@@ -1,0 +1,15 @@
+PLATFORM — ПЕРВЫЙ ЗАПУСК
+
+1) Распакуй архив так, чтобы был путь C:\Platform
+2) Запусти Docker Desktop
+3) Открой PowerShell и выполни:
+
+   cd C:\Platform
+   powershell -ExecutionPolicy Bypass -File .\scripts\first-start.ps1
+
+4) После зелёного OK открой DBeaver.
+   Параметры подключения скрипт напечатает сам.
+
+5) В DBeaver открой Schemas -> core. Там должно быть ровно 23 таблицы.
+
+Если что-то упадёт — НЕ переделывай руками. Просто пришли мне весь текст ошибки.

@@ -1,0 +1,98 @@
+name: platform
+
+services:
+  # ----------------------------------------------------------------
+  # Main transactional database.
+  # PostgreSQL 18 changed the official image volume root to
+  # /var/lib/postgresql (NOT /var/lib/postgresql/data).
+  # ----------------------------------------------------------------
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ:-UTC}
+    ports:
+      # Exposed only on the local machine so DBeaver can connect.
+      # Production will not expose PostgreSQL publicly.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # PostgreSQL 18+ official Docker image expects the persistent volume
+      # at /var/lib/postgresql. PGDATA itself is /var/lib/postgresql/18/docker.
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    networks:
+      - backend_net
+
+  # ----------------------------------------------------------------
+  # Redis is infrastructure for cache, locks, short-lived state, presence,
+  # queues/timers later. It is NOT the source of truth for business data.
+  # ----------------------------------------------------------------
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - backend_net
+
+  # ----------------------------------------------------------------
+  # One-shot SQL migration runner for PHASE 1.
+  # It records applied files in public.platform_migrations, so the core
+  # schema itself remains EXACTLY 23 tables.
+  #
+  # Later, when Yii3 backend is bootstrapped, these migrations are migrated
+  # into the application's migration mechanism. The database contract stays
+  # the same; this runner is intentionally small and easy to verify now.
+  # ----------------------------------------------------------------
+  db-migrate:
+    image: postgres:18
+    restart: "no"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGHOST: postgres
+      PGPORT: 5432
+    volumes:
+      - ./apps/backend/migrations/sql:/migrations:ro
+      - ./infra/postgres/migrate.sh:/migrate.sh:ro
+    entrypoint: ["bash", "/migrate.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend_net
+
+volumes:
+  postgres_data:
+    name: platform_postgres_data
+  redis_data:
+    name: platform_redis_data
+
+networks:
+  # Internal network for data services. Only ports explicitly bound to
+  # 127.0.0.1 are reachable from Windows during development.
+  backend_net:
+    name: platform_backend_net
+    internal: false

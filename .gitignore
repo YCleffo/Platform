@@ -1,0 +1,34 @@
+# Local secrets / environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+
+# PHP / Composer
+**/vendor/
+**/runtime/
+.phpunit.cache/
+.phpunit.result.cache
+
+# Node / frontend
+**/node_modules/
+**/dist/
+**/.vite/
+
+# .NET
+**/bin/
+**/obj/
+
+# Logs / dumps
+*.log
+*.dump
+*.sql.gz
+backups/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
