@@ -7,7 +7,7 @@ namespace App\Shared;
 final readonly class ApplicationParams
 {
     public function __construct(
-        public string $name = 'My Project',
-        public string $version = '1.0',
+        public string $name = 'Platform',
+        public string $version = '0.1.0',
     ) {}
 }

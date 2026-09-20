@@ -2,90 +2,106 @@ name: platform
 
 services:
   # ----------------------------------------------------------------
-  # Main transactional database.
-  # PostgreSQL 18 changed the official image volume root to
-  # /var/lib/postgresql (NOT /var/lib/postgresql/data).
+  # PostgreSQL
+  # Main transactional database and source of truth.
   # ----------------------------------------------------------------
   postgres:
     image: postgres:18
     restart: unless-stopped
+
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       TZ: ${TZ:-UTC}
+
     ports:
-      # Exposed only on the local machine so DBeaver can connect.
-      # Production will not expose PostgreSQL publicly.
+      # Local development access, for example from DBeaver.
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+
     volumes:
-      # PostgreSQL 18+ official Docker image expects the persistent volume
-      # at /var/lib/postgresql. PGDATA itself is /var/lib/postgresql/18/docker.
+      # PostgreSQL 18+ stores its versioned PGDATA below this directory.
       - postgres_data:/var/lib/postgresql
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 20
       start_period: 5s
+
     networks:
       - backend_net
 
   # ----------------------------------------------------------------
-  # Redis is infrastructure for cache, locks, short-lived state, presence,
-  # queues/timers later. It is NOT the source of truth for business data.
+  # Redis
+  # Cache, locks, queues, presence and short-lived state.
+  # It is not a source of truth for business data.
   # ----------------------------------------------------------------
   redis:
     image: redis:8-alpine
     restart: unless-stopped
+
     command:
       - redis-server
       - --appendonly
       - "yes"
       - --appendfsync
       - everysec
+
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+
     volumes:
       - redis_data:/data
+
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 20
+
     networks:
       - backend_net
 
   # ----------------------------------------------------------------
-  # One-shot SQL migration runner for PHASE 1.
-  # It records applied files in public.platform_migrations, so the core
-  # schema itself remains EXACTLY 23 tables.
+  # Database migrations
+  # One-shot service that applies raw SQL migrations.
   #
-  # Later, when Yii3 backend is bootstrapped, these migrations are migrated
-  # into the application's migration mechanism. The database contract stays
-  # the same; this runner is intentionally small and easy to verify now.
+  # Applied migrations are recorded in public.platform_migrations.
+  # The Core schema itself remains exactly 23 business tables.
   # ----------------------------------------------------------------
   db-migrate:
     image: postgres:18
     restart: "no"
+
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
       PGHOST: postgres
       PGPORT: 5432
+
     volumes:
       - ./apps/backend/migrations/sql:/migrations:ro
       - ./infra/postgres/migrate.sh:/migrate.sh:ro
-    entrypoint: ["bash", "/migrate.sh"]
+
+    entrypoint:
+      - bash
+      - /migrate.sh
+
     depends_on:
       postgres:
         condition: service_healthy
-      db-migrate:
-        condition: service_completed_successfully
+
     networks:
       - backend_net
 
+  # ----------------------------------------------------------------
+  # Yii3 API backend
+  # FrankenPHP + Yii3.
+  # ----------------------------------------------------------------
   backend:
     build:
       context: ./apps/backend
@@ -107,6 +123,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
       db-migrate:
         condition: service_completed_successfully
 
@@ -116,18 +133,30 @@ services:
     volumes:
       - ./apps/backend:/app
 
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "php",
+          "-r",
+          "exit(@file_get_contents('http://127.0.0.1/health') === false ? 1 : 0);",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
     networks:
       - backend_net
 
 volumes:
   postgres_data:
     name: platform_postgres_data
+
   redis_data:
     name: platform_redis_data
 
 networks:
-  # Internal network for data services. Only ports explicitly bound to
-  # 127.0.0.1 are reachable from Windows during development.
   backend_net:
     name: platform_backend_net
     internal: false

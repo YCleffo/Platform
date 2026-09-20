@@ -6,20 +6,32 @@ use ShipMonk\ComposerDependencyAnalyser\Config\Configuration;
 use ShipMonk\ComposerDependencyAnalyser\Config\ErrorType;
 
 $root = __DIR__;
+
 return (new Configuration())
     ->disableComposerAutoloadPathScan()
     ->setFileExtensions(['php'])
+
     ->addPathToScan($root . '/src', isDev: false)
     ->addPathToExclude($root . '/src/bootstrap.php')
     ->addPathToScan($root . '/src/bootstrap.php', isDev: true)
+
     ->addPathToScan($root . '/config', isDev: false)
     ->addPathToScan($root . '/public/index.php', isDev: false)
     ->addPathToScan($root . '/yii', isDev: false)
+
     ->addPathToScan($root . '/tests', isDev: true)
+    ->addPathToExclude($root . '/tests/Support/_generated')
+
     ->ignoreErrorsOnPackages(
-        ['yiisoft/di', 'yiisoft/data'],
-        [ErrorType::PROD_DEPENDENCY_ONLY_IN_DEV],
+        [
+            'yiisoft/di',
+            'yiisoft/data',
+        ],
+        [
+            ErrorType::PROD_DEPENDENCY_ONLY_IN_DEV,
+        ],
     )
+
     ->ignoreErrorsOnPackages(
         [
             'psr/container',
@@ -28,6 +40,9 @@ return (new Configuration())
             'yiisoft/request-provider',
             'yiisoft/router-fastroute',
             'yiisoft/cache',
+            'yiisoft/yii-console',
         ],
-        [ErrorType::UNUSED_DEPENDENCY],
+        [
+            ErrorType::UNUSED_DEPENDENCY,
+        ],
     );
