@@ -11,24 +11,25 @@ use Yiisoft\Db\Pgsql\Dsn;
  * - local .env loaded by phpdotenv;
  * - real process/container environment variables.
  */
-$env = static function (string $name): string {
-    $value = getenv($name, true);
-
-    if ($value === false) {
+$env = static function (string ...$names): string {
+    foreach ($names as $name) {
         $value = getenv($name);
+
+        if ($value !== false && $value !== '') {
+            return $value;
+        }
+
+        if (isset($_ENV[$name]) && $_ENV[$name] !== '') {
+            return (string) $_ENV[$name];
+        }
     }
 
-    if ($value === false) {
-        $value = $_ENV[$name] ?? null;
-    }
-
-    if (!is_string($value) || $value === '') {
-        throw new RuntimeException(
-            sprintf('Required environment variable "%s" is not defined.', $name),
-        );
-    }
-
-    return $value;
+    throw new \RuntimeException(
+        sprintf(
+            'Required environment variable is missing: %s',
+            implode(' or ', $names),
+        ),
+    );
 };
 
 return [
@@ -47,11 +48,12 @@ return [
     'yiisoft/db-pgsql' => [
         'dsn' => new Dsn(
             'pgsql',
-            $env('DB_HOST'),
-            $env('DB_NAME'),
-            $env('DB_PORT'),
+            getenv('DB_HOST') ?: '127.0.0.1',
+            $env('DB_NAME', 'POSTGRES_DB'),
+            $env('DB_PORT', 'POSTGRES_PORT'),
         ),
-        'username' => $env('DB_USER'),
-        'password' => $env('DB_PASSWORD'),
+
+        'username' => $env('DB_USER', 'POSTGRES_USER'),
+        'password' => $env('DB_PASSWORD', 'POSTGRES_PASSWORD'),
     ],
 ];

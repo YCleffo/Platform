@@ -84,6 +84,37 @@ services:
     networks:
       - backend_net
 
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: docker/Dockerfile
+      target: dev
+
+    restart: unless-stopped
+
+    environment:
+      APP_ENV: dev
+      APP_DEBUG: "true"
+
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    ports:
+      - "127.0.0.1:8080:80"
+
+    volumes:
+      - ./apps/backend:/app
+
+    networks:
+      - backend_net
+
 volumes:
   postgres_data:
     name: platform_postgres_data
