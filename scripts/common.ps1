@@ -95,7 +95,8 @@ function Import-PlatformEnv {
         "POSTGRES_USER",
         "POSTGRES_PASSWORD",
         "POSTGRES_PORT",
-        "REDIS_PORT"
+        "REDIS_PORT",
+        "BACKEND_PORT"
     )
 
     foreach ($key in $required) {

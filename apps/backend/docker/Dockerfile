@@ -54,11 +54,20 @@ COPY docker/dev/Caddyfile /etc/frankenphp/Caddyfile
 #
 
 FROM base AS prod-builder
+
 COPY --from=composer /composer /usr/bin/composer
-COPY .. /app
+
+WORKDIR /app
+
+COPY . /app
+
 RUN --mount=type=cache,target=/tmp/cache \
-    composer install --no-dev --no-progress --no-interaction --classmap-authoritative && \
-    rm composer.lock composer.json
+    composer install \
+        --no-dev \
+        --no-progress \
+        --no-interaction \
+        --classmap-authoritative \
+    && rm composer.lock composer.json
 
 FROM base AS prod
 ENV APP_ENV=prod

@@ -21,6 +21,13 @@ return (new Configuration())
         [ErrorType::PROD_DEPENDENCY_ONLY_IN_DEV],
     )
     ->ignoreErrorsOnPackages(
-        ['psr/container', 'yiisoft/config', 'yiisoft/aliases', 'yiisoft/request-provider', 'yiisoft/router-fastroute'],
+        [
+            'psr/container',
+            'yiisoft/config',
+            'yiisoft/aliases',
+            'yiisoft/request-provider',
+            'yiisoft/router-fastroute',
+            'yiisoft/cache',
+        ],
         [ErrorType::UNUSED_DEPENDENCY],
     );

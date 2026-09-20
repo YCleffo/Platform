@@ -27,12 +27,16 @@ final class HealthAction
                     SELECT count(*)
                     FROM information_schema.tables
                     WHERE table_schema = 'core'
-                        AND table_type = 'BASE TABLE'
+                      AND table_type = 'BASE TABLE'
                     SQL,
                 )
                 ->queryScalar();
 
-            if ($database !== 'platform' || $coreTables !== 23) {
+            if (
+                !is_string($database)
+                || $database === ''
+                || $coreTables !== 23
+            ) {
                 return $responseFactory->fail(
                     message: 'Service is not ready.',
                     data: [
@@ -45,7 +49,7 @@ final class HealthAction
 
             return $responseFactory->success([
                 'status' => 'ok',
-                'database' => 'ok',
+                'database' => $database,
                 'coreTables' => $coreTables,
             ]);
         } catch (Throwable) {

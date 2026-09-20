@@ -1,16 +1,15 @@
-# Ignore everything
+# Ignore everything by default.
 *
 
-# except:
-
+# Runtime configuration.
 !/docker/**/Caddyfile
+
+# Application source required by the production image.
 !/config
 !/public
 !/src
-!/vendor
-!autoload.php
-!configuration.php
+
+# Application entry point and Composer metadata.
 !yii
 !composer.json
 !composer.lock
-!.env*

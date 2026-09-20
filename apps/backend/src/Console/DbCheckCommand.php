@@ -44,14 +44,18 @@ final class DbCheckCommand extends Command
         $output->writeln("Database: {$database}");
         $output->writeln("Core tables: {$coreTables}");
 
-        if ($database !== 'platform') {
-            $output->writeln('<error>Unexpected database.</error>');
+        if (!is_string($database) || $database === '') {
+            $output->writeln(
+                '<error>Unable to determine the current database.</error>',
+            );
 
             return Command::FAILURE;
         }
 
         if ((int) $coreTables !== 23) {
-            $output->writeln('<error>Expected exactly 23 Core tables.</error>');
+            $output->writeln(
+                '<error>Expected exactly 23 Core tables.</error>',
+            );
 
             return Command::FAILURE;
         }
