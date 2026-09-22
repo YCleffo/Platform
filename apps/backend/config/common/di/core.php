@@ -13,6 +13,7 @@ use App\Core\Account\Infrastructure\PostgresAccountSecurityRepository;
 use App\Core\Audit\Application\AuditWriter;
 use App\Core\Audit\Infrastructure\PostgresAuditWriter;
 use App\Core\Auth\Application\AuthChallengeRepository;
+use App\Core\Auth\Application\AuthCleanupRepository;
 use App\Core\Auth\Application\CredentialLifecycleRepository;
 use App\Core\Auth\Application\AuthProviderRepository;
 use App\Core\Auth\Application\ExternalIdentityRepository;
@@ -23,6 +24,7 @@ use App\Core\Auth\Application\RecoveryCodeRepository;
 use App\Core\Auth\Application\SessionRepository;
 use App\Core\Auth\Application\TotpFactorRepository;
 use App\Core\Auth\Infrastructure\PostgresAuthRepository;
+use App\Core\Auth\Infrastructure\PostgresAuthCleanupRepository;
 use App\Core\Auth\Infrastructure\PostgresCredentialLifecycleRepository;
 use App\Core\Module\Application\ModuleRepository;
 use App\Core\Module\Infrastructure\PostgresModuleRepository;
@@ -70,6 +72,7 @@ return [
     RecoveryCodeRepository::class => ['class' => PostgresAuthRepository::class],
     SessionRepository::class => ['class' => PostgresAuthRepository::class],
     AuthChallengeRepository::class => ['class' => PostgresAuthRepository::class],
+    AuthCleanupRepository::class => ['class' => PostgresAuthCleanupRepository::class],
     CredentialLifecycleRepository::class => ['class' => PostgresCredentialLifecycleRepository::class],
     OutboxRepository::class => ['class' => PostgresOutboxRepository::class],
     InboxRepository::class => ['class' => PostgresInboxRepository::class],

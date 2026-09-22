@@ -23,6 +23,8 @@ use App\Core\Auth\Api\MeAction;
 use App\Core\Auth\Api\MfaStatusAction;
 use App\Core\Auth\Api\MfaVerifyAction;
 use App\Core\Auth\Api\MfaRecoveryConfirmAction;
+use App\Core\Auth\Api\MfaRecoveryExternalCallbackAction;
+use App\Core\Auth\Api\MfaRecoveryExternalStartAction;
 use App\Core\Auth\Api\MfaRecoveryRequestAction;
 use App\Core\Auth\Api\RefreshAction;
 use App\Core\Auth\Api\ProvidersAction;
@@ -104,6 +106,14 @@ return [
     Route::post('/api/auth/mfa/recovery/confirm')
         ->action(MfaRecoveryConfirmAction::class)
         ->name('auth/mfa/recovery/confirm'),
+
+    Route::post('/api/auth/mfa/recovery/external/{provider}/start')
+        ->action(MfaRecoveryExternalStartAction::class)
+        ->name('auth/mfa/recovery/external/start'),
+
+    Route::get('/api/auth/mfa/recovery/external/{provider}/callback')
+        ->action(MfaRecoveryExternalCallbackAction::class)
+        ->name('auth/mfa/recovery/external/callback'),
 
     Route::post('/api/auth/activate')
         ->action(ActivationAction::class)

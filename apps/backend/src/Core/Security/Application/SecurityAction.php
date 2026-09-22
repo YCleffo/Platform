@@ -47,6 +47,9 @@ final class SecurityAction
     public const MFA_RECOVERY_REQUESTED = 'auth.mfa_recovery.requested';
     public const MFA_RECOVERY_COMPLETED = 'auth.mfa_recovery.completed';
     public const MFA_RECOVERY_FAILED = 'auth.mfa_recovery.failed';
+    public const MFA_RECOVERY_EXTERNAL_REAUTH_REQUIRED = 'auth.mfa_recovery.external_reauth_required';
+    public const MFA_RECOVERY_EXTERNAL_REAUTH_SUCCEEDED = 'auth.mfa_recovery.external_reauth_succeeded';
+    public const MFA_RECOVERY_EXTERNAL_REAUTH_FAILED = 'auth.mfa_recovery.external_reauth_failed';
     public const SUSPICIOUS_ACTIVITY = 'auth.suspicious_activity';
 
     /** @return non-empty-list<string> */
@@ -94,6 +97,9 @@ final class SecurityAction
             self::MFA_RECOVERY_REQUESTED,
             self::MFA_RECOVERY_COMPLETED,
             self::MFA_RECOVERY_FAILED,
+            self::MFA_RECOVERY_EXTERNAL_REAUTH_REQUIRED,
+            self::MFA_RECOVERY_EXTERNAL_REAUTH_SUCCEEDED,
+            self::MFA_RECOVERY_EXTERNAL_REAUTH_FAILED,
             self::SUSPICIOUS_ACTIVITY,
         ];
     }

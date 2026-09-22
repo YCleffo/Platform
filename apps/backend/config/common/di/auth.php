@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Environment;
 use App\Console\DbCheckCommand;
 use App\Core\Auth\Application\AuthRuntimePolicy;
+use App\Core\Auth\Application\AuthCleanupPolicy;
 use App\Core\Auth\Application\AuthenticationPayloadCipher;
 use App\Core\Auth\Application\OidcClientRegistry;
 use App\Core\Auth\Application\OidcClientRegistryInterface;
@@ -13,6 +14,7 @@ use App\Core\Auth\Application\AuthLinkBuilder;
 use App\Core\Auth\Application\PasswordHasherInterface;
 use App\Core\Auth\Application\SessionActivityService;
 use App\Core\Auth\Application\TotpSecretCipher;
+use App\Core\Auth\Application\TotpProvisioningPolicy;
 use App\Core\Auth\Infrastructure\NativePasswordHasher;
 use App\Core\Auth\Infrastructure\GoogleOidcClient;
 use App\Core\Auth\Infrastructure\TelegramOidcClient;
@@ -77,8 +79,14 @@ return [
             'recentAuthenticationSeconds' => $auth['recentAuthenticationSeconds'],
         ],
     ],
+    AuthCleanupPolicy::class => [
+        '__construct()' => $auth['cleanup'],
+    ],
     AuthLinkBuilder::class => [
         '__construct()' => ['publicBaseUrl' => $auth['publicBaseUrl']],
+    ],
+    TotpProvisioningPolicy::class => [
+        '__construct()' => ['issuer' => $auth['totpIssuer']],
     ],
     AuthRateLimitPolicy::class => [
         '__construct()' => $auth['rateLimit'],

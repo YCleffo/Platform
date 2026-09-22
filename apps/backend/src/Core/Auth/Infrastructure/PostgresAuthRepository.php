@@ -102,6 +102,34 @@ final readonly class PostgresAuthRepository implements
         return is_array($row) ? self::identifier($row) : null;
     }
 
+    public function findDisplayIdentifierByAccount(string $accountId): ?AuthIdentifier
+    {
+        $row = $this->db->createCommand(
+            <<<'SQL'
+            SELECT
+                id::text AS id,
+                account_id::text AS account_id,
+                identifier_type::text AS identifier_type,
+                value,
+                normalized_value,
+                is_primary,
+                can_login,
+                can_recover,
+                to_char(verified_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS verified_at,
+                to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+                to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at
+            FROM core.auth_identifiers
+            WHERE account_id = CAST(:account_id AS uuid)
+              AND verified_at IS NOT NULL
+            ORDER BY is_primary DESC, can_login DESC, verified_at, id
+            LIMIT 1
+            SQL,
+            [':account_id' => $accountId],
+        )->queryOne();
+
+        return is_array($row) ? self::identifier($row) : null;
+    }
+
     public function findByAccountId(string $accountId): ?PasswordCredential
     {
         $row = $this->db->createCommand(

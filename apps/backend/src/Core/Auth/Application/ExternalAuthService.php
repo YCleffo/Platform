@@ -27,6 +27,7 @@ final readonly class ExternalAuthService
         private AuthenticationPayloadCipher $cipher,
         private OpaqueTokenService $tokens,
         private AuthenticationFlowService $authenticationFlow,
+        private MfaRecoveryFinalizer $mfaRecoveryFinalizer,
         private RecentAuthenticationPolicy $recentAuthentication,
         private AccountSecurityNotifier $notifications,
         private RateLimiterInterface $rateLimiter,
@@ -116,6 +117,106 @@ final readonly class ExternalAuthService
             $this->audit->record(new SecurityAuditCommand(
                 action: SecurityAction::EXTERNAL_LOGIN_FAILED,
                 actorAccountId: null,
+                resourceType: 'core.auth_challenge',
+                resourceId: $challenge->id,
+                requestId: $context->requestId,
+                ipAddress: $context->ipAddress,
+                userAgent: $context->userAgent,
+                success: false,
+                errorCode: 'external_verification_failed',
+                metadata: ['provider' => $providerCode],
+            ));
+            throw $exception instanceof ExternalAuthenticationException
+                ? $exception
+                : new ExternalAuthenticationException(previous: $exception);
+        }
+    }
+
+    public function startRecoveryReauthentication(
+        string $providerCode,
+        string $recoveryToken,
+        ClientContext $context,
+    ): ExternalAuthorizationStart {
+        $this->consumeRecoveryStartLimits($providerCode, $recoveryToken, $context);
+        $provider = $this->availableProvider($providerCode, true);
+        if (!$this->tokens->hasValidFormat($recoveryToken)) {
+            throw new ExternalAuthenticationException();
+        }
+        $pending = $this->challenges->findActiveBySecretHashHex($this->tokens->hashHex($recoveryToken));
+        $allowedProviders = $pending?->payload['providers'] ?? null;
+        $originChallengeId = $pending?->payload['originChallengeId'] ?? null;
+        if ($pending === null
+            || $pending->accountId === null
+            || $pending->challengeType !== 'mfa_recovery_reauth_pending'
+            || ($pending->payload['purpose'] ?? null) !== 'mfa_recovery_reauth_pending'
+            || ($pending->payload['clientBinding'] ?? null) !== AuthenticationFlowService::clientBinding($context)
+            || !is_array($allowedProviders)
+            || !in_array($providerCode, $allowedProviders, true)
+            || !is_string($originChallengeId)
+            || $this->identities->findByAccountProvider($pending->accountId, $provider->id) === null
+        ) {
+            throw new ExternalAuthenticationException();
+        }
+
+        return $this->db->transaction(function () use ($provider, $pending, $originChallengeId, $context): ExternalAuthorizationStart {
+            if (!$this->challenges->consume($pending->id)) {
+                throw new ExternalAuthenticationException();
+            }
+            return $this->start(
+                $provider,
+                'mfa_recovery_reauth',
+                $pending->accountId,
+                null,
+                $context,
+                [
+                    'originChallengeId' => $originChallengeId,
+                    'recoveryChallengeId' => $pending->id,
+                ],
+            );
+        });
+    }
+
+    public function completeRecoveryReauthentication(
+        string $providerCode,
+        string $state,
+        string $authorizationCode,
+        ClientContext $context,
+    ): void {
+        $this->consumeRecoveryCallbackLimit($providerCode, $state, $context);
+        $provider = $this->availableProvider($providerCode, true);
+        $challenge = $this->recoveryTransaction($state, $providerCode, $context);
+        try {
+            $sensitive = $this->sensitive($challenge);
+            $profile = $this->clients->get($providerCode)->exchangeAuthorizationCode(
+                $authorizationCode,
+                $sensitive['nonce'],
+                $sensitive['codeVerifier'],
+            );
+            $identity = $this->identities->findByProviderSubject($provider->id, $profile->subject);
+            if ($identity === null || $identity->accountId !== $challenge->accountId) {
+                throw new ExternalAuthenticationException();
+            }
+
+            $this->db->transaction(function () use ($challenge, $identity, $profile, $providerCode, $context): void {
+                $this->identities->updateSnapshotAndLogin($identity->id, $profile)
+                    ?? throw new ExternalAuthenticationException();
+                $this->mfaRecoveryFinalizer->completeWithinTransaction($challenge, $context, $providerCode);
+                $this->audit->record(new SecurityAuditCommand(
+                    action: SecurityAction::MFA_RECOVERY_EXTERNAL_REAUTH_SUCCEEDED,
+                    actorAccountId: $challenge->accountId,
+                    resourceType: 'core.auth_challenge',
+                    resourceId: $challenge->id,
+                    requestId: $context->requestId,
+                    ipAddress: $context->ipAddress,
+                    userAgent: $context->userAgent,
+                    metadata: ['provider' => $providerCode],
+                ));
+            });
+        } catch (Throwable $exception) {
+            $this->challenges->registerFailedAttempt($challenge->id);
+            $this->audit->record(new SecurityAuditCommand(
+                action: SecurityAction::MFA_RECOVERY_EXTERNAL_REAUTH_FAILED,
+                actorAccountId: $challenge->accountId,
                 resourceType: 'core.auth_challenge',
                 resourceId: $challenge->id,
                 requestId: $context->requestId,
@@ -245,6 +346,7 @@ final readonly class ExternalAuthService
         ?string $accountId,
         ?string $sessionId,
         ClientContext $context,
+        array $additionalPayload = [],
     ): ExternalAuthorizationStart {
         $state = $this->tokens->issue();
         $nonce = self::randomBase64Url(32);
@@ -268,14 +370,14 @@ final readonly class ExternalAuthService
             challengeType: $type,
             secretHashHex: $state->hashHex,
             targetNormalized: null,
-            payload: [
+            payload: array_merge($additionalPayload, [
                 'purpose' => $type,
                 'provider' => $provider->code,
                 'sessionId' => $sessionId,
                 'clientBinding' => AuthenticationFlowService::clientBinding($context),
                 'sealed' => $sealed->ciphertextHex,
                 'keyVersion' => $sealed->keyVersion,
-            ],
+            ]),
             maxAttempts: 5,
             expiresAt: $expiresAt,
         ));
@@ -313,6 +415,27 @@ final readonly class ExternalAuthService
             || ($challenge->payload['clientBinding'] ?? null) !== AuthenticationFlowService::clientBinding($context)
             || $challenge->accountId !== $accountId
             || ($challenge->payload['sessionId'] ?? null) !== $sessionId
+        ) {
+            throw new ExternalAuthenticationException();
+        }
+        return $challenge;
+    }
+
+    private function recoveryTransaction(string $state, string $provider, ClientContext $context): AuthChallenge
+    {
+        if (!$this->tokens->hasValidFormat($state)) {
+            throw new ExternalAuthenticationException();
+        }
+        $challenge = $this->challenges->findActiveBySecretHashHex($this->tokens->hashHex($state));
+        if ($challenge === null
+            || $challenge->accountId === null
+            || $challenge->challengeType !== 'mfa_recovery_reauth'
+            || ($challenge->payload['purpose'] ?? null) !== 'mfa_recovery_reauth'
+            || ($challenge->payload['provider'] ?? null) !== $provider
+            || ($challenge->payload['clientBinding'] ?? null) !== AuthenticationFlowService::clientBinding($context)
+            || ($challenge->payload['sessionId'] ?? null) !== null
+            || !is_string($challenge->payload['originChallengeId'] ?? null)
+            || !is_string($challenge->payload['recoveryChallengeId'] ?? null)
         ) {
             throw new ExternalAuthenticationException();
         }
@@ -359,6 +482,40 @@ final readonly class ExternalAuthService
             'external:callback',
             $key,
             $this->ratePolicy->externalCallbackLimit,
+            $this->ratePolicy->securityWindowSeconds,
+        )) {
+            throw new LoginRateLimitedException();
+        }
+    }
+
+    private function consumeRecoveryStartLimits(
+        string $provider,
+        string $recoveryToken,
+        ClientContext $context,
+    ): void {
+        $ipAllowed = $this->rateLimiter->consume(
+            'mfa-recovery:external:start:ip',
+            $this->digests->digest($context->ipAddress ?? 'unknown'),
+            $this->ratePolicy->mfaRecoveryExternalStartIpLimit,
+            $this->ratePolicy->securityWindowSeconds,
+        );
+        $transactionAllowed = $this->rateLimiter->consume(
+            'mfa-recovery:external:start:transaction',
+            $this->digests->digest($provider . '|' . $recoveryToken),
+            $this->ratePolicy->mfaRecoveryExternalTransactionLimit,
+            $this->ratePolicy->securityWindowSeconds,
+        );
+        if (!$ipAllowed || !$transactionAllowed) {
+            throw new LoginRateLimitedException();
+        }
+    }
+
+    private function consumeRecoveryCallbackLimit(string $provider, string $state, ClientContext $context): void
+    {
+        if (!$this->rateLimiter->consume(
+            'mfa-recovery:external:callback',
+            $this->digests->digest($provider . '|' . $state . '|' . ($context->ipAddress ?? 'unknown')),
+            $this->ratePolicy->mfaRecoveryExternalCallbackLimit,
             $this->ratePolicy->securityWindowSeconds,
         )) {
             throw new LoginRateLimitedException();

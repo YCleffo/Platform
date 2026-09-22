@@ -17,8 +17,6 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class TotpManager
 {
-    private const string ISSUER = 'Platform';
-
     public function __construct(
         private TotpFactorRepository $factors,
         private RecoveryCodeRepository $recoveryCodes,
@@ -26,6 +24,7 @@ final readonly class TotpManager
         private PasswordHasherInterface $passwordHasher,
         private TotpSecretCipher $cipher,
         private TotpService $totp,
+        private TotpProvisioningPolicy $provisioning,
         private RecoveryCodeService $recovery,
         private RecentAuthenticationPolicy $recentAuthentication,
         private AccountSecurityRepository $accounts,
@@ -75,13 +74,15 @@ final readonly class TotpManager
         $secretBytes = $this->totp->generateSecret();
         $base32 = Base32::encode($secretBytes);
         $encrypted = $this->cipher->encrypt($secretBytes);
+        // The request label is retained only for backward-compatible input parsing.
+        $accountLabel = $this->provisioning->accountLabel($accountId);
         $expiresAt = $this->clock->now()->modify(sprintf(
             '+%d seconds',
             $this->runtimePolicy->totpSetupTtlSeconds,
         ))->format('Y-m-d\TH:i:s\Z');
         $factor = $this->factors->createPending(new CreateTotpFactorCommand(
             accountId: $accountId,
-            label: $label,
+            label: $accountLabel,
             secretEncryptedHex: $encrypted->ciphertextHex,
             algorithm: 'sha1',
             digits: 6,
@@ -98,14 +99,12 @@ final readonly class TotpManager
             ipAddress: $context->ipAddress,
             userAgent: $context->userAgent,
         ));
-        $accountLabel = $label === null || trim($label) === '' ? $accountId : trim($label);
-
         return [
             'setupId' => $factor->id,
-            'issuer' => self::ISSUER,
+            'issuer' => $this->provisioning->issuer,
             'accountLabel' => $accountLabel,
             'secret' => $base32,
-            'provisioningUri' => $this->totp->provisioningUri(self::ISSUER, $accountLabel, $base32),
+            'provisioningUri' => $this->totp->provisioningUri($this->provisioning->issuer, $accountLabel, $base32),
             'expiresAt' => $expiresAt,
         ];
     }

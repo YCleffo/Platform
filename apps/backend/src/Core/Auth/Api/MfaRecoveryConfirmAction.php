@@ -20,12 +20,12 @@ final readonly class MfaRecoveryConfirmAction
     {
         $input = AuthInput::mfaRecoveryConfirm($request->getParsedBody());
         try {
-            $recovery->confirm($input['token'], $input['password'], ClientContext::fromRequest($request));
+            $result = $recovery->confirm($input['token'], $input['password'], ClientContext::fromRequest($request));
         } catch (MfaVerificationException) {
             return $responses->error(ApiMessage::AUTH_MFA_INVALID, httpCode: Status::UNAUTHORIZED);
         } catch (RateLimiterUnavailableException) {
             return $responses->error(ApiMessage::AUTH_LOGIN_UNAVAILABLE, httpCode: Status::SERVICE_UNAVAILABLE);
         }
-        return $responses->success(['status' => 'completed']);
+        return $responses->success($result->toArray());
     }
 }

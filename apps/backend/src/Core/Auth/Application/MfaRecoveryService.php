@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Core\Auth\Application;
 
-use App\Core\Account\Application\AccountSecurityRepository;
 use App\Core\Client\Domain\ClientContext;
 use App\Core\Communication\Application\EmailService;
 use App\Core\Communication\Application\QueueEmailCommand;
@@ -15,7 +14,6 @@ use App\Core\Security\Application\SecurityAuditCommand;
 use App\Core\Security\Application\SecurityAuditService;
 use App\Core\Time\Application\ClockInterface;
 use InvalidArgumentException;
-use RuntimeException;
 use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class MfaRecoveryService
@@ -24,20 +22,19 @@ final readonly class MfaRecoveryService
         private IdentifierRepository $identifiers,
         private AuthIdentifierNormalizer $normalizer,
         private TotpFactorRepository $factors,
-        private RecoveryCodeRepository $recoveryCodes,
         private PasswordCredentialRepository $passwords,
         private PasswordHasherInterface $passwordHasher,
+        private AuthProviderRepository $providers,
+        private ExternalIdentityRepository $identities,
         private AuthChallengeRepository $challenges,
         private OpaqueTokenService $tokens,
+        private MfaRecoveryFinalizer $finalizer,
         private AuthRuntimePolicy $runtimePolicy,
         private AuthRateLimitPolicy $ratePolicy,
         private RateLimiterInterface $rateLimiter,
         private IdentifierDigestService $digests,
         private AuthLinkBuilder $links,
         private EmailService $email,
-        private AccountSecurityNotifier $notifications,
-        private AccountSecurityRepository $accounts,
-        private SessionRepository $sessions,
         private SecurityAuditService $audit,
         private ClockInterface $clock,
         private ConnectionInterface $db,
@@ -110,7 +107,11 @@ final readonly class MfaRecoveryService
         });
     }
 
-    public function confirm(string $rawToken, ?string $password, ClientContext $context): void
+    public function confirm(
+        string $rawToken,
+        ?string $password,
+        ClientContext $context,
+    ): MfaRecoveryConfirmationResult
     {
         if (!$this->tokens->hasValidFormat($rawToken)) {
             throw new MfaVerificationException();
@@ -126,42 +127,97 @@ final readonly class MfaRecoveryService
             throw new MfaVerificationException();
         }
         $credential = $this->passwords->findByAccountId($challenge->accountId);
-        if ($credential !== null
-            && ($password === null || !$this->passwordHasher->verify($password, $credential->passwordHash))
-        ) {
-            $this->fail($challenge, $context);
+        if ($credential !== null) {
+            if ($password === null || !$this->passwordHasher->verify($password, $credential->passwordHash)) {
+                $this->fail($challenge, $context);
+            }
+            try {
+                $this->finalizer->complete($challenge, $context, AuthenticationMethod::PASSWORD);
+            } catch (MfaVerificationException) {
+                $this->fail($challenge, $context);
+            }
+            return MfaRecoveryConfirmationResult::completed();
         }
 
+        $providers = $this->usableExternalProviders($challenge->accountId);
         try {
-            $this->db->transaction(function () use ($challenge, $context): void {
+            return $this->db->transaction(function () use ($challenge, $providers, $context): MfaRecoveryConfirmationResult {
                 if (!$this->challenges->consume($challenge->id)) {
                     throw new MfaVerificationException();
                 }
-                $this->factors->revokeAllFactors($challenge->accountId);
-                $this->recoveryCodes->revokeAllCodes($challenge->accountId);
-                $this->accounts->rotateSecurityStamp($challenge->accountId)
-                    ?? throw new RuntimeException('Account security stamp could not be rotated.');
-                $this->sessions->revokeAll($challenge->accountId, 'mfa_recovery');
-                $this->challenges->cancelAllForAccount($challenge->accountId, $challenge->id);
+                if ($providers === []) {
+                    $this->audit->record(new SecurityAuditCommand(
+                        action: SecurityAction::MFA_RECOVERY_EXTERNAL_REAUTH_FAILED,
+                        actorAccountId: $challenge->accountId,
+                        resourceType: 'core.auth_challenge',
+                        resourceId: $challenge->id,
+                        requestId: $context->requestId,
+                        ipAddress: $context->ipAddress,
+                        userAgent: $context->userAgent,
+                        success: false,
+                        errorCode: 'additional_recovery_required',
+                    ));
+                    return MfaRecoveryConfirmationResult::additionalRecoveryRequired();
+                }
+
+                $proof = $this->tokens->issue();
+                $expiresAt = $this->clock->now()->modify(sprintf(
+                    '+%d seconds',
+                    $this->runtimePolicy->mfaRecoveryTtlSeconds,
+                ))->format('Y-m-d\TH:i:s\Z');
+                $reauth = $this->challenges->storeChallenge(new CreateAuthChallengeCommand(
+                    accountId: $challenge->accountId,
+                    challengeType: 'mfa_recovery_reauth_pending',
+                    secretHashHex: $proof->hashHex,
+                    targetNormalized: null,
+                    payload: [
+                        'purpose' => 'mfa_recovery_reauth_pending',
+                        'originChallengeId' => $challenge->id,
+                        'providers' => $providers,
+                        'clientBinding' => AuthenticationFlowService::clientBinding($context),
+                    ],
+                    maxAttempts: 3,
+                    expiresAt: $expiresAt,
+                ));
                 $this->audit->record(new SecurityAuditCommand(
-                    action: SecurityAction::MFA_RECOVERY_COMPLETED,
+                    action: SecurityAction::MFA_RECOVERY_EXTERNAL_REAUTH_REQUIRED,
                     actorAccountId: $challenge->accountId,
-                    resourceType: 'core.account',
-                    resourceId: $challenge->accountId,
+                    resourceType: 'core.auth_challenge',
+                    resourceId: $reauth->id,
                     requestId: $context->requestId,
                     ipAddress: $context->ipAddress,
                     userAgent: $context->userAgent,
-                    metadata: ['severity' => 'high'],
+                    metadata: ['providers' => $providers],
                 ));
-                $this->notifications->notify(
-                    $challenge->accountId,
-                    'auth.mfa.recovery_completed',
-                    $context->locale->locale->tag,
+
+                /** @var non-empty-list<string> $providers */
+                return MfaRecoveryConfirmationResult::externalReauthenticationRequired(
+                    $proof->raw,
+                    $providers,
+                    $expiresAt,
                 );
             });
         } catch (MfaVerificationException) {
             $this->fail($challenge, $context);
         }
+    }
+
+    /** @return list<string> */
+    private function usableExternalProviders(string $accountId): array
+    {
+        $result = [];
+        foreach ([AuthenticationMethod::GOOGLE, AuthenticationMethod::TELEGRAM] as $code) {
+            $provider = $this->providers->findByCode($code);
+            if ($provider !== null
+                && $provider->enabled
+                && $provider->allowLogin
+                && $provider->protocol === 'oidc'
+                && $this->identities->findByAccountProvider($accountId, $provider->id) !== null
+            ) {
+                $result[] = $code;
+            }
+        }
+        return $result;
     }
 
     private function fail(AuthChallenge $challenge, ClientContext $context): never

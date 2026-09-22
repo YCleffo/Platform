@@ -9,4 +9,6 @@ interface IdentifierRepository
     public function findByNormalized(string $type, string $normalizedValue): ?AuthIdentifier;
 
     public function findRecoveryEmailByAccount(string $accountId): ?AuthIdentifier;
+
+    public function findDisplayIdentifierByAccount(string $accountId): ?AuthIdentifier;
 }

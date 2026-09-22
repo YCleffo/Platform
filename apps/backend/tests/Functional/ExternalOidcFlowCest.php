@@ -20,6 +20,7 @@ use App\Core\Auth\Application\ExternalIdentityRepository;
 use App\Core\Auth\Application\OidcClientInterface;
 use App\Core\Auth\Application\OidcClientRegistryInterface;
 use App\Core\Auth\Application\OpaqueTokenService;
+use App\Core\Auth\Application\MfaRecoveryFinalizer;
 use App\Core\Auth\Application\PasskeyRepository;
 use App\Core\Auth\Application\PasswordCredentialRepository;
 use App\Core\Auth\Application\RecentAuthenticationPolicy;
@@ -327,6 +328,7 @@ final readonly class ExternalOidcFlowCest
             cipher: $container->get(AuthenticationPayloadCipher::class),
             tokens: $container->get(OpaqueTokenService::class),
             authenticationFlow: $container->get(AuthenticationFlowService::class),
+            mfaRecoveryFinalizer: $container->get(MfaRecoveryFinalizer::class),
             recentAuthentication: $container->get(RecentAuthenticationPolicy::class),
             notifications: $container->get(AccountSecurityNotifier::class),
             rateLimiter: $container->get(RateLimiterInterface::class),

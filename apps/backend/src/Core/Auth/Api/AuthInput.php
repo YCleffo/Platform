@@ -189,6 +189,21 @@ final class AuthInput
         return ['token' => (string) $token, 'password' => is_string($password) ? $password : null];
     }
 
+    public static function recoveryToken(mixed $body): string
+    {
+        $data = self::object($body);
+        $token = $data['recoveryToken'] ?? null;
+        $result = new Result();
+        if (!is_string($token) || $token === '' || strlen($token) > 512) {
+            $result->addError(ApiMessage::VALIDATION_REQUIRED, valuePath: ['recoveryToken']);
+        }
+        self::unknown($data, ['recoveryToken'], $result);
+        if (!$result->isValid()) {
+            throw new InputValidationException($result);
+        }
+        return (string) $token;
+    }
+
     /** @return array{state: string, code: string} */
     public static function externalCallback(mixed $input): array
     {
