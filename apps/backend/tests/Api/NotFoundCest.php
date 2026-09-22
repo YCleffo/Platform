@@ -11,14 +11,19 @@ final readonly class NotFoundCest
 {
     public function testNotFoundPage(ApiTester $I): void
     {
+        $I->haveHttpHeader('Accept-Language', 'en-US');
         $I->sendGET('/not_found_page');
         $I->seeResponseCodeIs(HttpCode::NOT_FOUND);
         $I->seeResponseIsJson();
         $I->seeResponseContainsJson(
             [
-                'status' => 'failed',
-                'error_message' => 'Not found.',
+                'error' => [
+                    'code' => 'http.not_found',
+                    'message' => 'The requested resource was not found.',
+                ],
             ],
         );
+        $I->seeHttpHeader('Content-Language', 'en-US');
+        $I->seeHttpHeader('Vary', 'Accept-Language, X-Client-Locale');
     }
 }

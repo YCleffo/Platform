@@ -4,22 +4,23 @@ declare(strict_types=1);
 
 namespace App\Core\Person\Api;
 
+use App\Api\Shared\OffsetPagination;
 use App\Api\Shared\ResponseFactory;
 use App\Core\Person\Application\ListPersons;
-use App\Core\Person\Application\PersonView;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 final readonly class ListPersonsAction
 {
     public function __invoke(
+        ServerRequestInterface $request,
         ListPersons $listPersons,
         ResponseFactory $responseFactory,
     ): ResponseInterface {
-        $persons = array_map(
-            static fn(PersonView $person): array => $person->toArray(),
-            $listPersons->execute(),
-        );
+        $pagination = OffsetPagination::fromQuery($request->getQueryParams());
 
-        return $responseFactory->success($persons);
+        return $responseFactory->success(
+            $listPersons->execute($pagination->limit, $pagination->offset)->toArray(),
+        );
     }
 }

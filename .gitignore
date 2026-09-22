@@ -13,6 +13,10 @@
 .phpunit.cache/
 .phpunit.result.cache
 
+# Codeception diagnostics can contain passwords and raw one-time/auth tokens.
+**/tests/_output/*
+!**/tests/_output/.gitkeep
+
 # Node / frontend
 **/node_modules/
 **/dist/
@@ -26,6 +30,7 @@
 *.log
 *.dump
 *.sql.gz
+*.mmdb
 backups/
 
 # OS

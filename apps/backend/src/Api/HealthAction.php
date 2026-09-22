@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Api;
 
 use App\Api\Shared\ResponseFactory;
+use App\Api\Shared\ApiMessage;
 use Psr\Http\Message\ResponseInterface;
 use Throwable;
 use Yiisoft\Db\Connection\ConnectionInterface;
@@ -27,7 +28,7 @@ final class HealthAction
                     SELECT count(*)
                     FROM information_schema.tables
                     WHERE table_schema = 'core'
-                      AND table_type = 'BASE TABLE'
+                        AND table_type = 'BASE TABLE'
                     SQL,
                 )
                 ->queryScalar();
@@ -37,9 +38,9 @@ final class HealthAction
                 || $database === ''
                 || $coreTables !== 23
             ) {
-                return $responseFactory->fail(
-                    message: 'Service is not ready.',
-                    data: [
+                return $responseFactory->error(
+                    messageId: ApiMessage::HEALTH_NOT_READY,
+                    meta: [
                         'database' => $database,
                         'coreTables' => $coreTables,
                     ],
@@ -53,8 +54,8 @@ final class HealthAction
                 'coreTables' => $coreTables,
             ]);
         } catch (Throwable) {
-            return $responseFactory->fail(
-                message: 'Database is unavailable.',
+            return $responseFactory->error(
+                messageId: ApiMessage::HEALTH_DATABASE_UNAVAILABLE,
                 httpCode: Status::SERVICE_UNAVAILABLE,
             );
         }

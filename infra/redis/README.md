@@ -1,3 +1,3 @@
 # Redis
 
-Phase 1 uses the official Redis container with command-line configuration from compose.yaml.
+На этапе 1 используется официальный контейнер Redis с конфигурацией командной строки из `compose.yaml`.

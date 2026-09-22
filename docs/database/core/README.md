@@ -1,7 +1,7 @@
-# Core database files
+# Файлы базы данных Core
 
-- `Core_v1_FINAL.dbml` — visual/design contract for dbdiagram-compatible tooling.
-- `Core_v1_FINAL_RU.md` — Russian field-by-field explanation.
-- Executable PostgreSQL migrations are in `apps/backend/migrations/sql/`.
+- `Core_v1_FINAL.dbml` — визуальное представление контракта для инструментов, совместимых с dbdiagram.
+- `Core_v1_FINAL_RU.md` — описание полей на русском языке.
+- Исполняемые миграции PostgreSQL находятся в `apps/backend/migrations/sql/`.
 
-The DBML uses neutral Platform naming. Product/module-specific schemas are not part of Core.
+В DBML используются нейтральные названия Platform. Схемы продуктов и модулей не входят в Core.

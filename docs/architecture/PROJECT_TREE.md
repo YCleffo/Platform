@@ -1,14 +1,13 @@
-# Target project tree
+# Целевая структура проекта
 
-Phase 1 creates the stable root and the parts we need immediately. Empty/future
-areas are represented by README/.gitkeep files so you can see where everything goes.
+На этапе 1 создаётся стабильная структура проекта и необходимые сейчас компоненты. Пустые разделы и разделы на будущее обозначены файлами README/.gitkeep, чтобы было понятно, где они будут располагаться.
 
 ```text
 C:\\Platform
 ├── apps
-│   ├── backend            Yii3 API + worker; phase 1 currently has Core SQL migrations
+│   ├── backend            Yii3 API + обработчик; на этапе 1 содержит SQL-миграции Core
 │   ├── frontend           Vue 3 + TypeScript
-│   └── agent              C#/.NET Windows agent
+│   └── agent              агент Windows на C#/.NET
 ├── infra
 │   ├── postgres
 │   ├── redis
@@ -30,5 +29,4 @@ C:\\Platform
 └── README.md
 ```
 
-Backend/frontend module folders will mirror the same conceptual modules but do not
-force every future module to exist on day one.
+Каталоги модулей backend/frontend будут отражать те же концептуальные модули, но не требуют создавать каждый будущий модуль с самого начала.

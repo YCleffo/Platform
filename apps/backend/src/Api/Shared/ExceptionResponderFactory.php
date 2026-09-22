@@ -6,6 +6,7 @@ namespace App\Api\Shared;
 
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Log\LoggerInterface;
 use Throwable;
 use Yiisoft\ErrorHandler\Exception\UserException;
 use Yiisoft\ErrorHandler\Middleware\ExceptionResponder;
@@ -18,6 +19,7 @@ final readonly class ExceptionResponderFactory
         private ResponseFactoryInterface $psrResponseFactory,
         private ResponseFactory $apiResponseFactory,
         private Injector $injector,
+        private LoggerInterface $logger,
     ) {}
 
     public function create(): ExceptionResponder
@@ -41,11 +43,16 @@ final readonly class ExceptionResponderFactory
     {
         if (UserException::isUserException($exception)) {
             $code = $exception->getCode();
-            return $this->apiResponseFactory->fail(
-                $exception->getMessage(),
-                code: is_int($code) ? $code : null,
-            );
+            $status = is_int($code) && in_array($code, [400, 401, 403, 404, 405, 409, 413, 415, 422, 429, 503], true)
+                ? $code
+                : 400;
+            return $this->apiResponseFactory->forStatus($status);
         }
-        throw $exception;
+
+        $this->logger->error('Unhandled API exception.', [
+            'errorCode' => ApiMessage::HTTP_INTERNAL_ERROR,
+            'exceptionType' => $exception::class,
+        ]);
+        return $this->apiResponseFactory->forStatus(500);
     }
 }

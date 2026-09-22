@@ -15,6 +15,10 @@ final readonly class HealthCest
 
         $I->seeResponseCodeIs(HttpCode::OK);
         $I->seeResponseIsJson();
+        $I->seeHttpHeader('X-Content-Type-Options', 'nosniff');
+        $I->seeHttpHeader('Referrer-Policy', 'no-referrer');
+        $I->seeHttpHeader('X-Frame-Options', 'DENY');
+        $I->dontSeeHttpHeader('Access-Control-Allow-Origin');
 
         $I->seeResponseContainsJson([
             'status' => 'success',

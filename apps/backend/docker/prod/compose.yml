@@ -30,6 +30,8 @@ services:
       labels:
         caddy: ${PROD_HOST:-app-api.example.com}
         caddy.reverse_proxy: "{{upstreams 80}}"
+        caddy.tls.protocols: "tls1.2 tls1.3"
+        caddy.header.Strict-Transport-Security: "max-age=31536000; includeSubDomains"
 
 volumes:
   runtime:

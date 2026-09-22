@@ -1,3 +1,3 @@
-# Windows Agent
+# Агент Windows
 
-C#/.NET Windows runtime will live here and will run directly on Windows, not inside Docker.
+Здесь будет размещаться агент для Windows на C#/.NET. Он будет запускаться непосредственно в Windows, а не внутри Docker.

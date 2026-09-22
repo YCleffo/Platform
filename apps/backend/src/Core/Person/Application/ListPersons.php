@@ -10,11 +10,8 @@ final readonly class ListPersons
         private PersonRepository $repository,
     ) {}
 
-    /**
-     * @return list<PersonView>
-     */
-    public function execute(): array
+    public function execute(int $limit, int $offset): PersonPage
     {
-        return $this->repository->findAll();
+        return $this->repository->findPage($limit, $offset);
     }
 }

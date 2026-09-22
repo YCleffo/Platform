@@ -24,6 +24,7 @@ return (new Configuration())
 
     ->ignoreErrorsOnPackages(
         [
+            'psr/container',
             'yiisoft/di',
             'yiisoft/data',
         ],
@@ -34,10 +35,8 @@ return (new Configuration())
 
     ->ignoreErrorsOnPackages(
         [
-            'psr/container',
             'yiisoft/config',
             'yiisoft/aliases',
-            'yiisoft/request-provider',
             'yiisoft/router-fastroute',
             'yiisoft/cache',
             'yiisoft/yii-console',

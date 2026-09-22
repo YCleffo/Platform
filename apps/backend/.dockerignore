@@ -3,6 +3,10 @@
 
 # Runtime configuration.
 !/docker/**/Caddyfile
+!/docker/php/*.ini
+
+# Local test diagnostics are sensitive generated artifacts.
+/tests/_output/
 
 # Application source required by the production image.
 !/config

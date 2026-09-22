@@ -1,3 +1,3 @@
-# TLS / certificate tooling
+# TLS / инструменты работы с сертификатами
 
-Production concern; intentionally inactive in phase 1.
+Относится к промышленному окружению; намеренно не используется на этапе 1.

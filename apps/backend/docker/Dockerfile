@@ -28,6 +28,8 @@ RUN install-php-extensions \
 
 ENV LC_ALL=C.UTF-8
 
+COPY docker/php/security.ini /usr/local/etc/php/conf.d/zz-security.ini
+
 
 # ---------------------------------------------------------------------
 # Development image
@@ -89,6 +91,8 @@ RUN --mount=type=cache,target=/tmp/cache \
 FROM base AS prod
 
 ENV APP_ENV=prod
+
+COPY docker/php/production.ini /usr/local/etc/php/conf.d/zz-production.ini
 
 WORKDIR /app
 

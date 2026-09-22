@@ -1,3 +1,3 @@
 # Frontend
 
-Vue 3 + TypeScript will live here. Not bootstrapped in phase 1.
+Здесь будет размещён frontend на Vue 3 и TypeScript. На этапе 1 проект ещё не инициализирован.

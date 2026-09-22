@@ -1,3 +1,3 @@
 # Centrifugo
 
-Realtime transport will be added after Core API/auth is operational.
+Транспорт реального времени будет добавлен после запуска Core API и аутентификации.

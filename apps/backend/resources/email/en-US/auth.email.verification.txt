@@ -1,0 +1,4 @@
+Hello, {{ displayName }}!
+
+Verify your email address to finish setting up your account:
+{{ actionUrl }}

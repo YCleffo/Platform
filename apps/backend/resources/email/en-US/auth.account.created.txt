@@ -1,0 +1,4 @@
+Hello, {{ displayName }}!
+
+Your account has been created successfully.
+Sign in: {{ signInUrl }}

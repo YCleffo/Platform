@@ -1,19 +1,19 @@
-# Modularity rules
+# Правила модульности
 
-These are project laws, not suggestions.
+Это обязательные правила проекта, а не рекомендации.
 
-1. **Core is universal.** It contains no education, game, chat, file, device or product-specific entities.
-2. **Dependency direction is toward Core:** `Education -> Core`, `Games -> Core`, etc. Never `Core -> Games`.
-3. A module owns its data, business rules and infrastructure adapters.
-4. One module must not directly manipulate another module's internal tables as an implementation shortcut.
-5. Cross-module collaboration goes through application APIs/ports or domain/integration events.
-6. Replaceable external technologies sit behind provider/port interfaces where replacement is plausible.
-7. PostgreSQL is deliberately the transactional source of truth. We do not pretend swapping the primary relational database is a routine requirement.
-8. Redis is ephemeral infrastructure, not business source of truth.
-9. Technical telemetry does not go into Core audit tables.
-10. Optional modules must be removable/disableable without collapsing Core.
+1. **Core универсален.** В нём нет сущностей образования, игр, чатов, файлов, устройств и конкретных продуктов.
+2. **Зависимости направлены к Core:** `Education -> Core`, `Games -> Core` и т. д. Направление `Core -> Games` недопустимо.
+3. Модуль владеет своими данными, бизнес-правилами и инфраструктурными адаптерами.
+4. Модуль не должен напрямую изменять внутренние таблицы другого модуля в качестве короткого пути реализации.
+5. Взаимодействие между модулями проходит через API/порты приложения или доменные/интеграционные события.
+6. Заменяемые внешние технологии скрываются за интерфейсами provider/port, если замена практически возможна.
+7. PostgreSQL намеренно выбран источником истины для транзакционных данных. Замена основной реляционной БД не считается обычным требованием.
+8. Redis — временная инфраструктура, а не источник бизнес-данных.
+9. Техническая телеметрия не записывается в таблицы аудита Core.
+10. Необязательные модули должны отключаться или удаляться без разрушения Core.
 
-## Conceptual dependency
+## Концептуальные зависимости
 
 ```text
 Education ----\

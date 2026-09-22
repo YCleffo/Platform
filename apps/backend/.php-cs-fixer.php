@@ -15,6 +15,10 @@ $finder = (new Finder())
         $root . '/src',
         $root . '/tests',
     ])
+    ->exclude([
+        'Support/_generated',
+        '_output',
+    ])
     ->append([
         $root . '/public/index.php',
     ]);

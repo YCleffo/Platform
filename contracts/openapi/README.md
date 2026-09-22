@@ -1,3 +1,3 @@
-# OpenAPI contracts
+# Контракты OpenAPI
 
-Module API contracts will be stored here as they become stable.
+Здесь будут храниться контракты API модулей по мере их стабилизации.

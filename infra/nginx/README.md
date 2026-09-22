@@ -1,3 +1,3 @@
 # Nginx
 
-Added when HTTP routing/frontend/backend are enabled. Not needed for database phase 1.
+Будет добавлен при включении HTTP-маршрутизации, frontend и backend. Для этапа 1, посвящённого базе данных, не требуется.

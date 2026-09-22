@@ -6,8 +6,13 @@ namespace App\Core\Person\Application;
 
 interface PersonRepository
 {
-    /**
-     * @return list<PersonView>
-     */
-    public function findAll(): array;
+    public function findPage(int $limit, int $offset): PersonPage;
+
+    public function findById(string $id): ?PersonView;
+
+    public function create(CreatePersonCommand $command): PersonView;
+
+    public function update(UpdatePersonCommand $command): ?PersonView;
+
+    public function archive(string $id): ?PersonView;
 }
