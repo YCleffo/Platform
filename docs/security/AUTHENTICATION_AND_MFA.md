@@ -82,22 +82,47 @@ Outbox. Новый TOTP автоматически не создаётся. Pass
 Background security notification использует сохранённую `accounts.locale`, а при её отсутствии —
 `APP_DEFAULT_LOCALE`. Каноническая locale фиксируется в Outbox до commit и не пересчитывается worker-ом.
 
+## MFA Recovery Assurance Levels
+
+В Platform действуют строгие уровни подтверждения при сбросе MFA (MFA Recovery Assurance Levels):
+
+### 1. Password account
+```text
+verified recovery email + current password -> MFA reset
+```
+Для учётной записи с установленным паролем сброс MFA требует подтверждения одноразового токена из письма на верифицированный email и ввода действующего пароля.
+
+### 2. External-only account
+```text
+verified recovery email -> email recovery token -> linked provider reauthentication -> MFA reset
+```
+Для аккаунтов без пароля, использующих внешнюю аутентификацию (Google/Telegram OIDC): владение recovery email само по себе **не даёт** права отключить TOTP, если существует доступная привязанная внешняя identity.
+После подтверждения recovery email система переходит в контролируемое состояние `external_reauth_required` и требует обязательной повторной аутентификации через одного из привязанных провайдеров (`POST /api/auth/mfa/recovery/external/{provider}/start` и callback).
+При этом:
+- Reauthentication строго проверяет принадлежность провайдерского `sub`/subject именно восстанавливаемому аккаунту (`auth_external_identities.account_id == recovery_account_id`).
+- Попытка использовать чужой Google/Telegram аккаунт или автопривязка по email категорически запрещены и блокируются.
+- Recovery reauthentication **не выпускает сессию** и не выдаёт access/refresh токены; это исключительно proof для завершения процедуры сброса MFA.
+
+### 3. No remaining authentication method
+```text
+manual / additional recovery required
+```
+Если у аккаунта отсутствует пароль и нет доступных привязанных внешних провайдеров, одного лишь письма недостаточно для тихого сброса MFA. API возвращает контролируемый результат `additional_recovery_required` без утечки деталей аккаунта анонимному клиенту.
+
 ## Threat model и секреты
 
-- TLS защищает transport, но не скрывает payload от владельца браузера и DevTools; custom JSON encryption
-  поверх HTTPS запрещено.
-- OAuth state защищает browser flow от CSRF, nonce — от replay ID token, PKCE — от перехвата code.
-- Provider URLs и issuer не поступают из request, что закрывает SSRF/discovery substitution.
-- Auth API использует `Cache-Control: no-store`; permissive CORS не вводится.
-- Audit/log/API не получают password, raw token/challenge, TOTP ciphertext/plaintext, recovery hashes,
-  provider tokens или client secrets. Callback query string должен редактироваться/исключаться в access
-  logs reverse proxy; приложение не пишет query/body в логи.
-- Redis rate limits разделены для external start/callback, MFA challenge/IP, setup confirm, provider link,
-  recovery-code попыток и email recovery. Защитные endpoints fail closed при недоступности limiter.
-
-Production требует валидный Base64 32-byte encryption key. `db:check` проверяет конфигурацию Google и
-Telegram, если соответствующий provider включён в БД. Для локальной разработки разрешён отдельный
-детерминированный dev-only key; он запрещён в production.
+- **Mailbox compromise**: компрометация почтового ящика недостаточна для сброса MFA — требуется второй фактор (текущий пароль для password-аккаунтов либо владение привязанным Google/Telegram аккаунтом для external-only аккаунтов).
+- **OAuth account mismatch / Provider identity substitution**: при recovery callback проверяется authoritative provider `sub`, сопоставленный с существующей записью `core.auth_external_identities`. Чужой аккаунт провайдера отклоняется, привязка нового провайдера во время recovery запрещена, перемещение identity невозможно.
+- **Automatic email-based account linking**: совпадение email провайдера с локальным recovery email никогда не считается подтверждением identity.
+- **MFA bypass via recovery**: сброс MFA немедленно отзывает все активные факторы, аннулирует резервные коды, отменяет все активные challenges, инвалидирует все существующие сессии через ротацию `security_stamp` и отправляет security notification на verified email.
+- **Recovery callback replay**: одноразовые токены email challenge, state и authorization code single-use; повторный callback отклоняется.
+- **Session issuance boundary**: recovery flow полностью отделён от login flow; provider callback с purpose `mfa_recovery_reauth` никогда не вызывает `SessionIssuer` и не создаёт сессий.
+- **Stale auth artifact accumulation**: периодический cleanup удаляет устаревшие challenges, неактуальные recovery codes и просроченные unverified TOTP setup без удаления активных данных.
+- **TLS и транспорт**: TLS защищает transport, но не скрывает payload от владельца браузера и DevTools; custom JSON encryption поверх HTTPS запрещено.
+- **OAuth state, nonce, PKCE**: OAuth state защищает browser flow от CSRF, nonce — от replay ID token, PKCE — от перехвата code.
+- **Provider URLs и issuer**: не поступают из request, что закрывает SSRF/discovery substitution.
+- **Audit/log/API не получают secrets**: пароли, raw tokens, TOTP secrets, recovery-code hashes, ID tokens, access tokens и client secrets не логируются и не передаются в Audit metadata.
+- **Rate limiting**: fail-closed лимиты разделены для external login, recovery start, callback, setup confirm и IP.
 
 ## API
 
@@ -105,6 +130,7 @@ Telegram, если соответствующий provider включён в Б�
 - `GET /api/auth/providers`, `POST /api/auth/external/{provider}/start`, callback;
 - `GET /api/auth/me/identities`, link start/callback, unlink;
 - `GET /api/auth/mfa`, TOTP setup/confirm/disable, recovery-code regenerate;
-- `POST /api/auth/mfa/recovery/request`, `POST /api/auth/mfa/recovery/confirm`.
+- `POST /api/auth/mfa/recovery/request`, `POST /api/auth/mfa/recovery/confirm`;
+- `POST /api/auth/mfa/recovery/external/{provider}/start`, `GET /api/auth/mfa/recovery/external/{provider}/callback`.
 
 Все self-service endpoints берут Account только из `AuthenticatedIdentity` и не требуют admin RBAC.

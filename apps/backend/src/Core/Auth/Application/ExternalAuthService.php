@@ -314,14 +314,8 @@ final readonly class ExternalAuthService
         if ($provider === null || $identity === null) {
             throw new ExternalAuthenticationException();
         }
-        $remaining = $this->identities->countByAccount($accountId) - 1;
-        if ($this->passwords->findByAccountId($accountId) !== null) {
-            ++$remaining;
-        }
-        $remaining += count($this->passkeys->findActivePasskeysByAccountId($accountId));
-        if ($remaining < 1) {
-            throw new ExternalIdentityLastMethodException();
-        }
+        $methodsPolicy = new AccountAuthenticationMethodsPolicy($this->passwords, $this->identities, $this->passkeys);
+        $methodsPolicy->assertCanUnlinkIdentity($accountId);
         $this->db->transaction(function () use ($accountId, $provider, $identity, $providerCode, $context): void {
             if ($this->identities->unlink($accountId, $provider->id) === null) {
                 throw new ExternalAuthenticationException();

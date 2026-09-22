@@ -20,5 +20,12 @@ final readonly class Passkey
         public string $createdAt,
         public ?string $lastUsedAt,
         public ?string $revokedAt,
+        public bool $backupEligible = false,
+        public bool $backupState = false,
     ) {}
+
+    public function isActive(): bool
+    {
+        return $this->revokedAt === null;
+    }
 }

@@ -31,6 +31,9 @@ final readonly class AuthRateLimitPolicy
         public int $providerLinkLimit,
         public int $recoveryCodeLimit,
         public int $securityWindowSeconds,
+        public int $passkeyAuthStartLimit = 20,
+        public int $passkeyAuthCompleteLimit = 10,
+        public int $passkeyRegisterCompleteLimit = 10,
     ) {
         foreach (get_object_vars($this) as $value) {
             if ($value < 1) {

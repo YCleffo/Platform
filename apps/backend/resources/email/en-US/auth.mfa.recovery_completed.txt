@@ -1,1 +1,1 @@
-MFA was reset for your Platform account. All sessions and recovery codes were revoked. Sign in again.
+MFA was reset for your Platform account. All sessions and recovery codes were revoked. Sign in again. If you did not perform this action, contact support or security immediately.

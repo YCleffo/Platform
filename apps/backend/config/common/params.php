@@ -135,6 +135,12 @@ return [
                 'redirectUri' => $nullableEnv('AUTH_TELEGRAM_REDIRECT_URI'),
             ],
         ],
+        'webauthn' => [
+            'rpId' => $envOr('AUTH_WEBAUTHN_RP_ID', 'localhost'),
+            'rpName' => $envOr('AUTH_WEBAUTHN_RP_NAME', 'Platform'),
+            'origins' => array_values(array_filter(array_map('trim', explode(',', $envOr('AUTH_WEBAUTHN_ORIGINS', 'http://localhost:5173,http://localhost:8080'))))),
+            'challengeTtlSeconds' => (int) $envOr('AUTH_WEBAUTHN_CHALLENGE_TTL_SECONDS', '300'),
+        ],
         'rateLimit' => [
             'loginIpLimit' => (int) $envOr('AUTH_LOGIN_IP_LIMIT', '30'),
             'loginIdentifierLimit' => (int) $envOr('AUTH_LOGIN_IDENTIFIER_LIMIT', '10'),
@@ -158,6 +164,9 @@ return [
             'providerLinkLimit' => (int) $envOr('AUTH_PROVIDER_LINK_LIMIT', '10'),
             'recoveryCodeLimit' => (int) $envOr('AUTH_RECOVERY_CODE_LIMIT', '5'),
             'securityWindowSeconds' => (int) $envOr('AUTH_SECURITY_WINDOW_SECONDS', '900'),
+            'passkeyAuthStartLimit' => (int) $envOr('AUTH_PASSKEY_AUTH_START_LIMIT', '20'),
+            'passkeyAuthCompleteLimit' => (int) $envOr('AUTH_PASSKEY_AUTH_COMPLETE_LIMIT', '10'),
+            'passkeyRegisterCompleteLimit' => (int) $envOr('AUTH_PASSKEY_REGISTER_COMPLETE_LIMIT', '10'),
         ],
     ],
 

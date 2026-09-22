@@ -27,15 +27,12 @@ final class AuthCleanupCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $report = $this->repository->cleanup($this->policy);
-        $output->writeln(sprintf(
-            'expired_challenges=%d consumed_challenges=%d cancelled_challenges=%d recovery_codes=%d pending_totp=%d total=%d',
-            $report->expiredChallenges,
-            $report->consumedChallenges,
-            $report->cancelledChallenges,
-            $report->recoveryCodes,
-            $report->pendingTotpFactors,
-            $report->total(),
-        ));
+        $output->writeln(sprintf('Expired challenges removed: %d', $report->expiredChallenges));
+        $output->writeln(sprintf('Consumed challenges removed: %d', $report->consumedChallenges));
+        $output->writeln(sprintf('Cancelled challenges removed: %d', $report->cancelledChallenges));
+        $output->writeln(sprintf('Revoked/used recovery codes removed: %d', $report->recoveryCodes));
+        $output->writeln(sprintf('Expired TOTP setups removed: %d', $report->pendingTotpFactors));
+        $output->writeln(sprintf('Total removed: %d', $report->total()));
         return Command::SUCCESS;
     }
 }

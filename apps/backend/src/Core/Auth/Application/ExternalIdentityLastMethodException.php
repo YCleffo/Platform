@@ -4,6 +4,4 @@ declare(strict_types=1);
 
 namespace App\Core\Auth\Application;
 
-use RuntimeException;
-
-final class ExternalIdentityLastMethodException extends RuntimeException {}
+final class ExternalIdentityLastMethodException extends LastAuthenticationMethodException {}

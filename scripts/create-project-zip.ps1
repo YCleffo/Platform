@@ -34,7 +34,7 @@ if (-not (Test-Path -LiteralPath $ArchiveDirectory -PathType Container)) {
         -ItemType Directory `
         -Force `
         -Path $ArchiveDirectory |
-        Out-Null
+    Out-Null
 }
 
 if (Test-Path -LiteralPath $ArchivePath) {
@@ -62,16 +62,29 @@ function Test-ExcludedProjectFile {
         return $true
     }
 
-    # Secrets
-    if ($fileName -eq ".env") {
+    # Secrets: .env, .env.local, .env.*.local (never exclude .env.example)
+    if (
+        $fileName -eq ".env" -or
+        $fileName -match '^\.env(\..+)?\.local$'
+    ) {
         return $true
     }
 
-    # Previously generated project archives:
-    # Platform-20260921-221445.zip
-    $archivePattern = "^$([regex]::Escape($ProjectName))-\d{8}-\d{6}\.zip$"
+    # Database dumps and compressed dumps
+    if (
+        $fileName.EndsWith(".dump", [StringComparison]::OrdinalIgnoreCase) -or
+        $fileName.EndsWith(".sql.gz", [StringComparison]::OrdinalIgnoreCase)
+    ) {
+        return $true
+    }
 
-    if ($RelativePath -match $archivePattern) {
+    # Any zip archives inside the project tree
+    if ($fileName.EndsWith(".zip", [StringComparison]::OrdinalIgnoreCase)) {
+        return $true
+    }
+
+    # Generated log files
+    if ($fileName.EndsWith(".log", [StringComparison]::OrdinalIgnoreCase)) {
         return $true
     }
 
@@ -91,8 +104,11 @@ function Test-ExcludedProjectFile {
 
         if (
             $segment -eq ".git" -or
-            # $segment -eq "vendor" -or
-            # $segment -eq "runtime"
+            $segment -eq "vendor" -or
+            $segment -eq "runtime" -or
+            $segment -eq "node_modules" -or
+            $segment -eq "dist" -or
+            $segment -eq "backups"
         ) {
             return $true
         }

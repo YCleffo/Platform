@@ -380,6 +380,33 @@ final readonly class PostgresAuthRepository implements
         )->queryScalar();
     }
 
+    public function findById(string $id): ?Passkey
+    {
+        $row = $this->db->createCommand(
+            <<<'SQL'
+            SELECT
+                id::text AS id,
+                account_id::text AS account_id,
+                encode(credential_id, 'hex') AS credential_id_hex,
+                encode(public_key, 'hex') AS public_key_hex,
+                sign_count,
+                aaguid::text AS aaguid,
+                to_json(transports)::text AS transports,
+                label,
+                to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+                to_char(last_used_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS last_used_at,
+                to_char(revoked_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS revoked_at,
+                backup_eligible,
+                backup_state
+            FROM core.auth_passkeys
+            WHERE id = CAST(:id AS uuid)
+            SQL,
+            [':id' => $id],
+        )->queryOne();
+
+        return is_array($row) ? self::passkey($row) : null;
+    }
+
     public function findByCredentialIdHex(string $credentialIdHex): ?Passkey
     {
         $row = $this->db->createCommand(
@@ -395,7 +422,9 @@ final readonly class PostgresAuthRepository implements
                 label,
                 to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
                 to_char(last_used_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS last_used_at,
-                to_char(revoked_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS revoked_at
+                to_char(revoked_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS revoked_at,
+                backup_eligible,
+                backup_state
             FROM core.auth_passkeys
             WHERE credential_id = decode(:credential_id_hex, 'hex')
             SQL,
@@ -420,7 +449,9 @@ final readonly class PostgresAuthRepository implements
                 label,
                 to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
                 to_char(last_used_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS last_used_at,
-                to_char(revoked_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS revoked_at
+                to_char(revoked_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS revoked_at,
+                backup_eligible,
+                backup_state
             FROM core.auth_passkeys
             WHERE account_id = CAST(:account_id AS uuid) AND revoked_at IS NULL
             ORDER BY created_at, id
@@ -430,6 +461,184 @@ final readonly class PostgresAuthRepository implements
 
         /** @var list<array<array-key, mixed>> $rows */
         return array_map(self::passkey(...), $rows);
+    }
+
+    public function findAllByAccountId(string $accountId): array
+    {
+        $rows = $this->db->createCommand(
+            <<<'SQL'
+            SELECT
+                id::text AS id,
+                account_id::text AS account_id,
+                encode(credential_id, 'hex') AS credential_id_hex,
+                encode(public_key, 'hex') AS public_key_hex,
+                sign_count,
+                aaguid::text AS aaguid,
+                to_json(transports)::text AS transports,
+                label,
+                to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+                to_char(last_used_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS last_used_at,
+                to_char(revoked_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS revoked_at,
+                backup_eligible,
+                backup_state
+            FROM core.auth_passkeys
+            WHERE account_id = CAST(:account_id AS uuid)
+            ORDER BY created_at, id
+            SQL,
+            [':account_id' => $accountId],
+        )->queryAll();
+
+        /** @var list<array<array-key, mixed>> $rows */
+        return array_map(self::passkey(...), $rows);
+    }
+
+    public function create(
+        string $accountId,
+        string $credentialIdHex,
+        string $publicKeyHex,
+        int $signCount,
+        ?string $aaguid,
+        array $transports,
+        ?string $label,
+        bool $backupEligible,
+        bool $backupState,
+    ): Passkey {
+        $validAaguid = null;
+        if ($aaguid !== null && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $aaguid) === 1) {
+            $validAaguid = $aaguid;
+        }
+
+        try {
+            $row = $this->db->createCommand(
+                <<<'SQL'
+                INSERT INTO core.auth_passkeys (
+                    account_id,
+                    credential_id,
+                    public_key,
+                    sign_count,
+                    aaguid,
+                    transports,
+                    label,
+                    backup_eligible,
+                    backup_state
+                )
+                VALUES (
+                    CAST(:account_id AS uuid),
+                    decode(:credential_id_hex, 'hex'),
+                    decode(:public_key_hex, 'hex'),
+                    :sign_count,
+                    CASE WHEN :aaguid IS NULL THEN NULL ELSE CAST(:aaguid AS uuid) END,
+                    ARRAY(SELECT json_array_elements_text(CAST(:transports_json AS json))),
+                    :label,
+                    :backup_eligible,
+                    :backup_state
+                )
+                RETURNING
+                    id::text AS id,
+                    account_id::text AS account_id,
+                    encode(credential_id, 'hex') AS credential_id_hex,
+                    encode(public_key, 'hex') AS public_key_hex,
+                    sign_count,
+                    aaguid::text AS aaguid,
+                    to_json(transports)::text AS transports,
+                    label,
+                    to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+                    to_char(last_used_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS last_used_at,
+                    to_char(revoked_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS revoked_at,
+                    backup_eligible,
+                    backup_state
+                SQL,
+                [
+                    ':account_id' => $accountId,
+                    ':credential_id_hex' => $credentialIdHex,
+                    ':public_key_hex' => $publicKeyHex,
+                    ':sign_count' => $signCount,
+                    ':aaguid' => $validAaguid,
+                    ':transports_json' => json_encode(array_values($transports), JSON_THROW_ON_ERROR),
+                    ':label' => $label,
+                    ':backup_eligible' => $backupEligible ? 't' : 'f',
+                    ':backup_state' => $backupState ? 't' : 'f',
+                ],
+            )->queryOne();
+        } catch (IntegrityException $exception) {
+            throw new ConflictException('Passkey credential already registered.', previous: $exception);
+        }
+
+        if (!is_array($row)) {
+            throw new RuntimeException('PostgreSQL did not return the stored passkey.');
+        }
+
+        return self::passkey($row);
+    }
+
+    public function updateLabel(string $id, string $accountId, ?string $label): ?Passkey
+    {
+        $row = $this->db->createCommand(
+            <<<'SQL'
+            UPDATE core.auth_passkeys
+            SET label = :label
+            WHERE id = CAST(:id AS uuid)
+              AND account_id = CAST(:account_id AS uuid)
+              AND revoked_at IS NULL
+            RETURNING
+                id::text AS id,
+                account_id::text AS account_id,
+                encode(credential_id, 'hex') AS credential_id_hex,
+                encode(public_key, 'hex') AS public_key_hex,
+                sign_count,
+                aaguid::text AS aaguid,
+                to_json(transports)::text AS transports,
+                label,
+                to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+                to_char(last_used_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS last_used_at,
+                to_char(revoked_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS revoked_at,
+                backup_eligible,
+                backup_state
+            SQL,
+            [
+                ':id' => $id,
+                ':account_id' => $accountId,
+                ':label' => $label,
+            ],
+        )->queryOne();
+
+        return is_array($row) ? self::passkey($row) : null;
+    }
+
+    public function recordUsage(string $id, int $signCount, bool $backupState): void
+    {
+        $this->db->createCommand(
+            <<<'SQL'
+            UPDATE core.auth_passkeys
+            SET
+                sign_count = :sign_count,
+                backup_state = :backup_state,
+                last_used_at = now()
+            WHERE id = CAST(:id AS uuid)
+            SQL,
+            [
+                ':id' => $id,
+                ':sign_count' => $signCount,
+                ':backup_state' => $backupState ? 't' : 'f',
+            ],
+        )->execute();
+    }
+
+    public function revoke(string $id, string $accountId): bool
+    {
+        return $this->db->createCommand(
+            <<<'SQL'
+            UPDATE core.auth_passkeys
+            SET revoked_at = now()
+            WHERE id = CAST(:id AS uuid)
+              AND account_id = CAST(:account_id AS uuid)
+              AND revoked_at IS NULL
+            SQL,
+            [
+                ':id' => $id,
+                ':account_id' => $accountId,
+            ],
+        )->execute() === 1;
     }
 
     public function findActiveByAccountId(string $accountId): array
@@ -1417,6 +1626,8 @@ final readonly class PostgresAuthRepository implements
             (string) $row['created_at'],
             self::nullableString($row['last_used_at']),
             self::nullableString($row['revoked_at']),
+            self::boolean($row['backup_eligible'] ?? false),
+            self::boolean($row['backup_state'] ?? false),
         );
     }
 

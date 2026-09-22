@@ -63,17 +63,17 @@ powershell -ExecutionPolicy Bypass -File .\scripts\first-start.ps1
 
 ## 4. DBeaver
 
-По умолчанию `.env.example` содержит:
+Параметры подключения:
 
 ```text
 Host:     localhost
 Port:     5432
 Database: platform
 User:     platform_app
-Password: dev_platform_password_change_me
+Password: read POSTGRES_PASSWORD from .env
 ```
 
-Если поменял `.env`, используй значения уже из него.
+Значение `POSTGRES_PASSWORD` генерируется автоматически при первом запуске в `.env`. Используй значение из твоего `.env`.
 
 После подключения смотри:
 

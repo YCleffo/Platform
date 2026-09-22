@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Auth\Application;
 
 use App\Core\Account\Application\AccountRepository;
+use App\Core\Security\Application\IdentifierDigestService;
 use InvalidArgumentException;
 
 final readonly class TotpProvisioningPolicy
@@ -14,11 +15,12 @@ final readonly class TotpProvisioningPolicy
     public function __construct(
         private IdentifierRepository $identifiers,
         private AccountRepository $accounts,
+        private IdentifierDigestService $digests,
         string $issuer,
     ) {
-        $issuer = trim($issuer);
-        if ($issuer === '' || mb_strlen($issuer) > 64 || preg_match('/[\x00-\x1F\x7F]/u', $issuer) === 1) {
-            throw new InvalidArgumentException('TOTP issuer must contain 1-64 printable characters.');
+        $issuer = trim(preg_replace('/[\x00-\x1F\x7F]/u', '', str_replace(':', '', $issuer)) ?? '');
+        if ($issuer === '' || mb_strlen($issuer) > 64) {
+            throw new InvalidArgumentException('TOTP issuer must contain 1-64 printable characters and no colons.');
         }
         $this->issuer = $issuer;
     }
@@ -27,20 +29,40 @@ final readonly class TotpProvisioningPolicy
     {
         $recoveryEmail = $this->identifiers->findRecoveryEmailByAccount($accountId);
         if ($recoveryEmail !== null) {
-            return $recoveryEmail->value;
+            $sanitized = $this->sanitizeLabel($recoveryEmail->value);
+            if ($sanitized !== null) {
+                return $sanitized;
+            }
         }
         $identifier = $this->identifiers->findDisplayIdentifierByAccount($accountId);
         if ($identifier !== null) {
-            return $identifier->value;
+            $sanitized = $this->sanitizeLabel($identifier->value);
+            if ($sanitized !== null) {
+                return $sanitized;
+            }
         }
-        $accountLabel = trim($this->accounts->findById($accountId)?->label ?? '');
-        if ($accountLabel !== '') {
-            return $accountLabel;
+        $account = $this->accounts->findById($accountId);
+        if ($account !== null && $account->label !== null) {
+            $sanitized = $this->sanitizeLabel($account->label);
+            if ($sanitized !== null) {
+                return $sanitized;
+            }
         }
-        $compactId = preg_replace('/[^a-f0-9]/i', '', $accountId);
-        if (is_string($compactId) && strlen($compactId) >= 8) {
-            return 'account-' . substr($compactId, 0, 12);
+
+        $digest = substr($this->digests->digest('totp_label:' . $accountId), 0, 16);
+        return 'account-' . $digest;
+    }
+
+    private function sanitizeLabel(string $candidate): ?string
+    {
+        $sanitized = preg_replace('/[\x00-\x1F\x7F]/u', '', $candidate);
+        if ($sanitized === null) {
+            return null;
         }
-        return $accountId;
+        $sanitized = trim(str_replace(':', '', $sanitized));
+        if ($sanitized === '') {
+            return null;
+        }
+        return mb_substr($sanitized, 0, 160);
     }
 }

@@ -111,8 +111,7 @@ final readonly class MfaRecoveryService
         string $rawToken,
         ?string $password,
         ClientContext $context,
-    ): MfaRecoveryConfirmationResult
-    {
+    ): MfaRecoveryConfirmationResult {
         if (!$this->tokens->hasValidFormat($rawToken)) {
             throw new MfaVerificationException();
         }

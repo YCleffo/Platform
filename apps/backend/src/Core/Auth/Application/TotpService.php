@@ -18,7 +18,7 @@ final readonly class TotpService
 
     public function provisioningUri(string $issuer, string $accountLabel, string $base32Secret): string
     {
-        $label = rawurlencode($issuer . ':' . $accountLabel);
+        $label = rawurlencode($issuer) . ':' . rawurlencode($accountLabel);
         return sprintf(
             'otpauth://totp/%s?secret=%s&issuer=%s&algorithm=SHA1&digits=6&period=30',
             $label,

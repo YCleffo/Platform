@@ -51,6 +51,14 @@ final class SecurityAction
     public const MFA_RECOVERY_EXTERNAL_REAUTH_SUCCEEDED = 'auth.mfa_recovery.external_reauth_succeeded';
     public const MFA_RECOVERY_EXTERNAL_REAUTH_FAILED = 'auth.mfa_recovery.external_reauth_failed';
     public const SUSPICIOUS_ACTIVITY = 'auth.suspicious_activity';
+    public const PASSKEY_REGISTRATION_STARTED = 'auth.passkey_registration.started';
+    public const PASSKEY_REGISTRATION_COMPLETED = 'auth.passkey_registration.completed';
+    public const PASSKEY_REGISTRATION_FAILED = 'auth.passkey_registration.failed';
+    public const PASSKEY_AUTHENTICATION_SUCCEEDED = 'auth.passkey_authentication.succeeded';
+    public const PASSKEY_AUTHENTICATION_FAILED = 'auth.passkey_authentication.failed';
+    public const PASSKEY_RENAMED = 'auth.passkey.renamed';
+    public const PASSKEY_REVOKED = 'auth.passkey.revoked';
+    public const PASSKEY_COUNTER_ANOMALY = 'auth.passkey.counter_anomaly';
 
     /** @return non-empty-list<string> */
     public static function all(): array
@@ -101,6 +109,14 @@ final class SecurityAction
             self::MFA_RECOVERY_EXTERNAL_REAUTH_SUCCEEDED,
             self::MFA_RECOVERY_EXTERNAL_REAUTH_FAILED,
             self::SUSPICIOUS_ACTIVITY,
+            self::PASSKEY_REGISTRATION_STARTED,
+            self::PASSKEY_REGISTRATION_COMPLETED,
+            self::PASSKEY_REGISTRATION_FAILED,
+            self::PASSKEY_AUTHENTICATION_SUCCEEDED,
+            self::PASSKEY_AUTHENTICATION_FAILED,
+            self::PASSKEY_RENAMED,
+            self::PASSKEY_REVOKED,
+            self::PASSKEY_COUNTER_ANOMALY,
         ];
     }
 }
