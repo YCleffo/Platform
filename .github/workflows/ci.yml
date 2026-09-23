@@ -11,6 +11,7 @@ jobs:
     name: Backend Quality Assurance & Test Isolation
     runs-on: ubuntu-latest
     env:
+      POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
       POSTGRES_USER: platform_app
       POSTGRES_PASSWORD: platform_ci_test_password
@@ -49,7 +50,7 @@ jobs:
 
       - name: Start Isolated Test Infrastructure
         run: |
-          ./scripts/test-start.sh
+          bash ./scripts/test-start.sh
 
       - name: Verify Core Base Table Count (Strictly 23 Tables)
         run: |
@@ -83,4 +84,4 @@ jobs:
       - name: Stop Test Infrastructure
         if: always()
         run: |
-          ./scripts/test-stop.sh
+          bash ./scripts/test-stop.sh
