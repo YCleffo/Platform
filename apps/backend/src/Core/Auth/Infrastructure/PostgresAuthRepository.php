@@ -382,6 +382,10 @@ final readonly class PostgresAuthRepository implements
 
     public function findById(string $id): ?Passkey
     {
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id) !== 1) {
+            return null;
+        }
+
         $row = $this->db->createCommand(
             <<<'SQL'
             SELECT
@@ -527,7 +531,7 @@ final readonly class PostgresAuthRepository implements
                     decode(:credential_id_hex, 'hex'),
                     decode(:public_key_hex, 'hex'),
                     :sign_count,
-                    CASE WHEN :aaguid IS NULL THEN NULL ELSE CAST(:aaguid AS uuid) END,
+                    CAST(:aaguid AS text)::uuid,
                     ARRAY(SELECT json_array_elements_text(CAST(:transports_json AS json))),
                     :label,
                     :backup_eligible,
@@ -554,7 +558,7 @@ final readonly class PostgresAuthRepository implements
                     ':public_key_hex' => $publicKeyHex,
                     ':sign_count' => $signCount,
                     ':aaguid' => $validAaguid,
-                    ':transports_json' => json_encode(array_values($transports), JSON_THROW_ON_ERROR),
+                    ':transports_json' => json_encode($transports, JSON_THROW_ON_ERROR),
                     ':label' => $label,
                     ':backup_eligible' => $backupEligible ? 't' : 'f',
                     ':backup_state' => $backupState ? 't' : 'f',
@@ -573,6 +577,12 @@ final readonly class PostgresAuthRepository implements
 
     public function updateLabel(string $id, string $accountId, ?string $label): ?Passkey
     {
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id) !== 1
+            || preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $accountId) !== 1
+        ) {
+            return null;
+        }
+
         $row = $this->db->createCommand(
             <<<'SQL'
             UPDATE core.auth_passkeys
@@ -607,6 +617,10 @@ final readonly class PostgresAuthRepository implements
 
     public function recordUsage(string $id, int $signCount, bool $backupState): void
     {
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id) !== 1) {
+            return;
+        }
+
         $this->db->createCommand(
             <<<'SQL'
             UPDATE core.auth_passkeys
@@ -624,8 +638,61 @@ final readonly class PostgresAuthRepository implements
         )->execute();
     }
 
-    public function revoke(string $id, string $accountId): bool
+    /**
+     * Compare-and-set update: only updates if the stored sign_count equals $expectedCounter.
+     * For hardware/non-synced passkeys this prevents a stale concurrent request from
+     * overwriting a newer counter value.
+     * Returns true if the row was updated (this request won), false otherwise.
+     */
+    public function recordUsageCompareSet(
+        string $id,
+        int $expectedCounter,
+        int $newCounter,
+        bool $newBackupState,
+    ): bool {
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id) !== 1) {
+            return false;
+        }
+
+        return $this->db->createCommand(
+            <<<'SQL'
+            UPDATE core.auth_passkeys
+            SET
+                sign_count = :new_count,
+                backup_state = :backup_state,
+                last_used_at = now()
+            WHERE id = CAST(:id AS uuid)
+              AND sign_count = :expected_count
+            SQL,
+            [
+                ':id' => $id,
+                ':expected_count' => $expectedCounter,
+                ':new_count' => $newCounter,
+                ':backup_state' => $newBackupState ? 't' : 'f',
+            ],
+        )->execute() === 1;
+    }
+
+    public function countActiveByAccountId(string $accountId): int
     {
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $accountId) !== 1) {
+            return 0;
+        }
+
+        return (int) $this->db->createCommand(
+            'SELECT count(*) FROM core.auth_passkeys WHERE account_id = CAST(:account_id AS uuid) AND revoked_at IS NULL',
+            [':account_id' => $accountId],
+        )->queryScalar();
+    }
+
+    public function revokePasskey(string $id, string $accountId): bool
+    {
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id) !== 1
+            || preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $accountId) !== 1
+        ) {
+            return false;
+        }
+
         return $this->db->createCommand(
             <<<'SQL'
             UPDATE core.auth_passkeys

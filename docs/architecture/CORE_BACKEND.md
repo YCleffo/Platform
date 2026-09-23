@@ -21,10 +21,10 @@ authentication/session runtime, а также защищённый configuration
 системных и модульных настроек и feature flags. Configuration routes требуют явных permissions;
 публичным без аутентификации является только фильтрованный `GET /api/public/config`.
 
-Authentication runtime включает password, Google OIDC и Telegram OIDC как first-factor adapters,
+Authentication runtime включает password, Google OIDC, Telegram OIDC и WebAuthn Passkeys (Level 3) как first-factor adapters,
 но ни один adapter не создаёт сессию самостоятельно. `AuthenticationFlowService` применяет account/MFA
 policy, а единственный `SessionIssuer` выдаёт opaque access/refresh tokens только после всех обязательных
-факторов. External login и explicit account linking используют разные одноразовые challenge purpose.
+факторов. External login, explicit account linking и passkey ceremonies используют разные одноразовые challenge purpose.
 
 Публичные представления Account не включают `security_stamp`, сведения о блокировке/входе,
 данные о создателе/подтверждающем и любые учётные данные. Auth API никогда не отдаёт hashes токенов,
@@ -58,6 +58,10 @@ email, phone, session token или fingerprint как rollout identity.
 - Записи Audit добавляются без возможности изменения; сервисов обновления/удаления нет.
 - Завершение MFA, привязка/отвязка внешней identity, включение/отключение TOTP, замена recovery codes
   и email-восстановление выполняются транзакционно вместе с Audit и Outbox notification.
+- Операции с Passkeys строго сериализованы: потребление challenge использует атомарный CAS gate, обновление
+  счетчика для аппаратных токенов защищено CAS условием `sign_count = :expected`, а отзыв passkey и отвязка identity
+  используют `CredentialMutationGuard` с блокировкой строки аккаунта `SELECT ... FOR UPDATE NOWAIT`, гарантируя
+  сохранение последнего метода аутентификации при любых параллельных запросах.
 
 Универсальный репозиторий и собственный менеджер транзакций не вводились. Общий
 код ограничен действительно сквозными задачами: пагинацией, проверкой UUID и

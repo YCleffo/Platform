@@ -278,6 +278,102 @@ final class AuthInput
         return $data;
     }
 
+    /** @return array{responseJson: string, label: ?string} */
+    public static function passkeyRegister(mixed $body): array
+    {
+        $data = self::object($body);
+        $result = new Result();
+
+        $label = null;
+        if (array_key_exists('label', $data)) {
+            if ($data['label'] !== null && !is_string($data['label'])) {
+                $result->addError(ApiMessage::VALIDATION_STRING_OR_NULL, valuePath: ['label']);
+            } elseif (is_string($data['label'])) {
+                $trimmed = trim($data['label']);
+                if (mb_strlen($trimmed, 'UTF-8') > 160) {
+                    $result->addError(ApiMessage::VALIDATION_MAX_LENGTH, ['max' => 160], valuePath: ['label']);
+                }
+                $label = $trimmed === '' ? null : $trimmed;
+            }
+        }
+
+        /** @var array<string, mixed> $credentialData */
+        if (isset($data['responseJson']) && is_string($data['responseJson'])) {
+            $decoded = json_decode($data['responseJson'], true);
+            $credentialData = is_array($decoded) ? $decoded : [];
+        } elseif (isset($data['credential']) && is_array($data['credential'])) {
+            $credentialData = $data['credential'];
+        } else {
+            $credentialData = $data;
+        }
+        unset($credentialData['label']);
+
+        if (!isset($credentialData['response']) || !is_array($credentialData['response'])) {
+            $result->addError(ApiMessage::VALIDATION_REQUIRED, valuePath: ['response']);
+        }
+
+        if (!$result->isValid()) {
+            throw new InputValidationException($result);
+        }
+
+        return [
+            'responseJson' => json_encode($credentialData, JSON_THROW_ON_ERROR),
+            'label' => $label,
+        ];
+    }
+
+    public static function passkeyAuthenticate(mixed $body): string
+    {
+        $data = self::object($body);
+        $result = new Result();
+
+        /** @var array<string, mixed> $credentialData */
+        if (isset($data['responseJson']) && is_string($data['responseJson'])) {
+            $decoded = json_decode($data['responseJson'], true);
+            $credentialData = is_array($decoded) ? $decoded : [];
+        } elseif (isset($data['credential']) && is_array($data['credential'])) {
+            $credentialData = $data['credential'];
+        } else {
+            $credentialData = $data;
+        }
+
+        if (!isset($credentialData['response']) || !is_array($credentialData['response'])) {
+            $result->addError(ApiMessage::VALIDATION_REQUIRED, valuePath: ['response']);
+        }
+
+        if (!$result->isValid()) {
+            throw new InputValidationException($result);
+        }
+
+        return json_encode($credentialData, JSON_THROW_ON_ERROR);
+    }
+
+    public static function passkeyRename(mixed $body): ?string
+    {
+        $data = self::object($body);
+        $result = new Result();
+        self::unknown($data, ['label'], $result);
+
+        $label = null;
+        if (array_key_exists('label', $data)) {
+            if ($data['label'] !== null && !is_string($data['label'])) {
+                $result->addError(ApiMessage::VALIDATION_STRING_OR_NULL, valuePath: ['label']);
+            } elseif (is_string($data['label'])) {
+                $trimmed = trim($data['label']);
+                if (mb_strlen($trimmed, 'UTF-8') > 160) {
+                    $result->addError(ApiMessage::VALIDATION_MAX_LENGTH, ['max' => 160], valuePath: ['label']);
+                }
+                $label = $trimmed === '' ? null : $trimmed;
+            }
+        }
+
+        if (!$result->isValid()) {
+            throw new InputValidationException($result);
+        }
+
+        return $label;
+    }
+
     /** @return array<string, mixed> */
     private static function object(mixed $body): array
     {

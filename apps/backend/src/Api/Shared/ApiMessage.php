@@ -52,6 +52,9 @@ final class ApiMessage
     public const string AUTH_EXTERNAL_INVALID = 'auth.external.invalid';
     public const string AUTH_IDENTITY_CONFLICT = 'auth.identity.conflict';
     public const string AUTH_LAST_METHOD = 'auth.identity.last_method';
+    public const string AUTH_PASSKEY_INVALID = 'auth.passkey.invalid';
+    public const string AUTH_PASSKEY_CONFLICT = 'auth.passkey.conflict';
+    public const string AUTH_PASSKEY_NOT_FOUND = 'auth.passkey.not_found';
 
     public const string ACCOUNT_INVALID_ID = 'account.invalid_id';
     public const string ACCOUNT_NOT_FOUND = 'account.not_found';

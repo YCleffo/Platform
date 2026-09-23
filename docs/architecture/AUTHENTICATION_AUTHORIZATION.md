@@ -9,7 +9,7 @@ authentication and authorization:
   lock, security-stamp, locale, and timezone state;
 - `auth_identifiers`, `auth_password_credentials`, `auth_sessions`, and
   `auth_challenges` are the authoritative credential/session stores;
-- passkey остаётся persistence foundation; TOTP, recovery-code и external-identity
+- passkey обслуживается полноценным WebAuthn Level 3 runtime (migration 014); TOTP, recovery-code и external-identity
   таблицы обслуживаются полноценным runtime;
 - `roles`, `permissions`, `role_permissions`, and `account_roles` implement the
   RBAC data model;
@@ -57,6 +57,12 @@ The same migration seeds the minimal Core permission vocabulary and grants it
 explicitly to `core.admin`. `core.superadmin` retains the existing centralized
 `PermissionService` bypass. No new table is required and the Core table count
 remains 23. Migrations `001` through `010` are immutable.
+
+Migration `014_passkey_runtime.sql` extends `core.auth_passkeys` with columns
+`transports text[]`, `backup_eligible boolean NOT NULL DEFAULT false`, and
+`backup_state boolean NOT NULL DEFAULT false` for W3C WebAuthn Level 3 compliance.
+No new table is added; total Core table count remains strictly 23. Migrations `001`
+through `013` remain immutable.
 
 ## Контракт сессий и токенов
 
@@ -145,6 +151,6 @@ cookies later also requires introducing CSRF protection in the same change.
 
 ## Намеренно исключённые функции
 
-Этот этап не реализует API keys, SAML, passkey login/WebAuthn runtime, SMS/email OTP как обычный
-второй фактор, frontend или optional product modules. Google/Telegram OIDC, TOTP, recovery codes и
-email MFA recovery описаны в `docs/security/AUTHENTICATION_AND_MFA.md`.
+Этот этап не реализует API keys, SAML, SMS/email OTP как обычный
+второй фактор, frontend или optional product modules. Google/Telegram OIDC, Passkeys (WebAuthn Level 3),
+TOTP, recovery codes и email MFA recovery описаны в `docs/security/AUTHENTICATION_AND_MFA.md`.

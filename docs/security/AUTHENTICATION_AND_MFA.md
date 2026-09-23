@@ -122,7 +122,65 @@ manual / additional recovery required
 - **OAuth state, nonce, PKCE**: OAuth state защищает browser flow от CSRF, nonce — от replay ID token, PKCE — от перехвата code.
 - **Provider URLs и issuer**: не поступают из request, что закрывает SSRF/discovery substitution.
 - **Audit/log/API не получают secrets**: пароли, raw tokens, TOTP secrets, recovery-code hashes, ID tokens, access tokens и client secrets не логируются и не передаются в Audit metadata.
-- **Rate limiting**: fail-closed лимиты разделены для external login, recovery start, callback, setup confirm и IP.
+- Rate limiting: fail-closed лимиты разделены для external login, recovery start, callback, setup confirm, passkey ceremonies и IP.
+
+## WebAuthn Passkeys Runtime (Level 3)
+
+В Platform реализован полноценный runtime ключей доступа (Passkeys) по стандарту **W3C WebAuthn Level 3**:
+
+### 1. Архитектура и библиотека
+- Интеграция выполнена на базе библиотеки `web-auth/webauthn-lib:5.3.9` напрямую в Yii3 без использования Symfony-бандлов.
+- Сущности хранятся в существующей таблице `core.auth_passkeys` (дополненной в миграции `014_passkey_runtime.sql` полями `transports`, `backup_eligible`, `backup_state`), общее число таблиц Core строго сохранено равным 23.
+
+### 2. Discoverable Credentials и User Handle Privacy
+- Аутентификация построена на discoverable credentials (`residentKey: required`), позволяющих пользователю входить без предварительного ввода логина или email.
+- `userHandle` вычисляется детерминированно как `HMAC-SHA256(account.id, identifier_hmac_key)` (первые 32 байта). Это полностью исключает утечку реальных UUID аккаунтов, email или PII на сторону аутентификаторов или в клиентский контекст.
+
+### 3. Relying Party и Origin Policy
+- Relying Party ID (`AUTH_WEBAUTHN_RP_ID`) и список разрешённых origins (`AUTH_WEBAUTHN_ORIGINS`) строго валидируются на backend. Cross-origin запросы и несоответствия RP ID немедленно отклоняются.
+
+### 4. Политика счетчика (Counter Policy): Synced vs Hardware Passkeys
+- **Synced Passkeys** (синхронизируемые связки ключей: Apple iCloud Keychain, Google Password Manager, 1Password и др.): для ключей с флагом `backupEligible = true` значение счетчика подписи может оставаться равным 0 (согласно стандарту WebAuthn Level 3). Это штатное поведение синхронизируемых ключей доступа.
+- **Hardware Security Keys** (аппаратные FIDO2-токены, например YubiKey, `backupEligible = false`): счетчик подписи строго проверяется на возрастание (`counter > last_sign_count`). Попытка повторного использования счетчика или его уменьшение фиксируется в аудите как `SecurityAction::PASSKEY_COUNTER_ANOMALY` и блокирует аутентификацию.
+
+### 5. Требования присутствия и верификации (UP / UV)
+- User Presence (UP) является обязательным требованием.
+- User Verification (UV: биометрия / PIN) строго требуется (`userVerification: required`) как на этапе регистрации, так и при каждой аутентификации. Downgrade до `preferred` сервером категорически блокируется — сервер всегда валидирует ответ в строгом режиме `required`. Ответы без установленного флага UV отклоняются.
+
+### 6. Граница аутентификации и MFA
+- Passkey доказывает **первый фактор** аутентификации.
+- Если для аккаунта настроен и подтверждён второй фактор (TOTP MFA), аутентификация по Passkey **не обходит MFA**. API возвращает промежуточный статус `status: mfa_required` и challenge token, требуя подтверждения 6-значного кода TOTP либо резервного кода. Сессия создаётся только после прохождения второго фактора.
+
+### 7. Инвариант последнего метода входа (Last Method Invariant)
+- Passkeys включены в централизованную политику `AccountAuthenticationMethodsPolicy` и сервис взаимной блокировки `CredentialMutationGuard` наравне с паролями и внешними identity.
+- Удаление ключа доступа (`DELETE /api/auth/me/passkeys/{id}`) отклоняется с кодом `409 Conflict` (`auth.identity.last_method`), если после удаления у аккаунта не останется ни одного действующего способа входа (пароля, привязанного Google/Telegram или другого активного passkey).
+
+### 8. Транзакционные уведомления (Transactional Security Notifications)
+- При успешной регистрации ключа доступа и при его отзыве генерируются почтовые уведомления:
+  - `auth.passkey.registered`
+  - `auth.passkey.revoked`
+- Шаблоны подготовлены на двух языках (`ru-RU` и `en-US`), содержат валидные HTML-метатеги (`viewport`, `charset`) и plain-text альтернативы, и отправляются через транзакционный `core.outbox_events` на верифицированный email аккаунта.
+
+### 9. Аудит и защита от утечки секретов
+- Все операции протоколируются в `core.security_audit_logs`:
+  `PASSKEY_REGISTRATION_STARTED`, `PASSKEY_REGISTRATION_COMPLETED`, `PASSKEY_REGISTRATION_FAILED`,
+  `PASSKEY_AUTHENTICATION_SUCCEEDED`, `PASSKEY_AUTHENTICATION_FAILED`,
+  `PASSKEY_COUNTER_ANOMALY`, `PASSKEY_RENAMED`, `PASSKEY_REVOKED`.
+- В аудит категорически **не попадают**: сырые учетные данные (raw credentials), открытые ключи, подписи, clientDataJSON, challenge tokens или приватные материалы.
+
+### 10. Rate Limiting
+- Все эндпоинты защищены fail-closed rate-лимитами в Redis:
+  - `passkeyAuthStartLimit`: лимит инициализации аутентификации по IP;
+  - `passkeyAuthCompleteLimit`: лимит завершения аутентификации по IP;
+  - `passkeyRegisterCompleteLimit`: лимит завершения регистрации по IP и по аккаунту.
+
+### 11. Concurrency Safety, CAS Gates и CredentialMutationGuard
+- **Atomic Challenge CAS Gate**: потребление challenge выполняется первым шагом внутри транзакции через атомарный CAS (`UPDATE core.auth_challenges SET consumed_at = now() WHERE id = :id AND consumed_at IS NULL`). При параллельных запросах с одним challenge ровно один поток получает true (1 измененная строка); все остальные запросы немедленно прерываются с отказом.
+- **Session & Client Binding**: challenge на регистрацию привязывается к сессии (`sessionId`) и к клиентскому контексту (`clientBinding: hash(clientInstanceId + clientType + userAgent)`). Попытка завершить регистрацию в чужой сессии или с другого клиента блокируется.
+- **Counter Compare-and-Set**: для аппаратных токенов (non-synced) обновление счетчика выполняется через `WHERE sign_count = :expected_counter`. При гонке между assertion-запросами устаревший запрос не может перезаписать счетчик и отклоняется.
+- **CredentialMutationGuard**: отзыв passkey (`DELETE /api/auth/me/passkeys/{id}`) и отключение внешних identity (`DELETE /api/auth/me/identities/{provider}`) защищены транзакционной блокировкой строки аккаунта (`SELECT id FROM core.accounts WHERE id = :id FOR UPDATE NOWAIT`) с повторным подсчетом оставшихся методов входа. Это исключает race condition (TOCTOU), когда параллельные запросы могли бы одновременно удалить последние методы входа и заблокировать аккаунт.
+- **Payload Size Limits**: размер JSON-ответов WebAuthn строго ограничен 32 KiB на уровне API-экшенов и сервиса, предотвращая DoS через парсинг сверхбольших структур.
+- **Transport Allowlist Normalization**: список транспортов нормализуется по строгому allowlist (`internal`, `usb`, `nfc`, `ble`, `hybrid`, `smart-card`), отсекая неподдерживаемые или вредоносные значения.
 
 ## API
 
@@ -131,6 +189,9 @@ manual / additional recovery required
 - `GET /api/auth/me/identities`, link start/callback, unlink;
 - `GET /api/auth/mfa`, TOTP setup/confirm/disable, recovery-code regenerate;
 - `POST /api/auth/mfa/recovery/request`, `POST /api/auth/mfa/recovery/confirm`;
-- `POST /api/auth/mfa/recovery/external/{provider}/start`, `GET /api/auth/mfa/recovery/external/{provider}/callback`.
+- `POST /api/auth/mfa/recovery/external/{provider}/start`, `GET /api/auth/mfa/recovery/external/{provider}/callback`;
+- `POST /api/auth/passkeys/authentication/start`, `POST /api/auth/passkeys/authentication/complete`;
+- `POST /api/auth/passkeys/registration/start`, `POST /api/auth/passkeys/registration/complete`;
+- `GET /api/auth/me/passkeys`, `PATCH /api/auth/me/passkeys/{id}`, `DELETE /api/auth/me/passkeys/{id}`.
 
 Все self-service endpoints берут Account только из `AuthenticatedIdentity` и не требуют admin RBAC.

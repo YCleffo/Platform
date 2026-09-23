@@ -157,7 +157,8 @@
 - **PK:** `id uuid DEFAULT uuidv7()`.
 - **Fields:** `account_id uuid`, `credential_id bytea`, `public_key bytea`,
   `sign_count bigint DEFAULT 0`, `aaguid uuid` (nullable), `transports text[]
-  DEFAULT []`, `label varchar(160)`, `last_used_at`, `revoked_at` (nullable),
+  DEFAULT []`, `label varchar(160)`, `backup_eligible boolean DEFAULT false`,
+  `backup_state boolean DEFAULT false`, `last_used_at`, `revoked_at` (nullable),
   `created_at`.
 - **FK/delete:** account `CASCADE`.
 - **Checks:** non-negative sign count and non-empty credential/public-key bytes.

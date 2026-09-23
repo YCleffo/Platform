@@ -37,6 +37,7 @@ final readonly class ExternalAuthService
         private SecurityAuditService $audit,
         private ClockInterface $clock,
         private ConnectionInterface $db,
+        private ?CredentialMutationGuard $mutationGuard = null,
     ) {}
 
     /** @return list<array{code: string, displayName: string, loginEnabled: bool}> */
@@ -314,9 +315,20 @@ final readonly class ExternalAuthService
         if ($provider === null || $identity === null) {
             throw new ExternalAuthenticationException();
         }
-        $methodsPolicy = new AccountAuthenticationMethodsPolicy($this->passwords, $this->identities, $this->passkeys);
-        $methodsPolicy->assertCanUnlinkIdentity($accountId);
-        $this->db->transaction(function () use ($accountId, $provider, $identity, $providerCode, $context): void {
+        $guard = $this->mutationGuard ?? new CredentialMutationGuard(
+            $this->db,
+            $this->passwords,
+            $this->identities,
+            $this->passkeys,
+        );
+
+        $this->db->transaction(function () use ($guard, $accountId, $provider, $identity, $providerCode, $context): void {
+            try {
+                $guard->assertCanRemoveOneMethod($accountId);
+            } catch (LastAuthenticationMethodException $e) {
+                throw new ExternalIdentityLastMethodException('Cannot unlink the last usable authentication method.', $e->getCode(), $e);
+            }
+
             if ($this->identities->unlink($accountId, $provider->id) === null) {
                 throw new ExternalAuthenticationException();
             }

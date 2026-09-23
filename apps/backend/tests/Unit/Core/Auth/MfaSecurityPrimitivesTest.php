@@ -53,7 +53,7 @@ final class MfaSecurityPrimitivesTest extends Unit
                 return new DateTimeImmutable('@0');
             }
         };
-        assertStringStartsWith('otpauth://totp/Platform%3A', (new TotpService($clock))->provisioningUri('Platform', 'user', $encoded));
+        assertStringStartsWith('otpauth://totp/Platform:', (new TotpService($clock))->provisioningUri('Platform', 'user', $encoded));
     }
 
     public function testSecretsUseAuthenticatedEncryptionWithDomainSeparation(): void

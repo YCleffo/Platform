@@ -7,6 +7,9 @@ Project Platform_Core_v1_FINAL {
   module registry/settings, audit, transactional outbox/inbox.
   Domain entities such as Student/Teacher/Parent/Lesson/Device/File/Message
   are NOT part of Core.
+  Synchronized with PostgreSQL migrations 001-014. SQL migrations remain the
+  executable source of truth; PostgreSQL partial-index predicates and selected
+  CHECK constraints are documented in table notes to preserve their exact semantics.
   '''
 }
 
@@ -128,7 +131,8 @@ Table core.person_contacts {
   Если строка контакта существует, value и normalized_value обязательны.
   Телефон родителя принадлежит Person родителя, а связь родитель-ребёнок
   будет находиться в доменном модуле Education.
-  В миграции добавить partial UNIQUE: один is_primary=true на (person_id, contact_type).
+  В БД есть partial UNIQUE uq_person_contacts_primary_per_type:
+  один is_primary=true на (person_id, contact_type), WHERE is_primary = true.
   '''
 }
 
@@ -156,6 +160,9 @@ Table core.accounts {
   disabled_at timestamptz
   archived_at timestamptz
 
+  locale varchar(35) [note: 'Сохранённая canonical BCP 47 locale; NULL = использовать значение по умолчанию']
+  timezone varchar(64) [note: 'Сохранённая IANA timezone; NULL = использовать значение по умолчанию']
+
   indexes {
     person_id [unique, name: 'uq_accounts_person']
     status [name: 'idx_accounts_status']
@@ -169,7 +176,8 @@ Table core.accounts {
   При "выйти со всех устройств", смене пароля после компрометации и подобных
   security-событиях security_stamp меняется; старые сессии с прежним stamp
   считаются недействительными.
-  В миграции добавить CHECK: account_type='human' -> person_id IS NOT NULL.
+  В БД действует CHECK chk_accounts_human_has_person: account_type='human' -> person_id IS NOT NULL.
+  Migration 010 также добавляет CHECK canonical BCP 47 для locale и запрет blank timezone.
   '''
 }
 
@@ -198,7 +206,8 @@ Table core.auth_identifiers {
   Note: '''
   Идентификаторы безопасности Account: username/email/phone.
   Отдельны от person_contacts намеренно.
-  В миграции добавить partial UNIQUE: один is_primary=true на (account_id, identifier_type).
+  В БД есть partial UNIQUE uq_auth_identifiers_primary_per_type:
+  один is_primary=true на (account_id, identifier_type), WHERE is_primary = true.
   Application policy: can_recover фактически использовать только для подтверждённых recovery-идентификаторов.
   '''
 }
@@ -291,6 +300,9 @@ Table core.auth_passkeys {
   public_key bytea [not null, note: 'Публичный ключ; приватный ключ сервер не хранит']
   sign_count bigint [not null, default: 0]
 
+  backup_eligible boolean [not null, default: false, note: 'WebAuthn L3: credential может быть синхронизирован через cloud keychain']
+  backup_state boolean [not null, default: false, note: 'WebAuthn L3: credential сейчас находится в backed-up/synced состоянии']
+
   aaguid uuid
   transports text[] [not null, default: `'{}'::text[]`, note: 'internal / usb / nfc / ble / ...']
   label varchar(160)
@@ -305,7 +317,7 @@ Table core.auth_passkeys {
     revoked_at [name: 'idx_auth_passkeys_revoked']
   }
 
-  Note: 'Passkey/WebAuthn. Один Account может иметь несколько Passkey.'
+  Note: 'Passkey/WebAuthn. Один Account может иметь несколько Passkey. backup_eligible и backup_state добавлены migration 014 для WebAuthn Level 3.'
 }
 
 Table core.auth_totp_factors {
@@ -323,6 +335,10 @@ Table core.auth_totp_factors {
   last_used_at timestamptz
   revoked_at timestamptz
 
+  last_used_counter bigint [note: 'Последний принятый RFC 6238 time-step counter; защита от replay']
+  secret_key_version smallint [not null, default: 1, note: 'Версия внешнего ключа шифрования для secret_encrypted']
+  setup_expires_at timestamptz [note: 'Срок жизни pending/unverified TOTP setup']
+
   indexes {
     account_id [name: 'idx_auth_totp_account']
     revoked_at [name: 'idx_auth_totp_revoked']
@@ -331,7 +347,11 @@ Table core.auth_totp_factors {
   Note: '''
   TOTP/MFA для Google Authenticator, 2FAS, Microsoft Authenticator и т.п.
   Обязательность MFA задаётся политикой конкретной установки/приложения.
-  В миграции добавить CHECK для digits и period_seconds.
+  В БД действуют CHECK digits BETWEEN 6 AND 8 и period_seconds > 0.
+  Migration 013 добавляет CHECK last_used_counter >= 0, secret_key_version > 0 и setup_expires_at > created_at.
+  Partial indexes migration 013: uq_auth_totp_active_verified_account на account_id
+  WHERE verified_at IS NOT NULL AND revoked_at IS NULL; idx_auth_totp_pending_expiry
+  на setup_expires_at WHERE verified_at IS NULL AND revoked_at IS NULL.
   '''
 }
 
@@ -343,6 +363,7 @@ Table core.auth_recovery_codes {
 
   created_at timestamptz [not null, default: `now()`]
   used_at timestamptz [note: 'NULL пока код не использован']
+  revoked_at timestamptz [note: 'Инвалидация при regeneration, MFA disable или recovery reset']
 
   indexes {
     code_hash [unique, name: 'uq_auth_recovery_codes_hash']
@@ -350,7 +371,11 @@ Table core.auth_recovery_codes {
     used_at [name: 'idx_auth_recovery_codes_used']
   }
 
-  Note: 'Одноразовые резервные MFA-коды.'
+  Note: '''
+  Одноразовые резервные MFA-коды.
+  Migration 013 добавляет partial index idx_auth_recovery_codes_available на account_id
+  WHERE used_at IS NULL AND revoked_at IS NULL.
+  '''
 }
 
 Table core.auth_sessions {
@@ -378,6 +403,22 @@ Table core.auth_sessions {
   revoked_at timestamptz
   revoke_reason varchar(255)
 
+  browser_name varchar(120)
+  browser_version varchar(60)
+  os_name varchar(120)
+  os_version varchar(60)
+  device_type varchar(40)
+  device_model varchar(160)
+  client_locale varchar(35) [note: 'Canonical BCP 47 locale snapshot клиента']
+  client_timezone varchar(64) [note: 'IANA timezone snapshot клиента']
+  client_instance_id uuid [note: 'Случайный UUID установки frontend; не фактор аутентификации']
+  device_fingerprint_hash bytea [note: 'HMAC-SHA-256 risk signal, ровно 32 bytes; не фактор аутентификации']
+  geo_country_code char(2) [note: 'Approximate ISO 3166-1 alpha-2 country from IP']
+  geo_region varchar(160)
+  geo_city varchar(160) [note: 'Approximate city from IP; не точная геолокация']
+  geo_timezone varchar(64)
+  access_expires_at timestamptz [not null, note: 'Expiry текущего short-lived opaque access token; <= expires_at']
+
   indexes {
     session_token_hash [unique, name: 'uq_auth_sessions_token']
     refresh_token_hash [unique, name: 'uq_auth_sessions_refresh']
@@ -390,7 +431,11 @@ Table core.auth_sessions {
   Основная browser-auth модель: opaque token в HttpOnly Secure cookie,
   в БД хранится только hash.
   Позволяет показывать активные устройства и отзывать одну/все сессии.
-  В миграции добавить CHECK expires_at > created_at.
+  В БД действует CHECK expires_at > created_at и CHECK access_expires_at <= expires_at.
+  Migration 010 добавляет CHECK для canonical client_locale, non-blank timezone/device fields,
+  32-byte device_fingerprint_hash и ISO alpha-2 geo_country_code.
+  Partial index idx_auth_sessions_account_active: (account_id, last_seen_at DESC)
+  WHERE revoked_at IS NULL.
   '''
 }
 
@@ -422,7 +467,7 @@ Table core.auth_challenges {
   Note: '''
   Одноразовые security/auth операции.
   challenge_type специально varchar — набор сценариев расширяемый.
-  В миграции добавить CHECK attempts >= 0, max_attempts > 0, expires_at > created_at.
+  В БД действуют CHECK attempts >= 0, max_attempts > 0, expires_at > created_at.
   '''
 }
 
@@ -574,7 +619,7 @@ Table core.feature_flags {
     module_id [name: 'idx_feature_flags_module']
   }
 
-  Note: 'В миграции добавить CHECK rollout_percent BETWEEN 0 AND 100.'
+  Note: 'В БД действует CHECK rollout_percent BETWEEN 0 AND 100.'
 }
 
 Table core.system_settings {
@@ -682,7 +727,7 @@ Table core.outbox_events {
   Worker публикует событие позже.
   Успешно published записи можно чистить retention-job, например после 30 дней.
   pending/failed/dead преждевременно не удалять.
-  В миграции добавить CHECK attempts >= 0.
+  В БД действует CHECK attempts >= 0.
   '''
 }
 
@@ -712,7 +757,7 @@ Table core.inbox_events {
   Idempotency для consumers: один event_id конкретный consumer обрабатывает один раз.
   processed записи можно чистить retention-job, например после 30 дней.
   failed/dead хранить дольше для диагностики.
-  В миграции добавить CHECK attempts >= 0.
+  В БД действует CHECK attempts >= 0.
   '''
 }
 

@@ -44,4 +44,15 @@ return (new Configuration())
         [
             ErrorType::UNUSED_DEPENDENCY,
         ],
+    )
+
+    ->ignoreErrorsOnPackages(
+        [
+            'symfony/uid',
+            'spomky-labs/cbor-php',
+        ],
+        [
+            ErrorType::SHADOW_DEPENDENCY,
+        ],
     );
+

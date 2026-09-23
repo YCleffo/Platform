@@ -469,6 +469,8 @@ class ApiTester extends \Codeception\Actor
                   AND (
                     payload #>> '{recipient,address}' LIKE 'auth-%@example.test'
                     OR payload #>> '{recipient,address}' LIKE 'invite-%@example.test'
+                    OR payload #>> '{recipient,address}' LIKE 'passkey-%@example.test'
+                    OR payload->>'templateCode' LIKE 'auth.passkey.%'
                   )
                 SQL,
             )->execute();
@@ -484,6 +486,8 @@ class ApiTester extends \Codeception\Actor
                         label = 'API integration service'
                         OR label LIKE 'API authorization fixture %'
                         OR label LIKE 'API password fixture %'
+                        OR label LIKE 'Passkey Test Account%'
+                        OR label = 'Only Passkey Account'
                     )
                 ) OR label LIKE 'API invitation fixture %'
                 SQL,
@@ -585,5 +589,43 @@ class ApiTester extends \Codeception\Actor
         $this->haveHttpHeader('Authorization', 'Bearer ' . $token);
 
         return ['accountId' => (string) $account['id'], 'token' => $token];
+    }
+
+    public function amAuthenticatedAccount(string $accountId): string
+    {
+        $runner = new HttpApplicationRunner(
+            rootPath: dirname(__DIR__, 2),
+            environment: Environment::appEnv(),
+        );
+        $db = $runner->getContainer()->get(ConnectionInterface::class);
+        $account = $db->createCommand(
+            'SELECT security_stamp FROM core.accounts WHERE id = CAST(:id AS uuid)',
+            [':id' => $accountId],
+        )->queryOne();
+        if (!is_array($account)) {
+            throw new \RuntimeException('Account not found.');
+        }
+        $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        $db->createCommand(
+            <<<'SQL'
+            INSERT INTO core.auth_sessions (
+                account_id, session_token_hash, refresh_token_hash, security_stamp,
+                authentication_method, client_type, access_expires_at, expires_at
+            )
+            VALUES (
+                CAST(:account_id AS uuid), decode(:token_hash, 'hex'), NULL,
+                CAST(:security_stamp AS uuid), 'test', 'api-test',
+                now() + interval '15 minutes', now() + interval '1 hour'
+            )
+            SQL,
+            [
+                ':account_id' => $accountId,
+                ':security_stamp' => $account['security_stamp'],
+                ':token_hash' => hash('sha256', $token),
+            ],
+        )->execute();
+        $this->haveHttpHeader('Authorization', 'Bearer ' . $token);
+
+        return $token;
     }
 }

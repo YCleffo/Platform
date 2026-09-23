@@ -36,6 +36,13 @@ use App\Core\Auth\Api\UpdatePreferencesAction;
 use App\Core\Auth\Api\TotpConfirmAction;
 use App\Core\Auth\Api\TotpDisableAction;
 use App\Core\Auth\Api\TotpSetupAction;
+use App\Core\Auth\Api\PasskeyRegistrationStartAction;
+use App\Core\Auth\Api\PasskeyRegistrationCompleteAction;
+use App\Core\Auth\Api\PasskeyAuthenticationStartAction;
+use App\Core\Auth\Api\PasskeyAuthenticationCompleteAction;
+use App\Core\Auth\Api\PasskeyListAction;
+use App\Core\Auth\Api\PasskeyRenameAction;
+use App\Core\Auth\Api\PasskeyRevokeAction;
 use App\Core\Auth\Infrastructure\RequireAuthentication;
 use App\Core\Module\Api\GetModuleAction;
 use App\Core\Module\Api\ListModulesAction;
@@ -78,6 +85,24 @@ return [
     Route::post('/api/auth/login')
         ->action(LoginAction::class)
         ->name('auth/login'),
+
+    Route::post('/api/auth/passkeys/authentication/start')
+        ->action(PasskeyAuthenticationStartAction::class)
+        ->name('auth/passkeys/authentication/start'),
+
+    Route::post('/api/auth/passkeys/authentication/complete')
+        ->action(PasskeyAuthenticationCompleteAction::class)
+        ->name('auth/passkeys/authentication/complete'),
+
+    Route::post('/api/auth/passkeys/registration/start')
+        ->middleware(RequireAuthentication::class)
+        ->action(PasskeyRegistrationStartAction::class)
+        ->name('auth/passkeys/registration/start'),
+
+    Route::post('/api/auth/passkeys/registration/complete')
+        ->middleware(RequireAuthentication::class)
+        ->action(PasskeyRegistrationCompleteAction::class)
+        ->name('auth/passkeys/registration/complete'),
 
     Route::get('/api/auth/providers')
         ->action(ProvidersAction::class)
@@ -161,6 +186,21 @@ return [
         ->middleware(RequireAuthentication::class)
         ->action(ExternalIdentityUnlinkAction::class)
         ->name('auth/me/identities/unlink'),
+
+    Route::get('/api/auth/me/passkeys')
+        ->middleware(RequireAuthentication::class)
+        ->action(PasskeyListAction::class)
+        ->name('auth/me/passkeys/index'),
+
+    Route::patch('/api/auth/me/passkeys/{id}')
+        ->middleware(RequireAuthentication::class)
+        ->action(PasskeyRenameAction::class)
+        ->name('auth/me/passkeys/rename'),
+
+    Route::delete('/api/auth/me/passkeys/{id}')
+        ->middleware(RequireAuthentication::class)
+        ->action(PasskeyRevokeAction::class)
+        ->name('auth/me/passkeys/revoke'),
 
     Route::get('/api/auth/mfa')
         ->middleware(RequireAuthentication::class)
