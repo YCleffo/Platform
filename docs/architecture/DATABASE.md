@@ -1,11 +1,12 @@
 # Архитектура базы данных — этап 1
 
-Используется одна база данных PostgreSQL. Модули владеют отдельными схемами PostgreSQL:
+Yii runtime использует одну базу данных PostgreSQL. Модули владеют отдельными схемами PostgreSQL:
 
 ```text
 platform database
 ├── public.*       technical migration history only
 ├── core.*         universal Core v1 — exactly 23 tables
+├── platform_runtime.*  installation identity and signed entitlement snapshots — 2 tables
 ├── education.*    later
 ├── games.*        later
 ├── chat.*         later
@@ -19,6 +20,19 @@ platform database
 Схема `core.*` содержит ровно 23 основные таблицы. Добавление Games, Education,
 Search или брендинга **не означает**, что в Core нужно добавлять таблицы конкретного продукта.
 Для общих настроек установки используется `core.system_settings`.
+Идентичность установки и локальные подписанные коммерческие разрешения находятся в
+`platform_runtime.*`, описанной отдельно в `docs/database/runtime/Platform_Runtime_v1.dbml`.
+Будущая Symfony Commercial DB — отдельная база; её планы, платежи, подписки и реестр
+лицензий сюда не входят.
+
+## Подпись entitlement documents
+
+Документы подписываются асимметрично, предпочтительно Ed25519. Приватный ключ
+хранится только в будущем Commercial Control Plane: он не попадает в Yii/Core,
+On-Prem Docker image или Git. Локальный runtime получает только доверенные публичные
+ключи для проверки. PostgreSQL обеспечивает порядок применения через монотонный
+`current_entitlement_sequence`; проверка подписи и доверия к ключу должна выполняться
+до перевода документа в `applied`.
 
 ## Крупные таблицы в будущем
 

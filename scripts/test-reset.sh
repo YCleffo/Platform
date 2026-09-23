@@ -6,12 +6,15 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${ROOT_DIR}"
 
 echo "=== Safely Resetting Isolated Test Infrastructure ==="
-docker compose --profile test stop backend-test db-migrate-test postgres-test redis-test || true
-docker compose --profile test rm -f -v backend-test db-migrate-test postgres-test redis-test || true
+bash "${SCRIPT_DIR}/test-stop.sh"
 
 # Explicitly remove only test volumes (DEV volumes are never touched)
-docker volume rm -f platform_postgres_test_data platform_redis_test_data || true
+for volume in platform_postgres_test_data platform_redis_test_data; do
+  if docker volume inspect "${volume}" >/dev/null 2>&1; then
+    docker volume rm "${volume}"
+  fi
+done
 
-"${SCRIPT_DIR}/test-start.sh"
+bash "${SCRIPT_DIR}/test-start.sh"
 
 echo "Test reset complete."

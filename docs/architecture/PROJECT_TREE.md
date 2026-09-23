@@ -21,7 +21,9 @@ C:\\Platform
 │   └── events
 ├── docs
 │   ├── architecture
-│   └── database/core
+│   └── database
+│       ├── core            frozen 23-table Core DBML
+│       └── runtime         installation and entitlement DBML
 ├── scripts
 ├── compose.yaml
 ├── .env.example

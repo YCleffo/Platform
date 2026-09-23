@@ -417,8 +417,6 @@ services:
         condition: service_healthy
       postgres-test:
         condition: service_healthy
-      db-migrate-test:
-        condition: service_completed_successfully
 
     ports:
       - "127.0.0.1:${BACKEND_TEST_PORT:-8081}:80"

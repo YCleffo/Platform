@@ -6,4 +6,4 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${ROOT_DIR}"
 
 echo "=== Stopping Isolated Test Infrastructure ==="
-docker compose --profile test stop backend-test db-migrate-test postgres-test redis-test
+docker compose --profile test rm --stop --force backend-test db-migrate-test postgres-test redis-test

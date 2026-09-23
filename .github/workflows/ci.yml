@@ -8,7 +8,7 @@ on:
 
 jobs:
   backend-qa:
-    name: Backend Quality Assurance & Test Isolation
+    name: Yii Backend Quality Assurance & Test Isolation
     runs-on: ubuntu-latest
     env:
       POSTGRES_DB: platform_test
@@ -58,6 +58,15 @@ jobs:
           echo "Core tables count: ${count}"
           if [ "${count}" != "23" ]; then
             echo "ERROR: Expected 23 core tables, got ${count}"
+            exit 1
+          fi
+
+      - name: Verify Platform Runtime Tables
+        run: |
+          count=$(docker compose --profile test exec -T postgres-test psql -U "${POSTGRES_USER}" -d "${POSTGRES_TEST_DB}" -tA -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'platform_runtime' AND table_type = 'BASE TABLE' AND table_name IN ('installations', 'entitlement_documents');")
+          echo "Platform runtime tables count: ${count}"
+          if [ "${count}" != "2" ]; then
+            echo "ERROR: Expected 2 platform runtime tables, got ${count}"
             exit 1
           fi
 

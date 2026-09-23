@@ -310,6 +310,12 @@ public.platform_migrations
 
 `platform_migrations` не относится к бизнес-таблицам Core.
 
+`platform_runtime.installations` хранит единственную идентичность этой установки,
+а `platform_runtime.entitlement_documents` — локальные подписанные snapshots
+разрешений. Они описаны отдельно от Core в
+`docs/database/runtime/Platform_Runtime_v1.dbml`. Будущая Commercial DB Symfony
+будет отдельной базой; платёжные и subscription таблицы сюда не входят.
+
 ---
 
 ## Core schema
@@ -610,10 +616,10 @@ tests/
 Linux/macOS:
 
 ```bash
-./scripts/test-start.sh
-./scripts/test-run.sh
-./scripts/test-reset.sh
-./scripts/test-stop.sh
+bash ./scripts/test-start.sh
+bash ./scripts/test-run.sh
+bash ./scripts/test-reset.sh
+bash ./scripts/test-stop.sh
 ```
 
 PowerShell:
@@ -625,13 +631,19 @@ PowerShell:
 .\scripts\test-stop.ps1
 ```
 
+`test-stop` останавливает и удаляет только тестовые контейнеры, сохраняя
+`platform_postgres_test_data` и `platform_redis_test_data` для следующего запуска.
+`test-reset` удаляет эти два тестовых тома и создаёт тестовую инфраструктуру с нуля.
+Development-контейнеры и тома обе команды не затрагивают. GitHub Actions создаёт
+собственные тестовые контейнеры на своём runner; локальный Docker Desktop ему не нужен.
+
 Для отдельной suite передайте её имя в test-run, например:
 
 ```bash
-./scripts/test-run.sh Api
-./scripts/test-run.sh Functional
-./scripts/test-run.sh Unit
-./scripts/test-run.sh Console
+bash ./scripts/test-run.sh Api
+bash ./scripts/test-run.sh Functional
+bash ./scripts/test-run.sh Unit
+bash ./scripts/test-run.sh Console
 ```
 
 ```powershell
@@ -644,7 +656,7 @@ PowerShell:
 Static analysis:
 
 ```bash
-./scripts/test-start.sh
+bash ./scripts/test-start.sh
 docker compose --profile test exec -T backend-test \
   vendor/bin/psalm
 ```
@@ -759,10 +771,10 @@ git status
 После изменения backend:
 
 ```bash
-./scripts/test-start.sh
+bash ./scripts/test-start.sh
 docker compose --profile test exec -T backend-test vendor/bin/psalm
-./scripts/test-run.sh
-./scripts/test-stop.sh
+bash ./scripts/test-run.sh
+bash ./scripts/test-stop.sh
 ```
 
 Перед commit необходимо убедиться, что в Git не попали:
