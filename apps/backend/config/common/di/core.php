@@ -37,7 +37,7 @@ use App\Core\Person\Application\PersonContactRepository;
 use App\Core\Person\Application\PersonRepository;
 use App\Core\Person\Infrastructure\PostgresPersonContactRepository;
 use App\Core\Person\Infrastructure\PostgresPersonRepository;
-use App\Core\Person\Infrastructure\TrimOnlyContactNormalizer;
+use App\Core\Person\Infrastructure\CanonicalContactNormalizer;
 use App\Core\Rbac\Application\PermissionRepository;
 use App\Core\Rbac\Application\RoleRepository;
 use App\Core\Rbac\Infrastructure\PostgresPermissionRepository;
@@ -87,7 +87,7 @@ return [
         'class' => PostgresPersonContactRepository::class,
     ],
     ContactNormalizer::class => [
-        'class' => TrimOnlyContactNormalizer::class,
+        'class' => CanonicalContactNormalizer::class,
     ],
     RoleRepository::class => [
         'class' => PostgresRoleRepository::class,

@@ -6,6 +6,8 @@ namespace App\Core\Auth\Api;
 
 use App\Api\Shared\ApiMessage;
 use App\Core\Auth\Application\LoginCommand;
+use App\Core\Shared\Domain\ValueNormalizer;
+use InvalidArgumentException;
 use Yiisoft\Input\Http\InputValidationException;
 use Yiisoft\Validator\Result;
 
@@ -24,6 +26,8 @@ final class AuthInput
         }
         if (!is_string($identifier) || trim($identifier) === '') {
             $result->addError(ApiMessage::VALIDATION_REQUIRED, valuePath: ['identifier']);
+        } elseif ($type === 'username' && !ValueNormalizer::isValidUsername($identifier)) {
+            $result->addError(ApiMessage::VALIDATION_USERNAME_INVALID, valuePath: ['identifier']);
         }
         if (!is_string($password) || $password === '') {
             $result->addError(ApiMessage::VALIDATION_REQUIRED, valuePath: ['password']);
@@ -100,17 +104,14 @@ final class AuthInput
     public static function totpSetup(mixed $body): array
     {
         $data = self::object($body);
-        $label = $data['label'] ?? null;
         $result = new Result();
-        if ($label !== null && (!is_string($label) || mb_strlen(trim($label)) > 160)) {
-            $result->addError(ApiMessage::VALIDATION_LABEL, ['max' => 160], ['label']);
-        }
+        $label = self::label($data, $result);
         self::unknown($data, ['label'], $result);
         if (!$result->isValid()) {
             throw new InputValidationException($result);
         }
 
-        return ['label' => is_string($label) && trim($label) !== '' ? trim($label) : null];
+        return ['label' => $label];
     }
 
     /** @return array{setupId: string, code: string} */
@@ -284,18 +285,7 @@ final class AuthInput
         $data = self::object($body);
         $result = new Result();
 
-        $label = null;
-        if (array_key_exists('label', $data)) {
-            if ($data['label'] !== null && !is_string($data['label'])) {
-                $result->addError(ApiMessage::VALIDATION_STRING_OR_NULL, valuePath: ['label']);
-            } elseif (is_string($data['label'])) {
-                $trimmed = trim($data['label']);
-                if (mb_strlen($trimmed, 'UTF-8') > 160) {
-                    $result->addError(ApiMessage::VALIDATION_MAX_LENGTH, ['max' => 160], valuePath: ['label']);
-                }
-                $label = $trimmed === '' ? null : $trimmed;
-            }
-        }
+        $label = self::label($data, $result);
 
         /** @var array<string, mixed> $credentialData */
         if (isset($data['responseJson']) && is_string($data['responseJson'])) {
@@ -354,18 +344,7 @@ final class AuthInput
         $result = new Result();
         self::unknown($data, ['label'], $result);
 
-        $label = null;
-        if (array_key_exists('label', $data)) {
-            if ($data['label'] !== null && !is_string($data['label'])) {
-                $result->addError(ApiMessage::VALIDATION_STRING_OR_NULL, valuePath: ['label']);
-            } elseif (is_string($data['label'])) {
-                $trimmed = trim($data['label']);
-                if (mb_strlen($trimmed, 'UTF-8') > 160) {
-                    $result->addError(ApiMessage::VALIDATION_MAX_LENGTH, ['max' => 160], valuePath: ['label']);
-                }
-                $label = $trimmed === '' ? null : $trimmed;
-            }
-        }
+        $label = self::label($data, $result);
 
         if (!$result->isValid()) {
             throw new InputValidationException($result);
@@ -394,6 +373,25 @@ final class AuthInput
             if (!in_array($field, $allowed, true)) {
                 $result->addError(ApiMessage::VALIDATION_UNKNOWN_FIELD, valuePath: [$field]);
             }
+        }
+    }
+
+    /** @param array<string, mixed> $data */
+    private static function label(array $data, Result $result): ?string
+    {
+        if (!array_key_exists('label', $data) || $data['label'] === null) {
+            return null;
+        }
+        if (!is_string($data['label'])) {
+            $result->addError(ApiMessage::VALIDATION_STRING_OR_NULL, valuePath: ['label']);
+            return null;
+        }
+
+        try {
+            return ValueNormalizer::normalizeLabel($data['label'], 160);
+        } catch (InvalidArgumentException) {
+            $result->addError(ApiMessage::VALIDATION_LABEL, ['max' => 160], ['label']);
+            return null;
         }
     }
 }

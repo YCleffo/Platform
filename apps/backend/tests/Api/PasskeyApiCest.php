@@ -43,6 +43,26 @@ final readonly class PasskeyApiCest
         $I->seeResponseContainsJson(['error' => ['code' => 'auth.required']]);
     }
 
+    public function rejectsUnsafePasskeyLabelsAtValidationBoundary(ApiTester $I): void
+    {
+        $fixture = $I->havePasswordAccount();
+        $I->amAuthenticatedAccount($fixture['accountId']);
+        $I->haveHttpHeader('Content-Type', 'application/json');
+
+        foreach (['   ', "bad\0label", "bad\nlabel", str_repeat('a', 161)] as $label) {
+            $I->sendPOST('/api/auth/passkeys/registration/complete', [
+                'credential' => ['response' => []],
+                'label' => $label,
+            ]);
+            $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+            $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
+
+            $I->sendPATCH('/api/auth/me/passkeys/018f2892-aaaa-7aaa-8aaa-aaaaaaaaaaaa', ['label' => $label]);
+            $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+            $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
+        }
+    }
+
     public function registrationCeremonyEndToEnd(ApiTester $I): void
     {
         $fixture = $I->havePasswordAccount();

@@ -167,9 +167,9 @@ final class ValueNormalizerTest extends TestCase
     {
         return [
             ['john_doe', 'john_doe'],
-            ['Jane.Doe', 'jane.doe'],
+            ['jane.doe', 'jane.doe'],
             ['user-123', 'user-123'],
-            ['Юрий_123', 'юрий_123'],
+            ['user_123', 'user_123'],
             ['admin', 'admin'],
         ];
     }
@@ -197,7 +197,14 @@ final class ValueNormalizerTest extends TestCase
             ['-user'],
             ['user-'],
             ['user..name'],
+            ['user__name'],
+            ['user--name'],
             ['user  name'],
+            [' user'],
+            ['user '],
+            ['Jane.Doe'],
+            ['Юрий_123'],
+            ['Ａlice'],
             ['<script>'],
             ['ab'], // < 3 chars
             [''],
@@ -243,8 +250,42 @@ final class ValueNormalizerTest extends TestCase
             ['core..admin'],
             ['core--admin'],
             ['Core.Admin'],
+            [' core.admin'],
+            ['core.admin '],
             ['core/admin'],
             [''],
+        ];
+    }
+
+    public function testNormalizesLabelsAndTextWithoutHtmlEscaping(): void
+    {
+        self::assertSame(
+            '<b>Пример</b> label',
+            ValueNormalizer::normalizeLabel("  <b>Пример</b>\u{00A0}  label  ", 160),
+        );
+        self::assertSame(
+            'Unicode description',
+            ValueNormalizer::normalizeText('  Unicode   description  '),
+        );
+        self::assertNull(ValueNormalizer::normalizeLabel(null));
+        self::assertNull(ValueNormalizer::normalizeText(null));
+    }
+
+    /** @dataProvider invalidTextProvider */
+    public function testRejectsInvalidLabelsAndText(string $input): void
+    {
+        self::assertFalse(ValueNormalizer::isValidLabel($input, 8));
+        self::assertFalse(ValueNormalizer::isValidText($input, 8));
+    }
+
+    public static function invalidTextProvider(): array
+    {
+        return [
+            [''],
+            ['   '],
+            ["bad\0text"],
+            ["bad\ntext"],
+            [str_repeat('a', 9)],
         ];
     }
 }

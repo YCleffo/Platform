@@ -29,8 +29,14 @@ final class PasswordAndIdentifierTest extends TestCase
             'user@xn--e1afmkfd.xn--p1ai',
             $normalizer->normalize('email', ' User@ПРИМЕР.РФ '),
         );
-        self::assertSame('alice', $normalizer->normalize('username', ' Ａlice '));
+        self::assertSame('alice', $normalizer->normalize('username', 'alice'));
         self::assertSame('+79991234567', $normalizer->normalize('phone', '+79991234567'));
+    }
+
+    public function testRejectsNonCanonicalUsername(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        (new AuthIdentifierNormalizer())->normalize('username', 'Alice');
     }
 
     public function testRejectsAmbiguousPhone(): void

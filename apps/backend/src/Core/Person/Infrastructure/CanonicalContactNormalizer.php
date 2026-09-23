@@ -11,7 +11,7 @@ use InvalidArgumentException;
 /**
  * Field-specific contact normalization for email and phone using canonical rules.
  */
-final readonly class TrimOnlyContactNormalizer implements ContactNormalizer
+final readonly class CanonicalContactNormalizer implements ContactNormalizer
 {
     public function normalize(string $contactType, string $value): string
     {

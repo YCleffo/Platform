@@ -163,4 +163,25 @@ final class PersonInputTest extends Unit
             ['email', 'user@'],
         ];
     }
+
+    /** @dataProvider invalidContactLabelsProvider */
+    public function testRejectsInvalidContactLabels(string $label): void
+    {
+        $this->expectException(InputValidationException::class);
+        PersonInput::createContact('018f2892-aaaa-7aaa-8aaa-aaaaaaaaaaaa', [
+            'contactType' => 'email',
+            'value' => 'user@example.com',
+            'label' => $label,
+        ]);
+    }
+
+    public static function invalidContactLabelsProvider(): array
+    {
+        return [
+            ['   '],
+            ["work\0label"],
+            ["work\nlabel"],
+            [str_repeat('a', 81)],
+        ];
+    }
 }

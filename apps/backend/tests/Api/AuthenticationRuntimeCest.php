@@ -119,6 +119,20 @@ final readonly class AuthenticationRuntimeCest
         }
     }
 
+    public function rejectsNonCanonicalUsernamesAtValidationBoundary(ApiTester $I): void
+    {
+        $I->haveHttpHeader('Content-Type', 'application/json');
+        foreach (['Alice', 'алиса', 'core..admin', '.core', 'core.'] as $username) {
+            $I->sendPOST('/api/auth/login', [
+                'identifierType' => 'username',
+                'identifier' => $username,
+                'password' => 'irrelevant',
+            ]);
+            $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+            $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
+        }
+    }
+
     public function authenticationAndAuthorizationBoundaries(ApiTester $I): void
     {
         $I->sendGET('/api/core/persons');

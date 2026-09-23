@@ -605,49 +605,58 @@ tests/
 └── Unit/
 ```
 
-Полный запуск:
+Все тестовые suites запускаются только в изолированном `backend-test`; development-контейнер `backend` для API/интеграционных тестов не используется.
+
+Linux/macOS:
 
 ```bash
-docker compose exec -T backend \
-  vendor/bin/codecept run
+./scripts/test-start.sh
+./scripts/test-run.sh
+./scripts/test-reset.sh
+./scripts/test-stop.sh
 ```
 
-Только API:
+PowerShell:
 
-```bash
-docker compose exec -T backend \
-  vendor/bin/codecept run Api
+```powershell
+.\scripts\test-start.ps1
+.\scripts\test-run.ps1
+.\scripts\test-reset.ps1
+.\scripts\test-stop.ps1
 ```
 
-Functional:
+Для отдельной suite передайте её имя в test-run, например:
 
 ```bash
-docker compose exec -T backend \
-  vendor/bin/codecept run Functional
+./scripts/test-run.sh Api
+./scripts/test-run.sh Functional
+./scripts/test-run.sh Unit
+./scripts/test-run.sh Console
 ```
 
-Unit:
-
-```bash
-docker compose exec -T backend \
-  vendor/bin/codecept run Unit
+```powershell
+.\scripts\test-run.ps1 Api
+.\scripts\test-run.ps1 Functional
+.\scripts\test-run.ps1 Unit
+.\scripts\test-run.ps1 Console
 ```
 
 Static analysis:
 
 ```bash
-docker compose exec -T backend \
+./scripts/test-start.sh
+docker compose --profile test exec -T backend-test \
   vendor/bin/psalm
 ```
 
 Проверка Composer dependencies:
 
 ```bash
-docker compose exec -T backend composer validate --strict
+docker compose --profile test exec -T backend-test composer validate --strict
 
-docker compose exec -T backend composer check-platform-reqs
+docker compose --profile test exec -T backend-test composer check-platform-reqs
 
-docker compose exec -T backend composer audit
+docker compose --profile test exec -T backend-test composer audit
 ```
 
 ---
@@ -750,8 +759,10 @@ git status
 После изменения backend:
 
 ```bash
-docker compose exec -T backend vendor/bin/psalm
-docker compose exec -T backend vendor/bin/codecept run
+./scripts/test-start.sh
+docker compose --profile test exec -T backend-test vendor/bin/psalm
+./scripts/test-run.sh
+./scripts/test-stop.sh
 ```
 
 Перед commit необходимо убедиться, что в Git не попали:

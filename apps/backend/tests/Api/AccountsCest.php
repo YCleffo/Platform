@@ -65,6 +65,16 @@ final readonly class AccountsCest
         $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
     }
 
+    public function rejectsUnsafeAccountLabelsAtValidationBoundary(ApiTester $I): void
+    {
+        $I->haveHttpHeader('Content-Type', 'application/json');
+        foreach (['   ', "bad\0label", "bad\nlabel", str_repeat('a', 161)] as $label) {
+            $I->sendPOST('/api/core/accounts', ['accountType' => 'service', 'label' => $label]);
+            $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+            $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
+        }
+    }
+
     public function securityLifecycleUsesNamedOperations(ApiTester $I): void
     {
         $target = $I->havePasswordAccount();

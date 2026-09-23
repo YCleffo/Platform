@@ -136,36 +136,33 @@ final class ValueNormalizer
      */
     public static function normalizeLabel(?string $value, int $maxLength = 80): ?string
     {
-        if ($value === null) {
-            return null;
-        }
-
-        if (preg_match('/[\x00-\x1F\x7F]/', $value) === 1) {
-            throw new InvalidArgumentException('Label must not contain control characters.');
-        }
-
-        $normalized = Normalizer::normalize(trim($value), Normalizer::FORM_C);
-        if (!is_string($normalized) || $normalized === '') {
-            return null;
-        }
-
-        $collapsed = (string) preg_replace('/\s+/u', ' ', $normalized);
-
-        if (!mb_check_encoding($collapsed, 'UTF-8')) {
-            throw new InvalidArgumentException('Label must be valid UTF-8.');
-        }
-
-        if (mb_strlen($collapsed) > $maxLength) {
-            throw new InvalidArgumentException("Label must not exceed {$maxLength} characters.");
-        }
-
-        return $collapsed;
+        return self::normalizeOptionalText($value, $maxLength, 'Label');
     }
 
     public static function isValidLabel(?string $value, int $maxLength = 80): bool
     {
         try {
             self::normalizeLabel($value, $maxLength);
+            return true;
+        } catch (InvalidArgumentException) {
+            return false;
+        }
+    }
+
+    /**
+     * Lightweight normalization for nullable user-controlled text.
+     *
+     * @throws InvalidArgumentException
+     */
+    public static function normalizeText(?string $value, int $maxLength = 1_000): ?string
+    {
+        return self::normalizeOptionalText($value, $maxLength, 'Text');
+    }
+
+    public static function isValidText(?string $value, int $maxLength = 1_000): bool
+    {
+        try {
+            self::normalizeText($value, $maxLength);
             return true;
         } catch (InvalidArgumentException) {
             return false;
@@ -278,31 +275,26 @@ final class ValueNormalizer
             throw new InvalidArgumentException('Username must not contain control characters.');
         }
 
-        $normalized = Normalizer::normalize(trim($value), Normalizer::FORM_KC);
-        if (!is_string($normalized) || $normalized === '') {
+        if ($value === '') {
             throw new InvalidArgumentException('Username cannot be blank.');
         }
 
-        if (preg_match('/[\x00-\x20\x7F]/u', $normalized) === 1) {
+        if (preg_match('/[\x00-\x20\x7F]/', $value) === 1) {
             throw new InvalidArgumentException('Username must not contain whitespace or control characters.');
         }
 
-        $length = mb_strlen($normalized);
+        $length = strlen($value);
         if ($length < $minLength || $length > $maxLength) {
             throw new InvalidArgumentException("Username length must be between {$minLength} and {$maxLength} characters.");
         }
 
-        // Must contain at least one letter or digit
-        if (preg_match('/[\p{L}\p{N}]/u', $normalized) !== 1) {
-            throw new InvalidArgumentException('Username must contain at least one letter or number.');
+        if (preg_match('/\A[a-z0-9]+(?:[._-][a-z0-9]+)*\z/', $value) !== 1) {
+            throw new InvalidArgumentException(
+                'Username must be strictly lowercase ASCII alphanumeric with single internal [._-].',
+            );
         }
 
-        // Allowed: letters, digits, '.', '_', '-'. No leading/trailing/consecutive separators
-        if (preg_match('/^[\p{L}\p{N}]+(?:[._-][\p{L}\p{N}]+)*$/u', $normalized) !== 1) {
-            throw new InvalidArgumentException('Username format is invalid.');
-        }
-
-        return mb_strtolower($normalized);
+        return $value;
     }
 
     public static function isValidUsername(string $value, int $minLength = 3, int $maxLength = 60): bool
@@ -326,21 +318,20 @@ final class ValueNormalizer
             throw new InvalidArgumentException('Machine code must not contain control characters.');
         }
 
-        $trimmed = trim($value);
-        if ($trimmed === '') {
+        if ($value === '') {
             throw new InvalidArgumentException('Machine code cannot be blank.');
         }
 
-        $length = mb_strlen($trimmed);
+        $length = strlen($value);
         if ($length < 1 || $length > $maxLength) {
             throw new InvalidArgumentException("Machine code length must be between 1 and {$maxLength} characters.");
         }
 
-        if (preg_match('/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/', $trimmed) !== 1) {
+        if (preg_match('/\A[a-z0-9]+(?:[._-][a-z0-9]+)*\z/', $value) !== 1) {
             throw new InvalidArgumentException('Machine code must be strictly lowercase alphanumeric with single internal [._-].');
         }
 
-        return $trimmed;
+        return $value;
     }
 
     public static function isValidMachineCode(string $value, int $maxLength = 120): bool
@@ -351,5 +342,33 @@ final class ValueNormalizer
         } catch (InvalidArgumentException) {
             return false;
         }
+    }
+
+    /** @throws InvalidArgumentException */
+    private static function normalizeOptionalText(?string $value, int $maxLength, string $field): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (preg_match('/[\x00-\x1F\x7F]/', $value) === 1) {
+            throw new InvalidArgumentException("{$field} must not contain control characters.");
+        }
+
+        $normalized = Normalizer::normalize($value, Normalizer::FORM_C);
+        if (!is_string($normalized) || !mb_check_encoding($normalized, 'UTF-8')) {
+            throw new InvalidArgumentException("{$field} must be valid UTF-8.");
+        }
+
+        $collapsed = trim((string) preg_replace('/\s+/u', ' ', $normalized));
+        if ($collapsed === '') {
+            throw new InvalidArgumentException("{$field} cannot be blank.");
+        }
+
+        if (mb_strlen($collapsed) > $maxLength) {
+            throw new InvalidArgumentException("{$field} must not exceed {$maxLength} characters.");
+        }
+
+        return $collapsed;
     }
 }

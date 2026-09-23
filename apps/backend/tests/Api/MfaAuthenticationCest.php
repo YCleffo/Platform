@@ -121,6 +121,25 @@ final readonly class MfaAuthenticationCest
         $I->seeResponseContainsJson(['data' => ['totpEnabled' => true, 'recoveryCodesRemaining' => 10]]);
     }
 
+    public function rejectsUnsafeTotpLabelsAtValidationBoundary(ApiTester $I): void
+    {
+        $fixture = $I->havePasswordAccount();
+        $I->haveHttpHeader('Content-Type', 'application/json');
+        $I->sendPOST('/api/auth/login', [
+            'identifierType' => 'email',
+            'identifier' => $fixture['email'],
+            'password' => $fixture['password'],
+        ]);
+        $login = $this->response($I)['data'];
+        $I->haveHttpHeader('Authorization', 'Bearer ' . $login['accessToken']);
+
+        foreach (['   ', "bad\0label", "bad\nlabel", str_repeat('a', 161)] as $label) {
+            $I->sendPOST('/api/auth/mfa/totp/setup', ['label' => $label]);
+            $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+            $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
+        }
+    }
+
     public function emailRecoveryIsGenericSingleUseAndRevokesSecurityState(ApiTester $I): void
     {
         $fixture = $I->havePasswordAccount();

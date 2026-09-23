@@ -10,6 +10,10 @@ jobs:
   backend-qa:
     name: Backend Quality Assurance & Test Isolation
     runs-on: ubuntu-latest
+    env:
+      POSTGRES_TEST_DB: platform_test
+      POSTGRES_USER: platform_app
+      POSTGRES_PASSWORD: platform_ci_test_password
 
     steps:
       - name: Checkout code
@@ -22,42 +26,47 @@ jobs:
           extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
           tools: composer:v2
 
-      - name: Composer Validate & Platform Reqs
+      - name: Validate Composer Metadata
         working-directory: apps/backend
         run: |
           composer validate --strict
-          composer check-platform-reqs
-          composer audit
 
       - name: Install Composer Dependencies
         working-directory: apps/backend
         run: |
           composer install --no-interaction --prefer-dist
 
+      - name: Verify Composer Platform and Security
+        working-directory: apps/backend
+        run: |
+          composer check-platform-reqs
+          composer audit
+
       - name: Run Psalm Static Analysis
         working-directory: apps/backend
         run: |
           ./vendor/bin/psalm --no-cache
 
-      - name: Run Unit Tests
-        working-directory: apps/backend
-        run: |
-          ./vendor/bin/codecept run Unit
-
       - name: Start Isolated Test Infrastructure
         run: |
-          docker compose --profile test up -d postgres-test redis-test
-          docker compose --profile test run --rm db-migrate-test
-          docker compose --profile test up -d backend-test
+          ./scripts/test-start.sh
 
       - name: Verify Core Base Table Count (Strictly 23 Tables)
         run: |
-          count=$(docker compose --profile test exec -T postgres-test psql -U platform_user -d platform_test -tA -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'core' AND table_type = 'BASE TABLE';")
+          count=$(docker compose --profile test exec -T postgres-test psql -U "${POSTGRES_USER}" -d "${POSTGRES_TEST_DB}" -tA -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'core' AND table_type = 'BASE TABLE';")
           echo "Core tables count: ${count}"
           if [ "${count}" != "23" ]; then
             echo "ERROR: Expected 23 core tables, got ${count}"
             exit 1
           fi
+
+      - name: Run Unit Suite on Isolated Runtime
+        run: |
+          docker compose --profile test exec -T backend-test composer test:unit
+
+      - name: Run Console Suite on Isolated Runtime
+        run: |
+          docker compose --profile test exec -T backend-test composer test:console
 
       - name: Run Functional Suite on Isolated Runtime
         run: |
@@ -74,4 +83,4 @@ jobs:
       - name: Stop Test Infrastructure
         if: always()
         run: |
-          docker compose --profile test stop
+          ./scripts/test-stop.sh
