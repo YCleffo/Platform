@@ -4,14 +4,23 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Core\Account\Application\AccountSecurityRepository;
 use App\Core\Auth\Application\AuthChallengeRepository;
+use App\Core\Auth\Application\AuthenticationFlowService;
+use App\Core\Auth\Application\AuthRateLimitPolicy;
+use App\Core\Auth\Application\CredentialMutationGuard;
 use App\Core\Auth\Application\InvalidCredentialsException;
 use App\Core\Auth\Application\PasskeyRepository;
 use App\Core\Auth\Application\PasskeyService;
+use App\Core\Auth\Application\RecentAuthenticationPolicy;
+use App\Core\Auth\Application\AccountSecurityNotifier;
 use App\Core\Auth\Application\WebAuthnPolicy;
 use App\Core\Client\Application\ClientContextResolver;
+use App\Core\Security\Application\IdentifierDigestService;
 use App\Core\Security\Application\RateLimiterInterface;
 use App\Core\Security\Application\RateLimiterUnavailableException;
+use App\Core\Security\Application\SecurityAuditService;
+use App\Core\Time\Application\ClockInterface;
 use App\Environment;
 use App\Tests\Support\FunctionalTester;
 use App\Tests\Support\WebAuthnTestAuthenticator;
@@ -19,6 +28,7 @@ use HttpSoft\Message\ServerRequest;
 use InvalidArgumentException;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Yii\Runner\Http\HttpApplicationRunner;
+use PHPUnit\Framework\Assert;
 
 use function dirname;
 use function hash;
@@ -68,7 +78,10 @@ final readonly class PasskeyHardeningCest
 
         $ip = '10.1.' . random_int(1, 250) . '.' . random_int(1, 250);
         $request = new ServerRequest(
-            headers: ['X-Client-Instance-Id' => 'hard-inst-1'],
+            headers: [
+                'User-Agent' => 'PasskeyHardeningTester/1.0',
+                'X-Client-Instance-ID' => 'a0000000-0000-4000-8000-000000000001',
+            ],
             serverParams: ['REMOTE_ADDR' => $ip, 'HTTP_USER_AGENT' => 'PasskeyHardeningTester/1.0'],
             uri: 'http://localhost:5173/api/auth/passkeys',
             method: 'POST',
@@ -144,12 +157,12 @@ final readonly class PasskeyHardeningCest
         $authenticator = new WebAuthnTestAuthenticator();
         $responseJson = $authenticator->makeRegistrationResponse($start['challenge']);
 
-        $I->expectThrowable(
-            new InvalidArgumentException('Registration challenge session mismatch.'),
-            static function () use ($service, $accountId, $sessionB, $responseJson, $context): void {
-                $service->completeRegistration($accountId, $sessionB, $responseJson, 'Key', $context);
-            },
-        );
+        try {
+            $service->completeRegistration($accountId, $sessionB, $responseJson, 'Key', $context);
+            Assert::fail('Session mismatch must be rejected.');
+        } catch (InvalidArgumentException $e) {
+            assertSame('Registration challenge session mismatch.', $e->getMessage());
+        }
     }
 
     /**
@@ -166,19 +179,22 @@ final readonly class PasskeyHardeningCest
 
         // Context B has a different client instance ID and user agent
         $requestB = new ServerRequest(
-            headers: ['X-Client-Instance-Id' => 'hard-inst-different'],
+            headers: [
+                'User-Agent' => 'AnotherBrowser/2.0',
+                'X-Client-Instance-ID' => 'b0000000-0000-4000-8000-000000000002',
+            ],
             serverParams: ['REMOTE_ADDR' => '10.2.3.4', 'HTTP_USER_AGENT' => 'AnotherBrowser/2.0'],
             uri: 'http://localhost:5173/api/auth/passkeys',
             method: 'POST',
         );
         $contextB = $container->get(ClientContextResolver::class)->resolve($requestB);
 
-        $I->expectThrowable(
-            new InvalidArgumentException('Registration challenge client binding mismatch.'),
-            static function () use ($service, $accountId, $sessionA, $responseJson, $contextB): void {
-                $service->completeRegistration($accountId, $sessionA, $responseJson, 'Key', $contextB);
-            },
-        );
+        try {
+            $service->completeRegistration($accountId, $sessionA, $responseJson, 'Key', $contextB);
+            Assert::fail('Client binding mismatch must be rejected.');
+        } catch (InvalidArgumentException $e) {
+            assertSame('Registration challenge client binding mismatch.', $e->getMessage());
+        }
     }
 
     /**
@@ -215,12 +231,12 @@ final readonly class PasskeyHardeningCest
         assertSame(null, $stored, 'Challenge must be exhausted after 3 failed attempts.');
 
         // Attempting with the valid response must now fail because challenge is gone
-        $I->expectThrowable(
-            new InvalidArgumentException('Invalid or expired registration challenge.'),
-            static function () use ($service, $accountId, $sessionA, $validResponseJson, $context): void {
-                $service->completeRegistration($accountId, $sessionA, $validResponseJson, 'Key', $context);
-            },
-        );
+        try {
+            $service->completeRegistration($accountId, $sessionA, $validResponseJson, 'Key', $context);
+            Assert::fail('Attempt on exhausted challenge must fail.');
+        } catch (InvalidArgumentException $e) {
+            assertSame('Invalid or expired registration challenge.', $e->getMessage());
+        }
     }
 
     /**
@@ -240,12 +256,12 @@ final readonly class PasskeyHardeningCest
             userVerified: false,
         );
 
-        $I->expectThrowable(
-            InvalidArgumentException::class,
-            static function () use ($service, $accountId, $sessionA, $noUvResponseJson, $context): void {
-                $service->completeRegistration($accountId, $sessionA, $noUvResponseJson, 'Key', $context);
-            },
-        );
+        try {
+            $service->completeRegistration($accountId, $sessionA, $noUvResponseJson, 'Key', $context);
+            Assert::fail('Registration with UV=false must be rejected.');
+        } catch (InvalidArgumentException) {
+            // Expected.
+        }
     }
 
     /**
@@ -273,12 +289,12 @@ final readonly class PasskeyHardeningCest
             userVerified: false,
         );
 
-        $I->expectThrowable(
-            InvalidCredentialsException::class,
-            static function () use ($service, $noUvAuthResponse, $context): void {
-                $service->completeAuthentication($noUvAuthResponse, $context);
-            },
-        );
+        try {
+            $service->completeAuthentication($noUvAuthResponse, $context);
+            Assert::fail('Authentication with UV=false must be rejected.');
+        } catch (InvalidCredentialsException) {
+            // Expected.
+        }
     }
 
     /**
@@ -295,19 +311,19 @@ final readonly class PasskeyHardeningCest
         $oversizedPayload = '{"id":"test","response":{"clientDataJSON":"' . str_repeat('a', 36_000) . '"}}';
         assertTrue(strlen($oversizedPayload) > 32_768);
 
-        $I->expectThrowable(
-            new InvalidArgumentException('WebAuthn response too large.'),
-            static function () use ($service, $accountId, $sessionA, $oversizedPayload, $context): void {
-                $service->completeRegistration($accountId, $sessionA, $oversizedPayload, 'Key', $context);
-            },
-        );
+        try {
+            $service->completeRegistration($accountId, $sessionA, $oversizedPayload, 'Key', $context);
+            Assert::fail('Oversized registration payload must be rejected.');
+        } catch (InvalidArgumentException $e) {
+            assertSame('WebAuthn response payload too large.', $e->getMessage());
+        }
 
-        $I->expectThrowable(
-            new InvalidArgumentException('WebAuthn response too large.'),
-            static function () use ($service, $oversizedPayload, $context): void {
-                $service->completeAuthentication($oversizedPayload, $context);
-            },
-        );
+        try {
+            $service->completeAuthentication($oversizedPayload, $context);
+            Assert::fail('Oversized authentication payload must be rejected.');
+        } catch (InvalidCredentialsException) {
+            // Expected: completeAuthentication converts oversized payload to InvalidCredentialsException.
+        }
     }
 
     /**
@@ -360,49 +376,48 @@ final readonly class PasskeyHardeningCest
         $container = $runner->getContainer();
 
         $failingService = new PasskeyService(
-            challenges: $challenges,
             passkeys: $passkeyRepo,
-            passwords: $container->get(\App\Core\Auth\Application\PasswordCredentialRepository::class),
-            identities: $container->get(\App\Core\Auth\Application\ExternalIdentityRepository::class),
-            recentAuthentication: $container->get(\App\Core\Auth\Application\RecentAuthenticationPolicy::class),
-            notifications: $container->get(\App\Core\Auth\Application\AccountSecurityNotifier::class),
+            challenges: $challenges,
+            accounts: $container->get(AccountSecurityRepository::class),
+            recentAuthentication: $container->get(RecentAuthenticationPolicy::class),
+            notifications: $container->get(AccountSecurityNotifier::class),
             rateLimiter: $failingLimiter,
-            ratePolicy: $container->get(\App\Core\Auth\Application\AuthRateLimitPolicy::class),
-            digests: $container->get(\App\Core\Security\Application\IdentifierDigestService::class),
-            audit: $container->get(\App\Core\Security\Application\SecurityAuditService::class),
-            clock: $container->get(\App\Core\Time\Application\ClockInterface::class),
+            ratePolicy: $container->get(AuthRateLimitPolicy::class),
+            digests: $container->get(IdentifierDigestService::class),
+            audit: $container->get(SecurityAuditService::class),
+            clock: $container->get(ClockInterface::class),
             db: $db,
             webAuthnPolicy: $policy,
-            mutationGuard: $container->get(\App\Core\Auth\Application\CredentialMutationGuard::class),
-            authFlow: $container->get(\App\Core\Auth\Application\AuthenticationFlowService::class),
+            mutationGuard: $container->get(CredentialMutationGuard::class),
+            authFlow: $container->get(AuthenticationFlowService::class),
         );
 
         // startAuthentication must fail closed
-        $I->expectThrowable(
-            RateLimiterUnavailableException::class,
-            static function () use ($failingService, $context): void {
-                $failingService->startAuthentication($context);
-            },
-        );
+        try {
+            $failingService->startAuthentication($context);
+            Assert::fail('Outage must fail closed.');
+        } catch (RateLimiterUnavailableException) {
+            // Expected.
+        }
 
         // completeRegistration must fail closed
         $start = $service->startRegistration($accountId, $sessionA, $context);
         $authenticator = new WebAuthnTestAuthenticator();
         $responseJson = $authenticator->makeRegistrationResponse($start['challenge']);
 
-        $I->expectThrowable(
-            RateLimiterUnavailableException::class,
-            static function () use ($failingService, $accountId, $sessionA, $responseJson, $context): void {
-                $failingService->completeRegistration($accountId, $sessionA, $responseJson, 'Key', $context);
-            },
-        );
+        try {
+            $failingService->completeRegistration($accountId, $sessionA, $responseJson, 'Key', $context);
+            Assert::fail('Outage must fail closed.');
+        } catch (RateLimiterUnavailableException) {
+            // Expected.
+        }
 
         // completeAuthentication must fail closed
-        $I->expectThrowable(
-            RateLimiterUnavailableException::class,
-            static function () use ($failingService, $responseJson, $context): void {
-                $failingService->completeAuthentication($responseJson, $context);
-            },
-        );
+        try {
+            $failingService->completeAuthentication($responseJson, $context);
+            Assert::fail('Outage must fail closed.');
+        } catch (RateLimiterUnavailableException) {
+            // Expected.
+        }
     }
 }

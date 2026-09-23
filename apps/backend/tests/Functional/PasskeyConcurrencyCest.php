@@ -22,6 +22,7 @@ use HttpSoft\Message\ServerRequest;
 use InvalidArgumentException;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Yii\Runner\Http\HttpApplicationRunner;
+use PHPUnit\Framework\Assert;
 
 use function dirname;
 use function hash;
@@ -281,12 +282,12 @@ final readonly class PasskeyConcurrencyCest
         $service1->revoke($passkey->id, $accountId, $sessionId, $ctx1);
 
         // Step 2: Attempt to unlink the only remaining identity -> MUST be rejected!
-        $I->expectThrowable(
-            LastAuthenticationMethodException::class,
-            static function () use ($extService1, $accountId, $sessionId, $ctx1): void {
-                $extService1->unlink('google', $accountId, $sessionId, $ctx1);
-            },
-        );
+        try {
+            $extService1->unlink('google', $accountId, $sessionId, $ctx1);
+            Assert::fail('Unlinking the last remaining login method must fail.');
+        } catch (LastAuthenticationMethodException) {
+            // Expected.
+        }
 
         // Final invariant check: account STILL has exactly 1 method (the Google identity)
         $remainingMethods = (int) $db1->createCommand(
