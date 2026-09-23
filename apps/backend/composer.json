@@ -125,8 +125,13 @@
         "test:api": [
             "Composer\\Config::disableProcessTimeout",
             "codecept run Api"
+        ],
+        "test:console": [
+            "Composer\\Config::disableProcessTimeout",
+            "codecept run Console"
         ]
     },
+
     "extra": {
         "config-plugin-file": "config/configuration.php"
     },

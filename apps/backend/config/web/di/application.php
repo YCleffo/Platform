@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Api\Shared\ExceptionResponderFactory;
 use App\Api\Shared\LocalizedResponseMiddleware;
 use App\Api\Shared\NotFoundMiddleware;
+use App\Api\Shared\RequestSizeLimitMiddleware;
 use App\Api\Shared\SecurityHeadersMiddleware;
 use App\Core\Client\Infrastructure\ClientContextMiddleware;
 use Yiisoft\DataResponse\Formatter\JsonFormatter;
@@ -43,6 +44,7 @@ return [
                         static fn(ExceptionResponderFactory $factory) => $factory->create(),
                         ClientContextMiddleware::class,
                         LocalizedResponseMiddleware::class,
+                        RequestSizeLimitMiddleware::class,
                         RequestBodyParser::class,
                         Router::class,
                         NotFoundMiddleware::class,

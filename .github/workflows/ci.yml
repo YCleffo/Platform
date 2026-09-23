@@ -1,0 +1,77 @@
+name: Platform CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-qa:
+    name: Backend Quality Assurance & Test Isolation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
+          tools: composer:v2
+
+      - name: Composer Validate & Platform Reqs
+        working-directory: apps/backend
+        run: |
+          composer validate --strict
+          composer check-platform-reqs
+          composer audit
+
+      - name: Install Composer Dependencies
+        working-directory: apps/backend
+        run: |
+          composer install --no-interaction --prefer-dist
+
+      - name: Run Psalm Static Analysis
+        working-directory: apps/backend
+        run: |
+          ./vendor/bin/psalm --no-cache
+
+      - name: Run Unit Tests
+        working-directory: apps/backend
+        run: |
+          ./vendor/bin/codecept run Unit
+
+      - name: Start Isolated Test Infrastructure
+        run: |
+          docker compose --profile test up -d postgres-test redis-test
+          docker compose --profile test run --rm db-migrate-test
+          docker compose --profile test up -d backend-test
+
+      - name: Verify Core Base Table Count (Strictly 23 Tables)
+        run: |
+          count=$(docker compose --profile test exec -T postgres-test psql -U platform_user -d platform_test -tA -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'core' AND table_type = 'BASE TABLE';")
+          echo "Core tables count: ${count}"
+          if [ "${count}" != "23" ]; then
+            echo "ERROR: Expected 23 core tables, got ${count}"
+            exit 1
+          fi
+
+      - name: Run Functional Suite on Isolated Runtime
+        run: |
+          docker compose --profile test exec -T backend-test composer test:functional
+
+      - name: Run API Suite on Isolated Runtime
+        run: |
+          docker compose --profile test exec -T backend-test composer test:api
+
+      - name: Run Full Deterministic Suite with Seed 2120741368
+        run: |
+          docker compose --profile test exec -T backend-test vendor/bin/codecept run --seed 2120741368
+
+      - name: Stop Test Infrastructure
+        if: always()
+        run: |
+          docker compose --profile test stop

@@ -1,5 +1,6 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+$PSNativeCommandUseErrorActionPreference = $false
 
 # -----------------------------------------------------------------------------
 # Shared helpers for local Platform development scripts.

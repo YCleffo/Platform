@@ -267,7 +267,7 @@ services:
       start_period: 3s
 
     networks:
-      - backend_net
+      - test_net
 
   redis-test:
     profiles: ["test"]
@@ -284,6 +284,9 @@ services:
     ports:
       - "127.0.0.1:${REDIS_TEST_PORT:-6380}:6379"
 
+    volumes:
+      - redis_test_data:/data
+
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 3s
@@ -291,7 +294,7 @@ services:
       retries: 20
 
     networks:
-      - backend_net
+      - test_net
 
   db-migrate-test:
     profiles: ["test"]
@@ -319,7 +322,7 @@ services:
         condition: service_healthy
 
     networks:
-      - backend_net
+      - test_net
 
   backend-test:
     profiles: ["test"]
@@ -333,6 +336,7 @@ services:
     environment:
       APP_ENV: test
       APP_DEBUG: "false"
+      TEST_ISOLATED_RUNTIME: "1"
       XDEBUG_MODE: "off"
 
       DB_HOST: postgres-test
@@ -415,8 +419,6 @@ services:
         condition: service_healthy
       db-migrate-test:
         condition: service_completed_successfully
-      mailpit:
-        condition: service_started
 
     ports:
       - "127.0.0.1:${BACKEND_TEST_PORT:-8081}:80"
@@ -438,7 +440,7 @@ services:
       start_period: 5s
 
     networks:
-      - backend_net
+      - test_net
 
 volumes:
   postgres_data:
@@ -450,7 +452,14 @@ volumes:
   redis_data:
     name: platform_redis_data
 
+  redis_test_data:
+    name: platform_redis_test_data
+
 networks:
   backend_net:
     name: platform_backend_net
+    internal: false
+
+  test_net:
+    name: platform_test_net
     internal: false

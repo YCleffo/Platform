@@ -34,7 +34,8 @@ final readonly class LocalizedResponseMiddleware implements MiddlewareInterface
         $response = $handler->handle($request);
         $status = $response->getStatusCode();
 
-        if (in_array($status, self::LOCALIZED_ERROR_STATUSES, true)
+        if (
+            in_array($status, self::LOCALIZED_ERROR_STATUSES, true)
             && !($response->getBody() instanceof DataStream)
         ) {
             $original = $response;

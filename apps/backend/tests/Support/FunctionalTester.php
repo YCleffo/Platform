@@ -27,23 +27,28 @@ use function dirname;
  * @method void pause($vars = [])
  *
  * @SuppressWarnings(PHPMD)
-*/
+ */
 class FunctionalTester extends Actor
 {
     use _generated\FunctionalTesterActions;
 
-    /**
-     * Define custom actions here
-     */
+    private static ?HttpApplicationRunner $runner = null;
+
+    public static function getRunner(): HttpApplicationRunner
+    {
+        if (self::$runner === null) {
+            self::$runner = new HttpApplicationRunner(
+                rootPath: dirname(__DIR__, 2),
+                environment: Environment::appEnv(),
+            );
+        }
+
+        return self::$runner;
+    }
 
     public function sendRequest(ServerRequestInterface $request): ResponseInterface
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-
-        $response = $runner->runAndGetResponse($request);
+        $response = self::getRunner()->runAndGetResponse($request);
 
         $body = $response->getBody();
         if ($body->isSeekable()) {

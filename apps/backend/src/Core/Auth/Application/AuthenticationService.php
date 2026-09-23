@@ -53,6 +53,7 @@ final readonly class AuthenticationService
         ));
         $activity = $this->activity->touch($session->id, $account->accountId, $localizedContext);
         if ($activity === null) {
+            error_log('[DEBUG AUTH] activity touch returned null');
             return null;
         }
 

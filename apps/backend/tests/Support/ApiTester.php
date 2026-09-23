@@ -28,7 +28,7 @@ use function dirname;
  * @method void pause($vars = [])
  *
  * @SuppressWarnings(PHMD)
-*/
+ */
 class ApiTester extends \Codeception\Actor
 {
     use _generated\ApiTesterActions;
@@ -53,16 +53,12 @@ class ApiTester extends \Codeception\Actor
         return self::getTestContainer()->get(ConnectionInterface::class);
     }
 
-    public static function flushTestRedis(): void
+    public static function getRedis(): RedisClient
     {
-        try {
-            $client = new RedisClient([
-                'host' => getenv('REDIS_HOST') ?: '127.0.0.1',
-                'port' => (int) (getenv('REDIS_PORT') ?: 6379),
-            ]);
-            $client->flushdb();
-        } catch (\Throwable) {
-        }
+        return new RedisClient([
+            'host' => getenv('REDIS_HOST') ?: '127.0.0.1',
+            'port' => (int) (getenv('REDIS_PORT') ?: 6379),
+        ]);
     }
 
     public function resetClientState(): void
@@ -71,6 +67,9 @@ class ApiTester extends \Codeception\Actor
         $this->deleteHeader('X-Client-Locale');
         $this->deleteHeader('Accept-Language');
         $this->deleteHeader('Content-Type');
+        $this->deleteHeader('Origin');
+        $this->deleteHeader('X-Forwarded-For');
+        $this->deleteHeader('X-Real-IP');
     }
 
     /** @return array{accountId: string, token: string} */
@@ -433,23 +432,9 @@ class ApiTester extends \Codeception\Actor
     public function cleanupCoreTestFixtures(): void
     {
         $this->resetClientState();
-        $db = self::getDb();
-        $db->transaction(static function (ConnectionInterface $db): void {
-            $db->createCommand('DELETE FROM core.auth_challenges')->execute();
-            $db->createCommand('DELETE FROM core.outbox_events')->execute();
-            $db->createCommand('DELETE FROM core.inbox_events')->execute();
-            $db->createCommand('DELETE FROM core.audit_events')->execute();
-            $db->createCommand('DELETE FROM core.accounts')->execute();
-            $db->createCommand('DELETE FROM core.persons')->execute();
-            $db->createCommand('DELETE FROM core.module_settings')->execute();
-            $db->createCommand('DELETE FROM core.system_settings')->execute();
-            $db->createCommand('DELETE FROM core.feature_flags')->execute();
-            $db->createCommand('DELETE FROM core.modules')->execute();
-            $db->createCommand('DELETE FROM core.role_permissions WHERE role_id NOT IN (SELECT id FROM core.roles WHERE is_system = true)')->execute();
-            $db->createCommand('DELETE FROM core.roles WHERE is_system = false')->execute();
-        });
-        self::flushTestRedis();
+        TestReset::reset(self::getDb(), self::getRedis());
     }
+
 
     /**
      * @param list<string> $permissions
@@ -541,6 +526,7 @@ class ApiTester extends \Codeception\Actor
             throw new \RuntimeException('Account not found.');
         }
         $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        $hash = hash('sha256', $token);
         $db->createCommand(
             <<<'SQL'
             INSERT INTO core.auth_sessions (
