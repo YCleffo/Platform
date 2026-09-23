@@ -12,6 +12,11 @@ use function PHPUnit\Framework\assertSame;
 
 final readonly class AuthenticationRuntimeCest
 {
+    public function _before(ApiTester $I): void
+    {
+        $I->cleanupCoreTestFixtures();
+    }
+
     public function _after(ApiTester $I): void
     {
         $I->cleanupCoreTestFixtures();
@@ -111,6 +116,20 @@ final readonly class AuthenticationRuntimeCest
             ]);
             $I->seeResponseCodeIs(HttpCode::UNAUTHORIZED);
             $I->seeResponseContainsJson(['error' => ['code' => 'auth.invalid_credentials']]);
+        }
+    }
+
+    public function rejectsNonCanonicalUsernamesAtValidationBoundary(ApiTester $I): void
+    {
+        $I->haveHttpHeader('Content-Type', 'application/json');
+        foreach (['Alice', 'алиса', 'core..admin', '.core', 'core.'] as $username) {
+            $I->sendPOST('/api/auth/login', [
+                'identifierType' => 'username',
+                'identifier' => $username,
+                'password' => 'irrelevant',
+            ]);
+            $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+            $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
         }
     }
 

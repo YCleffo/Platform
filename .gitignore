@@ -1,7 +1,8 @@
 # Local secrets / environment
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+**/override.env
 
 # IDE
 .idea/
@@ -10,6 +11,8 @@
 # PHP / Composer
 **/vendor/
 **/runtime/
+!docs/database/runtime/
+!docs/database/runtime/**
 .phpunit.cache/
 .phpunit.result.cache
 

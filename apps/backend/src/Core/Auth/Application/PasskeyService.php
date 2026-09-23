@@ -395,6 +395,10 @@ final readonly class PasskeyService
                 throw new InvalidArgumentException('Registration challenge already consumed or expired.');
             }
 
+            if ($this->passkeys->findByCredentialIdHex($credentialIdHex) !== null) {
+                throw new ConflictException('Passkey credential already registered.');
+            }
+
             try {
                 $created = $this->passkeys->create(
                     accountId: $accountId,

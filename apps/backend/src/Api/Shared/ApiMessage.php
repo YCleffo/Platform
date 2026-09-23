@@ -112,6 +112,11 @@ final class ApiMessage
     public const string VALIDATION_JSON_TOO_LARGE = 'validation.json_too_large';
     public const string VALIDATION_SECRET_KEY_FORBIDDEN = 'validation.secret_key_forbidden';
     public const string VALIDATION_EXACTLY_ONE_MFA_CODE = 'validation.exactly_one_mfa_code';
+    public const string VALIDATION_PERSON_NAME_INVALID = 'validation.person_name_invalid';
+    public const string VALIDATION_PHONE_INVALID = 'validation.phone_invalid';
+    public const string VALIDATION_USERNAME_INVALID = 'validation.username_invalid';
+    public const string VALIDATION_TEXT_INVALID = 'validation.text_invalid';
+    public const string VALIDATION_BIRTH_DATE_FUTURE = 'validation.birth_date_future';
 
     public static function forStatus(int $status): string
     {

@@ -8,9 +8,21 @@ use App\Api\Shared\ApiMessage;
 use App\Core\Person\Application\CreatePersonCommand;
 use App\Core\Person\Application\CreatePersonContactCommand;
 use App\Core\Person\Application\UpdatePersonCommand;
+use App\Core\Shared\Domain\ValueNormalizer;
 use DateTimeImmutable;
+use DateTimeZone;
+use InvalidArgumentException;
 use Yiisoft\Input\Http\InputValidationException;
 use Yiisoft\Validator\Result;
+
+use function array_filter;
+use function array_key_exists;
+use function array_keys;
+use function in_array;
+use function is_array;
+use function is_bool;
+use function is_string;
+use function trim;
 
 final class PersonInput
 {
@@ -19,19 +31,21 @@ final class PersonInput
         $data = self::body($body);
         $result = new Result();
         self::rejectUnknown($data, ['givenName', 'familyName', 'middleName', 'displayName', 'birthDate'], $result);
-        self::string($data, 'givenName', 120, false, true, $result);
-        self::string($data, 'familyName', 120, false, true, $result);
-        self::string($data, 'middleName', 120, true, false, $result);
-        self::string($data, 'displayName', 255, true, false, $result);
-        self::date($data, 'birthDate', false, $result);
+
+        $givenName = self::personName($data, 'givenName', 120, false, true, $result);
+        $familyName = self::personName($data, 'familyName', 120, false, true, $result);
+        $middleName = self::personName($data, 'middleName', 120, true, false, $result);
+        $displayName = self::displayName($data, 'displayName', 255, true, false, $result);
+        $birthDate = self::date($data, 'birthDate', false, $result);
+
         self::throwIfInvalid($result);
 
         return new CreatePersonCommand(
-            (string) $data['givenName'],
-            (string) $data['familyName'],
-            self::nullableString($data['middleName'] ?? null),
-            self::nullableString($data['displayName'] ?? null),
-            self::nullableString($data['birthDate'] ?? null),
+            givenName: (string) $givenName,
+            familyName: (string) $familyName,
+            middleName: $middleName,
+            displayName: $displayName,
+            birthDate: $birthDate,
         );
     }
 
@@ -50,25 +64,26 @@ final class PersonInput
             $result->addError(ApiMessage::VALIDATION_UPDATE_REQUIRED);
         }
 
-        self::string($data, 'givenName', 120, false, false, $result);
-        self::string($data, 'familyName', 120, false, false, $result);
-        self::string($data, 'middleName', 120, true, false, $result);
-        self::string($data, 'displayName', 255, true, false, $result);
-        self::date($data, 'birthDate', false, $result);
+        $givenName = self::personName($data, 'givenName', 120, false, false, $result);
+        $familyName = self::personName($data, 'familyName', 120, false, false, $result);
+        $middleName = self::personName($data, 'middleName', 120, true, false, $result);
+        $displayName = self::displayName($data, 'displayName', 255, true, false, $result);
+        $birthDate = self::date($data, 'birthDate', false, $result);
+
         self::throwIfInvalid($result);
 
         return new UpdatePersonCommand(
             id: $id,
             givenNameProvided: array_key_exists('givenName', $data),
-            givenName: self::nullableString($data['givenName'] ?? null),
+            givenName: $givenName,
             familyNameProvided: array_key_exists('familyName', $data),
-            familyName: self::nullableString($data['familyName'] ?? null),
+            familyName: $familyName,
             middleNameProvided: array_key_exists('middleName', $data),
-            middleName: self::nullableString($data['middleName'] ?? null),
+            middleName: $middleName,
             displayNameProvided: array_key_exists('displayName', $data),
-            displayName: self::nullableString($data['displayName'] ?? null),
+            displayName: $displayName,
             birthDateProvided: array_key_exists('birthDate', $data),
-            birthDate: self::nullableString($data['birthDate'] ?? null),
+            birthDate: $birthDate,
         );
     }
 
@@ -77,27 +92,41 @@ final class PersonInput
         $data = self::body($body);
         $result = new Result();
         self::rejectUnknown($data, ['contactType', 'value', 'label', 'isPrimary'], $result);
+
         self::string($data, 'contactType', 20, false, true, $result);
         self::string($data, 'value', 320, false, true, $result);
-        self::string($data, 'label', 80, true, false, $result);
+        $label = self::label($data, 'label', 80, true, false, $result);
 
-        if (
-            isset($data['contactType'])
-            && is_string($data['contactType'])
-            && !in_array($data['contactType'], ['email', 'phone'], true)
-        ) {
+        $contactType = isset($data['contactType']) && is_string($data['contactType'])
+            ? $data['contactType']
+            : null;
+
+        if ($contactType !== null && !in_array($contactType, ['email', 'phone'], true)) {
             $result->addError(ApiMessage::VALIDATION_CONTACT_TYPE, valuePath: ['contactType']);
         }
+
         if (array_key_exists('isPrimary', $data) && !is_bool($data['isPrimary'])) {
             $result->addError(ApiMessage::VALIDATION_BOOLEAN, valuePath: ['isPrimary']);
         }
+
+        $value = isset($data['value']) && is_string($data['value']) ? $data['value'] : '';
+        if ($contactType === 'email' && $value !== '') {
+            if (!ValueNormalizer::isValidEmail($value)) {
+                $result->addError(ApiMessage::VALIDATION_EMAIL_INVALID, valuePath: ['value']);
+            }
+        } elseif ($contactType === 'phone' && $value !== '') {
+            if (!ValueNormalizer::isValidPhone($value)) {
+                $result->addError(ApiMessage::VALIDATION_PHONE_INVALID, valuePath: ['value']);
+            }
+        }
+
         self::throwIfInvalid($result);
 
         return new CreatePersonContactCommand(
             personId: $personId,
-            contactType: (string) ($data['contactType'] ?? ''),
-            value: (string) $data['value'],
-            label: self::nullableString($data['label'] ?? null),
+            contactType: (string) $contactType,
+            value: $value,
+            label: $label,
             isPrimary: self::boolean($data['isPrimary'] ?? false),
         );
     }
@@ -126,6 +155,165 @@ final class PersonInput
             if (!in_array($field, $allowed, true)) {
                 $result->addError(ApiMessage::VALIDATION_UNKNOWN_FIELD, valuePath: [$field]);
             }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private static function personName(
+        array $data,
+        string $field,
+        int $maxLength,
+        bool $nullable,
+        bool $required,
+        Result $result,
+    ): ?string {
+        if (!array_key_exists($field, $data)) {
+            if ($required) {
+                $result->addError(ApiMessage::VALIDATION_REQUIRED, valuePath: [$field]);
+            }
+            return null;
+        }
+
+        $value = $data[$field];
+        if ($value === null) {
+            if (!$nullable) {
+                $result->addError(ApiMessage::VALIDATION_STRING, valuePath: [$field]);
+            }
+            return null;
+        }
+
+        if (!is_string($value)) {
+            $result->addError(ApiMessage::VALIDATION_STRING, valuePath: [$field]);
+            return null;
+        }
+
+        if (trim($value) === '') {
+            $result->addError(ApiMessage::VALIDATION_NOT_BLANK, valuePath: [$field]);
+            return null;
+        }
+
+        if (self::unicodeLength($value) > $maxLength) {
+            $result->addError(
+                ApiMessage::VALIDATION_MAX_LENGTH,
+                ['max' => $maxLength],
+                [$field],
+            );
+            return null;
+        }
+
+        try {
+            return ValueNormalizer::normalizePersonName($value, $maxLength);
+        } catch (InvalidArgumentException) {
+            $result->addError(ApiMessage::VALIDATION_PERSON_NAME_INVALID, valuePath: [$field]);
+            return null;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private static function displayName(
+        array $data,
+        string $field,
+        int $maxLength,
+        bool $nullable,
+        bool $required,
+        Result $result,
+    ): ?string {
+        if (!array_key_exists($field, $data)) {
+            if ($required) {
+                $result->addError(ApiMessage::VALIDATION_REQUIRED, valuePath: [$field]);
+            }
+            return null;
+        }
+
+        $value = $data[$field];
+        if ($value === null) {
+            if (!$nullable) {
+                $result->addError(ApiMessage::VALIDATION_STRING, valuePath: [$field]);
+            }
+            return null;
+        }
+
+        if (!is_string($value)) {
+            $result->addError(ApiMessage::VALIDATION_STRING, valuePath: [$field]);
+            return null;
+        }
+
+        if (trim($value) === '') {
+            $result->addError(ApiMessage::VALIDATION_NOT_BLANK, valuePath: [$field]);
+            return null;
+        }
+
+        if (self::unicodeLength($value) > $maxLength) {
+            $result->addError(
+                ApiMessage::VALIDATION_MAX_LENGTH,
+                ['max' => $maxLength],
+                [$field],
+            );
+            return null;
+        }
+
+        try {
+            return ValueNormalizer::normalizeDisplayName($value, $maxLength);
+        } catch (InvalidArgumentException) {
+            $result->addError(ApiMessage::VALIDATION_TEXT_INVALID, valuePath: [$field]);
+            return null;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private static function label(
+        array $data,
+        string $field,
+        int $maxLength,
+        bool $nullable,
+        bool $required,
+        Result $result,
+    ): ?string {
+        if (!array_key_exists($field, $data)) {
+            if ($required) {
+                $result->addError(ApiMessage::VALIDATION_REQUIRED, valuePath: [$field]);
+            }
+            return null;
+        }
+
+        $value = $data[$field];
+        if ($value === null) {
+            if (!$nullable) {
+                $result->addError(ApiMessage::VALIDATION_STRING, valuePath: [$field]);
+            }
+            return null;
+        }
+
+        if (!is_string($value)) {
+            $result->addError(ApiMessage::VALIDATION_STRING, valuePath: [$field]);
+            return null;
+        }
+
+        if (trim($value) === '') {
+            $result->addError(ApiMessage::VALIDATION_NOT_BLANK, valuePath: [$field]);
+            return null;
+        }
+
+        if (self::unicodeLength($value) > $maxLength) {
+            $result->addError(
+                ApiMessage::VALIDATION_MAX_LENGTH,
+                ['max' => $maxLength],
+                [$field],
+            );
+            return null;
+        }
+
+        try {
+            return ValueNormalizer::normalizeLabel($value, $maxLength);
+        } catch (InvalidArgumentException) {
+            $result->addError(ApiMessage::VALIDATION_TEXT_INVALID, valuePath: [$field]);
+            return null;
         }
     }
 
@@ -170,28 +358,43 @@ final class PersonInput
     /**
      * @param array<string, mixed> $data
      */
-    private static function date(array $data, string $field, bool $required, Result $result): void
+    private static function date(array $data, string $field, bool $required, Result $result): ?string
     {
         if (!array_key_exists($field, $data)) {
             if ($required) {
                 $result->addError(ApiMessage::VALIDATION_REQUIRED, valuePath: [$field]);
             }
-            return;
+            return null;
         }
 
         $value = $data[$field];
         if ($value === null) {
-            return;
+            return null;
         }
         if (!is_string($value)) {
             $result->addError(ApiMessage::VALIDATION_DATE_STRING, valuePath: [$field]);
-            return;
+            return null;
         }
 
-        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value, new DateTimeZone('UTC'));
         if ($date === false || $date->format('Y-m-d') !== $value) {
             $result->addError(ApiMessage::VALIDATION_DATE_INVALID, valuePath: [$field]);
+            return null;
         }
+
+        $today = new DateTimeImmutable('today', new DateTimeZone('UTC'));
+        if ($date > $today) {
+            $result->addError(ApiMessage::VALIDATION_BIRTH_DATE_FUTURE, valuePath: [$field]);
+            return null;
+        }
+
+        $minDate = new DateTimeImmutable('1900-01-01', new DateTimeZone('UTC'));
+        if ($date < $minDate) {
+            $result->addError(ApiMessage::VALIDATION_DATE_INVALID, valuePath: [$field]);
+            return null;
+        }
+
+        return $value;
     }
 
     private static function throwIfInvalid(Result $result): void
@@ -199,11 +402,6 @@ final class PersonInput
         if (!$result->isValid()) {
             throw new InputValidationException($result);
         }
-    }
-
-    private static function nullableString(mixed $value): ?string
-    {
-        return $value === null ? null : (string) $value;
     }
 
     private static function boolean(mixed $value): bool

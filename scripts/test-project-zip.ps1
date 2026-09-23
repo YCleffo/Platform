@@ -12,10 +12,20 @@ $archivePath = Join-Path $temporaryDirectory "$projectName-security-test.zip"
 # Fixtures to prove exclusions catch prohibited files
 $fixtures = @(
     (Join-Path $root "$projectName.zip"),
+    (Join-Path $root ".env.archive-test"),
     (Join-Path $root "backups\test.dump"),
     (Join-Path $root "apps\backend\runtime\test.log"),
-    (Join-Path $root "apps\backend\tests\_output\example.fail.json")
+    (Join-Path $root "apps\backend\tests\_output\example.fail.json"),
+    (Join-Path $root "apps\backend\vendor\zip-fixture.php"),
+    (Join-Path $root "apps\backend\node_modules\zip-fixture.js"),
+    (Join-Path $root "apps\backend\dist\zip-fixture.js")
 )
+
+foreach ($fixture in $fixtures) {
+    if (Test-Path -LiteralPath $fixture) {
+        throw "Refusing to replace existing archive test fixture: $fixture"
+    }
+}
 
 New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
 
@@ -56,7 +66,7 @@ try {
             $fileName = $segments[-1]
 
             # Sensitive env files
-            if ($fileName -eq ".env" -or $fileName -match '^\.env(\..+)?\.local$') {
+            if (($fileName -eq ".env" -or $fileName -like ".env.*") -and $fileName -ne ".env.example") {
                 $entry
                 continue
             }
@@ -82,7 +92,7 @@ try {
 
             # Excluded directories
             if ($segments -contains "vendor" -or
-                $segments -contains "runtime" -or
+                (($segments -contains "runtime") -and $entry -notlike 'docs/database/runtime/*') -or
                 $segments -contains "node_modules" -or
                 $segments -contains "dist" -or
                 $segments -contains "backups") {
@@ -104,7 +114,7 @@ try {
     }
 
     # Ensure regression fixtures are demonstrably NOT present in archive
-    $fixtureLeaves = @("Platform.zip", "test.dump", "test.log", "example.fail.json")
+    $fixtureLeaves = @("Platform.zip", ".env.archive-test", "test.dump", "test.log", "example.fail.json", "zip-fixture.php", "zip-fixture.js")
     foreach ($entry in $entries) {
         $leaf = Split-Path $entry -Leaf
         if ($fixtureLeaves -contains $leaf) {
@@ -114,7 +124,8 @@ try {
 
     foreach ($requiredEntry in @(
         "apps/backend/codeception.yml",
-        "apps/backend/tests/Api/AuthSecurityCest.php"
+        "apps/backend/tests/Api/AuthSecurityCest.php",
+        "docs/database/runtime/Platform_Runtime_v1.dbml"
     )) {
         if ($entries -notcontains $requiredEntry) {
             throw "Archive is missing required test source/configuration: $requiredEntry"

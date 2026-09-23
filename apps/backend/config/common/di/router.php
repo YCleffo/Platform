@@ -11,7 +11,7 @@ use Yiisoft\Router\RouteCollectorInterface;
 
 return [
     RouteCollectionInterface::class =>
-        static fn(RouteCollectorInterface $collector) => new RouteCollection(
-            $collector->addRoute(...$config->get('routes')),
-        ),
+    static fn(RouteCollectorInterface $collector) => new RouteCollection(
+        $collector->addRoute(...$config->get('routes')),
+    ),
 ];

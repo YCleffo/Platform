@@ -9,6 +9,16 @@ use Codeception\Util\HttpCode;
 
 final readonly class AuthSecurityCest
 {
+    public function _before(ApiTester $I): void
+    {
+        $I->cleanupCoreTestFixtures();
+    }
+
+    public function _after(ApiTester $I): void
+    {
+        $I->cleanupCoreTestFixtures();
+    }
+
     public function sensitiveApiResponsesAreNotCacheableAndCorsIsNotPermissive(ApiTester $I): void
     {
         foreach (['/api/auth/me', '/api/core/persons'] as $path) {

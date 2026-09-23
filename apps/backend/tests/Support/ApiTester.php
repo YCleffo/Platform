@@ -7,6 +7,8 @@ namespace App\Tests\Support;
 use App\Environment;
 use App\Core\Auth\Application\RecoveryCodeService;
 use App\Core\Auth\Application\TotpSecretCipher;
+use Predis\Client as RedisClient;
+use Psr\Container\ContainerInterface;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Yii\Runner\Http\HttpApplicationRunner;
 
@@ -25,20 +27,55 @@ use function dirname;
  * @method void comment($description)
  * @method void pause($vars = [])
  *
- * @SuppressWarnings(PHPMD)
-*/
+ * @SuppressWarnings(PHMD)
+ */
 class ApiTester extends \Codeception\Actor
 {
     use _generated\ApiTesterActions;
 
+    private static ?ContainerInterface $testContainer = null;
+
+    public static function getTestContainer(): ContainerInterface
+    {
+        if (self::$testContainer === null) {
+            $runner = new HttpApplicationRunner(
+                rootPath: dirname(__DIR__, 2),
+                environment: Environment::appEnv(),
+            );
+            self::$testContainer = $runner->getContainer();
+        }
+
+        return self::$testContainer;
+    }
+
+    public static function getDb(): ConnectionInterface
+    {
+        return self::getTestContainer()->get(ConnectionInterface::class);
+    }
+
+    public static function getRedis(): RedisClient
+    {
+        return new RedisClient([
+            'host' => getenv('REDIS_HOST') ?: '127.0.0.1',
+            'port' => (int) (getenv('REDIS_PORT') ?: 6379),
+        ]);
+    }
+
+    public function resetClientState(): void
+    {
+        $this->deleteHeader('Authorization');
+        $this->deleteHeader('X-Client-Locale');
+        $this->deleteHeader('Accept-Language');
+        $this->deleteHeader('Content-Type');
+        $this->deleteHeader('Origin');
+        $this->deleteHeader('X-Forwarded-For');
+        $this->deleteHeader('X-Real-IP');
+    }
+
     /** @return array{accountId: string, token: string} */
     public function amAuthenticatedSuperadmin(?string $locale = null): array
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $db = $runner->getContainer()->get(ConnectionInterface::class);
+        $db = self::getDb();
         $suffix = bin2hex(random_bytes(6));
         $account = $db->createCommand(
             <<<'SQL'
@@ -99,11 +136,7 @@ class ApiTester extends \Codeception\Actor
     /** @return array{id: string, code: string} */
     public function haveConfigurationModule(bool $enabled = false): array
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $db = $runner->getContainer()->get(ConnectionInterface::class);
+        $db = self::getDb();
         $suffix = bin2hex(random_bytes(6));
         $code = 'test.configuration.' . $suffix;
         $id = $db->createCommand(
@@ -137,11 +170,7 @@ class ApiTester extends \Codeception\Actor
     /** @return list<string> */
     public function grabConfigurationAuditActions(): array
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $rows = $runner->getContainer()->get(ConnectionInterface::class)->createCommand(
+        $rows = self::getDb()->createCommand(
             <<<'SQL'
             SELECT action
             FROM core.audit_events
@@ -162,11 +191,7 @@ class ApiTester extends \Codeception\Actor
         bool $locked = false,
         ?string $locale = null,
     ): array {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $db = $runner->getContainer()->get(ConnectionInterface::class);
+        $db = self::getDb();
         $suffix = bin2hex(random_bytes(8));
         $email = 'auth-' . $suffix . '@example.test';
         $password = 'Correct Horse ' . $suffix;
@@ -222,11 +247,7 @@ class ApiTester extends \Codeception\Actor
     /** @return array{totpCode: string, recoveryCode: string} */
     public function enableTotp(string $accountId): array
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $container = $runner->getContainer();
+        $container = self::getTestContainer();
         $db = $container->get(ConnectionInterface::class);
         $secret = random_bytes(20);
         $encrypted = $container->get(TotpSecretCipher::class)->encrypt($secret);
@@ -267,11 +288,7 @@ class ApiTester extends \Codeception\Actor
 
     public function sessionHasMfa(string $sessionId): bool
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $value = $runner->getContainer()->get(ConnectionInterface::class)->createCommand(
+        $value = self::getDb()->createCommand(
             'SELECT mfa_verified_at IS NOT NULL FROM core.auth_sessions WHERE id = CAST(:id AS uuid)',
             [':id' => $sessionId],
         )->queryScalar();
@@ -280,11 +297,7 @@ class ApiTester extends \Codeception\Actor
 
     public function storedTotpEqualsPlaintext(string $accountId, string $plaintext): bool
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $value = $runner->getContainer()->get(ConnectionInterface::class)->createCommand(
+        $value = self::getDb()->createCommand(
             <<<'SQL'
             SELECT secret_encrypted = decode(:plaintext_hex, 'hex')
             FROM core.auth_totp_factors
@@ -300,11 +313,7 @@ class ApiTester extends \Codeception\Actor
     /** @return array{activeFactors: int, availableCodes: int, activeSessions: int} */
     public function mfaStorageState(string $accountId): array
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $row = $runner->getContainer()->get(ConnectionInterface::class)->createCommand(
+        $row = self::getDb()->createCommand(
             <<<'SQL'
             SELECT
                 (SELECT count(*) FROM core.auth_totp_factors WHERE account_id = CAST(:id AS uuid) AND verified_at IS NOT NULL AND revoked_at IS NULL) AS active_factors,
@@ -326,11 +335,7 @@ class ApiTester extends \Codeception\Actor
     /** @return array{accountId: string, email: string} */
     public function haveInvitableHumanAccount(?string $locale = null): array
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $db = $runner->getContainer()->get(ConnectionInterface::class);
+        $db = self::getDb();
         $suffix = bin2hex(random_bytes(8));
         $email = 'invite-' . $suffix . '@example.test';
         $personId = $db->createCommand(
@@ -362,11 +367,7 @@ class ApiTester extends \Codeception\Actor
 
     public function grabAuthActionToken(string $email): string
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $db = $runner->getContainer()->get(ConnectionInterface::class);
+        $db = self::getDb();
         $payload = $db->createCommand(
             <<<'SQL'
             SELECT payload::text
@@ -397,11 +398,7 @@ class ApiTester extends \Codeception\Actor
 
     public function grabLatestAuthEmailLocale(string $email): string
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $locale = $runner->getContainer()->get(ConnectionInterface::class)->createCommand(
+        $locale = self::getDb()->createCommand(
             <<<'SQL'
             SELECT payload #>> '{locale}'
             FROM core.outbox_events
@@ -421,11 +418,7 @@ class ApiTester extends \Codeception\Actor
 
     public function invalidateAuthentication(string $accountId, string $mode): void
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $db = $runner->getContainer()->get(ConnectionInterface::class);
+        $db = self::getDb();
         $sql = match ($mode) {
             'stamp' => 'UPDATE core.accounts SET security_stamp = uuidv4() WHERE id = CAST(:id AS uuid)',
             'access_expired' => "UPDATE core.auth_sessions SET access_expires_at = now() - interval '1 second' WHERE account_id = CAST(:id AS uuid)",
@@ -438,75 +431,10 @@ class ApiTester extends \Codeception\Actor
 
     public function cleanupCoreTestFixtures(): void
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $db = $runner->getContainer()->get(ConnectionInterface::class);
-        $db->transaction(static function (ConnectionInterface $db): void {
-            $db->createCommand(
-                "DELETE FROM core.feature_flags WHERE code LIKE 'test.configuration.%'",
-            )->execute();
-            $db->createCommand(
-                "DELETE FROM core.system_settings WHERE setting_key LIKE 'test.configuration.%'",
-            )->execute();
-            $db->createCommand(
-                "DELETE FROM core.modules WHERE code LIKE 'test.configuration.%'",
-            )->execute();
-            $db->createCommand(
-                <<<'SQL'
-                DELETE FROM core.audit_events
-                WHERE action LIKE 'core.module.%'
-                   OR action LIKE 'core.system_setting.%'
-                   OR action LIKE 'core.module_setting.%'
-                   OR action LIKE 'core.feature_flag.%'
-                SQL,
-            )->execute();
-            $db->createCommand(
-                <<<'SQL'
-                DELETE FROM core.outbox_events
-                WHERE producer_module = 'core.auth'
-                  AND (
-                    payload #>> '{recipient,address}' LIKE 'auth-%@example.test'
-                    OR payload #>> '{recipient,address}' LIKE 'invite-%@example.test'
-                    OR payload #>> '{recipient,address}' LIKE 'passkey-%@example.test'
-                    OR payload->>'templateCode' LIKE 'auth.passkey.%'
-                  )
-                SQL,
-            )->execute();
-            $db->createCommand(
-                "DELETE FROM core.roles WHERE code LIKE 'test.configuration.%'",
-            )->execute();
-            $db->createCommand(
-                <<<'SQL'
-                DELETE FROM core.accounts
-                WHERE (
-                    account_type = 'service'
-                    AND (
-                        label = 'API integration service'
-                        OR label LIKE 'API authorization fixture %'
-                        OR label LIKE 'API password fixture %'
-                        OR label LIKE 'Passkey Test Account%'
-                        OR label = 'Only Passkey Account'
-                    )
-                ) OR label LIKE 'API invitation fixture %'
-                SQL,
-            )->execute();
-            $db->createCommand(
-                <<<'SQL'
-                DELETE FROM core.persons
-                WHERE (
-                    archived_at IS NOT NULL
-                    AND given_name = 'Integration'
-                    AND family_name = 'Person'
-                ) OR (
-                    given_name = 'Invite'
-                    AND family_name LIKE 'Fixture %'
-                )
-                SQL,
-            )->execute();
-        });
+        $this->resetClientState();
+        TestReset::reset(self::getDb(), self::getRedis());
     }
+
 
     /**
      * @param list<string> $permissions
@@ -514,11 +442,7 @@ class ApiTester extends \Codeception\Actor
      */
     private function authenticateConfigurationFixture(?string $roleCode, array $permissions): array
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $db = $runner->getContainer()->get(ConnectionInterface::class);
+        $db = self::getDb();
         $suffix = bin2hex(random_bytes(6));
         $account = $db->createCommand(
             <<<'SQL'
@@ -593,11 +517,7 @@ class ApiTester extends \Codeception\Actor
 
     public function amAuthenticatedAccount(string $accountId): string
     {
-        $runner = new HttpApplicationRunner(
-            rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv(),
-        );
-        $db = $runner->getContainer()->get(ConnectionInterface::class);
+        $db = self::getDb();
         $account = $db->createCommand(
             'SELECT security_stamp FROM core.accounts WHERE id = CAST(:id AS uuid)',
             [':id' => $accountId],
@@ -606,6 +526,7 @@ class ApiTester extends \Codeception\Actor
             throw new \RuntimeException('Account not found.');
         }
         $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        $hash = hash('sha256', $token);
         $db->createCommand(
             <<<'SQL'
             INSERT INTO core.auth_sessions (

@@ -1,0 +1,96 @@
+name: Platform CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-qa:
+    name: Yii Backend Quality Assurance & Test Isolation
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_DB: platform_test
+      POSTGRES_TEST_DB: platform_test
+      POSTGRES_USER: platform_app
+      POSTGRES_PASSWORD: platform_ci_test_password
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
+          tools: composer:v2
+
+      - name: Validate Composer Metadata
+        working-directory: apps/backend
+        run: |
+          composer validate --strict
+
+      - name: Install Composer Dependencies
+        working-directory: apps/backend
+        run: |
+          composer install --no-interaction --prefer-dist
+
+      - name: Verify Composer Platform and Security
+        working-directory: apps/backend
+        run: |
+          composer check-platform-reqs
+          composer audit
+
+      - name: Run Psalm Static Analysis
+        working-directory: apps/backend
+        run: |
+          ./vendor/bin/psalm --no-cache
+
+      - name: Start Isolated Test Infrastructure
+        run: |
+          bash ./scripts/test-start.sh
+
+      - name: Verify Core Base Table Count (Strictly 23 Tables)
+        run: |
+          count=$(docker compose --profile test exec -T postgres-test psql -U "${POSTGRES_USER}" -d "${POSTGRES_TEST_DB}" -tA -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'core' AND table_type = 'BASE TABLE';")
+          echo "Core tables count: ${count}"
+          if [ "${count}" != "23" ]; then
+            echo "ERROR: Expected 23 core tables, got ${count}"
+            exit 1
+          fi
+
+      - name: Verify Platform Runtime Tables
+        run: |
+          count=$(docker compose --profile test exec -T postgres-test psql -U "${POSTGRES_USER}" -d "${POSTGRES_TEST_DB}" -tA -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'platform_runtime' AND table_type = 'BASE TABLE' AND table_name IN ('installations', 'entitlement_documents');")
+          echo "Platform runtime tables count: ${count}"
+          if [ "${count}" != "2" ]; then
+            echo "ERROR: Expected 2 platform runtime tables, got ${count}"
+            exit 1
+          fi
+
+      - name: Run Unit Suite on Isolated Runtime
+        run: |
+          docker compose --profile test exec -T backend-test composer test:unit
+
+      - name: Run Console Suite on Isolated Runtime
+        run: |
+          docker compose --profile test exec -T backend-test composer test:console
+
+      - name: Run Functional Suite on Isolated Runtime
+        run: |
+          docker compose --profile test exec -T backend-test composer test:functional
+
+      - name: Run API Suite on Isolated Runtime
+        run: |
+          docker compose --profile test exec -T backend-test composer test:api
+
+      - name: Run Full Deterministic Suite with Seed 2120741368
+        run: |
+          docker compose --profile test exec -T backend-test vendor/bin/codecept run --seed 2120741368
+
+      - name: Stop Test Infrastructure
+        if: always()
+        run: |
+          bash ./scripts/test-stop.sh

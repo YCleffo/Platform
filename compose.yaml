@@ -237,14 +237,227 @@ services:
     networks:
       - backend_net
 
+  # ================================================================
+  # TEST INFRASTRUCTURE (Completely isolated from development)
+  # Activated with: docker compose --profile test up ...
+  # ================================================================
+
+  postgres-test:
+    profiles: ["test"]
+    image: postgres:18
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_TEST_DB:-platform_test}
+      POSTGRES_USER: ${POSTGRES_USER:-platform_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ:-UTC}
+
+    ports:
+      - "127.0.0.1:${POSTGRES_TEST_PORT:-5433}:5432"
+
+    volumes:
+      - postgres_test_data:/var/lib/postgresql
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-platform_app} -d ${POSTGRES_TEST_DB:-platform_test}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 3s
+
+    networks:
+      - test_net
+
+  redis-test:
+    profiles: ["test"]
+    image: redis:8-alpine
+    restart: unless-stopped
+
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+
+    ports:
+      - "127.0.0.1:${REDIS_TEST_PORT:-6380}:6379"
+
+    volumes:
+      - redis_test_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+    networks:
+      - test_net
+
+  db-migrate-test:
+    profiles: ["test"]
+    image: postgres:18
+    restart: "no"
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_TEST_DB:-platform_test}
+      POSTGRES_USER: ${POSTGRES_USER:-platform_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+      PGHOST: postgres-test
+      PGPORT: 5432
+
+    volumes:
+      - ./apps/backend/migrations/sql:/migrations:ro
+      - ./infra/postgres/migrate.sh:/migrate.sh:ro
+
+    entrypoint:
+      - bash
+      - /migrate.sh
+
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+
+    networks:
+      - test_net
+
+  backend-test:
+    profiles: ["test"]
+    build:
+      context: ./apps/backend
+      dockerfile: docker/Dockerfile
+      target: dev
+
+    restart: unless-stopped
+
+    environment:
+      APP_ENV: test
+      APP_DEBUG: "false"
+      TEST_ISOLATED_RUNTIME: "1"
+      XDEBUG_MODE: "off"
+
+      DB_HOST: postgres-test
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_TEST_DB:-platform_test}
+      DB_USER: ${POSTGRES_USER:-platform_app}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_ENCRYPTION: ${SMTP_ENCRYPTION:-none}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@platform.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Platform}
+      APP_DEFAULT_LOCALE: ${APP_DEFAULT_LOCALE:-ru-RU}
+      APP_DEFAULT_TIMEZONE: ${APP_DEFAULT_TIMEZONE:-UTC}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      DEVICE_FINGERPRINT_KEY: ${DEVICE_FINGERPRINT_KEY:-test-fingerprint-key}
+      SESSION_TOUCH_INTERVAL_SECONDS: ${SESSION_TOUCH_INTERVAL_SECONDS:-300}
+      ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-2592000}
+      AUTH_ACTIVATION_TTL_SECONDS: ${AUTH_ACTIVATION_TTL_SECONDS:-86400}
+      AUTH_PASSWORD_RESET_TTL_SECONDS: ${AUTH_PASSWORD_RESET_TTL_SECONDS:-1800}
+      AUTH_MFA_CHALLENGE_TTL_SECONDS: ${AUTH_MFA_CHALLENGE_TTL_SECONDS:-300}
+      AUTH_MFA_RECOVERY_TTL_SECONDS: ${AUTH_MFA_RECOVERY_TTL_SECONDS:-1800}
+      AUTH_TOTP_SETUP_TTL_SECONDS: ${AUTH_TOTP_SETUP_TTL_SECONDS:-600}
+      AUTH_TOTP_ISSUER: ${AUTH_TOTP_ISSUER:-Platform}
+      AUTH_CHALLENGE_RETENTION_DAYS: ${AUTH_CHALLENGE_RETENTION_DAYS:-30}
+      AUTH_RECOVERY_CODE_RETENTION_DAYS: ${AUTH_RECOVERY_CODE_RETENTION_DAYS:-30}
+      AUTH_CLEANUP_BATCH_SIZE: ${AUTH_CLEANUP_BATCH_SIZE:-500}
+      AUTH_RECENT_AUTH_SECONDS: ${AUTH_RECENT_AUTH_SECONDS:-600}
+      AUTH_TOTP_ENCRYPTION_KEY: ${AUTH_TOTP_ENCRYPTION_KEY:-ALasAU4uesJloJ5cggvrzLkmhHFjloie9Azgd4rih3A=}
+      AUTH_GOOGLE_CLIENT_ID: ${AUTH_GOOGLE_CLIENT_ID:-google-test-client-id}
+      AUTH_GOOGLE_CLIENT_SECRET: ${AUTH_GOOGLE_CLIENT_SECRET:-google-test-client-secret}
+      AUTH_GOOGLE_REDIRECT_URI: ${AUTH_GOOGLE_REDIRECT_URI:-http://localhost:5173/auth/callback/google}
+      AUTH_TELEGRAM_CLIENT_ID: ${AUTH_TELEGRAM_CLIENT_ID:-telegram-test-client-id}
+      AUTH_TELEGRAM_CLIENT_SECRET: ${AUTH_TELEGRAM_CLIENT_SECRET:-telegram-test-client-secret}
+      AUTH_TELEGRAM_REDIRECT_URI: ${AUTH_TELEGRAM_REDIRECT_URI:-http://localhost:5173/auth/callback/telegram}
+      AUTH_IDENTIFIER_HMAC_KEY: ${AUTH_IDENTIFIER_HMAC_KEY:-0123456789abcdef0123456789abcdef}
+      AUTH_PUBLIC_BASE_URL: ${AUTH_PUBLIC_BASE_URL:-http://localhost:5173}
+      REDIS_HOST: redis-test
+      REDIS_PORT: "6379"
+      REDIS_DATABASE: "0"
+      REDIS_RATE_LIMIT_PREFIX: platform:auth:test
+      AUTH_LOGIN_IP_LIMIT: ${AUTH_LOGIN_IP_LIMIT:-30}
+      AUTH_LOGIN_IDENTIFIER_LIMIT: ${AUTH_LOGIN_IDENTIFIER_LIMIT:-10}
+      AUTH_LOGIN_COMBINED_LIMIT: ${AUTH_LOGIN_COMBINED_LIMIT:-5}
+      AUTH_LOGIN_WINDOW_SECONDS: ${AUTH_LOGIN_WINDOW_SECONDS:-300}
+      AUTH_PASSWORD_RESET_LIMIT: ${AUTH_PASSWORD_RESET_LIMIT:-5}
+      AUTH_PASSWORD_RESET_WINDOW_SECONDS: ${AUTH_PASSWORD_RESET_WINDOW_SECONDS:-3600}
+      AUTH_ACTIVATION_RESEND_LIMIT: ${AUTH_ACTIVATION_RESEND_LIMIT:-3}
+      AUTH_ACTIVATION_RESEND_WINDOW_SECONDS: ${AUTH_ACTIVATION_RESEND_WINDOW_SECONDS:-3600}
+      AUTH_EXTERNAL_START_IP_LIMIT: ${AUTH_EXTERNAL_START_IP_LIMIT:-20}
+      AUTH_EXTERNAL_CALLBACK_LIMIT: ${AUTH_EXTERNAL_CALLBACK_LIMIT:-10}
+      AUTH_MFA_VERIFY_CHALLENGE_LIMIT: ${AUTH_MFA_VERIFY_CHALLENGE_LIMIT:-5}
+      AUTH_MFA_VERIFY_IP_LIMIT: ${AUTH_MFA_VERIFY_IP_LIMIT:-20}
+      AUTH_TOTP_SETUP_CONFIRM_LIMIT: ${AUTH_TOTP_SETUP_CONFIRM_LIMIT:-5}
+      AUTH_MFA_RECOVERY_IDENTIFIER_LIMIT: ${AUTH_MFA_RECOVERY_IDENTIFIER_LIMIT:-5}
+      AUTH_MFA_RECOVERY_IP_LIMIT: ${AUTH_MFA_RECOVERY_IP_LIMIT:-10}
+      AUTH_MFA_RECOVERY_CONFIRM_LIMIT: ${AUTH_MFA_RECOVERY_CONFIRM_LIMIT:-5}
+      AUTH_MFA_RECOVERY_EXTERNAL_START_IP_LIMIT: ${AUTH_MFA_RECOVERY_EXTERNAL_START_IP_LIMIT:-10}
+      AUTH_MFA_RECOVERY_EXTERNAL_TRANSACTION_LIMIT: ${AUTH_MFA_RECOVERY_EXTERNAL_TRANSACTION_LIMIT:-3}
+      AUTH_MFA_RECOVERY_EXTERNAL_CALLBACK_LIMIT: ${AUTH_MFA_RECOVERY_EXTERNAL_CALLBACK_LIMIT:-5}
+      AUTH_PROVIDER_LINK_LIMIT: ${AUTH_PROVIDER_LINK_LIMIT:-10}
+      AUTH_RECOVERY_CODE_LIMIT: ${AUTH_RECOVERY_CODE_LIMIT:-5}
+      AUTH_SECURITY_WINDOW_SECONDS: ${AUTH_SECURITY_WINDOW_SECONDS:-900}
+      GEOIP_DATABASE_PATH: ${GEOIP_DATABASE_PATH:-}
+      SECURITY_AUDIT_RETENTION_DAYS: ${SECURITY_AUDIT_RETENTION_DAYS:-365}
+      MAIL_MESSAGE_ID_DOMAIN: ${MAIL_MESSAGE_ID_DOMAIN:-platform.local}
+      MAIL_OUTBOX_LEASE_SECONDS: ${MAIL_OUTBOX_LEASE_SECONDS:-60}
+      MAIL_OUTBOX_MAX_ATTEMPTS: ${MAIL_OUTBOX_MAX_ATTEMPTS:-5}
+      MAIL_OUTBOX_RETRY_BASE_SECONDS: ${MAIL_OUTBOX_RETRY_BASE_SECONDS:-30}
+      MAIL_OUTBOX_RETRY_MAX_SECONDS: ${MAIL_OUTBOX_RETRY_MAX_SECONDS:-3600}
+
+    depends_on:
+      redis-test:
+        condition: service_healthy
+      postgres-test:
+        condition: service_healthy
+
+    ports:
+      - "127.0.0.1:${BACKEND_TEST_PORT:-8081}:80"
+
+    volumes:
+      - ./apps/backend:/app
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "php",
+          "-r",
+          "exit(@file_get_contents('http://127.0.0.1/health') === false ? 1 : 0);",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+    networks:
+      - test_net
+
 volumes:
   postgres_data:
     name: platform_postgres_data
 
+  postgres_test_data:
+    name: platform_postgres_test_data
+
   redis_data:
     name: platform_redis_data
+
+  redis_test_data:
+    name: platform_redis_test_data
 
 networks:
   backend_net:
     name: platform_backend_net
+    internal: false
+
+  test_net:
+    name: platform_test_net
     internal: false

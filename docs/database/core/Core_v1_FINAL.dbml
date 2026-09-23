@@ -7,7 +7,9 @@ Project Platform_Core_v1_FINAL {
   module registry/settings, audit, transactional outbox/inbox.
   Domain entities such as Student/Teacher/Parent/Lesson/Device/File/Message
   are NOT part of Core.
-  Synchronized with PostgreSQL migrations 001-014. SQL migrations remain the
+  Synchronized with PostgreSQL migrations 001-015. Migration 015 adds data
+  hygiene CHECK constraints without changing the 23-table Core boundary.
+  SQL migrations remain the
   executable source of truth; PostgreSQL partial-index predicates and selected
   CHECK constraints are documented in table notes to preserve their exact semantics.
   '''

@@ -78,3 +78,18 @@ if [ "$core_count" != "23" ]; then
   echo "[db-migrate] ERROR: expected exactly 23 core tables, got $core_count"
   exit 2
 fi
+
+# Runtime tables are checked separately and never enter the Core count.
+runtime_count="$("${psql_base[@]}" --tuples-only --no-align --command="
+SELECT count(*)
+FROM information_schema.tables
+WHERE table_schema = 'platform_runtime'
+  AND table_type = 'BASE TABLE'
+  AND table_name IN ('installations', 'entitlement_documents');")"
+
+echo "[db-migrate] platform_runtime tables: $runtime_count"
+
+if [ "$runtime_count" != "2" ]; then
+  echo "[db-migrate] ERROR: expected both platform_runtime tables, got $runtime_count"
+  exit 3
+fi

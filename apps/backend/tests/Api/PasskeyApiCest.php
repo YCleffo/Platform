@@ -7,11 +7,6 @@ namespace App\Tests\Api;
 use App\Tests\Support\ApiTester;
 use App\Tests\Support\WebAuthnTestAuthenticator;
 use Codeception\Util\HttpCode;
-use Yiisoft\Db\Connection\ConnectionInterface;
-use Yiisoft\Yii\Runner\Http\HttpApplicationRunner;
-use App\Environment;
-
-use function dirname;
 use function json_decode;
 use function PHPUnit\Framework\assertArrayHasKey;
 use function PHPUnit\Framework\assertArrayNotHasKey;
@@ -27,14 +22,6 @@ final readonly class PasskeyApiCest
     public function _before(ApiTester $I): void
     {
         $I->cleanupCoreTestFixtures();
-        try {
-            $redis = new \Predis\Client([
-                'host' => getenv('REDIS_HOST') ?: '127.0.0.1',
-                'port' => (int) (getenv('REDIS_PORT') ?: 6379),
-            ]);
-            $redis->flushall();
-        } catch (\Throwable) {
-        }
     }
 
     public function _after(ApiTester $I): void
@@ -54,6 +41,26 @@ final readonly class PasskeyApiCest
         $I->sendPOST('/api/auth/passkeys/registration/start');
         $I->seeResponseCodeIs(HttpCode::UNAUTHORIZED);
         $I->seeResponseContainsJson(['error' => ['code' => 'auth.required']]);
+    }
+
+    public function rejectsUnsafePasskeyLabelsAtValidationBoundary(ApiTester $I): void
+    {
+        $fixture = $I->havePasswordAccount();
+        $I->amAuthenticatedAccount($fixture['accountId']);
+        $I->haveHttpHeader('Content-Type', 'application/json');
+
+        foreach (['   ', "bad\0label", "bad\nlabel", str_repeat('a', 161)] as $label) {
+            $I->sendPOST('/api/auth/passkeys/registration/complete', [
+                'credential' => ['response' => []],
+                'label' => $label,
+            ]);
+            $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+            $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
+
+            $I->sendPATCH('/api/auth/me/passkeys/018f2892-aaaa-7aaa-8aaa-aaaaaaaaaaaa', ['label' => $label]);
+            $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+            $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
+        }
     }
 
     public function registrationCeremonyEndToEnd(ApiTester $I): void
@@ -165,7 +172,7 @@ final readonly class PasskeyApiCest
         $I->seeResponseCodeIs(HttpCode::CREATED);
 
         // Reset Authorization header (unauthenticated client)
-        $I->haveHttpHeader('Authorization', '');
+        $I->deleteHeader('Authorization');
 
         // 1. Start Authentication
         $I->sendPOST('/api/auth/passkeys/authentication/start');
@@ -175,8 +182,7 @@ final readonly class PasskeyApiCest
         assertEquals('localhost', $startAuth['rpId']);
 
         // 2. Compute opaque deterministic userHandle
-        $runner = new HttpApplicationRunner(rootPath: dirname(__DIR__, 2), environment: Environment::appEnv());
-        $policy = $runner->getContainer()->get(\App\Core\Auth\Application\WebAuthnPolicy::class);
+        $policy = ApiTester::getTestContainer()->get(\App\Core\Auth\Application\WebAuthnPolicy::class);
         $userHandle = $policy->makeUserHandle($fixture['accountId']);
 
         // 3. Failed Authentication (tampered signature) -> 401
@@ -232,12 +238,11 @@ final readonly class PasskeyApiCest
         $I->seeResponseCodeIs(HttpCode::CREATED);
 
         // Reset auth header and authenticate with passkey
-        $I->haveHttpHeader('Authorization', '');
+        $I->deleteHeader('Authorization');
         $I->sendPOST('/api/auth/passkeys/authentication/start');
         $startAuth = $this->response($I)['data'];
 
-        $runner = new HttpApplicationRunner(rootPath: dirname(__DIR__, 2), environment: Environment::appEnv());
-        $policy = $runner->getContainer()->get(\App\Core\Auth\Application\WebAuthnPolicy::class);
+        $policy = ApiTester::getTestContainer()->get(\App\Core\Auth\Application\WebAuthnPolicy::class);
         $userHandle = $policy->makeUserHandle($fixture['accountId']);
         $authJson = $authenticator->makeAuthenticationResponse($startAuth['challenge'], $userHandle, signCount: 1);
 
@@ -313,8 +318,7 @@ final readonly class PasskeyApiCest
     public function lastAuthenticationMethodCannotBeRevoked(ApiTester $I): void
     {
         // Account with passkey only (no password, no external identity)
-        $runner = new HttpApplicationRunner(rootPath: dirname(__DIR__, 2), environment: Environment::appEnv());
-        $db = $runner->getContainer()->get(ConnectionInterface::class);
+        $db = ApiTester::getDb();
 
         $accountId = (string) $db->createCommand(
             "INSERT INTO core.accounts (account_type, status, label) VALUES ('service', 'active', 'Only Passkey Account') RETURNING id::text",

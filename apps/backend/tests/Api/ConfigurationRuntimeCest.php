@@ -255,6 +255,21 @@ final readonly class ConfigurationRuntimeCest
         $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
         $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
 
+        foreach (['Core.Admin', 'core..admin', 'core--', 'core.', '.core'] as $invalidCode) {
+            $I->sendPUT('/api/core/settings/system/' . $invalidCode, ['value' => true]);
+            $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+            $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
+        }
+
+        foreach (['   ', "bad\0description", "bad\ndescription", str_repeat('a', 1_001)] as $description) {
+            $I->sendPUT('/api/core/settings/system/test.configuration.description', [
+                'value' => true,
+                'description' => $description,
+            ]);
+            $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+            $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
+        }
+
         $I->sendPUT('/api/core/settings/system/test.configuration.malformed', '{"value":');
         $I->seeResponseCodeIs(HttpCode::BAD_REQUEST);
         $I->seeResponseContainsJson(['error' => ['code' => 'http.bad_request']]);

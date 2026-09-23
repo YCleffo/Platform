@@ -11,6 +11,7 @@ final readonly class PersonsCest
 {
     public function _before(ApiTester $I): void
     {
+        $I->cleanupCoreTestFixtures();
         $I->amAuthenticatedSuperadmin();
     }
 
@@ -69,6 +70,16 @@ final readonly class PersonsCest
                 'displayName' => 'Updated Integration Person',
             ],
         ]);
+
+        foreach (['   ', "bad\0label", "bad\nlabel", str_repeat('a', 81)] as $label) {
+            $I->sendPOST('/api/core/persons/' . $id . '/contacts', [
+                'contactType' => 'email',
+                'value' => 'integration@example.test',
+                'label' => $label,
+            ]);
+            $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+            $I->seeResponseContainsJson(['error' => ['code' => 'validation.failed']]);
+        }
 
         $I->sendPOST('/api/core/persons/' . $id . '/contacts', [
             'contactType' => 'email',

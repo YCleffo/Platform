@@ -6,6 +6,8 @@ namespace App\Core\Settings\Api;
 
 use App\Api\Shared\ApiMessage;
 use App\Core\Settings\Application\SettingSecurityPolicy;
+use App\Core\Shared\Domain\ValueNormalizer;
+use InvalidArgumentException;
 use Yiisoft\Input\Http\InputValidationException;
 use Yiisoft\Validator\Result;
 
@@ -100,7 +102,7 @@ final class ConfigurationInput
 
         $moduleCode = $data['moduleCode'] ?? null;
         if ($moduleCode !== null) {
-            if (!is_string($moduleCode) || !self::identifierIsValid($moduleCode, 100)) {
+            if (!is_string($moduleCode) || !ValueNormalizer::isValidMachineCode($moduleCode, 100)) {
                 $result->addError(ApiMessage::VALIDATION_CODE, valuePath: ['moduleCode']);
             }
         }
@@ -145,19 +147,13 @@ final class ConfigurationInput
 
     private static function identifier(string $value, int $maxLength, string $field, string $message): string
     {
-        if (!self::identifierIsValid($value, $maxLength)) {
+        try {
+            return ValueNormalizer::normalizeMachineCode($value, $maxLength);
+        } catch (InvalidArgumentException) {
             throw new InputValidationException(
                 (new Result())->addError($message, valuePath: [$field]),
             );
         }
-
-        return $value;
-    }
-
-    private static function identifierIsValid(string $value, int $maxLength): bool
-    {
-        return mb_strlen($value) <= $maxLength
-            && preg_match('/\A[A-Za-z0-9][A-Za-z0-9._-]*\z/', $value) === 1;
     }
 
     /** @return array<string, mixed> */
@@ -191,12 +187,13 @@ final class ConfigurationInput
             $result->addError(ApiMessage::VALIDATION_STRING_OR_NULL, valuePath: ['description']);
             return null;
         }
-        if (is_string($description) && mb_strlen($description) > self::MAX_DESCRIPTION_LENGTH) {
-            $result->addError(
-                ApiMessage::VALIDATION_MAX_LENGTH,
-                ['max' => self::MAX_DESCRIPTION_LENGTH],
-                ['description'],
-            );
+        if (is_string($description)) {
+            try {
+                return ValueNormalizer::normalizeText($description, self::MAX_DESCRIPTION_LENGTH);
+            } catch (InvalidArgumentException) {
+                $result->addError(ApiMessage::VALIDATION_TEXT_INVALID, valuePath: ['description']);
+                return null;
+            }
         }
 
         return $description;

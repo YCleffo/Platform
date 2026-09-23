@@ -310,6 +310,12 @@ public.platform_migrations
 
 `platform_migrations` не относится к бизнес-таблицам Core.
 
+`platform_runtime.installations` хранит единственную идентичность этой установки,
+а `platform_runtime.entitlement_documents` — локальные подписанные snapshots
+разрешений. Они описаны отдельно от Core в
+`docs/database/runtime/Platform_Runtime_v1.dbml`. Будущая Commercial DB Symfony
+будет отдельной базой; платёжные и subscription таблицы сюда не входят.
+
 ---
 
 ## Core schema
@@ -605,49 +611,64 @@ tests/
 └── Unit/
 ```
 
-Полный запуск:
+Все тестовые suites запускаются только в изолированном `backend-test`; development-контейнер `backend` для API/интеграционных тестов не используется.
+
+Linux/macOS:
 
 ```bash
-docker compose exec -T backend \
-  vendor/bin/codecept run
+bash ./scripts/test-start.sh
+bash ./scripts/test-run.sh
+bash ./scripts/test-reset.sh
+bash ./scripts/test-stop.sh
 ```
 
-Только API:
+PowerShell:
 
-```bash
-docker compose exec -T backend \
-  vendor/bin/codecept run Api
+```powershell
+.\scripts\test-start.ps1
+.\scripts\test-run.ps1
+.\scripts\test-reset.ps1
+.\scripts\test-stop.ps1
 ```
 
-Functional:
+`test-stop` останавливает и удаляет только тестовые контейнеры, сохраняя
+`platform_postgres_test_data` и `platform_redis_test_data` для следующего запуска.
+`test-reset` удаляет эти два тестовых тома и создаёт тестовую инфраструктуру с нуля.
+Development-контейнеры и тома обе команды не затрагивают. GitHub Actions создаёт
+собственные тестовые контейнеры на своём runner; локальный Docker Desktop ему не нужен.
+
+Для отдельной suite передайте её имя в test-run, например:
 
 ```bash
-docker compose exec -T backend \
-  vendor/bin/codecept run Functional
+bash ./scripts/test-run.sh Api
+bash ./scripts/test-run.sh Functional
+bash ./scripts/test-run.sh Unit
+bash ./scripts/test-run.sh Console
 ```
 
-Unit:
-
-```bash
-docker compose exec -T backend \
-  vendor/bin/codecept run Unit
+```powershell
+.\scripts\test-run.ps1 Api
+.\scripts\test-run.ps1 Functional
+.\scripts\test-run.ps1 Unit
+.\scripts\test-run.ps1 Console
 ```
 
 Static analysis:
 
 ```bash
-docker compose exec -T backend \
+bash ./scripts/test-start.sh
+docker compose --profile test exec -T backend-test \
   vendor/bin/psalm
 ```
 
 Проверка Composer dependencies:
 
 ```bash
-docker compose exec -T backend composer validate --strict
+docker compose --profile test exec -T backend-test composer validate --strict
 
-docker compose exec -T backend composer check-platform-reqs
+docker compose --profile test exec -T backend-test composer check-platform-reqs
 
-docker compose exec -T backend composer audit
+docker compose --profile test exec -T backend-test composer audit
 ```
 
 ---
@@ -750,8 +771,10 @@ git status
 После изменения backend:
 
 ```bash
-docker compose exec -T backend vendor/bin/psalm
-docker compose exec -T backend vendor/bin/codecept run
+bash ./scripts/test-start.sh
+docker compose --profile test exec -T backend-test vendor/bin/psalm
+bash ./scripts/test-run.sh
+bash ./scripts/test-stop.sh
 ```
 
 Перед commit необходимо убедиться, что в Git не попали:

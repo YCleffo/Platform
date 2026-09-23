@@ -129,7 +129,7 @@ final readonly class ResponseFactory
         try {
             $client = ClientContext::fromRequest($this->requestProvider->get());
             return [$client->locale, $client->requestId];
-        } catch (RequestNotSetException|RuntimeException) {
+        } catch (RequestNotSetException | RuntimeException) {
             return [new LocaleContext($this->supportedLocales->default(), 'default'), null];
         }
     }

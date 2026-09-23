@@ -7,6 +7,8 @@ namespace App\Core\Account\Api;
 use App\Api\Shared\ApiMessage;
 use App\Api\Shared\Uuid;
 use App\Core\Account\Application\CreateAccountCommand;
+use App\Core\Shared\Domain\ValueNormalizer;
+use InvalidArgumentException;
 use Yiisoft\Input\Http\InputValidationException;
 use Yiisoft\Validator\Result;
 
@@ -45,8 +47,16 @@ final class AccountInput
         }
 
         $label = $body['label'] ?? null;
-        if ($label !== null && (!is_string($label) || self::unicodeLength($label) > 160)) {
-            $result->addError(ApiMessage::VALIDATION_LABEL, ['max' => 160], ['label']);
+        if ($label !== null) {
+            if (!is_string($label)) {
+                $result->addError(ApiMessage::VALIDATION_LABEL, ['max' => 160], ['label']);
+            } else {
+                try {
+                    $label = ValueNormalizer::normalizeLabel($label, 160);
+                } catch (InvalidArgumentException) {
+                    $result->addError(ApiMessage::VALIDATION_LABEL, ['max' => 160], ['label']);
+                }
+            }
         }
 
         if (!$result->isValid()) {
@@ -58,11 +68,5 @@ final class AccountInput
             is_string($personId) ? $personId : null,
             is_string($label) ? $label : null,
         );
-    }
-
-    private static function unicodeLength(string $value): int
-    {
-        $length = preg_match_all('/./us', $value);
-        return $length === false ? strlen($value) : $length;
     }
 }
