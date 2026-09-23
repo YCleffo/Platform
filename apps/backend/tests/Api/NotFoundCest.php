@@ -9,6 +9,16 @@ use Codeception\Util\HttpCode;
 
 final readonly class NotFoundCest
 {
+    public function _before(ApiTester $I): void
+    {
+        $I->cleanupCoreTestFixtures();
+    }
+
+    public function _after(ApiTester $I): void
+    {
+        $I->cleanupCoreTestFixtures();
+    }
+
     public function testNotFoundPage(ApiTester $I): void
     {
         $I->haveHttpHeader('Accept-Language', 'en-US');

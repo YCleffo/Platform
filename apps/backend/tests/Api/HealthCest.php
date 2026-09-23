@@ -9,6 +9,16 @@ use Codeception\Util\HttpCode;
 
 final readonly class HealthCest
 {
+    public function _before(ApiTester $I): void
+    {
+        $I->cleanupCoreTestFixtures();
+    }
+
+    public function _after(ApiTester $I): void
+    {
+        $I->cleanupCoreTestFixtures();
+    }
+
     public function health(ApiTester $I): void
     {
         $I->sendGET('/health');

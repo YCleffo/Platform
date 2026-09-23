@@ -11,6 +11,7 @@ final readonly class PersonsCest
 {
     public function _before(ApiTester $I): void
     {
+        $I->cleanupCoreTestFixtures();
         $I->amAuthenticatedSuperadmin();
     }
 

@@ -110,7 +110,22 @@
             "Composer\\Config::disableProcessTimeout",
             "@php ./yii serve"
         ],
-        "test": "codecept run"
+        "test": [
+            "Composer\\Config::disableProcessTimeout",
+            "codecept run"
+        ],
+        "test:unit": [
+            "Composer\\Config::disableProcessTimeout",
+            "codecept run Unit"
+        ],
+        "test:functional": [
+            "Composer\\Config::disableProcessTimeout",
+            "codecept run Functional"
+        ],
+        "test:api": [
+            "Composer\\Config::disableProcessTimeout",
+            "codecept run Api"
+        ]
     },
     "extra": {
         "config-plugin-file": "config/configuration.php"

@@ -11,6 +11,11 @@ use function PHPUnit\Framework\assertSame;
 
 final readonly class CredentialLifecycleCest
 {
+    public function _before(ApiTester $I): void
+    {
+        $I->cleanupCoreTestFixtures();
+    }
+
     public function _after(ApiTester $I): void
     {
         $I->cleanupCoreTestFixtures();

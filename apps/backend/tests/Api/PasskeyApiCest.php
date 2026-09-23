@@ -27,14 +27,6 @@ final readonly class PasskeyApiCest
     public function _before(ApiTester $I): void
     {
         $I->cleanupCoreTestFixtures();
-        try {
-            $redis = new \Predis\Client([
-                'host' => getenv('REDIS_HOST') ?: '127.0.0.1',
-                'port' => (int) (getenv('REDIS_PORT') ?: 6379),
-            ]);
-            $redis->flushall();
-        } catch (\Throwable) {
-        }
     }
 
     public function _after(ApiTester $I): void

@@ -16,6 +16,11 @@ use function PHPUnit\Framework\assertTrue;
 
 final readonly class MfaAuthenticationCest
 {
+    public function _before(ApiTester $I): void
+    {
+        $I->cleanupCoreTestFixtures();
+    }
+
     public function _after(ApiTester $I): void
     {
         $I->cleanupCoreTestFixtures();

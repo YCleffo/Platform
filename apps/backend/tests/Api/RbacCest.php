@@ -11,6 +11,7 @@ final readonly class RbacCest
 {
     public function _before(ApiTester $I): void
     {
+        $I->cleanupCoreTestFixtures();
         $I->amAuthenticatedSuperadmin();
     }
 
