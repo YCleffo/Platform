@@ -1,4 +1,4 @@
-# Commercial Control Plane — Phase 3.3 Subscription Lifecycle
+# Commercial Control Plane — Phase 3.5 Billing Core
 
 `apps/control-plane` is a separate Symfony 7.4/PHP 8.3 application with its
 own `platform_commercial` PostgreSQL database and `commercial` schema. It does
@@ -17,7 +17,7 @@ a tenant database or process a payment.
 
 ## Implemented schema
 
-Twelve ordered Doctrine migrations create exactly 27 `commercial.*` tables.
+Fourteen ordered Doctrine migrations create exactly 31 `commercial.*` tables.
 The 21 Phase 1 tables remain unchanged. Phase 2 adds:
 
 - `control_user_email_verifications` — one-time, expiring, hash-only tokens;
@@ -53,12 +53,33 @@ Commercial Account remains `active/completed`, effective entitlements become
 empty, and a new subscription row can be created and activated. Historical
 subscriptions and their items are never recycled or deleted.
 
+Phase 3.4 adds `usage_periods`, `usage_counters` and immutable `usage_mode`
+semantics on catalog features. Explicitly metered integer features use either
+monotonic `counter` or signed `gauge` deltas. Limits come from the effective
+subscription contract and are enforced as hard quotas by an idempotent,
+transactional internal service. Activation creates the open usage period with
+the subscription boundaries; cancellation and expiration close it while
+preserving counters. A replacement subscription receives a new period and
+starts from zero. This operational quota state is not usage-based billing.
+
+Phase 3.5 adds `invoices` and `invoice_lines` for the initial
+`subscription_create` charge. `IssueInvoice` derives currency, quantity and
+integer minor-unit amounts from the locked draft subscription contract and
+publishes the invoice atomically with `invoice.issued` audit/outbox records.
+The issued invoice stores immutable billing-profile and catalog snapshots;
+reads never reconstruct history from mutable source rows. Cancelling a draft
+subscription voids its issued invoice in the same transaction and emits
+`invoice.voided`, while cancelling an active subscription preserves the
+historical invoice. The `paid` state is reserved for Payment Core and does not
+activate a subscription in this phase.
+
 The current schema, including clearly marked future entities, is
 `docs/database/commercial/Commercial_ControlPlane_v2.dbml`. Effective
 entitlements are derived at read time from the current active subscription,
 its valid items and immutable plan features. There is no mutable
-`commercial.entitlements` table. Invoices, payments and usage remain future
-work.
+`commercial.entitlements` table. Usage is a separate mutable read/write model.
+Invoice is not payment; payment execution and usage-based charging remain
+future work.
 
 ## HTTP contract
 
@@ -76,7 +97,12 @@ Public endpoints:
 Authenticated endpoints create/read commercial accounts, manage memberships,
 save the billing profile, advance onboarding, create/read subscriptions,
 cancel them through `POST /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/cancel`,
-and expose `GET /api/control/accounts/{accountId}/entitlements`. Every account
+issue the initial invoice through
+`POST /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/invoice`,
+read its immutable snapshot through
+`GET /api/control/accounts/{accountId}/invoices/{invoiceId}`, and expose
+`GET /api/control/accounts/{accountId}/entitlements` plus the read-only
+`GET /api/control/accounts/{accountId}/usage`. Every account
 resource is authorized from active account membership; an account UUID from
 the URL is never trusted by itself. Roles and permissions live in the central
 `AccountAuthorization` policy, not in controllers and not in Diary RBAC.
@@ -111,7 +137,8 @@ directories.
 
 ## Deferred
 
-Renewal, plan switching, usage, billing, invoices, payments, payment providers,
-webhooks, signed entitlement issuance, tenant DB creation, provisioning,
-DNS/TLS, custom domains, On-Prem activation, MFA and updater execution remain
-future phases.
+Renewal, plan switching, Payment Core, payment providers, payment methods,
+payment attempts, refunds, receipts, webhooks,
+usage-based and overage billing, service-to-service usage ingestion, signed
+entitlement issuance, tenant DB creation, provisioning, DNS/TLS, custom
+domains, On-Prem activation, MFA and updater execution remain future phases.

@@ -32,6 +32,11 @@ final readonly class CancelSubscription
         return $this->connection->transactional(function (Connection $connection) use ($userId, $accountId, $subscriptionId, $idempotencyKey, $correlationId, $scope, $hash): array {
             $this->authorization->requirePermission($userId, $accountId, 'billing.manage');
 
+            $subscription = $connection->fetchAssociative('SELECT id, status FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$subscriptionId, $accountId]);
+            if ($subscription === false) {
+                throw new \DomainException('Subscription was not found.');
+            }
+
             // Serialize the same opaque key even when callers attempt to reuse it for another resource.
             $connection->executeQuery('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [$idempotencyKey]);
             $otherScope = $connection->fetchOne('SELECT scope FROM commercial.idempotency_keys WHERE idempotency_key = ? AND scope <> ? LIMIT 1', [$idempotencyKey, $scope]);
@@ -58,10 +63,6 @@ final readonly class CancelSubscription
                 return ['id' => $subscriptionId, 'status' => 'cancelled'];
             }
 
-            $subscription = $connection->fetchAssociative('SELECT id, status FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$subscriptionId, $accountId]);
-            if ($subscription === false) {
-                throw new \DomainException('Subscription was not found.');
-            }
             if ($subscription['status'] === 'expired') {
                 throw new \DomainException('An expired subscription cannot be cancelled.');
             }
@@ -70,6 +71,23 @@ final readonly class CancelSubscription
                     throw new \DomainException('Subscription cannot be cancelled from its current state.');
                 }
                 $connection->executeStatement("UPDATE commercial.subscriptions SET status = 'cancelled', updated_at = now() WHERE id = ?", [$subscriptionId]);
+                if ($subscription['status'] === 'active') {
+                    $closed = $connection->executeStatement("UPDATE commercial.usage_periods SET status = 'closed', closed_at = now() WHERE subscription_id = ? AND status = 'open'", [$subscriptionId]);
+                    if ($closed !== 1) {
+                        throw new \LogicException('Active subscription usage period is unavailable.');
+                    }
+                }
+                if ($subscription['status'] === 'draft') {
+                    $invoice = $connection->fetchAssociative("SELECT id FROM commercial.invoices WHERE subscription_id = ? AND billing_reason = 'subscription_create' AND status = 'issued' FOR UPDATE", [$subscriptionId]);
+                    if ($invoice !== false) {
+                        if (!is_string($invoice['id'])) {
+                            throw new \LogicException('Invoice identity is unavailable.');
+                        }
+                        $connection->executeStatement("UPDATE commercial.invoices SET status = 'void', voided_at = now(), updated_at = now() WHERE id = ?", [$invoice['id']]);
+                        $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, actor_id, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('control_user', ?, ?, 'invoice.voided', 'invoice', ?, ?, 'success')", [$userId, $accountId, $invoice['id'], $correlationId]);
+                        $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('invoice.voided', 'invoice', ?, jsonb_build_object('invoice_id', ?::text, 'subscription_id', ?::text, 'commercial_account_id', ?::text))", [$invoice['id'], $invoice['id'], $subscriptionId, $accountId]);
+                    }
+                }
                 $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, actor_id, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('control_user', ?, ?, 'subscription.cancelled', 'subscription', ?, ?, 'success')", [$userId, $accountId, $subscriptionId, $correlationId]);
                 $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('subscription.cancelled', 'subscription', ?, jsonb_build_object('subscription_id', ?::text, 'commercial_account_id', ?::text))", [$subscriptionId, $subscriptionId, $accountId]);
             }

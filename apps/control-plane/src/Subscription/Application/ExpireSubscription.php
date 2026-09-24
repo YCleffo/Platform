@@ -78,6 +78,10 @@ SQL, $batchSize), [$this->timestamp($effectiveInstant)]);
         }
 
         $connection->executeStatement("UPDATE commercial.subscriptions SET status = 'expired', updated_at = now() WHERE id = ?", [$subscription['id']]);
+        $closed = $connection->executeStatement("UPDATE commercial.usage_periods SET status = 'closed', closed_at = now() WHERE subscription_id = ? AND status = 'open'", [$subscription['id']]);
+        if ($closed !== 1) {
+            throw new \LogicException('Active subscription usage period is unavailable.');
+        }
         $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, 'subscription.expired', 'subscription', ?, ?, 'success')", [$subscription['commercial_account_id'], $subscription['id'], $correlationId]);
         $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('subscription.expired', 'subscription', ?, jsonb_build_object('subscription_id', ?::text, 'commercial_account_id', ?::text, 'current_period_end', to_jsonb(?::timestamptz)))", [$subscription['id'], $subscription['id'], $subscription['commercial_account_id'], $this->timestamp($periodEnd)]);
 

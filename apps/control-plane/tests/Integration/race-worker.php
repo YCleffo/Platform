@@ -10,6 +10,7 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\Tools\DsnParser;
 use ControlPlane\Account\Application\MembershipService;
 use ControlPlane\Account\Authorization\AccountAuthorization;
+use ControlPlane\Billing\Application\IssueInvoice;
 use ControlPlane\Identity\Application\AuthFailure;
 use ControlPlane\Identity\Application\AuthService;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
@@ -19,6 +20,7 @@ use ControlPlane\Subscription\Application\ActivateSubscription;
 use ControlPlane\Subscription\Application\CancelSubscription;
 use ControlPlane\Subscription\Application\ExpireSubscription;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
+use ControlPlane\Usage\Application\ApplyUsageDelta;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasher;
 
@@ -87,9 +89,17 @@ try {
             [$userId, $accountId, $idempotencyKey, $correlationId] = explode('|', $extra);
             (new CancelSubscription($connection, new AccountAuthorization($connection)))->cancel($userId, $accountId, $value, $idempotencyKey, $correlationId);
             break;
+        case 'issue_invoice':
+            [$userId, $accountId, $idempotencyKey, $correlationId] = explode('|', $extra);
+            (new IssueInvoice($connection, new AccountAuthorization($connection)))->issue($userId, $accountId, $value, $idempotencyKey, $correlationId);
+            break;
         case 'expire_subscription':
             [$accountId, $correlationId, $effectiveInstant] = explode('|', $extra);
             (new ExpireSubscription($connection))->expire($accountId, $value, new DateTimeImmutable($effectiveInstant), $correlationId);
+            break;
+        case 'apply_usage':
+            [$accountId, $featureCode, $delta, $idempotencyKey] = explode('|', $extra);
+            (new ApplyUsageDelta($connection))->apply($accountId, $featureCode, (int) $delta, $idempotencyKey);
             break;
         default:
             exit(3);

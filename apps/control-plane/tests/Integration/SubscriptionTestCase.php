@@ -24,9 +24,9 @@ abstract class SubscriptionTestCase extends DatabaseTestCase
         return [$owner, $account, $profile];
     }
 
-    protected function feature(string $code, string $type): string
+    protected function feature(string $code, string $type, string $usageMode = 'none'): string
     {
-        $id = $this->connection->fetchOne('INSERT INTO commercial.features (code, value_type) VALUES (?, ?) RETURNING id', [$code, $type]);
+        $id = $this->connection->fetchOne('INSERT INTO commercial.features (code, value_type, usage_mode) VALUES (?, ?, ?) RETURNING id', [$code, $type, $usageMode]);
         self::assertIsString($id);
 
         return $id;

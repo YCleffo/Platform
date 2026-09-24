@@ -1,6 +1,6 @@
 Project Commercial_ControlPlane_v2 {
   database_type: 'PostgreSQL'
-  Note: '''Current target model for the separate platform_commercial database. Tables marked Phase 1, Phase 2 or Phase 3.1 are implemented by Control Plane migrations; Planned tables describe later phases only. Diary/Core is a different database. Control User is not Diary User; Commercial Account is not Diary Organization; Control Plane Auth is not Diary Auth. No tenant_id is added to frozen Core.'''
+  Note: '''Current target model for the separate platform_commercial database. Tables marked through Phase 3.5 are implemented by Control Plane migrations; Planned tables describe later phases only. Diary/Core is a different database. Control User is not Diary User; Commercial Account is not Diary Organization; Control Plane Auth is not Diary Auth. No tenant_id is added to frozen Core.'''
 }
 
 // Phase 1 + Phase 2: central identity and customers.
@@ -102,10 +102,11 @@ Table commercial.features {
   id uuid [pk, default: `uuidv7()`]
   code varchar(160) [not null, unique]
   value_type varchar(16) [not null, note: 'boolean/integer/string/json']
+  usage_mode varchar(16) [not null, default: 'none', note: 'none/counter/gauge; counter and gauge require integer value_type and are immutable identity semantics']
   description text
   created_at timestamptz [not null, default: `now()`]
   retired_at timestamptz
-  Note: 'Phase 1. Stable machine code and typed value.'
+  Note: 'Phase 3.4. Stable machine code, typed value and immutable usage mode.'
 }
 
 Table commercial.plans {
@@ -135,7 +136,7 @@ Table commercial.plan_prices {
 Table commercial.plan_features {
   plan_id uuid [not null, ref: > commercial.plans.id]
   feature_id uuid [not null, ref: > commercial.features.id]
-  value jsonb [not null, note: 'Must match features.value_type; enforced by PostgreSQL trigger']
+  value jsonb [not null, note: 'Must match features.value_type; metered values are nonnegative bigint hard quotas']
   indexes { (plan_id, feature_id) [pk] }
   Note: 'Phase 1. Published plan features are immutable.'
 }
@@ -360,26 +361,67 @@ Table commercial.outbox_events {
 // Phase 3.3 effective entitlements are a derived read model over the current active subscription graph; cancelled and expired subscriptions grant nothing.
 // There is intentionally no mutable commercial.entitlements table.
 
-// Planned after Phase 3.3: renewal, plan switching, billing, payments and usage.
+// Phase 3.4 operational quota state. It is not billing metering.
+Table commercial.usage_periods {
+  id uuid [pk, default: `uuidv7()`]
+  subscription_id uuid [not null, ref: > commercial.subscriptions.id]
+  starts_at timestamptz [not null]
+  ends_at timestamptz [not null]
+  status varchar(16) [not null, default: 'open', note: 'open/closed; at most one open period per subscription']
+  created_at timestamptz [not null, default: `now()`]
+  closed_at timestamptz
+  Note: 'Phase 3.4. Immutable subscription-period boundaries; only open to closed transition is allowed.'
+}
+Table commercial.usage_counters {
+  usage_period_id uuid [not null, ref: > commercial.usage_periods.id]
+  feature_id uuid [not null, ref: > commercial.features.id]
+  quantity bigint [not null, default: 0, note: 'Nonnegative and hard-quota enforced by the application service']
+  updated_at timestamptz [not null, default: `now()`]
+  indexes { (usage_period_id, feature_id) [pk] }
+  Note: 'Phase 3.4. Lazy operational counter; closed-period history is immutable and never cascades.'
+}
+
+// Phase 3.5 immutable billing snapshots. Invoice is not payment.
 Table commercial.invoices {
-  id uuid [pk]
+  id uuid [pk, default: `uuidv7()`]
   commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  subscription_id uuid [not null, ref: > commercial.subscriptions.id]
   billing_profile_id uuid [not null, ref: > commercial.billing_profiles.id]
+  billing_reason varchar(40) [not null, note: 'subscription_create only']
   currency char(3) [not null]
-  total_minor bigint [not null]
-  status varchar(24) [not null]
+  total_minor bigint [not null, default: 0, note: 'Nonnegative sum of line totals']
+  status varchar(16) [not null, default: 'draft', note: 'draft/issued/paid/void; paid reserved for Payment Core']
+  bill_to_legal_name varchar(240) [not null]
+  bill_to_country_code char(2) [not null]
+  bill_to_contact_name varchar(200)
+  bill_to_contact_email varchar(320)
+  bill_to_tax_identifier varchar(80)
+  bill_to_address jsonb [not null]
+  created_at timestamptz [not null, default: `now()`]
   issued_at timestamptz
-  Note: 'Planned. Invoice is not payment.'
+  paid_at timestamptz
+  voided_at timestamptz
+  updated_at timestamptz [not null, default: `now()`]
+  Note: 'Phase 3.5. Immutable after issuance; billing-profile fields are historical snapshots. One current issued/paid initial invoice per subscription.'
 }
 Table commercial.invoice_lines {
-  id uuid [pk]
+  id uuid [pk, default: `uuidv7()`]
   invoice_id uuid [not null, ref: > commercial.invoices.id]
-  description varchar(300) [not null]
+  subscription_item_id uuid [not null, ref: > commercial.subscription_items.id]
+  plan_price_id uuid [not null, ref: > commercial.plan_prices.id]
+  plan_code varchar(120) [not null]
+  plan_version integer [not null]
+  plan_name varchar(200) [not null]
+  billing_period varchar(24) [not null, note: 'month/year']
+  description varchar(400) [not null]
   quantity integer [not null]
   unit_amount_minor bigint [not null]
   total_minor bigint [not null]
-  Note: 'Planned. Historical snapshot, not mutable catalog join.'
+  created_at timestamptz [not null, default: `now()`]
+  Note: 'Phase 3.5. Immutable plan/version/price/quantity snapshot after invoice issuance; catalog FKs are provenance only.'
 }
+
+// Planned after Phase 3.5: Payment Core, renewal and plan switching.
 Table commercial.payment_provider_accounts {
   id uuid [pk]
   provider_code varchar(80) [not null]
@@ -443,19 +485,4 @@ Table commercial.receipts {
   currency char(3) [not null]
   issued_at timestamptz [not null]
   Note: 'Planned. Immutable fiscal receipt reference.'
-}
-Table commercial.usage_periods {
-  id uuid [pk]
-  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
-  starts_at timestamptz [not null]
-  ends_at timestamptz [not null]
-  status varchar(24) [not null]
-  Note: 'Planned. Bounded usage window.'
-}
-Table commercial.usage_counters {
-  usage_period_id uuid [not null, ref: > commercial.usage_periods.id]
-  feature_id uuid [not null, ref: > commercial.features.id]
-  quantity bigint [not null]
-  indexes { (usage_period_id, feature_id) [pk] }
-  Note: 'Planned. Nonnegative measured quantity.'
 }

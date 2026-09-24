@@ -104,6 +104,7 @@ SQL, [$subscriptionId]);
             if ($initialActivation) {
                 $connection->executeStatement("UPDATE commercial.commercial_accounts SET status = 'active', onboarding_state = 'completed', updated_at = now() WHERE id = ?", [$accountId]);
             }
+            $connection->executeStatement("INSERT INTO commercial.usage_periods (subscription_id, starts_at, ends_at, status) VALUES (?, ?::timestamptz, ?::timestamptz, 'open')", [$subscriptionId, $start, $end]);
             $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, 'subscription.activated', 'subscription', ?, ?, 'success')", [$accountId, $subscriptionId, $correlationId]);
             $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('subscription.activated', 'subscription', ?, jsonb_build_object('subscription_id', ?::text, 'commercial_account_id', ?::text, 'current_period_start', to_jsonb(?::timestamptz), 'current_period_end', to_jsonb(?::timestamptz)))", [$subscriptionId, $subscriptionId, $accountId, $start, $end]);
 

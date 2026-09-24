@@ -19,6 +19,14 @@ final class ApiRequest
         return $data;
     }
 
+    public static function emptyObject(Request $request): void
+    {
+        $data = json_decode($request->getContent(), false, 64, JSON_THROW_ON_ERROR);
+        if (!$data instanceof \stdClass || get_object_vars($data) !== []) {
+            throw new \InvalidArgumentException('An empty JSON object is required.');
+        }
+    }
+
     /** @param array<string, mixed> $data */
     public static function string(array $data, string $key): string
     {
