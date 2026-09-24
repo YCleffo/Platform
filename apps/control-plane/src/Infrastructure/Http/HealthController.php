@@ -14,9 +14,13 @@ final readonly class HealthController
     public function __invoke(Connection $connection): JsonResponse
     {
         try {
-            $ready = (int) $connection->fetchOne(
-                "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'commercial' AND table_type = 'BASE TABLE'",
-            ) >= 21;
+            $ready = (bool) $connection->fetchOne(<<<'SQL'
+SELECT to_regclass('commercial.control_users') IS NOT NULL
+   AND to_regclass('commercial.control_user_email_verifications') IS NOT NULL
+   AND to_regclass('commercial.control_sessions') IS NOT NULL
+   AND to_regclass('commercial.control_session_refresh_history') IS NOT NULL
+   AND to_regclass('commercial.rate_limit_counters') IS NOT NULL
+SQL);
         } catch (\Throwable) {
             $ready = false;
         }

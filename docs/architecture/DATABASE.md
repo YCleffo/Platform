@@ -1,4 +1,4 @@
-# Архитектура базы данных — этап 1
+# Архитектура базы данных — Core v1 и Commercial Phase 2
 
 Yii runtime использует одну базу данных PostgreSQL. Модули владеют отдельными схемами PostgreSQL:
 
@@ -24,10 +24,15 @@ Search или брендинга **не означает**, что в Core ну�
 `platform_runtime.*`, описанной отдельно в `docs/database/runtime/Platform_Runtime_v1.dbml`.
 Symfony Commercial DB — отдельная база `platform_commercial` со схемой `commercial`.
 Phase 1 создаёт 21 таблицу identity/customer, catalog, deployment, licensing,
-release и reliability. Платежи и подписки пока только в целевой DBML v2;
+release и reliability. Phase 2 добавляет 4 таблицы verification/session/rate
+limit/session-history и расширяет identity/onboarding, всего `commercial.* = 25`. Платежи и подписки пока только в целевой DBML v2;
 их таблиц нет. Подробности: `docs/architecture/COMMERCIAL_CONTROL_PLANE.md`.
 Её планы, платежи, подписки и реестр
 лицензий сюда не входят.
+
+`commercial.control_users` — отдельная центральная identity. Это не
+`core.accounts`; Commercial Account также не является Diary Organization.
+Auth, session и membership Control Plane не переиспользуют Diary Auth/RBAC.
 
 ## Подпись entitlement documents
 

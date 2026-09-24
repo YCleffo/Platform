@@ -9,6 +9,13 @@ use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Tools\DsnParser;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ControlPlane\Identity\Application\AuthService;
+use ControlPlane\Identity\Security\ControlUserPrincipal;
+use ControlPlane\Identity\Security\DatabaseRateLimiter;
+use ControlPlane\Identity\Security\TokenCodec;
+use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasher;
+use Symfony\Component\Uid\Uuid;
 
 final class ConcurrencyTest extends TestCase
 {
@@ -39,8 +46,7 @@ final class ConcurrencyTest extends TestCase
         $extraA = '';
         $extraB = '';
         if ($mode === 'slug' || $mode === 'hostname') {
-            $account = $this->connection->fetchOne("INSERT INTO commercial.commercial_accounts (code, display_name) VALUES (?, 'Race Account') RETURNING id", ['owner-' . $suffix]);
-            self::assertIsString($account);
+            $account = $this->account('owner-' . $suffix);
             if ($mode === 'slug') {
                 $extraA = $account;
                 $extraB = $account;
@@ -69,12 +75,108 @@ final class ConcurrencyTest extends TestCase
         }
     }
 
+    public function testConcurrentRegistrationWithSameNormalizedEmailHasOneIdentity(): void
+    {
+        $email = 'race-user-' . bin2hex(random_bytes(6)) . '@example.test';
+        $correlation = Uuid::v7()->toRfc4122();
+        $results = $this->race('register', $email, $correlation, $email, $correlation);
+        self::assertSame([0, 2], $results);
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.control_users WHERE email_normalized = ?', [$email]));
+    }
+
+    public function testConcurrentMembershipCreationIsIdempotent(): void
+    {
+        $account = $this->account('membership-' . bin2hex(random_bytes(5)));
+        $actor = (string) $this->connection->fetchOne("SELECT control_user_id FROM commercial.commercial_account_memberships WHERE commercial_account_id = ? AND role = 'owner'", [$account]);
+        $target = $this->user('target-' . bin2hex(random_bytes(5)) . '@example.test');
+        $correlation = Uuid::v7()->toRfc4122();
+        $extra = implode('|', [$actor, $account, $target, $correlation]);
+        self::assertSame([0, 0], $this->race('membership', 'same', $extra, 'same', $extra));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.commercial_account_memberships WHERE commercial_account_id = ? AND control_user_id = ?', [$account, $target]));
+    }
+
+    public function testConcurrentOwnerDowngradesCannotLeaveAccountOwnerless(): void
+    {
+        $account = $this->account('owners-' . bin2hex(random_bytes(5)));
+        $second = $this->user('owner-' . bin2hex(random_bytes(5)) . '@example.test');
+        $this->connection->executeStatement("INSERT INTO commercial.commercial_account_memberships (control_user_id, commercial_account_id, role) VALUES (?, ?, 'owner')", [$second, $account]);
+        $ids = $this->connection->fetchFirstColumn("SELECT id FROM commercial.commercial_account_memberships WHERE commercial_account_id = ? AND role = 'owner' ORDER BY id", [$account]);
+        self::assertCount(2, $ids);
+        self::assertSame([0, 2], $this->race('owner_change', (string) $ids[0], '', (string) $ids[1], ''));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.commercial_account_memberships WHERE commercial_account_id = ? AND role = 'owner' AND revoked_at IS NULL", [$account]));
+    }
+
+    public function testConcurrentVerificationAndRefreshAreSingleUse(): void
+    {
+        $auth = $this->authService();
+        $correlation = Uuid::v7()->toRfc4122();
+        $registered = $auth->register('tokens-' . bin2hex(random_bytes(5)) . '@example.test', 'correct horse battery staple', '198.51.100.20', $correlation);
+        self::assertSame([0, 2], $this->race('verify', $registered['verification_token'], $correlation, $registered['verification_token'], $correlation));
+        $session = $auth->login('tokens-' . $this->emailSuffix($registered['user_id']), 'correct horse battery staple', '198.51.100.21', 'PHPUnit', $correlation);
+        self::assertSame([0, 2], $this->race('refresh', $session['refresh_token'], $correlation, $session['refresh_token'], $correlation));
+        self::assertNotNull($this->connection->fetchOne('SELECT revoked_at FROM commercial.control_sessions WHERE control_user_id = ?', [$registered['user_id']]));
+    }
+
     private function onPrem(string $account): string
     {
         $deployment = $this->connection->fetchOne("INSERT INTO commercial.deployments (commercial_account_id, installation_id, mode) VALUES (?, uuidv7(), 'on_prem') RETURNING id", [$account]);
         self::assertIsString($deployment);
 
         return $deployment;
+    }
+
+    private function account(string $code): string
+    {
+        return $this->connection->transactional(function (Connection $connection) use ($code): string {
+            $email = $code . '-' . bin2hex(random_bytes(4)) . '@example.test';
+            $user = $connection->fetchOne("INSERT INTO commercial.control_users (email, email_normalized, password_hash, status, email_verified_at, password_changed_at) VALUES (?, ?, '!race-hash!', 'active', now(), now()) RETURNING id", [$email, $email]);
+            $account = $connection->fetchOne("INSERT INTO commercial.commercial_accounts (code, display_name) VALUES (?, 'Race Account') RETURNING id", [$code]);
+            if (!is_string($user) || !is_string($account)) {
+                throw new \LogicException('Race fixture IDs unavailable.');
+            }
+            $connection->executeStatement("INSERT INTO commercial.commercial_account_memberships (control_user_id, commercial_account_id, role) VALUES (?, ?, 'owner')", [$user, $account]);
+
+            return $account;
+        });
+    }
+
+    private function user(string $email): string
+    {
+        $id = Uuid::v7()->toRfc4122();
+        $this->connection->executeStatement("INSERT INTO commercial.control_users (id, email, email_normalized, password_hash, status, email_verified_at, password_changed_at) VALUES (?, ?, ?, '!race-hash!', 'active', now(), now())", [$id, $email, strtolower($email)]);
+
+        return $id;
+    }
+
+    private function authService(): AuthService
+    {
+        $tokens = new TokenCodec('test-only-control-token-secret-at-least-32-chars');
+        $factory = new PasswordHasherFactory([ControlUserPrincipal::class => ['algorithm' => 'auto']]);
+
+        return new AuthService($this->connection, new UserPasswordHasher($factory), $tokens, new DatabaseRateLimiter($this->connection, $tokens), 3600, 900, 2592000);
+    }
+
+    /** @return list<int> */
+    private function race(string $modeA, string $valueA, string $extraA, string $valueB, string $extraB): array
+    {
+        $start = (string) (microtime(true) + 0.4);
+        $worker = __DIR__ . '/race-worker.php';
+        $first = $this->launch($worker, $modeA, $valueA, $extraA, $start);
+        $second = $this->launch($worker, $modeA, $valueB, $extraB, $start);
+        $results = [$this->finish($first), $this->finish($second)];
+        sort($results);
+
+        return $results;
+    }
+
+    private function emailSuffix(string $userId): string
+    {
+        $email = $this->connection->fetchOne('SELECT email_normalized FROM commercial.control_users WHERE id = ?', [$userId]);
+        if (!is_string($email)) {
+            throw new \LogicException('Email unavailable.');
+        }
+
+        return substr($email, strlen('tokens-'));
     }
 
     /** @return array{resource, array<resource>} */

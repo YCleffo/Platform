@@ -5,8 +5,18 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\Tools\DsnParser;
+use ControlPlane\Account\Application\MembershipService;
+use ControlPlane\Account\Authorization\AccountAuthorization;
+use ControlPlane\Identity\Application\AuthFailure;
+use ControlPlane\Identity\Application\AuthService;
+use ControlPlane\Identity\Security\ControlUserPrincipal;
+use ControlPlane\Identity\Security\DatabaseRateLimiter;
+use ControlPlane\Identity\Security\TokenCodec;
+use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasher;
 
 $url = getenv('CONTROL_DATABASE_URL');
 $parts = is_string($url) ? parse_url($url) : false;
@@ -25,7 +35,12 @@ $connection = DriverManager::getConnection((new DsnParser(['postgresql' => 'pdo_
 try {
     switch ($mode) {
         case 'account':
-            $connection->executeStatement("INSERT INTO commercial.commercial_accounts (code, display_name) VALUES (?, 'Race Test')", [$value]);
+            $connection->beginTransaction();
+            $email = $value . '-' . bin2hex(random_bytes(4)) . '@example.test';
+            $user = $connection->fetchOne("INSERT INTO commercial.control_users (email, email_normalized, password_hash, status, email_verified_at, password_changed_at) VALUES (?, ?, '!race-hash!', 'active', now(), now()) RETURNING id", [$email, $email]);
+            $account = $connection->fetchOne("INSERT INTO commercial.commercial_accounts (code, display_name) VALUES (?, 'Race Test') RETURNING id", [$value]);
+            $connection->executeStatement("INSERT INTO commercial.commercial_account_memberships (control_user_id, commercial_account_id, role) VALUES (?, ?, 'owner')", [$user, $account]);
+            $connection->commit();
             break;
         case 'plan':
             $connection->executeStatement("INSERT INTO commercial.plans (code, version, name) VALUES (?, 1, 'Race Test')", [$value]);
@@ -42,6 +57,24 @@ try {
         case 'idempotency':
             $connection->executeStatement("INSERT INTO commercial.idempotency_keys (scope, idempotency_key, request_sha256, status) VALUES ('test.race', ?, decode(repeat('00',32),'hex'), 'completed')", [$value]);
             break;
+        case 'register':
+            authService($connection)->register($value, 'correct horse battery staple', '198.51.100.10', $extra);
+            break;
+        case 'verify':
+            authService($connection)->verifyEmail($value, $extra);
+            break;
+        case 'refresh':
+            authService($connection)->refresh($value, '198.51.100.11', 'race-worker', $extra);
+            break;
+        case 'membership':
+            [$actorId, $accountId, $targetId, $correlationId] = explode('|', $extra);
+            (new MembershipService($connection, new AccountAuthorization($connection)))->add($actorId, $accountId, $targetId, 'technical', $correlationId);
+            break;
+        case 'owner_change':
+            $connection->beginTransaction();
+            $connection->executeStatement("UPDATE commercial.commercial_account_memberships SET role = 'admin' WHERE id = ?", [$value]);
+            $connection->commit();
+            break;
         default:
             exit(3);
     }
@@ -51,9 +84,22 @@ try {
         $connection->rollBack();
     }
     exit(2);
+} catch (AuthFailure|DbalException|DomainException) {
+    if ($connection->isTransactionActive()) {
+        $connection->rollBack();
+    }
+    exit(2);
 } catch (Throwable) {
     if ($connection->isTransactionActive()) {
         $connection->rollBack();
     }
     exit(3);
+}
+
+function authService(\Doctrine\DBAL\Connection $connection): AuthService
+{
+    $tokens = new TokenCodec('test-only-control-token-secret-at-least-32-chars');
+    $factory = new PasswordHasherFactory([ControlUserPrincipal::class => ['algorithm' => 'auto']]);
+
+    return new AuthService($connection, new UserPasswordHasher($factory), $tokens, new DatabaseRateLimiter($connection, $tokens), 3600, 900, 2592000);
 }

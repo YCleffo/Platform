@@ -1,50 +1,72 @@
-# Commercial Control Plane — Phase 1 foundation
+# Commercial Control Plane — Phase 2 identity and onboarding
 
-`apps/control-plane` is a separate Symfony 7.4 application on PHP 8.3. It owns
-the `platform_commercial` PostgreSQL database and its `commercial` schema. Yii
-Diary/Core owns a different PostgreSQL database. Neither application receives
-the other's database credentials or joins the other's Compose network.
+`apps/control-plane` is a separate Symfony 7.4/PHP 8.3 application with its
+own `platform_commercial` PostgreSQL database and `commercial` schema. It does
+not receive Yii/Diary database credentials and does not join the Diary Docker
+network.
 
-One Diary organization has one Core database. A commercial account is the
-customer of Platform, not a Diary organization, and may later own multiple
-deployments. `control_users` and account memberships are central identities;
-they are deliberately not Diary users or Diary RBAC records. Authentication,
-signup and public commercial APIs are later phases. The only public route now
-is `GET /health`.
+These boundaries are contractual:
 
-## Current schema
+- Control User != Diary User.
+- Commercial Account != Diary Organization.
+- Control Plane Auth != Diary Auth.
 
-Seven ordered Doctrine migrations create exactly 21 Phase 1 tables in
-`commercial.*`:
+A central Control User is created before any tenant Diary exists. Phase 2 does
+not create a tenant database, deployment, subscription or payment.
 
-- Identity/customer: `control_users`, `commercial_accounts`,
-  `commercial_account_memberships`, `billing_profiles`.
-- Catalog: `features`, `plans`, `plan_prices`, `plan_features`.
-- Signing/licensing: `signing_keys`, `licenses`, `license_installations`,
-  `maintenance_contracts`, `issued_entitlement_documents`.
-- Releases: `releases`, `release_entitlements`.
-- Deployments: `deployments`, `deployment_domains`, `deployment_operations`.
-- Reliability: `idempotency_keys`, `audit_events`, `outbox_events`.
+## Implemented schema
 
-Doctrine migration history remains in `public.doctrine_migration_versions` in
-the Commercial database. The full target model, including subscriptions,
-invoices, provider-neutral payments and usage, is in
-`docs/database/commercial/Commercial_ControlPlane_v2.dbml`; tables marked
-`Planned` there do not exist in Phase 1.
+Ten ordered Doctrine migrations create exactly 25 `commercial.*` tables. The
+21 Phase 1 tables remain unchanged. Phase 2 adds:
 
-Published plan/release terms, issued entitlement documents and audit records
-have database immutability guards. Account creation and cloud deployment
-reservation write their business row, audit event and outbox event in one
-transaction. Reservation creates a system domain and durable provisioning
-operation, but no worker provisions infrastructure yet. A system domain is
-retained when a custom domain is added. A deployment UUID, not its slug, is
-the permanent identity.
+- `control_user_email_verifications` — one-time, expiring, hash-only tokens;
+- `control_sessions` — short-lived opaque access tokens and rotating refresh
+  tokens, both stored only as hashes;
+- `control_session_refresh_history` — consumed token hashes for complete family
+  reuse detection;
+- `rate_limit_counters` — expiring, pseudonymized fixed-window counters.
 
-## Local test workflow
+Migrations 008–010 also extend `control_users`, `commercial_accounts` and
+`billing_profiles`. Account creation writes the account, owner membership,
+audit event, outbox event and idempotency result in one transaction. Deferred
+PostgreSQL constraint triggers prevent an account from committing without an
+active owner and serialize concurrent owner removal/downgrade.
 
-Set `CONTROL_TEST_PASSWORD` to a local test-only value. The isolated profile
-uses `control-postgres-test`, `control_test_net` and its own named volume;
-neither Yii `backend` nor its test network is connected. From repository root:
+The current schema, including clearly marked future entities, is
+`docs/database/commercial/Commercial_ControlPlane_v2.dbml`. Planned
+subscriptions, effective entitlements, invoices, payments and usage tables do
+not exist yet.
+
+## HTTP contract
+
+Public endpoints:
+
+- `POST /api/control/auth/register`
+- `POST /api/control/auth/verification/resend`
+- `POST /api/control/auth/verify`
+- `POST /api/control/auth/login`
+- `POST /api/control/auth/refresh`
+- `POST /api/control/auth/logout`
+- `GET /api/control/catalog/plans`
+- `GET /health`
+
+Authenticated endpoints create/read commercial accounts, manage memberships,
+save the billing profile and advance onboarding after catalog review. Every
+account resource is authorized from active account membership; an account UUID
+from the URL is never trusted by itself. Roles and permissions live in the
+central `AccountAuthorization` policy, not in controllers and not in Diary
+RBAC.
+
+Registration stores the trimmed presentation email and a lowercase normalized
+lookup key. Passwords use Symfony PasswordHasher `auto`. Verification tokens
+are authenticated from an artifact UUID with `CONTROL_TOKEN_SECRET`; only the
+SHA-256 token hash is stored. The transactional outbox contains the recipient
+and verification artifact ID, so a mail worker can reproduce the link without
+persisting the raw token. No production mail dispatcher is implemented yet.
+
+## Local validation
+
+Set a test-only `CONTROL_TEST_PASSWORD`, then run from the repository root:
 
 ```bash
 bash ./scripts/control-test-start.sh
@@ -53,31 +75,19 @@ APP_ENV=test bash ./scripts/control-test-reset.sh
 bash ./scripts/control-test-stop.sh
 ```
 
-PowerShell equivalents are `control-test-start.ps1`, `control-test-run.ps1`,
-`control-test-reset.ps1`, and `control-test-stop.ps1` in `scripts/`.
-`control:test:reset` refuses anything other than `APP_ENV=test`,
-`CONTROL_TEST_ISOLATED=1`, host `control-postgres-test`, and database
-`platform_commercial_test`. Reset drops only the isolated Commercial test
-schema and migration history; it never targets development.
+PowerShell equivalents are in `scripts/`. The reset command refuses any target
+except `APP_ENV=test`, `CONTROL_TEST_ISOLATED=1`, host
+`control-postgres-test`, database `platform_commercial_test`.
 
-For development, set separate `CONTROL_POSTGRES_PASSWORD` and a 32+-character
-`CONTROL_APP_SECRET` locally, then run the one-shot migration with `--rm`:
+For the development profile configure separate `CONTROL_POSTGRES_PASSWORD`,
+`CONTROL_APP_SECRET` and `CONTROL_TOKEN_SECRET` values of at least 32
+characters. The production image remains FrankenPHP, runs as `www-data`, has
+no dev dependencies or tests, and grants write access only to runtime
+directories.
 
-```bash
-docker compose --profile control up -d control-postgres
-docker compose --profile control run --rm control-migrate
-docker compose --profile control up -d control-plane
-```
+## Deferred
 
-The Commercial PostgreSQL port is bound to localhost and should not be published
-in a production deployment. The test credentials used in CI are non-secret
-throwaway values. Never put actual signing/private keys in `.env`, Git or the
-Commercial database.
-
-## Deferred phases
-
-Phase 2 adds Control Plane authentication, signup and account onboarding.
-Later phases add subscriptions/entitlements, invoices, provider-neutral
-payments, provider adapters, provisioning, DNS/TLS, On-Prem issuance and a
-signed-release updater. No provider SDK, automatic tenant database creation,
-Docker socket, DNS API, ACME, SSH or renewal engine is present in Phase 1.
+Subscriptions, subscription items, effective entitlements, usage, payment
+providers, charges, invoice processing, tenant DB creation, provisioning,
+DNS/TLS, custom domains, On-Prem activation, MFA and updater execution remain
+future phases.

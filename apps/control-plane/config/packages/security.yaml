@@ -1,10 +1,16 @@
 security:
-    providers:
-        foundation_users:
-            memory: null
+    password_hashers:
+        ControlPlane\Identity\Security\ControlUserPrincipal:
+            algorithm: auto
     firewalls:
         main:
             stateless: true
+            custom_authenticators:
+                - ControlPlane\Identity\Security\AccessTokenAuthenticator
+            entry_point: ControlPlane\Identity\Security\AccessTokenAuthenticator
     access_control:
         - { path: '^/health$', roles: PUBLIC_ACCESS }
-        - { path: '^/', roles: ROLE_CONTROL_OPERATOR }
+        - { path: '^/api/control/auth/(register|verify|verification/resend|login|refresh|logout)$', roles: PUBLIC_ACCESS }
+        - { path: '^/api/control/catalog/plans$', roles: PUBLIC_ACCESS }
+        - { path: '^/api/control/', roles: ROLE_CONTROL_USER }
+        - { path: '^/', roles: PUBLIC_ACCESS }

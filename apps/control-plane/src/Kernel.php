@@ -16,6 +16,9 @@ final class Kernel extends BaseKernel
         if ($this->getEnvironment() === 'prod' && strlen((string) getenv('CONTROL_APP_SECRET')) < 32) {
             throw new \RuntimeException('Control Plane production secret is not configured.');
         }
+        if ($this->getEnvironment() === 'prod' && strlen((string) getenv('CONTROL_TOKEN_SECRET')) < 32) {
+            throw new \RuntimeException('Control Plane token secret is not configured.');
+        }
 
         parent::boot();
     }

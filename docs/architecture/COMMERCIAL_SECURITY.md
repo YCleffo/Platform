@@ -1,48 +1,48 @@
 # Commercial Control Plane security boundary
 
-Phase 1 is closed by default. `/health` returns only `{"status":"ok"}` or
-`{"status":"not_ready"}`; it does not expose credentials, exception traces or
-environment values. Other routes require an operator role, but no operator
-login is implemented yet. Do not publish new write routes before Phase 2
-authentication and account ownership checks.
-The production kernel refuses to boot when `CONTROL_APP_SECRET` has fewer than
-32 characters.
+Phase 2 uses a dedicated central identity, not Diary authentication. Passwords
+are hashed with Symfony PasswordHasher. Email lookup is lowercase and unique in
+PostgreSQL; presentation email is trimmed and retained separately. Status
+transitions are constrained to `pending_verification`, `active`, `suspended`
+and `disabled`.
 
-The Commercial and Diary PostgreSQL services have separate users, passwords,
-volumes and Docker networks. The Control Plane has no Docker socket or tenant
-Diary SQL connection. Signing-key rows contain a 32-byte Ed25519 public key
-and a `vault://`, `kms://` or `hsm://` reference, never private-key bytes.
-Deployment database credentials also use a secret reference. Payment PAN,
-CVV and provider credentials are not modeled in the Phase 1 schema.
+Email verification and session credentials are never stored raw. Verification
+tokens are one-time and expiring. Opaque access tokens are short-lived;
+server-side refresh tokens rotate on every use. Reuse of the previous refresh
+token revokes the session family. Logout is idempotent. Expired artifacts are
+removed by `control:security:cleanup`, not by arbitrary HTTP requests.
 
-Database constraints cover canonical machine codes, unique account codes,
-plan versions, slugs and hostnames, typed feature values, nonnegative prices,
-uppercase currency, valid state sets and intervals, signing key metadata,
-license installation limits, published catalog/release immutability, one
-default billing profile, one system domain per Cloud deployment, immutable
-issued documents, append-only audit and unique idempotency keys. The
-application additionally validates machine identifiers, labels, slugs and
-IDNA domains before persistence. Each main HTTP request receives a validated
-or generated UUID correlation ID; it is returned in `X-Correlation-ID` and
-added to structured Monolog records.
+Registration, login, verification resend, refresh and account creation use
+expiring database rate-limit counters with HMAC-pseudonymized keys. API bodies
+are limited to 64 KiB. API errors never include SQL, stack traces, filesystem
+paths or secrets. Auth responses are `no-store`; all responses receive
+`nosniff`, deny framing, `frame-ancestors 'none'` and `no-referrer`. CORS is
+closed by default. Authentication uses Authorization bearer tokens, not
+cookies, so this API boundary does not rely on cookie CSRF protection.
 
-`CreateCommercialAccount` and `ReserveDeployment` commit their outbox and
-audit rows with the business row. No background outbox dispatcher exists yet.
-Audit metadata on these paths is fixed/empty rather than copied from raw
-request bodies. Logs use structured Monolog output; handlers must continue
-to omit secrets and request bodies. Future authenticated APIs must enforce
-account ownership per request. Database and service credentials are not
-security boundaries against a PostgreSQL superuser or an On-Prem root user.
+Account permissions are centralized. Owner, admin, billing and technical are
+Control Plane roles and are unrelated to Diary RBAC. Account membership is
+checked for every account resource. Owner removal and downgrade are serialized
+under the account row lock and backed by deferred database constraints, so
+concurrent requests cannot leave an account ownerless.
 
-Signed entitlement issuance is not implemented. Before a signer is added,
-define and test a versioned canonical envelope (document version,
-installation ID, monotonic sequence, issuance/validity and payload), sign
-the exact canonical bytes, and retain the immutable bytes/hash/signature.
-Do not treat arbitrary JSON serialization order as canonical and do not add
-fake signatures to draft licenses/releases.
+Audit events include correlation IDs and fixed, redacted metadata. They never
+copy passwords, raw tokens or Authorization headers. Transactional outbox rows
+contain no raw credential. Registration, verification, login summary, account
+creation, membership changes and billing profile changes are audited. Login
+failure audit is protected by the login rate limits.
 
-The test reset command checks environment, isolation marker, host and
-database before executing any `DROP`. Run integration/constraint tests only
-through the isolated Commercial test runtime. The production image contains
-no development dependencies and runs as `www-data`; the separate test image
-includes PHPUnit and static-analysis tooling.
+`/health` reveals only `ok` or `not_ready` and checks only the presence of the
+required schema objects. Production boot requires both `CONTROL_APP_SECRET`
+and `CONTROL_TOKEN_SECRET` to contain at least 32 characters. The Commercial
+and Diary databases use separate credentials, volumes and networks.
+
+The production Docker image pins the FrankenPHP base manifest, runs as
+`www-data`, installs dependencies with `--no-dev`, excludes tests, `.env` and
+Git metadata, and makes only `var/cache`, `var/log` plus FrankenPHP data/config
+directories writable. CI reports High vulnerabilities and fails on any
+Critical vulnerability.
+
+MFA is intentionally deferred. The central user/session model does not embed
+TOTP/WebAuthn fields and can add authenticators, recovery codes and step-up
+authentication in separate tables later.

@@ -1,9 +1,36 @@
 FROM composer/composer:2-bin AS composer
 
+# Rebuild the official FrankenPHP 1.12.7 binary with the upstream security
+# releases that are newer than the current prebuilt image. Mercure and Vulcain
+# stay enabled because they are part of the upstream binary; only dependency
+# versions change.
+FROM dunglas/frankenphp:1.12.7-builder-php8.3@sha256:ff93138a6f94e59de46d69e49f77007fe0274f04ca1ec5b70a58ebbf0c821e98 AS frankenphp-builder
+
+ENV PATH="/usr/local/go/bin:${PATH}" \
+    GODEBUG=http2client=0
+
+WORKDIR /go/src/app/caddy
+
+RUN go get \
+        github.com/getkin/kin-openapi@v0.144.0 \
+        google.golang.org/grpc@v1.83.2 \
+        golang.org/x/crypto@v0.56.0 \
+    && go mod tidy
+
+WORKDIR /go/src/app/caddy/frankenphp
+
+RUN GOBIN=/usr/local/bin \
+    ../../go.sh install \
+        -trimpath \
+        -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP v1.12.7 PHP 8.3 Caddy' -X 'github.com/caddyserver/caddy/v2.CustomBinaryName=frankenphp' -X 'github.com/caddyserver/caddy/v2/modules/caddyhttp.ServerHeader=FrankenPHP Caddy'" \
+        -buildvcs=false
+
 # ---------------------------------------------------------------------
 # Base FrankenPHP image
 # ---------------------------------------------------------------------
-FROM dunglas/frankenphp:1.12-php8.3 AS base
+FROM dunglas/frankenphp:1.12-php8.3@sha256:d5c2c5cdc8b6e73d861cccbf26ddab6443e3dc56e82641e5d991d21133e58a5d AS base
+
+COPY --from=frankenphp-builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 
 RUN install-php-extensions \
     opcache \
@@ -42,7 +69,11 @@ RUN --mount=type=cache,target=/tmp/cache \
         --classmap-authoritative \
         --no-scripts
 
-COPY . /app
+COPY bin /app/bin
+COPY config /app/config
+COPY migrations /app/migrations
+COPY public /app/public
+COPY src /app/src
 
 RUN composer dump-autoload --no-dev --classmap-authoritative --no-interaction
 

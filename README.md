@@ -617,7 +617,11 @@ tests/
 Symfony Commercial Control Plane (`apps/control-plane`) — отдельное приложение
 на Symfony 7.4/PHP 8.3 с собственной БД `platform_commercial`, схемой
 `commercial` и отдельным Docker network. Yii/Diary DB и Commercial DB не
-разделяют credentials. Phase 1 создаёт 21 Commercial таблицу; подписки и
+разделяют credentials. Phase 2 содержит 10 миграций и 25 Commercial таблиц:
+central Control User, hash-only verification, rotating server-side sessions,
+Commercial Account с атомарным owner membership, billing onboarding и
+published plan catalog. Control User != Diary User; Commercial Account !=
+Diary Organization; Control Plane Auth != Diary Auth. Подписки и
 платежи пока описаны только в
 `docs/database/commercial/Commercial_ControlPlane_v2.dbml`.
 См. `docs/architecture/COMMERCIAL_CONTROL_PLANE.md` и
@@ -644,8 +648,9 @@ $env:APP_ENV = 'test'; .\scripts\control-test-reset.ps1
 ```
 
 Reset отказывается работать вне изолированной Commercial test DB. Он не
-удаляет development-данные. Публичных account/payment/provisioning API на
-этом этапе нет; доступен только минимальный `GET /health`.
+удаляет development-данные. Доступны `/api/control/auth/*`, account onboarding
+и read-only `/api/control/catalog/plans`; payment, subscription и provisioning
+API на этом этапе отсутствуют. `GET /health` остаётся минимальным.
 
 Linux/macOS:
 

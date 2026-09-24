@@ -1,23 +1,69 @@
 Project Commercial_ControlPlane_v2 {
   database_type: 'PostgreSQL'
-  Note: '''Target model for the separate platform_commercial database. Tables marked Phase 1 are implemented by Control Plane foundation migrations; Planned tables describe later phases only. Diary/Core is a different database. One organization has one Core database; a commercial account may own several deployments. No tenant_id is added to frozen Core.'''
+  Note: '''Current target model for the separate platform_commercial database. Tables marked Phase 1 or Phase 2 are implemented by Control Plane migrations; Planned tables describe later phases only. Diary/Core is a different database. Control User is not Diary User; Commercial Account is not Diary Organization; Control Plane Auth is not Diary Auth. No tenant_id is added to frozen Core.'''
 }
 
-// Phase 1: central identity and customers. Authentication credentials are a later phase.
+// Phase 1 + Phase 2: central identity and customers.
 Table commercial.control_users {
   id uuid [pk, default: `uuidv7()`]
-  email varchar(320) [not null, unique, note: 'Canonical lowercase identity, not a Diary account']
-  status varchar(24) [not null, default: 'invited']
+  email varchar(320) [not null, note: 'Trimmed presentation form; not a Diary account']
+  email_normalized varchar(320) [not null, unique, note: 'Lowercase lookup identity']
+  password_hash varchar(255) [not null, note: 'Symfony PasswordHasher output only']
+  status varchar(24) [not null, default: 'pending_verification', note: 'pending_verification/active/suspended/disabled']
+  email_verified_at timestamptz
   created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  last_login_at timestamptz
+  password_changed_at timestamptz
   archived_at timestamptz
-  Note: 'Phase 1. No password or MFA secret in this table.'
+  Note: 'Phase 2 central identity. Password plaintext, tokens and MFA secrets are never stored here.'
+}
+
+Table commercial.control_user_email_verifications {
+  id uuid [pk, default: `uuidv7()`]
+  control_user_id uuid [not null, ref: > commercial.control_users.id]
+  token_hash bytea [not null, unique, note: 'SHA-256; raw token is never persisted']
+  expires_at timestamptz [not null]
+  consumed_at timestamptz
+  invalidated_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  Note: 'Phase 2. One-time verification artifact; resend invalidates active predecessors under user row lock.'
+}
+
+Table commercial.control_sessions {
+  id uuid [pk, default: `uuidv7()`]
+  control_user_id uuid [not null, ref: > commercial.control_users.id]
+  token_family_id uuid [not null, default: `uuidv7()`]
+  access_token_hash bytea [not null, unique]
+  refresh_token_hash bytea [not null, unique]
+  previous_refresh_token_hash bytea [note: 'Partial unique index; reuse revokes the family session']
+  generation integer [not null, default: 0]
+  issued_at timestamptz [not null, default: `now()`]
+  access_expires_at timestamptz [not null]
+  expires_at timestamptz [not null]
+  last_used_at timestamptz
+  rotated_at timestamptz
+  revoked_at timestamptz
+  revoke_reason varchar(80)
+  ip_hash bytea
+  user_agent varchar(300)
+  Note: 'Phase 2. Server-side opaque session with short access lifetime, refresh rotation and revocation.'
+}
+
+Table commercial.control_session_refresh_history {
+  token_hash bytea [pk, note: 'Hash of a consumed refresh token']
+  control_session_id uuid [not null, ref: > commercial.control_sessions.id]
+  consumed_at timestamptz [not null, default: `now()`]
+  Note: 'Phase 2. Full family reuse detection; deleted with the expired session.'
 }
 
 Table commercial.commercial_accounts {
   id uuid [pk, default: `uuidv7()`]
   code varchar(120) [not null, unique, note: 'Canonical machine code']
   display_name varchar(200) [not null]
+  legal_name varchar(240)
   status varchar(24) [not null, default: 'draft']
+  onboarding_state varchar(40) [not null, default: 'profile_required', note: 'profile_required/catalog_selection_pending/ready_for_subscription']
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   archived_at timestamptz
@@ -40,8 +86,13 @@ Table commercial.billing_profiles {
   commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
   legal_name varchar(240) [not null]
   country_code char(2) [not null]
+  contact_name varchar(200)
+  contact_email varchar(320)
+  tax_identifier varchar(80)
+  address jsonb [not null, default: `{}`]
   is_default boolean [not null, default: false]
   created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
   archived_at timestamptz
   Note: 'Phase 1. Partial unique index allows one active default per commercial account.'
 }
@@ -239,6 +290,16 @@ Table commercial.idempotency_keys {
   expires_at timestamptz
   indexes { (scope, idempotency_key) [unique] }
   Note: 'Phase 1. Same key and hash resolves to same result; changed hash is a conflict.'
+}
+
+Table commercial.rate_limit_counters {
+  scope varchar(80) [not null]
+  key_hash bytea [not null, note: 'HMAC-pseudonymized key']
+  window_started_at timestamptz [not null]
+  hits integer [not null, default: 1]
+  expires_at timestamptz [not null]
+  indexes { (scope, key_hash, window_started_at) [pk] }
+  Note: 'Phase 2. Bounded fixed-window counters removed by control:security:cleanup.'
 }
 
 Table commercial.audit_events {
