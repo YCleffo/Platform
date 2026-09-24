@@ -1,0 +1,10 @@
+security:
+    providers:
+        foundation_users:
+            memory: null
+    firewalls:
+        main:
+            stateless: true
+    access_control:
+        - { path: '^/health$', roles: PUBLIC_ACCESS }
+        - { path: '^/', roles: ROLE_CONTROL_OPERATOR }

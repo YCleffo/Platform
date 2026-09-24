@@ -440,6 +440,110 @@ services:
     networks:
       - test_net
 
+  # The Commercial database and API never join the Diary networks.
+  control-postgres:
+    profiles: ["control"]
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CONTROL_POSTGRES_DB:-platform_commercial}
+      POSTGRES_USER: ${CONTROL_POSTGRES_USER:-platform_control}
+      POSTGRES_PASSWORD: ${CONTROL_POSTGRES_PASSWORD:-}
+    ports:
+      - "127.0.0.1:${CONTROL_POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - control_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CONTROL_POSTGRES_USER:-platform_control} -d ${CONTROL_POSTGRES_DB:-platform_commercial}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [control_net]
+
+  control-migrate:
+    profiles: ["control"]
+    build:
+      context: ./apps/control-plane
+      dockerfile: docker/Dockerfile
+      target: app
+    restart: "no"
+    environment:
+      APP_ENV: ${CONTROL_APP_ENV:-prod}
+      CONTROL_APP_SECRET: ${CONTROL_APP_SECRET:-}
+      CONTROL_DATABASE_URL: postgresql://${CONTROL_POSTGRES_USER:-platform_control}:${CONTROL_POSTGRES_PASSWORD:-}@control-postgres:5432/${CONTROL_POSTGRES_DB:-platform_commercial}?serverVersion=18&charset=utf8
+    command: ["php", "bin/console", "doctrine:migrations:migrate", "--no-interaction"]
+    depends_on:
+      control-postgres:
+        condition: service_healthy
+    networks: [control_net]
+
+  control-plane:
+    profiles: ["control"]
+    build:
+      context: ./apps/control-plane
+      dockerfile: docker/Dockerfile
+      target: app
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${CONTROL_APP_ENV:-prod}
+      APP_DEBUG: "0"
+      CONTROL_APP_SECRET: ${CONTROL_APP_SECRET:-}
+      CONTROL_DATABASE_URL: postgresql://${CONTROL_POSTGRES_USER:-platform_control}:${CONTROL_POSTGRES_PASSWORD:-}@control-postgres:5432/${CONTROL_POSTGRES_DB:-platform_commercial}?serverVersion=18&charset=utf8
+      PLATFORM_BASE_DOMAIN: ${PLATFORM_BASE_DOMAIN:-platform.example}
+    depends_on:
+      control-postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${CONTROL_PORT:-8090}:8000"
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/health') === false ? 1 : 0);"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [control_net]
+
+  control-postgres-test:
+    profiles: ["control-test"]
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CONTROL_TEST_DB:-platform_commercial_test}
+      POSTGRES_USER: ${CONTROL_TEST_USER:-platform_control_test}
+      POSTGRES_PASSWORD: ${CONTROL_TEST_PASSWORD:-}
+    volumes:
+      - control_postgres_test_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CONTROL_TEST_USER:-platform_control_test} -d ${CONTROL_TEST_DB:-platform_commercial_test}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [control_test_net]
+
+  control-plane-test:
+    profiles: ["control-test"]
+    build:
+      context: ./apps/control-plane
+      dockerfile: docker/Dockerfile
+      target: test
+    restart: "no"
+    environment:
+      APP_ENV: test
+      APP_DEBUG: "0"
+      CONTROL_TEST_ISOLATED: "1"
+      CONTROL_APP_SECRET: test-only-not-a-production-secret
+      CONTROL_DATABASE_URL: postgresql://${CONTROL_TEST_USER:-platform_control_test}:${CONTROL_TEST_PASSWORD:-}@control-postgres-test:5432/${CONTROL_TEST_DB:-platform_commercial_test}?serverVersion=18&charset=utf8
+      PLATFORM_BASE_DOMAIN: platform.example
+    depends_on:
+      control-postgres-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/health') === false ? 1 : 0);"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    networks: [control_test_net]
+
 volumes:
   postgres_data:
     name: platform_postgres_data
@@ -453,6 +557,12 @@ volumes:
   redis_test_data:
     name: platform_redis_test_data
 
+  control_postgres_data:
+    name: platform_control_postgres_data
+
+  control_postgres_test_data:
+    name: platform_control_postgres_test_data
+
 networks:
   backend_net:
     name: platform_backend_net
@@ -460,4 +570,12 @@ networks:
 
   test_net:
     name: platform_test_net
+    internal: false
+
+  control_net:
+    name: platform_control_net
+    internal: false
+
+  control_test_net:
+    name: platform_control_test_net
     internal: false

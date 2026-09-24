@@ -1,0 +1,7 @@
+doctrine:
+    dbal:
+        url: '%env(resolve:CONTROL_DATABASE_URL)%'
+        server_version: '18'
+        charset: utf8
+    orm:
+        auto_mapping: false

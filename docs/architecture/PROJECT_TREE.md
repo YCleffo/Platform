@@ -1,13 +1,14 @@
 # Целевая структура проекта
 
-На этапе 1 создаётся стабильная структура проекта и необходимые сейчас компоненты. Пустые разделы и разделы на будущее обозначены файлами README/.gitkeep, чтобы было понятно, где они будут располагаться.
+Текущая структура включает Yii3 Core и отдельный Symfony Commercial Control Plane. Пустые разделы на будущее обозначены файлами README/.gitkeep, чтобы было понятно, где они будут располагаться.
 
 ```text
 C:\\Platform
 ├── apps
 │   ├── backend            Yii3 API + обработчик; на этапе 1 содержит SQL-миграции Core
 │   ├── frontend           Vue 3 + TypeScript
-│   └── agent              агент Windows на C#/.NET
+│   ├── agent              агент Windows на C#/.NET
+│   └── control-plane      Symfony Commercial Control Plane, отдельная БД
 ├── infra
 │   ├── postgres
 │   ├── redis
@@ -23,7 +24,8 @@ C:\\Platform
 │   ├── architecture
 │   └── database
 │       ├── core            frozen 23-table Core DBML
-│       └── runtime         installation and entitlement DBML
+│       ├── runtime         installation and entitlement DBML
+│       └── commercial      Commercial Control Plane v2 DBML
 ├── scripts
 ├── compose.yaml
 ├── .env.example

@@ -27,7 +27,10 @@
 
 # .NET
 **/bin/
+!apps/control-plane/bin/
+!apps/control-plane/bin/console
 **/obj/
+apps/control-plane/var/
 
 # Logs / dumps
 *.log

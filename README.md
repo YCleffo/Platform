@@ -49,7 +49,8 @@ Platform/
 ├── apps/
 │   ├── backend/              # Yii3 Core API
 │   ├── frontend/             # frontend application
-│   └── agent/                # platform agent
+│   ├── agent/                # platform agent
+│   └── control-plane/        # Symfony Commercial Control Plane
 │
 ├── contracts/                # межмодульные и внешние контракты
 │
@@ -313,8 +314,8 @@ public.platform_migrations
 `platform_runtime.installations` хранит единственную идентичность этой установки,
 а `platform_runtime.entitlement_documents` — локальные подписанные snapshots
 разрешений. Они описаны отдельно от Core в
-`docs/database/runtime/Platform_Runtime_v1.dbml`. Будущая Commercial DB Symfony
-будет отдельной базой; платёжные и subscription таблицы сюда не входят.
+`docs/database/runtime/Platform_Runtime_v1.dbml`. Commercial DB Symfony —
+отдельная база; платёжные и subscription таблицы в Core не входят.
 
 ---
 
@@ -612,6 +613,39 @@ tests/
 ```
 
 Все тестовые suites запускаются только в изолированном `backend-test`; development-контейнер `backend` для API/интеграционных тестов не используется.
+
+Symfony Commercial Control Plane (`apps/control-plane`) — отдельное приложение
+на Symfony 7.4/PHP 8.3 с собственной БД `platform_commercial`, схемой
+`commercial` и отдельным Docker network. Yii/Diary DB и Commercial DB не
+разделяют credentials. Phase 1 создаёт 21 Commercial таблицу; подписки и
+платежи пока описаны только в
+`docs/database/commercial/Commercial_ControlPlane_v2.dbml`.
+См. `docs/architecture/COMMERCIAL_CONTROL_PLANE.md` и
+`docs/architecture/COMMERCIAL_SECURITY.md`.
+
+Тесты Control Plane запускаются только через `control-plane-test` и
+`control-postgres-test`. Установите локальный `CONTROL_TEST_PASSWORD` и
+выполните:
+
+```bash
+bash ./scripts/control-test-start.sh
+bash ./scripts/control-test-run.sh
+APP_ENV=test bash ./scripts/control-test-reset.sh
+bash ./scripts/control-test-stop.sh
+```
+
+PowerShell:
+
+```powershell
+.\scripts\control-test-start.ps1
+.\scripts\control-test-run.ps1
+$env:APP_ENV = 'test'; .\scripts\control-test-reset.ps1
+.\scripts\control-test-stop.ps1
+```
+
+Reset отказывается работать вне изолированной Commercial test DB. Он не
+удаляет development-данные. Публичных account/payment/provisioning API на
+этом этапе нет; доступен только минимальный `GET /health`.
 
 Linux/macOS:
 

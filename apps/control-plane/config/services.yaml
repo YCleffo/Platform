@@ -1,0 +1,20 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    ControlPlane\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+            - '../src/**/Domain/'
+
+    ControlPlane\Infrastructure\Http\HealthController:
+        tags: ['controller.service_arguments']
+
+    ControlPlane\Deployment\Application\ReserveDeployment:
+        arguments:
+            $baseDomain: '%env(PLATFORM_BASE_DOMAIN)%'
+
+    ControlPlane\Infrastructure\Logging\CorrelationIdProcessor:
+        tags: ['monolog.processor']

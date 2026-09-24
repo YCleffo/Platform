@@ -18,7 +18,11 @@ $fixtures = @(
     (Join-Path $root "apps\backend\tests\_output\example.fail.json"),
     (Join-Path $root "apps\backend\vendor\zip-fixture.php"),
     (Join-Path $root "apps\backend\node_modules\zip-fixture.js"),
-    (Join-Path $root "apps\backend\dist\zip-fixture.js")
+    (Join-Path $root "apps\backend\dist\zip-fixture.js"),
+    (Join-Path $root "apps\control-plane\vendor\zip-control-vendor.php"),
+    (Join-Path $root "apps\control-plane\var\cache\zip-control-cache.php"),
+    (Join-Path $root "apps\control-plane\var\log\zip-control-log.log"),
+    (Join-Path $root "apps\control-plane\tests\_output\zip-control.fail.json")
 )
 
 foreach ($fixture in $fixtures) {
@@ -95,7 +99,8 @@ try {
                 (($segments -contains "runtime") -and $entry -notlike 'docs/database/runtime/*') -or
                 $segments -contains "node_modules" -or
                 $segments -contains "dist" -or
-                $segments -contains "backups") {
+                $segments -contains "backups" -or
+                ($entry -like 'apps/control-plane/var/*')) {
                 $entry
                 continue
             }
@@ -114,7 +119,7 @@ try {
     }
 
     # Ensure regression fixtures are demonstrably NOT present in archive
-    $fixtureLeaves = @("Platform.zip", ".env.archive-test", "test.dump", "test.log", "example.fail.json", "zip-fixture.php", "zip-fixture.js")
+    $fixtureLeaves = @("Platform.zip", ".env.archive-test", "test.dump", "test.log", "example.fail.json", "zip-fixture.php", "zip-fixture.js", "zip-control-vendor.php", "zip-control-cache.php", "zip-control-log.log", "zip-control.fail.json")
     foreach ($entry in $entries) {
         $leaf = Split-Path $entry -Leaf
         if ($fixtureLeaves -contains $leaf) {
@@ -125,7 +130,16 @@ try {
     foreach ($requiredEntry in @(
         "apps/backend/codeception.yml",
         "apps/backend/tests/Api/AuthSecurityCest.php",
-        "docs/database/runtime/Platform_Runtime_v1.dbml"
+        "docs/database/runtime/Platform_Runtime_v1.dbml",
+        "docs/database/commercial/Commercial_ControlPlane_v2.dbml",
+        "apps/control-plane/composer.json",
+        "apps/control-plane/composer.lock",
+        "apps/control-plane/.dockerignore",
+        "apps/control-plane/bin/console",
+        "apps/control-plane/docker/Dockerfile",
+        "apps/control-plane/migrations/Version20260924000100.php",
+        "apps/control-plane/src/Kernel.php",
+        "apps/control-plane/tests/Unit/IdentifierPolicyTest.php"
     )) {
         if ($entries -notcontains $requiredEntry) {
             throw "Archive is missing required test source/configuration: $requiredEntry"

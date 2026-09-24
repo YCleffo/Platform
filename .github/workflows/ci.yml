@@ -94,3 +94,80 @@ jobs:
         if: always()
         run: |
           bash ./scripts/test-stop.sh
+
+  control-plane-qa:
+    name: Symfony Commercial Control Plane Quality Assurance
+    runs-on: ubuntu-latest
+    env:
+      # The root Compose file also interpolates Diary variables even when only
+      # the Commercial test profile is selected. These are CI-only dummy values.
+      POSTGRES_DB: platform_test
+      POSTGRES_TEST_DB: platform_test
+      POSTGRES_USER: platform_app
+      POSTGRES_PASSWORD: platform_ci_test_password
+      CONTROL_TEST_DB: platform_commercial_test
+      CONTROL_TEST_USER: platform_control_test
+      CONTROL_TEST_PASSWORD: platform_control_ci_only
+      CONTROL_APP_SECRET: test-only-not-a-production-secret
+      PLATFORM_BASE_DOMAIN: platform.example
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, pdo, pdo_pgsql, sodium
+          tools: composer:v2
+
+      - name: Validate and install locked dependencies
+        working-directory: apps/control-plane
+        run: |
+          composer validate --strict
+          composer install --no-interaction --prefer-dist
+          composer check-platform-reqs
+          composer audit
+
+      - name: Static analysis and unit tests
+        working-directory: apps/control-plane
+        env:
+          APP_ENV: test
+          APP_DEBUG: "0"
+          CONTROL_DATABASE_URL: postgresql://unused:unused@control-postgres-test:5432/platform_commercial_test
+        run: |
+          composer analyse
+          vendor/bin/phpunit --testsuite Unit
+
+      - name: Start isolated Commercial test database and migrate from empty
+        run: bash ./scripts/control-test-start.sh
+
+      - name: Verify clean migration, repeat and table count
+        run: |
+          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate --no-interaction
+          count=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'commercial' AND table_type = 'BASE TABLE';")
+          test "$count" = "21"
+          versions=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT count(*) FROM public.doctrine_migration_versions;")
+          test "$versions" = "7"
+
+      - name: Database constraints and integration tests
+        run: bash ./scripts/control-test-run.sh
+
+      - name: Reset guard and clean rerun
+        run: |
+          if APP_ENV=dev bash ./scripts/control-test-reset.sh; then
+            echo 'ERROR: Commercial reset was allowed with APP_ENV=dev' >&2
+            exit 1
+          fi
+          APP_ENV=test bash ./scripts/control-test-reset.sh
+          bash ./scripts/control-test-run.sh
+
+      - name: Verify Control Plane readiness
+        run: |
+          docker compose --profile control-test up -d --wait control-plane-test
+          docker compose --profile control-test exec -T control-plane-test curl -fsS http://127.0.0.1:8000/health | grep -Fx '{"status":"ok"}'
+
+      - name: Stop isolated Commercial test runtime
+        if: always()
+        run: bash ./scripts/control-test-stop.sh

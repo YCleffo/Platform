@@ -1,0 +1,403 @@
+Project Commercial_ControlPlane_v2 {
+  database_type: 'PostgreSQL'
+  Note: '''Target model for the separate platform_commercial database. Tables marked Phase 1 are implemented by Control Plane foundation migrations; Planned tables describe later phases only. Diary/Core is a different database. One organization has one Core database; a commercial account may own several deployments. No tenant_id is added to frozen Core.'''
+}
+
+// Phase 1: central identity and customers. Authentication credentials are a later phase.
+Table commercial.control_users {
+  id uuid [pk, default: `uuidv7()`]
+  email varchar(320) [not null, unique, note: 'Canonical lowercase identity, not a Diary account']
+  status varchar(24) [not null, default: 'invited']
+  created_at timestamptz [not null, default: `now()`]
+  archived_at timestamptz
+  Note: 'Phase 1. No password or MFA secret in this table.'
+}
+
+Table commercial.commercial_accounts {
+  id uuid [pk, default: `uuidv7()`]
+  code varchar(120) [not null, unique, note: 'Canonical machine code']
+  display_name varchar(200) [not null]
+  status varchar(24) [not null, default: 'draft']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  archived_at timestamptz
+  Note: 'Phase 1. Customer of Platform; never a Diary organization.'
+}
+
+Table commercial.commercial_account_memberships {
+  id uuid [pk, default: `uuidv7()`]
+  control_user_id uuid [not null, ref: > commercial.control_users.id]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  role varchar(24) [not null, note: 'owner/admin/billing/technical']
+  created_at timestamptz [not null, default: `now()`]
+  revoked_at timestamptz
+  indexes { (control_user_id, commercial_account_id) [unique] }
+  Note: 'Phase 1. Account-scoped central membership, separate from Diary RBAC.'
+}
+
+Table commercial.billing_profiles {
+  id uuid [pk, default: `uuidv7()`]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  legal_name varchar(240) [not null]
+  country_code char(2) [not null]
+  is_default boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  archived_at timestamptz
+  Note: 'Phase 1. Partial unique index allows one active default per commercial account.'
+}
+
+// Phase 1: versioned catalog. Prices use minor units, never floating point.
+Table commercial.features {
+  id uuid [pk, default: `uuidv7()`]
+  code varchar(160) [not null, unique]
+  value_type varchar(16) [not null, note: 'boolean/integer/string/json']
+  description text
+  created_at timestamptz [not null, default: `now()`]
+  retired_at timestamptz
+  Note: 'Phase 1. Stable machine code and typed value.'
+}
+
+Table commercial.plans {
+  id uuid [pk, default: `uuidv7()`]
+  code varchar(120) [not null]
+  version integer [not null]
+  status varchar(24) [not null, default: 'draft']
+  name varchar(200) [not null]
+  created_at timestamptz [not null, default: `now()`]
+  published_at timestamptz
+  retired_at timestamptz
+  indexes { (code, version) [unique] }
+  Note: 'Phase 1. Published terms are immutable; changes require a new version.'
+}
+
+Table commercial.plan_prices {
+  id uuid [pk, default: `uuidv7()`]
+  plan_id uuid [not null, ref: > commercial.plans.id]
+  currency char(3) [not null, note: 'ISO uppercase']
+  amount_minor bigint [not null, note: 'Nonnegative']
+  billing_period varchar(24) [not null]
+  created_at timestamptz [not null, default: `now()`]
+  indexes { (plan_id, currency, billing_period) [unique] }
+  Note: 'Phase 1. Never rewrite published historical prices.'
+}
+
+Table commercial.plan_features {
+  plan_id uuid [not null, ref: > commercial.plans.id]
+  feature_id uuid [not null, ref: > commercial.features.id]
+  value jsonb [not null, note: 'Must match features.value_type; enforced by PostgreSQL trigger']
+  indexes { (plan_id, feature_id) [pk] }
+  Note: 'Phase 1. Published plan features are immutable.'
+}
+
+// Phase 1: deployments and durable operations. Core database secrets are references only.
+Table commercial.deployments {
+  id uuid [pk, default: `uuidv7()`]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  installation_id uuid [not null, unique]
+  mode varchar(16) [not null, note: 'shared/dedicated/on_prem']
+  system_slug varchar(63) [unique, note: 'Nullable for on_prem; lowercase DNS label, reserved names rejected']
+  status varchar(24) [not null, default: 'reserved']
+  provisioning_state varchar(24) [not null, default: 'pending']
+  current_release_id uuid [ref: > commercial.releases.id]
+  desired_release_id uuid [ref: > commercial.releases.id]
+  core_db_secret_ref varchar(300) [note: 'Never plaintext credentials']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  archived_at timestamptz
+  Note: 'Phase 1. A Cloud deployment needs a system slug and one system domain. No automatic provisioning yet.'
+}
+
+Table commercial.deployment_domains {
+  id uuid [pk, default: `uuidv7()`]
+  deployment_id uuid [not null, ref: > commercial.deployments.id]
+  kind varchar(16) [not null, note: 'system/custom']
+  hostname varchar(253) [not null, unique, note: 'Canonical lowercase ASCII IDNA hostname']
+  status varchar(24) [not null, default: 'pending']
+  ownership_verified_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  disabled_at timestamptz
+  Note: 'Phase 1. Partial unique index: one system domain per deployment. System domain cannot be deleted by customer.'
+}
+
+Table commercial.deployment_operations {
+  id uuid [pk, default: `uuidv7()`]
+  deployment_id uuid [not null, ref: > commercial.deployments.id]
+  operation_type varchar(32) [not null]
+  idempotency_key varchar(200) [not null]
+  status varchar(24) [not null, default: 'pending']
+  current_step varchar(120)
+  attempt_count integer [not null, default: 0]
+  next_retry_at timestamptz
+  last_error_code varchar(120) [note: 'Sanitized code, not raw credentials or stack trace']
+  started_at timestamptz
+  finished_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  indexes { (deployment_id, idempotency_key) [unique] }
+  Note: 'Phase 1 durable state model; execution belongs to later provisioning phases.'
+}
+
+// Phase 1: key metadata, mutable license policy, immutable signed artifacts.
+Table commercial.signing_keys {
+  key_id varchar(160) [pk]
+  algorithm varchar(24) [not null, note: 'Ed25519']
+  purpose varchar(32) [not null, note: 'entitlement/release']
+  public_key bytea [not null]
+  private_key_secret_ref varchar(300) [not null, note: 'Vault/KMS reference only; never private key bytes']
+  status varchar(24) [not null]
+  valid_from timestamptz [not null]
+  valid_until timestamptz
+  revoked_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  Note: 'Phase 1. Key rotation uses multiple key IDs; private bytes never enter PostgreSQL.'
+}
+
+Table commercial.licenses {
+  id uuid [pk, default: `uuidv7()`]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  kind varchar(24) [not null, note: 'subscription/perpetual']
+  status varchar(24) [not null, default: 'draft']
+  valid_from timestamptz [not null]
+  valid_until timestamptz
+  max_installations integer [not null]
+  policy jsonb [not null, note: 'Feature and numeric limit policy']
+  created_at timestamptz [not null, default: `now()`]
+  revoked_at timestamptz
+  Note: 'Phase 1. Lifecycle record is not itself the signed document.'
+}
+
+Table commercial.license_installations {
+  license_id uuid [not null, ref: > commercial.licenses.id]
+  installation_id uuid [not null]
+  activated_at timestamptz [not null, default: `now()`]
+  revoked_at timestamptz
+  indexes { (license_id, installation_id) [pk] }
+  Note: 'Phase 1. Active assignments are bounded by max_installations under row lock.'
+}
+
+Table commercial.maintenance_contracts {
+  id uuid [pk, default: `uuidv7()`]
+  license_id uuid [not null, ref: > commercial.licenses.id]
+  valid_from timestamptz [not null]
+  valid_until timestamptz [not null]
+  status varchar(24) [not null]
+  Note: 'Phase 1. Maintenance rights are separate from perpetual license validity.'
+}
+
+Table commercial.issued_entitlement_documents {
+  id uuid [pk, default: `uuidv7()`]
+  license_id uuid [not null, ref: > commercial.licenses.id]
+  installation_id uuid [not null]
+  document_version integer [not null]
+  sequence bigint [not null]
+  envelope bytea [not null, note: 'Versioned canonical serialized envelope']
+  envelope_sha256 bytea [not null]
+  signature bytea [not null]
+  signing_key_id varchar(160) [not null, ref: > commercial.signing_keys.key_id]
+  issued_at timestamptz [not null]
+  valid_from timestamptz [not null]
+  valid_until timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  indexes { (installation_id, sequence) [unique] }
+  Note: 'Phase 1 registry. Insert-only; no fake signature on draft license. Issuer and canonical serializer are later phases.'
+}
+
+// Phase 1: release registry. Published release data is immutable.
+Table commercial.releases {
+  id uuid [pk, default: `uuidv7()`]
+  version varchar(80) [not null, unique, note: 'Semantic version']
+  channel varchar(24) [not null]
+  status varchar(24) [not null, default: 'draft']
+  compatibility jsonb [not null]
+  oci_reference varchar(400)
+  image_digest varchar(80) [note: 'sha256 digest, not mutable tag']
+  manifest_sha256 bytea
+  manifest_signature bytea
+  signing_key_id varchar(160) [ref: > commercial.signing_keys.key_id]
+  created_at timestamptz [not null, default: `now()`]
+  published_at timestamptz
+  retired_at timestamptz
+  Note: 'Phase 1 metadata. Publish requires a complete signed immutable digest.'
+}
+
+Table commercial.release_entitlements {
+  release_id uuid [not null, ref: > commercial.releases.id]
+  feature_id uuid [not null, ref: > commercial.features.id]
+  requirement jsonb [not null]
+  indexes { (release_id, feature_id) [pk] }
+  Note: 'Phase 1 release capability metadata.'
+}
+
+// Phase 1: reliability ledger. Application writes business change and outbox in one transaction.
+Table commercial.idempotency_keys {
+  id uuid [pk, default: `uuidv7()`]
+  scope varchar(120) [not null]
+  idempotency_key varchar(200) [not null]
+  request_sha256 bytea [not null]
+  status varchar(24) [not null]
+  result_reference varchar(200)
+  created_at timestamptz [not null, default: `now()`]
+  expires_at timestamptz
+  indexes { (scope, idempotency_key) [unique] }
+  Note: 'Phase 1. Same key and hash resolves to same result; changed hash is a conflict.'
+}
+
+Table commercial.audit_events {
+  id bigint [pk, increment]
+  event_id uuid [not null, unique, default: `uuidv7()`]
+  occurred_at timestamptz [not null, default: `now()`]
+  actor_type varchar(24) [not null]
+  actor_id uuid
+  commercial_account_id uuid [ref: > commercial.commercial_accounts.id]
+  action varchar(160) [not null]
+  resource_type varchar(120) [not null]
+  resource_id varchar(160) [not null]
+  correlation_id uuid
+  outcome varchar(24) [not null]
+  metadata jsonb [not null, note: 'Redacted, no request bodies or credentials']
+  Note: 'Phase 1. Append-only.'
+}
+
+Table commercial.outbox_events {
+  id bigint [pk, increment]
+  event_id uuid [not null, unique, default: `uuidv7()`]
+  event_type varchar(180) [not null]
+  aggregate_type varchar(120) [not null]
+  aggregate_id uuid [not null]
+  payload jsonb [not null]
+  status varchar(24) [not null, default: 'pending']
+  attempts integer [not null, default: 0]
+  available_at timestamptz [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+  published_at timestamptz
+  Note: 'Phase 1. Transactional outbox; no external delivery worker yet.'
+}
+
+// Planned: subscriptions, billing, payments and usage. No Phase 1 SQL migration creates these.
+Table commercial.subscriptions {
+  id uuid [pk]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  billing_profile_id uuid [ref: > commercial.billing_profiles.id]
+  status varchar(24) [not null]
+  current_period_start timestamptz
+  current_period_end timestamptz
+  created_at timestamptz [not null]
+  Note: 'Planned. Subscription lifecycle is distinct from plan and entitlement.'
+}
+Table commercial.subscription_items {
+  id uuid [pk]
+  subscription_id uuid [not null, ref: > commercial.subscriptions.id]
+  plan_id uuid [not null, ref: > commercial.plans.id]
+  quantity integer [not null]
+  valid_from timestamptz [not null]
+  valid_until timestamptz
+  Note: 'Planned. Retains historical plan version.'
+}
+Table commercial.entitlements {
+  id uuid [pk]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  feature_id uuid [not null, ref: > commercial.features.id]
+  source_type varchar(24) [not null]
+  source_id uuid [not null]
+  value jsonb [not null]
+  valid_from timestamptz [not null]
+  valid_until timestamptz
+  Note: 'Planned. Commercial capability, not Diary RBAC permission.'
+}
+Table commercial.invoices {
+  id uuid [pk]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  billing_profile_id uuid [not null, ref: > commercial.billing_profiles.id]
+  currency char(3) [not null]
+  total_minor bigint [not null]
+  status varchar(24) [not null]
+  issued_at timestamptz
+  Note: 'Planned. Invoice is not payment.'
+}
+Table commercial.invoice_lines {
+  id uuid [pk]
+  invoice_id uuid [not null, ref: > commercial.invoices.id]
+  description varchar(300) [not null]
+  quantity integer [not null]
+  unit_amount_minor bigint [not null]
+  total_minor bigint [not null]
+  Note: 'Planned. Historical snapshot, not mutable catalog join.'
+}
+Table commercial.payment_provider_accounts {
+  id uuid [pk]
+  provider_code varchar(80) [not null]
+  external_account_id varchar(200)
+  secret_ref varchar(300) [not null]
+  status varchar(24) [not null]
+  Note: 'Planned. Provider-neutral; no provider secrets in DB.'
+}
+Table commercial.payment_methods {
+  id uuid [pk]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  provider_account_id uuid [not null, ref: > commercial.payment_provider_accounts.id]
+  method_type varchar(40) [not null, note: 'card/sbp/bank_transfer/...']
+  provider_token varchar(300)
+  status varchar(24) [not null]
+  Note: 'Planned. No PAN/CVV. SBP is a method capability.'
+}
+Table commercial.payments {
+  id uuid [pk]
+  invoice_id uuid [ref: > commercial.invoices.id]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  amount_minor bigint [not null]
+  currency char(3) [not null]
+  status varchar(24) [not null]
+  created_at timestamptz [not null]
+  Note: 'Planned. Provider-neutral payment intent.'
+}
+Table commercial.payment_attempts {
+  id uuid [pk]
+  payment_id uuid [not null, ref: > commercial.payments.id]
+  provider_account_id uuid [not null, ref: > commercial.payment_provider_accounts.id]
+  provider_payment_id varchar(200)
+  status varchar(24) [not null]
+  attempted_at timestamptz [not null]
+  Note: 'Planned. Retry/history for one payment.'
+}
+Table commercial.refunds {
+  id uuid [pk]
+  payment_id uuid [not null, ref: > commercial.payments.id]
+  amount_minor bigint [not null]
+  currency char(3) [not null]
+  status varchar(24) [not null]
+  created_at timestamptz [not null]
+  Note: 'Planned. Nonnegative minor units.'
+}
+Table commercial.payment_provider_events {
+  id uuid [pk]
+  provider_account_id uuid [not null, ref: > commercial.payment_provider_accounts.id]
+  provider_event_id varchar(200) [not null]
+  received_at timestamptz [not null]
+  payload_hash bytea [not null]
+  status varchar(24) [not null]
+  indexes { (provider_account_id, provider_event_id) [unique] }
+  Note: 'Planned. Deduplicated webhook metadata, no raw secrets.'
+}
+Table commercial.receipts {
+  id uuid [pk]
+  payment_id uuid [not null, ref: > commercial.payments.id]
+  external_receipt_id varchar(200)
+  amount_minor bigint [not null]
+  currency char(3) [not null]
+  issued_at timestamptz [not null]
+  Note: 'Planned. Immutable fiscal receipt reference.'
+}
+Table commercial.usage_periods {
+  id uuid [pk]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  starts_at timestamptz [not null]
+  ends_at timestamptz [not null]
+  status varchar(24) [not null]
+  Note: 'Planned. Bounded usage window.'
+}
+Table commercial.usage_counters {
+  usage_period_id uuid [not null, ref: > commercial.usage_periods.id]
+  feature_id uuid [not null, ref: > commercial.features.id]
+  quantity bigint [not null]
+  indexes { (usage_period_id, feature_id) [pk] }
+  Note: 'Planned. Nonnegative measured quantity.'
+}

@@ -22,13 +22,18 @@ Search или брендинга **не означает**, что в Core ну�
 Для общих настроек установки используется `core.system_settings`.
 Идентичность установки и локальные подписанные коммерческие разрешения находятся в
 `platform_runtime.*`, описанной отдельно в `docs/database/runtime/Platform_Runtime_v1.dbml`.
-Будущая Symfony Commercial DB — отдельная база; её планы, платежи, подписки и реестр
+Symfony Commercial DB — отдельная база `platform_commercial` со схемой `commercial`.
+Phase 1 создаёт 21 таблицу identity/customer, catalog, deployment, licensing,
+release и reliability. Платежи и подписки пока только в целевой DBML v2;
+их таблиц нет. Подробности: `docs/architecture/COMMERCIAL_CONTROL_PLANE.md`.
+Её планы, платежи, подписки и реестр
 лицензий сюда не входят.
 
 ## Подпись entitlement documents
 
-Документы подписываются асимметрично, предпочтительно Ed25519. Приватный ключ
-хранится только в будущем Commercial Control Plane: он не попадает в Yii/Core,
+Документы в будущей фазе будут подписываться асимметрично Ed25519. Сейчас
+Commercial Control Plane хранит только metadata ключей и secret reference;
+приватный ключ должен находиться во внешнем Vault/KMS/HSM. Он не попадает в Yii/Core,
 On-Prem Docker image или Git. Локальный runtime получает только доверенные публичные
 ключи для проверки. PostgreSQL обеспечивает порядок применения через монотонный
 `current_entitlement_sequence`; проверка подписи и доверия к ключу должна выполняться
