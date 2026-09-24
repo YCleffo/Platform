@@ -617,13 +617,14 @@ tests/
 Symfony Commercial Control Plane (`apps/control-plane`) — отдельное приложение
 на Symfony 7.4/PHP 8.3 с собственной БД `platform_commercial`, схемой
 `commercial` и отдельным Docker network. Yii/Diary DB и Commercial DB не
-разделяют credentials. Phase 2 содержит 10 миграций и 25 Commercial таблиц:
+разделяют credentials. Phase 3.2 содержит 12 миграций и 27 Commercial таблиц:
 central Control User, hash-only verification, rotating server-side sessions,
 Commercial Account с атомарным owner membership, billing onboarding и
-published plan catalog. Control User != Diary User; Commercial Account !=
-Diary Organization; Control Plane Auth != Diary Auth. Подписки и
-платежи пока описаны только в
-`docs/database/commercial/Commercial_ControlPlane_v2.dbml`.
+published plan catalog, draft/active subscriptions и immutable subscription
+items. Effective entitlements вычисляются как derived read model из активной
+подписки и plan features; mutable `commercial.entitlements` table отсутствует.
+Control User != Diary User; Commercial Account != Diary Organization; Control
+Plane Auth != Diary Auth. Payments, invoices и usage остаются отложенными.
 См. `docs/architecture/COMMERCIAL_CONTROL_PLANE.md` и
 `docs/architecture/COMMERCIAL_SECURITY.md`.
 
@@ -648,9 +649,12 @@ $env:APP_ENV = 'test'; .\scripts\control-test-reset.ps1
 ```
 
 Reset отказывается работать вне изолированной Commercial test DB. Он не
-удаляет development-данные. Доступны `/api/control/auth/*`, account onboarding
-и read-only `/api/control/catalog/plans`; payment, subscription и provisioning
-API на этом этапе отсутствуют. `GET /health` остаётся минимальным.
+удаляет development-данные. Доступны `/api/control/auth/*`, account onboarding,
+read-only `/api/control/catalog/plans`, draft subscription create/read и
+`GET /api/control/accounts/{accountId}/entitlements`. Activation является
+только внутренним application service; customer `/activate` endpoint
+отсутствует. Payment и provisioning API не реализованы. `GET /health` остаётся
+минимальным.
 
 Linux/macOS:
 

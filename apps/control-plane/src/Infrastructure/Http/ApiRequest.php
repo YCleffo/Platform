@@ -42,6 +42,16 @@ final class ApiRequest
         return $data[$key];
     }
 
+    /** @param array<string, mixed> $data */
+    public static function integer(array $data, string $key): int
+    {
+        if (!isset($data[$key]) || !is_int($data[$key])) {
+            throw new \InvalidArgumentException('Required integer field is missing.');
+        }
+
+        return $data[$key];
+    }
+
     public static function correlationId(Request $request): string
     {
         $id = $request->attributes->get(CorrelationIdSubscriber::ATTRIBUTE);

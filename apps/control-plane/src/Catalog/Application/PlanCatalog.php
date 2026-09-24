@@ -8,16 +8,14 @@ use Doctrine\DBAL\Connection;
 
 final readonly class PlanCatalog
 {
-    public function __construct(private Connection $connection)
-    {
-    }
+    public function __construct(private Connection $connection) {}
 
     /** @return list<array<string, mixed>> */
     public function published(): array
     {
         $rows = $this->connection->fetchAllAssociative(<<<'SQL'
 SELECT p.id, p.code, p.version, p.name,
-       COALESCE((SELECT jsonb_agg(jsonb_build_object('currency', pp.currency, 'amount_minor', pp.amount_minor, 'billing_period', pp.billing_period) ORDER BY pp.currency, pp.billing_period) FROM commercial.plan_prices pp WHERE pp.plan_id = p.id), '[]'::jsonb) AS prices,
+       COALESCE((SELECT jsonb_agg(jsonb_build_object('id', pp.id, 'currency', pp.currency, 'amount_minor', pp.amount_minor, 'billing_period', pp.billing_period) ORDER BY pp.currency, pp.billing_period) FROM commercial.plan_prices pp WHERE pp.plan_id = p.id), '[]'::jsonb) AS prices,
        COALESCE((SELECT jsonb_object_agg(f.code, pf.value ORDER BY f.code) FROM commercial.plan_features pf JOIN commercial.features f ON f.id = pf.feature_id WHERE pf.plan_id = p.id), '{}'::jsonb) AS features
 FROM commercial.plans p
 WHERE p.status = 'published'

@@ -15,6 +15,10 @@ use ControlPlane\Identity\Application\AuthService;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
 use ControlPlane\Identity\Security\DatabaseRateLimiter;
 use ControlPlane\Identity\Security\TokenCodec;
+use ControlPlane\Subscription\Application\ActivateSubscription;
+use ControlPlane\Subscription\Application\CancelSubscription;
+use ControlPlane\Subscription\Application\ExpireSubscription;
+use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasher;
 
@@ -74,6 +78,18 @@ try {
             $connection->beginTransaction();
             $connection->executeStatement("UPDATE commercial.commercial_account_memberships SET role = 'admin' WHERE id = ?", [$value]);
             $connection->commit();
+            break;
+        case 'activate_subscription':
+            [$accountId, $correlationId, $activationInstant] = explode('|', $extra);
+            (new ActivateSubscription($connection, new SubscriptionPeriodCalculator()))->activate($accountId, $value, new DateTimeImmutable($activationInstant), $correlationId);
+            break;
+        case 'cancel_subscription':
+            [$userId, $accountId, $idempotencyKey, $correlationId] = explode('|', $extra);
+            (new CancelSubscription($connection, new AccountAuthorization($connection)))->cancel($userId, $accountId, $value, $idempotencyKey, $correlationId);
+            break;
+        case 'expire_subscription':
+            [$accountId, $correlationId, $effectiveInstant] = explode('|', $extra);
+            (new ExpireSubscription($connection))->expire($accountId, $value, new DateTimeImmutable($effectiveInstant), $correlationId);
             break;
         default:
             exit(3);

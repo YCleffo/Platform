@@ -1,4 +1,4 @@
-# Commercial Control Plane — Phase 2 identity and onboarding
+# Commercial Control Plane — Phase 3.3 Subscription Lifecycle
 
 `apps/control-plane` is a separate Symfony 7.4/PHP 8.3 application with its
 own `platform_commercial` PostgreSQL database and `commercial` schema. It does
@@ -11,13 +11,14 @@ These boundaries are contractual:
 - Commercial Account != Diary Organization.
 - Control Plane Auth != Diary Auth.
 
-A central Control User is created before any tenant Diary exists. Phase 2 does
-not create a tenant database, deployment, subscription or payment.
+A central Control User is created before any tenant Diary exists. The Control
+Plane now owns the commercial subscription contract, but still does not create
+a tenant database or process a payment.
 
 ## Implemented schema
 
-Ten ordered Doctrine migrations create exactly 25 `commercial.*` tables. The
-21 Phase 1 tables remain unchanged. Phase 2 adds:
+Twelve ordered Doctrine migrations create exactly 27 `commercial.*` tables.
+The 21 Phase 1 tables remain unchanged. Phase 2 adds:
 
 - `control_user_email_verifications` — one-time, expiring, hash-only tokens;
 - `control_sessions` — short-lived opaque access tokens and rotating refresh
@@ -32,10 +33,32 @@ audit event, outbox event and idempotency result in one transaction. Deferred
 PostgreSQL constraint triggers prevent an account from committing without an
 active owner and serialize concurrent owner removal/downgrade.
 
+Phase 3.1 adds `subscriptions` and `subscription_items`. A draft selects an
+immutable published recurring `plan_price`; partial unique indexes allow at
+most one draft and one active subscription per Commercial Account. Creation,
+its item, audit/outbox events and idempotency result commit atomically.
+
+Phase 3.2 adds no table. Internal `ActivateSubscription` locks and validates
+the subscription contract, calculates its first UTC calendar period, freezes
+its items through PostgreSQL guards, activates the Commercial Account and
+completes onboarding in one transaction. Activation is intentionally not an
+HTTP customer action.
+
+Phase 3.3 also adds no table. A customer with `billing.manage` can cancel a
+draft or active subscription through an idempotent HTTP action. The internal
+`control:subscriptions:expire` command claims due active subscriptions in
+bounded `FOR UPDATE SKIP LOCKED` batches. Both terminal transitions write
+audit and outbox records atomically. After cancellation or expiration the
+Commercial Account remains `active/completed`, effective entitlements become
+empty, and a new subscription row can be created and activated. Historical
+subscriptions and their items are never recycled or deleted.
+
 The current schema, including clearly marked future entities, is
-`docs/database/commercial/Commercial_ControlPlane_v2.dbml`. Planned
-subscriptions, effective entitlements, invoices, payments and usage tables do
-not exist yet.
+`docs/database/commercial/Commercial_ControlPlane_v2.dbml`. Effective
+entitlements are derived at read time from the current active subscription,
+its valid items and immutable plan features. There is no mutable
+`commercial.entitlements` table. Invoices, payments and usage remain future
+work.
 
 ## HTTP contract
 
@@ -51,11 +74,12 @@ Public endpoints:
 - `GET /health`
 
 Authenticated endpoints create/read commercial accounts, manage memberships,
-save the billing profile and advance onboarding after catalog review. Every
-account resource is authorized from active account membership; an account UUID
-from the URL is never trusted by itself. Roles and permissions live in the
-central `AccountAuthorization` policy, not in controllers and not in Diary
-RBAC.
+save the billing profile, advance onboarding, create/read subscriptions,
+cancel them through `POST /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/cancel`,
+and expose `GET /api/control/accounts/{accountId}/entitlements`. Every account
+resource is authorized from active account membership; an account UUID from
+the URL is never trusted by itself. Roles and permissions live in the central
+`AccountAuthorization` policy, not in controllers and not in Diary RBAC.
 
 Registration stores the trimmed presentation email and a lowercase normalized
 lookup key. Passwords use Symfony PasswordHasher `auto`. Verification tokens
@@ -87,7 +111,7 @@ directories.
 
 ## Deferred
 
-Subscriptions, subscription items, effective entitlements, usage, payment
-providers, charges, invoice processing, tenant DB creation, provisioning,
+Renewal, plan switching, usage, billing, invoices, payments, payment providers,
+webhooks, signed entitlement issuance, tenant DB creation, provisioning,
 DNS/TLS, custom domains, On-Prem activation, MFA and updater execution remain
 future phases.

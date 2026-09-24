@@ -1,6 +1,6 @@
 Project Commercial_ControlPlane_v2 {
   database_type: 'PostgreSQL'
-  Note: '''Current target model for the separate platform_commercial database. Tables marked Phase 1 or Phase 2 are implemented by Control Plane migrations; Planned tables describe later phases only. Diary/Core is a different database. Control User is not Diary User; Commercial Account is not Diary Organization; Control Plane Auth is not Diary Auth. No tenant_id is added to frozen Core.'''
+  Note: '''Current target model for the separate platform_commercial database. Tables marked Phase 1, Phase 2 or Phase 3.1 are implemented by Control Plane migrations; Planned tables describe later phases only. Diary/Core is a different database. Control User is not Diary User; Commercial Account is not Diary Organization; Control Plane Auth is not Diary Auth. No tenant_id is added to frozen Core.'''
 }
 
 // Phase 1 + Phase 2: central identity and customers.
@@ -63,7 +63,7 @@ Table commercial.commercial_accounts {
   display_name varchar(200) [not null]
   legal_name varchar(240)
   status varchar(24) [not null, default: 'draft']
-  onboarding_state varchar(40) [not null, default: 'profile_required', note: 'profile_required/catalog_selection_pending/ready_for_subscription']
+  onboarding_state varchar(40) [not null, default: 'profile_required', note: 'profile_required/catalog_selection_pending/ready_for_subscription/completed']
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   archived_at timestamptz
@@ -138,6 +138,30 @@ Table commercial.plan_features {
   value jsonb [not null, note: 'Must match features.value_type; enforced by PostgreSQL trigger']
   indexes { (plan_id, feature_id) [pk] }
   Note: 'Phase 1. Published plan features are immutable.'
+}
+
+// Phase 3.1–3.3: draft subscriptions select concrete published recurring prices; activation freezes the contract; cancellation, expiration and replacement preserve history.
+Table commercial.subscriptions {
+  id uuid [pk, default: `uuidv7()`]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  billing_profile_id uuid [not null, ref: > commercial.billing_profiles.id]
+  status varchar(24) [not null, default: 'draft', note: 'draft/active/cancelled/expired']
+  current_period_start timestamptz
+  current_period_end timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  Note: 'Phase 3.3. Partial unique indexes allow at most one draft and one active subscription per account. Active periods and lifecycle transitions are database guarded. Cancelled/expired rows remain historical and may be followed by a new subscription row.'
+}
+
+Table commercial.subscription_items {
+  id uuid [pk, default: `uuidv7()`]
+  subscription_id uuid [not null, ref: > commercial.subscriptions.id]
+  plan_price_id uuid [not null, ref: > commercial.plan_prices.id]
+  quantity integer [not null, note: 'Greater than zero']
+  valid_from timestamptz [not null]
+  valid_until timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  Note: 'Phase 3.2. Historical selection points to an immutable published plan price; items are database-frozen once the parent leaves draft.'
 }
 
 // Phase 1: deployments and durable operations. Core database secrets are references only.
@@ -333,37 +357,10 @@ Table commercial.outbox_events {
   Note: 'Phase 1. Transactional outbox; no external delivery worker yet.'
 }
 
-// Planned: subscriptions, billing, payments and usage. No Phase 1 SQL migration creates these.
-Table commercial.subscriptions {
-  id uuid [pk]
-  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
-  billing_profile_id uuid [ref: > commercial.billing_profiles.id]
-  status varchar(24) [not null]
-  current_period_start timestamptz
-  current_period_end timestamptz
-  created_at timestamptz [not null]
-  Note: 'Planned. Subscription lifecycle is distinct from plan and entitlement.'
-}
-Table commercial.subscription_items {
-  id uuid [pk]
-  subscription_id uuid [not null, ref: > commercial.subscriptions.id]
-  plan_id uuid [not null, ref: > commercial.plans.id]
-  quantity integer [not null]
-  valid_from timestamptz [not null]
-  valid_until timestamptz
-  Note: 'Planned. Retains historical plan version.'
-}
-Table commercial.entitlements {
-  id uuid [pk]
-  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
-  feature_id uuid [not null, ref: > commercial.features.id]
-  source_type varchar(24) [not null]
-  source_id uuid [not null]
-  value jsonb [not null]
-  valid_from timestamptz [not null]
-  valid_until timestamptz
-  Note: 'Planned. Commercial capability, not Diary RBAC permission.'
-}
+// Phase 3.3 effective entitlements are a derived read model over the current active subscription graph; cancelled and expired subscriptions grant nothing.
+// There is intentionally no mutable commercial.entitlements table.
+
+// Planned after Phase 3.3: renewal, plan switching, billing, payments and usage.
 Table commercial.invoices {
   id uuid [pk]
   commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]

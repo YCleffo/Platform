@@ -117,6 +117,36 @@ final class ConcurrencyTest extends TestCase
         self::assertNotNull($this->connection->fetchOne('SELECT revoked_at FROM commercial.control_sessions WHERE control_user_id = ?', [$registered['user_id']]));
     }
 
+    public function testConcurrentSubscriptionActivationProducesOneStableResult(): void
+    {
+        $suffix = bin2hex(random_bytes(5));
+        $account = $this->account('activation-' . $suffix);
+        $profile = $this->connection->fetchOne("INSERT INTO commercial.billing_profiles (commercial_account_id, legal_name, country_code, is_default) VALUES (?, 'Race LLC', 'US', true) RETURNING id", [$account]);
+        self::assertIsString($profile);
+        $this->connection->executeStatement("UPDATE commercial.commercial_accounts SET onboarding_state = 'catalog_selection_pending' WHERE id = ?", [$account]);
+        $this->connection->executeStatement("UPDATE commercial.commercial_accounts SET onboarding_state = 'ready_for_subscription' WHERE id = ?", [$account]);
+        $plan = $this->connection->fetchOne("INSERT INTO commercial.plans (code, version, name) VALUES (?, 1, 'Activation Race') RETURNING id", ['activation-plan-' . $suffix]);
+        self::assertIsString($plan);
+        $price = $this->connection->fetchOne("INSERT INTO commercial.plan_prices (plan_id, currency, amount_minor, billing_period) VALUES (?, 'USD', 1000, 'month') RETURNING id", [$plan]);
+        self::assertIsString($price);
+        $this->connection->executeStatement("UPDATE commercial.plans SET status = 'published', published_at = now() WHERE id = ?", [$plan]);
+        $subscription = $this->connection->fetchOne("INSERT INTO commercial.subscriptions (commercial_account_id, billing_profile_id, status) VALUES (?, ?, 'draft') RETURNING id", [$account, $profile]);
+        self::assertIsString($subscription);
+        $this->connection->executeStatement("INSERT INTO commercial.subscription_items (subscription_id, plan_price_id, quantity, valid_from) VALUES (?, ?, 1, now() - interval '1 day')", [$subscription, $price]);
+        $correlation = Uuid::v7()->toRfc4122();
+        $activationInstant = '2026-09-24T12:00:00Z';
+        $extra = implode('|', [$account, $correlation, $activationInstant]);
+
+        self::assertSame([0, 0], $this->race('activate_subscription', $subscription, $extra, $subscription, $extra));
+        $state = $this->connection->fetchAssociative('SELECT status, current_period_start, current_period_end FROM commercial.subscriptions WHERE id = ?', [$subscription]);
+        self::assertIsArray($state);
+        self::assertSame('active', $state['status']);
+        self::assertNotNull($state['current_period_start']);
+        self::assertNotNull($state['current_period_end']);
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action = 'subscription.activated' AND resource_id = ?", [$subscription]));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events WHERE event_type = 'subscription.activated' AND aggregate_id = ?", [$subscription]));
+    }
+
     private function onPrem(string $account): string
     {
         $deployment = $this->connection->fetchOne("INSERT INTO commercial.deployments (commercial_account_id, installation_id, mode) VALUES (?, uuidv7(), 'on_prem') RETURNING id", [$account]);
