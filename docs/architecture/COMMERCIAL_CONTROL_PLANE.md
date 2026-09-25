@@ -1,4 +1,4 @@
-# Commercial Control Plane — Phase 3.6 Payment Core
+# Commercial Control Plane — Phase 3.7 YooKassa Provider Integration
 
 `apps/control-plane` is a separate Symfony 7.4/PHP 8.3 application with its
 own `platform_commercial` PostgreSQL database and `commercial` schema. It does
@@ -12,12 +12,12 @@ These boundaries are contractual:
 - Control Plane Auth != Diary Auth.
 
 A central Control User is created before any tenant Diary exists. The Control
-Plane now owns the commercial subscription contract, but still does not create
-a tenant database or process a payment.
+Plane now owns the commercial subscription and payment contracts, but still
+does not create a tenant database.
 
 ## Implemented schema
 
-Fifteen ordered Doctrine migrations create exactly 34 `commercial.*` tables.
+Sixteen ordered Doctrine migrations create exactly 35 `commercial.*` tables.
 The 21 Phase 1 tables remain unchanged. Phase 2 adds:
 
 - `control_user_email_verifications` — one-time, expiring, hash-only tokens;
@@ -70,8 +70,8 @@ The issued invoice stores immutable billing-profile and catalog snapshots;
 reads never reconstruct history from mutable source rows. Cancelling a draft
 subscription voids its issued invoice in the same transaction and emits
 `invoice.voided`, while cancelling an active subscription preserves the
-historical invoice. The `paid` state is reserved for Payment Core and does not
-activate a subscription in this phase.
+historical invoice. The `paid` state belongs exclusively to Payment Core and
+payment settlement activates the subscription atomically.
 
 Phase 3.6 adds provider-neutral `payment_provider_accounts`, `payments` and
 `payment_attempts`. One payment mirrors one invoice's immutable money, while
@@ -80,8 +80,25 @@ attempt. A trusted internal success confirmation atomically succeeds the
 attempt/payment, pays the invoice, activates its draft subscription, opens the
 usage period and writes audit/outbox lifecycle events. Direct activation is
 payment-gated. Zero-amount invoices create a historical succeeded payment and
-activate without a fake provider or attempt. Concrete provider clients,
-webhooks, refunds and receipts are intentionally absent.
+activate without a fake provider or attempt. Refunds and receipts are
+intentionally absent.
+
+Phase 3.7 adds the first concrete provider integration: YooKassa with SBP,
+`capture=true` and hosted redirect confirmation. Credentials remain outside
+PostgreSQL: `payment_provider_accounts.secret_ref` points to an environment
+variable resolved server-side. The provider request uses the existing attempt
+request key as YooKassa `Idempotence-Key`; money is derived from the immutable
+local Payment and only RUB is accepted.
+
+`payment_provider_events` is a hash-only webhook inbox. It deduplicates by
+provider account plus deterministic event key and never stores the raw body.
+Webhook JSON is only a notification: final state, amount, currency and local
+metadata are re-fetched from YooKassa before the existing provider-neutral
+bind/completion services are called. Metadata supports recovery when the
+provider created a payment but the process died before the local reference was
+bound. `control:payments:reconcile-yookassa --limit=100` performs the same
+authoritative flow for a bounded batch without holding database locks during
+network I/O. Settlement remains owned by Payment Core.
 
 The current schema, including clearly marked future entities, is
 `docs/database/commercial/Commercial_ControlPlane_v2.dbml`. Effective
@@ -114,6 +131,12 @@ read its immutable snapshot through
 payment creation through
 `POST /api/control/accounts/{accountId}/invoices/{invoiceId}/payment`, payment
 reads through `GET /api/control/accounts/{accountId}/payments/{paymentId}`, and
+starts hosted SBP checkout through
+`POST /api/control/accounts/{accountId}/payments/{paymentId}/checkout`. YooKassa
+notifications enter through the Control-User-independent machine endpoint
+`POST /api/control/webhooks/yookassa`; authoritative provider re-fetch is its
+authentication boundary. The endpoint does not trust forwarded IP headers or
+notification JSON as financial proof. The API also exposes
 `GET /api/control/accounts/{accountId}/entitlements` plus the read-only
 `GET /api/control/accounts/{accountId}/usage`. Every account
 resource is authorized from active account membership; an account UUID from
@@ -144,14 +167,17 @@ except `APP_ENV=test`, `CONTROL_TEST_ISOLATED=1`, host
 
 For the development profile configure separate `CONTROL_POSTGRES_PASSWORD`,
 `CONTROL_APP_SECRET` and `CONTROL_TOKEN_SECRET` values of at least 32
-characters. The production image remains FrankenPHP, runs as `www-data`, has
+characters, plus `CONTROL_YOOKASSA_RETURN_URL`. Configure merchant metadata with
+`control:payments:providers:yookassa:configure --shop-id=... --secret-ref=env:YOOKASSA_SECRET_KEY`;
+the command never accepts the secret itself. The production image remains
+FrankenPHP, runs as `www-data`, has
 no dev dependencies or tests, and grants write access only to runtime
 directories.
 
 ## Deferred
 
-Renewal, plan switching, concrete payment providers, payment methods,
-provider webhooks/events, refunds, receipts and fiscalization,
+Renewal, plan switching, additional payment providers and methods, bank cards,
+saved/recurring credentials, refunds, receipts and fiscalization,
 usage-based and overage billing, service-to-service usage ingestion, signed
 entitlement issuance, tenant DB creation, provisioning, DNS/TLS, custom
 domains, On-Prem activation, MFA and updater execution remain future phases.

@@ -17,12 +17,24 @@ final readonly class BeginPaymentAttempt
     /** @return array{attempt_id: string, payment_id: string, provider_account_id: string, provider_request_key: string, status: 'pending'} */
     public function begin(string $paymentId, string $providerAccountId, string $methodType, string $correlationId): array
     {
+        return $this->beginInternal($paymentId, $providerAccountId, $methodType, $correlationId, false);
+    }
+
+    /** @return array{attempt_id: string, payment_id: string, provider_account_id: string, provider_request_key: string, status: 'pending'} */
+    public function beginOrReuse(string $paymentId, string $providerAccountId, string $methodType, string $correlationId): array
+    {
+        return $this->beginInternal($paymentId, $providerAccountId, $methodType, $correlationId, true);
+    }
+
+    /** @return array{attempt_id: string, payment_id: string, provider_account_id: string, provider_request_key: string, status: 'pending'} */
+    private function beginInternal(string $paymentId, string $providerAccountId, string $methodType, string $correlationId, bool $reuse): array
+    {
         if (!Uuid::isValid($paymentId) || !Uuid::isValid($providerAccountId) || !Uuid::isValid($correlationId)) {
             throw new \InvalidArgumentException('Invalid public identifier.');
         }
         $methodType = IdentifierPolicy::machineCode($methodType);
 
-        return $this->connection->transactional(function (Connection $connection) use ($paymentId, $providerAccountId, $methodType): array {
+        return $this->connection->transactional(function (Connection $connection) use ($paymentId, $providerAccountId, $methodType, $reuse): array {
             $identity = $connection->fetchAssociative('SELECT i.subscription_id, p.invoice_id FROM commercial.payments p JOIN commercial.invoices i ON i.id = p.invoice_id WHERE p.id = ?', [$paymentId]);
             if ($identity === false || !is_string($identity['subscription_id']) || !is_string($identity['invoice_id'])) {
                 throw new \DomainException('Payment was not found.');
@@ -37,7 +49,18 @@ final readonly class BeginPaymentAttempt
             if ($providerStatus !== 'active') {
                 throw new \DomainException('An active provider account is required.');
             }
-            if ($connection->fetchOne("SELECT 1 FROM commercial.payment_attempts WHERE payment_id = ? AND status = 'pending'", [$paymentId]) !== false) {
+            $existing = $connection->fetchAssociative("SELECT id, payment_id, provider_account_id, method_type, provider_request_key, status FROM commercial.payment_attempts WHERE payment_id = ? AND status = 'pending'", [$paymentId]);
+            if ($existing !== false) {
+                if ($reuse && $existing['provider_account_id'] === $providerAccountId && $existing['method_type'] === $methodType
+                    && is_string($existing['id']) && is_string($existing['payment_id']) && is_string($existing['provider_request_key'])) {
+                    return [
+                        'attempt_id' => $existing['id'],
+                        'payment_id' => $existing['payment_id'],
+                        'provider_account_id' => $existing['provider_account_id'],
+                        'provider_request_key' => $existing['provider_request_key'],
+                        'status' => 'pending',
+                    ];
+                }
                 throw new \DomainException('A payment attempt is already in progress.');
             }
             $attemptId = Uuid::v7()->toRfc4122();

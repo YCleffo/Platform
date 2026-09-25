@@ -28,3 +28,13 @@ services:
 
     ControlPlane\Infrastructure\Logging\CorrelationIdProcessor:
         tags: ['monolog.processor']
+
+    ControlPlane\Payment\Provider\PaymentProviderSecretResolver:
+        alias: ControlPlane\Payment\Provider\YooKassa\EnvPaymentProviderSecretResolver
+
+    ControlPlane\Payment\Provider\PaymentProviderGateway:
+        alias: ControlPlane\Payment\Provider\YooKassa\YooKassaGateway
+
+    ControlPlane\Payment\Provider\YooKassa\YooKassaGateway:
+        arguments:
+            $returnUrl: '%env(CONTROL_YOOKASSA_RETURN_URL)%'

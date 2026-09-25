@@ -617,7 +617,7 @@ tests/
 Symfony Commercial Control Plane (`apps/control-plane`) — отдельное приложение
 на Symfony 7.4/PHP 8.3 с собственной БД `platform_commercial`, схемой
 `commercial` и отдельным Docker network. Yii/Diary DB и Commercial DB не
-разделяют credentials. Phase 3.6 содержит 15 миграций и 34 Commercial таблицы:
+разделяют credentials. Phase 3.7 содержит 16 миграций и 35 Commercial таблиц:
 central Control User, hash-only verification, rotating server-side sessions,
 Commercial Account с атомарным owner membership, billing onboarding и
 published plan catalog, draft/active subscriptions и immutable subscription
@@ -628,8 +628,10 @@ immutable snapshots billing profile, плана, версии, цены и ко�
 `commercial.entitlements` table отсутствует.
 Control User != Diary User; Commercial Account != Diary Organization; Control
 Plane Auth != Diary Auth. Provider-neutral Payment Core связывает invoice с
-payment attempts и атомарно активирует subscription после settlement. Конкретные
-провайдеры, webhooks, refunds, receipts, renewal и usage-based billing отложены.
+payment attempts и атомарно активирует subscription после settlement. Первая
+production-интеграция использует YooKassa SBP hosted redirect, server-side secret
+resolution, authoritative webhook verification и bounded reconciliation. Refunds,
+receipts, renewal и usage-based billing отложены.
 См. `docs/architecture/COMMERCIAL_CONTROL_PLANE.md` и
 `docs/architecture/COMMERCIAL_SECURITY.md`.
 
@@ -658,7 +660,8 @@ Reset отказывается работать вне изолированно�
 read-only `/api/control/catalog/plans`, draft subscription create/read и
 `GET /api/control/accounts/{accountId}/entitlements`. Activation является
 только внутренним application service; customer `/activate` endpoint
-отсутствует. Payment и provisioning API не реализованы. `GET /health` остаётся
+отсутствует. Доступны создание/read Payment, YooKassa SBP checkout и публичный
+machine-to-machine webhook; provisioning API не реализован. `GET /health` остаётся
 минимальным.
 
 Linux/macOS:

@@ -2,3 +2,4 @@ framework:
     secret: '%env(CONTROL_APP_SECRET)%'
     http_method_override: false
     handle_all_throwables: true
+    http_client: ~

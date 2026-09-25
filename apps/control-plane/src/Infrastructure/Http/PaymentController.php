@@ -7,6 +7,7 @@ namespace ControlPlane\Infrastructure\Http;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
 use ControlPlane\Payment\Application\CreatePayment;
 use ControlPlane\Payment\Application\GetPayment;
+use ControlPlane\Payment\Application\StartYooKassaPayment;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,7 +16,11 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class PaymentController extends AbstractController
 {
-    public function __construct(private readonly CreatePayment $creator, private readonly GetPayment $reader)
+    public function __construct(
+        private readonly CreatePayment $creator,
+        private readonly GetPayment $reader,
+        private readonly StartYooKassaPayment $checkout,
+    )
     {
     }
 
@@ -35,6 +40,31 @@ final class PaymentController extends AbstractController
     public function get(string $accountId, string $paymentId): JsonResponse
     {
         return new JsonResponse($this->reader->get($this->user()->id(), $accountId, $paymentId));
+    }
+
+    #[Route('/api/control/accounts/{accountId}/payments/{paymentId}/checkout', name: 'control_payment_checkout', methods: ['POST'])]
+    public function checkout(string $accountId, string $paymentId, Request $request): JsonResponse
+    {
+        $key = $request->headers->get('Idempotency-Key');
+        if (!is_string($key)) {
+            throw new \InvalidArgumentException('Idempotency-Key is required.');
+        }
+        $body = ApiRequest::json($request);
+        $keys = array_keys($body);
+        sort($keys);
+        if ($keys !== ['method', 'provider']) {
+            throw new \InvalidArgumentException('Only provider and method fields are accepted.');
+        }
+
+        return new JsonResponse($this->checkout->start(
+            $this->user()->id(),
+            $accountId,
+            $paymentId,
+            ApiRequest::string($body, 'provider'),
+            ApiRequest::string($body, 'method'),
+            $key,
+            ApiRequest::correlationId($request),
+        ));
     }
 
     private function user(): ControlUserPrincipal

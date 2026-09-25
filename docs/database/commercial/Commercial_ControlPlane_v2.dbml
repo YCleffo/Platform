@@ -1,6 +1,6 @@
 Project Commercial_ControlPlane_v2 {
   database_type: 'PostgreSQL'
-  Note: '''Current target model for the separate platform_commercial database. Tables marked through Phase 3.6 are implemented by Control Plane migrations; Planned tables describe later phases only. Diary/Core is a different database. Control User is not Diary User; Commercial Account is not Diary Organization; Control Plane Auth is not Diary Auth. No tenant_id is added to frozen Core.'''
+  Note: '''Current target model for the separate platform_commercial database. Tables marked through Phase 3.7 are implemented by Control Plane migrations; Planned tables describe later phases only. Diary/Core is a different database. Control User is not Diary User; Commercial Account is not Diary Organization; Control Plane Auth is not Diary Auth. No tenant_id is added to frozen Core.'''
 }
 
 // Phase 1 + Phase 2: central identity and customers.
@@ -463,7 +463,26 @@ Table commercial.payment_attempts {
   Note: 'Phase 3.6. Historical retry; only one pending attempt per payment, provider reference binds once, terminal rows are immutable.'
 }
 
-// Planned after Phase 3.6: provider adapters, methods/events, refunds, receipts, renewal and plan switching.
+// Phase 3.7 YooKassa webhook inbox. Raw webhook payloads and provider secrets are never stored.
+Table commercial.payment_provider_events {
+  id uuid [pk, default: `uuidv7()`]
+  provider_account_id uuid [not null, ref: > commercial.payment_provider_accounts.id]
+  event_key varchar(400) [not null]
+  event_type varchar(160) [not null]
+  provider_object_id varchar(200) [not null]
+  payload_sha256 bytea [not null, note: 'Exactly 32 bytes']
+  status varchar(16) [not null, default: 'received', note: 'received/processed/ignored/failed']
+  received_at timestamptz [not null, default: `now()`]
+  processed_at timestamptz
+  last_error_code varchar(120)
+  indexes {
+    (provider_account_id, event_key) [unique]
+    (status, received_at)
+  }
+  Note: 'Phase 3.7. Deterministic webhook deduplication and diagnostics hash; terminal processed/ignored events are immutable.'
+}
+
+// Planned after Phase 3.7: stored methods, refunds, receipts, renewal and plan switching.
 Table commercial.payment_methods {
   id uuid [pk]
   commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
@@ -481,16 +500,6 @@ Table commercial.refunds {
   status varchar(24) [not null]
   created_at timestamptz [not null]
   Note: 'Planned. Nonnegative minor units.'
-}
-Table commercial.payment_provider_events {
-  id uuid [pk]
-  provider_account_id uuid [not null, ref: > commercial.payment_provider_accounts.id]
-  provider_event_id varchar(200) [not null]
-  received_at timestamptz [not null]
-  payload_hash bytea [not null]
-  status varchar(24) [not null]
-  indexes { (provider_account_id, provider_event_id) [unique] }
-  Note: 'Planned. Deduplicated webhook metadata, no raw secrets.'
 }
 Table commercial.receipts {
   id uuid [pk]

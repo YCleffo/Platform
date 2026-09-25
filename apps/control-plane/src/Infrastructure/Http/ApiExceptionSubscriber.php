@@ -6,6 +6,7 @@ namespace ControlPlane\Infrastructure\Http;
 
 use ControlPlane\Identity\Application\AuthFailure;
 use ControlPlane\Identity\Security\RateLimitExceeded;
+use ControlPlane\Payment\Provider\PaymentProviderException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -25,6 +26,7 @@ final class ApiExceptionSubscriber implements EventSubscriberInterface
         $exception = $event->getThrowable();
         [$status, $code, $message] = match (true) {
             $exception instanceof RateLimitExceeded => [Response::HTTP_TOO_MANY_REQUESTS, 'rate_limited', 'Too many requests.'],
+            $exception instanceof PaymentProviderException => [$exception->retryable ? Response::HTTP_SERVICE_UNAVAILABLE : Response::HTTP_BAD_GATEWAY, $exception->errorCode, 'The payment provider request could not be completed.'],
             $exception instanceof AuthFailure => [in_array($exception->errorCode, ['invalid_credentials', 'invalid_access_token'], true) || str_starts_with($exception->errorCode, 'refresh_') ? Response::HTTP_UNAUTHORIZED : Response::HTTP_BAD_REQUEST, $exception->errorCode, $exception->getMessage()],
             $exception instanceof AccessDeniedException && ApiRequest::bearer($request) === '' => [Response::HTTP_UNAUTHORIZED, 'authentication_required', 'Authentication is required.'],
             $exception instanceof AccessDeniedException => [Response::HTTP_NOT_FOUND, 'resource_not_found', 'The requested resource was not found.'],

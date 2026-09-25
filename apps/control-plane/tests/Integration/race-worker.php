@@ -21,9 +21,13 @@ use ControlPlane\Subscription\Application\CancelSubscription;
 use ControlPlane\Subscription\Application\ExpireSubscription;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 use ControlPlane\Payment\Application\BeginPaymentAttempt;
+use ControlPlane\Payment\Application\BindPaymentAttemptProviderReference;
 use ControlPlane\Payment\Application\CompletePaymentAttempt;
 use ControlPlane\Payment\Application\CreatePayment;
+use ControlPlane\Payment\Application\ProcessAuthoritativeProviderPayment;
 use ControlPlane\Payment\Application\SettlePayment;
+use ControlPlane\Payment\Provider\ProviderAccount;
+use ControlPlane\Payment\Provider\ProviderPayment;
 use ControlPlane\Usage\Application\ApplyUsageDelta;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasher;
@@ -108,6 +112,41 @@ try {
         case 'complete_payment_attempt':
             [$outcome, $failureCode, $settlementInstant, $correlationId] = explode('|', $extra);
             (new CompletePaymentAttempt($connection, paymentSettlement($connection)))->complete($value, $outcome, $failureCode === '' ? null : $failureCode, new DateTimeImmutable($settlementInstant), $correlationId);
+            break;
+        case 'bind_payment_attempt':
+            (new BindPaymentAttemptProviderReference($connection))->bind($value, $extra);
+            break;
+        case 'process_provider_payment':
+            [$providerPaymentId, $status, $capturedAt, $correlationId] = explode('|', $extra);
+            $row = $connection->fetchAssociative(<<<'SQL'
+SELECT pa.payment_id, pa.provider_account_id, p.invoice_id, p.amount_minor, p.currency,
+       ppa.provider_code, ppa.external_account_id, ppa.secret_ref
+FROM commercial.payment_attempts pa
+JOIN commercial.payments p ON p.id = pa.payment_id
+JOIN commercial.payment_provider_accounts ppa ON ppa.id = pa.provider_account_id
+WHERE pa.id = ?
+SQL, [$value]);
+            if ($row === false || !is_string($row['payment_id']) || !is_string($row['provider_account_id'])
+                || !is_string($row['invoice_id']) || !is_string($row['provider_code'])
+                || !is_string($row['external_account_id']) || !is_string($row['secret_ref'])) {
+                throw new LogicException('Provider race fixture unavailable.');
+            }
+            $providerAccount = new ProviderAccount($row['provider_account_id'], $row['provider_code'], $row['external_account_id'], $row['secret_ref']);
+            $providerPayment = new ProviderPayment(
+                $providerPaymentId,
+                $status,
+                $status === 'succeeded',
+                (int) $row['amount_minor'],
+                (string) $row['currency'],
+                ['payment_id' => $row['payment_id'], 'attempt_id' => $value, 'invoice_id' => $row['invoice_id']],
+                null,
+                $capturedAt === '' ? null : new DateTimeImmutable($capturedAt),
+            );
+            (new ProcessAuthoritativeProviderPayment(
+                $connection,
+                new BindPaymentAttemptProviderReference($connection),
+                new CompletePaymentAttempt($connection, paymentSettlement($connection)),
+            ))->process($providerAccount, $providerPayment, $correlationId);
             break;
         case 'expire_subscription':
             [$accountId, $correlationId, $effectiveInstant] = explode('|', $extra);

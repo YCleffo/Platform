@@ -96,8 +96,42 @@ final class PaymentConcurrencyTest extends TestCase
         self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action = 'payment.succeeded' AND resource_id = ?", [$payment['id']]));
     }
 
+    public function testWebhookAndReconciliationStyleCompletionSettlesOnce(): void
+    {
+        [$owner, $account, $subscription, $invoice] = $this->issuedFixture('provider-complete-race', 'RUB');
+        $payment = $this->creator()->create($owner, $account, $invoice, 'provider-race-payment-' . $account, Uuid::v7()->toRfc4122());
+        $provider = $this->provider('provider-complete');
+        $attempt = (new BeginPaymentAttempt($this->connection))->begin($payment['id'], $provider, 'sbp', Uuid::v7()->toRfc4122());
+        $providerPaymentId = 'provider-race-' . $attempt['attempt_id'];
+        (new BindPaymentAttemptProviderReference($this->connection))->bind($attempt['attempt_id'], $providerPaymentId);
+        $extra = implode('|', [$providerPaymentId, 'succeeded', '2026-09-26T14:00:00Z', Uuid::v7()->toRfc4122()]);
+
+        self::assertSame([0, 0], $this->race('process_provider_payment', $attempt['attempt_id'], $extra, 'process_provider_payment', $attempt['attempt_id'], $extra));
+        self::assertSame('succeeded', $this->connection->fetchOne('SELECT status FROM commercial.payments WHERE id = ?', [$payment['id']]));
+        self::assertSame('paid', $this->connection->fetchOne('SELECT status FROM commercial.invoices WHERE id = ?', [$invoice]));
+        self::assertSame('active', $this->connection->fetchOne('SELECT status FROM commercial.subscriptions WHERE id = ?', [$subscription]));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.usage_periods WHERE subscription_id = ?', [$subscription]));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action = 'payment.succeeded' AND resource_id = ?", [$payment['id']]));
+    }
+
+    public function testCheckoutBindingAndWebhookRecoveryCanRaceIdempotently(): void
+    {
+        [$owner, $account, $subscription, $invoice] = $this->issuedFixture('provider-bind-race', 'RUB');
+        $payment = $this->creator()->create($owner, $account, $invoice, 'provider-bind-payment-' . $account, Uuid::v7()->toRfc4122());
+        $provider = $this->provider('provider-bind');
+        $attempt = (new BeginPaymentAttempt($this->connection))->begin($payment['id'], $provider, 'sbp', Uuid::v7()->toRfc4122());
+        $providerPaymentId = 'provider-bind-' . $attempt['attempt_id'];
+        $process = implode('|', [$providerPaymentId, 'succeeded', '2026-09-26T15:00:00Z', Uuid::v7()->toRfc4122()]);
+
+        self::assertSame([0, 0], $this->race('bind_payment_attempt', $attempt['attempt_id'], $providerPaymentId, 'process_provider_payment', $attempt['attempt_id'], $process));
+        self::assertSame($providerPaymentId, $this->connection->fetchOne('SELECT provider_payment_id FROM commercial.payment_attempts WHERE id = ?', [$attempt['attempt_id']]));
+        self::assertSame('succeeded', $this->connection->fetchOne('SELECT status FROM commercial.payments WHERE id = ?', [$payment['id']]));
+        self::assertSame('active', $this->connection->fetchOne('SELECT status FROM commercial.subscriptions WHERE id = ?', [$subscription]));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.usage_periods WHERE subscription_id = ?', [$subscription]));
+    }
+
     /** @return array{string, string, string, string} */
-    private function issuedFixture(string $prefix): array
+    private function issuedFixture(string $prefix, string $currency = 'USD'): array
     {
         $suffix = bin2hex(random_bytes(6));
         $email = $prefix . '-' . $suffix . '@example.test';
@@ -113,7 +147,7 @@ final class PaymentConcurrencyTest extends TestCase
         $this->connection->executeStatement("UPDATE commercial.commercial_accounts SET onboarding_state = 'ready_for_subscription' WHERE id = ?", [$account]);
         $plan = $this->connection->fetchOne("INSERT INTO commercial.plans (code, version, name) VALUES (?, 1, 'Payment Race') RETURNING id", [$prefix . '-plan-' . $suffix]);
         self::assertIsString($plan);
-        $price = $this->connection->fetchOne("INSERT INTO commercial.plan_prices (plan_id, currency, amount_minor, billing_period) VALUES (?, 'USD', 1000, 'month') RETURNING id", [$plan]);
+        $price = $this->connection->fetchOne("INSERT INTO commercial.plan_prices (plan_id, currency, amount_minor, billing_period) VALUES (?, ?, 1000, 'month') RETURNING id", [$plan, $currency]);
         self::assertIsString($price);
         $this->connection->executeStatement("UPDATE commercial.plans SET status = 'published', published_at = now() WHERE id = ?", [$plan]);
         $subscription = $this->connection->fetchOne("INSERT INTO commercial.subscriptions (commercial_account_id, billing_profile_id, status) VALUES (?, ?, 'draft') RETURNING id", [$account, $profile]);
@@ -127,7 +161,7 @@ final class PaymentConcurrencyTest extends TestCase
 
     private function provider(string $suffix): string
     {
-        $id = $this->connection->fetchOne("INSERT INTO commercial.payment_provider_accounts (provider_code, secret_ref) VALUES (?, ?) RETURNING id", ['race-' . $suffix . '-' . bin2hex(random_bytes(4)), 'payments/race/' . $suffix]);
+        $id = $this->connection->fetchOne("INSERT INTO commercial.payment_provider_accounts (provider_code, external_account_id, secret_ref) VALUES (?, ?, ?) RETURNING id", ['race-' . $suffix . '-' . bin2hex(random_bytes(4)), 'merchant-' . $suffix, 'payments/race/' . $suffix]);
         self::assertIsString($id);
 
         return $id;

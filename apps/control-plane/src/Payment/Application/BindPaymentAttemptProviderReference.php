@@ -33,11 +33,11 @@ final readonly class BindPaymentAttemptProviderReference
             if ($attempt === false) {
                 throw new \DomainException('Payment attempt was not found.');
             }
-            if ($attempt['status'] !== 'pending') {
-                throw new \DomainException('Only a pending attempt can bind a provider reference.');
-            }
             if ($attempt['provider_payment_id'] === $providerPaymentId) {
                 return $providerPaymentId;
+            }
+            if ($attempt['status'] !== 'pending') {
+                throw new \DomainException('Only a pending attempt can bind a provider reference.');
             }
             if ($attempt['provider_payment_id'] !== null) {
                 throw new \DomainException('Provider payment reference cannot be rebound.');

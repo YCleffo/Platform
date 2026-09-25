@@ -474,6 +474,7 @@ services:
       CONTROL_VERIFICATION_TTL_SECONDS: ${CONTROL_VERIFICATION_TTL_SECONDS:-86400}
       CONTROL_ACCESS_TOKEN_TTL_SECONDS: ${CONTROL_ACCESS_TOKEN_TTL_SECONDS:-900}
       CONTROL_SESSION_TTL_SECONDS: ${CONTROL_SESSION_TTL_SECONDS:-2592000}
+      CONTROL_YOOKASSA_RETURN_URL: ${CONTROL_YOOKASSA_RETURN_URL:-}
       CONTROL_DATABASE_URL: postgresql://${CONTROL_POSTGRES_USER:-platform_control}:${CONTROL_POSTGRES_PASSWORD:-}@control-postgres:5432/${CONTROL_POSTGRES_DB:-platform_commercial}?serverVersion=18&charset=utf8
     command: ["php", "bin/console", "doctrine:migrations:migrate", "--no-interaction"]
     depends_on:
@@ -496,6 +497,8 @@ services:
       CONTROL_VERIFICATION_TTL_SECONDS: ${CONTROL_VERIFICATION_TTL_SECONDS:-86400}
       CONTROL_ACCESS_TOKEN_TTL_SECONDS: ${CONTROL_ACCESS_TOKEN_TTL_SECONDS:-900}
       CONTROL_SESSION_TTL_SECONDS: ${CONTROL_SESSION_TTL_SECONDS:-2592000}
+      CONTROL_YOOKASSA_RETURN_URL: ${CONTROL_YOOKASSA_RETURN_URL:-}
+      YOOKASSA_SECRET_KEY: ${YOOKASSA_SECRET_KEY:-}
       CONTROL_DATABASE_URL: postgresql://${CONTROL_POSTGRES_USER:-platform_control}:${CONTROL_POSTGRES_PASSWORD:-}@control-postgres:5432/${CONTROL_POSTGRES_DB:-platform_commercial}?serverVersion=18&charset=utf8
       PLATFORM_BASE_DOMAIN: ${PLATFORM_BASE_DOMAIN:-platform.example}
     depends_on:
@@ -543,6 +546,8 @@ services:
       CONTROL_VERIFICATION_TTL_SECONDS: 86400
       CONTROL_ACCESS_TOKEN_TTL_SECONDS: 900
       CONTROL_SESSION_TTL_SECONDS: 2592000
+      CONTROL_YOOKASSA_RETURN_URL: https://platform.example/payments/return
+      YOOKASSA_SECRET_KEY: test-only-yookassa-secret
       CONTROL_DATABASE_URL: postgresql://${CONTROL_TEST_USER:-platform_control_test}:${CONTROL_TEST_PASSWORD:-}@control-postgres-test:5432/${CONTROL_TEST_DB:-platform_commercial_test}?serverVersion=18&charset=utf8
       PLATFORM_BASE_DOMAIN: platform.example
     depends_on:

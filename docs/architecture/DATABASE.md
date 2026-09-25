@@ -1,4 +1,4 @@
-# Архитектура базы данных — Core v1 и Commercial Phase 3.6
+# Архитектура базы данных — Core v1 и Commercial Phase 3.7
 
 Yii runtime использует одну базу данных PostgreSQL. Модули владеют отдельными схемами PostgreSQL:
 
@@ -27,9 +27,9 @@ Phase 1 создаёт 21 таблицу identity/customer, catalog, deployment,
 release и reliability. Phase 2 добавляет 4 таблицы verification/session/rate
 limit/session-history и расширяет identity/onboarding. Phase 3 добавляет
 subscription lifecycle, effective entitlements, Usage Core и immutable invoice
-snapshots и provider-neutral Payment Core; после Phase 3.6 схема содержит
-`commercial.* = 34` таблицы. Реализованы payment provider metadata, payments и
-payment attempts. Payment methods, provider events, refunds и receipts пока
+snapshots, provider-neutral Payment Core и YooKassa webhook inbox; после Phase 3.7
+схема содержит `commercial.* = 35` таблиц. Реализованы payment provider metadata,
+payments, payment attempts и hash-only provider events. Payment methods, refunds и receipts пока
 остаются только в целевой DBML v2. Подробности:
 `docs/architecture/COMMERCIAL_CONTROL_PLANE.md`.
 Её планы, платежи, подписки и реестр
