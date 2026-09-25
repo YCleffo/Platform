@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ControlPlane\Tests\Integration;
 
+use ControlPlane\Account\Authorization\AccountAuthorization;
+use ControlPlane\Billing\Application\IssueInvoice;
 use ControlPlane\Subscription\Application\ActivateSubscription;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 
@@ -70,6 +72,45 @@ abstract class SubscriptionTestCase extends DatabaseTestCase
     protected function activator(): ActivateSubscription
     {
         return new ActivateSubscription($this->connection, new SubscriptionPeriodCalculator());
+    }
+
+    /** @return array{id: string, status: 'active', current_period_start: string, current_period_end: string} */
+    protected function activatePaid(string $accountId, string $subscriptionId, \DateTimeImmutable $activationInstant, string $correlationId): array
+    {
+        $this->markInitialInvoicePaid($accountId, $subscriptionId, $activationInstant);
+
+        return $this->activator()->activate($accountId, $subscriptionId, $activationInstant, $correlationId);
+    }
+
+    protected function markInitialInvoicePaid(string $accountId, string $subscriptionId, \DateTimeImmutable $settlementInstant): string
+    {
+        $invoice = $this->connection->fetchAssociative("SELECT id, status FROM commercial.invoices WHERE subscription_id = ? AND billing_reason = 'subscription_create' ORDER BY created_at DESC LIMIT 1", [$subscriptionId]);
+        if ($invoice === false) {
+            $owner = $this->connection->fetchOne("SELECT control_user_id FROM commercial.commercial_account_memberships WHERE commercial_account_id = ? AND role = 'owner' AND revoked_at IS NULL", [$accountId]);
+            if (!is_string($owner)) {
+                throw new \LogicException('Test account owner is unavailable.');
+            }
+            $issued = (new IssueInvoice($this->connection, new AccountAuthorization($this->connection)))->issue($owner, $accountId, $subscriptionId, 'test-paid-invoice-' . $this->uuid(), $this->uuid());
+            $invoice = ['id' => $issued['id'], 'status' => 'issued'];
+        }
+        if (!is_string($invoice['id'])) {
+            throw new \LogicException('Test invoice identity is unavailable.');
+        }
+        if ($invoice['status'] === 'paid') {
+            return $invoice['id'];
+        }
+        if ($invoice['status'] !== 'issued') {
+            throw new \LogicException('Test invoice is not payable.');
+        }
+        $payment = $this->connection->fetchOne("INSERT INTO commercial.payments (invoice_id, commercial_account_id, amount_minor, currency, status) SELECT id, commercial_account_id, total_minor, currency, 'pending' FROM commercial.invoices WHERE id = ? RETURNING id", [$invoice['id']]);
+        if (!is_string($payment)) {
+            throw new \LogicException('Test payment identity is unavailable.');
+        }
+        $instant = $settlementInstant->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.uP');
+        $this->connection->executeStatement("UPDATE commercial.payments SET status = 'succeeded', succeeded_at = ?::timestamptz, updated_at = now() WHERE id = ?", [$instant, $payment]);
+        $this->connection->executeStatement("UPDATE commercial.invoices SET status = 'paid', paid_at = ?::timestamptz, updated_at = now() WHERE id = ?", [$instant, $invoice['id']]);
+
+        return $invoice['id'];
     }
 
     protected function activationInstant(): \DateTimeImmutable

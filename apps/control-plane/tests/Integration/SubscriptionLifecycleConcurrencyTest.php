@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ControlPlane\Tests\Integration;
 
+use ControlPlane\Account\Authorization\AccountAuthorization;
+use ControlPlane\Billing\Application\IssueInvoice;
 use ControlPlane\Subscription\Application\ActivateSubscription;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 use Doctrine\DBAL\Connection;
@@ -73,6 +75,7 @@ final class SubscriptionLifecycleConcurrencyTest extends TestCase
         $replacement = $this->connection->fetchOne("INSERT INTO commercial.subscriptions (commercial_account_id, billing_profile_id, status) VALUES (?, ?, 'draft') RETURNING id", [$account, $profile]);
         self::assertIsString($replacement);
         $this->connection->executeStatement("INSERT INTO commercial.subscription_items (subscription_id, plan_price_id, quantity, valid_from) VALUES (?, ?, 1, now() - interval '1 day')", [$replacement, $price]);
+        $this->markPaid($user, $account, $replacement, '2026-09-24T12:00:00Z');
         $extra = implode('|', [$account, Uuid::v7()->toRfc4122(), '2026-09-24T12:00:00Z']);
 
         self::assertSame([0, 0], $this->race('activate_subscription', $replacement, $extra, 'activate_subscription', $replacement, $extra));
@@ -104,10 +107,20 @@ final class SubscriptionLifecycleConcurrencyTest extends TestCase
         $subscription = $this->connection->fetchOne("INSERT INTO commercial.subscriptions (commercial_account_id, billing_profile_id, status) VALUES (?, ?, 'draft') RETURNING id", [$account, $profile]);
         self::assertIsString($subscription);
         $this->connection->executeStatement("INSERT INTO commercial.subscription_items (subscription_id, plan_price_id, quantity, valid_from) VALUES (?, ?, 1, now() - interval '1 day')", [$subscription, $price]);
+        $this->markPaid($user, $account, $subscription, $activationInstant);
         (new ActivateSubscription($this->connection, new SubscriptionPeriodCalculator()))->activate($account, $subscription, new \DateTimeImmutable($activationInstant), Uuid::v7()->toRfc4122());
         $this->connection->commit();
 
         return [$user, $account, $subscription, $profile, $price];
+    }
+
+    private function markPaid(string $user, string $account, string $subscription, string $instant): void
+    {
+        $invoice = (new IssueInvoice($this->connection, new AccountAuthorization($this->connection)))->issue($user, $account, $subscription, 'race-paid-' . $subscription, Uuid::v7()->toRfc4122());
+        $payment = $this->connection->fetchOne("INSERT INTO commercial.payments (invoice_id, commercial_account_id, amount_minor, currency, status) VALUES (?, ?, ?, ?, 'pending') RETURNING id", [$invoice['id'], $account, $invoice['total_minor'], $invoice['currency']]);
+        self::assertIsString($payment);
+        $this->connection->executeStatement("UPDATE commercial.payments SET status = 'succeeded', succeeded_at = ?::timestamptz WHERE id = ?", [$instant, $payment]);
+        $this->connection->executeStatement("UPDATE commercial.invoices SET status = 'paid', paid_at = ?::timestamptz WHERE id = ?", [$instant, $invoice['id']]);
     }
 
     private function assertSingleTerminalEvent(string $subscription): void

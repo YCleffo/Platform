@@ -72,6 +72,10 @@ INSERT INTO commercial.invoice_lines (invoice_id, subscription_item_id, plan_pri
 VALUES (?, ?, ?, 'invoice.paid.plan', 1, 'Paid', 'month', 'Paid monthly subscription', 1, 1000, 1000)
 SQL, [$paid, $item, $price]);
         $this->connection->executeStatement("UPDATE commercial.invoices SET status = 'issued', issued_at = now() WHERE id = ?", [$paid]);
+        $this->expectDatabaseRejection(fn () => $this->connection->executeStatement("UPDATE commercial.invoices SET status = 'paid', paid_at = now(), updated_at = now() WHERE id = ?", [$paid]));
+        $payment = $this->connection->fetchOne("INSERT INTO commercial.payments (invoice_id, commercial_account_id, amount_minor, currency, status) VALUES (?, ?, 1000, 'USD', 'pending') RETURNING id", [$paid, $account]);
+        self::assertIsString($payment);
+        $this->connection->executeStatement("UPDATE commercial.payments SET status = 'succeeded', succeeded_at = now() WHERE id = ?", [$payment]);
         $this->connection->executeStatement("UPDATE commercial.invoices SET status = 'paid', paid_at = now(), updated_at = now() WHERE id = ?", [$paid]);
         $this->expectDatabaseRejection(fn () => $this->connection->executeStatement("UPDATE commercial.invoices SET status = 'void', paid_at = NULL, voided_at = now() WHERE id = ?", [$paid]));
     }

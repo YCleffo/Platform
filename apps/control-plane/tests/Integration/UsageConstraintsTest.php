@@ -36,7 +36,7 @@ final class UsageConstraintsTest extends SubscriptionTestCase
         $otherFeature = $this->feature('usage.constraints.other', 'integer', 'gauge');
         [, $price] = $this->planPrice('usage-constraints-plan', featureValues: [$feature => 10]);
         $subscription = $this->draftSubscription($account, $profile, [$price]);
-        $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
         $period = $this->connection->fetchAssociative("SELECT id, starts_at, ends_at FROM commercial.usage_periods WHERE subscription_id = ? AND status = 'open'", [$subscription]);
         self::assertIsArray($period);
 

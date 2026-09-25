@@ -20,11 +20,11 @@ final class SubscriptionReplacementTest extends SubscriptionTestCase
         [, $oldPrice] = $this->planPrice('replace-old-plan', featureValues: [$oldFeature => true]);
         [, $newPrice] = $this->planPrice('replace-new-plan', featureValues: [$newFeature => true]);
         $old = $this->draftSubscription($account, $profile, [$oldPrice]);
-        $this->activator()->activate($account, $old, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $old, $this->activationInstant(), $this->uuid());
         (new CancelSubscription($this->connection, new AccountAuthorization($this->connection)))->cancel($owner, $account, $old, 'replace-cancel-old', $this->uuid());
 
         $new = $this->creator()->create($owner, $account, $newPrice, 1, 'replace-create-new', $this->uuid())['id'];
-        $this->activator()->activate($account, $new, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $new, $this->activationInstant(), $this->uuid());
 
         self::assertNotSame($old, $new);
         self::assertSame('cancelled', $this->connection->fetchOne('SELECT status FROM commercial.subscriptions WHERE id = ?', [$old]));
@@ -43,7 +43,7 @@ final class SubscriptionReplacementTest extends SubscriptionTestCase
         [, $oldPrice] = $this->planPrice('replace-expired-old');
         [, $newPrice] = $this->planPrice('replace-expired-new');
         $old = $this->draftSubscription($account, $profile, [$oldPrice]);
-        $this->activator()->activate($account, $old, new \DateTimeImmutable('2026-01-01T00:00:00Z'), $this->uuid());
+        $this->activatePaid($account, $old, new \DateTimeImmutable('2026-01-01T00:00:00Z'), $this->uuid());
 
         try {
             $this->creator()->create($owner, $account, $newPrice, 1, 'replace-while-active', $this->uuid());

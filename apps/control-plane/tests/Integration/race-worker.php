@@ -20,6 +20,10 @@ use ControlPlane\Subscription\Application\ActivateSubscription;
 use ControlPlane\Subscription\Application\CancelSubscription;
 use ControlPlane\Subscription\Application\ExpireSubscription;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
+use ControlPlane\Payment\Application\BeginPaymentAttempt;
+use ControlPlane\Payment\Application\CompletePaymentAttempt;
+use ControlPlane\Payment\Application\CreatePayment;
+use ControlPlane\Payment\Application\SettlePayment;
 use ControlPlane\Usage\Application\ApplyUsageDelta;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasher;
@@ -93,6 +97,18 @@ try {
             [$userId, $accountId, $idempotencyKey, $correlationId] = explode('|', $extra);
             (new IssueInvoice($connection, new AccountAuthorization($connection)))->issue($userId, $accountId, $value, $idempotencyKey, $correlationId);
             break;
+        case 'create_payment':
+            [$userId, $accountId, $idempotencyKey, $correlationId] = explode('|', $extra);
+            paymentCreator($connection)->create($userId, $accountId, $value, $idempotencyKey, $correlationId);
+            break;
+        case 'begin_payment_attempt':
+            [$providerAccountId, $methodType, $correlationId] = explode('|', $extra);
+            (new BeginPaymentAttempt($connection))->begin($value, $providerAccountId, $methodType, $correlationId);
+            break;
+        case 'complete_payment_attempt':
+            [$outcome, $failureCode, $settlementInstant, $correlationId] = explode('|', $extra);
+            (new CompletePaymentAttempt($connection, paymentSettlement($connection)))->complete($value, $outcome, $failureCode === '' ? null : $failureCode, new DateTimeImmutable($settlementInstant), $correlationId);
+            break;
         case 'expire_subscription':
             [$accountId, $correlationId, $effectiveInstant] = explode('|', $extra);
             (new ExpireSubscription($connection))->expire($accountId, $value, new DateTimeImmutable($effectiveInstant), $correlationId);
@@ -128,4 +144,14 @@ function authService(\Doctrine\DBAL\Connection $connection): AuthService
     $factory = new PasswordHasherFactory([ControlUserPrincipal::class => ['algorithm' => 'auto']]);
 
     return new AuthService($connection, new UserPasswordHasher($factory), $tokens, new DatabaseRateLimiter($connection, $tokens), 3600, 900, 2592000);
+}
+
+function paymentSettlement(\Doctrine\DBAL\Connection $connection): SettlePayment
+{
+    return new SettlePayment(new ActivateSubscription($connection, new SubscriptionPeriodCalculator()));
+}
+
+function paymentCreator(\Doctrine\DBAL\Connection $connection): CreatePayment
+{
+    return new CreatePayment($connection, new AccountAuthorization($connection), paymentSettlement($connection));
 }

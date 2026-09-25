@@ -31,12 +31,12 @@ final class InvoiceLifecycleTest extends InvoiceTestCase
     {
         [$owner, $account, , , , $subscription] = $this->invoiceContext('invoice-active-cancel');
         $invoice = $this->issuer()->issue($owner, $account, $subscription, 'invoice-active-cancel-issue', $this->uuid());
-        $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
 
         $this->canceller()->cancel($owner, $account, $subscription, 'invoice-active-cancel', $this->uuid());
 
         self::assertSame('cancelled', $this->connection->fetchOne('SELECT status FROM commercial.subscriptions WHERE id = ?', [$subscription]));
-        self::assertSame('issued', $this->connection->fetchOne('SELECT status FROM commercial.invoices WHERE id = ?', [$invoice['id']]));
+        self::assertSame('paid', $this->connection->fetchOne('SELECT status FROM commercial.invoices WHERE id = ?', [$invoice['id']]));
         self::assertSame(0, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action = 'invoice.voided' AND resource_id = ?", [$invoice['id']]));
         self::assertSame(0, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events WHERE event_type = 'invoice.voided' AND aggregate_id = ?", [$invoice['id']]));
     }

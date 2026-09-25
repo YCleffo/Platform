@@ -617,7 +617,7 @@ tests/
 Symfony Commercial Control Plane (`apps/control-plane`) — отдельное приложение
 на Symfony 7.4/PHP 8.3 с собственной БД `platform_commercial`, схемой
 `commercial` и отдельным Docker network. Yii/Diary DB и Commercial DB не
-разделяют credentials. Phase 3.5 содержит 14 миграций и 31 Commercial таблицу:
+разделяют credentials. Phase 3.6 содержит 15 миграций и 34 Commercial таблицы:
 central Control User, hash-only verification, rotating server-side sessions,
 Commercial Account с атомарным owner membership, billing onboarding и
 published plan catalog, draft/active subscriptions и immutable subscription
@@ -627,8 +627,9 @@ items. Effective entitlements вычисляются как derived read model �
 immutable snapshots billing profile, плана, версии, цены и количества. Mutable
 `commercial.entitlements` table отсутствует.
 Control User != Diary User; Commercial Account != Diary Organization; Control
-Plane Auth != Diary Auth. Invoice не является payment; Payment Core, провайдеры,
-renewal и usage-based billing остаются отложенными.
+Plane Auth != Diary Auth. Provider-neutral Payment Core связывает invoice с
+payment attempts и атомарно активирует subscription после settlement. Конкретные
+провайдеры, webhooks, refunds, receipts, renewal и usage-based billing отложены.
 См. `docs/architecture/COMMERCIAL_CONTROL_PLANE.md` и
 `docs/architecture/COMMERCIAL_SECURITY.md`.
 

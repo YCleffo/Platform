@@ -105,14 +105,14 @@ final class InvoiceIssuanceTest extends InvoiceTestCase
             }
         }
 
-        $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
         try {
             $this->issuer()->issue($owner, $account, $subscription, 'invoice-active-denied', $this->uuid());
             self::fail('Initial invoice for an active subscription must be rejected.');
         } catch (\DomainException) {
             self::addToAssertionCount(1);
         }
-        self::assertSame(0, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.invoices WHERE subscription_id = ?', [$subscription]));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.invoices WHERE subscription_id = ?', [$subscription]));
     }
 
     public function testIncompatibleTermsAndBigintOverflowFailWithoutPartialInvoice(): void

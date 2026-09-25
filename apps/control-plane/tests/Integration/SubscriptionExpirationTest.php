@@ -16,7 +16,7 @@ final class SubscriptionExpirationTest extends SubscriptionTestCase
         $feature = $this->feature('expire.students.max', 'integer');
         [, $price] = $this->planPrice('expire-due-plan', featureValues: [$feature => 100]);
         $subscription = $this->draftSubscription($account, $profile, [$price]);
-        $this->activator()->activate($account, $subscription, new \DateTimeImmutable('2026-01-01T00:00:00Z'), $this->uuid());
+        $this->activatePaid($account, $subscription, new \DateTimeImmutable('2026-01-01T00:00:00Z'), $this->uuid());
         $service = new ExpireSubscription($this->connection);
 
         $first = $service->expire($account, $subscription, new \DateTimeImmutable('2026-02-01T00:00:00Z'), $this->uuid());
@@ -42,7 +42,7 @@ final class SubscriptionExpirationTest extends SubscriptionTestCase
         [, $account, $profile] = $this->readyAccount('expire-invalid');
         [, $price] = $this->planPrice('expire-invalid-plan');
         $active = $this->draftSubscription($account, $profile, [$price]);
-        $this->activator()->activate($account, $active, new \DateTimeImmutable('2026-01-01T00:00:00Z'), $this->uuid());
+        $this->activatePaid($account, $active, new \DateTimeImmutable('2026-01-01T00:00:00Z'), $this->uuid());
         $service = new ExpireSubscription($this->connection);
         try {
             $service->expire($account, $active, new \DateTimeImmutable('2026-01-31T23:59:59Z'), $this->uuid());
@@ -70,7 +70,7 @@ final class SubscriptionExpirationTest extends SubscriptionTestCase
             [, $account, $profile] = $this->readyAccount($suffix);
             [, $price] = $this->planPrice($suffix . '-plan');
             $subscription = $this->draftSubscription($account, $profile, [$price]);
-            $this->activator()->activate($account, $subscription, new \DateTimeImmutable('2000-01-01T00:00:00Z'), $this->uuid());
+            $this->activatePaid($account, $subscription, new \DateTimeImmutable('2000-01-01T00:00:00Z'), $this->uuid());
             $subscriptions[] = $subscription;
         }
         $service = new ExpireSubscription($this->connection);

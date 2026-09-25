@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ControlPlane\Tests\Integration;
 
+use ControlPlane\Account\Authorization\AccountAuthorization;
+use ControlPlane\Billing\Application\IssueInvoice;
 use ControlPlane\Subscription\Application\ActivateSubscription;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 use ControlPlane\Usage\Application\ApplyUsageDelta;
@@ -91,7 +93,14 @@ final class UsageConcurrencyTest extends TestCase
         $subscription = $this->connection->fetchOne("INSERT INTO commercial.subscriptions (commercial_account_id, billing_profile_id, status) VALUES (?, ?, 'draft') RETURNING id", [$account, $profile]);
         self::assertIsString($subscription);
         $this->connection->executeStatement("INSERT INTO commercial.subscription_items (subscription_id, plan_price_id, quantity, valid_from) VALUES (?, ?, 1, now() - interval '1 day')", [$subscription, $price]);
-        (new ActivateSubscription($this->connection, new SubscriptionPeriodCalculator()))->activate($account, $subscription, new \DateTimeImmutable('now'), Uuid::v7()->toRfc4122());
+        $instant = new \DateTimeImmutable('now');
+        $invoice = (new IssueInvoice($this->connection, new AccountAuthorization($this->connection)))->issue($user, $account, $subscription, 'usage-race-paid-' . $subscription, Uuid::v7()->toRfc4122());
+        $payment = $this->connection->fetchOne("INSERT INTO commercial.payments (invoice_id, commercial_account_id, amount_minor, currency, status) VALUES (?, ?, ?, ?, 'pending') RETURNING id", [$invoice['id'], $account, $invoice['total_minor'], $invoice['currency']]);
+        self::assertIsString($payment);
+        $timestamp = $instant->format('Y-m-d H:i:s.uP');
+        $this->connection->executeStatement("UPDATE commercial.payments SET status = 'succeeded', succeeded_at = ?::timestamptz WHERE id = ?", [$timestamp, $payment]);
+        $this->connection->executeStatement("UPDATE commercial.invoices SET status = 'paid', paid_at = ?::timestamptz WHERE id = ?", [$timestamp, $invoice['id']]);
+        (new ActivateSubscription($this->connection, new SubscriptionPeriodCalculator()))->activate($account, $subscription, $instant, Uuid::v7()->toRfc4122());
         $this->connection->commit();
 
         return [$user, $account, $subscription, $featureCode];

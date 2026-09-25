@@ -35,7 +35,7 @@ final class EffectiveEntitlementsTest extends SubscriptionTestCase
             $json => ['x' => 1],
         ]);
         $subscription = $this->draftSubscription($account, $profile, [$price], 5);
-        $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
 
         $features = $this->resolver()->forAccount($owner, $account)['features'];
         self::assertIsArray($features);
@@ -60,7 +60,7 @@ final class EffectiveEntitlementsTest extends SubscriptionTestCase
         [, $futurePrice] = $this->planPrice('window-future-plan', featureValues: [$futureFeature => true]);
         $subscription = $this->draftSubscription($account, $profile, [$currentPrice, $futurePrice]);
         $this->connection->executeStatement("UPDATE commercial.subscription_items SET valid_from = now() + interval '1 day' WHERE subscription_id = ? AND plan_price_id = ?", [$subscription, $futurePrice]);
-        $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
         $features = $this->resolver()->forAccount($owner, $account)['features'];
         self::assertIsArray($features);
         self::assertArrayHasKey('window.current', $features);
@@ -82,7 +82,7 @@ final class EffectiveEntitlementsTest extends SubscriptionTestCase
         [, $firstPrice] = $this->planPrice('deduplicate-plan-a', featureValues: [$feature => true]);
         [, $secondPrice] = $this->planPrice('deduplicate-plan-b', featureValues: [$feature => true]);
         $subscription = $this->draftSubscription($account, $profile, [$firstPrice, $secondPrice]);
-        $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
 
         $reader = $this->user('entitlement-reader@example.test');
         $this->connection->executeStatement("INSERT INTO commercial.commercial_account_memberships (control_user_id, commercial_account_id, role) VALUES (?, ?, 'technical')", [$reader, $account]);

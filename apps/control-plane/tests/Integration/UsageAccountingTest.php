@@ -20,7 +20,7 @@ final class UsageAccountingTest extends SubscriptionTestCase
         $bigint = $this->feature('usage.bigint.max', 'integer', 'gauge');
         [, $price] = $this->planPrice('usage-accounting-plan', featureValues: [$counter => 15, $gauge => 10, $bigint => PHP_INT_MAX]);
         $subscription = $this->draftSubscription($account, $profile, [$price], 5);
-        $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
         $service = new ApplyUsageDelta($this->connection);
 
         self::assertSame(10, $service->apply($account, 'usage.messages.monthly', 10, 'usage-counter-10')['used']);
@@ -67,7 +67,7 @@ final class UsageAccountingTest extends SubscriptionTestCase
         $foreign = $this->feature('usage.foreign.max', 'integer', 'gauge');
         [, $price] = $this->planPrice('usage-rejections-plan', featureValues: [$plain => 365]);
         $subscription = $this->draftSubscription($account, $profile, [$price]);
-        $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
         $service = new ApplyUsageDelta($this->connection);
 
         $this->expectDomainRejection(fn () => $service->apply($account, 'usage.retention.days', 1, 'usage-plain'));
@@ -83,7 +83,7 @@ final class UsageAccountingTest extends SubscriptionTestCase
         $plain = $this->feature('usage.module.crm', 'boolean');
         [, $price] = $this->planPrice('usage-current-plan', featureValues: [$alpha => 4, $zero => 0, $plain => true]);
         $subscription = $this->draftSubscription($account, $profile, [$price], 50);
-        $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
         (new ApplyUsageDelta($this->connection))->apply($account, 'usage.alpha.max', 1, 'usage-current-one');
         $reader = new CurrentUsage($this->connection, new AccountAuthorization($this->connection));
         $result = $reader->forAccount($owner, $account);

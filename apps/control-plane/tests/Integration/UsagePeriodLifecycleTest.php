@@ -18,7 +18,7 @@ final class UsagePeriodLifecycleTest extends SubscriptionTestCase
         $feature = $this->feature('usage.period.activation', 'integer', 'counter');
         [, $price] = $this->planPrice('usage-period-activation-plan', featureValues: [$feature => 10]);
         $subscription = $this->draftSubscription($account, $profile, [$price]);
-        $active = $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $active = $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
         $period = $this->connection->fetchAssociative('SELECT starts_at, ends_at, status FROM commercial.usage_periods WHERE subscription_id = ?', [$subscription]);
         self::assertIsArray($period);
         self::assertSame($active['current_period_start'], $period['starts_at']);
@@ -37,7 +37,7 @@ final class UsagePeriodLifecycleTest extends SubscriptionTestCase
         $feature = $this->feature('usage.period.gauge', 'integer', 'gauge');
         [, $price] = $this->planPrice('usage-period-cancel-plan', featureValues: [$feature => 5]);
         $subscription = $this->draftSubscription($account, $profile, [$price]);
-        $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
         (new ApplyUsageDelta($this->connection))->apply($account, 'usage.period.gauge', 2, 'usage-before-cancel');
         (new CancelSubscription($this->connection, new AccountAuthorization($this->connection)))->cancel($owner, $account, $subscription, 'usage-close-cancel', $this->uuid());
         self::assertSame('closed', $this->connection->fetchOne('SELECT status FROM commercial.usage_periods WHERE subscription_id = ?', [$subscription]));
@@ -46,7 +46,7 @@ final class UsagePeriodLifecycleTest extends SubscriptionTestCase
 
         [, $expireAccount, $expireProfile] = $this->readyAccount('usage-period-expire');
         $expired = $this->draftSubscription($expireAccount, $expireProfile, [$price]);
-        $this->activator()->activate($expireAccount, $expired, new \DateTimeImmutable('2026-01-01T00:00:00Z'), $this->uuid());
+        $this->activatePaid($expireAccount, $expired, new \DateTimeImmutable('2026-01-01T00:00:00Z'), $this->uuid());
         (new ExpireSubscription($this->connection))->expire($expireAccount, $expired, new \DateTimeImmutable('2026-02-01T00:00:00Z'), $this->uuid());
         self::assertSame('closed', $this->connection->fetchOne('SELECT status FROM commercial.usage_periods WHERE subscription_id = ?', [$expired]));
     }
@@ -57,12 +57,12 @@ final class UsagePeriodLifecycleTest extends SubscriptionTestCase
         $feature = $this->feature('usage.period.replacement', 'integer', 'counter');
         [, $price] = $this->planPrice('usage-period-replacement-plan', featureValues: [$feature => 10]);
         $old = $this->draftSubscription($account, $profile, [$price]);
-        $this->activator()->activate($account, $old, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $old, $this->activationInstant(), $this->uuid());
         (new ApplyUsageDelta($this->connection))->apply($account, 'usage.period.replacement', 4, 'usage-old-four');
         (new CancelSubscription($this->connection, new AccountAuthorization($this->connection)))->cancel($owner, $account, $old, 'usage-old-cancel', $this->uuid());
 
         $new = (new CreateSubscription($this->connection, new AccountAuthorization($this->connection)))->create($owner, $account, $price, 1, 'usage-new-create', $this->uuid())['id'];
-        $this->activator()->activate($account, $new, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $new, $this->activationInstant(), $this->uuid());
 
         self::assertSame('closed', $this->connection->fetchOne('SELECT status FROM commercial.usage_periods WHERE subscription_id = ?', [$old]));
         self::assertSame('open', $this->connection->fetchOne('SELECT status FROM commercial.usage_periods WHERE subscription_id = ?', [$new]));

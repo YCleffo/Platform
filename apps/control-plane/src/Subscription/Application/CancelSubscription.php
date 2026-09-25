@@ -70,6 +70,28 @@ final readonly class CancelSubscription
                 if (!in_array($subscription['status'], ['draft', 'active'], true)) {
                     throw new \DomainException('Subscription cannot be cancelled from its current state.');
                 }
+                $invoice = false;
+                $payment = false;
+                if ($subscription['status'] === 'draft') {
+                    $invoice = $connection->fetchAssociative("SELECT id FROM commercial.invoices WHERE subscription_id = ? AND billing_reason = 'subscription_create' AND status = 'issued' FOR UPDATE", [$subscriptionId]);
+                    if ($invoice !== false) {
+                        if (!is_string($invoice['id'])) {
+                            throw new \LogicException('Invoice identity is unavailable.');
+                        }
+                        $payment = $connection->fetchAssociative('SELECT id, status FROM commercial.payments WHERE invoice_id = ? FOR UPDATE', [$invoice['id']]);
+                        if ($payment !== false) {
+                            if (!is_string($payment['id'])) {
+                                throw new \LogicException('Payment identity is unavailable.');
+                            }
+                            if ($payment['status'] !== 'pending') {
+                                throw new \DomainException('Draft subscription payment cannot be cancelled from its current state.');
+                            }
+                            if ($connection->fetchOne("SELECT 1 FROM commercial.payment_attempts WHERE payment_id = ? AND status = 'pending' FOR UPDATE", [$payment['id']]) !== false) {
+                                throw new \DomainException('Payment processing is in progress.');
+                            }
+                        }
+                    }
+                }
                 $connection->executeStatement("UPDATE commercial.subscriptions SET status = 'cancelled', updated_at = now() WHERE id = ?", [$subscriptionId]);
                 if ($subscription['status'] === 'active') {
                     $closed = $connection->executeStatement("UPDATE commercial.usage_periods SET status = 'closed', closed_at = now() WHERE subscription_id = ? AND status = 'open'", [$subscriptionId]);
@@ -78,10 +100,11 @@ final readonly class CancelSubscription
                     }
                 }
                 if ($subscription['status'] === 'draft') {
-                    $invoice = $connection->fetchAssociative("SELECT id FROM commercial.invoices WHERE subscription_id = ? AND billing_reason = 'subscription_create' AND status = 'issued' FOR UPDATE", [$subscriptionId]);
                     if ($invoice !== false) {
-                        if (!is_string($invoice['id'])) {
-                            throw new \LogicException('Invoice identity is unavailable.');
+                        if ($payment !== false) {
+                            $connection->executeStatement("UPDATE commercial.payments SET status = 'cancelled', cancelled_at = now(), updated_at = now() WHERE id = ?", [$payment['id']]);
+                            $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, actor_id, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('control_user', ?, ?, 'payment.cancelled', 'payment', ?, ?, 'success')", [$userId, $accountId, $payment['id'], $correlationId]);
+                            $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('payment.cancelled', 'payment', ?, jsonb_build_object('payment_id', ?::text, 'invoice_id', ?::text, 'commercial_account_id', ?::text))", [$payment['id'], $payment['id'], $invoice['id'], $accountId]);
                         }
                         $connection->executeStatement("UPDATE commercial.invoices SET status = 'void', voided_at = now(), updated_at = now() WHERE id = ?", [$invoice['id']]);
                         $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, actor_id, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('control_user', ?, ?, 'invoice.voided', 'invoice', ?, ?, 'success')", [$userId, $accountId, $invoice['id'], $correlationId]);

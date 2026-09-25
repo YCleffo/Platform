@@ -25,7 +25,7 @@ final class SubscriptionCancellationTest extends SubscriptionTestCase
         $feature = $this->feature('cancel.module.crm', 'boolean');
         [, $price] = $this->planPrice('cancel-active-plan', featureValues: [$feature => true]);
         $subscription = $this->draftSubscription($account, $profile, [$price]);
-        $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
         self::assertIsArray($this->entitlements()->forAccount($owner, $account)['features']);
 
         $result = $this->canceller()->cancel($owner, $account, $subscription, 'cancel-active', $this->uuid());

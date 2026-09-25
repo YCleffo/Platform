@@ -16,7 +16,7 @@ final class SubscriptionActivationTest extends SubscriptionTestCase
         [, $price] = $this->planPrice('activation-happy-plan', featureValues: [$feature => 500]);
         $subscription = $this->draftSubscription($account, $profile, [$price]);
 
-        $result = $this->activator()->activate($account, $subscription, $this->activationInstant(), $this->uuid());
+        $result = $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
 
         self::assertSame('active', $result['status']);
         self::assertNotEmpty($result['current_period_start']);
@@ -41,6 +41,7 @@ final class SubscriptionActivationTest extends SubscriptionTestCase
         [, $price] = $this->planPrice('activation-retry-plan');
         $subscription = $this->draftSubscription($account, $profile, [$price]);
         $activator = $this->activator();
+        $this->markInitialInvoicePaid($account, $subscription, new \DateTimeImmutable('2026-01-31T12:00:00Z'));
         $first = $activator->activate($account, $subscription, new \DateTimeImmutable('2026-01-31T12:00:00Z'), $this->uuid());
         $second = $activator->activate($account, $subscription, new \DateTimeImmutable('2026-05-01T00:00:00Z'), $this->uuid());
 
@@ -111,7 +112,7 @@ final class SubscriptionActivationTest extends SubscriptionTestCase
         [, $priceB] = $this->planPrice('activation-conflict-b', featureValues: [$feature => 500]);
         $conflictSubscription = $this->draftSubscription($conflictAccount, $conflictProfile, [$priceA, $priceB]);
         try {
-            $this->activator()->activate($conflictAccount, $conflictSubscription, $this->activationInstant(), $this->uuid());
+            $this->activatePaid($conflictAccount, $conflictSubscription, $this->activationInstant(), $this->uuid());
             self::fail('Conflicting feature values must reject activation.');
         } catch (\DomainException) {
             self::addToAssertionCount(1);
@@ -127,6 +128,6 @@ final class SubscriptionActivationTest extends SubscriptionTestCase
         [, $samePriceA] = $this->planPrice('activation-identical-a', featureValues: [$sameFeature => true]);
         [, $samePriceB] = $this->planPrice('activation-identical-b', featureValues: [$sameFeature => true]);
         $sameSubscription = $this->draftSubscription($sameAccount, $sameProfile, [$samePriceA, $samePriceB]);
-        self::assertSame('active', $this->activator()->activate($sameAccount, $sameSubscription, $this->activationInstant(), $this->uuid())['status']);
+        self::assertSame('active', $this->activatePaid($sameAccount, $sameSubscription, $this->activationInstant(), $this->uuid())['status']);
     }
 }

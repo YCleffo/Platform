@@ -21,24 +21,38 @@ final readonly class ActivateSubscription
             throw new \InvalidArgumentException('Invalid public identifier.');
         }
 
-        return $this->connection->transactional(function (Connection $connection) use ($accountId, $subscriptionId, $activationInstant, $correlationId): array {
-            $subscription = $connection->fetchAssociative(<<<'SQL'
+        return $this->connection->transactional(fn (Connection $connection): array => $this->activateInTransaction(
+            $connection,
+            $accountId,
+            $subscriptionId,
+            $activationInstant,
+            $correlationId,
+        ));
+    }
+
+    /** @return array{id: string, status: 'active', current_period_start: string, current_period_end: string} */
+    public function activateInTransaction(Connection $connection, string $accountId, string $subscriptionId, \DateTimeImmutable $activationInstant, string $correlationId): array
+    {
+        $subscription = $connection->fetchAssociative(<<<'SQL'
 SELECT id, commercial_account_id, billing_profile_id, status, current_period_start, current_period_end
 FROM commercial.subscriptions
 WHERE id = ? AND commercial_account_id = ?
 FOR UPDATE
 SQL, [$subscriptionId, $accountId]);
-            if ($subscription === false) {
-                throw new \DomainException('Subscription was not found.');
-            }
-            if ($subscription['status'] === 'active') {
-                return $this->activeResult($subscription);
-            }
-            if ($subscription['status'] !== 'draft') {
-                throw new \DomainException('Subscription cannot be activated from its current state.');
-            }
+        if ($subscription === false) {
+            throw new \DomainException('Subscription was not found.');
+        }
+        if ($subscription['status'] === 'active') {
+            return $this->activeResult($subscription);
+        }
+        if ($subscription['status'] !== 'draft') {
+            throw new \DomainException('Subscription cannot be activated from its current state.');
+        }
+        if ($connection->fetchOne("SELECT id FROM commercial.invoices WHERE subscription_id = ? AND billing_reason = 'subscription_create' AND status = 'paid' FOR UPDATE", [$subscriptionId]) === false) {
+            throw new \DomainException('Subscription activation requires a paid initial invoice.');
+        }
 
-            $account = $connection->fetchAssociative('SELECT status, onboarding_state FROM commercial.commercial_accounts WHERE id = ? FOR UPDATE', [$accountId]);
+        $account = $connection->fetchAssociative('SELECT status, onboarding_state FROM commercial.commercial_accounts WHERE id = ? FOR UPDATE', [$accountId]);
             $initialActivation = $account !== false && $account['status'] === 'draft' && $account['onboarding_state'] === 'ready_for_subscription';
             $replacementActivation = $account !== false && $account['status'] === 'active' && $account['onboarding_state'] === 'completed';
             if (!$initialActivation && !$replacementActivation) {
@@ -108,8 +122,7 @@ SQL, [$subscriptionId]);
             $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, 'subscription.activated', 'subscription', ?, ?, 'success')", [$accountId, $subscriptionId, $correlationId]);
             $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('subscription.activated', 'subscription', ?, jsonb_build_object('subscription_id', ?::text, 'commercial_account_id', ?::text, 'current_period_start', to_jsonb(?::timestamptz), 'current_period_end', to_jsonb(?::timestamptz)))", [$subscriptionId, $subscriptionId, $accountId, $start, $end]);
 
-            return $this->activeResult($activated);
-        });
+        return $this->activeResult($activated);
     }
 
     /**

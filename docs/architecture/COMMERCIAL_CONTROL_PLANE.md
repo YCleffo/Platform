@@ -1,4 +1,4 @@
-# Commercial Control Plane — Phase 3.5 Billing Core
+# Commercial Control Plane — Phase 3.6 Payment Core
 
 `apps/control-plane` is a separate Symfony 7.4/PHP 8.3 application with its
 own `platform_commercial` PostgreSQL database and `commercial` schema. It does
@@ -17,7 +17,7 @@ a tenant database or process a payment.
 
 ## Implemented schema
 
-Fourteen ordered Doctrine migrations create exactly 31 `commercial.*` tables.
+Fifteen ordered Doctrine migrations create exactly 34 `commercial.*` tables.
 The 21 Phase 1 tables remain unchanged. Phase 2 adds:
 
 - `control_user_email_verifications` — one-time, expiring, hash-only tokens;
@@ -73,6 +73,16 @@ subscription voids its issued invoice in the same transaction and emits
 historical invoice. The `paid` state is reserved for Payment Core and does not
 activate a subscription in this phase.
 
+Phase 3.6 adds provider-neutral `payment_provider_accounts`, `payments` and
+`payment_attempts`. One payment mirrors one invoice's immutable money, while
+multiple historical attempts model provider retries with at most one pending
+attempt. A trusted internal success confirmation atomically succeeds the
+attempt/payment, pays the invoice, activates its draft subscription, opens the
+usage period and writes audit/outbox lifecycle events. Direct activation is
+payment-gated. Zero-amount invoices create a historical succeeded payment and
+activate without a fake provider or attempt. Concrete provider clients,
+webhooks, refunds and receipts are intentionally absent.
+
 The current schema, including clearly marked future entities, is
 `docs/database/commercial/Commercial_ControlPlane_v2.dbml`. Effective
 entitlements are derived at read time from the current active subscription,
@@ -101,6 +111,9 @@ issue the initial invoice through
 `POST /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/invoice`,
 read its immutable snapshot through
 `GET /api/control/accounts/{accountId}/invoices/{invoiceId}`, and expose
+payment creation through
+`POST /api/control/accounts/{accountId}/invoices/{invoiceId}/payment`, payment
+reads through `GET /api/control/accounts/{accountId}/payments/{paymentId}`, and
 `GET /api/control/accounts/{accountId}/entitlements` plus the read-only
 `GET /api/control/accounts/{accountId}/usage`. Every account
 resource is authorized from active account membership; an account UUID from
@@ -137,8 +150,8 @@ directories.
 
 ## Deferred
 
-Renewal, plan switching, Payment Core, payment providers, payment methods,
-payment attempts, refunds, receipts, webhooks,
+Renewal, plan switching, concrete payment providers, payment methods,
+provider webhooks/events, refunds, receipts and fiscalization,
 usage-based and overage billing, service-to-service usage ingestion, signed
 entitlement issuance, tenant DB creation, provisioning, DNS/TLS, custom
 domains, On-Prem activation, MFA and updater execution remain future phases.
