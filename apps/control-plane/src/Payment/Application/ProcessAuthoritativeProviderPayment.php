@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace ControlPlane\Payment\Application;
 
 use ControlPlane\Billing\Domain\Money;
+use ControlPlane\Fiscalization\Application\SubmitYooKassaReceipt;
+use ControlPlane\Payment\Provider\PaymentProviderException;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPayment;
 use Doctrine\DBAL\Connection;
@@ -16,6 +18,7 @@ final readonly class ProcessAuthoritativeProviderPayment
         private Connection $connection,
         private BindPaymentAttemptProviderReference $binder,
         private CompletePaymentAttempt $completer,
+        private SubmitYooKassaReceipt $receipts,
     ) {
     }
 
@@ -60,6 +63,11 @@ SQL, [$attemptId]);
                 throw new \DomainException('Provider payment is not authoritatively settled.');
             }
             $this->completer->complete($attemptId, 'succeeded', null, $providerPayment->capturedAt, $correlationId);
+            try {
+                $this->receipts->submitForPayment($paymentId, $correlationId);
+            } catch (PaymentProviderException|\DomainException) {
+                // Settlement is already committed; reconciliation owns fiscal delivery.
+            }
 
             return ['attempt_id' => $attemptId, 'payment_id' => $paymentId, 'provider_status' => 'succeeded', 'changed' => $local['attempt_status'] === 'pending'];
         }

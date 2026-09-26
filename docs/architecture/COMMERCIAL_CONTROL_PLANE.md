@@ -1,4 +1,4 @@
-# Commercial Control Plane — Phase 3.7 YooKassa Provider Integration
+# Commercial Control Plane — Phase 3.8 Fiscalization Core
 
 `apps/control-plane` is a separate Symfony 7.4/PHP 8.3 application with its
 own `platform_commercial` PostgreSQL database and `commercial` schema. It does
@@ -17,7 +17,7 @@ does not create a tenant database.
 
 ## Implemented schema
 
-Sixteen ordered Doctrine migrations create exactly 35 `commercial.*` tables.
+Seventeen ordered Doctrine migrations create exactly 37 `commercial.*` tables.
 The 21 Phase 1 tables remain unchanged. Phase 2 adds:
 
 - `control_user_email_verifications` — one-time, expiring, hash-only tokens;
@@ -100,12 +100,24 @@ bound. `control:payments:reconcile-yookassa --limit=100` performs the same
 authoritative flow for a bounded batch without holding database locks during
 network I/O. Settlement remains owned by Payment Core.
 
+Phase 3.8 adds `receipts` and `receipt_items`. A successful non-zero provider
+settlement creates the local fiscal obligation and immutable invoice-line
+snapshot in the same database transaction as Payment, Invoice, Subscription
+and Usage changes. Provider HTTP is never executed in that transaction.
+YooKassa receipt submission uses a separate stable idempotency key and the
+provider payment reference; uncertain failures leave the payment paid and the
+receipt pending for `control:payments:reconcile-yookassa-receipts --limit=100`.
+Only `pending -> succeeded` and `pending -> canceled` transitions are accepted.
+Customer email/name come from the issued invoice snapshot and are excluded
+from the receipt read API, audit and outbox payloads. Zero payments do not
+create receipts.
+
 The current schema, including clearly marked future entities, is
 `docs/database/commercial/Commercial_ControlPlane_v2.dbml`. Effective
 entitlements are derived at read time from the current active subscription,
 its valid items and immutable plan features. There is no mutable
 `commercial.entitlements` table. Usage is a separate mutable read/write model.
-Invoice is not payment; payment execution and usage-based charging remain
+Invoice is not payment; refunds, renewals and usage-based charging remain
 future work.
 
 ## HTTP contract
@@ -130,7 +142,9 @@ read its immutable snapshot through
 `GET /api/control/accounts/{accountId}/invoices/{invoiceId}`, and expose
 payment creation through
 `POST /api/control/accounts/{accountId}/invoices/{invoiceId}/payment`, payment
-reads through `GET /api/control/accounts/{accountId}/payments/{paymentId}`, and
+reads through `GET /api/control/accounts/{accountId}/payments/{paymentId}`,
+reads sanitized fiscal state through
+`GET /api/control/accounts/{accountId}/payments/{paymentId}/receipt`, and
 starts hosted SBP checkout through
 `POST /api/control/accounts/{accountId}/payments/{paymentId}/checkout`. YooKassa
 notifications enter through the Control-User-independent machine endpoint
@@ -168,7 +182,7 @@ except `APP_ENV=test`, `CONTROL_TEST_ISOLATED=1`, host
 For the development profile configure separate `CONTROL_POSTGRES_PASSWORD`,
 `CONTROL_APP_SECRET` and `CONTROL_TOKEN_SECRET` values of at least 32
 characters, plus `CONTROL_YOOKASSA_RETURN_URL`. Configure merchant metadata with
-`control:payments:providers:yookassa:configure --shop-id=... --secret-ref=env:YOOKASSA_SECRET_KEY`;
+`control:payments:providers:yookassa:configure --shop-id=... --secret-ref=env:YOOKASSA_SECRET_KEY --receipt-mode=yookassa --vat-code=1 --payment-subject=service --payment-mode=full_payment`;
 the command never accepts the secret itself. The production image remains
 FrankenPHP, runs as `www-data`, has
 no dev dependencies or tests, and grants write access only to runtime
@@ -177,7 +191,7 @@ directories.
 ## Deferred
 
 Renewal, plan switching, additional payment providers and methods, bank cards,
-saved/recurring credentials, refunds, receipts and fiscalization,
+saved/recurring credentials, refunds and refund receipts,
 usage-based and overage billing, service-to-service usage ingestion, signed
 entitlement issuance, tenant DB creation, provisioning, DNS/TLS, custom
 domains, On-Prem activation, MFA and updater execution remain future phases.

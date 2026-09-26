@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace ControlPlane\Payment\Application;
 
+use ControlPlane\Fiscalization\Application\CreatePaymentReceiptObligation;
 use ControlPlane\Shared\Domain\IdentifierPolicy;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Uid\Uuid;
 
 final readonly class CompletePaymentAttempt
 {
-    public function __construct(private Connection $connection, private SettlePayment $settlement)
+    public function __construct(private Connection $connection, private SettlePayment $settlement, private CreatePaymentReceiptObligation $receipts)
     {
     }
 
@@ -59,6 +60,7 @@ final readonly class CompletePaymentAttempt
             }
             $connection->executeStatement("UPDATE commercial.payment_attempts SET status = 'succeeded', completed_at = ?::timestamptz WHERE id = ?", [$completedAt, $attemptId]);
             $this->settlement->succeed($connection, $payment, $invoice, $settlementInstant, $correlationId);
+            $this->receipts->createInTransaction($connection, $attemptId);
 
             return ['attempt_id' => $attemptId, 'attempt_status' => 'succeeded', 'payment_id' => $payment['id'], 'payment_status' => 'succeeded'];
         });

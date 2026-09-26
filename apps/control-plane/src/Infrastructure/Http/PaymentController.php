@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ControlPlane\Infrastructure\Http;
 
 use ControlPlane\Identity\Security\ControlUserPrincipal;
+use ControlPlane\Fiscalization\Application\GetReceipt;
 use ControlPlane\Payment\Application\CreatePayment;
 use ControlPlane\Payment\Application\GetPayment;
 use ControlPlane\Payment\Application\StartYooKassaPayment;
@@ -20,6 +21,7 @@ final class PaymentController extends AbstractController
         private readonly CreatePayment $creator,
         private readonly GetPayment $reader,
         private readonly StartYooKassaPayment $checkout,
+        private readonly GetReceipt $receipts,
     )
     {
     }
@@ -65,6 +67,12 @@ final class PaymentController extends AbstractController
             $key,
             ApiRequest::correlationId($request),
         ));
+    }
+
+    #[Route('/api/control/accounts/{accountId}/payments/{paymentId}/receipt', name: 'control_payment_receipt_get', methods: ['GET'])]
+    public function receipt(string $accountId, string $paymentId): JsonResponse
+    {
+        return new JsonResponse($this->receipts->get($this->user()->id(), $accountId, $paymentId));
     }
 
     private function user(): ControlUserPrincipal

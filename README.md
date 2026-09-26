@@ -617,7 +617,7 @@ tests/
 Symfony Commercial Control Plane (`apps/control-plane`) — отдельное приложение
 на Symfony 7.4/PHP 8.3 с собственной БД `platform_commercial`, схемой
 `commercial` и отдельным Docker network. Yii/Diary DB и Commercial DB не
-разделяют credentials. Phase 3.7 содержит 16 миграций и 35 Commercial таблиц:
+разделяют credentials. Phase 3.8 содержит 17 миграций и 37 Commercial таблиц:
 central Control User, hash-only verification, rotating server-side sessions,
 Commercial Account с атомарным owner membership, billing onboarding и
 published plan catalog, draft/active subscriptions и immutable subscription
@@ -630,8 +630,10 @@ Control User != Diary User; Commercial Account != Diary Organization; Control
 Plane Auth != Diary Auth. Provider-neutral Payment Core связывает invoice с
 payment attempts и атомарно активирует subscription после settlement. Первая
 production-интеграция использует YooKassa SBP hosted redirect, server-side secret
-resolution, authoritative webhook verification и bounded reconciliation. Refunds,
-receipts, renewal и usage-based billing отложены.
+resolution, authoritative webhook verification и bounded reconciliation.
+Fiscalization Core атомарно фиксирует обязательство и immutable receipt items при
+settlement, затем отдельно отправляет чек в YooKassa и сверяет pending receipts
+без отката уже оплаченного invoice. Refunds, renewal и usage-based billing отложены.
 См. `docs/architecture/COMMERCIAL_CONTROL_PLANE.md` и
 `docs/architecture/COMMERCIAL_SECURITY.md`.
 
@@ -660,8 +662,8 @@ Reset отказывается работать вне изолированно�
 read-only `/api/control/catalog/plans`, draft subscription create/read и
 `GET /api/control/accounts/{accountId}/entitlements`. Activation является
 только внутренним application service; customer `/activate` endpoint
-отсутствует. Доступны создание/read Payment, YooKassa SBP checkout и публичный
-machine-to-machine webhook; provisioning API не реализован. `GET /health` остаётся
+отсутствует. Доступны создание/read Payment, sanitized read его fiscal receipt,
+YooKassa SBP checkout и публичный machine-to-machine webhook; provisioning API не реализован. `GET /health` остаётся
 минимальным.
 
 Linux/macOS:

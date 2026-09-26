@@ -35,6 +35,9 @@ services:
     ControlPlane\Payment\Provider\PaymentProviderGateway:
         alias: ControlPlane\Payment\Provider\YooKassa\YooKassaGateway
 
+    ControlPlane\Payment\Provider\FiscalReceiptProviderGateway:
+        alias: ControlPlane\Payment\Provider\YooKassa\YooKassaReceiptGateway
+
     ControlPlane\Payment\Provider\YooKassa\YooKassaGateway:
         arguments:
             $returnUrl: '%env(CONTROL_YOOKASSA_RETURN_URL)%'

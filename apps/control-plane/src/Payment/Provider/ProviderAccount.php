@@ -11,6 +11,10 @@ final readonly class ProviderAccount
         public string $providerCode,
         public string $externalAccountId,
         public string $secretRef,
+        public string $receiptMode = 'disabled',
+        public ?int $receiptVatCode = null,
+        public ?string $receiptPaymentSubject = null,
+        public ?string $receiptPaymentMode = null,
     ) {
     }
 }

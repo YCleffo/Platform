@@ -1,0 +1,63 @@
+<?php
+
+declare(strict_types=1);
+
+namespace ControlPlane\Fiscalization\Application;
+
+use ControlPlane\Payment\Provider\FiscalReceiptRequest;
+use ControlPlane\Payment\Provider\ProviderReceipt;
+use Doctrine\DBAL\Connection;
+
+final readonly class ApplyAuthoritativeReceipt
+{
+    public function __construct(private Connection $connection)
+    {
+    }
+
+    public function apply(string $receiptId, ProviderReceipt $provider, FiscalReceiptRequest $expected, string $correlationId): bool
+    {
+        $this->validate($provider, $expected);
+
+        return $this->connection->transactional(function (Connection $connection) use ($receiptId, $provider, $correlationId): bool {
+            $row = $connection->fetchAssociative('SELECT id, commercial_account_id, external_receipt_id, status FROM commercial.receipts WHERE id = ? FOR UPDATE', [$receiptId]);
+            if ($row === false) {
+                throw new \DomainException('Receipt was not found.');
+            }
+            if (is_string($row['external_receipt_id']) && $row['external_receipt_id'] !== $provider->id) {
+                throw new \DomainException('Provider receipt reference does not match local state.');
+            }
+            if (in_array($row['status'], ['succeeded', 'canceled'], true)) {
+                if ($row['status'] !== $provider->status) {
+                    throw new \DomainException('Terminal receipt status does not match provider state.');
+                }
+
+                return false;
+            }
+            $connection->executeStatement('UPDATE commercial.receipts SET external_receipt_id = COALESCE(external_receipt_id, ?), last_attempted_at = now(), last_error_code = NULL, updated_at = now() WHERE id = ?', [$provider->id, $receiptId]);
+            if ($provider->status === 'pending') {
+                return false;
+            }
+            $completed = ($provider->completedAt ?? new \DateTimeImmutable('now'))->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.uP');
+            $error = $provider->status === 'canceled' ? 'provider_receipt_canceled' : null;
+            $connection->executeStatement('UPDATE commercial.receipts SET status = ?, completed_at = ?::timestamptz, last_error_code = ?, updated_at = now() WHERE id = ?', [$provider->status, $completed, $error, $receiptId]);
+            $event = 'receipt.' . $provider->status;
+            $outcome = $provider->status === 'succeeded' ? 'success' : 'failure';
+            $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, ?, 'receipt', ?, ?, ?)", [$row['commercial_account_id'], $event, $receiptId, $correlationId, $outcome]);
+            $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES (?, 'receipt', ?, jsonb_build_object('receipt_id', ?::text, 'status', ?::text))", [$event, $receiptId, $receiptId, $provider->status]);
+
+            return true;
+        });
+    }
+
+    private function validate(ProviderReceipt $actual, FiscalReceiptRequest $expected): void
+    {
+        if ($actual->type !== 'payment' || $actual->providerPaymentId !== $expected->providerPaymentId || $actual->amountMinor !== $expected->amountMinor || $actual->currency !== $expected->currency || count($actual->items) !== count($expected->items)) {
+            throw new \DomainException('Provider receipt does not match the immutable local snapshot.');
+        }
+        foreach ($expected->items as $index => $item) {
+            if ($actual->items[$index] != $item) {
+                throw new \DomainException('Provider receipt items do not match the immutable local snapshot.');
+            }
+        }
+    }
+}

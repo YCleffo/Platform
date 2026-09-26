@@ -11,6 +11,10 @@ use Doctrine\DBAL\Tools\DsnParser;
 use ControlPlane\Account\Application\MembershipService;
 use ControlPlane\Account\Authorization\AccountAuthorization;
 use ControlPlane\Billing\Application\IssueInvoice;
+use ControlPlane\Fiscalization\Application\ApplyAuthoritativeReceipt;
+use ControlPlane\Fiscalization\Application\CreatePaymentReceiptObligation;
+use ControlPlane\Fiscalization\Application\ReceiptSnapshot;
+use ControlPlane\Fiscalization\Application\SubmitYooKassaReceipt;
 use ControlPlane\Identity\Application\AuthFailure;
 use ControlPlane\Identity\Application\AuthService;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
@@ -29,6 +33,7 @@ use ControlPlane\Payment\Application\SettlePayment;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPayment;
 use ControlPlane\Usage\Application\ApplyUsageDelta;
+use ControlPlane\Tests\Support\FakeFiscalReceiptProviderGateway;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasher;
 
@@ -111,7 +116,7 @@ try {
             break;
         case 'complete_payment_attempt':
             [$outcome, $failureCode, $settlementInstant, $correlationId] = explode('|', $extra);
-            (new CompletePaymentAttempt($connection, paymentSettlement($connection)))->complete($value, $outcome, $failureCode === '' ? null : $failureCode, new DateTimeImmutable($settlementInstant), $correlationId);
+            (new CompletePaymentAttempt($connection, paymentSettlement($connection), new CreatePaymentReceiptObligation()))->complete($value, $outcome, $failureCode === '' ? null : $failureCode, new DateTimeImmutable($settlementInstant), $correlationId);
             break;
         case 'bind_payment_attempt':
             (new BindPaymentAttemptProviderReference($connection))->bind($value, $extra);
@@ -120,7 +125,8 @@ try {
             [$providerPaymentId, $status, $capturedAt, $correlationId] = explode('|', $extra);
             $row = $connection->fetchAssociative(<<<'SQL'
 SELECT pa.payment_id, pa.provider_account_id, p.invoice_id, p.amount_minor, p.currency,
-       ppa.provider_code, ppa.external_account_id, ppa.secret_ref
+       ppa.provider_code, ppa.external_account_id, ppa.secret_ref, ppa.receipt_mode, ppa.receipt_vat_code,
+       ppa.receipt_payment_subject, ppa.receipt_payment_mode
 FROM commercial.payment_attempts pa
 JOIN commercial.payments p ON p.id = pa.payment_id
 JOIN commercial.payment_provider_accounts ppa ON ppa.id = pa.provider_account_id
@@ -131,7 +137,7 @@ SQL, [$value]);
                 || !is_string($row['external_account_id']) || !is_string($row['secret_ref'])) {
                 throw new LogicException('Provider race fixture unavailable.');
             }
-            $providerAccount = new ProviderAccount($row['provider_account_id'], $row['provider_code'], $row['external_account_id'], $row['secret_ref']);
+            $providerAccount = new ProviderAccount($row['provider_account_id'], $row['provider_code'], $row['external_account_id'], $row['secret_ref'], (string) $row['receipt_mode'], $row['receipt_vat_code'] === null ? null : (int) $row['receipt_vat_code'], is_string($row['receipt_payment_subject']) ? $row['receipt_payment_subject'] : null, is_string($row['receipt_payment_mode']) ? $row['receipt_payment_mode'] : null);
             $providerPayment = new ProviderPayment(
                 $providerPaymentId,
                 $status,
@@ -145,7 +151,8 @@ SQL, [$value]);
             (new ProcessAuthoritativeProviderPayment(
                 $connection,
                 new BindPaymentAttemptProviderReference($connection),
-                new CompletePaymentAttempt($connection, paymentSettlement($connection)),
+                new CompletePaymentAttempt($connection, paymentSettlement($connection), new CreatePaymentReceiptObligation()),
+                new SubmitYooKassaReceipt($connection, new ReceiptSnapshot(), new FakeFiscalReceiptProviderGateway(), new ApplyAuthoritativeReceipt($connection)),
             ))->process($providerAccount, $providerPayment, $correlationId);
             break;
         case 'expire_subscription':

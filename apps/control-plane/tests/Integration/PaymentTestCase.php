@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace ControlPlane\Tests\Integration;
 
 use ControlPlane\Account\Authorization\AccountAuthorization;
+use ControlPlane\Fiscalization\Application\ApplyAuthoritativeReceipt;
+use ControlPlane\Fiscalization\Application\CreatePaymentReceiptObligation;
+use ControlPlane\Fiscalization\Application\ReceiptSnapshot;
+use ControlPlane\Fiscalization\Application\SubmitYooKassaReceipt;
 use ControlPlane\Payment\Application\BeginPaymentAttempt;
 use ControlPlane\Payment\Application\BindPaymentAttemptProviderReference;
 use ControlPlane\Payment\Application\CompletePaymentAttempt;
@@ -16,7 +20,9 @@ use ControlPlane\Payment\Application\ReconcileYooKassaPayments;
 use ControlPlane\Payment\Application\SettlePayment;
 use ControlPlane\Payment\Application\StartYooKassaPayment;
 use ControlPlane\Payment\Provider\PaymentProviderGateway;
+use ControlPlane\Payment\Provider\FiscalReceiptProviderGateway;
 use ControlPlane\Payment\Provider\YooKassa\YooKassaProviderAccountLocator;
+use ControlPlane\Tests\Support\FakeFiscalReceiptProviderGateway;
 
 abstract class PaymentTestCase extends InvoiceTestCase
 {
@@ -51,7 +57,7 @@ abstract class PaymentTestCase extends InvoiceTestCase
 
     protected function attemptCompleter(): CompletePaymentAttempt
     {
-        return new CompletePaymentAttempt($this->connection, $this->settlement());
+        return new CompletePaymentAttempt($this->connection, $this->settlement(), new CreatePaymentReceiptObligation());
     }
 
     protected function providerAccount(string $suffix, string $status = 'active'): string
@@ -64,7 +70,7 @@ abstract class PaymentTestCase extends InvoiceTestCase
 
     protected function yooKassaProviderAccount(string $suffix = 'default', string $status = 'active'): string
     {
-        $id = $this->connection->fetchOne("INSERT INTO commercial.payment_provider_accounts (provider_code, external_account_id, secret_ref, status) VALUES ('yookassa', ?, 'env:YOOKASSA_SECRET_KEY', ?) RETURNING id", ['shop-' . $suffix, $status]);
+        $id = $this->connection->fetchOne("INSERT INTO commercial.payment_provider_accounts (provider_code, external_account_id, secret_ref, receipt_mode, receipt_vat_code, receipt_payment_subject, receipt_payment_mode, status) VALUES ('yookassa', ?, 'env:YOOKASSA_SECRET_KEY', 'yookassa', 1, 'service', 'full_payment', ?) RETURNING id", ['shop-' . $suffix, $status]);
         self::assertIsString($id);
 
         return $id;
@@ -74,14 +80,20 @@ abstract class PaymentTestCase extends InvoiceTestCase
     protected function issuedRubInvoiceContext(string $suffix): array
     {
         [$owner, $account, $profile, $plan, $price, $subscription] = $this->invoiceContext($suffix, 1, 'month', 'RUB');
+        $this->connection->executeStatement('UPDATE commercial.billing_profiles SET contact_name = ?, contact_email = ? WHERE id = ?', ['Billing Contact', 'billing-' . $suffix . '@example.test', $profile]);
         $invoice = $this->issuer()->issue($owner, $account, $subscription, $suffix . '-invoice', $this->uuid());
 
         return [$owner, $account, $profile, $plan, $price, $subscription, $invoice];
     }
 
-    protected function authoritativeProcessor(): ProcessAuthoritativeProviderPayment
+    protected function authoritativeProcessor(?FiscalReceiptProviderGateway $gateway = null): ProcessAuthoritativeProviderPayment
     {
-        return new ProcessAuthoritativeProviderPayment($this->connection, $this->attemptBinder(), $this->attemptCompleter());
+        return new ProcessAuthoritativeProviderPayment($this->connection, $this->attemptBinder(), $this->attemptCompleter(), $this->receiptSubmission($gateway));
+    }
+
+    protected function receiptSubmission(?FiscalReceiptProviderGateway $gateway = null): SubmitYooKassaReceipt
+    {
+        return new SubmitYooKassaReceipt($this->connection, new ReceiptSnapshot(), $gateway ?? new FakeFiscalReceiptProviderGateway(), new ApplyAuthoritativeReceipt($this->connection));
     }
 
     protected function yooKassaCheckout(PaymentProviderGateway $gateway): StartYooKassaPayment
@@ -98,13 +110,13 @@ abstract class PaymentTestCase extends InvoiceTestCase
         );
     }
 
-    protected function yooKassaWebhook(PaymentProviderGateway $gateway): ReceiveYooKassaWebhook
+    protected function yooKassaWebhook(PaymentProviderGateway $gateway, ?FiscalReceiptProviderGateway $receiptGateway = null): ReceiveYooKassaWebhook
     {
         return new ReceiveYooKassaWebhook(
             $this->connection,
             new YooKassaProviderAccountLocator($this->connection),
             $gateway,
-            $this->authoritativeProcessor(),
+            $this->authoritativeProcessor($receiptGateway),
         );
     }
 

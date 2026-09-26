@@ -65,6 +65,21 @@ final class PaymentConcurrencyTest extends TestCase
         self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action = 'payment.succeeded' AND resource_id = ?", [$payment['id']]));
     }
 
+    public function testConcurrentYooKassaSettlementCreatesOneReceiptSnapshot(): void
+    {
+        [$owner, $account, , $invoice] = $this->issuedFixture('receipt-success-race', 'RUB');
+        $payment = $this->creator()->create($owner, $account, $invoice, 'receipt-race-payment-' . $account, Uuid::v7()->toRfc4122());
+        $provider = $this->yooKassaProvider('receipt-race');
+        $attempt = (new BeginPaymentAttempt($this->connection))->begin($payment['id'], $provider, 'sbp', Uuid::v7()->toRfc4122());
+        (new BindPaymentAttemptProviderReference($this->connection))->bind($attempt['attempt_id'], 'provider-' . $attempt['attempt_id']);
+        $extra = implode('|', ['succeeded', '', '2026-09-26T11:00:00Z', Uuid::v7()->toRfc4122()]);
+
+        self::assertSame([0, 0], $this->race('complete_payment_attempt', $attempt['attempt_id'], $extra, 'complete_payment_attempt', $attempt['attempt_id'], $extra));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.receipts WHERE payment_id = ?', [$payment['id']]));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.receipt_items ri JOIN commercial.receipts r ON r.id = ri.receipt_id WHERE r.payment_id = ?', [$payment['id']]));
+        $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET status = 'disabled', updated_at = now() WHERE id = ?", [$provider]);
+    }
+
     public function testConcurrentAttemptStartCreatesOnePendingAttempt(): void
     {
         [$owner, $account, , $invoice] = $this->issuedFixture('payment-attempt-race');
@@ -141,7 +156,7 @@ final class PaymentConcurrencyTest extends TestCase
         self::assertIsString($owner);
         self::assertIsString($account);
         $this->connection->executeStatement("INSERT INTO commercial.commercial_account_memberships (control_user_id, commercial_account_id, role) VALUES (?, ?, 'owner')", [$owner, $account]);
-        $profile = $this->connection->fetchOne("INSERT INTO commercial.billing_profiles (commercial_account_id, legal_name, country_code, is_default) VALUES (?, 'Race LLC', 'US', true) RETURNING id", [$account]);
+        $profile = $this->connection->fetchOne("INSERT INTO commercial.billing_profiles (commercial_account_id, legal_name, country_code, contact_name, contact_email, is_default) VALUES (?, 'Race LLC', 'US', 'Race Billing', ?, true) RETURNING id", [$account, $email]);
         self::assertIsString($profile);
         $this->connection->executeStatement("UPDATE commercial.commercial_accounts SET onboarding_state = 'catalog_selection_pending' WHERE id = ?", [$account]);
         $this->connection->executeStatement("UPDATE commercial.commercial_accounts SET onboarding_state = 'ready_for_subscription' WHERE id = ?", [$account]);
@@ -162,6 +177,14 @@ final class PaymentConcurrencyTest extends TestCase
     private function provider(string $suffix): string
     {
         $id = $this->connection->fetchOne("INSERT INTO commercial.payment_provider_accounts (provider_code, external_account_id, secret_ref) VALUES (?, ?, ?) RETURNING id", ['race-' . $suffix . '-' . bin2hex(random_bytes(4)), 'merchant-' . $suffix, 'payments/race/' . $suffix]);
+        self::assertIsString($id);
+
+        return $id;
+    }
+
+    private function yooKassaProvider(string $suffix): string
+    {
+        $id = $this->connection->fetchOne("INSERT INTO commercial.payment_provider_accounts (provider_code, external_account_id, secret_ref, receipt_mode, receipt_vat_code, receipt_payment_subject, receipt_payment_mode) VALUES ('yookassa', ?, 'env:YOOKASSA_SECRET_KEY', 'yookassa', 1, 'service', 'full_payment') RETURNING id", ['race-shop-' . $suffix . '-' . bin2hex(random_bytes(4))]);
         self::assertIsString($id);
 
         return $id;

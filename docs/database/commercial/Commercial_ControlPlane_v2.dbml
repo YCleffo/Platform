@@ -1,6 +1,6 @@
 Project Commercial_ControlPlane_v2 {
   database_type: 'PostgreSQL'
-  Note: '''Current target model for the separate platform_commercial database. Tables marked through Phase 3.7 are implemented by Control Plane migrations; Planned tables describe later phases only. Diary/Core is a different database. Control User is not Diary User; Commercial Account is not Diary Organization; Control Plane Auth is not Diary Auth. No tenant_id is added to frozen Core.'''
+  Note: '''Current target model for the separate platform_commercial database. Tables marked through Phase 3.8 are implemented by Control Plane migrations; Planned tables describe later phases only. Diary/Core is a different database. Control User is not Diary User; Commercial Account is not Diary Organization; Control Plane Auth is not Diary Auth. No tenant_id is added to frozen Core.'''
 }
 
 // Phase 1 + Phase 2: central identity and customers.
@@ -427,10 +427,14 @@ Table commercial.payment_provider_accounts {
   provider_code varchar(120) [not null]
   external_account_id varchar(200)
   secret_ref varchar(300) [not null, note: 'Secret-manager reference only; never a credential']
+  receipt_mode varchar(24) [not null, default: 'disabled', note: 'disabled/yookassa']
+  receipt_vat_code smallint
+  receipt_payment_subject varchar(40)
+  receipt_payment_mode varchar(40)
   status varchar(16) [not null, default: 'active', note: 'active/disabled']
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
-  Note: 'Phase 3.6. Provider identity is immutable and rows cannot be deleted.'
+  Note: 'Phase 3.8. Provider identity is immutable; fiscal settings are mutable all-or-nothing configuration; rows cannot be deleted.'
 }
 Table commercial.payments {
   id uuid [pk, default: `uuidv7()`]
@@ -482,7 +486,59 @@ Table commercial.payment_provider_events {
   Note: 'Phase 3.7. Deterministic webhook deduplication and diagnostics hash; terminal processed/ignored events are immutable.'
 }
 
-// Planned after Phase 3.7: stored methods, refunds, receipts, renewal and plan switching.
+// Phase 3.8 immutable local fiscal obligation and invoice-line snapshot.
+Table commercial.receipts {
+  id uuid [pk, default: `uuidv7()`]
+  payment_id uuid [not null, ref: > commercial.payments.id]
+  invoice_id uuid [not null, ref: > commercial.invoices.id]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  payment_attempt_id uuid [not null, ref: > commercial.payment_attempts.id]
+  provider_account_id uuid [not null, ref: > commercial.payment_provider_accounts.id]
+  receipt_type varchar(24) [not null, default: 'payment']
+  status varchar(16) [not null, default: 'pending', note: 'pending/succeeded/canceled']
+  provider_request_key varchar(200) [not null]
+  external_receipt_id varchar(200)
+  amount_minor bigint [not null]
+  currency char(3) [not null]
+  customer_email varchar(320) [not null, note: 'Private invoice snapshot; excluded from public API/events']
+  customer_name varchar(200)
+  vat_code smallint [not null]
+  payment_subject varchar(40) [not null]
+  payment_mode varchar(40) [not null]
+  created_at timestamptz [not null, default: `now()`]
+  last_attempted_at timestamptz
+  completed_at timestamptz
+  updated_at timestamptz [not null, default: `now()`]
+  last_error_code varchar(120)
+  indexes {
+    (payment_id, receipt_type) [unique]
+    (provider_account_id, provider_request_key) [unique]
+    (provider_account_id, external_receipt_id) [unique, note: 'Partial when external_receipt_id is not null']
+    (created_at, id) [note: 'Partial for pending reconciliation']
+  }
+  Note: 'Phase 3.8. One immutable payment receipt obligation; provider ID binds once and only pending-to-terminal transitions are allowed.'
+}
+Table commercial.receipt_items {
+  id uuid [pk, default: `uuidv7()`]
+  receipt_id uuid [not null, ref: > commercial.receipts.id]
+  invoice_line_id uuid [not null, ref: > commercial.invoice_lines.id]
+  description varchar(400) [not null]
+  quantity integer [not null]
+  unit_amount_minor bigint [not null]
+  total_minor bigint [not null]
+  currency char(3) [not null]
+  vat_code smallint [not null]
+  payment_subject varchar(40) [not null]
+  payment_mode varchar(40) [not null]
+  created_at timestamptz [not null, default: `now()`]
+  indexes {
+    (receipt_id, invoice_line_id) [unique]
+    (receipt_id, created_at, id)
+  }
+  Note: 'Phase 3.8. Immutable one-to-one snapshots of all invoice lines; totals must equal the receipt.'
+}
+
+// Planned after Phase 3.8: stored methods, refunds, renewal and plan switching.
 Table commercial.payment_methods {
   id uuid [pk]
   commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
@@ -500,13 +556,4 @@ Table commercial.refunds {
   status varchar(24) [not null]
   created_at timestamptz [not null]
   Note: 'Planned. Nonnegative minor units.'
-}
-Table commercial.receipts {
-  id uuid [pk]
-  payment_id uuid [not null, ref: > commercial.payments.id]
-  external_receipt_id varchar(200)
-  amount_minor bigint [not null]
-  currency char(3) [not null]
-  issued_at timestamptz [not null]
-  Note: 'Planned. Immutable fiscal receipt reference.'
 }

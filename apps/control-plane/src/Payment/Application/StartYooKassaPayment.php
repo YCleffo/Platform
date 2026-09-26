@@ -6,12 +6,14 @@ namespace ControlPlane\Payment\Application;
 
 use ControlPlane\Account\Authorization\AccountAuthorization;
 use ControlPlane\Billing\Domain\Money;
+use ControlPlane\Identity\Domain\EmailPolicy;
 use ControlPlane\Payment\Provider\PaymentProviderException;
 use ControlPlane\Payment\Provider\PaymentProviderGateway;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPayment;
 use ControlPlane\Payment\Provider\ProviderPaymentRequest;
 use ControlPlane\Payment\Provider\YooKassa\YooKassaProviderAccountLocator;
+use ControlPlane\Payment\Provider\YooKassa\YooKassaFiscalPolicy;
 use ControlPlane\Shared\Domain\IdentifierPolicy;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Uid\Uuid;
@@ -101,7 +103,7 @@ final readonly class StartYooKassaPayment
     {
         return $this->connection->transactional(function (Connection $connection) use ($userId, $accountId, $paymentId, $idempotencyKey, $correlationId): array {
             $this->authorization->requirePermission($userId, $accountId, 'billing.manage');
-            $payment = $connection->fetchAssociative('SELECT id, invoice_id, commercial_account_id, amount_minor, currency, status FROM commercial.payments WHERE id = ? AND commercial_account_id = ?', [$paymentId, $accountId]);
+            $payment = $connection->fetchAssociative('SELECT p.id, p.invoice_id, p.commercial_account_id, p.amount_minor, p.currency, p.status, i.bill_to_contact_email FROM commercial.payments p JOIN commercial.invoices i ON i.id = p.invoice_id WHERE p.id = ? AND p.commercial_account_id = ?', [$paymentId, $accountId]);
             if ($payment === false) {
                 throw new \DomainException('Payment was not found.');
             }
@@ -115,6 +117,11 @@ final readonly class StartYooKassaPayment
                 throw new \DomainException('YooKassa SBP supports RUB only.');
             }
             $providerAccount = $this->accounts->active();
+            YooKassaFiscalPolicy::validate($providerAccount);
+            if (!is_string($payment['bill_to_contact_email'])) {
+                throw new \DomainException('YooKassa checkout requires invoice customer email.');
+            }
+            EmailPolicy::normalize($payment['bill_to_contact_email']);
             $scope = 'payment.checkout.' . str_replace('-', '', strtolower($paymentId)) . '.yookassa.sbp';
             $hash = hash('sha256', json_encode(['payment_id' => strtolower($paymentId), 'provider' => 'yookassa', 'method' => 'sbp'], JSON_THROW_ON_ERROR));
             $connection->executeQuery('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [$idempotencyKey]);
