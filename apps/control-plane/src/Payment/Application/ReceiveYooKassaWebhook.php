@@ -6,7 +6,9 @@ namespace ControlPlane\Payment\Application;
 
 use ControlPlane\Payment\Provider\PaymentProviderException;
 use ControlPlane\Payment\Provider\PaymentProviderGateway;
+use ControlPlane\Payment\Provider\RefundProviderGateway;
 use ControlPlane\Payment\Provider\YooKassa\YooKassaProviderAccountLocator;
+use ControlPlane\Refund\Application\SubmitYooKassaRefund;
 use ControlPlane\Shared\Domain\IdentifierPolicy;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Uid\Uuid;
@@ -20,6 +22,8 @@ final readonly class ReceiveYooKassaWebhook
         private YooKassaProviderAccountLocator $accounts,
         private PaymentProviderGateway $gateway,
         private ProcessAuthoritativeProviderPayment $processor,
+        private ?RefundProviderGateway $refundGateway = null,
+        private ?SubmitYooKassaRefund $refunds = null,
     ) {
     }
 
@@ -49,13 +53,34 @@ final readonly class ReceiveYooKassaWebhook
         if (in_array($event['status'], ['processed', 'ignored'], true)) {
             return ['status' => (string) $event['status']];
         }
-        if (!in_array($eventType, ['payment.succeeded', 'payment.canceled'], true)) {
+        if (!in_array($eventType, ['payment.succeeded', 'payment.canceled', 'refund.succeeded'], true)) {
             $this->finish((string) $event['id'], 'ignored', null);
 
             return ['status' => 'ignored'];
         }
 
         try {
+            if ($eventType === 'refund.succeeded') {
+                if ($this->refundGateway === null || $this->refunds === null) {
+                    throw new \DomainException('Refund webhook processing is unavailable.');
+                }
+                $providerRefund = $this->refundGateway->getRefund($account, $providerObjectId);
+                if ($providerRefund->status === 'pending') {
+                    throw PaymentProviderException::uncertain('provider_state_not_final');
+                }
+                $refundId = $providerRefund->localRefundId;
+                if ($refundId === null) {
+                    $candidate = $this->connection->fetchOne('SELECT id FROM commercial.refunds WHERE provider_account_id = ? AND provider_refund_id = ?', [$account->id, $providerRefund->id]);
+                    $refundId = is_string($candidate) ? $candidate : null;
+                }
+                if ($refundId === null) {
+                    throw new \DomainException('Provider refund cannot be linked to local state.');
+                }
+                $this->refunds->processAuthoritative($refundId, $providerRefund, $correlationId);
+                $this->finish((string) $event['id'], 'processed', null);
+
+                return ['status' => 'processed'];
+            }
             $providerPayment = $this->gateway->getPayment($account, $providerObjectId);
             if (in_array($providerPayment->status, ['pending', 'waiting_for_capture'], true)) {
                 throw PaymentProviderException::uncertain('provider_state_not_final');

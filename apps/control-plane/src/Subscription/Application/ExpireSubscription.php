@@ -9,11 +9,14 @@ use Symfony\Component\Uid\Uuid;
 
 final readonly class ExpireSubscription
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private Connection $connection, private ?AdvanceSubscriptionPeriod $advancement = null, private int $graceSeconds = 0)
     {
+        if ($graceSeconds < 0 || $graceSeconds > 604800) {
+            throw new \InvalidArgumentException('Renewal settlement grace must be between 0 and 604800 seconds.');
+        }
     }
 
-    /** @return array{id: string, status: 'expired'} */
+    /** @return array{id: string, status: 'expired'|'active'} */
     public function expire(string $accountId, string $subscriptionId, \DateTimeImmutable $effectiveInstant, string $correlationId): array
     {
         if (!Uuid::isValid($accountId) || !Uuid::isValid($subscriptionId) || !Uuid::isValid($correlationId)) {
@@ -40,11 +43,11 @@ final readonly class ExpireSubscription
             $rows = $connection->fetchAllAssociative(sprintf(<<<'SQL'
 SELECT id, commercial_account_id, status, current_period_end
 FROM commercial.subscriptions
-WHERE status = 'active' AND current_period_end <= ?::timestamptz
+WHERE status = 'active' AND current_period_end + (? * interval '1 second') <= ?::timestamptz
 ORDER BY current_period_end, id
 LIMIT %d
 FOR UPDATE SKIP LOCKED
-SQL, $batchSize), [$this->timestamp($effectiveInstant)]);
+SQL, $batchSize), [$this->graceSeconds, $this->timestamp($effectiveInstant)]);
 
             foreach ($rows as $subscription) {
                 $this->expireLocked($connection, $subscription, $effectiveInstant, $correlationId);
@@ -56,7 +59,7 @@ SQL, $batchSize), [$this->timestamp($effectiveInstant)]);
 
     /**
      * @param array<string, mixed> $subscription
-     * @return array{id: string, status: 'expired'}
+     * @return array{id: string, status: 'expired'|'active'}
      */
     private function expireLocked(Connection $connection, array $subscription, \DateTimeImmutable $effectiveInstant, string $correlationId): array
     {
@@ -73,8 +76,15 @@ SQL, $batchSize), [$this->timestamp($effectiveInstant)]);
             throw new \LogicException('Active subscription period is invalid.');
         }
         $periodEnd = new \DateTimeImmutable($subscription['current_period_end']);
-        if ($periodEnd > $effectiveInstant) {
+        if ($periodEnd->modify(sprintf('+%d seconds', $this->graceSeconds)) > $effectiveInstant) {
             throw new \DomainException('Subscription has not reached its current period end.');
+        }
+
+        $paidRenewal = $connection->fetchOne("SELECT id FROM commercial.invoices WHERE subscription_id = ? AND billing_reason = 'subscription_renewal' AND status = 'paid' AND service_period_start = ?::timestamptz FOR UPDATE", [$subscription['id'], $subscription['current_period_end']]);
+        if (is_string($paidRenewal) && $this->advancement !== null) {
+            $advanced = $this->advancement->advanceInTransaction($connection, $subscription['commercial_account_id'], $subscription['id'], $effectiveInstant, $correlationId);
+
+            return ['id' => $advanced['id'], 'status' => 'active'];
         }
 
         $connection->executeStatement("UPDATE commercial.subscriptions SET status = 'expired', updated_at = now() WHERE id = ?", [$subscription['id']]);
@@ -84,6 +94,7 @@ SQL, $batchSize), [$this->timestamp($effectiveInstant)]);
         }
         $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, 'subscription.expired', 'subscription', ?, ?, 'success')", [$subscription['commercial_account_id'], $subscription['id'], $correlationId]);
         $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('subscription.expired', 'subscription', ?, jsonb_build_object('subscription_id', ?::text, 'commercial_account_id', ?::text, 'current_period_end', to_jsonb(?::timestamptz)))", [$subscription['id'], $subscription['id'], $subscription['commercial_account_id'], $this->timestamp($periodEnd)]);
+        $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('subscription.renewal_failed_or_expired', 'subscription', ?, jsonb_build_object('subscription_id', ?::text, 'commercial_account_id', ?::text, 'current_period_end', to_jsonb(?::timestamptz)))", [$subscription['id'], $subscription['id'], $subscription['commercial_account_id'], $this->timestamp($periodEnd)]);
 
         return ['id' => $subscription['id'], 'status' => 'expired'];
     }

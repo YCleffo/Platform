@@ -34,7 +34,7 @@ final readonly class CompletePaymentAttempt
                 throw new \DomainException('Payment attempt was not found.');
             }
             $connection->executeQuery('SELECT id FROM commercial.subscriptions WHERE id = ? FOR UPDATE', [$identity['subscription_id']]);
-            $invoice = $connection->fetchAssociative('SELECT id, subscription_id, commercial_account_id, status, currency, total_minor FROM commercial.invoices WHERE id = ? FOR UPDATE', [$identity['invoice_id']]);
+            $invoice = $connection->fetchAssociative('SELECT id, subscription_id, commercial_account_id, billing_reason, service_period_start, service_period_end, status, currency, total_minor FROM commercial.invoices WHERE id = ? FOR UPDATE', [$identity['invoice_id']]);
             $payment = $connection->fetchAssociative('SELECT id, invoice_id, commercial_account_id, status, currency, amount_minor, created_at, succeeded_at FROM commercial.payments WHERE id = ? FOR UPDATE', [$identity['payment_id']]);
             $attempt = $connection->fetchAssociative('SELECT id, payment_id, provider_payment_id, status, failure_code FROM commercial.payment_attempts WHERE id = ? FOR UPDATE', [$attemptId]);
             if ($invoice === false || $payment === false || $attempt === false || !is_string($payment['id'])) {

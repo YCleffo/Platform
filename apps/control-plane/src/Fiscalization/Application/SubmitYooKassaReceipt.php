@@ -46,7 +46,14 @@ final readonly class SubmitYooKassaReceipt
 
     public function submitForPayment(string $paymentId, string $correlationId): bool
     {
-        $receiptId = $this->connection->fetchOne("SELECT id FROM commercial.receipts WHERE payment_id = ? AND status = 'pending'", [$paymentId]);
+        $receiptId = $this->connection->fetchOne("SELECT id FROM commercial.receipts WHERE payment_id = ? AND receipt_type = 'payment' AND status = 'pending'", [$paymentId]);
+
+        return is_string($receiptId) && $this->submit($receiptId, $correlationId);
+    }
+
+    public function submitForRefund(string $refundId, string $correlationId): bool
+    {
+        $receiptId = $this->connection->fetchOne("SELECT id FROM commercial.receipts WHERE refund_id = ? AND receipt_type = 'refund' AND status = 'pending'", [$refundId]);
 
         return is_string($receiptId) && $this->submit($receiptId, $correlationId);
     }

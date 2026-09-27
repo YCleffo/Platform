@@ -9,6 +9,8 @@
         <env name="APP_ENV" value="test"/>
         <env name="APP_DEBUG" value="0"/>
         <env name="CONTROL_YOOKASSA_RETURN_URL" value="https://platform.example/payments/return"/>
+        <env name="CONTROL_RENEWAL_LEAD_DAYS" value="7"/>
+        <env name="CONTROL_RENEWAL_SETTLEMENT_GRACE_SECONDS" value="900"/>
     </php>
     <testsuites>
         <testsuite name="Unit"><directory>tests/Unit</directory></testsuite>

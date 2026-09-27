@@ -15,6 +15,8 @@ final readonly class FiscalReceiptRequest
         public int $amountMinor,
         public string $currency,
         public array $items,
+        public string $receiptType = 'payment',
+        public ?string $providerRefundId = null,
     ) {
     }
 }

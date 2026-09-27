@@ -618,7 +618,7 @@ tests/
 Symfony Commercial Control Plane (`apps/control-plane`) — отдельное приложение
 на Symfony 7.4/PHP 8.3 с собственной БД `platform_commercial`, схемой
 `commercial` и отдельным Docker network. Yii/Diary DB и Commercial DB не
-разделяют credentials. Phase 3.8 содержит 17 миграций и 37 Commercial таблиц:
+разделяют credentials. Phase 3.9 содержит 19 миграций и 39 Commercial таблиц:
 central Control User, hash-only verification, rotating server-side sessions,
 Commercial Account с атомарным owner membership, billing onboarding и
 published plan catalog, draft/active subscriptions и immutable subscription
@@ -634,7 +634,10 @@ production-интеграция использует YooKassa SBP hosted redirec
 resolution, authoritative webhook verification и bounded reconciliation.
 Fiscalization Core атомарно фиксирует обязательство и immutable receipt items при
 settlement, затем отдельно отправляет чек в YooKassa и сверяет pending receipts
-без отката уже оплаченного invoice. Refunds, renewal и usage-based billing отложены.
+без отката уже оплаченного invoice. Phase 3.9 добавляет renewal invoices,
+атомарный rollover usage periods, full/partial refunds, YooKassa refund
+reconciliation/webhooks и отдельные refund receipts. Plan switching и
+usage-based billing отложены.
 См. `docs/architecture/COMMERCIAL_CONTROL_PLANE.md` и
 `docs/architecture/COMMERCIAL_SECURITY.md`.
 

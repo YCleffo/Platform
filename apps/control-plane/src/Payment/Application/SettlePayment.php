@@ -6,11 +6,12 @@ namespace ControlPlane\Payment\Application;
 
 use ControlPlane\Billing\Domain\Money;
 use ControlPlane\Subscription\Application\ActivateSubscription;
+use ControlPlane\Subscription\Application\AdvanceSubscriptionPeriod;
 use Doctrine\DBAL\Connection;
 
 final readonly class SettlePayment
 {
-    public function __construct(private ActivateSubscription $activation)
+    public function __construct(private ActivateSubscription $activation, private ?AdvanceSubscriptionPeriod $advancement = null)
     {
     }
 
@@ -27,7 +28,8 @@ final readonly class SettlePayment
             }
         }
         if (!is_string($invoice['id'] ?? null) || !is_string($invoice['subscription_id'] ?? null)
-            || !is_string($invoice['commercial_account_id'] ?? null) || !is_string($invoice['currency'] ?? null)) {
+            || !is_string($invoice['commercial_account_id'] ?? null) || !is_string($invoice['currency'] ?? null)
+            || !is_string($invoice['billing_reason'] ?? null)) {
             throw new \LogicException('Invoice settlement identity is unavailable.');
         }
         if ($payment['invoice_id'] !== $invoice['id'] || $payment['commercial_account_id'] !== $invoice['commercial_account_id']
@@ -53,7 +55,18 @@ final readonly class SettlePayment
         $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, 'invoice.paid', 'invoice', ?, ?, 'success')", [$payment['commercial_account_id'], $invoice['id'], $correlationId]);
         $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('payment.succeeded', 'payment', ?, jsonb_build_object('payment_id', ?::text, 'invoice_id', ?::text, 'commercial_account_id', ?::text, 'amount_minor', ?::bigint, 'currency', ?::text))", [$payment['id'], $payment['id'], $invoice['id'], $payment['commercial_account_id'], $payment['amount_minor'], $payment['currency']]);
         $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('invoice.paid', 'invoice', ?, jsonb_build_object('invoice_id', ?::text, 'payment_id', ?::text, 'subscription_id', ?::text, 'commercial_account_id', ?::text))", [$invoice['id'], $invoice['id'], $payment['id'], $invoice['subscription_id'], $payment['commercial_account_id']]);
-        $this->activation->activateInTransaction($connection, $payment['commercial_account_id'], $invoice['subscription_id'], $settlementInstant, $correlationId);
+        if ($invoice['billing_reason'] === 'subscription_create') {
+            $this->activation->activateInTransaction($connection, $payment['commercial_account_id'], $invoice['subscription_id'], $settlementInstant, $correlationId);
+        } elseif ($invoice['billing_reason'] === 'subscription_renewal') {
+            $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('subscription.renewal_paid', 'subscription', ?, jsonb_build_object('subscription_id', ?::text, 'invoice_id', ?::text, 'payment_id', ?::text, 'commercial_account_id', ?::text))", [$invoice['subscription_id'], $invoice['subscription_id'], $invoice['id'], $payment['id'], $payment['commercial_account_id']]);
+            $subscription = $connection->fetchAssociative('SELECT status, current_period_end FROM commercial.subscriptions WHERE id = ? FOR UPDATE', [$invoice['subscription_id']]);
+            if ($subscription !== false && $subscription['status'] === 'active' && is_string($subscription['current_period_end'])
+                && $settlementInstant >= new \DateTimeImmutable($subscription['current_period_end'])) {
+                ($this->advancement ?? new AdvanceSubscriptionPeriod($connection))->advanceInTransaction($connection, $payment['commercial_account_id'], $invoice['subscription_id'], $settlementInstant, $correlationId);
+            }
+        } else {
+            throw new \DomainException('Unsupported invoice billing reason.');
+        }
 
         $payment['status'] = 'succeeded';
         $payment['succeeded_at'] = $settledAt;

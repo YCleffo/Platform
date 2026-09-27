@@ -38,6 +38,21 @@ services:
     ControlPlane\Payment\Provider\FiscalReceiptProviderGateway:
         alias: ControlPlane\Payment\Provider\YooKassa\YooKassaReceiptGateway
 
+    ControlPlane\Payment\Provider\RefundProviderGateway:
+        alias: ControlPlane\Payment\Provider\YooKassa\YooKassaRefundGateway
+
     ControlPlane\Payment\Provider\YooKassa\YooKassaGateway:
         arguments:
             $returnUrl: '%env(CONTROL_YOOKASSA_RETURN_URL)%'
+
+    ControlPlane\Subscription\Application\ExpireSubscription:
+        arguments:
+            $graceSeconds: '%env(int:CONTROL_RENEWAL_SETTLEMENT_GRACE_SECONDS)%'
+
+    ControlPlane\Infrastructure\Console\PrepareRenewalsCommand:
+        arguments:
+            $leadDays: '%env(int:CONTROL_RENEWAL_LEAD_DAYS)%'
+
+    ControlPlane\Infrastructure\Console\CheckCommercialDatabaseCommand:
+        arguments:
+            $databaseUrl: '%env(resolve:CONTROL_DATABASE_URL)%'

@@ -24,7 +24,7 @@ final readonly class GetInvoice
         $this->authorization->requirePermission($controlUserId, $commercialAccountId, 'account.read');
         $invoice = $this->connection->fetchAssociative(<<<'SQL'
 SELECT id, subscription_id, billing_profile_id, billing_reason, status, currency, total_minor,
-       issued_at, paid_at, voided_at, created_at,
+       service_period_start, service_period_end, issued_at, paid_at, voided_at, created_at,
        bill_to_legal_name, bill_to_country_code, bill_to_contact_name,
        bill_to_contact_email, bill_to_tax_identifier, bill_to_address::text AS bill_to_address
 FROM commercial.invoices
@@ -46,6 +46,8 @@ SQL, [$invoiceId]);
             'subscription_id' => $invoice['subscription_id'],
             'billing_profile_id' => $invoice['billing_profile_id'],
             'billing_reason' => $invoice['billing_reason'],
+            'service_period_start' => $invoice['service_period_start'],
+            'service_period_end' => $invoice['service_period_end'],
             'status' => $invoice['status'],
             'currency' => $invoice['currency'],
             'total_minor' => Money::nonNegativeBigInt($invoice['total_minor']),

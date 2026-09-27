@@ -19,7 +19,7 @@ final readonly class ApplyAuthoritativeReceipt
         $this->validate($provider, $expected);
 
         return $this->connection->transactional(function (Connection $connection) use ($receiptId, $provider, $correlationId): bool {
-            $row = $connection->fetchAssociative('SELECT id, commercial_account_id, external_receipt_id, status FROM commercial.receipts WHERE id = ? FOR UPDATE', [$receiptId]);
+            $row = $connection->fetchAssociative('SELECT id, commercial_account_id, receipt_type, external_receipt_id, status FROM commercial.receipts WHERE id = ? FOR UPDATE', [$receiptId]);
             if ($row === false) {
                 throw new \DomainException('Receipt was not found.');
             }
@@ -40,7 +40,7 @@ final readonly class ApplyAuthoritativeReceipt
             $completed = ($provider->completedAt ?? new \DateTimeImmutable('now'))->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.uP');
             $error = $provider->status === 'canceled' ? 'provider_receipt_canceled' : null;
             $connection->executeStatement('UPDATE commercial.receipts SET status = ?, completed_at = ?::timestamptz, last_error_code = ?, updated_at = now() WHERE id = ?', [$provider->status, $completed, $error, $receiptId]);
-            $event = 'receipt.' . $provider->status;
+            $event = $row['receipt_type'] === 'refund' ? 'receipt.refund_' . $provider->status : 'receipt.' . $provider->status;
             $outcome = $provider->status === 'succeeded' ? 'success' : 'failure';
             $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, ?, 'receipt', ?, ?, ?)", [$row['commercial_account_id'], $event, $receiptId, $correlationId, $outcome]);
             $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES (?, 'receipt', ?, jsonb_build_object('receipt_id', ?::text, 'status', ?::text))", [$event, $receiptId, $receiptId, $provider->status]);
@@ -51,7 +51,10 @@ final readonly class ApplyAuthoritativeReceipt
 
     private function validate(ProviderReceipt $actual, FiscalReceiptRequest $expected): void
     {
-        if ($actual->type !== 'payment' || $actual->providerPaymentId !== $expected->providerPaymentId || $actual->amountMinor !== $expected->amountMinor || $actual->currency !== $expected->currency || count($actual->items) !== count($expected->items)) {
+        $referenceMatches = $expected->receiptType === 'payment'
+            ? $actual->providerPaymentId === $expected->providerPaymentId
+            : $actual->providerRefundId === $expected->providerRefundId;
+        if ($actual->type !== $expected->receiptType || !$referenceMatches || $actual->amountMinor !== $expected->amountMinor || $actual->currency !== $expected->currency || count($actual->items) !== count($expected->items)) {
             throw new \DomainException('Provider receipt does not match the immutable local snapshot.');
         }
         foreach ($expected->items as $index => $item) {

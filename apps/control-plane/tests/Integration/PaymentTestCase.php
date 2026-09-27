@@ -22,6 +22,7 @@ use ControlPlane\Payment\Application\StartYooKassaPayment;
 use ControlPlane\Payment\Provider\PaymentProviderGateway;
 use ControlPlane\Payment\Provider\FiscalReceiptProviderGateway;
 use ControlPlane\Payment\Provider\YooKassa\YooKassaProviderAccountLocator;
+use ControlPlane\Subscription\Application\AdvanceSubscriptionPeriod;
 use ControlPlane\Tests\Support\FakeFiscalReceiptProviderGateway;
 
 abstract class PaymentTestCase extends InvoiceTestCase
@@ -127,6 +128,6 @@ abstract class PaymentTestCase extends InvoiceTestCase
 
     protected function settlement(): SettlePayment
     {
-        return new SettlePayment($this->activator());
+        return new SettlePayment($this->activator(), new AdvanceSubscriptionPeriod($this->connection));
     }
 }

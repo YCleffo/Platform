@@ -35,7 +35,7 @@ final readonly class CreatePayment
             if ($connection->fetchOne('SELECT id FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$subscriptionId, $commercialAccountId]) === false) {
                 throw new \DomainException('Invoice subscription was not found.');
             }
-            $invoice = $connection->fetchAssociative('SELECT id, subscription_id, commercial_account_id, status, currency, total_minor FROM commercial.invoices WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$invoiceId, $commercialAccountId]);
+            $invoice = $connection->fetchAssociative('SELECT id, subscription_id, commercial_account_id, billing_reason, service_period_start, service_period_end, status, currency, total_minor FROM commercial.invoices WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$invoiceId, $commercialAccountId]);
             if ($invoice === false) {
                 throw new \DomainException('Invoice was not found.');
             }

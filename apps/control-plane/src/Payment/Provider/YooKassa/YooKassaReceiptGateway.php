@@ -42,9 +42,12 @@ final readonly class YooKassaReceiptGateway implements FiscalReceiptProviderGate
         if ($total !== $request->amountMinor) {
             throw new \DomainException('YooKassa receipt total is inconsistent.');
         }
+        if (!in_array($request->receiptType, ['payment', 'refund'], true)
+            || ($request->receiptType === 'refund' && !is_string($request->providerRefundId))) {
+            throw new \DomainException('Unsupported YooKassa receipt type.');
+        }
         $payload = [
-            'type' => 'payment',
-            'payment_id' => IdentifierPolicy::opaqueKey($request->providerPaymentId),
+            'type' => $request->receiptType,
             'send' => true,
             'customer' => array_filter(['email' => $request->customerEmail, 'full_name' => $request->customerName], static fn (mixed $value): bool => $value !== null),
             'items' => array_map(static fn (FiscalReceiptItem $item): array => [
@@ -60,6 +63,11 @@ final readonly class YooKassaReceiptGateway implements FiscalReceiptProviderGate
                 'amount' => ['value' => self::formatMinor($request->amountMinor), 'currency' => $request->currency],
             ]],
         ];
+        if ($request->receiptType === 'payment') {
+            $payload['payment_id'] = IdentifierPolicy::opaqueKey($request->providerPaymentId);
+        } else {
+            $payload['refund_id'] = IdentifierPolicy::opaqueKey((string) $request->providerRefundId);
+        }
 
         return $this->request('POST', self::API_BASE, $account, [
             'headers' => ['Idempotence-Key' => IdentifierPolicy::opaqueKey($request->providerRequestKey)],
@@ -115,14 +123,18 @@ final readonly class YooKassaReceiptGateway implements FiscalReceiptProviderGate
 
     private function parse(mixed $data): ProviderReceipt
     {
-        if (!is_array($data) || array_is_list($data) || !is_string($data['id'] ?? null) || ($data['type'] ?? null) !== 'payment'
-            || !is_string($data['payment_id'] ?? null) || !is_string($data['status'] ?? null)
+        if (!is_array($data) || array_is_list($data) || !is_string($data['id'] ?? null) || !in_array($data['type'] ?? null, ['payment', 'refund'], true)
+            || !is_string($data['status'] ?? null)
             || !is_array($data['items'] ?? null) || !array_is_list($data['items'])
             || !is_array($data['settlements'] ?? null) || !array_is_list($data['settlements']) || count($data['settlements']) !== 1) {
             throw new \UnexpectedValueException('Invalid provider receipt response.');
         }
         if (!in_array($data['status'], ['pending', 'succeeded', 'canceled'], true)) {
             throw new \UnexpectedValueException('Unsupported provider receipt status.');
+        }
+        $type = $data['type'];
+        if (($type === 'payment' && !is_string($data['payment_id'] ?? null)) || ($type === 'refund' && !is_string($data['refund_id'] ?? null))) {
+            throw new \UnexpectedValueException('Invalid provider receipt source reference.');
         }
         $items = [];
         foreach ($data['items'] as $item) {
@@ -151,13 +163,14 @@ final readonly class YooKassaReceiptGateway implements FiscalReceiptProviderGate
 
         return new ProviderReceipt(
             IdentifierPolicy::opaqueKey($data['id']),
-            'payment',
-            IdentifierPolicy::opaqueKey($data['payment_id']),
+            $type,
+            $type === 'payment' ? IdentifierPolicy::opaqueKey($data['payment_id']) : '',
             $data['status'],
             self::parseMinor($settlement['amount']['value']),
             $settlement['amount']['currency'],
             $items,
             $completedAt,
+            $type === 'refund' ? IdentifierPolicy::opaqueKey($data['refund_id']) : null,
         );
     }
 

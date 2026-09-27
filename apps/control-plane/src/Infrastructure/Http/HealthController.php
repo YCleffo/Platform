@@ -20,6 +20,9 @@ SELECT to_regclass('commercial.control_users') IS NOT NULL
    AND to_regclass('commercial.control_sessions') IS NOT NULL
    AND to_regclass('commercial.control_session_refresh_history') IS NOT NULL
    AND to_regclass('commercial.rate_limit_counters') IS NOT NULL
+   AND to_regclass('commercial.refunds') IS NOT NULL
+   AND to_regclass('commercial.refund_items') IS NOT NULL
+   AND to_regclass('commercial.receipts') IS NOT NULL
 SQL);
         } catch (\Throwable) {
             $ready = false;

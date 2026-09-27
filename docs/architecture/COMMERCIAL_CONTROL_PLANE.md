@@ -1,4 +1,4 @@
-# Commercial Control Plane — Phase 3.8 Fiscalization Core
+# Commercial Control Plane — Phase 3.9 Renewals and Refunds
 
 `apps/control-plane` is a separate Symfony 7.4/PHP 8.3 application with its
 own `platform_commercial` PostgreSQL database and `commercial` schema. It does
@@ -17,7 +17,7 @@ does not create a tenant database.
 
 ## Implemented schema
 
-Seventeen ordered Doctrine migrations create exactly 37 `commercial.*` tables.
+Nineteen ordered Doctrine migrations create exactly 39 `commercial.*` tables.
 The 21 Phase 1 tables remain unchanged. Phase 2 adds:
 
 - `control_user_email_verifications` — one-time, expiring, hash-only tokens;
@@ -112,12 +112,28 @@ Customer email/name come from the issued invoice snapshot and are excluded
 from the receipt read API, audit and outbox payloads. Zero payments do not
 create receipts.
 
+Phase 3.9 adds immutable `subscription_renewal` invoice periods and the bounded
+`control:billing:prepare-renewals` / `control:subscriptions:advance` jobs. Early
+payment funds the next period without changing the active period; rollover
+atomically closes the old usage period and opens a zeroed one. Expiration waits
+for the configurable settlement grace and serializes on the subscription row.
+
+The same phase adds `refunds` and `refund_items`. Refund money is derived from
+validated invoice-line allocations, while payment locking prevents concurrent
+over-refund. YooKassa create/get calls reuse a stable provider idempotency key;
+webhooks remain hash-only notifications followed by authoritative GET. A
+succeeded refund creates a separate immutable `refund` receipt obligation in
+the settlement transaction and the existing receipt reconciler delivers it.
+
 The current schema, including clearly marked future entities, is
 `docs/database/commercial/Commercial_ControlPlane_v2.dbml`. Effective
 entitlements are derived at read time from the current active subscription,
 its valid items and immutable plan features. There is no mutable
 `commercial.entitlements` table. Usage is a separate mutable read/write model.
-Invoice is not payment; refunds, renewals and usage-based charging remain
+Phase 3.9 adds immutable renewal service periods, bounded preparation and
+rollover commands, settlement grace, provider-neutral full/partial refunds,
+YooKassa refund reconciliation/webhooks, and separate refund receipts. Invoice
+remains distinct from payment; plan switching and usage-based charging remain
 future work.
 
 ## HTTP contract
@@ -146,7 +162,11 @@ reads through `GET /api/control/accounts/{accountId}/payments/{paymentId}`,
 reads sanitized fiscal state through
 `GET /api/control/accounts/{accountId}/payments/{paymentId}/receipt`, and
 starts hosted SBP checkout through
-`POST /api/control/accounts/{accountId}/payments/{paymentId}/checkout`. YooKassa
+`POST /api/control/accounts/{accountId}/payments/{paymentId}/checkout`.
+Refunds use item allocations through
+`POST /api/control/accounts/{accountId}/payments/{paymentId}/refunds`, with
+history at the matching `GET` endpoint and
+`GET /api/control/accounts/{accountId}/refunds/{refundId}`. YooKassa
 notifications enter through the Control-User-independent machine endpoint
 `POST /api/control/webhooks/yookassa`; authoritative provider re-fetch is its
 authentication boundary. The endpoint does not trust forwarded IP headers or
@@ -190,8 +210,8 @@ directories.
 
 ## Deferred
 
-Renewal, plan switching, additional payment providers and methods, bank cards,
-saved/recurring credentials, refunds and refund receipts,
+Plan switching, additional payment providers and methods, bank cards,
+saved/recurring credentials,
 usage-based and overage billing, service-to-service usage ingestion, signed
 entitlement issuance, tenant DB creation, provisioning, DNS/TLS, custom
 domains, On-Prem activation, MFA and updater execution remain future phases.

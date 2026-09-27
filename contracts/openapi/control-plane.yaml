@@ -1,0 +1,294 @@
+openapi: 3.1.0
+info:
+  title: Platform Commercial Control Plane API
+  version: 3.9.0
+  description: Customer-facing Commercial API. Provider secrets, request keys, raw webhooks and fiscal customer PII are never returned.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      operationId: health
+      responses:
+        '200': {description: Ready, content: {application/json: {schema: {$ref: '#/components/schemas/Health'}}}}
+        '503': {description: Not ready, content: {application/json: {schema: {$ref: '#/components/schemas/Health'}}}}
+  /api/control/auth/register:
+    post:
+      security: []
+      operationId: register
+      requestBody: {$ref: '#/components/requestBodies/EmailPassword'}
+      responses: {'201': {$ref: '#/components/responses/Object'}, '422': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/verification/resend:
+    post:
+      security: []
+      operationId: resendVerification
+      requestBody: {$ref: '#/components/requestBodies/Email'}
+      responses: {'202': {$ref: '#/components/responses/Object'}, '429': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/verify:
+    post:
+      security: []
+      operationId: verifyEmail
+      requestBody: {$ref: '#/components/requestBodies/Token'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '422': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/login:
+    post:
+      security: []
+      operationId: login
+      requestBody: {$ref: '#/components/requestBodies/EmailPassword'}
+      responses: {'200': {$ref: '#/components/responses/Tokens'}, '401': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/refresh:
+    post:
+      security: []
+      operationId: refresh
+      requestBody: {$ref: '#/components/requestBodies/RefreshToken'}
+      responses: {'200': {$ref: '#/components/responses/Tokens'}, '401': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/logout:
+    post:
+      operationId: logout
+      responses: {'204': {description: Logged out}, '401': {$ref: '#/components/responses/Error'}}
+  /api/control/catalog/plans:
+    get:
+      security: []
+      operationId: listPlans
+      responses: {'200': {$ref: '#/components/responses/Object'}}
+  /api/control/accounts:
+    post:
+      operationId: createAccount
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'201': {$ref: '#/components/responses/Object'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    get:
+      operationId: getAccount
+      responses: {'200': {$ref: '#/components/responses/Object'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/memberships:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    post:
+      operationId: addMembership
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'201': {$ref: '#/components/responses/Object'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/memberships/{membershipId}:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/MembershipId'}]
+    patch:
+      operationId: changeMembershipRole
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'204': {description: Updated}, '409': {$ref: '#/components/responses/Error'}}
+    delete:
+      operationId: removeMembership
+      responses: {'204': {description: Removed}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/billing-profile:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    put:
+      operationId: saveBillingProfile
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '422': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/onboarding/catalog-reviewed:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    post:
+      operationId: markCatalogReviewed
+      responses: {'204': {description: Updated}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/subscriptions:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    post:
+      operationId: createSubscription
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'201': {$ref: '#/components/responses/Subscription'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/subscriptions/{subscriptionId}:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/SubscriptionId'}]
+    get:
+      operationId: getSubscription
+      responses: {'200': {$ref: '#/components/responses/Subscription'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/cancel:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/SubscriptionId'}]
+    post:
+      operationId: cancelSubscription
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      responses: {'200': {$ref: '#/components/responses/Subscription'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/invoice:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/SubscriptionId'}]
+    post:
+      operationId: issueInitialInvoice
+      description: Issues only a subscription_create invoice. Renewal invoices are prepared by the bounded internal scheduler.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      responses: {'201': {$ref: '#/components/responses/Invoice'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/invoices/{invoiceId}:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/InvoiceId'}]
+    get:
+      operationId: getInvoice
+      responses: {'200': {$ref: '#/components/responses/Invoice'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/invoices/{invoiceId}/payment:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/InvoiceId'}]
+    post:
+      operationId: createPayment
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      responses: {'201': {$ref: '#/components/responses/Payment'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/payments/{paymentId}:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/PaymentId'}]
+    get:
+      operationId: getPayment
+      responses: {'200': {$ref: '#/components/responses/Payment'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/payments/{paymentId}/checkout:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/PaymentId'}]
+    post:
+      operationId: startCheckout
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {$ref: '#/components/requestBodies/Checkout'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '503': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/payments/{paymentId}/receipt:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/PaymentId'}]
+    get:
+      operationId: getPaymentReceipt
+      responses: {'200': {$ref: '#/components/responses/Receipt'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/payments/{paymentId}/refunds:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/PaymentId'}]
+    post:
+      operationId: createRefund
+      description: Requires billing.manage. Same Idempotency-Key and payload returns the same refund; a changed payload conflicts. Provider idempotency is separate and never exposed.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/CreateRefund'}}}
+      responses: {'201': {$ref: '#/components/responses/Refund'}, '409': {$ref: '#/components/responses/Error'}, '503': {$ref: '#/components/responses/Error'}}
+    get:
+      operationId: listPaymentRefunds
+      responses:
+        '200':
+          description: Refund history
+          content: {application/json: {schema: {type: object, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/Refund'}}}}}}
+  /api/control/accounts/{accountId}/refunds/{refundId}:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/RefundId'}]
+    get:
+      operationId: getRefund
+      responses: {'200': {$ref: '#/components/responses/Refund'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/entitlements:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    get: {operationId: getEntitlements, responses: {'200': {$ref: '#/components/responses/Object'}}}
+  /api/control/accounts/{accountId}/usage:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    get: {operationId: getUsage, responses: {'200': {$ref: '#/components/responses/Object'}}}
+  /api/control/webhooks/yookassa:
+    post:
+      security: []
+      operationId: receiveYooKassaWebhook
+      description: Hash-only inbox. Notification data is never financial proof; payment/refund state is authoritatively re-fetched.
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '503': {$ref: '#/components/responses/Error'}}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer}
+  parameters:
+    IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 1, maxLength: 200}}
+    AccountId: {name: accountId, in: path, required: true, schema: {type: string, format: uuid}}
+    MembershipId: {name: membershipId, in: path, required: true, schema: {type: string, format: uuid}}
+    SubscriptionId: {name: subscriptionId, in: path, required: true, schema: {type: string, format: uuid}}
+    InvoiceId: {name: invoiceId, in: path, required: true, schema: {type: string, format: uuid}}
+    PaymentId: {name: paymentId, in: path, required: true, schema: {type: string, format: uuid}}
+    RefundId: {name: refundId, in: path, required: true, schema: {type: string, format: uuid}}
+  requestBodies:
+    Object: {required: true, content: {application/json: {schema: {type: object}}}}
+    Email: {required: true, content: {application/json: {schema: {type: object, required: [email], properties: {email: {type: string, format: email}}}}}}
+    EmailPassword: {required: true, content: {application/json: {schema: {type: object, required: [email, password], properties: {email: {type: string, format: email}, password: {type: string, format: password}}}}}}
+    Token: {required: true, content: {application/json: {schema: {type: object, required: [token], properties: {token: {type: string}}}}}}
+    RefreshToken: {required: true, content: {application/json: {schema: {type: object, required: [refresh_token], properties: {refresh_token: {type: string}}}}}}
+    Checkout: {required: true, content: {application/json: {schema: {type: object, required: [provider, method], properties: {provider: {const: yookassa}, method: {const: sbp}}}}}}
+  responses:
+    Object: {description: Success, content: {application/json: {schema: {type: object}}}}
+    Tokens: {description: Session tokens, content: {application/json: {schema: {type: object, required: [access_token, refresh_token], properties: {access_token: {type: string}, refresh_token: {type: string}}}}}}
+    Subscription: {description: Subscription, content: {application/json: {schema: {$ref: '#/components/schemas/Subscription'}}}}
+    Invoice: {description: Invoice, content: {application/json: {schema: {$ref: '#/components/schemas/Invoice'}}}}
+    Payment: {description: Payment, content: {application/json: {schema: {$ref: '#/components/schemas/Payment'}}}}
+    Refund: {description: Refund, content: {application/json: {schema: {$ref: '#/components/schemas/Refund'}}}}
+    Receipt: {description: Sanitized fiscal receipt, content: {application/json: {schema: {$ref: '#/components/schemas/Receipt'}}}}
+    Error: {description: Sanitized error, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+  schemas:
+    Health: {type: object, additionalProperties: false, required: [status], properties: {status: {type: string, enum: [ok, not_ready]}}}
+    Error: {type: object, required: [error], properties: {error: {type: object, required: [code, message], properties: {code: {type: string}, message: {type: string}}}}}
+    Subscription:
+      type: object
+      required: [id, status, renewal_required]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string, enum: [draft, active, cancelled, expired]}
+        current_period_start: {type: [string, 'null'], format: date-time}
+        current_period_end: {type: [string, 'null'], format: date-time}
+        renewal_required: {type: boolean}
+        renewal: {oneOf: [{$ref: '#/components/schemas/RenewalState'}, {type: 'null'}]}
+    RenewalState:
+      type: object
+      properties:
+        invoice_id: {type: string, format: uuid}
+        invoice_status: {type: string, enum: [issued, paid]}
+        payment_id: {type: [string, 'null'], format: uuid}
+        payment_status: {type: [string, 'null'], enum: [pending, succeeded, cancelled, null]}
+        service_period_start: {type: string, format: date-time}
+        service_period_end: {type: string, format: date-time}
+    Invoice:
+      type: object
+      required: [id, subscription_id, billing_reason, status, currency, total_minor]
+      properties:
+        id: {type: string, format: uuid}
+        subscription_id: {type: string, format: uuid}
+        billing_reason: {type: string, enum: [subscription_create, subscription_renewal]}
+        status: {type: string, enum: [issued, paid, void]}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        total_minor: {type: integer, minimum: 0}
+        service_period_start: {type: [string, 'null'], format: date-time}
+        service_period_end: {type: [string, 'null'], format: date-time}
+    Payment:
+      type: object
+      required: [id, invoice_id, status, currency, amount_minor, refunded_minor, refundable_minor]
+      properties:
+        id: {type: string, format: uuid}
+        invoice_id: {type: string, format: uuid}
+        status: {type: string, enum: [pending, succeeded, cancelled]}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        amount_minor: {type: integer, minimum: 0}
+        refunded_minor: {type: integer, minimum: 0}
+        refundable_minor: {type: integer, minimum: 0}
+    CreateRefund:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items: {type: array, minItems: 1, items: {$ref: '#/components/schemas/RefundItemInput'}}
+    RefundItemInput:
+      type: object
+      additionalProperties: false
+      required: [invoice_line_id, quantity, unit_amount_minor]
+      properties:
+        invoice_line_id: {type: string, format: uuid}
+        quantity: {type: integer, minimum: 1}
+        unit_amount_minor: {type: integer, minimum: 0}
+    Refund:
+      type: object
+      required: [id, payment_id, amount_minor, currency, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        payment_id: {type: string, format: uuid}
+        amount_minor: {type: integer, minimum: 1}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        status: {type: string, enum: [pending, succeeded, canceled]}
+        provider_refund_id: {type: [string, 'null'], description: Non-secret provider reference}
+        created_at: {type: string, format: date-time}
+        completed_at: {type: [string, 'null'], format: date-time}
+        items: {type: array, items: {$ref: '#/components/schemas/RefundItem'}}
+        receipt: {oneOf: [{$ref: '#/components/schemas/Receipt'}, {type: 'null'}]}
+    RefundItem:
+      allOf:
+        - {$ref: '#/components/schemas/RefundItemInput'}
+        - {type: object, properties: {description: {type: string}, total_minor: {type: integer, minimum: 1}, currency: {type: string}, vat_code: {type: integer}, payment_subject: {type: string}, payment_mode: {type: string}}}
+    Receipt:
+      type: object
+      required: [id, type, status, amount_minor, currency]
+      properties:
+        id: {type: string, format: uuid}
+        type: {type: string, enum: [payment, refund]}
+        status: {type: string, enum: [pending, succeeded, canceled]}
+        external_receipt_id: {type: [string, 'null']}
+        amount_minor: {type: integer, minimum: 1}
+        currency: {type: string}

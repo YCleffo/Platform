@@ -28,7 +28,7 @@ final class FakeFiscalReceiptProviderGateway implements FiscalReceiptProviderGat
             $this->createFailure = null;
             throw $failure;
         }
-        $receipt = new ProviderReceipt('yr-' . str_replace('-', '', $request->providerRequestKey), 'payment', $request->providerPaymentId, 'pending', $request->amountMinor, $request->currency, $request->items, null);
+        $receipt = new ProviderReceipt('yr-' . str_replace('-', '', $request->providerRequestKey), $request->receiptType, $request->providerPaymentId, 'pending', $request->amountMinor, $request->currency, $request->items, null, $request->providerRefundId);
         $this->receipts[$receipt->id] = $receipt;
 
         return $receipt;

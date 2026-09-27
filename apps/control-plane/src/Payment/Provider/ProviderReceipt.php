@@ -16,6 +16,7 @@ final readonly class ProviderReceipt
         public string $currency,
         public array $items,
         public ?\DateTimeImmutable $completedAt,
+        public ?string $providerRefundId = null,
     ) {
     }
 }

@@ -387,7 +387,9 @@ Table commercial.invoices {
   commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
   subscription_id uuid [not null, ref: > commercial.subscriptions.id]
   billing_profile_id uuid [not null, ref: > commercial.billing_profiles.id]
-  billing_reason varchar(40) [not null, note: 'subscription_create only']
+  billing_reason varchar(40) [not null, note: 'subscription_create/subscription_renewal']
+  service_period_start timestamptz [note: 'Required only for renewal invoices']
+  service_period_end timestamptz [note: 'Required only for renewal invoices; greater than start']
   currency char(3) [not null]
   total_minor bigint [not null, default: 0, note: 'Nonnegative sum of line totals']
   status varchar(16) [not null, default: 'draft', note: 'draft/issued/paid/void; paid reserved for Payment Core']
@@ -402,7 +404,7 @@ Table commercial.invoices {
   paid_at timestamptz
   voided_at timestamptz
   updated_at timestamptz [not null, default: `now()`]
-  Note: 'Phase 3.5. Immutable after issuance; billing-profile fields are historical snapshots. One current issued/paid initial invoice per subscription.'
+  Note: 'Phase 3.9. Immutable after issuance; billing-profile and renewal service-period fields are historical snapshots. One current issued/paid invoice per renewal period.'
 }
 Table commercial.invoice_lines {
   id uuid [pk, default: `uuidv7()`]
@@ -486,13 +488,56 @@ Table commercial.payment_provider_events {
   Note: 'Phase 3.7. Deterministic webhook deduplication and diagnostics hash; terminal processed/ignored events are immutable.'
 }
 
-// Phase 3.8 immutable local fiscal obligation and invoice-line snapshot.
+// Phase 3.9 provider-neutral partial/full refunds with immutable fiscal allocations.
+Table commercial.refunds {
+  id uuid [pk, default: `uuidv7()`]
+  payment_id uuid [not null, ref: > commercial.payments.id]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  provider_account_id uuid [not null, ref: > commercial.payment_provider_accounts.id]
+  amount_minor bigint [not null]
+  currency char(3) [not null]
+  status varchar(16) [not null, default: 'pending', note: 'pending/succeeded/canceled']
+  client_request_key varchar(200) [not null, note: 'Public idempotency; never returned']
+  request_sha256 bytea [not null]
+  provider_request_key varchar(200) [not null, note: 'Provider idempotency; never returned']
+  provider_refund_id varchar(200)
+  created_at timestamptz [not null, default: `now()`]
+  last_attempted_at timestamptz
+  completed_at timestamptz
+  updated_at timestamptz [not null, default: `now()`]
+  last_error_code varchar(120)
+  indexes {
+    (payment_id, client_request_key) [unique]
+    (provider_account_id, provider_request_key) [unique]
+    (provider_account_id, provider_refund_id) [unique, note: 'Partial when provider_refund_id is not null']
+  }
+  Note: 'Phase 3.9. Payment row locking serializes refund reservations; pending plus succeeded cannot exceed the succeeded payment.'
+}
+Table commercial.refund_items {
+  id uuid [pk, default: `uuidv7()`]
+  refund_id uuid [not null, ref: > commercial.refunds.id]
+  invoice_line_id uuid [not null, ref: > commercial.invoice_lines.id]
+  description varchar(400) [not null]
+  quantity integer [not null]
+  unit_amount_minor bigint [not null]
+  total_minor bigint [not null]
+  currency char(3) [not null]
+  vat_code smallint [not null]
+  payment_subject varchar(40) [not null]
+  payment_mode varchar(40) [not null]
+  created_at timestamptz [not null, default: `now()`]
+  indexes { (refund_id, invoice_line_id) [unique] }
+  Note: 'Phase 3.9. Immutable allocation and refund-receipt snapshot; cumulative amount cannot exceed the invoice line total.'
+}
+
+// Phase 3.8/3.9 immutable local fiscal obligations for payments and refunds.
 Table commercial.receipts {
   id uuid [pk, default: `uuidv7()`]
   payment_id uuid [not null, ref: > commercial.payments.id]
   invoice_id uuid [not null, ref: > commercial.invoices.id]
   commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
-  payment_attempt_id uuid [not null, ref: > commercial.payment_attempts.id]
+  payment_attempt_id uuid [ref: > commercial.payment_attempts.id, note: 'Required for payment receipt; null for refund receipt']
+  refund_id uuid [ref: > commercial.refunds.id, note: 'Required for refund receipt; null for payment receipt']
   provider_account_id uuid [not null, ref: > commercial.payment_provider_accounts.id]
   receipt_type varchar(24) [not null, default: 'payment']
   status varchar(16) [not null, default: 'pending', note: 'pending/succeeded/canceled']
@@ -511,12 +556,13 @@ Table commercial.receipts {
   updated_at timestamptz [not null, default: `now()`]
   last_error_code varchar(120)
   indexes {
-    (payment_id, receipt_type) [unique]
+    (payment_id) [unique, note: 'Partial for payment receipts']
+    (refund_id) [unique, note: 'Partial for refund receipts']
     (provider_account_id, provider_request_key) [unique]
     (provider_account_id, external_receipt_id) [unique, note: 'Partial when external_receipt_id is not null']
     (created_at, id) [note: 'Partial for pending reconciliation']
   }
-  Note: 'Phase 3.8. One immutable payment receipt obligation; provider ID binds once and only pending-to-terminal transitions are allowed.'
+  Note: 'Phase 3.9. Immutable payment/refund receipt obligation; provider ID binds once and only pending-to-terminal transitions are allowed.'
 }
 Table commercial.receipt_items {
   id uuid [pk, default: `uuidv7()`]
@@ -535,10 +581,10 @@ Table commercial.receipt_items {
     (receipt_id, invoice_line_id) [unique]
     (receipt_id, created_at, id)
   }
-  Note: 'Phase 3.8. Immutable one-to-one snapshots of all invoice lines; totals must equal the receipt.'
+  Note: 'Phase 3.9. Immutable invoice-line snapshot: all invoice lines for payment, allocated refund items for refund.'
 }
 
-// Planned after Phase 3.8: stored methods, refunds, renewal and plan switching.
+// Planned after Phase 3.9: stored methods, plan switching and usage-based billing.
 Table commercial.payment_methods {
   id uuid [pk]
   commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
@@ -547,13 +593,4 @@ Table commercial.payment_methods {
   provider_token varchar(300)
   status varchar(24) [not null]
   Note: 'Planned. No PAN/CVV. SBP is a method capability.'
-}
-Table commercial.refunds {
-  id uuid [pk]
-  payment_id uuid [not null, ref: > commercial.payments.id]
-  amount_minor bigint [not null]
-  currency char(3) [not null]
-  status varchar(24) [not null]
-  created_at timestamptz [not null]
-  Note: 'Planned. Nonnegative minor units.'
 }

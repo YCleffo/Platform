@@ -24,7 +24,7 @@ final readonly class GetReceipt
         $this->authorization->requirePermission($userId, $accountId, 'account.read');
         $receipt = $this->connection->fetchAssociative(<<<'SQL'
 SELECT id, payment_id, receipt_type AS type, status, external_receipt_id, amount_minor, currency, created_at, completed_at
-FROM commercial.receipts WHERE payment_id = ? AND commercial_account_id = ?
+FROM commercial.receipts WHERE payment_id = ? AND commercial_account_id = ? AND receipt_type = 'payment'
 SQL, [$paymentId, $accountId]);
         if ($receipt === false) {
             throw new \DomainException('Receipt was not found.');

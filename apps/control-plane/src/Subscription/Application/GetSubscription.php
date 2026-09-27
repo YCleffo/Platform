@@ -58,6 +58,24 @@ SQL, [$subscriptionId]);
                 'billing_period' => $item['billing_period'],
             ],
         ], $items);
+        $renewal = $this->connection->fetchAssociative(<<<'SQL'
+SELECT i.id AS invoice_id, i.status AS invoice_status, i.service_period_start, i.service_period_end,
+       p.id AS payment_id, p.status AS payment_status
+FROM commercial.invoices i
+LEFT JOIN commercial.payments p ON p.invoice_id = i.id
+WHERE i.subscription_id = ? AND i.billing_reason = 'subscription_renewal'
+  AND i.status IN ('issued','paid') AND i.service_period_start = ?::timestamptz
+ORDER BY i.created_at DESC LIMIT 1
+SQL, [$subscriptionId, $subscription['current_period_end']]);
+        $subscription['renewal_required'] = $subscription['status'] === 'active' && $renewal === false;
+        $subscription['renewal'] = $renewal === false ? null : [
+            'invoice_id' => $renewal['invoice_id'],
+            'invoice_status' => $renewal['invoice_status'],
+            'payment_id' => $renewal['payment_id'],
+            'payment_status' => $renewal['payment_status'],
+            'service_period_start' => $renewal['service_period_start'],
+            'service_period_end' => $renewal['service_period_end'],
+        ];
 
         return $subscription;
     }
