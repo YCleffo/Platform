@@ -1,6 +1,6 @@
 Project Platform_Runtime_v1 {
   database_type: 'PostgreSQL'
-  Note: 'Migration 016. Local installation identity and signed entitlement snapshots. Separate from core.* (23 tables) and from the future Commercial database.'
+  Note: 'Migration 016. Local installation identity and signed entitlement snapshots. Separate from core.* (24 tables) and from the Commercial database.'
 }
 
 Enum platform_runtime_deployment_mode {

@@ -21,6 +21,7 @@ final class SecurityAction
     public const ACCOUNT_DISABLED = 'core.account.disabled';
     public const ACCOUNT_ENABLED = 'core.account.enabled';
     public const ACCOUNT_ARCHIVED = 'core.account.archived';
+    public const ACCOUNT_SETTINGS_UPDATED = 'core.account_settings.updated';
     public const ROLE_ASSIGNED = 'core.rbac.role_assigned';
     public const ROLE_REVOKED = 'core.rbac.role_revoked';
     public const MODULE_ENABLED = 'core.module.enabled';
@@ -79,6 +80,7 @@ final class SecurityAction
             self::ACCOUNT_DISABLED,
             self::ACCOUNT_ENABLED,
             self::ACCOUNT_ARCHIVED,
+            self::ACCOUNT_SETTINGS_UPDATED,
             self::ROLE_ASSIGNED,
             self::ROLE_REVOKED,
             self::MODULE_ENABLED,

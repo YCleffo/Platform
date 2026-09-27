@@ -1040,7 +1040,17 @@ Outbox Events
 Inbox Events
 ```
 
-# Почему именно 23 таблицы Core
+# 24. `core.account_settings`
+
+Персональные настройки Account хранятся одной лениво создаваемой строкой. Первичный
+ключ `account_id` одновременно является FK на `core.accounts.id` с `ON DELETE CASCADE`.
+`settings jsonb` содержит только разреженные overrides из whitelist registry;
+эффективный документ вычисляется как defaults текущей `schema_version` плюс overrides.
+`null` через PATCH удаляет override и возвращает default. JSON ограничен 32768 байт,
+обязан быть object; GIN-индекс отсутствует, поскольку чтение выполняется по PK.
+Auth, RBAC, sessions, credentials и иное security state здесь не хранятся.
+
+# Почему именно 24 таблицы Core
 
 Core хранит только универсальный фундамент платформы:
 - Person / contacts;

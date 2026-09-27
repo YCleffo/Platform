@@ -5,7 +5,7 @@ Yii runtime использует одну базу данных PostgreSQL. Мо
 ```text
 platform database
 ├── public.*       technical migration history only
-├── core.*         universal Core v1 — exactly 23 tables
+├── core.*         universal Core — exactly 24 tables
 ├── platform_runtime.*  installation identity and signed entitlement snapshots — 2 tables
 ├── education.*    later
 ├── games.*        later
@@ -17,7 +17,8 @@ platform database
 
 ## Зафиксированная версия Core v1
 
-Схема `core.*` содержит ровно 23 основные таблицы. Добавление Games, Education,
+Схема `core.*` содержит ровно 24 основные таблицы. Миграция 017 добавляет
+`core.account_settings` для разреженных персональных overrides. Добавление Games, Education,
 Search или брендинга **не означает**, что в Core нужно добавлять таблицы конкретного продукта.
 Для общих настроек установки используется `core.system_settings`.
 Идентичность установки и локальные подписанные коммерческие разрешения находятся в

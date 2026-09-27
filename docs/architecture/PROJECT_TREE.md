@@ -23,7 +23,7 @@ C:\\Platform
 ├── docs
 │   ├── architecture
 │   └── database
-│       ├── core            frozen 23-table Core DBML
+│       ├── core            24-table Core DBML
 │       ├── runtime         installation and entitlement DBML
 │       └── commercial      Commercial Control Plane v2 DBML
 ├── scripts

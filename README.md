@@ -321,13 +321,14 @@ public.platform_migrations
 
 ## Core schema
 
-Core содержит **23 базовые таблицы**:
+Core содержит **24 базовые таблицы**:
 
 ```text
 persons
 person_contacts
 
 accounts
+account_settings
 
 auth_identifiers
 auth_password_credentials

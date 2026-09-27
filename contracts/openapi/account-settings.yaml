@@ -1,0 +1,170 @@
+openapi: 3.1.0
+info:
+  title: Platform User Settings / Privacy API
+  version: 1.0.0
+  description: Authenticated self-service contract for schema version 1 account settings.
+
+paths:
+  /api/auth/me/settings:
+    get:
+      operationId: getOwnAccountSettings
+      summary: Read effective settings for the current account
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Versioned defaults merged with the account's sparse overrides.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsSuccess'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      operationId: patchOwnAccountSettings
+      summary: Deep-merge settings for the current account
+      description: >
+        Accepts a non-empty partial document up to 32768 bytes. Omitted siblings are
+        preserved. A null registered leaf removes its override and restores the
+        versioned default. Account IDs and unregistered namespaces are rejected.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsPatch'
+            examples:
+              privacy:
+                value:
+                  privacy:
+                    show_online_status: false
+                    profile_visibility:
+                      students: false
+              reset:
+                value:
+                  privacy:
+                    show_online_status: null
+      responses:
+        '200':
+          description: Effective settings after the atomic merge.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsSuccess'
+        '400':
+          description: Malformed JSON.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: Payload exceeds 32768 bytes.
+        '422':
+          description: Unknown path, invalid type, empty patch, or malformed nested object.
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    SettingsSuccess:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          const: success
+        data:
+          type: object
+          required: [settings, schema_version]
+          properties:
+            settings:
+              $ref: '#/components/schemas/EffectiveSettings'
+            schema_version:
+              type: integer
+              const: 1
+    EffectiveSettings:
+      type: object
+      additionalProperties: false
+      required: [interface, notifications, privacy]
+      properties:
+        interface:
+          $ref: '#/components/schemas/InterfaceSettings'
+        notifications:
+          $ref: '#/components/schemas/NotificationSettings'
+        privacy:
+          $ref: '#/components/schemas/PrivacySettings'
+    SettingsPatch:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        interface:
+          $ref: '#/components/schemas/InterfaceSettingsPatch'
+        notifications:
+          $ref: '#/components/schemas/NotificationSettingsPatch'
+        privacy:
+          $ref: '#/components/schemas/PrivacySettingsPatch'
+    InterfaceSettings:
+      type: object
+      additionalProperties: false
+      required: [animations, transparency]
+      properties:
+        animations: { type: boolean, default: true }
+        transparency: { type: boolean, default: true }
+    InterfaceSettingsPatch:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        animations: { type: [boolean, 'null'] }
+        transparency: { type: [boolean, 'null'] }
+    NotificationSettings:
+      type: object
+      additionalProperties: false
+      required: [browser, sound, email]
+      properties:
+        browser: { type: boolean, default: true }
+        sound: { type: boolean, default: true }
+        email: { type: boolean, default: false }
+    NotificationSettingsPatch:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        browser: { type: [boolean, 'null'] }
+        sound: { type: [boolean, 'null'] }
+        email: { type: [boolean, 'null'] }
+    PrivacySettings:
+      type: object
+      additionalProperties: false
+      required: [show_online_status, profile_visibility]
+      properties:
+        show_online_status: { type: boolean, default: true }
+        profile_visibility:
+          $ref: '#/components/schemas/ProfileVisibility'
+    PrivacySettingsPatch:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        show_online_status: { type: [boolean, 'null'] }
+        profile_visibility:
+          type: object
+          minProperties: 1
+          additionalProperties: false
+          properties:
+            students: { type: [boolean, 'null'] }
+            parents: { type: [boolean, 'null'] }
+            colleagues: { type: [boolean, 'null'] }
+    ProfileVisibility:
+      type: object
+      additionalProperties: false
+      required: [students, parents, colleagues]
+      properties:
+        students: { type: boolean, default: true }
+        parents: { type: boolean, default: true }
+        colleagues: { type: boolean, default: true }
+  responses:
+    Unauthorized:
+      description: Missing, invalid, expired, or revoked authentication session.

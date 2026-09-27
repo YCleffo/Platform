@@ -36,7 +36,7 @@ final class HealthAction
             if (
                 !is_string($database)
                 || $database === ''
-                || $coreTables !== 23
+                || $coreTables !== 24
             ) {
                 return $responseFactory->error(
                     messageId: ApiMessage::HEALTH_NOT_READY,

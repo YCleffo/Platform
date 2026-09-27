@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 # Tiny deterministic migration runner used only for the first database phase.
 # It intentionally keeps migration history in PUBLIC, not CORE, so that
-# core.* stays frozen at exactly 23 business/platform tables.
+# core.* contains exactly 24 business/platform tables after migration 017.
 
 export PGPASSWORD="${POSTGRES_PASSWORD}"
 
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS public.platform_migrations (
 );
 
 COMMENT ON TABLE public.platform_migrations IS
-    'Technical migration history. Not part of the 23-table core schema.';
+    'Technical migration history. Not part of the 24-table core schema.';
 SQL
 
 shopt -s nullglob
@@ -66,7 +66,7 @@ done
 
 echo "[db-migrate] Done."
 
-# Guardrail: Core v1 must contain exactly 23 base tables.
+# Guardrail: Core must contain exactly 24 base tables.
 core_count="$("${psql_base[@]}" --tuples-only --no-align --command="
 SELECT count(*)
 FROM information_schema.tables
@@ -74,8 +74,8 @@ WHERE table_schema = 'core' AND table_type = 'BASE TABLE';")"
 
 echo "[db-migrate] core.* tables: $core_count"
 
-if [ "$core_count" != "23" ]; then
-  echo "[db-migrate] ERROR: expected exactly 23 core tables, got $core_count"
+if [ "$core_count" != "24" ]; then
+  echo "[db-migrate] ERROR: expected exactly 24 core tables, got $core_count"
   exit 2
 fi
 

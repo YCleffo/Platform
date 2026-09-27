@@ -10,6 +10,8 @@ use App\Core\Account\Infrastructure\PostgresAccountPreferencesRepository;
 use App\Core\Account\Infrastructure\PostgresAccountRepository;
 use App\Core\Account\Infrastructure\PostgresAccountLifecycleRepository;
 use App\Core\Account\Infrastructure\PostgresAccountSecurityRepository;
+use App\Core\AccountSettings\Application\AccountSettingsRepository;
+use App\Core\AccountSettings\Infrastructure\PostgresAccountSettingsRepository;
 use App\Core\Audit\Application\AuditWriter;
 use App\Core\Audit\Infrastructure\PostgresAuditWriter;
 use App\Core\Auth\Application\AuthChallengeRepository;
@@ -61,6 +63,9 @@ return [
     ],
     AccountPreferencesRepository::class => [
         'class' => PostgresAccountPreferencesRepository::class,
+    ],
+    AccountSettingsRepository::class => [
+        'class' => PostgresAccountSettingsRepository::class,
     ],
     AuditWriter::class => ['class' => PostgresAuditWriter::class],
     IdentifierRepository::class => ['class' => PostgresAuthRepository::class],

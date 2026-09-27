@@ -7,6 +7,8 @@ use App\Core\Account\Api\CreateAccountAction;
 use App\Core\Account\Api\AccountLifecycleAction;
 use App\Core\Account\Api\GetAccountAction;
 use App\Core\Account\Api\ListAccountsAction;
+use App\Core\AccountSettings\Api\GetAccountSettingsAction;
+use App\Core\AccountSettings\Api\PatchAccountSettingsAction;
 use App\Core\Auth\Api\ListSessionsAction;
 use App\Core\Auth\Api\ActivationAction;
 use App\Core\Auth\Api\ConfirmPasswordResetAction;
@@ -166,6 +168,16 @@ return [
         ->middleware(RequireAuthentication::class)
         ->action(UpdatePreferencesAction::class)
         ->name('auth/me/preferences'),
+
+    Route::get('/api/auth/me/settings')
+        ->middleware(RequireAuthentication::class)
+        ->action(GetAccountSettingsAction::class)
+        ->name('auth/me/settings/get'),
+
+    Route::patch('/api/auth/me/settings')
+        ->middleware(RequireAuthentication::class)
+        ->action(PatchAccountSettingsAction::class)
+        ->name('auth/me/settings/patch'),
 
     Route::get('/api/auth/me/identities')
         ->middleware(RequireAuthentication::class)

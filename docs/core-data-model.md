@@ -2,7 +2,7 @@
 
 Этот документ описывает архитектуру контракта PostgreSQL, заданного файлами
 `apps/backend/migrations/sql/001_core_schema_and_types.sql`–
-`015_core_data_hygiene.sql`. Зафиксированный Core содержит ровно 23 основные
+`017_core_account_settings.sql`. Core содержит ровно 24 основные
 таблицы `core`. Миграции SQL остаются источником истины.
 
 Миграция `016_platform_runtime.sql` добавляет отдельную схему с двумя таблицами
@@ -308,6 +308,23 @@
 
 ## Настройки
 
+### `core.account_settings`
+
+- **Purpose/ownership:** centralized sparse personal setting overrides, owned by
+  `Core/AccountSettings`; locale/timezone remain on `core.accounts` and use the
+  existing `/api/auth/me/preferences` contract.
+- **PK/FK:** `account_id uuid -> core.accounts.id ON DELETE CASCADE`; at most one
+  row per account, created lazily and removed when all overrides are reset.
+- **Fields:** `settings jsonb DEFAULT {}`, `schema_version integer DEFAULT 1`,
+  `created_at`, `updated_at`.
+- **Checks:** settings is a JSON object no larger than 32768 bytes, schema version
+  is positive, and `updated_at >= created_at`.
+- **Sensitive/access:** only paths registered in the versioned whitelist may be
+  stored. Auth, RBAC, credentials, sessions and other security state are forbidden.
+  No GIN index is created because reads are by the account primary key.
+- **Concurrency:** writes lock the owning `core.accounts` row before reading and
+  merging overrides, preventing lost updates and serializing lazy creation.
+
 ### `core.module_settings`
 
 - **Purpose/ownership:** non-secret per-module configuration, owned by
@@ -422,6 +439,6 @@
 | Audit | optional filtered read | append-only writes |
 | Messaging | none | transactional outbox and inbox idempotency |
 
-All 23 tables are classified. Credential-bearing Auth tables and messaging
+All 24 tables are classified. Credential-bearing Auth tables and messaging
 ledgers are deliberately internal; lack of a public endpoint is part of their
 security design rather than missing coverage.

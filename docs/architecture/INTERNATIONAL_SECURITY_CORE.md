@@ -2,7 +2,7 @@
 
 ## Проверенное состояние до этого этапа
 
-- В Core 23 таблицы PostgreSQL. `core.accounts`, `core.auth_sessions`,
+- На момент migration 010 в Core было 23 таблицы PostgreSQL. `core.accounts`, `core.auth_sessions`,
   `core.audit_events`, and `core.system_settings` are the relevant existing
   persistence boundaries.
 - `core.auth_sessions` уже является авторитетным серверным хранилищем сессий.
@@ -55,7 +55,8 @@ Platform Core предоставляет единую основу для инт
 Частичный индекс по аккаунту и времени последней активности ускоряет список активных сессий.
 Новая таблица не требуется: настройки аккаунта занимают два столбца, снимок текущей сессии
 относится к `auth_sessions`, а история изменений IP/устройства — к Audit. В Core по-прежнему
-23 таблицы. Миграции `001`–`009` не изменяются.
+23 таблицы на том этапе. Миграции `001`–`009` не изменяются. Позднее migration 017
+добавляет `core.account_settings`, поэтому текущая схема содержит 24 таблицы.
 
 ## Locale contract
 

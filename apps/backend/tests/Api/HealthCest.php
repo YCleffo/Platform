@@ -34,7 +34,7 @@ final readonly class HealthCest
             'status' => 'success',
             'data' => [
                 'status' => 'ok',
-                'coreTables' => 23,
+                'coreTables' => 24,
             ],
         ]);
     }

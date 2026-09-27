@@ -106,9 +106,9 @@ final class DbCheckCommand extends Command
             return Command::FAILURE;
         }
 
-        if ((int) $coreTables !== 23) {
+        if ((int) $coreTables !== 24) {
             $output->writeln(
-                '<error>Expected exactly 23 Core tables.</error>',
+                '<error>Expected exactly 24 Core tables.</error>',
             );
 
             return Command::FAILURE;

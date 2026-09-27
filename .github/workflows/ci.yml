@@ -52,12 +52,12 @@ jobs:
         run: |
           bash ./scripts/test-start.sh
 
-      - name: Verify Core Base Table Count (Strictly 23 Tables)
+      - name: Verify Core Base Table Count (Strictly 24 Tables)
         run: |
           count=$(docker compose --profile test exec -T postgres-test psql -U "${POSTGRES_USER}" -d "${POSTGRES_TEST_DB}" -tA -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'core' AND table_type = 'BASE TABLE';")
           echo "Core tables count: ${count}"
-          if [ "${count}" != "23" ]; then
-            echo "ERROR: Expected 23 core tables, got ${count}"
+          if [ "${count}" != "24" ]; then
+            echo "ERROR: Expected 24 core tables, got ${count}"
             exit 1
           fi
 
