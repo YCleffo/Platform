@@ -18,7 +18,5 @@ final class RefundConcurrencyTest extends RefundTestCase
             self::addToAssertionCount(1);
         }
         self::assertSame(2, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.refunds WHERE payment_id = ? AND status = 'pending'", [$payment]));
-        $this->connection->commit();
-        $this->connection->beginTransaction();
     }
 }

@@ -39,16 +39,7 @@ function Ensure-PlatformEnv {
         if (-not (Test-Path -LiteralPath $exampleFile)) {
             throw ".env does not exist and .env.example was not found: $exampleFile"
         }
-
-        $randomBytes = New-Object byte[] 24
-        $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
-        $rng.GetBytes($randomBytes)
-        $randomPassword = [Convert]::ToBase64String($randomBytes).Replace("+", "-").Replace("/", "_").TrimEnd("=")
-
-        $envContent = Get-Content -LiteralPath $exampleFile -Raw
-        $envContent = $envContent -replace '(?m)^POSTGRES_PASSWORD=.*$', "POSTGRES_PASSWORD=$randomPassword"
-        Set-Content -LiteralPath $envFile -Value $envContent -Encoding utf8 -NoNewline
-        Write-Host "Created .env from .env.example with generated local development POSTGRES_PASSWORD." -ForegroundColor Yellow
+        & (Join-Path $PSScriptRoot 'init-env.ps1')
     }
 
     return $envFile

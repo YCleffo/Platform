@@ -14,15 +14,16 @@ deep PATCH merge, авторизацией текущего пользовате
 
 `core.account_settings` содержит максимум одну строку на Account. В `settings` хранится
 только разреженный документ overrides. Отсутствующая строка означает defaults и GET не
-создаёт её. `schema_version = 1`; `SettingsSchemaRegistry::upgradeStored()` является
-явной точкой будущего перехода v1 → v2 и отвергает неизвестные будущие версии.
+создаёт её. Текущая application schema — `schema_version = 2`.
+`SettingsSchemaRegistry::upgradeStored()` удаляет устаревшие Education-specific
+overrides из v1 и сохраняет общие preferences; неизвестные будущие версии отвергаются.
 
 PATCH выполняется как deep merge. Соседние ключи сохраняются. `null` допустим только в
 зарегистрированном leaf и означает удаление override/reset к versioned default. При
 пустом результате строка удаляется. Явное значение, равное default, сохраняется как
 пользовательский override.
 
-## Registry v1
+## Core registry v2
 
 | Path | Type | Default |
 |---|---|---:|
@@ -32,12 +33,12 @@ PATCH выполняется как deep merge. Соседние ключи со
 | `notifications.sound` | boolean | `true` |
 | `notifications.email` | boolean | `false` |
 | `privacy.show_online_status` | boolean | `true` |
-| `privacy.profile_visibility.students` | boolean | `true` |
-| `privacy.profile_visibility.parents` | boolean | `true` |
-| `privacy.profile_visibility.colleagues` | boolean | `true` |
 
 Registry также поддерживает декларативные `enum`, integer range и ограниченные
 типизированные list leaf для безопасного расширения будущими модулями.
+Модули передают `AccountSettingDefinition[]` через DI-параметр
+`accountSettingsDefinitions`. В будущем Education может зарегистрировать свои
+`education.privacy.*` paths, но Core их не знает.
 
 ## API
 
@@ -65,5 +66,6 @@ override не создаёт audit event.
 
 ## Не входит в контур
 
-UI, consent management, legal/privacy policy, notification delivery, presence engine,
-module-specific бизнес-логика и отдельный admin API в этой фазе не реализуются.
+UI, конкретные юридические документы, module-specific бизнес-логика и отдельный
+admin API не входят в этот контур. Durable consent, notification policy и
+ephemeral presence описаны отдельно в `CONSENT.md`, `NOTIFICATIONS.md`, `PRESENCE.md`.

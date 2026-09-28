@@ -43,6 +43,16 @@ final class DbCheckCommand extends Command
             )
             ->queryScalar();
 
+        $requiredObjects = $this->db->createCommand(
+            <<<'SQL'
+            SELECT to_regclass('core.accounts') IS NOT NULL
+               AND to_regclass('core.auth_sessions') IS NOT NULL
+               AND to_regclass('core.account_consents') IS NOT NULL
+               AND to_regclass('platform_runtime.installations') IS NOT NULL
+               AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL
+            SQL,
+        )->queryScalar();
+
         $internationalSecurityColumns = $this->db
             ->createCommand(
                 <<<'SQL'
@@ -106,9 +116,9 @@ final class DbCheckCommand extends Command
             return Command::FAILURE;
         }
 
-        if ((int) $coreTables !== 24) {
+        if (!$requiredObjects) {
             $output->writeln(
-                '<error>Expected exactly 24 Core tables.</error>',
+                '<error>Required Core or platform runtime objects are missing.</error>',
             );
 
             return Command::FAILURE;

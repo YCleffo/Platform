@@ -24,6 +24,10 @@ final class SecurityAction
     public const ACCOUNT_SETTINGS_UPDATED = 'core.account_settings.updated';
     public const ROLE_ASSIGNED = 'core.rbac.role_assigned';
     public const ROLE_REVOKED = 'core.rbac.role_revoked';
+    public const ROLE_CREATED = 'core.rbac.role_created';
+    public const ROLE_UPDATED = 'core.rbac.role_updated';
+    public const ROLE_DELETED = 'core.rbac.role_deleted';
+    public const ROLE_PERMISSIONS_UPDATED = 'core.rbac.permissions_updated';
     public const MODULE_ENABLED = 'core.module.enabled';
     public const MODULE_DISABLED = 'core.module.disabled';
     public const SYSTEM_SETTING_UPDATED = 'core.system_setting.updated';
@@ -83,6 +87,10 @@ final class SecurityAction
             self::ACCOUNT_SETTINGS_UPDATED,
             self::ROLE_ASSIGNED,
             self::ROLE_REVOKED,
+            self::ROLE_CREATED,
+            self::ROLE_UPDATED,
+            self::ROLE_DELETED,
+            self::ROLE_PERMISSIONS_UPDATED,
             self::MODULE_ENABLED,
             self::MODULE_DISABLED,
             self::SYSTEM_SETTING_UPDATED,

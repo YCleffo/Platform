@@ -77,7 +77,8 @@ try {
             $connection->executeStatement("INSERT INTO commercial.idempotency_keys (scope, idempotency_key, request_sha256, status) VALUES ('test.race', ?, decode(repeat('00',32),'hex'), 'completed')", [$value]);
             break;
         case 'register':
-            authService($connection)->register($value, 'correct horse battery staple', '198.51.100.10', $extra);
+            [$correlationId, $ip] = explode('|', $extra);
+            authService($connection)->register($value, 'correct horse battery staple', $ip, $correlationId);
             break;
         case 'verify':
             authService($connection)->verifyEmail($value, $extra);

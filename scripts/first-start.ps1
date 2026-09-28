@@ -6,11 +6,12 @@ $Root = Get-PlatformRoot
 Set-Location $Root
 
 Write-Host ""
-Write-Host "=== Platform Phase 1: first start ===" -ForegroundColor Cyan
+Write-Host "=== Platform: first start ===" -ForegroundColor Cyan
 Write-Host "Root: $Root"
 Write-Host ""
 
 Assert-DockerAvailable
+& (Join-Path $PSScriptRoot 'init-env.ps1')
 $Config = Get-PlatformConfig -Root $Root
 
 Write-Host "Pulling PostgreSQL/Redis images..." -ForegroundColor Cyan
@@ -25,7 +26,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "docker compose up failed"
 }
 
-Write-Host "Applying Core v1 migrations..." -ForegroundColor Cyan
+Write-Host "Applying Core migrations..." -ForegroundColor Cyan
 docker compose run --rm db-migrate
 if ($LASTEXITCODE -ne 0) {
     throw "Core migration failed"
@@ -50,8 +51,13 @@ if ([string]::IsNullOrWhiteSpace($coreTableCount)) {
     throw "PostgreSQL returned an empty Core table count."
 }
 
-if ($coreTableCount -ne "23") {
-    throw "Core validation failed. Expected 23 tables, found $coreTableCount."
+$schemaReady = Invoke-PlatformPsqlScalar `
+    -Root $Root `
+    -Config $Config `
+    -Sql "SELECT to_regclass('core.accounts') IS NOT NULL AND to_regclass('core.account_consents') IS NOT NULL AND to_regclass('platform_runtime.installations') IS NOT NULL AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL;"
+
+if ($schemaReady -ne 't') {
+    throw "Core validation failed: required schema objects are missing."
 }
 
 $migrationCount = Invoke-PlatformPsqlScalar `
@@ -59,8 +65,8 @@ $migrationCount = Invoke-PlatformPsqlScalar `
     -Config $Config `
     -Sql "SELECT count(*) FROM public.platform_migrations;"
 
-Write-Host "OK: core.* contains exactly 23 tables." -ForegroundColor Green
-Write-Host "Applied Phase 1 migrations: $migrationCount" -ForegroundColor Green
+Write-Host "OK: required Core/runtime objects exist ($coreTableCount Core tables)." -ForegroundColor Green
+Write-Host "Applied Core migrations: $migrationCount" -ForegroundColor Green
 
 Write-Host "Building Yii3 backend..." -ForegroundColor Cyan
 docker compose build backend

@@ -9,9 +9,15 @@ use App\Core\Account\Api\GetAccountAction;
 use App\Core\Account\Api\ListAccountsAction;
 use App\Core\AccountSettings\Api\GetAccountSettingsAction;
 use App\Core\AccountSettings\Api\PatchAccountSettingsAction;
+use App\Core\Consent\Api\ListOwnConsentsAction;
+use App\Core\Consent\Api\GrantOwnConsentAction;
+use App\Core\Consent\Api\WithdrawOwnConsentAction;
+use App\Core\Presence\Api\HeartbeatAction;
 use App\Core\Auth\Api\ListSessionsAction;
 use App\Core\Auth\Api\ActivationAction;
 use App\Core\Auth\Api\ConfirmPasswordResetAction;
+use App\Core\Auth\Api\ChangeOwnPasswordAction;
+use App\Core\Auth\Api\CompleteRequiredPasswordChangeAction;
 use App\Core\Auth\Api\ExternalIdentitiesAction;
 use App\Core\Auth\Api\ExternalIdentityLinkCallbackAction;
 use App\Core\Auth\Api\ExternalIdentityLinkStartAction;
@@ -59,6 +65,8 @@ use App\Core\Person\Api\UpdatePersonAction;
 use App\Core\Rbac\Api\ListPermissionsAction;
 use App\Core\Rbac\Api\AccountRolesAction;
 use App\Core\Rbac\Api\ListRolesAction;
+use App\Core\Rbac\Api\CustomRoleAction;
+use App\Core\Rbac\Api\RolePermissionsAction;
 use App\Core\Rbac\Infrastructure\RequirePermission;
 use App\Core\Settings\Api\FeatureFlagsAction;
 use App\Core\Settings\Api\ModuleSettingsAction;
@@ -87,6 +95,10 @@ return [
     Route::post('/api/auth/login')
         ->action(LoginAction::class)
         ->name('auth/login'),
+
+    Route::post('/api/auth/password/change-required')
+        ->action(CompleteRequiredPasswordChangeAction::class)
+        ->name('auth/password/change-required'),
 
     Route::post('/api/auth/passkeys/authentication/start')
         ->action(PasskeyAuthenticationStartAction::class)
@@ -169,6 +181,11 @@ return [
         ->action(UpdatePreferencesAction::class)
         ->name('auth/me/preferences'),
 
+    Route::post('/api/auth/me/password/change')
+        ->middleware(RequireAuthentication::class)
+        ->action(ChangeOwnPasswordAction::class)
+        ->name('auth/me/password/change'),
+
     Route::get('/api/auth/me/settings')
         ->middleware(RequireAuthentication::class)
         ->action(GetAccountSettingsAction::class)
@@ -178,6 +195,26 @@ return [
         ->middleware(RequireAuthentication::class)
         ->action(PatchAccountSettingsAction::class)
         ->name('auth/me/settings/patch'),
+
+    Route::get('/api/auth/me/consents')
+        ->middleware(RequireAuthentication::class)
+        ->action(ListOwnConsentsAction::class)
+        ->name('auth/me/consents/index'),
+
+    Route::post('/api/auth/me/consents/{code}')
+        ->middleware(RequireAuthentication::class)
+        ->action(GrantOwnConsentAction::class)
+        ->name('auth/me/consents/grant'),
+
+    Route::delete('/api/auth/me/consents/{code}')
+        ->middleware(RequireAuthentication::class)
+        ->action(WithdrawOwnConsentAction::class)
+        ->name('auth/me/consents/withdraw'),
+
+    Route::post('/api/auth/me/presence/heartbeat')
+        ->middleware(RequireAuthentication::class)
+        ->action(HeartbeatAction::class)
+        ->name('auth/me/presence/heartbeat'),
 
     Route::get('/api/auth/me/identities')
         ->middleware(RequireAuthentication::class)
@@ -352,6 +389,31 @@ return [
         ->middleware(RequireAuthentication::class, $permission('core.rbac.read'))
         ->action(ListRolesAction::class)
         ->name('core/roles/index'),
+
+    Route::post('/api/core/roles')
+        ->middleware(RequireAuthentication::class, $permission('core.rbac.manage'))
+        ->action(CustomRoleAction::class)
+        ->name('core/roles/create'),
+
+    Route::patch('/api/core/roles/{id}')
+        ->middleware(RequireAuthentication::class, $permission('core.rbac.manage'))
+        ->action(CustomRoleAction::class)
+        ->name('core/roles/update'),
+
+    Route::delete('/api/core/roles/{id}')
+        ->middleware(RequireAuthentication::class, $permission('core.rbac.manage'))
+        ->action(CustomRoleAction::class)
+        ->name('core/roles/delete'),
+
+    Route::get('/api/core/roles/{id}/permissions')
+        ->middleware(RequireAuthentication::class, $permission('core.rbac.manage'))
+        ->action(RolePermissionsAction::class)
+        ->name('core/roles/permissions/get'),
+
+    Route::put('/api/core/roles/{id}/permissions')
+        ->middleware(RequireAuthentication::class, $permission('core.rbac.manage'))
+        ->action(RolePermissionsAction::class)
+        ->name('core/roles/permissions/put'),
 
     Route::get('/api/core/permissions')
         ->middleware(RequireAuthentication::class, $permission('core.rbac.read'))

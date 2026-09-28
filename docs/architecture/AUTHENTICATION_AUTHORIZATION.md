@@ -122,6 +122,16 @@ Password-reset request always returns the same `202 Accepted` representation
 for known and unknown addresses. Invitation, reset, and login throttling use
 digested subjects and cover both IP and identifier dimensions.
 
+Authenticated `POST /api/auth/me/password/change` requires the current
+password and recent authentication. It rotates the Argon2id credential and
+security stamp, revokes other sessions, writes Audit and queues mandatory
+security email. `must_change_password` uses a short-lived
+`password_change_required` challenge before normal session issuance;
+`POST /api/auth/password/change-required` consumes it once. Yii already
+implements reset, MFA, step-up/recent-auth and session self-service. The
+separate Control Plane does not: reset, MFA, step-up and Control session
+self-service remain Phase 4.1.
+
 ## Жизненный цикл аккаунта
 
 Approval, disable, enable, and archive are explicit application operations;

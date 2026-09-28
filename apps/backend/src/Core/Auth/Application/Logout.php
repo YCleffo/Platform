@@ -6,12 +6,14 @@ namespace App\Core\Auth\Application;
 
 use App\Core\Client\Domain\ClientContext;
 use App\Core\Security\Application\SecurityAuditService;
+use App\Core\Presence\Application\PresenceService;
 
 final readonly class Logout
 {
     public function __construct(
         private SessionRepository $sessions,
         private SecurityAuditService $securityAudit,
+        private PresenceService $presence,
     ) {}
 
     public function execute(AuthenticatedIdentity $identity, ClientContext $context): void
@@ -26,6 +28,7 @@ final readonly class Logout
                 $identity->sessionId,
                 $context,
             );
+            $this->presence->clearIfCurrentClient($identity->accountId, $context->clientInstanceId);
         }
     }
 }

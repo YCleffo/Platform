@@ -22,6 +22,11 @@ final readonly class AuthenticationFlowResult
         return new self('mfa_required', null, $challengeToken);
     }
 
+    public static function passwordChangeRequired(string $challengeToken): self
+    {
+        return new self('password_change_required', null, $challengeToken);
+    }
+
     /** @return array<string, mixed> */
     public function toArray(): array
     {
@@ -29,6 +34,9 @@ final readonly class AuthenticationFlowResult
             return ['status' => $this->status, ...$this->authentication->toArray()];
         }
 
+        if ($this->status === 'password_change_required') {
+            return ['status' => $this->status, 'challengeToken' => $this->mfaChallengeToken];
+        }
         return [
             'status' => $this->status,
             'challengeToken' => $this->mfaChallengeToken,

@@ -11,7 +11,9 @@ use App\Core\Account\Infrastructure\PostgresAccountRepository;
 use App\Core\Account\Infrastructure\PostgresAccountLifecycleRepository;
 use App\Core\Account\Infrastructure\PostgresAccountSecurityRepository;
 use App\Core\AccountSettings\Application\AccountSettingsRepository;
+use App\Core\AccountSettings\Application\SettingsSchemaRegistry;
 use App\Core\AccountSettings\Infrastructure\PostgresAccountSettingsRepository;
+use App\Core\Consent\Application\ConsentDefinitionRegistry;
 use App\Core\Audit\Application\AuditWriter;
 use App\Core\Audit\Infrastructure\PostgresAuditWriter;
 use App\Core\Auth\Application\AuthChallengeRepository;
@@ -66,6 +68,12 @@ return [
     ],
     AccountSettingsRepository::class => [
         'class' => PostgresAccountSettingsRepository::class,
+    ],
+    SettingsSchemaRegistry::class => [
+        '__construct()' => ['definitions' => $params['accountSettingsDefinitions'] ?? []],
+    ],
+    ConsentDefinitionRegistry::class => [
+        '__construct()' => ['definitions' => $params['consentDefinitions'] ?? []],
     ],
     AuditWriter::class => ['class' => PostgresAuditWriter::class],
     IdentifierRepository::class => ['class' => PostgresAuthRepository::class],

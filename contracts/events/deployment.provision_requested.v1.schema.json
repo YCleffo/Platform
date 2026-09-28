@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.local/contracts/events/deployment.provision_requested.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["deployment_id"],
+  "properties": {
+    "deployment_id": {"type": "string", "format": "uuid"}
+  }
+}

@@ -20,6 +20,7 @@ final readonly class AuthenticationFlowService
         private ClockInterface $clock,
         private SessionIssuer $sessions,
         private SecurityAuditService $audit,
+        private PasswordCredentialRepository $passwords,
     ) {}
 
     public function completeFirstFactor(
@@ -28,6 +29,19 @@ final readonly class AuthenticationFlowService
         ClientContext $context,
     ): AuthenticationFlowResult {
         AuthenticationMethod::firstFactor($method);
+        if ($this->passwords->findByAccountId($accountId)?->mustChangePassword === true) {
+            $token = $this->tokens->issue();
+            $this->challenges->storeChallenge(new CreateAuthChallengeCommand(
+                accountId: $accountId,
+                challengeType: 'password_change_required',
+                secretHashHex: $token->hashHex,
+                targetNormalized: null,
+                payload: ['purpose' => 'password_change', 'firstFactor' => $method, 'clientBinding' => self::clientBinding($context)],
+                maxAttempts: 5,
+                expiresAt: $this->clock->now()->modify(sprintf('+%d seconds', $this->policy->mfaChallengeTtlSeconds))->format('Y-m-d\TH:i:s\Z'),
+            ));
+            return AuthenticationFlowResult::passwordChangeRequired($token->raw);
+        }
         if ($this->totpFactors->findActive($accountId) === null) {
             return AuthenticationFlowResult::authenticated(
                 $this->sessions->issue($accountId, $method, $context, false),

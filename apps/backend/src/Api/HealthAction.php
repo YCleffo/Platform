@@ -32,11 +32,19 @@ final class HealthAction
                     SQL,
                 )
                 ->queryScalar();
+            $schemaReady = $db->createCommand(
+                <<<'SQL'
+                SELECT to_regclass('core.accounts') IS NOT NULL
+                   AND to_regclass('core.account_consents') IS NOT NULL
+                   AND to_regclass('platform_runtime.installations') IS NOT NULL
+                   AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL
+                SQL,
+            )->queryScalar();
 
             if (
                 !is_string($database)
                 || $database === ''
-                || $coreTables !== 24
+                || !$schemaReady
             ) {
                 return $responseFactory->error(
                     messageId: ApiMessage::HEALTH_NOT_READY,

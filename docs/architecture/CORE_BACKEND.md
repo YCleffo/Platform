@@ -21,10 +21,25 @@ authentication/session runtime, а также защищённый configuration
 системных и модульных настроек и feature flags. Configuration routes требуют явных permissions;
 публичным без аутентификации является только фильтрованный `GET /api/public/config`.
 
+Identity domains не объединяются: Yii Core Account != Control User != Commercial
+Account; service identity != human account. `account_type=service/system` не
+означает разрешение использовать human password login для M2M. Следующий
+security boundary — hashed service credentials, scopes, expiry, rotation,
+revocation и `last_used_at` (Phase 4.2).
+
 Authentication runtime включает password, Google OIDC, Telegram OIDC и WebAuthn Passkeys (Level 3) как first-factor adapters,
 но ни один adapter не создаёт сессию самостоятельно. `AuthenticationFlowService` применяет account/MFA
 policy, а единственный `SessionIssuer` выдаёт opaque access/refresh tokens только после всех обязательных
 факторов. External login, explicit account linking и passkey ceremonies используют разные одноразовые challenge purpose.
+`must_change_password` блокирует обычную сессию после first factor до
+одноразовой password-change challenge. Authenticated self-change требует
+текущий пароль и recent authentication, меняет Argon2id hash и security
+stamp, отзывает другие сессии и создаёт Audit/security email.
+
+Core Settings v2, Consent, Notification Policy и Presence описаны в соседних
+architecture docs. Управление non-system ролями требует `core.rbac.manage`;
+защищённые системные роли и last-superadmin invariant остаются под отдельной
+защитой. Модули регистрируют собственные permission codes своими migrations.
 
 Публичные представления Account не включают `security_stamp`, сведения о блокировке/входе,
 данные о создателе/подтверждающем и любые учётные данные. Auth API никогда не отдаёт hashes токенов,

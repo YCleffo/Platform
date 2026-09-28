@@ -43,7 +43,7 @@ final readonly class AccountSettingsService
                 $stored?->schemaVersion ?? $this->registry->schemaVersion(),
             );
             $after = $this->registry->applyPatch($before, $patch);
-            if ($after !== $before) {
+            if ($after !== $before || ($stored !== null && $stored->schemaVersion !== $this->registry->schemaVersion())) {
                 $this->repository->save($accountId, $after, $this->registry->schemaVersion());
                 [$beforeAudit, $afterAudit] = self::auditDiff($before, $after);
                 $this->audit->record(new SecurityAuditCommand(

@@ -14,14 +14,14 @@ final class SettingsSchemaRegistryTest extends Unit
     public function testDefaultsAndDeepPatchPreserveSiblings(): void
     {
         $registry = new SettingsSchemaRegistry();
-        $patch = $registry->validatePatch(['privacy' => ['profile_visibility' => ['students' => false]]]);
+        $patch = $registry->validatePatch(['notifications' => ['browser' => false]]);
         $overrides = $registry->applyPatch([], $patch);
         $effective = $registry->effective($overrides);
 
-        self::assertFalse($effective['privacy']['profile_visibility']['students']);
-        self::assertTrue($effective['privacy']['profile_visibility']['parents']);
+        self::assertFalse($effective['notifications']['browser']);
+        self::assertTrue($effective['notifications']['sound']);
         self::assertTrue($effective['privacy']['show_online_status']);
-        self::assertTrue($effective['notifications']['browser']);
+        self::assertArrayNotHasKey('profile_visibility', $effective['privacy']);
     }
 
     public function testNullResetsOverrideToVersionedDefault(): void
@@ -83,6 +83,17 @@ final class SettingsSchemaRegistryTest extends Unit
     public function testFutureSchemaVersionIsRejectedExplicitly(): void
     {
         $this->expectException(\RuntimeException::class);
-        (new SettingsSchemaRegistry())->upgradeStored([], 2);
+        (new SettingsSchemaRegistry())->upgradeStored([], 3);
+    }
+
+    public function testVersionOneDropsEducationOverridesAndPreservesGenericSettings(): void
+    {
+        $registry = new SettingsSchemaRegistry();
+        $upgraded = $registry->upgradeStored([
+            'privacy' => ['profile_visibility' => ['students' => false, 'parents' => false], 'show_online_status' => false],
+            'notifications' => ['email' => true],
+        ], 1);
+        self::assertSame(['privacy' => ['show_online_status' => false], 'notifications' => ['email' => true]], $upgraded);
+        self::assertFalse($registry->effective($upgraded)['privacy']['show_online_status']);
     }
 }

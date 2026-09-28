@@ -1,0 +1,15 @@
+{
+  "event_id": "019a2d14-32fa-7dd0-bb64-47f2b47709e3",
+  "event_type": "control_user.email_verification_requested",
+  "schema_version": 1,
+  "occurred_at": "2026-09-28T00:00:00Z",
+  "producer": "commercial-control-plane",
+  "aggregate": {"type": "control_user", "id": "019a2d14-3a0d-7656-ad0a-532027599977"},
+  "correlation_id": null,
+  "causation_id": null,
+  "payload": {
+    "user_id": "019a2d14-3a0d-7656-ad0a-532027599977",
+    "verification_id": "019a2d14-3d58-7a5b-9aa1-17817765035f",
+    "recipient": "example@platform.test"
+  }
+}

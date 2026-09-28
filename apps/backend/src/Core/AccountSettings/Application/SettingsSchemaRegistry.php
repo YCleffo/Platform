@@ -10,7 +10,7 @@ use Yiisoft\Validator\Result;
 
 final class SettingsSchemaRegistry
 {
-    public const int CURRENT_VERSION = 1;
+    public const int CURRENT_VERSION = 2;
     public const int MAX_PAYLOAD_BYTES = 32768;
     private const int MAX_DEPTH = 6;
 
@@ -38,9 +38,6 @@ final class SettingsSchemaRegistry
             new AccountSettingDefinition('notifications.sound', 'boolean', true),
             new AccountSettingDefinition('notifications.email', 'boolean', false),
             new AccountSettingDefinition('privacy.show_online_status', 'boolean', true),
-            new AccountSettingDefinition('privacy.profile_visibility.students', 'boolean', true),
-            new AccountSettingDefinition('privacy.profile_visibility.parents', 'boolean', true),
-            new AccountSettingDefinition('privacy.profile_visibility.colleagues', 'boolean', true),
         ];
     }
 
@@ -90,6 +87,11 @@ final class SettingsSchemaRegistry
         if ($version < 1 || $version > self::CURRENT_VERSION) {
             throw new RuntimeException('Unsupported account settings schema version.');
         }
+        if ($version === 1) {
+            foreach (['students', 'parents', 'colleagues'] as $legacyAudience) {
+                $stored = self::withoutPath($stored, ['privacy', 'profile_visibility', $legacyAudience]);
+            }
+        }
         if ($stored !== []) {
             $result = new Result();
             $this->validateNode($stored, '', 1, $result, false);
@@ -97,7 +99,6 @@ final class SettingsSchemaRegistry
                 throw new RuntimeException('Stored account settings do not match their schema version.');
             }
         }
-        // The explicit hook is the upgrade seam for a future v1 -> v2 migration.
         return $stored;
     }
 

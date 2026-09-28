@@ -150,3 +150,10 @@ SMTP host, port, username, password, encryption, sender address, and sender name
 come from environment variables through application params and DI. Source code
 contains no production credentials. Local Compose routes backend SMTP traffic
 to Mailpit and exposes the Mailpit UI on `http://localhost:8025`.
+
+Yii worker `php yii communication:process-email` должен запускаться по расписанию
+или под supervisor в production. Его `core.outbox_events` поддерживает leases,
+bounded retry/dead state; мониторить pending/dead и явно выполнять requeue
+после устранения причины, не настраивать бесконечные автоматические повторы.
+Commercial verification email использует отдельный worker и отдельную БД;
+см. `COMMERCIAL_CONTROL_PLANE.md`.

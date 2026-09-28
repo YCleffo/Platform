@@ -29,8 +29,9 @@ final class AccountOnboardingTest extends DatabaseTestCase
         $this->connection->executeStatement("INSERT INTO commercial.plan_prices (plan_id, currency, amount_minor, billing_period) VALUES (?, 'USD', 1000, 'month')", [$plan]);
         $this->connection->executeStatement("UPDATE commercial.plans SET status = 'published', published_at = now() WHERE id = ?", [$plan]);
         $catalog = (new PlanCatalog($this->connection))->published();
-        self::assertCount(1, $catalog);
-        self::assertSame('starter', $catalog[0]['code']);
+        $created = array_values(array_filter($catalog, static fn (array $entry): bool => $entry['id'] === $plan));
+        self::assertCount(1, $created);
+        self::assertSame('starter', $created[0]['code']);
     }
 
     public function testCrossAccountAccessIsDeniedAndLastOwnerIsProtected(): void

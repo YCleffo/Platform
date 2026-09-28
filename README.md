@@ -321,7 +321,7 @@ public.platform_migrations
 
 ## Core schema
 
-Core содержит **24 базовые таблицы**:
+Core содержит **25 базовых таблиц** после миграции 018:
 
 ```text
 persons
@@ -329,6 +329,7 @@ person_contacts
 
 accounts
 account_settings
+account_consents
 
 auth_identifiers
 auth_password_credentials
@@ -504,9 +505,26 @@ http://127.0.0.1:8025
 ```powershell
 Set-Location C:\Platform
 
+# Синхронизировать старый .env с актуальным шаблоном; непустые значения сохраняются.
+powershell -ExecutionPolicy Bypass -File .\scripts\init-env.ps1
+
 powershell -ExecutionPolicy Bypass `
   -File .\scripts\first-start.ps1
 ```
+
+Если PostgreSQL volume уже существовал или требуется ротация локальных
+паролей, используйте отдельные скрипты. Они меняют роль в БД, проверяют TCP
+вход и обновляют `.env` с резервной копией; простое редактирование `.env`
+не меняет пароль внутри существующего volume:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\change-platform-db-password.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\change-control-db-password.ps1
+docker compose up db-migrate
+```
+
+Ни один из скриптов не выводит новые значения секретов. Credentials для
+приложений и мигратора всегда берутся из `.env` через Compose.
 
 Скрипт:
 
@@ -618,7 +636,7 @@ tests/
 Symfony Commercial Control Plane (`apps/control-plane`) — отдельное приложение
 на Symfony 7.4/PHP 8.3 с собственной БД `platform_commercial`, схемой
 `commercial` и отдельным Docker network. Yii/Diary DB и Commercial DB не
-разделяют credentials. Phase 3.9 содержит 19 миграций и 39 Commercial таблиц:
+разделяют credentials. Phase 4.0 содержит 20 миграций и 39 Commercial таблиц:
 central Control User, hash-only verification, rotating server-side sessions,
 Commercial Account с атомарным owner membership, billing onboarding и
 published plan catalog, draft/active subscriptions и immutable subscription
@@ -638,6 +656,14 @@ settlement, затем отдельно отправляет чек в YooKassa 
 атомарный rollover usage periods, full/partial refunds, YooKassa refund
 reconciliation/webhooks и отдельные refund receipts. Plan switching и
 usage-based billing отложены.
+Phase 4.0 закрывает универсальный Yii Core: Settings v2 с module extensions,
+durable Consent, notification policy, Redis Presence и privacy gate,
+self-service/forced password change и guarded custom roles. Versioned contracts
+для межпроцессных событий лежат в `contracts/events/`; Commercial outbox
+получил leased email worker для подтверждения адреса. Entitlement issuance,
+M2M credentials и provisioning остаются следующими фазами, несмотря на
+подготовленные таблицы и интерфейсы. Актуальная модель Core —
+`docs/database/core/Core_v2.dbml`.
 См. `docs/architecture/COMMERCIAL_CONTROL_PLANE.md` и
 `docs/architecture/COMMERCIAL_SECURITY.md`.
 

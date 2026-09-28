@@ -1,6 +1,6 @@
 # Покрытие базы данных Core
 
-В этой таблице каждой таблице схемы `core` из 24 таблиц сопоставлен
+В этой таблице каждой таблице схемы `core` из 25 таблиц сопоставлен
 владелец в backend. `PUBLIC API` означает намеренно открытый HTTP-ресурс;
 `INTERNAL SERVICE` — доступность для кода приложения без универсального CRUD;
 `CONTROL PLANE API` — защищённый RBAC административный HTTP-интерфейс;
@@ -13,6 +13,7 @@
 | `core.person_contacts` | `PersonContactRepository` / PostgreSQL adapter | list/create contact, `ContactNormalizer` | `GET/POST /api/core/persons/{id}/contacts` | `PersonsCest` | contact PII | PUBLIC API |
 | `core.accounts` | `AccountRepository`, `AccountPreferencesRepository` / PostgreSQL adapters | list, create, get, lifecycle, invitation, locale/timezone preference | `/api/core/accounts*`, `PATCH /api/auth/me/preferences` | `AccountsCest`, `CredentialLifecycleCest`, `InternationalPreferencesCest` | security/lifecycle metadata omitted | PUBLIC API + INTERNAL SERVICE |
 | `core.account_settings` | `AccountSettingsRepository` / `PostgresAccountSettingsRepository` | versioned defaults, validated deep merge, reset, concurrency lock | `GET/PATCH /api/auth/me/settings` | `AccountSettingsCest`, `SettingsSchemaRegistryTest` | whitelisted personal preferences; security namespaces forbidden | AUTHENTICATED SELF API |
+| `core.account_consents` | `ConsentService` / PostgreSQL | grant, withdrawal, immutable evidence, versioned definition | `GET/POST/DELETE /api/auth/me/consents*` | `ConsentCest` | document hash, grant/withdraw timestamps | AUTHENTICATED SELF API |
 | `core.auth_identifiers` | `IdentifierRepository` / `PostgresAuthRepository` | normalized lookup, verified recovery-email selection | MFA recovery request, без прямого CRUD | `AuthPersistenceCest`, MFA API tests | login/recovery identifier | INTERNAL SERVICE |
 | `core.auth_password_credentials` | `PasswordCredentialRepository` / Auth adapter | internal retrieval | none | `AuthPersistenceCest`, `AuthSecurityCest` | password hash | INFRASTRUCTURE ONLY |
 | `core.auth_providers` | `AuthProviderRepository` / Auth adapter | provider policy and enabled list | `GET /api/auth/providers` | `ExternalIdentityMfaPersistenceCest`, schema by `db:check` | provider policy metadata only; secrets only в env | AUTH API + INTERNAL SERVICE |

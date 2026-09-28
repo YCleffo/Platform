@@ -29,7 +29,6 @@ final class RefundReceiptLifecycleTest extends RefundTestCase
         self::assertInstanceOf(ProviderReceipt::class, $pending);
         self::assertSame('refund', $pending->type);
         self::assertSame($providerRefund, $pending->providerRefundId);
-        $this->connection->commit();
-        $this->connection->beginTransaction();
+        $this->connection->executeStatement('SET CONSTRAINTS ALL IMMEDIATE');
     }
 }

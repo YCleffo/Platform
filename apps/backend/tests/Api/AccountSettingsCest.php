@@ -33,9 +33,9 @@ final readonly class AccountSettingsCest
         $I->sendGET('/api/auth/me/settings');
         $I->seeResponseCodeIs(HttpCode::OK);
         $data = $this->response($I)['data'];
-        assertSame(1, $data['schema_version']);
+        assertSame(2, $data['schema_version']);
         assertTrue($data['settings']['privacy']['show_online_status']);
-        assertTrue($data['settings']['privacy']['profile_visibility']['students']);
+        assertFalse(isset($data['settings']['privacy']['profile_visibility']));
     }
 
     public function patchDeepMergesPrivacyAndNullResets(ApiTester $I): void
@@ -53,12 +53,12 @@ final readonly class AccountSettingsCest
             [':id' => $fixture['accountId']],
         )->queryOne();
         $I->sendPATCH('/api/auth/me/settings', [
-            'privacy' => ['profile_visibility' => ['students' => false]],
+            'notifications' => ['browser' => false],
         ]);
         $I->seeResponseCodeIs(HttpCode::OK);
         $settings = $this->response($I)['data']['settings'];
-        assertFalse($settings['privacy']['profile_visibility']['students']);
-        assertTrue($settings['privacy']['profile_visibility']['parents']);
+        assertFalse($settings['notifications']['browser']);
+        assertTrue($settings['notifications']['sound']);
 
         $I->sendPATCH('/api/auth/me/settings', ['privacy' => ['show_online_status' => false]]);
         $I->sendPATCH('/api/auth/me/settings', ['privacy' => ['show_online_status' => null]]);

@@ -28,6 +28,7 @@ final readonly class MfaVerificationService
         private IdentifierDigestService $digests,
         private SecurityAuditService $audit,
         private ConnectionInterface $db,
+        private PasswordCredentialRepository $passwords,
     ) {}
 
     public function verify(
@@ -117,6 +118,9 @@ final readonly class MfaVerificationService
                 }
 
                 if (!$this->challenges->consume($challenge->id)) {
+                    throw new MfaVerificationException();
+                }
+                if ($this->passwords->findByAccountId($challenge->accountId)?->mustChangePassword === true) {
                     throw new MfaVerificationException();
                 }
                 $method = AuthenticationMethod::withSecondFactor($firstFactor, $secondFactor);

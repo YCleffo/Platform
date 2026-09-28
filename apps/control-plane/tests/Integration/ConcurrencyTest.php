@@ -13,6 +13,8 @@ use ControlPlane\Identity\Application\AuthService;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
 use ControlPlane\Identity\Security\DatabaseRateLimiter;
 use ControlPlane\Identity\Security\TokenCodec;
+use ControlPlane\Account\Authorization\AccountAuthorization;
+use ControlPlane\Billing\Application\IssueInvoice;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasher;
 use Symfony\Component\Uid\Uuid;
@@ -79,7 +81,10 @@ final class ConcurrencyTest extends TestCase
     {
         $email = 'race-user-' . bin2hex(random_bytes(6)) . '@example.test';
         $correlation = Uuid::v7()->toRfc4122();
-        $results = $this->race('register', $email, $correlation, $email, $correlation);
+        $ipSuffix = bin2hex(random_bytes(4));
+        $ip = '2001:db8:' . substr($ipSuffix, 0, 4) . ':' . substr($ipSuffix, 4, 4) . '::1';
+        $extra = $correlation . '|' . $ip;
+        $results = $this->race('register', $email, $extra, $email, $extra);
         self::assertSame([0, 2], $results);
         self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.control_users WHERE email_normalized = ?', [$email]));
     }
@@ -132,9 +137,16 @@ final class ConcurrencyTest extends TestCase
         $this->connection->executeStatement("UPDATE commercial.plans SET status = 'published', published_at = now() WHERE id = ?", [$plan]);
         $subscription = $this->connection->fetchOne("INSERT INTO commercial.subscriptions (commercial_account_id, billing_profile_id, status) VALUES (?, ?, 'draft') RETURNING id", [$account, $profile]);
         self::assertIsString($subscription);
-        $this->connection->executeStatement("INSERT INTO commercial.subscription_items (subscription_id, plan_price_id, quantity, valid_from) VALUES (?, ?, 1, now() - interval '1 day')", [$subscription, $price]);
+        $this->connection->executeStatement("INSERT INTO commercial.subscription_items (subscription_id, plan_price_id, quantity, valid_from) VALUES (?, ?, 1, '2026-09-01T00:00:00Z')", [$subscription, $price]);
         $correlation = Uuid::v7()->toRfc4122();
         $activationInstant = '2026-09-24T12:00:00Z';
+        $owner = $this->connection->fetchOne("SELECT control_user_id FROM commercial.commercial_account_memberships WHERE commercial_account_id = ? AND role = 'owner'", [$account]);
+        self::assertIsString($owner);
+        $invoice = (new IssueInvoice($this->connection, new AccountAuthorization($this->connection)))->issue($owner, $account, $subscription, 'activation-race-' . $suffix, $correlation);
+        $payment = $this->connection->fetchOne("INSERT INTO commercial.payments (invoice_id, commercial_account_id, amount_minor, currency, status) SELECT id, commercial_account_id, total_minor, currency, 'pending' FROM commercial.invoices WHERE id = ? RETURNING id", [$invoice['id']]);
+        self::assertIsString($payment);
+        $this->connection->executeStatement("UPDATE commercial.payments SET status = 'succeeded', succeeded_at = ?::timestamptz WHERE id = ?", [$activationInstant, $payment]);
+        $this->connection->executeStatement("UPDATE commercial.invoices SET status = 'paid', paid_at = ?::timestamptz WHERE id = ?", [$activationInstant, $invoice['id']]);
         $extra = implode('|', [$account, $correlation, $activationInstant]);
 
         self::assertSame([0, 0], $this->race('activate_subscription', $subscription, $extra, $subscription, $extra));

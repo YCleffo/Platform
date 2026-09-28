@@ -1,11 +1,11 @@
-# Архитектура базы данных — Core v1 и Commercial Phase 3.9
+# Архитектура базы данных — Core v2 и Commercial Phase 4.0
 
 Yii runtime использует одну базу данных PostgreSQL. Модули владеют отдельными схемами PostgreSQL:
 
 ```text
 platform database
 ├── public.*       technical migration history only
-├── core.*         universal Core — exactly 24 tables
+├── core.*         universal Core — 25 tables after migration 018
 ├── platform_runtime.*  installation identity and signed entitlement snapshots — 2 tables
 ├── education.*    later
 ├── games.*        later
@@ -15,10 +15,14 @@ platform database
 └── ...
 ```
 
-## Зафиксированная версия Core v1
+## Зафиксированная версия Core v2
 
-Схема `core.*` содержит ровно 24 основные таблицы. Миграция 017 добавляет
-`core.account_settings` для разреженных персональных overrides. Добавление Games, Education,
+Схема `core.*` содержит 25 базовых таблиц после миграции 018. Миграция 017 добавляет
+`core.account_settings`, миграция 018 — `core.account_consents` для неизменяемой истории
+authenticated согласий. Исторический артефакт `Core_v1_FINAL.dbml` не меняется;
+актуальная модель — `docs/database/core/Core_v2.dbml`. Runtime/CI проверяют наличие
+обязательных объектов и применённых миграций, а не фиксированное число таблиц.
+Добавление Games, Education,
 Search или брендинга **не означает**, что в Core нужно добавлять таблицы конкретного продукта.
 Для общих настроек установки используется `core.system_settings`.
 Идентичность установки и локальные подписанные коммерческие разрешения находятся в
@@ -29,7 +33,7 @@ release и reliability. Phase 2 добавляет 4 таблицы verification
 limit/session-history и расширяет identity/onboarding. Phase 3 добавляет
 subscription lifecycle, effective entitlements, Usage Core, immutable invoice
 snapshots, provider-neutral Payment Core, YooKassa webhook inbox и Fiscalization
-Core; после Phase 3.9 схема содержит `commercial.* = 39` таблиц. Реализованы
+Core; после Phase 4.0 схема содержит `commercial.* = 39` таблиц и 20 миграций. Реализованы
 payment provider metadata, payments, payment attempts, hash-only provider events,
 immutable payment/refund receipt obligations, renewal periods и refund item
 snapshots. Payment methods, plan switching и usage-based billing пока остаются целевыми сущностями. Подробности:

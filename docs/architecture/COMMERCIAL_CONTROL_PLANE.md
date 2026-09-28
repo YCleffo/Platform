@@ -1,4 +1,4 @@
-# Commercial Control Plane — Phase 3.9 Renewals and Refunds
+# Commercial Control Plane — Phase 4.0 Integration Foundation
 
 `apps/control-plane` is a separate Symfony 7.4/PHP 8.3 application with its
 own `platform_commercial` PostgreSQL database and `commercial` schema. It does
@@ -17,7 +17,9 @@ does not create a tenant database.
 
 ## Implemented schema
 
-Nineteen ordered Doctrine migrations create exactly 39 `commercial.*` tables.
+Twenty ordered Doctrine migrations create 39 `commercial.*` tables. Migration
+020 changes the outbox lifecycle without adding another table. Runtime checks
+assert required objects and migration state rather than an exact table count.
 The 21 Phase 1 tables remain unchanged. Phase 2 adds:
 
 - `control_user_email_verifications` — one-time, expiring, hash-only tokens;
@@ -182,7 +184,13 @@ lookup key. Passwords use Symfony PasswordHasher `auto`. Verification tokens
 are authenticated from an artifact UUID with `CONTROL_TOKEN_SECRET`; only the
 SHA-256 token hash is stored. The transactional outbox contains the recipient
 and verification artifact ID, so a mail worker can reproduce the link without
-persisting the raw token. No production mail dispatcher is implemented yet.
+persisting the raw token. `control:outbox:process-email` leases those events,
+reconstructs a short-lived verification link, sends via SMTP, and marks them
+published or retries with bounded backoff. `control:outbox:status` reports
+status counts/oldest pending and supports explicit `--requeue=ID` for dead events.
+Use the supervised `control-outbox-worker` Compose service or a production
+cron/systemd equivalent. SMTP is at-least-once; stable `Message-ID` is derived
+from `event_id`, and the raw token and email body never enter the outbox/logs.
 
 ## Local validation
 
@@ -201,7 +209,13 @@ except `APP_ENV=test`, `CONTROL_TEST_ISOLATED=1`, host
 
 For the development profile configure separate `CONTROL_POSTGRES_PASSWORD`,
 `CONTROL_APP_SECRET` and `CONTROL_TOKEN_SECRET` values of at least 32
-characters, plus `CONTROL_YOOKASSA_RETURN_URL`. Configure merchant metadata with
+characters, plus the real HTTPS `CONTROL_YOOKASSA_RETURN_URL` before live checkout.
+The `.env.example` return URL is only a local placeholder. Configure
+`CONTROL_MAILER_DSN` (`smtp://` or `smtps://`, with optional `?starttls=1`),
+`CONTROL_MAIL_FROM`, `CONTROL_VERIFICATION_URL` and
+`CONTROL_MESSAGE_ID_DOMAIN` for the verification worker. Locally the SMTP
+sink is Mailpit; production must use a real transport and HTTPS verification
+URL. Configure merchant metadata with
 `control:payments:providers:yookassa:configure --shop-id=... --secret-ref=env:YOOKASSA_SECRET_KEY --receipt-mode=yookassa --vat-code=1 --payment-subject=service --payment-mode=full_payment`;
 the command never accepts the secret itself. The production image remains
 FrankenPHP, runs as `www-data`, has
@@ -209,6 +223,17 @@ no dev dependencies or tests, and grants write access only to runtime
 directories.
 
 ## Deferred
+
+`signing_keys`, `licenses`, `license_installations`, `maintenance_contracts`,
+`issued_entitlement_documents`, `releases` and `release_entitlements` are
+schema foundations, not completed entitlement delivery. Yii
+`platform_runtime.installations` and `entitlement_documents` now have explicit
+repository/verification/application ports, but no production key trust or
+issuance implementation. `ReserveDeployment` creates a durable reservation;
+`deployment_operations` does not yet have an executor and must not be reported
+as a successful deployment. Control current-user/session APIs and paginated
+commercial read models belong to Phase 4.1; M2M usage ingestion, entitlement
+issuance/delivery and service credentials belong to Phase 4.2.
 
 Plan switching, additional payment providers and methods, bank cards,
 saved/recurring credentials,

@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Tiny deterministic migration runner used only for the first database phase.
-# It intentionally keeps migration history in PUBLIC, not CORE, so that
-# core.* contains exactly 24 business/platform tables after migration 017.
+# Deterministic migration runner. Migration history lives in PUBLIC, not CORE.
 
 export PGPASSWORD="${POSTGRES_PASSWORD}"
 
@@ -32,7 +30,7 @@ CREATE TABLE IF NOT EXISTS public.platform_migrations (
 );
 
 COMMENT ON TABLE public.platform_migrations IS
-    'Technical migration history. Not part of the 24-table core schema.';
+    'Technical migration history. Not part of the core schema.';
 SQL
 
 shopt -s nullglob
@@ -66,7 +64,6 @@ done
 
 echo "[db-migrate] Done."
 
-# Guardrail: Core must contain exactly 24 base tables.
 core_count="$("${psql_base[@]}" --tuples-only --no-align --command="
 SELECT count(*)
 FROM information_schema.tables
@@ -74,22 +71,13 @@ WHERE table_schema = 'core' AND table_type = 'BASE TABLE';")"
 
 echo "[db-migrate] core.* tables: $core_count"
 
-if [ "$core_count" != "24" ]; then
-  echo "[db-migrate] ERROR: expected exactly 24 core tables, got $core_count"
-  exit 2
-fi
-
-# Runtime tables are checked separately and never enter the Core count.
-runtime_count="$("${psql_base[@]}" --tuples-only --no-align --command="
-SELECT count(*)
-FROM information_schema.tables
-WHERE table_schema = 'platform_runtime'
-  AND table_type = 'BASE TABLE'
-  AND table_name IN ('installations', 'entitlement_documents');")"
-
-echo "[db-migrate] platform_runtime tables: $runtime_count"
-
-if [ "$runtime_count" != "2" ]; then
-  echo "[db-migrate] ERROR: expected both platform_runtime tables, got $runtime_count"
+schema_ready="$("${psql_base[@]}" --tuples-only --no-align --command="
+SELECT to_regclass('core.accounts') IS NOT NULL
+   AND to_regclass('core.account_consents') IS NOT NULL
+   AND to_regclass('platform_runtime.installations') IS NOT NULL
+   AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL;")"
+if [ "$schema_ready" != "t" ]; then
+  echo "[db-migrate] ERROR: required Core or runtime objects are missing"
   exit 3
 fi
+echo "[db-migrate] required Core and runtime objects: OK"

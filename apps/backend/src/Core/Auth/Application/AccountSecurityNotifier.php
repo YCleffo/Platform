@@ -8,6 +8,7 @@ use App\Core\Account\Application\AccountSecurityRepository;
 use App\Core\Communication\Application\EmailService;
 use App\Core\Communication\Application\QueueEmailCommand;
 use App\Core\Internationalization\Application\SupportedLocales;
+use App\Core\Notification\Application\NotificationPreferenceResolver;
 
 final readonly class AccountSecurityNotifier
 {
@@ -16,10 +17,14 @@ final readonly class AccountSecurityNotifier
         private EmailService $email,
         private AccountSecurityRepository $accounts,
         private SupportedLocales $supportedLocales,
+        private NotificationPreferenceResolver $preferences,
     ) {}
 
     public function notify(string $accountId, string $templateCode, ?string $locale = null): void
     {
+        if (!$this->preferences->allows($accountId, 'security', 'email')) {
+            throw new \LogicException('Security email policy must not be disabled by account preferences.');
+        }
         $target = $this->identifiers->findRecoveryEmailByAccount($accountId);
         if ($target === null) {
             return;

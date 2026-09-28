@@ -56,3 +56,16 @@ services:
     ControlPlane\Infrastructure\Console\CheckCommercialDatabaseCommand:
         arguments:
             $databaseUrl: '%env(resolve:CONTROL_DATABASE_URL)%'
+
+    ControlPlane\Infrastructure\Outbox\EmailTransport:
+        alias: ControlPlane\Infrastructure\Outbox\SmtpEmailTransport
+
+    ControlPlane\Infrastructure\Outbox\SmtpEmailTransport:
+        arguments:
+            $dsn: '%env(CONTROL_MAILER_DSN)%'
+            $fromAddress: '%env(CONTROL_MAIL_FROM)%'
+
+    ControlPlane\Infrastructure\Outbox\VerificationEmailProcessor:
+        arguments:
+            $verificationUrl: '%env(CONTROL_VERIFICATION_URL)%'
+            $messageIdDomain: '%env(CONTROL_MESSAGE_ID_DOMAIN)%'

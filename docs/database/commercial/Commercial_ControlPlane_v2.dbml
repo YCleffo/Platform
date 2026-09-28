@@ -1,6 +1,6 @@
 Project Commercial_ControlPlane_v2 {
   database_type: 'PostgreSQL'
-  Note: '''Current target model for the separate platform_commercial database. Tables marked through Phase 3.8 are implemented by Control Plane migrations; Planned tables describe later phases only. Diary/Core is a different database. Control User is not Diary User; Commercial Account is not Diary Organization; Control Plane Auth is not Diary Auth. No tenant_id is added to frozen Core.'''
+  Note: '''Current target model for the separate platform_commercial database. Tables marked through Phase 3.9 and outbox reliability migration 020 are implemented by 20 Control Plane migrations (39 base tables); Planned tables describe later phases only. Yii/Core is a different database. Control User is not Yii Core Account; Commercial Account is not Yii organization; Control Plane Auth is not Yii Auth. No tenant_id is added to Core.'''
 }
 
 // Phase 1 + Phase 2: central identity and customers.
@@ -350,12 +350,16 @@ Table commercial.outbox_events {
   aggregate_type varchar(120) [not null]
   aggregate_id uuid [not null]
   payload jsonb [not null]
+  schema_version smallint [not null, default: 1]
   status varchar(24) [not null, default: 'pending']
   attempts integer [not null, default: 0]
   available_at timestamptz [not null, default: `now()`]
+  locked_at timestamptz
+  lock_token uuid
+  last_error varchar(160)
   created_at timestamptz [not null, default: `now()`]
   published_at timestamptz
-  Note: 'Phase 1. Transactional outbox; no external delivery worker yet.'
+  Note: 'Phase 4.0 migration 020. Leased at-least-once delivery; pending/processing/published/failed/dead, bounded retries, immutable published rows. Verification email has a production worker; other event consumers remain deferred.'
 }
 
 // Phase 3.3 effective entitlements are a derived read model over the current active subscription graph; cancelled and expired subscriptions grant nothing.

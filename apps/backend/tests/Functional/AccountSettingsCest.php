@@ -45,16 +45,13 @@ final readonly class AccountSettingsCest
 
         $first = $service->patch($accountId, ['privacy' => [
             'show_online_status' => false,
-            'profile_visibility' => ['students' => false],
         ]], $this->context());
         assertFalse($first->settings['privacy']['show_online_status']);
-        assertFalse($first->settings['privacy']['profile_visibility']['students']);
-        assertTrue($first->settings['privacy']['profile_visibility']['parents']);
-        assertSame(1, $repository->find($accountId)?->schemaVersion);
+        assertFalse(isset($first->settings['privacy']['profile_visibility']));
+        assertSame(2, $repository->find($accountId)?->schemaVersion);
 
         $service->patch($accountId, ['privacy' => ['show_online_status' => null]], $this->context());
         assertTrue($service->get($accountId)->settings['privacy']['show_online_status']);
-        assertFalse($service->get($accountId)->settings['privacy']['profile_visibility']['students']);
 
         $audit = $db->createCommand(
             "SELECT before_data::text, after_data::text FROM core.audit_events WHERE action = 'core.account_settings.updated' AND resource_id = :id ORDER BY occurred_at DESC, id DESC LIMIT 1",
@@ -62,7 +59,7 @@ final readonly class AccountSettingsCest
         )->queryOne();
         assertTrue(is_array($audit));
         assertTrue(str_contains((string) $audit['after_data'], 'privacy.show_online_status'));
-        assertFalse(str_contains((string) $audit['after_data'], 'profile_visibility.students'));
+        assertFalse(str_contains((string) $audit['after_data'], 'profile_visibility'));
 
         $db->createCommand('DELETE FROM core.accounts WHERE id = CAST(:id AS uuid)', [':id' => $accountId])->execute();
         assertNull($repository->find($accountId));
