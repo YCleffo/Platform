@@ -7,6 +7,7 @@ namespace App\Core\Consent\Application;
 use App\Core\Audit\Application\AuditService;
 use App\Core\Audit\Application\WriteAuditEventCommand;
 use App\Core\Privacy\Application\RepresentativeAuthorityPolicy;
+use App\Core\Privacy\Application\ProcessingPurposeRegistry;
 use DomainException;
 use Yiisoft\Db\Connection\ConnectionInterface;
 
@@ -16,13 +17,19 @@ final readonly class ConsentService
         private ConnectionInterface $db,
         private ConsentDefinitionRegistry $definitions,
         private RepresentativeAuthorityPolicy $representations,
+        private ProcessingPurposeRegistry $purposes,
         private AuditService $audit,
     ) {}
 
     public function list(string $accountId): array
     {
         $personId = $this->personForAccount($accountId);
-        $definitions = array_map(static fn (ConsentDefinition $definition): array => $definition->toArray(), $this->definitions->all());
+        $definitions = array_map(
+            fn (ConsentDefinition $definition): array => $definition->toArray(
+                $this->purposes->get($definition->purposeCode)?->representativeAllowed ?? false,
+            ),
+            $this->definitions->all(),
+        );
         $rows = $this->db->createCommand(<<<'SQL'
             SELECT id::text, consent_code, purpose_code, document_version,
                    encode(document_sha256, 'hex') AS document_sha256,
@@ -77,10 +84,10 @@ final readonly class ConsentService
             $this->lockSubject($subjectPersonId);
             $representative = $actorPersonId !== $subjectPersonId;
             if ($representative) {
-                if (!$definition->representativeAllowed || $representationId === null) {
+                if (!$this->purposes->get($definition->purposeCode)?->representativeAllowed || $representationId === null) {
                     throw new DomainException('Representative consent is not allowed.');
                 }
-                $this->representations->assertActiveForConsent($representationId, $subjectPersonId, $actorPersonId);
+                $this->representations->assertActiveForAction($representationId, $subjectPersonId, $actorPersonId, 'privacy.consent.grant');
             } elseif ($representationId !== null) {
                 throw new DomainException('Self consent cannot use representative authority.');
             }
@@ -145,10 +152,10 @@ final readonly class ConsentService
             $actorPersonId = $this->personForAccount($actorAccountId);
             $this->lockSubject($subjectPersonId);
             if ($actorPersonId !== $subjectPersonId) {
-                if (!$definition->representativeAllowed || $representationId === null) {
+                if (!$this->purposes->get($definition->purposeCode)?->representativeAllowed || $representationId === null) {
                     throw new DomainException('Representative consent withdrawal is not allowed.');
                 }
-                $this->representations->assertActiveForConsent($representationId, $subjectPersonId, $actorPersonId);
+                $this->representations->assertActiveForAction($representationId, $subjectPersonId, $actorPersonId, 'privacy.consent.withdraw');
             } elseif ($representationId !== null) {
                 throw new DomainException('Self withdrawal cannot use representative authority.');
             }

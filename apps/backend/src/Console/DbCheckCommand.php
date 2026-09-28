@@ -49,6 +49,7 @@ final class DbCheckCommand extends Command
                AND to_regclass('core.auth_sessions') IS NOT NULL
                AND to_regclass('core.privacy_consents') IS NOT NULL
                AND to_regclass('core.legal_representations') IS NOT NULL
+               AND to_regclass('core.legal_representation_scopes') IS NOT NULL
                AND to_regclass('platform_runtime.installations') IS NOT NULL
                AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL
             SQL,

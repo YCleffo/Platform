@@ -9,6 +9,7 @@ use App\Api\Shared\ResponseFactory;
 use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Privacy\Application\LegalRepresentationService;
 use DomainException;
+use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Yiisoft\Http\Status;
@@ -24,7 +25,7 @@ final readonly class ManageRepresentationAction
     ): ResponseInterface {
         $operation = (string) $route->getArgument('operation');
         $input = $request->getParsedBody() ?? [];
-        if (!is_array($input) || count($input) > 8) {
+        if (!is_array($input) || count($input) > 9) {
             return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
         }
         $actor = AuthenticatedIdentity::fromRequest($request);
@@ -33,6 +34,8 @@ final readonly class ManageRepresentationAction
                 if (!$this->validDeclaration($input)) {
                     return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
                 }
+                /** @var list<string> $scopes */
+                $scopes = $input['scopes'];
                 $id = $representations->declare(
                     $actor,
                     (string) $input['subjectPersonId'],
@@ -43,6 +46,7 @@ final readonly class ManageRepresentationAction
                     isset($input['evidenceType']) ? (string) $input['evidenceType'] : null,
                     isset($input['evidenceReference']) ? (string) $input['evidenceReference'] : null,
                     isset($input['evidenceSha256']) ? (string) $input['evidenceSha256'] : null,
+                    $scopes,
                 );
                 return $responses->success(['id' => $id, 'status' => 'declared'])->withStatus(Status::CREATED);
             }
@@ -59,7 +63,7 @@ final readonly class ManageRepresentationAction
                 $changed = $representations->revoke($actor, $id, $input['reasonCode']);
                 return $responses->success(['id' => $id, 'status' => 'revoked', 'changed' => $changed]);
             }
-        } catch (DomainException) {
+        } catch (DomainException|InvalidArgumentException) {
             return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
         }
         return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
@@ -69,7 +73,7 @@ final readonly class ManageRepresentationAction
     private function validDeclaration(array $input): bool
     {
         foreach (array_keys($input) as $key) {
-            if (!in_array($key, ['subjectPersonId', 'representativePersonId', 'authorityType', 'validFrom', 'validUntil', 'evidenceType', 'evidenceReference', 'evidenceSha256'], true)) {
+            if (!in_array($key, ['subjectPersonId', 'representativePersonId', 'authorityType', 'validFrom', 'validUntil', 'evidenceType', 'evidenceReference', 'evidenceSha256', 'scopes'], true)) {
                 return false;
             }
         }
@@ -77,11 +81,18 @@ final readonly class ManageRepresentationAction
         $representative = $input['representativePersonId'] ?? null;
         $type = $input['authorityType'] ?? null;
         $from = $input['validFrom'] ?? null;
+        $scopes = $input['scopes'] ?? null;
         if (!is_string($subject) || !self::uuid($subject)
             || !is_string($representative) || !self::uuid($representative)
             || !is_string($type) || !self::code($type)
-            || !is_string($from) || !self::timestamp($from)) {
+            || !is_string($from) || !self::timestamp($from)
+            || !is_array($scopes) || !array_is_list($scopes) || $scopes === [] || count($scopes) > 32) {
             return false;
+        }
+        foreach ($scopes as $scope) {
+            if (!is_string($scope) || !self::code($scope)) {
+                return false;
+            }
         }
         if (isset($input['validUntil']) && (!is_string($input['validUntil']) || !self::timestamp($input['validUntil']))) {
             return false;

@@ -424,7 +424,6 @@ final readonly class PasskeyService
                 ipAddress: $context->ipAddress,
                 userAgent: $context->userAgent,
                 metadata: [
-                    'label' => $label,
                     'backupEligible' => $backupEligible,
                     'backupState' => $backupState,
                 ],
@@ -828,7 +827,6 @@ final readonly class PasskeyService
             requestId: $context->requestId,
             ipAddress: $context->ipAddress,
             userAgent: $context->userAgent,
-            metadata: ['label' => $label],
         ));
 
         return $updated;

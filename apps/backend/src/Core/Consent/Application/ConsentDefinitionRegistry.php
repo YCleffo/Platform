@@ -17,9 +17,7 @@ final class ConsentDefinitionRegistry
     {
         foreach ($definitions as $definition) {
             $purpose = $purposes->get($definition->purposeCode);
-            if ($purpose === null || !$purpose->requiresConsent
-                || $purpose->retentionPolicyCode !== $definition->retentionPolicyCode
-                || ($definition->representativeAllowed && !$purpose->representativeAllowed)) {
+            if ($purpose === null || !$purpose->requiresConsent) {
                 throw new InvalidArgumentException('Consent definition has no matching consent purpose.');
             }
             if (isset($this->definitions[$definition->code])) {

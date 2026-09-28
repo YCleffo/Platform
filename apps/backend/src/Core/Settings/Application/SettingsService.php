@@ -238,9 +238,7 @@ final readonly class SettingsService
     {
         return [
             'key' => $setting->key,
-            'value' => $setting->value,
             'isPublic' => $setting->isPublic,
-            'description' => $setting->description,
         ];
     }
 
@@ -250,8 +248,6 @@ final readonly class SettingsService
         return [
             'moduleCode' => $setting->moduleCode,
             'key' => $setting->key,
-            'value' => $setting->value,
-            'description' => $setting->description,
         ];
     }
 }

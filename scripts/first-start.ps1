@@ -54,7 +54,7 @@ if ([string]::IsNullOrWhiteSpace($coreTableCount)) {
 $schemaReady = Invoke-PlatformPsqlScalar `
     -Root $Root `
     -Config $Config `
-    -Sql "SELECT to_regclass('core.accounts') IS NOT NULL AND to_regclass('core.privacy_consents') IS NOT NULL AND to_regclass('core.legal_representations') IS NOT NULL AND to_regclass('platform_runtime.installations') IS NOT NULL AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL;"
+    -Sql "SELECT to_regclass('core.accounts') IS NOT NULL AND to_regclass('core.privacy_consents') IS NOT NULL AND to_regclass('core.legal_representations') IS NOT NULL AND to_regclass('core.legal_representation_scopes') IS NOT NULL AND to_regclass('platform_runtime.installations') IS NOT NULL AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL;"
 
 if ($schemaReady -ne 't') {
     throw "Core validation failed: required schema objects are missing."

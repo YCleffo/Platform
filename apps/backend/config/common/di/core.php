@@ -18,8 +18,10 @@ use App\Core\Privacy\Application\DataCategoryRegistry;
 use App\Core\Privacy\Application\ProcessingPurposeRegistry;
 use App\Core\Privacy\Application\RetentionPolicyRegistry;
 use App\Core\Privacy\Application\RepresentativeAuthorityPolicy;
+use App\Core\Privacy\Application\RepresentationScopeRegistry;
 use App\Core\Privacy\Infrastructure\PostgresRepresentativeAuthorityPolicy;
 use App\Core\Audit\Application\AuditWriter;
+use App\Core\Audit\Application\AuditEventDefinitionRegistry;
 use App\Core\Audit\Infrastructure\PostgresAuditWriter;
 use App\Core\Auth\Application\AuthChallengeRepository;
 use App\Core\Auth\Application\AuthCleanupRepository;
@@ -90,7 +92,13 @@ return [
         '__construct()' => ['definitions' => $params['processingPurposeDefinitions'] ?? []],
     ],
     RepresentativeAuthorityPolicy::class => ['class' => PostgresRepresentativeAuthorityPolicy::class],
+    RepresentationScopeRegistry::class => [
+        '__construct()' => ['additionalCodes' => $params['representationScopeCodes'] ?? []],
+    ],
     AuditWriter::class => ['class' => PostgresAuditWriter::class],
+    AuditEventDefinitionRegistry::class => [
+        '__construct()' => ['additionalDefinitions' => $params['auditEventDefinitions'] ?? []],
+    ],
     IdentifierRepository::class => ['class' => PostgresAuthRepository::class],
     PasswordCredentialRepository::class => ['class' => PostgresAuthRepository::class],
     AuthProviderRepository::class => ['class' => PostgresAuthRepository::class],

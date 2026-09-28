@@ -18,7 +18,7 @@ final class SecurityAuditServiceTest extends Unit
 {
     public function testRejectsSecretShapedMetadata(): void
     {
-        $service = new SecurityAuditService(new AuditService(new NullAuditWriter(), new \App\Core\Audit\Application\AuditPayloadPolicy()));
+        $service = new SecurityAuditService(new AuditService(new NullAuditWriter(), new \App\Core\Audit\Application\AuditPayloadPolicy(new \App\Core\Audit\Application\AuditEventDefinitionRegistry())));
 
         $this->expectException(InvalidArgumentException::class);
         $service->record(new SecurityAuditCommand(

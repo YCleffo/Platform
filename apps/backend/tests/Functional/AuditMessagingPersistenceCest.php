@@ -42,7 +42,6 @@ final readonly class AuditMessagingPersistenceCest
                     action: 'core.integration.checked',
                     resourceType: 'core.test',
                     resourceId: $suffix,
-                    metadata: ['suite' => 'functional'],
                 ),
             );
             assertTrue($receipt->id > 0);

@@ -117,8 +117,6 @@ final readonly class FeatureFlagManager
             'moduleCode' => $flag->moduleCode,
             'enabled' => $flag->enabled,
             'rolloutPercent' => $flag->rolloutPercent,
-            'config' => $flag->config,
-            'description' => $flag->description,
         ];
     }
 }

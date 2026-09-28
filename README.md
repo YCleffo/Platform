@@ -321,7 +321,7 @@ public.platform_migrations
 
 ## Core schema
 
-Core содержит **26 базовых таблиц** после миграции 020:
+Core содержит **27 базовых таблиц** после миграции 021:
 
 ```text
 persons
@@ -331,6 +331,7 @@ accounts
 account_settings
 privacy_consents
 legal_representations
+legal_representation_scopes
 
 auth_identifiers
 auth_password_credentials

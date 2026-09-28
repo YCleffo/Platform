@@ -224,6 +224,17 @@ Table core.legal_representations {
   Note: 'Migrations 019-020. Verified generic authority, no document scan stored in Core. Revocation preserves evidence.'
 }
 
+Table core.legal_representation_scopes {
+  representation_id uuid [not null]
+  scope_code varchar(120) [not null]
+
+  indexes {
+    (representation_id, scope_code) [pk]
+  }
+
+  Note: 'Migration 021. Scopes are immutable after verification and checked for each protected action.'
+}
+
 Table core.privacy_consents {
   id uuid [pk, not null, default: `uuidv7()`]
   granted_by_account_id uuid [not null, note: 'FK -> core.accounts.id ON DELETE RESTRICT']
@@ -850,6 +861,7 @@ Ref: core.legal_representations.subject_person_id > core.persons.id [delete: res
 Ref: core.legal_representations.representative_person_id > core.persons.id [delete: restrict]
 Ref: core.legal_representations.verified_by_account_id > core.accounts.id [delete: restrict]
 Ref: core.legal_representations.revoked_by_account_id > core.accounts.id [delete: restrict]
+Ref: core.legal_representation_scopes.representation_id > core.legal_representations.id [delete: restrict]
 Ref: core.privacy_consents.granted_by_account_id > core.accounts.id [delete: restrict]
 Ref: core.privacy_consents.subject_person_id > core.persons.id [delete: restrict]
 Ref: core.privacy_consents.granted_by_person_id > core.persons.id [delete: restrict]

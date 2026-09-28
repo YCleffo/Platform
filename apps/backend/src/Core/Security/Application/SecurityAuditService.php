@@ -176,22 +176,6 @@ final readonly class SecurityAuditService
             $accountId,
             $sessionId,
             $context,
-            beforeData: [
-                'browser' => $previous->browserName,
-                'browserVersion' => $previous->browserVersion,
-                'os' => $previous->osName,
-                'osVersion' => $previous->osVersion,
-                'deviceType' => $previous->deviceType,
-                'deviceModel' => $previous->deviceModel,
-            ],
-            afterData: [
-                'browser' => $context->device->browserName,
-                'browserVersion' => $context->device->browserVersion,
-                'os' => $context->device->osName,
-                'osVersion' => $context->device->osVersion,
-                'deviceType' => $context->device->deviceType,
-                'deviceModel' => $context->device->deviceModel,
-            ],
         );
     }
 
@@ -212,7 +196,6 @@ final readonly class SecurityAuditService
             metadata: [
                 'currentSessionId' => $currentSessionId,
                 'revokedCount' => $revokedCount,
-                'deviceType' => $context->device->deviceType,
             ],
         ));
     }
@@ -239,23 +222,6 @@ final readonly class SecurityAuditService
             userAgent: $context->userAgent,
             beforeData: $beforeData,
             afterData: $afterData,
-            metadata: [
-                'browser' => $context->device->browserName,
-                'browserVersion' => $context->device->browserVersion,
-                'os' => $context->device->osName,
-                'osVersion' => $context->device->osVersion,
-                'deviceType' => $context->device->deviceType,
-                'deviceModel' => $context->device->deviceModel,
-                'locale' => $context->locale->locale->tag,
-                'timezone' => $context->timezone->timezone->identifier,
-                'timezoneSource' => $context->timezone->source,
-                'approximateGeo' => [
-                    'countryCode' => $context->geoLocation->countryCode,
-                    'region' => $context->geoLocation->region,
-                    'city' => $context->geoLocation->city,
-                    'timezone' => $context->geoLocation->timezone,
-                ],
-            ],
         ));
     }
 

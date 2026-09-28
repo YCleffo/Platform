@@ -54,12 +54,12 @@ final readonly class AccountSettingsCest
         assertFalse($service->get($accountId)->settings['privacy']['show_online_status']);
 
         $audit = $db->createCommand(
-            "SELECT before_data::text, after_data::text FROM core.audit_events WHERE action = 'core.account_settings.updated' AND resource_id = :id ORDER BY occurred_at DESC, id DESC LIMIT 1",
+            "SELECT before_data::text, after_data::text, metadata::text FROM core.audit_events WHERE action = 'core.account_settings.updated' AND resource_id = :id ORDER BY occurred_at DESC, id DESC LIMIT 1",
             [':id' => $accountId],
         )->queryOne();
         assertTrue(is_array($audit));
-        assertTrue(str_contains((string) $audit['after_data'], 'privacy.show_online_status'));
-        assertFalse(str_contains((string) $audit['after_data'], 'profile_visibility'));
+        assertTrue(str_contains((string) $audit['metadata'], 'privacy.show_online_status'));
+        assertFalse(str_contains((string) $audit['metadata'], 'profile_visibility'));
 
         $db->createCommand('DELETE FROM core.accounts WHERE id = CAST(:id AS uuid)', [':id' => $accountId])->execute();
         assertNull($repository->find($accountId));

@@ -45,7 +45,7 @@ final readonly class AccountSettingsService
             $after = $this->registry->applyPatch($before, $patch);
             if ($after !== $before || ($stored !== null && $stored->schemaVersion !== $this->registry->schemaVersion())) {
                 $this->repository->save($accountId, $after, $this->registry->schemaVersion());
-                [$beforeAudit, $afterAudit] = self::auditDiff($before, $after);
+                $changedPaths = self::auditChangedPaths($before, $after);
                 $this->audit->record(new SecurityAuditCommand(
                     action: SecurityAction::ACCOUNT_SETTINGS_UPDATED,
                     actorAccountId: $accountId,
@@ -54,9 +54,7 @@ final readonly class AccountSettingsService
                     requestId: $context->requestId,
                     ipAddress: $context->ipAddress,
                     userAgent: $context->userAgent,
-                    beforeData: ['settings' => $beforeAudit],
-                    afterData: ['settings' => $afterAudit],
-                    metadata: ['changedPaths' => array_keys($afterAudit)],
+                    metadata: ['changedPaths' => $changedPaths],
                 ));
             }
             return new AccountSettings(
@@ -69,22 +67,20 @@ final readonly class AccountSettingsService
     /**
      * @param array<string, mixed> $before
      * @param array<string, mixed> $after
-     * @return array{0: array<string, mixed>, 1: array<string, mixed>}
+     * @return list<string>
      */
-    private static function auditDiff(array $before, array $after): array
+    private static function auditChangedPaths(array $before, array $after): array
     {
         $beforeFlat = SettingsSchemaRegistry::flatten($before);
         $afterFlat = SettingsSchemaRegistry::flatten($after);
-        $beforeAudit = [];
-        $afterAudit = [];
+        $paths = [];
         foreach (array_unique([...array_keys($beforeFlat), ...array_keys($afterFlat)]) as $path) {
             $old = $beforeFlat[$path] ?? null;
             $new = $afterFlat[$path] ?? null;
             if ($old !== $new) {
-                $beforeAudit[$path] = $old;
-                $afterAudit[$path] = $new;
+                $paths[] = $path;
             }
         }
-        return [$beforeAudit, $afterAudit];
+        return $paths;
     }
 }

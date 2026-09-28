@@ -14,20 +14,17 @@ final readonly class ConsentDefinition
         public string $currentDocumentSha256Hex,
         public bool $withdrawable,
         public string $purposeCode,
-        public bool $representativeAllowed,
-        public string $retentionPolicyCode,
     ) {
         if (!preg_match('/^[a-z0-9]+([._-][a-z0-9]+)*$/D', $code)
             || $currentDocumentVersion === ''
             || !preg_match('/^[a-f0-9]{64}$/D', $currentDocumentSha256Hex)
-            || !preg_match('/^[a-z0-9]+([._-][a-z0-9]+)*$/D', $purposeCode)
-            || !preg_match('/^[a-z0-9]+([._-][a-z0-9]+)*$/D', $retentionPolicyCode)) {
+            || !preg_match('/^[a-z0-9]+([._-][a-z0-9]+)*$/D', $purposeCode)) {
             throw new InvalidArgumentException('Invalid consent definition.');
         }
     }
 
     /** @return array{code: string, purpose_code: string, current_document_version: string, current_document_sha256: string, withdrawable: bool, representative_allowed: bool} */
-    public function toArray(): array
+    public function toArray(bool $representativeAllowed): array
     {
         return [
             'code' => $this->code,
@@ -35,7 +32,7 @@ final readonly class ConsentDefinition
             'current_document_version' => $this->currentDocumentVersion,
             'current_document_sha256' => $this->currentDocumentSha256Hex,
             'withdrawable' => $this->withdrawable,
-            'representative_allowed' => $this->representativeAllowed,
+            'representative_allowed' => $representativeAllowed,
         ];
     }
 }

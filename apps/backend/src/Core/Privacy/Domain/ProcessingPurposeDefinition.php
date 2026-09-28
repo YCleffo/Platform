@@ -20,12 +20,14 @@ final readonly class ProcessingPurposeDefinition
         public array $dataCategories,
         public array $subjectCategories,
         public string $retentionPolicyCode,
+        public string $processingRole,
         public bool $distributionAllowed = false,
         public string $crossBorderPolicy = 'none',
     ) {
         MachineCode::assert($code);
         MachineCode::assert($legalBasisCode);
         MachineCode::assert($retentionPolicyCode);
+        MachineCode::assert($processingRole);
         foreach ([...$dataCategories, ...$subjectCategories] as $category) {
             MachineCode::assert($category);
         }
@@ -33,7 +35,8 @@ final readonly class ProcessingPurposeDefinition
             || count($dataCategories) !== count(array_unique($dataCategories))
             || count($subjectCategories) !== count(array_unique($subjectCategories))
             || !in_array($crossBorderPolicy, ['none', 'possible', 'explicitly_allowed'], true)
-            || ($requiresConsent && $legalBasisCode !== 'consent')) {
+            || ($requiresConsent !== ($legalBasisCode === 'consent'))
+            || !in_array($processingRole, ['operator', 'processor_by_instruction', 'joint_or_external_policy'], true)) {
             throw new InvalidArgumentException('Contradictory processing purpose definition.');
         }
     }

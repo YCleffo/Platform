@@ -40,12 +40,17 @@ final readonly class PrivacyRepresentationCest
             'validFrom' => '2020-01-01T00:00:00Z',
             'evidenceType' => 'test_proof',
             'evidenceReference' => 'fixture:protected',
+            'scopes' => ['privacy.consent.grant', 'privacy.consent.withdraw'],
         ];
         $I->sendPOST($path, $body);
         $I->seeResponseCodeIs(HttpCode::FORBIDDEN);
 
         $I->amAuthenticatedSuperadmin();
         $I->sendPOST($path, $body + ['unexpected' => 'value']);
+        $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+        $I->sendPOST($path, array_diff_key($body, ['scopes' => true]));
+        $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+        $I->sendPOST($path, array_replace($body, ['scopes' => ['privacy.unknown.scope']]));
         $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
         $I->sendPOST($path, $body);
         $I->seeResponseCodeIs(HttpCode::CREATED);

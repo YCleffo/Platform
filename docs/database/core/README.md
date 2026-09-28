@@ -1,7 +1,7 @@
 # Файлы базы данных Core
 
 - `Core_v1_FINAL.dbml` — визуальное представление контракта для инструментов, совместимых с dbdiagram.
-- `Core_v2.dbml` — актуальная Core-схема после migration 020 (Privacy foundation); v1 сохранён как исторический артефакт.
+- `Core_v2.dbml` — актуальная Core-схема после migration 021 (scoped representation); v1 сохранён как исторический артефакт.
 - `Core_v1_FINAL_RU.md` — описание полей на русском языке.
 - Исполняемые миграции PostgreSQL находятся в `apps/backend/migrations/sql/`.
 

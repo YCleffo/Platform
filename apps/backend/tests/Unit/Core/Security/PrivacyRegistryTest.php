@@ -18,7 +18,7 @@ final class PrivacyRegistryTest extends Unit
     public function testRejectsUnknownRetentionAndContradictoryPurpose(): void
     {
         $categories = new DataCategoryRegistry();
-        $definition = new ProcessingPurposeDefinition('test.purpose', 'consent', true, false, ['identity'], ['person'], 'test.unknown');
+        $definition = new ProcessingPurposeDefinition('test.purpose', 'consent', true, false, ['identity'], ['person'], 'test.unknown', 'operator');
         $this->expectException(InvalidArgumentException::class);
         new ProcessingPurposeRegistry([$definition], $categories, new RetentionPolicyRegistry());
     }
@@ -33,5 +33,21 @@ final class PrivacyRegistryTest extends Unit
         }
         $this->expectException(InvalidArgumentException::class);
         new RetentionPolicyDefinition('Invalid Code', 'withdrawal', null, 'delete');
+    }
+
+    public function testConsentBasisRequiresConsentAndProcessingRoleIsExplicit(): void
+    {
+        foreach ([
+            ['consent', false, 'operator'],
+            ['contract', true, 'operator'],
+            ['contract', false, 'unknown_role'],
+        ] as [$basis, $requiresConsent, $role]) {
+            try {
+                new ProcessingPurposeDefinition('test.purpose', $basis, $requiresConsent, false, ['identity'], ['person'], 'test.retention', $role);
+                self::fail('Contradictory purpose was accepted.');
+            } catch (InvalidArgumentException) {
+                self::assertTrue(true);
+            }
+        }
     }
 }

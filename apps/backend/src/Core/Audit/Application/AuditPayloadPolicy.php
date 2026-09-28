@@ -20,21 +20,72 @@ final class AuditPayloadPolicy
         'fullname',
     ];
 
+    public function __construct(private AuditEventDefinitionRegistry $definitions) {}
+
     public function assertAllowed(WriteAuditEventCommand $command): void
     {
         if (str_starts_with($command->action, 'privacy.')
             && ($command->beforeData !== null || $command->afterData !== null || $command->metadata !== [])) {
             throw new InvalidArgumentException('Privacy audit events may contain only typed resource evidence.');
         }
-        foreach ([$command->beforeData, $command->afterData, $command->metadata] as $payload) {
+        $definition = $this->definitions->get($command->action);
+        foreach ([
+            [$command->beforeData, $definition?->beforeFields ?? []],
+            [$command->afterData, $definition?->afterFields ?? []],
+            [$command->metadata, $definition?->metadataFields ?? []],
+        ] as [$payload, $fields]) {
             if ($payload === null) {
                 continue;
             }
+            $this->assertFields($payload, $fields, $definition?->maxDepth ?? 1);
             $this->assertNode($payload, 1);
-            if (strlen(json_encode($payload, JSON_THROW_ON_ERROR)) > self::MAX_BYTES) {
+            if (strlen(json_encode($payload, JSON_THROW_ON_ERROR)) > ($definition?->maxPayloadBytes ?? self::MAX_BYTES)) {
                 throw new InvalidArgumentException('Audit payload exceeds the size limit.');
             }
         }
+    }
+
+    /** @param array<array-key, mixed> $payload @param array<string, string> $fields */
+    private function assertFields(array $payload, array $fields, int $maxDepth): void
+    {
+        foreach ($payload as $key => $value) {
+            if (!is_string($key) || !isset($fields[$key])) {
+                throw new InvalidArgumentException('Audit payload field is not defined for this action.');
+            }
+            if ($value === null) {
+                continue;
+            }
+            $type = $fields[$key];
+            $valid = match ($type) {
+                'code' => is_string($value) && strlen($value) <= 120 && preg_match('/^[a-z0-9]+([._-][a-z0-9]+)*$/D', $value) === 1,
+                'auth_method' => is_string($value) && strlen($value) <= 80 && preg_match('/^[a-z0-9_]+(?:\+[a-z0-9_]+)?$/D', $value) === 1,
+                'uuid' => is_string($value) && preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/Di', $value) === 1,
+                'digest' => is_string($value) && preg_match('/^[a-f0-9]{32,128}$/Di', $value) === 1,
+                'bool' => is_bool($value),
+                'int' => is_int($value) && $value >= 0,
+                'timestamp' => is_string($value) && strlen($value) <= 48 && strtotime($value) !== false,
+                'ip' => is_string($value) && filter_var($value, FILTER_VALIDATE_IP) !== false,
+                'domain' => is_string($value) && strlen($value) <= 253 && preg_match('/^[a-zA-Z0-9.-]+$/D', $value) === 1,
+                'path_list', 'code_list' => $maxDepth >= 2 && is_array($value) && array_is_list($value)
+                    && count($value) <= 32 && $this->validCodes($value),
+                default => false,
+            };
+            if (!$valid) {
+                throw new InvalidArgumentException('Audit payload field has an unsafe value.');
+            }
+        }
+    }
+
+    /** @param array<array-key, mixed> $values */
+    private function validCodes(array $values): bool
+    {
+        foreach ($values as $value) {
+            if (!is_string($value) || strlen($value) > 120
+                || preg_match('/^[a-z0-9]+([._-][a-z0-9]+)*$/D', $value) !== 1) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** @param array<array-key, mixed> $node */
