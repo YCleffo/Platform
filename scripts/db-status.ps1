@@ -30,7 +30,7 @@ $coreTableCount = Invoke-PlatformPsqlScalar `
 $requiredObjects = Invoke-PlatformPsqlScalar `
     -Root $Root `
     -Config $Config `
-    -Sql "SELECT to_regclass('core.accounts') IS NOT NULL AND to_regclass('core.account_consents') IS NOT NULL AND to_regclass('platform_runtime.installations') IS NOT NULL AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL;"
+    -Sql "SELECT to_regclass('core.accounts') IS NOT NULL AND to_regclass('core.privacy_consents') IS NOT NULL AND to_regclass('core.legal_representations') IS NOT NULL AND to_regclass('platform_runtime.installations') IS NOT NULL AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL;"
 
 if ($requiredObjects -eq 't') {
     Write-Host "Core tables: $coreTableCount; required objects OK" -ForegroundColor Green

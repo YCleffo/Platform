@@ -321,7 +321,7 @@ public.platform_migrations
 
 ## Core schema
 
-Core содержит **25 базовых таблиц** после миграции 018:
+Core содержит **26 базовых таблиц** после миграции 020:
 
 ```text
 persons
@@ -329,7 +329,8 @@ person_contacts
 
 accounts
 account_settings
-account_consents
+privacy_consents
+legal_representations
 
 auth_identifiers
 auth_password_credentials
@@ -664,6 +665,10 @@ self-service/forced password change и guarded custom roles. Versioned contracts
 M2M credentials и provisioning остаются следующими фазами, несмотря на
 подготовленные таблицы и интерфейсы. Актуальная модель Core —
 `docs/database/core/Core_v2.dbml`.
+Phase 4.1 foundation adds purpose and data-category registries, verified generic
+legal representation, subject/actor consent evidence, and a shared Audit payload
+policy. The retention, erasure, DSAR and incident workflows remain separate
+follow-on passes; see `docs/architecture/PRIVACY_COMPLIANCE_CORE.md`.
 См. `docs/architecture/COMMERCIAL_CONTROL_PLANE.md` и
 `docs/architecture/COMMERCIAL_SECURITY.md`.
 

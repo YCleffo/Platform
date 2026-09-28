@@ -54,7 +54,7 @@ jobs:
 
       - name: Verify Core migration and required schema objects
         run: |
-          ready=$(docker compose --profile test exec -T postgres-test psql -U "${POSTGRES_USER}" -d "${POSTGRES_TEST_DB}" -tA -c "SELECT to_regclass('core.accounts') IS NOT NULL AND to_regclass('core.account_consents') IS NOT NULL AND EXISTS (SELECT 1 FROM public.platform_migrations WHERE migration_name = '018_core_consent_runtime.sql');")
+          ready=$(docker compose --profile test exec -T postgres-test psql -U "${POSTGRES_USER}" -d "${POSTGRES_TEST_DB}" -tA -c "SELECT to_regclass('core.accounts') IS NOT NULL AND to_regclass('core.privacy_consents') IS NOT NULL AND to_regclass('core.legal_representations') IS NOT NULL AND EXISTS (SELECT 1 FROM public.platform_migrations WHERE migration_name = '020_core_privacy_invariants.sql');")
           test "$ready" = "t"
 
       - name: Verify Platform Runtime Objects

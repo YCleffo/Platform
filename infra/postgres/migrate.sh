@@ -73,7 +73,8 @@ echo "[db-migrate] core.* tables: $core_count"
 
 schema_ready="$("${psql_base[@]}" --tuples-only --no-align --command="
 SELECT to_regclass('core.accounts') IS NOT NULL
-   AND to_regclass('core.account_consents') IS NOT NULL
+   AND to_regclass('core.privacy_consents') IS NOT NULL
+   AND to_regclass('core.legal_representations') IS NOT NULL
    AND to_regclass('platform_runtime.installations') IS NOT NULL
    AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL;")"
 if [ "$schema_ready" != "t" ]; then

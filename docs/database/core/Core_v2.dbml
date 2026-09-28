@@ -197,9 +197,40 @@ Table core.account_settings {
   '''
 }
 
-Table core.account_consents {
+Table core.legal_representations {
   id uuid [pk, not null, default: `uuidv7()`]
-  account_id uuid [not null, note: 'FK -> core.accounts.id ON DELETE RESTRICT']
+  subject_person_id uuid [not null]
+  representative_person_id uuid [not null]
+  authority_type varchar(120) [not null]
+  status varchar(32) [not null, default: 'declared']
+  valid_from timestamptz [not null]
+  valid_until timestamptz
+  verified_at timestamptz
+  verified_by_account_id uuid
+  evidence_type varchar(120)
+  evidence_reference varchar(512)
+  evidence_sha256 bytea
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  revoked_at timestamptz
+  revoked_by_account_id uuid
+  revocation_reason_code varchar(120)
+
+  indexes {
+    (subject_person_id, status, valid_until) [name: 'idx_legal_rep_subject']
+    (representative_person_id, status) [name: 'idx_legal_rep_representative']
+  }
+
+  Note: 'Migrations 019-020. Verified generic authority, no document scan stored in Core. Revocation preserves evidence.'
+}
+
+Table core.privacy_consents {
+  id uuid [pk, not null, default: `uuidv7()`]
+  granted_by_account_id uuid [not null, note: 'FK -> core.accounts.id ON DELETE RESTRICT']
+  subject_person_id uuid
+  granted_by_person_id uuid
+  legal_representation_id uuid
+  purpose_code varchar(120)
   consent_code varchar(120) [not null]
   document_version varchar(80) [not null]
   document_sha256 bytea [not null, note: 'Exactly 32 bytes']
@@ -209,16 +240,21 @@ Table core.account_consents {
   withdrawn_at timestamptz
   request_id uuid
   created_at timestamptz [not null, default: `now()`]
+  retention_until timestamptz
+  legacy_record boolean [not null, default: false]
 
   indexes {
-    (account_id, consent_code) [unique, name: 'uq_account_consents_one_active', note: 'Partial: WHERE withdrawn_at IS NULL']
-    (account_id, consent_code, granted_at, id) [name: 'idx_account_consents_history']
+    (subject_person_id, consent_code, purpose_code) [unique, name: 'uq_privacy_consents_one_active', note: 'Partial: WHERE withdrawn_at IS NULL AND legacy_record = false']
+    (granted_by_account_id, consent_code, granted_at, id) [name: 'idx_account_consents_history']
+    (subject_person_id, granted_at, id) [name: 'idx_privacy_consents_subject_history']
+    (granted_by_account_id, granted_at, id) [name: 'idx_privacy_consents_actor_history']
   }
 
   Note: '''
-  Migration 018. An active consent is unique per account/code. Trigger prevents
-  deletion and mutation of evidence fields; only NULL -> timestamp withdrawal.
-  Re-grant inserts a new row. Not a browser cookie-consent ledger.
+  Migration 018 table evolved by 019-020. New evidence records subject, actor,
+  purpose, and verified representative authority. Historical rows without purpose
+  remain legacy_record and are not current consent. Triggers prevent ordinary deletion
+  and evidence mutation; an active subject/code/purpose is unique.
   '''
 }
 
@@ -810,7 +846,14 @@ Ref: core.accounts.person_id > core.persons.id [delete: restrict]
 Ref: core.accounts.created_by_account_id > core.accounts.id [delete: set null]
 Ref: core.accounts.approved_by_account_id > core.accounts.id [delete: set null]
 Ref: core.account_settings.account_id > core.accounts.id [delete: cascade]
-Ref: core.account_consents.account_id > core.accounts.id [delete: restrict]
+Ref: core.legal_representations.subject_person_id > core.persons.id [delete: restrict]
+Ref: core.legal_representations.representative_person_id > core.persons.id [delete: restrict]
+Ref: core.legal_representations.verified_by_account_id > core.accounts.id [delete: restrict]
+Ref: core.legal_representations.revoked_by_account_id > core.accounts.id [delete: restrict]
+Ref: core.privacy_consents.granted_by_account_id > core.accounts.id [delete: restrict]
+Ref: core.privacy_consents.subject_person_id > core.persons.id [delete: restrict]
+Ref: core.privacy_consents.granted_by_person_id > core.persons.id [delete: restrict]
+Ref: core.privacy_consents.legal_representation_id > core.legal_representations.id [delete: restrict]
 
 Ref: core.auth_identifiers.account_id > core.accounts.id [delete: cascade]
 Ref: core.auth_password_credentials.account_id > core.accounts.id [delete: cascade]

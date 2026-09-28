@@ -32,7 +32,7 @@ PATCH выполняется как deep merge. Соседние ключи со
 | `notifications.browser` | boolean | `true` |
 | `notifications.sound` | boolean | `true` |
 | `notifications.email` | boolean | `false` |
-| `privacy.show_online_status` | boolean | `true` |
+| `privacy.show_online_status` | boolean | `false` |
 
 Registry также поддерживает декларативные `enum`, integer range и ограниченные
 типизированные list leaf для безопасного расширения будущими модулями.

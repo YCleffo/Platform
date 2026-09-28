@@ -17,9 +17,10 @@ platform database
 
 ## Зафиксированная версия Core v2
 
-Схема `core.*` содержит 25 базовых таблиц после миграции 018. Миграция 017 добавляет
-`core.account_settings`, миграция 018 — `core.account_consents` для неизменяемой истории
-authenticated согласий. Исторический артефакт `Core_v1_FINAL.dbml` не меняется;
+Схема `core.*` содержит 26 базовых таблиц после миграции 020. Миграция 017 добавляет
+`core.account_settings`, миграция 018 — историю authenticated согласий, а миграции 019–020
+развивают её в `core.privacy_consents` и добавляют `core.legal_representations`.
+Исторический артефакт `Core_v1_FINAL.dbml` не меняется;
 актуальная модель — `docs/database/core/Core_v2.dbml`. Runtime/CI проверяют наличие
 обязательных объектов и применённых миграций, а не фиксированное число таблиц.
 Добавление Games, Education,

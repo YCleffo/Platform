@@ -14,6 +14,11 @@ use App\Core\AccountSettings\Application\AccountSettingsRepository;
 use App\Core\AccountSettings\Application\SettingsSchemaRegistry;
 use App\Core\AccountSettings\Infrastructure\PostgresAccountSettingsRepository;
 use App\Core\Consent\Application\ConsentDefinitionRegistry;
+use App\Core\Privacy\Application\DataCategoryRegistry;
+use App\Core\Privacy\Application\ProcessingPurposeRegistry;
+use App\Core\Privacy\Application\RetentionPolicyRegistry;
+use App\Core\Privacy\Application\RepresentativeAuthorityPolicy;
+use App\Core\Privacy\Infrastructure\PostgresRepresentativeAuthorityPolicy;
 use App\Core\Audit\Application\AuditWriter;
 use App\Core\Audit\Infrastructure\PostgresAuditWriter;
 use App\Core\Auth\Application\AuthChallengeRepository;
@@ -75,6 +80,16 @@ return [
     ConsentDefinitionRegistry::class => [
         '__construct()' => ['definitions' => $params['consentDefinitions'] ?? []],
     ],
+    DataCategoryRegistry::class => [
+        '__construct()' => ['definitions' => $params['dataCategoryDefinitions'] ?? []],
+    ],
+    RetentionPolicyRegistry::class => [
+        '__construct()' => ['definitions' => $params['retentionPolicyDefinitions'] ?? []],
+    ],
+    ProcessingPurposeRegistry::class => [
+        '__construct()' => ['definitions' => $params['processingPurposeDefinitions'] ?? []],
+    ],
+    RepresentativeAuthorityPolicy::class => ['class' => PostgresRepresentativeAuthorityPolicy::class],
     AuditWriter::class => ['class' => PostgresAuditWriter::class],
     IdentifierRepository::class => ['class' => PostgresAuthRepository::class],
     PasswordCredentialRepository::class => ['class' => PostgresAuthRepository::class],

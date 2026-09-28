@@ -28,7 +28,13 @@ final readonly class ConsentCest
     {
         $I->sendGET('/api/auth/me/consents');
         $I->seeResponseCodeIs(HttpCode::UNAUTHORIZED);
-        $fixture = $I->amAuthenticatedSuperadmin();
+        $db = ApiTester::getDb();
+        $personId = $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('Consent', 'Fixture') RETURNING id::text")->queryScalar();
+        $accountId = $db->createCommand(
+            "INSERT INTO core.accounts (person_id, account_type, status) VALUES (CAST(:person AS uuid), 'human', 'active') RETURNING id::text",
+            [':person' => $personId],
+        )->queryScalar();
+        $I->amAuthenticatedAccount((string) $accountId);
         $I->sendGET('/api/auth/me/consents');
         $I->seeResponseCodeIs(HttpCode::OK);
         $data = json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data'];
@@ -45,7 +51,7 @@ final readonly class ConsentCest
         $I->sendPOST('/api/auth/me/consents/test.processing', []);
         $I->seeResponseCodeIs(HttpCode::OK);
         assertSame($first['id'], json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data']['id']);
-        $count = ApiTester::getDb()->createCommand('SELECT count(*) FROM core.account_consents WHERE account_id = CAST(:id AS uuid)', [':id' => $fixture['accountId']])->queryScalar();
+        $count = ApiTester::getDb()->createCommand('SELECT count(*) FROM core.privacy_consents WHERE subject_person_id = CAST(:id AS uuid)', [':id' => $personId])->queryScalar();
         assertSame(1, (int) $count);
 
         $I->sendDELETE('/api/auth/me/consents/test.required');

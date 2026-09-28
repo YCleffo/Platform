@@ -37,7 +37,7 @@ final class SettingsSchemaRegistry
             new AccountSettingDefinition('notifications.browser', 'boolean', true),
             new AccountSettingDefinition('notifications.sound', 'boolean', true),
             new AccountSettingDefinition('notifications.email', 'boolean', false),
-            new AccountSettingDefinition('privacy.show_online_status', 'boolean', true),
+            new AccountSettingDefinition('privacy.show_online_status', 'boolean', false),
         ];
     }
 

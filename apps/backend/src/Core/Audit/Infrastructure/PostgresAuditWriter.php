@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Audit\Infrastructure;
 
 use App\Core\Audit\Application\AuditEventReceipt;
+use App\Core\Audit\Application\AuditPayloadPolicy;
 use App\Core\Audit\Application\AuditWriter;
 use App\Core\Audit\Application\WriteAuditEventCommand;
 use RuntimeException;
@@ -12,10 +13,11 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class PostgresAuditWriter implements AuditWriter
 {
-    public function __construct(private ConnectionInterface $db) {}
+    public function __construct(private ConnectionInterface $db, private AuditPayloadPolicy $policy) {}
 
     public function write(WriteAuditEventCommand $command): AuditEventReceipt
     {
+        $this->policy->assertAllowed($command);
         $row = $this->db->createCommand(
             <<<'SQL'
             INSERT INTO core.audit_events (

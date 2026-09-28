@@ -30,12 +30,18 @@ final readonly class PresenceCest
         try {
             $presence = $container->get(PresenceService::class);
             $policy = $container->get(PresenceVisibilityPolicy::class);
+            assertSame('hidden', $policy->visibleState($account));
+            $db->createCommand(<<<'SQL'
+                INSERT INTO core.account_settings (account_id, settings, schema_version)
+                VALUES (CAST(:id AS uuid), '{"privacy":{"show_online_status":true}}'::jsonb, 2)
+                SQL, [':id' => $account])->execute();
             assertSame('offline', $policy->visibleState($account));
             assertTrue($presence->heartbeat($account, 'test-client'));
             assertSame('online', $policy->visibleState($account));
             $db->createCommand(<<<'SQL'
-                INSERT INTO core.account_settings (account_id, settings, schema_version)
-                VALUES (CAST(:id AS uuid), '{"privacy":{"show_online_status":false}}'::jsonb, 2)
+                UPDATE core.account_settings
+                SET settings = '{"privacy":{"show_online_status":false}}'::jsonb
+                WHERE account_id = CAST(:id AS uuid)
                 SQL, [':id' => $account])->execute();
             assertSame('hidden', $policy->visibleState($account));
             $redis->expire('presence:' . $account, 1);

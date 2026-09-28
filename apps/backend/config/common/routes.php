@@ -13,6 +13,7 @@ use App\Core\Consent\Api\ListOwnConsentsAction;
 use App\Core\Consent\Api\GrantOwnConsentAction;
 use App\Core\Consent\Api\WithdrawOwnConsentAction;
 use App\Core\Presence\Api\HeartbeatAction;
+use App\Core\Privacy\Api\ManageRepresentationAction;
 use App\Core\Auth\Api\ListSessionsAction;
 use App\Core\Auth\Api\ActivationAction;
 use App\Core\Auth\Api\ConfirmPasswordResetAction;
@@ -210,6 +211,24 @@ return [
         ->middleware(RequireAuthentication::class)
         ->action(WithdrawOwnConsentAction::class)
         ->name('auth/me/consents/withdraw'),
+
+    Route::post('/api/core/privacy/representations')
+        ->defaults(['operation' => 'declare'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.representations.manage'))
+        ->action(ManageRepresentationAction::class)
+        ->name('core/privacy/representations/declare'),
+
+    Route::post('/api/core/privacy/representations/{id}/verify')
+        ->defaults(['operation' => 'verify'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.representations.manage'))
+        ->action(ManageRepresentationAction::class)
+        ->name('core/privacy/representations/verify'),
+
+    Route::post('/api/core/privacy/representations/{id}/revoke')
+        ->defaults(['operation' => 'revoke'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.representations.manage'))
+        ->action(ManageRepresentationAction::class)
+        ->name('core/privacy/representations/revoke'),
 
     Route::post('/api/auth/me/presence/heartbeat')
         ->middleware(RequireAuthentication::class)

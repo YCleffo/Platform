@@ -1,0 +1,7 @@
+# Generic legal representation
+
+`core.legal_representations` links a subject Person to a different representative Person, with a semantic authority type, validity range, verifier, evidence reference/hash, and immutable lifecycle evidence. It does not encode parent/student roles or store document scans. Storage can later attach protected evidence through a reference without becoming a Core dependency.
+
+A declaration is not authority to grant consent. `LegalRepresentationService::verify` requires separate `core.privacy.representations.manage` permission (or the existing superadmin bypass) and evidence type plus a reference/hash. `RepresentativeAuthorityPolicy::assertActiveForConsent` locks and checks an exact subject/actor pair, verified status, validity dates, and absence of revocation. Consent grant and authority check share a transaction. Verification and revocation are idempotent. Revoked, expired, and rejected rows cannot be silently reactivated; a new authority needs a new record. Database CHECK/FK/trigger rules repeat durable invariants.
+
+Management endpoints under `/api/core/privacy/representations` require authentication and `core.privacy.representations.manage`. They declare, verify, and revoke authority; they do not grant consent. There is no public endpoint accepting an arbitrary Person ID to grant representative consent. Future domain modules must authenticate the actor and apply scoped relationship/access policy before invoking the internal service.

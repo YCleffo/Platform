@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Core\Consent\Application;
 
+use App\Core\Audit\Application\AuditService;
+use App\Core\Audit\Application\WriteAuditEventCommand;
+use App\Core\Privacy\Application\RepresentativeAuthorityPolicy;
 use DomainException;
 use Yiisoft\Db\Connection\ConnectionInterface;
 
@@ -12,18 +15,22 @@ final readonly class ConsentService
     public function __construct(
         private ConnectionInterface $db,
         private ConsentDefinitionRegistry $definitions,
+        private RepresentativeAuthorityPolicy $representations,
+        private AuditService $audit,
     ) {}
 
     public function list(string $accountId): array
     {
+        $personId = $this->personForAccount($accountId);
         $definitions = array_map(static fn (ConsentDefinition $definition): array => $definition->toArray(), $this->definitions->all());
         $rows = $this->db->createCommand(<<<'SQL'
-            SELECT id::text, consent_code, document_version, encode(document_sha256, 'hex') AS document_sha256,
+            SELECT id::text, consent_code, purpose_code, document_version,
+                   encode(document_sha256, 'hex') AS document_sha256,
                    locale, source, granted_at, withdrawn_at
-            FROM core.account_consents
-            WHERE account_id = CAST(:account_id AS uuid)
+            FROM core.privacy_consents
+            WHERE subject_person_id = CAST(:person AS uuid) AND legacy_record = false
             ORDER BY granted_at DESC, id DESC
-            SQL, [':account_id' => $accountId])->queryAll();
+            SQL, [':person' => $personId])->queryAll();
         $current = [];
         foreach ($rows as $row) {
             $code = (string) $row['consent_code'];
@@ -33,6 +40,7 @@ final readonly class ConsentService
             $definition = $this->definitions->get($code);
             $row['current'] = $row['withdrawn_at'] === null
                 && $definition !== null
+                && $row['purpose_code'] === $definition->purposeCode
                 && $row['document_version'] === $definition->currentDocumentVersion
                 && $row['document_sha256'] === $definition->currentDocumentSha256Hex;
             $current[$code] = $row;
@@ -43,13 +51,40 @@ final readonly class ConsentService
     /** @return array<string, mixed> */
     public function grant(string $accountId, string $code, string $locale, string $requestId): array
     {
+        $personId = $this->personForAccount($accountId);
+        return $this->grantForSubject($accountId, $personId, $code, $locale, $requestId);
+    }
+
+    /**
+     * Internal representative operation. The actor is resolved from the account and the
+     * supplied authority is checked under a row lock in the consent transaction.
+     * @return array<string, mixed>
+     */
+    public function grantForSubject(
+        string $actorAccountId,
+        string $subjectPersonId,
+        string $code,
+        string $locale,
+        string $requestId,
+        ?string $representationId = null,
+    ): array {
         $definition = $this->definitions->get($code);
         if ($definition === null) {
-            throw new DomainException('Unknown consent code.');
+            throw new UnknownConsentException('Unknown consent code.');
         }
-        return $this->db->transaction(function () use ($accountId, $definition, $locale, $requestId): array {
-            $this->lockAccount($accountId);
-            $active = $this->active($accountId, $definition->code);
+        return $this->db->transaction(function () use ($actorAccountId, $subjectPersonId, $definition, $locale, $requestId, $representationId): array {
+            $actorPersonId = $this->personForAccount($actorAccountId);
+            $this->lockSubject($subjectPersonId);
+            $representative = $actorPersonId !== $subjectPersonId;
+            if ($representative) {
+                if (!$definition->representativeAllowed || $representationId === null) {
+                    throw new DomainException('Representative consent is not allowed.');
+                }
+                $this->representations->assertActiveForConsent($representationId, $subjectPersonId, $actorPersonId);
+            } elseif ($representationId !== null) {
+                throw new DomainException('Self consent cannot use representative authority.');
+            }
+            $active = $this->active($subjectPersonId, $definition);
             if ($active !== null) {
                 if ($active['document_version'] === $definition->currentDocumentVersion
                     && $active['document_sha256'] === $definition->currentDocumentSha256Hex) {
@@ -57,24 +92,34 @@ final readonly class ConsentService
                     return $active;
                 }
                 $this->withdrawRow((string) $active['id']);
+                $this->record($actorAccountId, 'privacy.consent.withdrawn', (string) $active['id']);
             }
             $row = $this->db->createCommand(<<<'SQL'
-                INSERT INTO core.account_consents
-                    (account_id, consent_code, document_version, document_sha256, locale, source, request_id)
-                VALUES (CAST(:account_id AS uuid), :code, :version, decode(:hash, 'hex'), :locale, 'self_api', CAST(:request_id AS uuid))
-                RETURNING id::text, consent_code, document_version, encode(document_sha256, 'hex') AS document_sha256,
-                          locale, source, granted_at, withdrawn_at
+                INSERT INTO core.privacy_consents
+                    (granted_by_account_id, subject_person_id, granted_by_person_id, legal_representation_id,
+                     consent_code, purpose_code, document_version, document_sha256, locale, source, request_id)
+                VALUES (CAST(:account AS uuid), CAST(:subject AS uuid), CAST(:actor_person AS uuid),
+                        CAST(:representation AS uuid), :code, :purpose, :version, decode(:hash, 'hex'),
+                        :locale, :source, CAST(:request_id AS uuid))
+                RETURNING id::text, consent_code, purpose_code, document_version,
+                          encode(document_sha256, 'hex') AS document_sha256, locale, source, granted_at, withdrawn_at
                 SQL, [
-                ':account_id' => $accountId,
+                ':account' => $actorAccountId,
+                ':subject' => $subjectPersonId,
+                ':actor_person' => $actorPersonId,
+                ':representation' => $representationId,
                 ':code' => $definition->code,
+                ':purpose' => $definition->purposeCode,
                 ':version' => $definition->currentDocumentVersion,
                 ':hash' => $definition->currentDocumentSha256Hex,
                 ':locale' => $locale,
+                ':source' => $representative ? 'representative_service' : 'self_api',
                 ':request_id' => $requestId,
             ])->queryOne();
             if (!is_array($row)) {
-                throw new \RuntimeException('Consent grant was not returned.');
+                throw new DomainException('Consent grant could not be recorded.');
             }
+            $this->record($actorAccountId, 'privacy.consent.granted', (string) $row['id']);
             $row['current'] = true;
             return $row;
         });
@@ -82,47 +127,93 @@ final readonly class ConsentService
 
     public function withdraw(string $accountId, string $code): bool
     {
+        $personId = $this->personForAccount($accountId);
+        return $this->withdrawForSubject($accountId, $personId, $code);
+    }
+
+    public function withdrawForSubject(
+        string $actorAccountId,
+        string $subjectPersonId,
+        string $code,
+        ?string $representationId = null,
+    ): bool {
         $definition = $this->definitions->get($code);
         if ($definition === null || !$definition->withdrawable) {
             throw new DomainException('Consent is unknown or cannot be withdrawn.');
         }
-        return $this->db->transaction(function () use ($accountId, $code): bool {
-            $this->lockAccount($accountId);
-            $active = $this->active($accountId, $code);
+        return $this->db->transaction(function () use ($actorAccountId, $subjectPersonId, $definition, $representationId): bool {
+            $actorPersonId = $this->personForAccount($actorAccountId);
+            $this->lockSubject($subjectPersonId);
+            if ($actorPersonId !== $subjectPersonId) {
+                if (!$definition->representativeAllowed || $representationId === null) {
+                    throw new DomainException('Representative consent withdrawal is not allowed.');
+                }
+                $this->representations->assertActiveForConsent($representationId, $subjectPersonId, $actorPersonId);
+            } elseif ($representationId !== null) {
+                throw new DomainException('Self withdrawal cannot use representative authority.');
+            }
+            $active = $this->active($subjectPersonId, $definition);
             if ($active === null) {
                 return false;
             }
             $this->withdrawRow((string) $active['id']);
+            $this->record($actorAccountId, 'privacy.consent.withdrawn', (string) $active['id']);
             return true;
         });
     }
 
-    private function lockAccount(string $accountId): void
+    private function personForAccount(string $accountId): string
     {
-        $id = $this->db->createCommand('SELECT id FROM core.accounts WHERE id = CAST(:id AS uuid) FOR UPDATE', [':id' => $accountId])->queryScalar();
+        $person = $this->db->createCommand(<<<'SQL'
+            SELECT person_id::text FROM core.accounts
+            WHERE id = CAST(:id AS uuid) AND account_type = 'human' AND person_id IS NOT NULL
+            SQL, [':id' => $accountId])->queryScalar();
+        if (!is_string($person)) {
+            throw new DomainException('A human Person is required for consent.');
+        }
+        return $person;
+    }
+
+    private function lockSubject(string $subjectPersonId): void
+    {
+        $id = $this->db->createCommand(
+            'SELECT id FROM core.persons WHERE id = CAST(:id AS uuid) FOR UPDATE',
+            [':id' => $subjectPersonId],
+        )->queryScalar();
         if ($id === false || $id === null) {
-            throw new DomainException('Account does not exist.');
+            throw new DomainException('Consent subject does not exist.');
         }
     }
 
     /** @return array<string, mixed>|null */
-    private function active(string $accountId, string $code): ?array
+    private function active(string $subjectPersonId, ConsentDefinition $definition): ?array
     {
         $row = $this->db->createCommand(<<<'SQL'
-            SELECT id::text, consent_code, document_version, encode(document_sha256, 'hex') AS document_sha256,
+            SELECT id::text, consent_code, purpose_code, document_version,
+                   encode(document_sha256, 'hex') AS document_sha256,
                    locale, source, granted_at, withdrawn_at
-            FROM core.account_consents
-            WHERE account_id = CAST(:account_id AS uuid) AND consent_code = :code AND withdrawn_at IS NULL
+            FROM core.privacy_consents
+            WHERE subject_person_id = CAST(:subject AS uuid)
+              AND consent_code = :code AND purpose_code = :purpose
+              AND withdrawn_at IS NULL AND legacy_record = false
             FOR UPDATE
-            SQL, [':account_id' => $accountId, ':code' => $code])->queryOne();
+            SQL, [':subject' => $subjectPersonId, ':code' => $definition->code, ':purpose' => $definition->purposeCode])->queryOne();
         return is_array($row) ? $row : null;
     }
 
     private function withdrawRow(string $id): void
     {
         $this->db->createCommand(<<<'SQL'
-            UPDATE core.account_consents SET withdrawn_at = GREATEST(now(), granted_at)
+            UPDATE core.privacy_consents SET withdrawn_at = GREATEST(now(), granted_at)
             WHERE id = CAST(:id AS uuid) AND withdrawn_at IS NULL
             SQL, [':id' => $id])->execute();
+    }
+
+    private function record(string $accountId, string $action, string $id): void
+    {
+        $this->audit->record(new WriteAuditEventCommand(
+            actorType: 'account', actorAccountId: $accountId,
+            action: $action, resourceType: 'core.privacy_consent', resourceId: $id,
+        ));
     }
 }

@@ -20,7 +20,7 @@ final class SettingsSchemaRegistryTest extends Unit
 
         self::assertFalse($effective['notifications']['browser']);
         self::assertTrue($effective['notifications']['sound']);
-        self::assertTrue($effective['privacy']['show_online_status']);
+        self::assertFalse($effective['privacy']['show_online_status']);
         self::assertArrayNotHasKey('profile_visibility', $effective['privacy']);
     }
 
@@ -31,7 +31,7 @@ final class SettingsSchemaRegistryTest extends Unit
         $overrides = $registry->applyPatch($overrides, ['privacy' => ['show_online_status' => null]]);
 
         self::assertSame([], $overrides);
-        self::assertTrue($registry->effective($overrides)['privacy']['show_online_status']);
+        self::assertFalse($registry->effective($overrides)['privacy']['show_online_status']);
     }
 
     /** @dataProvider invalidPatches */

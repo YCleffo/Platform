@@ -1,15 +1,9 @@
-# Core Consent
+# Core consent evidence
 
-`core.account_consents` (migration 018) stores authenticated, durable evidence
-for a Yii Core Account. It is not a cookie-tracking ledger and has no FK into
-the separate Commercial database. A partial unique index permits one active
-grant per `(account_id, consent_code)`; withdrawal preserves the original row,
-and a later re-grant inserts a new row. PostgreSQL rejects evidence mutation
-and deletion.
+Migration 019 evolves the migration 018 table into `core.privacy_consents`. The canonical model records the **subject Person**, the **acting Person and Account**, an optional **verified legal representation**, the **processing purpose**, and server-defined document version and SHA-256. Person and Account remain distinct. The test deployment registers explicit test-only definitions; production legal text, hashes and purposes must come from deployment/module configuration.
 
-`ConsentDefinitionRegistry` is the source of truth for document version,
-SHA-256 and withdrawability. The client cannot supply those fields. The
-authenticated self API is `GET /api/auth/me/consents`,
-`POST /api/auth/me/consents/{code}` and `DELETE /api/auth/me/consents/{code}`.
-Only definitions explicitly configured through `consentDefinitions` in DI are
-available; this repository does not invent a production legal document.
+The existing authenticated self API remains `GET /api/auth/me/consents`, `POST /api/auth/me/consents/{code}`, and `DELETE /api/auth/me/consents/{code}`. It derives the Person from the authenticated human Account and rejects service Accounts. Request bodies cannot supply a subject, document hash, purpose, legal basis, or representative. The internal `ConsentService::grantForSubject` and `withdrawForSubject` require an exact, verified, unexpired authority linking the acting Person to the subject. No public endpoint accepts an arbitrary subject ID for representative consent.
+
+`ProcessingPurposeRegistry`, `DataCategoryRegistry`, `RetentionPolicyRegistry`, and `ConsentDefinitionRegistry` validate configured definitions. There are no production consent fixtures. Concurrent grants serialize on the subject row and a partial unique index permits one active row per subject, consent code, and purpose. Grant, withdrawal, and minimal audit evidence commit in one transaction. A re-grant creates a new row; document version and hash come from the server definition.
+
+Migration 018 evidence lacks subject and purpose. Migration 019 preserves it with `legacy_record=true`; it is not presented as current purpose-bound consent. Ordinary DELETE and evidence mutation are blocked by PostgreSQL. A controlled erasure operation is part of the remaining retention/erasure pass and must check policy and legal holds before it can remove evidence. Consent is one possible legal basis; withdrawal alone does not erase an Account or unrelated data.

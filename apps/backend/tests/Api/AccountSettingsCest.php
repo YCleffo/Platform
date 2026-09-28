@@ -34,7 +34,7 @@ final readonly class AccountSettingsCest
         $I->seeResponseCodeIs(HttpCode::OK);
         $data = $this->response($I)['data'];
         assertSame(2, $data['schema_version']);
-        assertTrue($data['settings']['privacy']['show_online_status']);
+        assertFalse($data['settings']['privacy']['show_online_status']);
         assertFalse(isset($data['settings']['privacy']['profile_visibility']));
     }
 
@@ -60,10 +60,10 @@ final readonly class AccountSettingsCest
         assertFalse($settings['notifications']['browser']);
         assertTrue($settings['notifications']['sound']);
 
-        $I->sendPATCH('/api/auth/me/settings', ['privacy' => ['show_online_status' => false]]);
+        $I->sendPATCH('/api/auth/me/settings', ['privacy' => ['show_online_status' => true]]);
         $I->sendPATCH('/api/auth/me/settings', ['privacy' => ['show_online_status' => null]]);
         $I->seeResponseCodeIs(HttpCode::OK);
-        assertTrue($this->response($I)['data']['settings']['privacy']['show_online_status']);
+        assertFalse($this->response($I)['data']['settings']['privacy']['show_online_status']);
 
         $row = ApiTester::getDb()->createCommand(
             "SELECT count(*) FROM core.audit_events WHERE action = 'core.account_settings.updated' AND actor_account_id = CAST(:id AS uuid)",

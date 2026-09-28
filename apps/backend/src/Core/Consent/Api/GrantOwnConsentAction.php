@@ -9,6 +9,7 @@ use App\Api\Shared\ResponseFactory;
 use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Client\Domain\ClientContext;
 use App\Core\Consent\Application\ConsentService;
+use App\Core\Consent\Application\UnknownConsentException;
 use DomainException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -35,8 +36,10 @@ final readonly class GrantOwnConsentAction
                 $context->locale->locale->tag,
                 $context->requestId,
             );
-        } catch (DomainException) {
+        } catch (UnknownConsentException) {
             return $responses->error(ApiMessage::HTTP_NOT_FOUND, httpCode: Status::NOT_FOUND);
+        } catch (DomainException) {
+            return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
         }
         return $responses->success($result);
     }

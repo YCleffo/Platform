@@ -40,18 +40,18 @@ final readonly class AccountSettingsCest
 
         assertNull($repository->find($accountId));
         $defaults = $service->get($accountId);
-        assertTrue($defaults->settings['privacy']['show_online_status']);
+        assertFalse($defaults->settings['privacy']['show_online_status']);
         assertNull($repository->find($accountId)); // GET remains lazy/read-only.
 
         $first = $service->patch($accountId, ['privacy' => [
-            'show_online_status' => false,
+            'show_online_status' => true,
         ]], $this->context());
-        assertFalse($first->settings['privacy']['show_online_status']);
+        assertTrue($first->settings['privacy']['show_online_status']);
         assertFalse(isset($first->settings['privacy']['profile_visibility']));
         assertSame(2, $repository->find($accountId)?->schemaVersion);
 
         $service->patch($accountId, ['privacy' => ['show_online_status' => null]], $this->context());
-        assertTrue($service->get($accountId)->settings['privacy']['show_online_status']);
+        assertFalse($service->get($accountId)->settings['privacy']['show_online_status']);
 
         $audit = $db->createCommand(
             "SELECT before_data::text, after_data::text FROM core.audit_events WHERE action = 'core.account_settings.updated' AND resource_id = :id ORDER BY occurred_at DESC, id DESC LIMIT 1",
