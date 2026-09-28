@@ -7,6 +7,7 @@ namespace App\Tests\Functional;
 use App\Core\Audit\Application\AuditService;
 use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Privacy\Application\DataSubjectRequestService;
+use App\Core\Privacy\Application\DataSubjectRequestFilter;
 use App\Core\Privacy\Application\DataSubjectRequestStateMachine;
 use App\Core\Privacy\Application\DataSubjectRequestTypeRegistry;
 use App\Core\Privacy\Application\LegalRepresentationService;
@@ -52,8 +53,16 @@ final readonly class DataSubjectRequestsCest
                 $container->get(RepresentativeAuthorityPolicy::class), $audit);
             $blocks = new ProcessingBlockService($db, $clock, $container->get(ProcessingPurposeRegistry::class), $audit);
             $id = $service->submitSelf($self, 'access');
-            assertSame('submitted', $service->getVisible($self, $id)['status']);
-            assertSame('2026-10-12', (new DateTimeImmutable((string) $service->getVisible($self, $id)['due_at']))->format('Y-m-d'));
+            $db->createCommand(<<<'SQL'
+                INSERT INTO core.data_subject_request_deadlines
+                    (request_id, deadline_code, triggered_at, calendar_type, due_at)
+                VALUES (CAST(:id AS uuid), 'unlawful_processing_stop',
+                        '2026-09-25T10:00:00Z', 'working_days', '2026-09-30T10:00:00Z')
+                SQL, [':id' => $id])->execute();
+            assertSame('submitted', $service->getVisible($self, $id)?->status);
+            assertSame('2026-10-12', $service->getVisible($self, $id)?->deadlines[0]->dueAt->format('Y-m-d'));
+            assertSame(2, count($service->getVisible($self, $id)?->deadlines ?? []));
+            assertSame(1, count($service->listOwn($self)));
             assertSame(null, $service->getVisible($rep, $id));
             $extended = $service->extendDeadline($self, $id, 'access_response', 'complex_review');
             assertSame('2026-10-19', $extended->format('Y-m-d'));
@@ -63,6 +72,18 @@ final readonly class DataSubjectRequestsCest
             } catch (DomainException) { assertTrue(true); }
             $service->transition($self, $id, 'in_review', null);
             $service->transition($self, $id, 'in_progress', null);
+            $page = $service->listManagement(1, 0, new DataSubjectRequestFilter('in_progress', 'access', $subject));
+            assertSame(1, $page->total);
+            assertSame($id, $page->items[0]->id);
+            assertSame(0, count($service->listManagement(1, 1, new DataSubjectRequestFilter('in_progress', 'access', $subject))->items));
+            $lateClock = new class implements ClockInterface {
+                public function now(): DateTimeImmutable { return new DateTimeImmutable('2026-10-20T10:00:00Z'); }
+            };
+            $lateService = new DataSubjectRequestService($db, $lateClock, new PrivacyDeadlinePolicy($calendar),
+                new DataSubjectRequestTypeRegistry(), new DataSubjectRequestStateMachine(),
+                $container->get(RepresentativeAuthorityPolicy::class), $audit);
+            assertSame(1, $lateService->listManagement(10, 0, new DataSubjectRequestFilter(overdue: true))->total);
+            assertSame(0, $lateService->listManagement(10, 0, new DataSubjectRequestFilter(overdue: false))->total);
             try {
                 $service->transition($self, $id, 'completed', null);
                 \PHPUnit\Framework\Assert::fail('Unsupported completion was accepted.');
@@ -72,12 +93,19 @@ final readonly class DataSubjectRequestsCest
                 'fixture:dsar', null, ['privacy.request.submit', 'privacy.request.view']);
             $container->get(LegalRepresentationService::class)->verify($self, $representation);
             $repId = $service->submitForSubject($rep, $subject, $representation, 'processing_information');
-            assertSame($repId, $service->getVisible($rep, $repId)['id']);
+            assertSame($repId, $service->getVisible($rep, $repId)?->id);
             $blockId = $blocks->createBlock($self, $subject, 'subject', null, null, null, 'accuracy_review', $id);
             assertSame($blockId, $blocks->createBlock($self, $subject, 'subject', null, null, null, 'accuracy_review', $id));
             assertTrue($blocks->isBlocked($subject));
             assertTrue($blocks->releaseBlock($self, $blockId, 'review_complete'));
             assertFalse($blocks->releaseBlock($self, $blockId, 'review_complete'));
+            assertFalse($blocks->isBlocked($subject));
+            $blockA = $blocks->createBlock($self, $subject, 'subject', null, null, null, 'accuracy_review', $id);
+            $blockB = $blocks->createBlock($self, $subject, 'subject', null, null, null, 'lawfulness_review', $repId);
+            assertFalse($blockA === $blockB);
+            assertTrue($blocks->releaseBlock($self, $blockA, 'review_complete'));
+            assertTrue($blocks->isBlocked($subject));
+            assertTrue($blocks->releaseBlock($self, $blockB, 'review_complete'));
             assertFalse($blocks->isBlocked($subject));
             $purposeBlock = $blocks->createBlock($self, $subject, 'purpose', 'test.processing', null, null,
                 'lawfulness_review', $id);

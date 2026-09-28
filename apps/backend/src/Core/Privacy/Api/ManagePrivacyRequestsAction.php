@@ -6,8 +6,10 @@ namespace App\Core\Privacy\Api;
 
 use App\Api\Shared\ApiMessage;
 use App\Api\Shared\ResponseFactory;
+use App\Api\Shared\OffsetPagination;
 use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Privacy\Application\DataSubjectRequestService;
+use App\Core\Privacy\Application\DataSubjectRequestFilter;
 use DomainException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -21,7 +23,28 @@ final readonly class ManagePrivacyRequestsAction
     {
         $operation = (string) $route->getArgument('operation');
         if ($operation === 'list') {
-            return $responses->success($service->listManagement());
+            $query = $request->getQueryParams();
+            if (array_diff(array_keys($query), ['limit', 'offset', 'status', 'requestType', 'subjectPersonId', 'overdue']) !== []) {
+                return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
+            }
+            $status = $query['status'] ?? null;
+            $type = $query['requestType'] ?? null;
+            $subject = $query['subjectPersonId'] ?? null;
+            $overdue = $query['overdue'] ?? null;
+            if (($status !== null && (!is_string($status) || !in_array($status, ['submitted', 'identity_verification', 'in_review', 'in_progress', 'completed', 'partially_completed', 'rejected', 'cancelled'], true)))
+                || ($type !== null && (!is_string($type) || !in_array($type, ['access', 'processing_information', 'correction', 'restriction', 'processing_termination', 'erasure', 'export', 'consent_withdrawal'], true)))
+                || ($subject !== null && !PrivacyRequestInput::uuid($subject))
+                || ($overdue !== null && !in_array($overdue, ['true', 'false'], true))) {
+                return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
+            }
+            $pagination = OffsetPagination::fromQuery($query);
+            $filter = new DataSubjectRequestFilter(
+                is_string($status) ? $status : null,
+                is_string($type) ? $type : null,
+                is_string($subject) ? $subject : null,
+                $overdue === null ? null : $overdue === 'true',
+            );
+            return $responses->success($service->listManagement($pagination->limit, $pagination->offset, $filter)->toArray());
         }
         $id = (string) $route->getArgument('id');
         if (!PrivacyRequestInput::uuid($id)) {
@@ -29,7 +52,7 @@ final readonly class ManagePrivacyRequestsAction
         }
         if ($operation === 'get') {
             $row = $service->getVisible(AuthenticatedIdentity::fromRequest($request), $id, true);
-            return $row === null ? $responses->notFound() : $responses->success($row);
+            return $row === null ? $responses->notFound() : $responses->success($row->toArray());
         }
         if ($service->getVisible(AuthenticatedIdentity::fromRequest($request), $id, true) === null) {
             return $responses->notFound();

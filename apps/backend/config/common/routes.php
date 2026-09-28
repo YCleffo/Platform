@@ -17,6 +17,8 @@ use App\Core\Privacy\Api\ManageRepresentationAction;
 use App\Core\Privacy\Api\OwnPrivacyRequestsAction;
 use App\Core\Privacy\Api\ManagePrivacyRequestsAction;
 use App\Core\Privacy\Api\ManageProcessingBlocksAction;
+use App\Core\Privacy\Api\PersonalDataExportAction;
+use App\Core\Privacy\Api\ManagePrivacyCorrectionAction;
 use App\Core\Auth\Api\ListSessionsAction;
 use App\Core\Auth\Api\ActivationAction;
 use App\Core\Auth\Api\ConfirmPasswordResetAction;
@@ -251,6 +253,16 @@ return [
         ->action(OwnPrivacyRequestsAction::class)
         ->name('auth/me/privacy/requests/get'),
 
+    Route::get('/api/auth/me/privacy/requests/{id}/data')
+        ->middleware(RequireAuthentication::class)
+        ->action(PersonalDataExportAction::class)
+        ->name('auth/me/privacy/requests/data'),
+
+    Route::get('/api/auth/me/privacy/representations/{representationId}/requests/{id}/data')
+        ->middleware(RequireAuthentication::class)
+        ->action(PersonalDataExportAction::class)
+        ->name('auth/me/privacy/representations/requests/data'),
+
     Route::post('/api/auth/me/privacy/representations/{representationId}/requests')
         ->defaults(['operation' => 'submit_representative'])
         ->middleware(RequireAuthentication::class)
@@ -274,6 +286,18 @@ return [
         ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
         ->action(ManagePrivacyRequestsAction::class)
         ->name('core/privacy/requests/transition'),
+
+    Route::post('/api/core/privacy/requests/{id}/correction-evidence')
+        ->defaults(['operation' => 'confirm'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
+        ->action(ManagePrivacyCorrectionAction::class)
+        ->name('core/privacy/requests/correction-evidence'),
+
+    Route::post('/api/core/privacy/requests/{id}/corrections')
+        ->defaults(['operation' => 'correct'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
+        ->action(ManagePrivacyCorrectionAction::class)
+        ->name('core/privacy/requests/corrections'),
 
     Route::post('/api/core/privacy/requests/{id}/deadlines/{deadlineCode}/extend')
         ->defaults(['operation' => 'extend'])

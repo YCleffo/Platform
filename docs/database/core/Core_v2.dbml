@@ -7,8 +7,8 @@ Project Platform_Core_v2 {
   module registry/settings, audit, transactional outbox/inbox.
   Domain entities such as Student/Teacher/Parent/Lesson/Device/File/Message
   are NOT part of Core.
-  Synchronized with PostgreSQL migrations 001-018. Migration 018 adds
-  immutable authenticated consent evidence and expands Core to 25 tables.
+  Synchronized with PostgreSQL migrations 001-023. Migration 023 adds
+  immutable privacy request execution evidence and expands Core to 32 tables.
   SQL migrations remain the
   executable source of truth; PostgreSQL partial-index predicates and selected
   CHECK constraints are documented in table notes to preserve their exact semantics.
@@ -295,6 +295,31 @@ Table core.data_subject_request_events {
     (request_id, occurred_at, id) [name: 'idx_dsar_event_history']
   }
   Note: 'Migration 022. Immutable machine-code workflow history.'
+}
+
+Table core.data_subject_request_executions {
+  id uuid [pk, not null, default: `uuidv7()`]
+  request_id uuid [not null]
+  execution_code varchar(120) [not null]
+  status varchar(20) [not null]
+  actor_account_id uuid
+  contributor_code varchar(120)
+  resource_type varchar(120)
+  resource_id uuid
+  schema_version varchar(40)
+  result_sha256 char(64)
+  result_size_bytes bigint
+  changed_paths text[]
+  error_code varchar(120)
+  started_at timestamptz [not null]
+  completed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (request_id, started_at) [name: 'idx_dsar_executions_request']
+    (execution_code, status) [name: 'idx_dsar_executions_code_status']
+  }
+  Note: 'Migration 023. Terminal execution evidence is immutable. Stores only machine codes, paths, digest and size; never exported data or correction values.'
 }
 
 Table core.privacy_processing_blocks {
@@ -955,6 +980,8 @@ Ref: core.data_subject_requests.legal_representation_id > core.legal_representat
 Ref: core.data_subject_request_deadlines.request_id > core.data_subject_requests.id [delete: restrict]
 Ref: core.data_subject_request_events.request_id > core.data_subject_requests.id [delete: restrict]
 Ref: core.data_subject_request_events.actor_account_id > core.accounts.id [delete: restrict]
+Ref: core.data_subject_request_executions.request_id > core.data_subject_requests.id [delete: restrict]
+Ref: core.data_subject_request_executions.actor_account_id > core.accounts.id [delete: restrict]
 Ref: core.privacy_processing_blocks.subject_person_id > core.persons.id [delete: restrict]
 Ref: core.privacy_processing_blocks.source_request_id > core.data_subject_requests.id [delete: restrict]
 Ref: core.privacy_processing_blocks.released_by_account_id > core.accounts.id [delete: restrict]

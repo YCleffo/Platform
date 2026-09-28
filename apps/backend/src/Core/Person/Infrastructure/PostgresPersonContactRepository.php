@@ -115,6 +115,52 @@ final readonly class PostgresPersonContactRepository implements PersonContactRep
         }
     }
 
+    public function updateOwned(string $personId, string $contactId, ?string $value,
+        ?string $normalizedValue, bool $valueProvided, ?string $label, bool $labelProvided,
+        ?bool $isPrimary): ?PersonContactView
+    {
+        return $this->db->transaction(function (ConnectionInterface $db) use ($personId, $contactId,
+            $value, $normalizedValue, $valueProvided, $label, $labelProvided, $isPrimary): ?PersonContactView {
+            $row = $db->createCommand(<<<'SQL'
+                SELECT contact_type::text FROM core.person_contacts
+                WHERE id = CAST(:id AS uuid) AND person_id = CAST(:person AS uuid) FOR UPDATE
+                SQL, [':id' => $contactId, ':person' => $personId])->queryOne();
+            if (!is_array($row)) {
+                return null;
+            }
+            if ($isPrimary === true) {
+                $db->createCommand(<<<'SQL'
+                    UPDATE core.person_contacts SET is_primary = false, updated_at = now()
+                    WHERE person_id = CAST(:person AS uuid)
+                      AND contact_type = CAST(:type AS core.contact_type)
+                      AND id <> CAST(:id AS uuid) AND is_primary = true
+                    SQL, [':person' => $personId, ':type' => $row['contact_type'], ':id' => $contactId])->execute();
+            }
+            $assignments = ['updated_at = now()'];
+            $params = [':person' => $personId, ':id' => $contactId];
+            if ($valueProvided) {
+                $assignments[] = 'value = :value';
+                $assignments[] = 'normalized_value = :normalized';
+                $assignments[] = 'verified_at = NULL';
+                $params[':value'] = $value;
+                $params[':normalized'] = $normalizedValue;
+            }
+            if ($labelProvided) {
+                $assignments[] = 'label = :label';
+                $params[':label'] = $label;
+            }
+            if ($isPrimary !== null) {
+                $assignments[] = 'is_primary = :primary';
+                $params[':primary'] = $isPrimary;
+            }
+            $updated = $db->createCommand('UPDATE core.person_contacts SET ' . implode(', ', $assignments)
+                . ' WHERE id = CAST(:id AS uuid) AND person_id = CAST(:person AS uuid) RETURNING '
+                . substr(self::SELECT_COLUMNS, strlen('SELECT')),
+                $params)->queryOne();
+            return is_array($updated) ? self::map($updated) : null;
+        });
+    }
+
     private const string SELECT_COLUMNS = <<<'SQL'
         SELECT
             id::text AS id,

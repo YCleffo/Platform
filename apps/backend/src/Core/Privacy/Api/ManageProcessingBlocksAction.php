@@ -50,7 +50,7 @@ final readonly class ManageProcessingBlocksAction
         if ($requestRow === null) {
             return $responses->notFound();
         }
-        $subject = (string) $requestRow['subject_person_id'];
+        $subject = $requestRow->subjectPersonId;
         if ($operation === 'list') {
             return $responses->success(array_values(array_filter($blocks->listActiveForSubject($subject),
                 static fn(array $row): bool => $row['source_request_id'] === $requestId)));

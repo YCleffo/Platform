@@ -43,7 +43,7 @@ final readonly class DataSubjectRequestConcurrencyCest
                 'SELECT id FROM core.data_subject_request_deadlines WHERE request_id = CAST(:id AS uuid) FOR UPDATE', $requestId);
             assertSame(1, count(array_filter($extension, static fn(array $row): bool => $row['ok'] === true)));
 
-            $key = implode(':', [$person, 'subject', '', '', '']);
+            $key = implode(':', [$person, 'subject', '', '', '', $requestId, 'accuracy_review']);
             $created = $this->compete($db, 'create', $account, $person, $requestId,
                 'SELECT pg_advisory_xact_lock(hashtextextended(:id, 0))', $key);
             assertTrue($created[0]['ok']);

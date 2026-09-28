@@ -17,8 +17,8 @@ final class DataSubjectRequestPolicyTest extends Unit
         self::assertSame('privacy.request.submit', $types->get('access')['scope']);
         self::assertSame('privacy.processing_restriction.request', $types->get('restriction')['scope']);
         self::assertSame('privacy.consent.withdraw', $types->get('consent_withdrawal')['scope']);
-        self::assertFalse($types->get('export')['completion']);
-        self::assertFalse($types->get('erasure')['completion']);
+        self::assertSame('privacy.data.export', $types->get('export')['requiredCapability']);
+        self::assertSame('privacy.data.erasure', $types->get('erasure')['requiredCapability']);
     }
 
     public function testTerminalCannotReopen(): void

@@ -1,0 +1,9 @@
+# Privacy contributor contracts
+
+Modules holding personal data register their own `DataCategoryDefinition`, `ProcessingPurposeDefinition`, and `RetentionPolicyDefinition` through deployment DI. They also register a `PersonalDataContributor` for subject export, a `PersonalDataCorrectionContributor` when their data can be corrected, and a `ProcessingRestrictionContributor` when a canonical processing block requires a module side effect. Actions with audit metadata need audit definitions. Future erasure work will add an ErasureHandler; no erasure executor is available in B2.
+
+Export contributors receive only subject/request/actor IDs, representation ID, generation time, and optional locale. They must query only the subject's data, use explicit field allowlists, return bounded records in stable order, and exclude secrets and unrelated actors' data. Core's registry orders by unique machine code. Module registration uses `personalDataContributors` in DI; Core does not import module classes.
+
+Correction contributors validate a strict field allowlist, verify each resource belongs to the request subject, call the owning domain service, and return only resource ID/type and changed field paths. The payload must not enter audit, request/event/execution tables, logs, or outbox. Register through `personalDataCorrectionContributors`. The orchestration transaction includes the domain update and evidence.
+
+Restriction contributors register through `processingRestrictionContributors`, declare supported scope, and apply or release module effects using a block ID. `core.privacy_processing_blocks` remains the source of truth. No default contributor claims restriction completion. The capability registry offers access/export and correction only while their contributors are registered; restriction, processing termination/information, consent withdrawal, and erasure remain unavailable for completion.

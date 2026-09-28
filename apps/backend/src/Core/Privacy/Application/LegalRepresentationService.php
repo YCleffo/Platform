@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Privacy\Application;
 
 use App\Core\Auth\Application\AuthenticatedIdentity;
+use App\Core\Time\Application\ClockInterface;
 use App\Core\Audit\Application\AuditService;
 use App\Core\Audit\Application\WriteAuditEventCommand;
 use DomainException;
@@ -12,7 +13,8 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class LegalRepresentationService
 {
-    public function __construct(private ConnectionInterface $db, private AuditService $audit, private RepresentationScopeRegistry $scopes) {}
+    public function __construct(private ConnectionInterface $db, private AuditService $audit,
+        private RepresentationScopeRegistry $scopes, private ClockInterface $clock) {}
 
     /** @param list<string> $scopeCodes */
     public function declare(
@@ -81,18 +83,20 @@ final readonly class LegalRepresentationService
             if ($row['evidence_type'] === null || ($row['evidence_reference'] === null && !in_array($row['has_hash'], [true, 't', 1], true))) {
                 throw new DomainException('Representation evidence is required before verification.');
             }
+            $now = $this->clock->now()->format(DATE_ATOM);
             $valid = $this->db->createCommand(
-                'SELECT valid_from <= now() AND (valid_until IS NULL OR valid_until >= now()) FROM core.legal_representations WHERE id = CAST(:id AS uuid)',
-                [':id' => $id],
+                'SELECT valid_from <= CAST(:now AS timestamptz) AND (valid_until IS NULL OR valid_until >= CAST(:now AS timestamptz)) FROM core.legal_representations WHERE id = CAST(:id AS uuid)',
+                [':id' => $id, ':now' => $now],
             )->queryScalar();
             if (!in_array($valid, [true, 't', 1], true)) {
                 throw new DomainException('Representation is outside its validity interval.');
             }
             $this->db->createCommand(<<<'SQL'
                 UPDATE core.legal_representations
-                SET status = 'verified', verified_at = now(), verified_by_account_id = CAST(:actor AS uuid), updated_at = now()
+                SET status = 'verified', verified_at = CAST(:now AS timestamptz),
+                    verified_by_account_id = CAST(:actor AS uuid), updated_at = CAST(:now AS timestamptz)
                 WHERE id = CAST(:id AS uuid)
-                SQL, [':actor' => $actor->accountId, ':id' => $id])->execute();
+                SQL, [':actor' => $actor->accountId, ':id' => $id, ':now' => $now])->execute();
             $this->record($actor, 'privacy.representation.verified', $id);
             return true;
         });
@@ -115,12 +119,14 @@ final readonly class LegalRepresentationService
             if ($row['status'] !== 'verified') {
                 throw new DomainException('Only verified representation can be revoked.');
             }
+            $now = $this->clock->now()->format(DATE_ATOM);
             $this->db->createCommand(<<<'SQL'
                 UPDATE core.legal_representations
-                SET status = 'revoked', revoked_at = now(), revoked_by_account_id = CAST(:actor AS uuid),
-                    revocation_reason_code = :reason, updated_at = now()
+                SET status = 'revoked', revoked_at = CAST(:now AS timestamptz),
+                    revoked_by_account_id = CAST(:actor AS uuid),
+                    revocation_reason_code = :reason, updated_at = CAST(:now AS timestamptz)
                 WHERE id = CAST(:id AS uuid)
-                SQL, [':actor' => $actor->accountId, ':id' => $id, ':reason' => $reasonCode])->execute();
+                SQL, [':actor' => $actor->accountId, ':id' => $id, ':reason' => $reasonCode, ':now' => $now])->execute();
             $this->record($actor, 'privacy.representation.revoked', $id);
             return true;
         });

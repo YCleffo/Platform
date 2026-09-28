@@ -12,4 +12,8 @@ interface PersonContactRepository
     public function findByPersonId(string $personId): array;
 
     public function create(CreatePersonContactCommand $command, string $normalizedValue): PersonContactView;
+
+    public function updateOwned(string $personId, string $contactId, ?string $value,
+        ?string $normalizedValue, bool $valueProvided, ?string $label, bool $labelProvided,
+        ?bool $isPrimary): ?PersonContactView;
 }

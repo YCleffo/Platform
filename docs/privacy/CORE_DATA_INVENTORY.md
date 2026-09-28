@@ -1,6 +1,6 @@
 # Core personal data inventory (Phase 4.1 review)
 
-This inventory started from the 25-table baseline through migration 018 and includes migrations 019–022. It is a technical classification, not a deployment's legal basis or retention schedule. Deployment policy must assign the actual purposes, lawful bases, retention periods, export rules, and processors before production use. `Policy` below means no duration is currently established in Core.
+This inventory started from the 25-table baseline through migration 018 and includes migrations 019-023. It is a technical classification, not a deployment's legal basis or retention schedule. Deployment policy must assign the actual purposes, lawful bases, retention periods, export rules, and processors before production use. `Policy` below means no duration is currently established in Core.
 
 | Table and significant fields | Data category and PII | Processing purpose | Retention owner | Audit / logs / export | Special handling |
 | --- | --- | --- | --- | --- | --- |
@@ -28,6 +28,7 @@ This inventory started from the 25-table baseline through migration 018 and incl
 | `data_subject_requests`: subject, submitting Person/Account, authority ID, request type and state | Subject and actor identifiers; privacy case history | Data subject request intake and workflow | DSAR/privacy policy | Audit: IDs and machine codes; logs: no request body; export: restricted case evidence | No free-text request content; unsupported operations cannot be marked complete |
 | `data_subject_request_deadlines`: trigger, original due time, extension, satisfaction | Indirect subject case timing | Statutory deadline tracking | DSAR/privacy policy | Audit: deadline/reason codes; logs: no subject details; export: restricted case evidence | Original due time is immutable; calendar coverage must be verified |
 | `data_subject_request_events`: status changes, actor, reason codes and time | Indirect subject and staff activity evidence | Workflow accountability | DSAR/privacy policy | Audit: machine codes; logs: IDs only; export: restricted case evidence | Ordinary update/delete is blocked; no comments or documents |
+| `data_subject_request_executions`: request, actor, capability/result codes, digest, size, changed paths and time | Indirect subject execution evidence | Prove response issuance or correction | DSAR/privacy policy | Audit: IDs and codes; logs: IDs/codes only; export: no raw execution table dump | Terminal evidence immutable; never stores export body or correction before/after values |
 | `privacy_processing_blocks`: subject, scope, reason, source request and release | Restriction and case identifiers | Scoped processing restriction | DSAR/privacy policy | Audit: scope/reason codes; logs: IDs only; export: restricted case evidence | Active state considers release and expiry; not an Account disable or legal hold |
 | `outbox_events`: aggregate ID, payload, headers, error | Potential subject PII in event content | Transactional delivery | Messaging/privacy policy | Audit: event ID/status; logs: no payload; export: case-specific | Payload minimization and lifecycle review required |
 | `inbox_events`: event ID, consumer, error, times | Pseudonymous operational identifiers; error may leak PII | Idempotent delivery | Messaging/privacy policy | Audit: event ID/status; logs: sanitized; export: usually no | Bound and sanitize error text |
@@ -35,3 +36,9 @@ This inventory started from the 25-table baseline through migration 018 and incl
 The classification also covers network and device values generated in `ClientContext` and ephemeral Redis presence. Presence uses a TTL and has no durable SQL heartbeat history. External email delivery and backup copies require separate deployment processor and retention records. No current Core table stores biometric templates or special-category health data; future modules adding either require a separate design review.
 
 Until deployment policy assigns a duration, retention is **policy-required / deployment-defined**. This document does not authorize deletion or publication of any category.
+
+## B2 export allowlists
+
+The structured export includes subject Person names, birth date, status and times; own contacts' type, value, label, primary and verification state; human Account status/type/times; stored settings; consent codes, document version, locale, source, times and actor relation; subject representation status, scopes and times; request status/deadlines; and processing block scope, reason and times. Auth includes identifier type/value/verification and limited external identity, MFA, passkey and session metadata.
+
+Normalized contact identifiers, password hashes, TOTP secrets, recovery hashes, passkey credential/public key, session token hashes, external claims, audit rows and outbox payloads are deliberately excluded. The JSON response is never stored in execution evidence. Migration 023 brings the Core schema to 32 tables.

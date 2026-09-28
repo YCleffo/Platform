@@ -81,7 +81,7 @@ final readonly class DataSubjectRequestService
         });
     }
 
-    /** @return list<array<array-key, mixed>> */
+    /** @return list<DataSubjectRequestView> */
     public function listOwn(AuthenticatedIdentity $actor): array
     {
         if ($actor->personId === null) {
@@ -89,35 +89,33 @@ final readonly class DataSubjectRequestService
         }
         $this->assertHumanActor($actor);
         $rows = $this->db->createCommand(<<<'SQL'
-            SELECT r.id::text, r.subject_person_id::text, r.request_type, r.status, r.submitted_at,
-                   r.completed_at, r.resolution_code, d.deadline_code, d.due_at, d.extended_due_at, d.satisfied_at
+            SELECT r.id::text, r.subject_person_id::text, r.request_type, r.status,
+                   r.submitted_at, r.completed_at, r.resolution_code
             FROM core.data_subject_requests r
-            LEFT JOIN core.data_subject_request_deadlines d ON d.request_id = r.id
             WHERE r.subject_person_id = CAST(:person AS uuid)
                OR (r.submitted_by_account_id = CAST(:account AS uuid) AND r.legal_representation_id IS NOT NULL
                    AND EXISTS (SELECT 1 FROM core.legal_representations a
                        JOIN core.legal_representation_scopes s ON s.representation_id = a.id
                        WHERE a.id = r.legal_representation_id AND a.status = 'verified'
-                         AND a.revoked_at IS NULL AND a.valid_from <= now()
-                         AND (a.valid_until IS NULL OR a.valid_until >= now())
+                         AND a.revoked_at IS NULL AND a.valid_from <= CAST(:now AS timestamptz)
+                         AND (a.valid_until IS NULL OR a.valid_until >= CAST(:now AS timestamptz))
                          AND s.scope_code = 'privacy.request.view'))
             ORDER BY r.submitted_at DESC, r.id DESC LIMIT 100
-            SQL, [':person' => $actor->personId, ':account' => $actor->accountId])->queryAll();
-        return $rows;
+            SQL, [':person' => $actor->personId, ':account' => $actor->accountId,
+            ':now' => $this->clock->now()->format(DATE_ATOM)])->queryAll();
+        /** @var list<array<string, mixed>> $rows */
+        return $this->viewsFromRows($rows);
     }
 
-    /** @return array<array-key, mixed>|null */
-    public function getVisible(AuthenticatedIdentity $actor, string $id, bool $management = false): ?array
+    public function getVisible(AuthenticatedIdentity $actor, string $id, bool $management = false): ?DataSubjectRequestView
     {
         if (!$management && $actor->personId === null) {
             return null;
         }
         $sql = <<<'SQL'
-            SELECT r.id::text, r.subject_person_id::text, r.submitted_by_account_id::text,
-                   r.request_type, r.status, r.submitted_at, r.completed_at, r.resolution_code,
-                   d.deadline_code, d.due_at, d.extended_due_at, d.satisfied_at
+            SELECT r.id::text, r.subject_person_id::text,
+                   r.request_type, r.status, r.submitted_at, r.completed_at, r.resolution_code
             FROM core.data_subject_requests r
-            LEFT JOIN core.data_subject_request_deadlines d ON d.request_id = r.id
             WHERE r.id = CAST(:id AS uuid)
             SQL;
         $params = [':id' => $id];
@@ -130,26 +128,110 @@ final readonly class DataSubjectRequestService
                   AND EXISTS (SELECT 1 FROM core.legal_representations a
                       JOIN core.legal_representation_scopes s ON s.representation_id = a.id
                       WHERE a.id = r.legal_representation_id AND a.status = 'verified'
-                        AND a.revoked_at IS NULL AND a.valid_from <= now()
-                        AND (a.valid_until IS NULL OR a.valid_until >= now())
+                        AND a.revoked_at IS NULL AND a.valid_from <= CAST(:now AS timestamptz)
+                        AND (a.valid_until IS NULL OR a.valid_until >= CAST(:now AS timestamptz))
                         AND s.scope_code = 'privacy.request.view')))
                 SQL;
             $params[':person'] = $actor->personId;
             $params[':account'] = $actor->accountId;
+            $params[':now'] = $this->clock->now()->format(DATE_ATOM);
         }
         $row = $this->db->createCommand($sql, $params)->queryOne();
-        return is_array($row) ? $row : null;
+        if (!is_array($row)) {
+            return null;
+        }
+        /** @var array<string, mixed> $row */
+        $views = $this->viewsFromRows([$row]);
+        return $views[0];
     }
 
-    /** @return list<array<array-key, mixed>> */
-    public function listManagement(): array
+    public function listManagement(int $limit, int $offset, DataSubjectRequestFilter $filter): DataSubjectRequestPage
     {
-        $rows = $this->db->createCommand(<<<'SQL'
-            SELECT id::text, subject_person_id::text, request_type, status, submitted_at, completed_at
-            FROM core.data_subject_requests ORDER BY submitted_at DESC, id DESC LIMIT 100
-            SQL)->queryAll();
-        return $rows;
+        $where = ['1=1'];
+        $params = [];
+        if ($filter->status !== null) {
+            $where[] = 'r.status = :status';
+            $params[':status'] = $filter->status;
+        }
+        if ($filter->requestType !== null) {
+            $where[] = 'r.request_type = :type';
+            $params[':type'] = $filter->requestType;
+        }
+        if ($filter->subjectPersonId !== null) {
+            $where[] = 'r.subject_person_id = CAST(:subject AS uuid)';
+            $params[':subject'] = $filter->subjectPersonId;
+        }
+        if ($filter->overdue !== null) {
+            $params[':now'] = $this->clock->now()->format(DATE_ATOM);
+            $where[] = ($filter->overdue ? '' : 'NOT ') . <<<'SQL'
+                EXISTS (SELECT 1 FROM core.data_subject_request_deadlines d
+                    WHERE d.request_id = r.id AND d.satisfied_at IS NULL
+                      AND COALESCE(d.extended_due_at, d.due_at) < CAST(:now AS timestamptz))
+                SQL;
+        }
+        $clause = implode(' AND ', $where);
+        $total = (int) $this->db->createCommand(
+            'SELECT count(*) FROM core.data_subject_requests r WHERE ' . $clause, $params,
+        )->queryScalar();
+        $rows = $this->db->createCommand(<<<SQL
+            SELECT r.id::text, r.subject_person_id::text, r.request_type, r.status,
+                   r.submitted_at, r.completed_at, r.resolution_code
+            FROM core.data_subject_requests r WHERE {$clause}
+            ORDER BY r.submitted_at DESC, r.id DESC LIMIT :limit OFFSET :offset
+            SQL, [...$params, ':limit' => $limit, ':offset' => $offset])->queryAll();
+        /** @var list<array<string, mixed>> $rows */
+        return new DataSubjectRequestPage($this->viewsFromRows($rows), $limit, $offset, $total);
     }
+
+    /**
+     * @param list<array<string, mixed>> $rows
+     * @return list<DataSubjectRequestView>
+     */
+    private function viewsFromRows(array $rows): array
+    {
+        if ($rows === []) {
+            return [];
+        }
+        $params = [];
+        $placeholders = [];
+        foreach ($rows as $index => $row) {
+            $key = ':id' . $index;
+            $params[$key] = (string) $row['id'];
+            $placeholders[] = 'CAST(' . $key . ' AS uuid)';
+        }
+        $in = implode(', ', $placeholders);
+        $deadlineRows = $this->db->createCommand(<<<SQL
+            SELECT request_id::text, deadline_code, triggered_at, calendar_type,
+                   due_at, extended_due_at, satisfied_at
+            FROM core.data_subject_request_deadlines
+            WHERE request_id IN ({$in})
+            ORDER BY request_id, deadline_code, id
+            SQL, $params)->queryAll();
+        $byRequest = [];
+        $now = $this->clock->now();
+        foreach ($deadlineRows as $deadline) {
+            $due = new DateTimeImmutable((string) $deadline['due_at']);
+            $extended = $deadline['extended_due_at'] === null ? null : new DateTimeImmutable((string) $deadline['extended_due_at']);
+            $satisfied = $deadline['satisfied_at'] === null ? null : new DateTimeImmutable((string) $deadline['satisfied_at']);
+            $byRequest[(string) $deadline['request_id']][] = new DataSubjectRequestDeadlineView(
+                (string) $deadline['deadline_code'], new DateTimeImmutable((string) $deadline['triggered_at']),
+                (string) $deadline['calendar_type'], $due, $extended, $satisfied,
+                $this->deadlines->isOverdue($now, $extended ?? $due, $satisfied),
+            );
+        }
+        $views = [];
+        foreach ($rows as $row) {
+            $views[] = new DataSubjectRequestView(
+                (string) $row['id'], (string) $row['subject_person_id'], (string) $row['request_type'],
+                (string) $row['status'], new DateTimeImmutable((string) $row['submitted_at']),
+                $row['completed_at'] === null ? null : new DateTimeImmutable((string) $row['completed_at']),
+                $row['resolution_code'] === null ? null : (string) $row['resolution_code'],
+                $byRequest[(string) $row['id']] ?? [],
+            );
+        }
+        return $views;
+    }
+
 
     public function transition(AuthenticatedIdentity $actor, string $id, string $to, ?string $reasonCode): void
     {
@@ -166,11 +248,10 @@ final readonly class DataSubjectRequestService
             }
             $from = (string) $row['status'];
             $this->states->assertTransition($from, $to);
-            if (in_array($to, ['completed', 'partially_completed'], true)
-                && !$this->types->get((string) $row['request_type'])['completion']) {
-                throw new DomainException('Completion capability is unavailable.');
+            if (in_array($to, ['completed', 'partially_completed', 'rejected'], true)) {
+                throw new DomainException('Terminal response requires execution evidence.');
             }
-            if (in_array($to, ['rejected', 'cancelled', 'partially_completed'], true) && $reasonCode === null) {
+            if ($to === 'cancelled' && $reasonCode === null) {
                 throw new DomainException('Resolution reason is required.');
             }
             $now = $this->clock->now();
@@ -179,11 +260,10 @@ final readonly class DataSubjectRequestService
                     completed_at = CASE WHEN :terminal THEN CAST(:now AS timestamptz) ELSE completed_at END,
                     resolution_code = :reason, updated_at = CAST(:now AS timestamptz)
                 WHERE id = CAST(:id AS uuid)
-                SQL, [':status' => $to, ':terminal' => in_array($to, ['completed', 'partially_completed'], true),
+                SQL, [':status' => $to, ':terminal' => false,
                 ':now' => $now->format(DATE_ATOM), ':reason' => $reasonCode, ':id' => $id])->execute();
             $this->event($id, 'status_changed', $from, $to, $actor, $reasonCode, $now);
-            $this->record($actor, $to === 'cancelled' ? 'privacy.request.cancelled' :
-                ($to === 'completed' ? 'privacy.request.completed' : 'privacy.request.status_changed'),
+            $this->record($actor, $to === 'cancelled' ? 'privacy.request.cancelled' : 'privacy.request.status_changed',
                 $id, array_filter(['fromStatus' => $from, 'toStatus' => $to, 'reasonCode' => $reasonCode]));
         });
     }

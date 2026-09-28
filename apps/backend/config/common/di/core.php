@@ -22,6 +22,11 @@ use App\Core\Privacy\Application\RepresentationScopeRegistry;
 use App\Core\Privacy\Application\BusinessCalendarInterface;
 use App\Core\Privacy\Application\ProcessingBlockPolicy;
 use App\Core\Privacy\Application\ProcessingBlockService;
+use App\Core\Privacy\Application\PersonalDataContributorRegistry;
+use App\Core\Privacy\Application\PersonalDataCorrectionContributorRegistry;
+use App\Core\Privacy\Application\ProcessingRestrictionContributorRegistry;
+use App\Core\Privacy\Infrastructure\CorePersonalDataContributorProvider;
+use App\Core\Privacy\Infrastructure\CorePersonalDataCorrectionContributorProvider;
 use App\Core\Privacy\Infrastructure\ConfiguredBusinessCalendar;
 use App\Core\Privacy\Infrastructure\PostgresRepresentativeAuthorityPolicy;
 use App\Core\Audit\Application\AuditWriter;
@@ -63,6 +68,7 @@ use App\Core\Settings\Application\SystemSettingsRepository;
 use App\Core\Settings\Infrastructure\PostgresFeatureFlagRepository;
 use App\Core\Settings\Infrastructure\PostgresModuleSettingsRepository;
 use App\Core\Settings\Infrastructure\PostgresSystemSettingsRepository;
+use Yiisoft\Definitions\Reference;
 
 return [
     AccountRepository::class => [
@@ -107,6 +113,21 @@ return [
         ],
     ],
     ProcessingBlockPolicy::class => ['class' => ProcessingBlockService::class],
+    CorePersonalDataContributorProvider::class => [
+        '__construct()' => ['moduleContributors' => $params['personalDataContributors'] ?? []],
+    ],
+    PersonalDataContributorRegistry::class => [
+        '__construct()' => ['contributors' => Reference::to(CorePersonalDataContributorProvider::class)],
+    ],
+    CorePersonalDataCorrectionContributorProvider::class => [
+        '__construct()' => ['moduleContributors' => $params['personalDataCorrectionContributors'] ?? []],
+    ],
+    PersonalDataCorrectionContributorRegistry::class => [
+        '__construct()' => ['contributors' => Reference::to(CorePersonalDataCorrectionContributorProvider::class)],
+    ],
+    ProcessingRestrictionContributorRegistry::class => [
+        '__construct()' => ['contributors' => $params['processingRestrictionContributors'] ?? []],
+    ],
     RepresentationScopeRegistry::class => [
         '__construct()' => ['additionalCodes' => $params['representationScopeCodes'] ?? []],
     ],

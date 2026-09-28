@@ -8,6 +8,7 @@ use App\Core\Audit\Application\AuditService;
 use App\Core\Audit\Application\WriteAuditEventCommand;
 use App\Core\Privacy\Application\RepresentativeAuthorityPolicy;
 use App\Core\Privacy\Application\ProcessingPurposeRegistry;
+use App\Core\Time\Application\ClockInterface;
 use DomainException;
 use Yiisoft\Db\Connection\ConnectionInterface;
 
@@ -19,6 +20,7 @@ final readonly class ConsentService
         private RepresentativeAuthorityPolicy $representations,
         private ProcessingPurposeRegistry $purposes,
         private AuditService $audit,
+        private ClockInterface $clock,
     ) {}
 
     public function list(string $accountId): array
@@ -104,10 +106,10 @@ final readonly class ConsentService
             $row = $this->db->createCommand(<<<'SQL'
                 INSERT INTO core.privacy_consents
                     (granted_by_account_id, subject_person_id, granted_by_person_id, legal_representation_id,
-                     consent_code, purpose_code, document_version, document_sha256, locale, source, request_id)
+                     consent_code, purpose_code, document_version, document_sha256, locale, source, request_id, granted_at)
                 VALUES (CAST(:account AS uuid), CAST(:subject AS uuid), CAST(:actor_person AS uuid),
                         CAST(:representation AS uuid), :code, :purpose, :version, decode(:hash, 'hex'),
-                        :locale, :source, CAST(:request_id AS uuid))
+                        :locale, :source, CAST(:request_id AS uuid), CAST(:now AS timestamptz))
                 RETURNING id::text, consent_code, purpose_code, document_version,
                           encode(document_sha256, 'hex') AS document_sha256, locale, source, granted_at, withdrawn_at
                 SQL, [
@@ -122,6 +124,7 @@ final readonly class ConsentService
                 ':locale' => $locale,
                 ':source' => $representative ? 'representative_service' : 'self_api',
                 ':request_id' => $requestId,
+                ':now' => $this->clock->now()->format(DATE_ATOM),
             ])->queryOne();
             if (!is_array($row)) {
                 throw new DomainException('Consent grant could not be recorded.');
@@ -211,9 +214,9 @@ final readonly class ConsentService
     private function withdrawRow(string $id): void
     {
         $this->db->createCommand(<<<'SQL'
-            UPDATE core.privacy_consents SET withdrawn_at = GREATEST(now(), granted_at)
+            UPDATE core.privacy_consents SET withdrawn_at = GREATEST(CAST(:now AS timestamptz), granted_at)
             WHERE id = CAST(:id AS uuid) AND withdrawn_at IS NULL
-            SQL, [':id' => $id])->execute();
+            SQL, [':id' => $id, ':now' => $this->clock->now()->format(DATE_ATOM)])->execute();
     }
 
     private function record(string $accountId, string $action, string $id): void

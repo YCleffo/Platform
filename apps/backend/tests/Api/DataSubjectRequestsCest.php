@@ -50,7 +50,7 @@ final readonly class DataSubjectRequestsCest
         $id = json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data']['id'];
         $I->sendGET($path . '/' . $id);
         $I->seeResponseCodeIs(HttpCode::OK);
-        assertSame($person, json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data']['subject_person_id']);
+        assertSame($person, json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data']['subjectPersonId']);
         $I->sendGET('/api/core/privacy/requests/' . $id);
         $I->seeResponseCodeIs(HttpCode::FORBIDDEN);
         $I->amAuthenticatedAccount($otherAccount);
@@ -113,5 +113,48 @@ final readonly class DataSubjectRequestsCest
         $I->amAuthenticatedAccount($repAccount);
         $I->sendGET('/api/auth/me/privacy/requests/' . $requestId);
         $I->seeResponseCodeIs(HttpCode::NOT_FOUND);
+    }
+
+    public function exportAndCorrectionEndpoints(ApiTester $I): void
+    {
+        $db = ApiTester::getDb();
+        $subject = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('ApiExport', 'Subject') RETURNING id::text")->queryScalar();
+        $account = (string) $db->createCommand("INSERT INTO core.accounts (person_id, account_type, status) VALUES (CAST(:person AS uuid), 'human', 'active') RETURNING id::text", [':person' => $subject])->queryScalar();
+        $I->amAuthenticatedAccount($account);
+        $I->sendPOST('/api/auth/me/privacy/requests', ['requestType' => 'access']);
+        $I->seeResponseCodeIs(HttpCode::CREATED);
+        $access = json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data']['id'];
+        $I->sendGET('/api/auth/me/privacy/requests/' . $access . '/data');
+        $I->seeResponseCodeIs(HttpCode::NOT_FOUND);
+        $I->amAuthenticatedSuperadmin();
+        foreach (['in_review', 'in_progress'] as $status) {
+            $I->sendPOST('/api/core/privacy/requests/' . $access . '/transition', ['toStatus' => $status]);
+            $I->seeResponseCodeIs(HttpCode::OK);
+        }
+        $I->amAuthenticatedAccount($account);
+        $I->sendGET('/api/auth/me/privacy/requests/' . $access . '/data');
+        $I->seeResponseCodeIs(HttpCode::OK);
+        $body = $I->grabResponse();
+        assertSame('1', json_decode($body, true, flags: JSON_THROW_ON_ERROR)['schemaVersion']);
+        assertSame($subject, json_decode($body, true, flags: JSON_THROW_ON_ERROR)['subjectPersonId']);
+        $I->sendGET('/api/auth/me/privacy/requests/' . $access . '/data');
+        $I->seeResponseCodeIs(HttpCode::NOT_FOUND);
+
+        $I->sendPOST('/api/auth/me/privacy/requests', ['requestType' => 'correction']);
+        $I->seeResponseCodeIs(HttpCode::CREATED);
+        $correction = json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data']['id'];
+        $I->amAuthenticatedSuperadmin();
+        foreach (['in_review', 'in_progress'] as $status) {
+            $I->sendPOST('/api/core/privacy/requests/' . $correction . '/transition', ['toStatus' => $status]);
+            $I->seeResponseCodeIs(HttpCode::OK);
+        }
+        $I->sendPOST('/api/core/privacy/requests/' . $correction . '/correction-evidence', []);
+        $I->seeResponseCodeIs(HttpCode::OK);
+        $I->sendPOST('/api/core/privacy/requests/' . $correction . '/corrections', [
+            'contributorCode' => 'core.person', 'resourceId' => $subject,
+            'changes' => ['givenName' => 'ApiCorrected'],
+        ]);
+        $I->seeResponseCodeIs(HttpCode::OK);
+        assertSame('ApiCorrected', $db->createCommand('SELECT given_name FROM core.persons WHERE id = CAST(:id AS uuid)', [':id' => $subject])->queryScalar());
     }
 }

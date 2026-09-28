@@ -73,17 +73,21 @@ final readonly class ProcessingBlockService implements ProcessingBlockPolicy
                 }
             }
             $this->db->createCommand('SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))',
-                [':key' => implode(':', [$subjectPersonId, $scopeType, $purposeCode ?? '', $resourceType ?? '', $resourceId ?? ''])])->queryScalar();
+                [':key' => implode(':', [$subjectPersonId, $scopeType, $purposeCode ?? '', $resourceType ?? '',
+                    $resourceId ?? '', $sourceRequestId ?? '', $reasonCode])])->queryScalar();
             $existing = $this->db->createCommand(<<<'SQL'
                 SELECT id::text FROM core.privacy_processing_blocks
                 WHERE subject_person_id = CAST(:subject AS uuid) AND scope_type = :scope
                   AND purpose_code IS NOT DISTINCT FROM :purpose
                   AND resource_type IS NOT DISTINCT FROM :resource_type
                   AND resource_id IS NOT DISTINCT FROM CAST(:resource_id AS uuid)
+                  AND source_request_id IS NOT DISTINCT FROM CAST(:request AS uuid)
+                  AND reason_code = :reason
                   AND released_at IS NULL AND (expires_at IS NULL OR expires_at > CAST(:now AS timestamptz))
                 LIMIT 1 FOR UPDATE
                 SQL, [':subject' => $subjectPersonId, ':scope' => $scopeType, ':purpose' => $purposeCode,
-                ':resource_type' => $resourceType, ':resource_id' => $resourceId, ':now' => $now->format(DATE_ATOM)])->queryScalar();
+                ':resource_type' => $resourceType, ':resource_id' => $resourceId, ':request' => $sourceRequestId,
+                ':reason' => $reasonCode, ':now' => $now->format(DATE_ATOM)])->queryScalar();
             if (is_string($existing)) {
                 return $existing;
             }

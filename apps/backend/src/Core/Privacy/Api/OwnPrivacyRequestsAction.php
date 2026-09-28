@@ -51,7 +51,7 @@ final readonly class OwnPrivacyRequestsAction
                 return $responses->success(['id' => $id])->withStatus(Status::CREATED);
             }
             if ($operation === 'list') {
-                return $responses->success($service->listOwn($actor));
+                return $responses->success(array_map(static fn($view): array => $view->toArray(), $service->listOwn($actor)));
             }
             if ($operation === 'get') {
                 $id = (string) $route->getArgument('id');
@@ -59,7 +59,7 @@ final readonly class OwnPrivacyRequestsAction
                     return $responses->notFound();
                 }
                 $row = $service->getVisible($actor, $id);
-                return $row === null ? $responses->notFound() : $responses->success($row);
+                return $row === null ? $responses->notFound() : $responses->success($row->toArray());
             }
         } catch (DomainException) {
             return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
