@@ -25,8 +25,8 @@ final class AuditPayloadPolicy
     public function assertAllowed(WriteAuditEventCommand $command): void
     {
         if (str_starts_with($command->action, 'privacy.')
-            && ($command->beforeData !== null || $command->afterData !== null || $command->metadata !== [])) {
-            throw new InvalidArgumentException('Privacy audit events may contain only typed resource evidence.');
+            && ($command->beforeData !== null || $command->afterData !== null)) {
+            throw new InvalidArgumentException('Privacy audit state snapshots are forbidden.');
         }
         $definition = $this->definitions->get($command->action);
         foreach ([

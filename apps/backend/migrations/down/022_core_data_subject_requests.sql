@@ -1,0 +1,12 @@
+DROP TRIGGER trg_privacy_block_request ON core.privacy_processing_blocks;
+DROP FUNCTION core.validate_privacy_block_request();
+DROP TABLE core.privacy_processing_blocks;
+DROP TRIGGER trg_dsar_event_protect ON core.data_subject_request_events;
+DROP FUNCTION core.protect_dsar_event();
+DROP TABLE core.data_subject_request_events;
+DROP TRIGGER trg_dsar_deadline_protect ON core.data_subject_request_deadlines;
+DROP FUNCTION core.protect_dsar_deadline();
+DROP TABLE core.data_subject_request_deadlines;
+DROP TRIGGER trg_dsar_actor ON core.data_subject_requests;
+DROP FUNCTION core.validate_dsar_insert();
+DROP TABLE core.data_subject_requests;

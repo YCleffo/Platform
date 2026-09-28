@@ -99,6 +99,15 @@ return [
         'defaultTimezone' => $envOr('APP_DEFAULT_TIMEZONE', 'UTC'),
     ],
 
+    'privacyBusinessCalendar' => [
+        // No legal calendar is assumed until a covered period is configured.
+        'coverageFrom' => $envOr('PRIVACY_CALENDAR_COVERAGE_FROM', '1970-01-01'),
+        'coverageUntil' => $envOr('PRIVACY_CALENDAR_COVERAGE_UNTIL', '1970-01-01'),
+        'weekends' => [6, 7],
+        'nonWorkingDates' => $csvEnv('PRIVACY_CALENDAR_NON_WORKING_DATES'),
+        'workingOverrideDates' => $csvEnv('PRIVACY_CALENDAR_WORKING_OVERRIDE_DATES'),
+    ],
+
     'client' => [
         'trustedProxies' => $csvEnv('TRUSTED_PROXIES'),
         'fingerprintHmacKey' => $nullableEnv('DEVICE_FINGERPRINT_KEY'),

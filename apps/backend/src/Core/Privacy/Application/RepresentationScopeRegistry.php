@@ -14,7 +14,7 @@ final readonly class RepresentationScopeRegistry
         'privacy.consent.grant', 'privacy.consent.withdraw',
         'privacy.request.submit', 'privacy.request.view',
         'privacy.correction.request', 'privacy.processing_termination.request',
-        'privacy.erasure.request', 'privacy.export.request',
+        'privacy.processing_restriction.request', 'privacy.erasure.request', 'privacy.export.request',
     ];
 
     /** @var list<string> */

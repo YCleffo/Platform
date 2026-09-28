@@ -28,6 +28,19 @@ final class AuditEventDefinitionRegistry
 
     public function get(string $action): ?AuditEventDefinition
     {
+        if (str_starts_with($action, 'privacy.')) {
+            return match ($action) {
+                'privacy.request.submitted', 'privacy.request.status_changed',
+                'privacy.request.deadline_extended', 'privacy.request.completed',
+                'privacy.request.cancelled', 'privacy.processing_block.created',
+                'privacy.processing_block.released' => new AuditEventDefinition($action, [
+                    'requestType' => 'code', 'fromStatus' => 'code', 'toStatus' => 'code',
+                    'deadlineCode' => 'code', 'reasonCode' => 'code',
+                    'scopeType' => 'code', 'purposeCode' => 'code',
+                ], [], []),
+                default => $this->definitions[$action] ?? null,
+            };
+        }
         return $this->definitions[$action] ?? null;
     }
 

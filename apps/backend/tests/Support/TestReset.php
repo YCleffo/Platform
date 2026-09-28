@@ -29,7 +29,7 @@ final class TestReset
             $db->createCommand('DELETE FROM core.auth_challenges')->execute();
 
             // Isolated test reset may discard consent history; production writes cannot.
-            $db->createCommand('TRUNCATE core.privacy_consents, core.legal_representation_scopes, core.legal_representations')->execute();
+            $db->createCommand('TRUNCATE core.privacy_processing_blocks, core.data_subject_request_events, core.data_subject_request_deadlines, core.data_subject_requests, core.privacy_consents, core.legal_representation_scopes, core.legal_representations')->execute();
 
             // Deleting accounts cascades to auth_sessions, auth_identifiers, credentials, passkeys, factors, tokens
             $db->createCommand('DELETE FROM core.accounts')->execute();

@@ -235,6 +235,92 @@ Table core.legal_representation_scopes {
   Note: 'Migration 021. Scopes are immutable after verification and checked for each protected action.'
 }
 
+Table core.data_subject_requests {
+  id uuid [pk, not null, default: `uuidv7()`]
+  subject_person_id uuid [not null]
+  submitted_by_person_id uuid [not null]
+  submitted_by_account_id uuid [not null]
+  legal_representation_id uuid
+  request_type varchar(40) [not null]
+  status varchar(32) [not null, default: 'submitted']
+  submitted_at timestamptz [not null]
+  identity_verified_at timestamptz
+  completed_at timestamptz
+  resolution_code varchar(120)
+  submission_request_id uuid
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (subject_person_id, submitted_at) [name: 'idx_dsar_subject_submitted']
+    (status, submitted_at) [name: 'idx_dsar_status_submitted']
+    (request_type, status) [name: 'idx_dsar_type_status']
+    (submitted_by_account_id, submitted_at) [name: 'idx_dsar_actor_submitted']
+  }
+  Note: 'Migration 022. Canonical request state; actor and subject are distinct. No free-text payload.'
+}
+
+Table core.data_subject_request_deadlines {
+  id uuid [pk, not null, default: `uuidv7()`]
+  request_id uuid [not null]
+  deadline_code varchar(120) [not null]
+  triggered_at timestamptz [not null]
+  calendar_type varchar(20) [not null]
+  due_at timestamptz [not null]
+  extension_allowed boolean [not null, default: false]
+  extended_at timestamptz
+  extended_due_at timestamptz
+  extension_reason_code varchar(120)
+  satisfied_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (request_id, deadline_code) [unique]
+    due_at [name: 'idx_dsar_deadline_open', note: 'Partial: WHERE satisfied_at IS NULL']
+  }
+  Note: 'Migration 022. Original due_at and trigger are immutable; extension is separate.'
+}
+
+Table core.data_subject_request_events {
+  id uuid [pk, not null, default: `uuidv7()`]
+  request_id uuid [not null]
+  event_code varchar(120) [not null]
+  from_status varchar(32)
+  to_status varchar(32)
+  actor_account_id uuid [not null]
+  reason_code varchar(120)
+  occurred_at timestamptz [not null]
+
+  indexes {
+    (request_id, occurred_at, id) [name: 'idx_dsar_event_history']
+  }
+  Note: 'Migration 022. Immutable machine-code workflow history.'
+}
+
+Table core.privacy_processing_blocks {
+  id uuid [pk, not null, default: `uuidv7()`]
+  subject_person_id uuid [not null]
+  scope_type varchar(20) [not null]
+  purpose_code varchar(120)
+  resource_type varchar(120)
+  resource_id uuid
+  reason_code varchar(120) [not null]
+  source_request_id uuid
+  started_at timestamptz [not null]
+  expires_at timestamptz
+  released_at timestamptz
+  released_by_account_id uuid
+  release_reason_code varchar(120)
+  created_by_account_id uuid
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    subject_person_id [name: 'idx_privacy_blocks_subject_active', note: 'Partial: WHERE released_at IS NULL']
+    source_request_id [name: 'idx_privacy_blocks_request']
+  }
+  Note: 'Migration 022. Subject, purpose and semantic resource scopes; expiration is evaluated at read time.'
+}
+
 Table core.privacy_consents {
   id uuid [pk, not null, default: `uuidv7()`]
   granted_by_account_id uuid [not null, note: 'FK -> core.accounts.id ON DELETE RESTRICT']
@@ -862,6 +948,17 @@ Ref: core.legal_representations.representative_person_id > core.persons.id [dele
 Ref: core.legal_representations.verified_by_account_id > core.accounts.id [delete: restrict]
 Ref: core.legal_representations.revoked_by_account_id > core.accounts.id [delete: restrict]
 Ref: core.legal_representation_scopes.representation_id > core.legal_representations.id [delete: restrict]
+Ref: core.data_subject_requests.subject_person_id > core.persons.id [delete: restrict]
+Ref: core.data_subject_requests.submitted_by_person_id > core.persons.id [delete: restrict]
+Ref: core.data_subject_requests.submitted_by_account_id > core.accounts.id [delete: restrict]
+Ref: core.data_subject_requests.legal_representation_id > core.legal_representations.id [delete: restrict]
+Ref: core.data_subject_request_deadlines.request_id > core.data_subject_requests.id [delete: restrict]
+Ref: core.data_subject_request_events.request_id > core.data_subject_requests.id [delete: restrict]
+Ref: core.data_subject_request_events.actor_account_id > core.accounts.id [delete: restrict]
+Ref: core.privacy_processing_blocks.subject_person_id > core.persons.id [delete: restrict]
+Ref: core.privacy_processing_blocks.source_request_id > core.data_subject_requests.id [delete: restrict]
+Ref: core.privacy_processing_blocks.released_by_account_id > core.accounts.id [delete: restrict]
+Ref: core.privacy_processing_blocks.created_by_account_id > core.accounts.id [delete: restrict]
 Ref: core.privacy_consents.granted_by_account_id > core.accounts.id [delete: restrict]
 Ref: core.privacy_consents.subject_person_id > core.persons.id [delete: restrict]
 Ref: core.privacy_consents.granted_by_person_id > core.persons.id [delete: restrict]

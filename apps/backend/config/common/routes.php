@@ -14,6 +14,9 @@ use App\Core\Consent\Api\GrantOwnConsentAction;
 use App\Core\Consent\Api\WithdrawOwnConsentAction;
 use App\Core\Presence\Api\HeartbeatAction;
 use App\Core\Privacy\Api\ManageRepresentationAction;
+use App\Core\Privacy\Api\OwnPrivacyRequestsAction;
+use App\Core\Privacy\Api\ManagePrivacyRequestsAction;
+use App\Core\Privacy\Api\ManageProcessingBlocksAction;
 use App\Core\Auth\Api\ListSessionsAction;
 use App\Core\Auth\Api\ActivationAction;
 use App\Core\Auth\Api\ConfirmPasswordResetAction;
@@ -229,6 +232,72 @@ return [
         ->middleware(RequireAuthentication::class, $permission('core.privacy.representations.manage'))
         ->action(ManageRepresentationAction::class)
         ->name('core/privacy/representations/revoke'),
+
+    Route::post('/api/auth/me/privacy/requests')
+        ->defaults(['operation' => 'submit'])
+        ->middleware(RequireAuthentication::class)
+        ->action(OwnPrivacyRequestsAction::class)
+        ->name('auth/me/privacy/requests/submit'),
+
+    Route::get('/api/auth/me/privacy/requests')
+        ->defaults(['operation' => 'list'])
+        ->middleware(RequireAuthentication::class)
+        ->action(OwnPrivacyRequestsAction::class)
+        ->name('auth/me/privacy/requests/list'),
+
+    Route::get('/api/auth/me/privacy/requests/{id}')
+        ->defaults(['operation' => 'get'])
+        ->middleware(RequireAuthentication::class)
+        ->action(OwnPrivacyRequestsAction::class)
+        ->name('auth/me/privacy/requests/get'),
+
+    Route::post('/api/auth/me/privacy/representations/{representationId}/requests')
+        ->defaults(['operation' => 'submit_representative'])
+        ->middleware(RequireAuthentication::class)
+        ->action(OwnPrivacyRequestsAction::class)
+        ->name('auth/me/privacy/representations/requests/submit'),
+
+    Route::get('/api/core/privacy/requests')
+        ->defaults(['operation' => 'list'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.read'))
+        ->action(ManagePrivacyRequestsAction::class)
+        ->name('core/privacy/requests/list'),
+
+    Route::get('/api/core/privacy/requests/{id}')
+        ->defaults(['operation' => 'get'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.read'))
+        ->action(ManagePrivacyRequestsAction::class)
+        ->name('core/privacy/requests/get'),
+
+    Route::post('/api/core/privacy/requests/{id}/transition')
+        ->defaults(['operation' => 'transition'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
+        ->action(ManagePrivacyRequestsAction::class)
+        ->name('core/privacy/requests/transition'),
+
+    Route::post('/api/core/privacy/requests/{id}/deadlines/{deadlineCode}/extend')
+        ->defaults(['operation' => 'extend'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
+        ->action(ManagePrivacyRequestsAction::class)
+        ->name('core/privacy/requests/deadlines/extend'),
+
+    Route::post('/api/core/privacy/requests/{id}/blocks')
+        ->defaults(['operation' => 'create'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
+        ->action(ManageProcessingBlocksAction::class)
+        ->name('core/privacy/requests/blocks/create'),
+
+    Route::get('/api/core/privacy/requests/{id}/blocks')
+        ->defaults(['operation' => 'list'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.read'))
+        ->action(ManageProcessingBlocksAction::class)
+        ->name('core/privacy/requests/blocks/list'),
+
+    Route::post('/api/core/privacy/blocks/{id}/release')
+        ->defaults(['operation' => 'release'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
+        ->action(ManageProcessingBlocksAction::class)
+        ->name('core/privacy/blocks/release'),
 
     Route::post('/api/auth/me/presence/heartbeat')
         ->middleware(RequireAuthentication::class)

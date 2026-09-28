@@ -19,6 +19,10 @@ use App\Core\Privacy\Application\ProcessingPurposeRegistry;
 use App\Core\Privacy\Application\RetentionPolicyRegistry;
 use App\Core\Privacy\Application\RepresentativeAuthorityPolicy;
 use App\Core\Privacy\Application\RepresentationScopeRegistry;
+use App\Core\Privacy\Application\BusinessCalendarInterface;
+use App\Core\Privacy\Application\ProcessingBlockPolicy;
+use App\Core\Privacy\Application\ProcessingBlockService;
+use App\Core\Privacy\Infrastructure\ConfiguredBusinessCalendar;
 use App\Core\Privacy\Infrastructure\PostgresRepresentativeAuthorityPolicy;
 use App\Core\Audit\Application\AuditWriter;
 use App\Core\Audit\Application\AuditEventDefinitionRegistry;
@@ -92,6 +96,17 @@ return [
         '__construct()' => ['definitions' => $params['processingPurposeDefinitions'] ?? []],
     ],
     RepresentativeAuthorityPolicy::class => ['class' => PostgresRepresentativeAuthorityPolicy::class],
+    BusinessCalendarInterface::class => [
+        'class' => ConfiguredBusinessCalendar::class,
+        '__construct()' => [
+            'coverageFrom' => $params['privacyBusinessCalendar']['coverageFrom'],
+            'coverageUntil' => $params['privacyBusinessCalendar']['coverageUntil'],
+            'weekends' => $params['privacyBusinessCalendar']['weekends'],
+            'nonWorkingDates' => $params['privacyBusinessCalendar']['nonWorkingDates'],
+            'workingOverrideDates' => $params['privacyBusinessCalendar']['workingOverrideDates'],
+        ],
+    ],
+    ProcessingBlockPolicy::class => ['class' => ProcessingBlockService::class],
     RepresentationScopeRegistry::class => [
         '__construct()' => ['additionalCodes' => $params['representationScopeCodes'] ?? []],
     ],
