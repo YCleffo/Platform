@@ -32,16 +32,21 @@ final readonly class PersonalDataExportService
         return $this->export($actor, $requestId, $representationId);
     }
 
+    public function exportOperator(AuthenticatedIdentity $actor, string $requestId): PersonalDataExportResult
+    {
+        return $this->export($actor, $requestId, null, true);
+    }
+
     private function export(AuthenticatedIdentity $actor, string $requestId,
-        ?string $representationId): PersonalDataExportResult
+        ?string $representationId, bool $operatorIntake = false): PersonalDataExportResult
     {
         $authorized = false;
         try {
             $isolation = $this->db->getTransaction() === null ? TransactionInterface::REPEATABLE_READ : null;
-            return $this->db->transaction(function () use ($actor, $requestId, $representationId, &$authorized): PersonalDataExportResult {
+            return $this->db->transaction(function () use ($actor, $requestId, $representationId, $operatorIntake, &$authorized): PersonalDataExportResult {
                 $row = $this->db->createCommand(<<<'SQL'
                     SELECT r.subject_person_id::text, r.request_type, r.status,
-                           r.legal_representation_id::text
+                           r.legal_representation_id::text, r.intake_channel
                     FROM core.data_subject_requests r WHERE r.id = CAST(:id AS uuid) FOR UPDATE
                     SQL, [':id' => $requestId])->queryOne();
                 if (!is_array($row) || !in_array($row['request_type'], ['access', 'export'], true)
@@ -56,7 +61,11 @@ final readonly class PersonalDataExportService
                     throw new DomainException('Personal data response is unavailable.');
                 }
                 $subject = (string) $row['subject_person_id'];
-                if ($representationId === null) {
+                if ($operatorIntake) {
+                    if ($row['intake_channel'] === null || $representationId !== null) {
+                        throw new DomainException('Operator intake response is unavailable.');
+                    }
+                } elseif ($representationId === null) {
                     if ($subject !== $actor->personId) {
                         throw new DomainException('Personal data response is unavailable.');
                     }

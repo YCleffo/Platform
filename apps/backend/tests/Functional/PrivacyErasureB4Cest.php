@@ -17,6 +17,7 @@ use App\Core\Privacy\Application\ErasureRequestCompletionService;
 use App\Core\Privacy\Application\LawfulProcessingBasisContributorRegistry;
 use App\Core\Privacy\Application\LawfulProcessingBasisResolver;
 use App\Core\Privacy\Application\LegalHoldService;
+use App\Core\Privacy\Application\LegalDestructionPackageService;
 use App\Core\Privacy\Application\PersonalDataErasureHandlerRegistry;
 use App\Core\Privacy\Application\PersonalDataErasureHandler;
 use App\Core\Privacy\Application\PrivacyDeadlinePolicy;
@@ -196,10 +197,15 @@ final readonly class PrivacyErasureB4Cest
             $decisions = new RetentionDecisionService($db, $evaluator, $clock, $audit);
             $handlers = new PersonalDataErasureHandlerRegistry([new CorePersonContactErasureHandler($db)]);
             $cases = new ErasureCaseService($db, $clock, $candidates, $purposes, $decisions, $handlers, $audit);
+            $legalPackages = new LegalDestructionPackageService($db, $purposes,
+                ['name' => 'Test operator', 'address' => 'Test address'],
+                ['informationSystemName' => 'Core', 'informationSystemCode' => 'core',
+                    'destructionMethod' => 'transactional_delete']);
             $executor = new ErasureExecutor($db, $clock, $candidates, $purposes, $decisions,
                 $handlers, $container->get(DestructionEvidencePolicy::class),
                 new ErasureCaseStateMachine(), $audit,
-                $container->get(ErasureRequestCompletionService::class));
+                $container->get(ErasureRequestCompletionService::class),
+                $legalPackages);
             $caseId = $cases->create($actor, $subject, 'verified_erasure');
             assertSame('planned', $cases->get($caseId)['status']);
             $summary = $executor->executeBatch($actor, $caseId);
@@ -210,8 +216,20 @@ final readonly class PrivacyErasureB4Cest
             $evidence = (new DestructionEvidenceExporter($db, $clock))->export($caseId);
             assertSame(1, $evidence['totalEvidenceItems']);
             assertSame('deleted', $evidence['items'][0]['result']);
+            $act = $evidence['items'][0]['act'];
+            assertSame('Test operator', $act['operator']['name']);
+            assertSame('PrivateSurnameSentinel FullNameSentinel', $act['subject']['name']);
+            assertSame(['identity'], $act['dataCategories']);
+            assertSame('core', $act['informationSystem']['code']);
+            assertTrue((new DateTimeImmutable($act['retainUntil'])) >= (new DateTimeImmutable($act['destroyedAt']))->modify('+3 years'));
+            assertSame('core', $evidence['items'][0]['journalExport']['informationSystemCode']);
+            $legalPackages->attest($caseId, $evidence['items'][0]['evidenceId'], $account,
+                'urn:signed-act:test-45', 'urn:signature:test-45');
+            $signed = (new DestructionEvidenceExporter($db, $clock))->export($caseId)['items'][0]['act'];
+            assertTrue($signed['signed']);
+            assertSame('urn:signed-act:test-45', $signed['documentReference']);
+            assertSame('urn:signature:test-45', $signed['signatureReference']);
             assertFalse(str_contains(json_encode($evidence, JSON_THROW_ON_ERROR), 'private-sentinel@example.test'));
-            assertFalse(str_contains(json_encode($evidence, JSON_THROW_ON_ERROR), 'FullNameSentinel'));
             assertSame($summary, $executor->executeBatch($actor, $caseId));
             assertSame(1, (int) $db->createCommand('SELECT count(*) FROM core.privacy_destruction_evidence WHERE case_id = CAST(:id AS uuid)',
                 [':id' => $caseId])->queryScalar());

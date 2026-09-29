@@ -22,6 +22,11 @@ use App\Core\Privacy\Application\RetentionCandidateContributorRegistry;
 use App\Core\Privacy\Application\RetentionDependencyContributorRegistry;
 use App\Core\Privacy\Application\PrivacyRequestExecutionCapabilityRegistry;
 use App\Core\Privacy\Application\DestructionEvidencePolicy;
+use App\Core\Privacy\Application\DistributionConsentDefinitionRegistry;
+use App\Core\Privacy\Application\ProcessingInformationService;
+use App\Core\Privacy\Application\PersonalDataExporter;
+use App\Core\Privacy\Application\LegalDestructionPackageService;
+use App\Core\Privacy\Application\ErasureExecutor;
 use App\Core\Privacy\Application\ProcessorRegistry;
 use App\Core\Privacy\Application\DataRecipientRegistry;
 use App\Core\Privacy\Application\CrossBorderTransferRegistry;
@@ -136,6 +141,18 @@ return [
     DestructionEvidencePolicy::class => [
         '__construct()' => ['configuration' => $params['privacyDestructionEvidence'] ?? []],
     ],
+    DistributionConsentDefinitionRegistry::class => [
+        '__construct()' => ['definitions' => $params['privacyDistributionConsentDefinitions'] ?? []],
+    ],
+    LegalDestructionPackageService::class => [
+        '__construct()' => [
+            'operator' => $params['privacyOperatorIdentity'] ?? [],
+            'configuration' => $params['privacyLegalEvidence'] ?? [],
+        ],
+    ],
+    ErasureExecutor::class => [
+        '__construct()' => ['legalPackages' => Reference::to(LegalDestructionPackageService::class)],
+    ],
     ProcessorRegistry::class => [
         '__construct()' => ['definitions' => $params['privacyProcessorDefinitions'] ?? []],
     ],
@@ -151,6 +168,12 @@ return [
     ProcessingInformationRegistry::class => [
         '__construct()' => ['definitions' => $params['privacyProcessingInformationDefinitions'] ?? []],
     ],
+    ProcessingInformationService::class => [
+        '__construct()' => [
+            'personalData' => Reference::to(PersonalDataExporter::class),
+            'operatorIdentity' => $params['privacyOperatorIdentity'] ?? [],
+        ],
+    ],
     PrivacyCleanupPolicy::class => [
         '__construct()' => ['configuration' => $params['privacyCleanup'] ?? []],
     ],
@@ -161,6 +184,11 @@ return [
         '__construct()' => [
             'securityReferences' => $params['privacySecurityReferences'] ?? [],
             'incidentDeadlines' => $params['privacyIncidentDeadlines'] ?? [],
+            'calendar' => Reference::to(BusinessCalendarInterface::class),
+            'operatorNotification' => $params['privacyOperatorNotification'] ?? [],
+            'operatorIdentity' => $params['privacyOperatorIdentity'] ?? [],
+            'distributionDefinitions' => Reference::to(DistributionConsentDefinitionRegistry::class),
+            'legalPackages' => Reference::to(LegalDestructionPackageService::class),
         ],
     ],
     CoreErasureHandlerProvider::class => [
@@ -190,6 +218,8 @@ return [
             'weekends' => $params['privacyBusinessCalendar']['weekends'],
             'nonWorkingDates' => $params['privacyBusinessCalendar']['nonWorkingDates'],
             'workingOverrideDates' => $params['privacyBusinessCalendar']['workingOverrideDates'],
+            'sourceReference' => $params['privacyBusinessCalendar']['sourceReference'] ?? null,
+            'verifiedAt' => $params['privacyBusinessCalendar']['verifiedAt'] ?? null,
         ],
     ],
     ProcessingBlockPolicy::class => ['class' => ProcessingBlockService::class],

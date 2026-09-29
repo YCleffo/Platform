@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core\Privacy\Application;
 
+use App\Core\Privacy\Infrastructure\ConfiguredBusinessCalendar;
+
 /** Read-only technical readiness, never a legal compliance certification. */
 final readonly class ComplianceReadinessChecker
 {
@@ -15,7 +17,12 @@ final readonly class ComplianceReadinessChecker
         private CrossBorderTransferRegistry $transfers,
         private ProcessingRoleRegistry $roles, private DataResidencyEvidence $residency,
         private ProcessingInformationRegistry $processingInformation,
-        private array $securityReferences = [], private array $incidentDeadlines = []) {}
+        private array $securityReferences = [], private array $incidentDeadlines = [],
+        private ?BusinessCalendarInterface $calendar = null,
+        private array $operatorNotification = [],
+        private array $operatorIdentity = [],
+        private ?DistributionConsentDefinitionRegistry $distributionDefinitions = null,
+        private ?LegalDestructionPackageService $legalPackages = null) {}
 
     /** @return array{result:string,missingRequirements:list<string>} */
     public function check(bool $productionRequired): array
@@ -57,9 +64,41 @@ final readonly class ComplianceReadinessChecker
             $missing[] = 'incident_deadlines';
         }
         if ($productionRequired) {
+            if (!$this->calendar instanceof ConfiguredBusinessCalendar
+                || !$this->calendar->coversCurrentPeriod(new \DateTimeImmutable())) {
+                $missing[] = 'business_calendar_coverage';
+            }
+            if (($this->operatorNotification['required'] ?? null) === false) {
+                if (trim((string) ($this->operatorNotification['exemptionReference'] ?? '')) === '') {
+                    $missing[] = 'rkn_notification_evidence';
+                }
+            } elseif (($this->operatorNotification['required'] ?? null) !== true
+                || (($this->operatorNotification['status'] ?? null) !== 'submitted'
+                    || trim((string) ($this->operatorNotification['number'] ?? '')) === ''
+                    || trim((string) ($this->operatorNotification['date'] ?? '')) === ''
+                    || trim((string) ($this->operatorNotification['evidenceReference'] ?? '')) === ''
+                    || ($this->operatorNotification['registeredPurposes'] ?? []) === []
+                    || array_diff($this->purposes->codes(), $this->operatorNotification['registeredPurposes'] ?? []) !== []
+                    || trim((string) ($this->operatorNotification['databaseLocationReference'] ?? '')) === '')) {
+                $missing[] = 'rkn_notification_evidence';
+            }
             if (!$this->residency->complete()) { $missing[] = 'residency_evidence'; }
+            if (!$this->legalPackages?->available()) { $missing[] = 'legal_destruction_package'; }
+            if (trim((string) ($this->operatorIdentity['name'] ?? '')) === ''
+                || trim((string) ($this->operatorIdentity['address'] ?? '')) === '') {
+                $missing[] = 'operator_identity';
+            }
+            foreach ($this->purposes->codes() as $purposeCode) {
+                if ($this->purposes->get($purposeCode)?->distributionAllowed
+                    && $this->distributionDefinitions?->get($purposeCode) === null) {
+                    $missing[] = 'distribution_consent_definition';
+                }
+            }
             foreach (['threatModelReference', 'harmAssessmentReference', 'ispdnProtectionLevel',
-                'responsiblePersonReference', 'securityApprovalReference'] as $key) {
+                'responsiblePersonReference', 'securityApprovalReference',
+                'backupRecoveryReference', 'vulnerabilityUpdateReference',
+                'adminAccessReviewReference', 'secretsManagementReference',
+                'processorContractsReference'] as $key) {
                 if (!is_string($this->securityReferences[$key] ?? null)
                     || trim($this->securityReferences[$key]) === '') {
                     $missing[] = 'security_matrix_references';

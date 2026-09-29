@@ -33,7 +33,7 @@ final readonly class ManageDistributionConsentAction
             $body = $request->getParsedBody();
             if (!is_array($body) || !PrivacyRequestInput::keys($body, [
                 'subjectPersonId','purposeCode','categoryCodes','fieldCodes',
-                'conditionCodes','restrictionCodes','documentVersion','documentSha256','representationId'])) {
+                'conditionCodes','restrictionCodes','representationId'])) {
                 return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
             }
             foreach (['categoryCodes','fieldCodes','conditionCodes','restrictionCodes'] as $key) {
@@ -44,14 +44,12 @@ final readonly class ManageDistributionConsentAction
             }
             if (!PrivacyRequestInput::uuid($body['subjectPersonId'] ?? null)
                 || !PrivacyRequestInput::code($body['purposeCode'] ?? null)
-                || !is_string($body['documentVersion'] ?? null)
-                || !is_string($body['documentSha256'] ?? null)
                 || (isset($body['representationId']) && !PrivacyRequestInput::uuid($body['representationId']))) {
                 return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
             }
             $id = $consents->grant($actor, $body['subjectPersonId'], $body['purposeCode'],
                 $body['categoryCodes'], $body['fieldCodes'], $body['conditionCodes'],
-                $body['restrictionCodes'], $body['documentVersion'], $body['documentSha256'],
+                $body['restrictionCodes'],
                 $body['representationId'] ?? null);
             return $responses->success(['id' => $id])->withStatus(Status::CREATED);
         } catch (DomainException) {

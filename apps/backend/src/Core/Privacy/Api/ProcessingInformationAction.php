@@ -28,7 +28,7 @@ final readonly class ProcessingInformationAction
         }
         try {
             $json = $service->issue(AuthenticatedIdentity::fromRequest($request),
-                $id, $representationId);
+                $id, $representationId, $route->getArgument('operator') === true);
             return $psrResponses->createResponse(200)
                 ->withHeader('Content-Type', 'application/json; charset=utf-8')
                 ->withHeader('Cache-Control', 'no-store')

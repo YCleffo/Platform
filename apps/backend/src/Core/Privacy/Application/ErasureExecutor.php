@@ -10,6 +10,7 @@ use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Privacy\Domain\RetentionDecision;
 use App\Core\Time\Application\ClockInterface;
 use DomainException;
+use DateTimeImmutable;
 use Yiisoft\Db\Connection\ConnectionInterface;
 
 /** Core handlers execute in the item transaction; module handlers must reconcile by item ID. */
@@ -23,7 +24,8 @@ final readonly class ErasureExecutor
         private DestructionEvidencePolicy $evidencePolicy,
         private ErasureCaseStateMachine $states,
         private AuditService $audit,
-        private ErasureRequestCompletionService $requests) {}
+        private ErasureRequestCompletionService $requests,
+        private ?LegalDestructionPackageService $legalPackages = null) {}
 
     /** @return array{status:string,completed:int,blocked:int,failed:int,pending:int} */
     public function executeBatch(AuthenticatedIdentity $actor, string $caseId, int $limit = 25): array
@@ -84,6 +86,11 @@ final readonly class ErasureExecutor
             $subject = (string) $case['subject_person_id'];
             $this->db->createCommand('SELECT id FROM core.persons WHERE id = CAST(:id AS uuid) FOR UPDATE',
                 [':id' => $subject])->queryScalar();
+            if ($this->legalPackages !== null && !$this->legalPackages->available()) {
+                $this->block($actor, $itemId, 'legal_evidence_config_missing', (string) $item['resource_type']);
+                return;
+            }
+            $subjectName = $this->legalPackages?->subjectName($caseId, $subject);
             $now = $this->clock->now()->format(DATE_ATOM);
             if ($case['started_at'] === null) {
                 $this->audit($actor, 'privacy.erasure.started', $caseId, []);
@@ -104,7 +111,7 @@ final readonly class ErasureExecutor
             if ($handler !== null) {
                 $reconciled = $handler->reconcile($itemId);
                 if ($reconciled !== null) {
-                    $this->finishItem($actor, $caseId, $itemId, $item, $reconciled);
+                    $this->finishItem($actor, $caseId, $itemId, $item, $reconciled, $subjectName);
                     return;
                 }
             }
@@ -171,12 +178,12 @@ final readonly class ErasureExecutor
                 SQL, [':action' => $action, ':policy' => $policy, ':id' => $itemId])->execute();
             $item['planned_action'] = $action;
             $item['policy_code'] = $policy;
-            $this->finishItem($actor, $caseId, $itemId, $item, $result);
+            $this->finishItem($actor, $caseId, $itemId, $item, $result, $subjectName);
         });
     }
 
     private function finishItem(AuthenticatedIdentity $actor, string $caseId, string $itemId,
-        array $item, string $result): void
+        array $item, string $result, ?string $subjectName): void
     {
         $expected = match ($item['planned_action']) {
             'delete' => 'deleted', 'anonymize' => 'anonymized',
@@ -191,7 +198,7 @@ final readonly class ErasureExecutor
             'privacy.erasure.item_completed', resourceType: 'core.privacy_erasure_item',
             resourceId: $itemId, metadata: ['resourceType' => $item['resource_type'],
                 'policyCode' => $item['policy_code'], 'action' => $item['planned_action'], 'result' => $result]));
-        $this->db->createCommand(<<<'SQL'
+        $evidenceId = $this->db->createCommand(<<<'SQL'
             INSERT INTO core.privacy_destruction_evidence
                 (case_id, item_id, resource_type, resource_reference_hash, policy_code,
                     evidence_policy_code, evidence_retain_until, action, result, executed_at,
@@ -199,6 +206,7 @@ final readonly class ErasureExecutor
             VALUES (CAST(:case AS uuid), CAST(:item AS uuid), :type, :hash, :policy,
                 :evidence_policy, CAST(:retain_until AS timestamptz), :action, :result,
                 CAST(:now AS timestamptz), CAST(:actor AS uuid), CAST(:event AS uuid))
+            RETURNING id::text
             SQL, [':case' => $caseId, ':item' => $itemId, ':type' => $item['resource_type'],
                 ':hash' => $this->evidencePolicy->referenceHash((string) $item['resource_type'],
                     (string) $item['resource_id']), ':policy' => $item['policy_code'],
@@ -206,7 +214,18 @@ final readonly class ErasureExecutor
                 ':retain_until' => $this->evidencePolicy->retainUntil($now)->format(DATE_ATOM),
                 ':action' => $item['planned_action'], ':result' => $result,
                 ':now' => $now->format(DATE_ATOM), ':actor' => $actor->accountId,
-                ':event' => $receipt->eventId])->execute();
+                ':event' => $receipt->eventId])->queryScalar();
+        if ($this->legalPackages !== null) {
+            if (!is_string($evidenceId) || $subjectName === null) {
+                throw new DomainException('Legal destruction evidence was not recorded.');
+            }
+            $subjectId = $this->db->createCommand('SELECT subject_person_id::text FROM core.privacy_erasure_cases WHERE id = CAST(:id AS uuid)',
+                [':id' => $caseId])->queryScalar();
+            if (!is_string($subjectId)) { throw new DomainException('Erasure subject unavailable.'); }
+            $this->legalPackages->record($evidenceId, $caseId, $itemId, $subjectId, $subjectName,
+                $actor->accountId, $receipt->eventId, $now,
+                $this->evidencePolicy->retainUntil($now));
+        }
         $this->db->createCommand(<<<'SQL'
             UPDATE core.privacy_erasure_items SET status = 'completed', completed_at = CAST(:now AS timestamptz),
                 failure_code = NULL, updated_at = CAST(:now AS timestamptz) WHERE id = CAST(:id AS uuid)

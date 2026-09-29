@@ -15,7 +15,8 @@ readonly class ProcessorDefinition
         public string $role, public array $purposes, public array $dataCategories,
         public string $country, public string $contractReference,
         public bool $securityRequirementsConfirmed, public bool $localizationCompatible,
-        public DateTimeImmutable $activeFrom, public ?DateTimeImmutable $activeUntil = null)
+        public DateTimeImmutable $activeFrom, public ?DateTimeImmutable $activeUntil = null,
+        public ?string $name = null, public ?string $address = null)
     {
         MachineCode::assert($code);
         foreach ([...$purposes, ...$dataCategories] as $value) { MachineCode::assert($value); }

@@ -13,7 +13,9 @@ final readonly class ProcessingInformationDefinition
      *  @param list<string> $complianceMethodCodes */
     public function __construct(public string $purposeCode, public array $methodCodes,
         public array $sourceCodes, public string $rightsProcedureReference,
-        public array $complianceMethodCodes)
+        public array $complianceMethodCodes,
+        public string $rightsProcedureText = '',
+        public array $complianceMethodDescriptions = [])
     {
         MachineCode::assert($purposeCode);
         foreach ([...$methodCodes, ...$sourceCodes, ...$complianceMethodCodes] as $code) {
@@ -22,6 +24,12 @@ final readonly class ProcessingInformationDefinition
         if ($methodCodes === [] || $sourceCodes === [] || $complianceMethodCodes === []
             || trim($rightsProcedureReference) === '') {
             throw new InvalidArgumentException('Incomplete processing information definition.');
+        }
+        foreach ($complianceMethodDescriptions as $code => $description) {
+            MachineCode::assert((string) $code);
+            if (!is_string($description) || trim($description) === '') {
+                throw new InvalidArgumentException('Invalid compliance method description.');
+            }
         }
     }
 }

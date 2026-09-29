@@ -11,6 +11,7 @@ use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Privacy\Application\DataSubjectRequestService;
 use App\Core\Privacy\Application\DataSubjectRequestFilter;
 use DomainException;
+use DateTimeImmutable;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Yiisoft\Http\Status;
@@ -45,6 +46,37 @@ final readonly class ManagePrivacyRequestsAction
                 $overdue === null ? null : $overdue === 'true',
             );
             return $responses->success($service->listManagement($pagination->limit, $pagination->offset, $filter)->toArray());
+        }
+        if ($operation === 'intake') {
+            $body = $request->getParsedBody();
+            if (!is_array($body) || !PrivacyRequestInput::keys($body, [
+                'subjectPersonId', 'requestType', 'receivedAt', 'identityVerificationCode',
+                'identityEvidenceReference', 'representativeVerificationReference', 'sourceChannel'])
+                || !PrivacyRequestInput::uuid($body['subjectPersonId'] ?? null)
+                || !is_string($body['requestType'] ?? null)
+                || !PrivacyRequestInput::timestamp($body['receivedAt'] ?? null)
+                || !PrivacyRequestInput::code($body['identityVerificationCode'] ?? null)
+                || !is_string($body['identityEvidenceReference'] ?? null)
+                || (isset($body['representativeVerificationReference'])
+                    && !is_string($body['representativeVerificationReference']))
+                || !is_string($body['sourceChannel'] ?? null)) {
+                return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
+            }
+            try {
+                $receivedAt = new DateTimeImmutable($body['receivedAt']);
+            } catch (\Exception) {
+                return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
+            }
+            try {
+                $id = $service->intake(AuthenticatedIdentity::fromRequest($request),
+                    $body['subjectPersonId'], $body['requestType'],
+                    $receivedAt, $body['identityVerificationCode'],
+                    $body['identityEvidenceReference'], $body['representativeVerificationReference'] ?? null,
+                    $body['sourceChannel']);
+                return $responses->success(['id' => $id])->withStatus(Status::CREATED);
+            } catch (DomainException) {
+                return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
+            }
         }
         $id = (string) $route->getArgument('id');
         if (!PrivacyRequestInput::uuid($id)) {

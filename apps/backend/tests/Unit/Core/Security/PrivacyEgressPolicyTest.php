@@ -42,9 +42,37 @@ final class PrivacyEgressPolicyTest extends TestCase
         $approved = new CrossBorderTransferPolicy(new ProcessorRegistry([$provider]),
             new DataRecipientRegistry(), new CrossBorderTransferRegistry([
                 new CrossBorderTransferDefinition('smtp', 'US', 'security_email', ['contact'],
-                    'notified', true, 'notification.1', $now->modify('-1 day')),
+                    'notified', true, 'notification.1', $now->modify('-1 day'),
+                    adequacyStatus: 'adequate', notificationSubmittedAt: $now->modify('-1 day'),
+                    notificationEvidenceReference: 'notification.1'),
             ]), $clock);
         $approved->assertEgressAllowed('smtp', 'security_email', ['contact']);
         self::assertTrue(true);
+    }
+
+    public function testNonAdequateReviewAndRegulatorDecisionsBlock(): void
+    {
+        $now = new DateTimeImmutable('2026-09-29T10:00:00Z');
+        $clock = new class($now) implements ClockInterface {
+            public function __construct(private DateTimeImmutable $now) {}
+            public function now(): DateTimeImmutable { return $this->now; }
+        };
+        $provider = new ProcessorDefinition('smtp', 'contract.smtp', 'processor_by_instruction',
+            ['security_email'], ['contact'], 'US', 'contract.smtp', true, true, $now->modify('-1 day'));
+        foreach ([['non_adequate', 'pending', $now->modify('+1 day')],
+            ['adequate', 'restricted', null], ['adequate', 'prohibited', null]] as [$adequacy, $decision, $reviewUntil]) {
+            $policy = new CrossBorderTransferPolicy(new ProcessorRegistry([$provider]),
+                new DataRecipientRegistry(), new CrossBorderTransferRegistry([
+                    new CrossBorderTransferDefinition('smtp', 'US', 'security_email', ['contact'],
+                        'notified', true, 'notification.1', $now->modify('-1 day'),
+                        adequacyStatus: $adequacy, notificationSubmittedAt: $now->modify('-1 day'),
+                        notificationEvidenceReference: 'notification.1', regulatorReviewUntil: $reviewUntil,
+                        regulatorDecision: $decision),
+                ]), $clock);
+            try {
+                $policy->assertEgressAllowed('smtp', 'security_email', ['contact']);
+                self::fail('Regulatory restriction or review period must block transfer.');
+            } catch (DomainException) { self::assertTrue(true); }
+        }
     }
 }

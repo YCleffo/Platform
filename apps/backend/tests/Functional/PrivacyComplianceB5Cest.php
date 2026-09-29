@@ -27,6 +27,7 @@ use App\Core\Privacy\Application\ProcessingRestrictionContributorRegistry;
 use App\Core\Privacy\Application\ProcessingRoleDefinition;
 use App\Core\Privacy\Application\ProcessingRoleRegistry;
 use App\Core\Privacy\Application\ProcessorRegistry;
+use App\Core\Privacy\Application\ProcessorDefinition;
 use App\Core\Privacy\Application\RepresentativeAuthorityPolicy;
 use App\Core\Privacy\Application\RetentionCandidateContributor;
 use App\Core\Privacy\Application\RetentionCandidateContributorRegistry;
@@ -153,7 +154,9 @@ final readonly class PrivacyComplianceB5Cest
             ]);
             $information = new ProcessingInformationRegistry([
                 new ProcessingInformationDefinition('b5.info', ['automated'], ['subject'],
-                    'privacy.rights.v1', ['access_control', 'audit']),
+                    'privacy.rights.v1', ['access_control', 'audit'],
+                    'Submit a verified request to the privacy operator.',
+                    ['access_control' => 'Role based access is enforced.', 'audit' => 'Access events are recorded.']),
             ]);
             $roles = new ProcessingRoleRegistry([
                 new ProcessingRoleDefinition('b5.info', 'operator', 'platform.operator', null,
@@ -175,12 +178,24 @@ final readonly class PrivacyComplianceB5Cest
                 $candidates, $purposes, $policies,
                 new LawfulProcessingBasisResolver($purposes,
                     new LawfulProcessingBasisContributorRegistry(), $db),
-                $information, new ProcessorRegistry(), new DataRecipientRegistry(),
-                new CrossBorderTransferRegistry(), $roles, $executions);
+                $information, new ProcessorRegistry([
+                    new ProcessorDefinition('processor.b5', 'processor.ref', 'processor_by_instruction',
+                        ['b5.info'], ['contact'], 'RU', 'contract.b5', true, true,
+                        new DateTimeImmutable('2026-01-01T00:00:00Z'),
+                        name: 'Test processor', address: 'Processor address'),
+                ]), new DataRecipientRegistry(),
+                new CrossBorderTransferRegistry(), $roles, $executions,
+                $container->get(\App\Core\Privacy\Application\PersonalDataExporter::class),
+                ['name' => 'Test operator', 'address' => 'Test address']);
             $result = json_decode($service->issue($actor, $requestId), true, flags: JSON_THROW_ON_ERROR);
             assertSame(true, $result['processed']);
             assertSame($subject, $result['subjectPersonId']);
+            assertSame('Test operator', $result['operator']['name']);
+            assertSame('Test address', $result['operator']['address']);
+            assertTrue($result['actualPersonalData'] !== []);
             assertSame('b5.info', $result['purposes'][0]['purposeCode']);
+            assertSame('Test processor', $result['purposes'][0]['processorsByInstruction'][0]['name']);
+            assertSame('Processor address', $result['purposes'][0]['processorsByInstruction'][0]['address']);
             foreach (['legalBasisCode', 'methods', 'dataCategories', 'resourceTypes', 'sources',
                 'storageAndProcessingPeriod', 'rightsProcedureReference', 'recipients',
                 'processorsByInstruction', 'crossBorderTransfer', 'complianceMethods'] as $key) {
@@ -242,12 +257,23 @@ final readonly class PrivacyComplianceB5Cest
             ], $container->get(DataCategoryRegistry::class), $policies);
             $distribution = new DistributionConsentService($db, $clock,
                 $container->get(RepresentativeAuthorityPolicy::class), $purposes,
-                $container->get(DataCategoryRegistry::class));
+                $container->get(DataCategoryRegistry::class),
+                new \App\Core\Privacy\Application\DistributionConsentDefinitionRegistry([
+                    new \App\Core\Privacy\Application\DistributionConsentDefinition('b5.distribution',
+                        'v1', str_repeat('a', 64), ['identity'], ['display_name'], ['moderated'], ['leaderboard']),
+                ]));
             assertFalse($distribution->allows($subject, 'b5.distribution', 'identity',
                 'display_name', 'public_profile'));
             $consentId = $distribution->grant($actor, $subject, 'b5.distribution',
-                ['identity'], ['display_name'], ['moderated'], ['leaderboard'],
-                'v1', str_repeat('a', 64));
+                ['identity'], ['display_name'], ['moderated'], ['leaderboard']);
+            $document = $db->createCommand('SELECT document_version, document_sha256 FROM core.privacy_distribution_consents WHERE id = CAST(:id AS uuid)', [':id' => $consentId])->queryOne();
+            assertSame('v1', $document['document_version']);
+            assertSame(str_repeat('a', 64), $document['document_sha256']);
+            assertFalse(\App\Core\Privacy\Api\PrivacyRequestInput::keys([
+                'subjectPersonId' => $subject, 'purposeCode' => 'b5.distribution',
+                'documentVersion' => 'forged', 'documentSha256' => str_repeat('b', 64),
+            ], ['subjectPersonId','purposeCode','categoryCodes','fieldCodes',
+                'conditionCodes','restrictionCodes','representationId']));
             assertFalse($distribution->allows($subject, 'b5.distribution', 'identity',
                 'display_name', 'public_profile'));
             assertTrue($distribution->allows($subject, 'b5.distribution', 'identity',

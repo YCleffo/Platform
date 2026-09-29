@@ -1,5 +1,6 @@
 parameters:
     env(CONTROL_PRIVACY_RETENTION_DAYS): '{}'
+    env(CONTROL_PRIVACY_OPERATOR_NOTIFICATION): '{}'
     env(CONTROL_PRIVACY_PROCESSING_ROLES): '{}'
     env(CONTROL_PRIVACY_RESIDENCY): '{}'
     env(CONTROL_PRIVACY_PROVIDER_DECISIONS): '{}'
@@ -9,6 +10,7 @@ parameters:
     env(CONTROL_PRIVACY_BILLING_CONTACT_RETENTION_DAYS): '-1'
     # Deployment must set reviewed per-category periods before cleanup can run.
     control_privacy_retention_days: '%env(json:CONTROL_PRIVACY_RETENTION_DAYS)%'
+    control_privacy_operator_notification: '%env(json:CONTROL_PRIVACY_OPERATOR_NOTIFICATION)%'
     control_privacy_erasure_policy_approved: '%env(bool:CONTROL_PRIVACY_ERASURE_POLICY_APPROVED)%'
     control_privacy_identity_retention_days: '%env(int:CONTROL_PRIVACY_IDENTITY_RETENTION_DAYS)%'
     control_privacy_billing_contact_retention_days: '%env(int:CONTROL_PRIVACY_BILLING_CONTACT_RETENTION_DAYS)%'
@@ -129,6 +131,7 @@ services:
 
     ControlPlane\Privacy\ControlPrivacyReadinessChecker:
         arguments:
+            $operatorNotification: '%control_privacy_operator_notification%'
             $residency: '%control_privacy_residency%'
             $providerDecisions: '%control_privacy_provider_decisions%'
             $securityReferences: '%control_privacy_security_references%'

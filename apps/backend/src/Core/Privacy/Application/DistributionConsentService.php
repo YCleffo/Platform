@@ -15,18 +15,25 @@ final readonly class DistributionConsentService
 {
     public function __construct(private ConnectionInterface $db, private ClockInterface $clock,
         private RepresentativeAuthorityPolicy $authority,
-        private ProcessingPurposeRegistry $purposes, private DataCategoryRegistry $categories) {}
+        private ProcessingPurposeRegistry $purposes, private DataCategoryRegistry $categories,
+        private DistributionConsentDefinitionRegistry $definitions) {}
 
     /** @param list<string> $categories @param list<string> $fields
      *  @param list<string> $conditions @param list<string> $restrictions */
     public function grant(AuthenticatedIdentity $actor, string $subjectPersonId, string $purposeCode,
         array $categories, array $fields, array $conditions, array $restrictions,
-        string $documentVersion, string $documentSha256,
         ?string $representationId = null): string
     {
         MachineCode::assert($purposeCode);
         if ($this->purposes->get($purposeCode)?->distributionAllowed !== true) {
             throw new DomainException('Purpose does not allow public distribution.');
+        }
+        $definition = $this->definitions->get($purposeCode);
+        if ($definition === null || array_diff($categories, $definition->allowedCategories) !== []
+            || array_diff($fields, $definition->allowedFields) !== []
+            || array_diff($conditions, $definition->allowedConditions) !== []
+            || array_diff($restrictions, $definition->allowedRestrictions) !== []) {
+            throw new DomainException('Distribution consent is outside the approved document scope.');
         }
         foreach ($categories as $category) {
             if ($this->categories->get($category) === null) {
@@ -43,9 +50,7 @@ final readonly class DistributionConsentService
         }
         if ($actor->personId === null || $categories === [] || $fields === []
             || count($categories) > 32 || count($fields) > 64
-            || count($conditions) > 32 || count($restrictions) > 32
-            || $documentVersion === '' || strlen($documentVersion) > 80
-            || preg_match('/^[a-f0-9]{64}$/D', $documentSha256) !== 1) {
+            || count($conditions) > 32 || count($restrictions) > 32) {
             throw new DomainException('Invalid distribution consent.');
         }
         $person = $this->db->createCommand(<<<'SQL'
@@ -80,8 +85,8 @@ final readonly class DistributionConsentService
                 ':account' => $actor->accountId, ':representation' => $representationId,
                 ':purpose' => $purposeCode, ':categories' => self::pgArray($categories),
                 ':fields' => self::pgArray($fields), ':conditions' => self::pgArray($conditions),
-                ':restrictions' => self::pgArray($restrictions), ':version' => $documentVersion,
-                ':sha' => $documentSha256, ':now' => $now])->queryScalar();
+                ':restrictions' => self::pgArray($restrictions), ':version' => $definition->documentVersion,
+                ':sha' => $definition->documentSha256, ':now' => $now])->queryScalar();
     }
 
     public function withdraw(AuthenticatedIdentity $actor, string $consentId): void
@@ -118,13 +123,18 @@ final readonly class DistributionConsentService
         foreach ([$purposeCode, $categoryCode, $fieldCode, $channelCode, ...$satisfiedConditions] as $code) {
             MachineCode::assert($code);
         }
+        $definition = $this->definitions->get($purposeCode);
+        if ($definition === null) { return false; }
         $rows = $this->db->createCommand(<<<'SQL'
             SELECT condition_codes, restriction_codes FROM core.privacy_distribution_consents
             WHERE subject_person_id = CAST(:subject AS uuid) AND purpose_code = :purpose
                 AND withdrawn_at IS NULL AND :category = ANY(category_codes)
                 AND :field = ANY(field_codes)
+                AND document_version = :version AND document_sha256 = :sha
             SQL, [':subject' => $subjectPersonId, ':purpose' => $purposeCode,
-                ':category' => $categoryCode, ':field' => $fieldCode])->queryAll();
+                ':category' => $categoryCode, ':field' => $fieldCode,
+                ':version' => $definition->documentVersion,
+                ':sha' => $definition->documentSha256])->queryAll();
         foreach ($rows as $row) {
             $conditions = self::parsePgArray($row['condition_codes']);
             $restrictions = self::parsePgArray($row['restriction_codes']);

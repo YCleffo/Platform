@@ -38,6 +38,7 @@ apps/control-plane/var/
 *.sql.gz
 *.mmdb
 backups/
+deployment/privacy/*.json
 
 # OS
 .DS_Store

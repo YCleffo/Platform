@@ -10,6 +10,7 @@ use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Privacy\Application\DestructionEvidenceExporter;
 use App\Core\Privacy\Application\ErasureCaseService;
 use App\Core\Privacy\Application\ErasureExecutor;
+use App\Core\Privacy\Application\LegalDestructionPackageService;
 use DateTimeImmutable;
 use DomainException;
 use Psr\Http\Message\ResponseInterface;
@@ -21,11 +22,12 @@ final readonly class ManageErasureAction
 {
     public function __invoke(ServerRequestInterface $request, CurrentRoute $route,
         ErasureCaseService $cases, ErasureExecutor $executor,
-        DestructionEvidenceExporter $exporter, ResponseFactory $responses): ResponseInterface
+        DestructionEvidenceExporter $exporter, LegalDestructionPackageService $legalPackages,
+        ResponseFactory $responses): ResponseInterface
     {
         $operation = (string) $route->getArgument('operation');
         $id = (string) $route->getArgument('id');
-        if (in_array($operation, ['get', 'execute', 'evidence'], true) && !PrivacyRequestInput::uuid($id)) {
+        if (in_array($operation, ['get', 'execute', 'evidence', 'attest'], true) && !PrivacyRequestInput::uuid($id)) {
             return $responses->notFound();
         }
         try {
@@ -48,6 +50,18 @@ final readonly class ManageErasureAction
                 return $responses->success($exporter->export($id, (int) $limit, (int) $offset));
             }
             $body = $request->getParsedBody() ?? [];
+            if ($operation === 'attest') {
+                if (!PrivacyRequestInput::keys($body, ['evidenceId', 'signedDocumentReference', 'signatureReference'])
+                    || !PrivacyRequestInput::uuid($body['evidenceId'] ?? null)
+                    || !is_string($body['signedDocumentReference'] ?? null)
+                    || !is_string($body['signatureReference'] ?? null)) {
+                    return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
+                }
+                $legalPackages->attest($id, $body['evidenceId'],
+                    AuthenticatedIdentity::fromRequest($request)->accountId,
+                    $body['signedDocumentReference'], $body['signatureReference']);
+                return $responses->success(['attested' => true]);
+            }
             if ($operation === 'execute') {
                 if ($body !== [] && !PrivacyRequestInput::keys($body, ['limit'])) {
                     return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);

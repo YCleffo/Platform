@@ -106,6 +106,8 @@ return [
         'weekends' => [6, 7],
         'nonWorkingDates' => $csvEnv('PRIVACY_CALENDAR_NON_WORKING_DATES'),
         'workingOverrideDates' => $csvEnv('PRIVACY_CALENDAR_WORKING_OVERRIDE_DATES'),
+        'sourceReference' => $nullableEnv('PRIVACY_CALENDAR_SOURCE_REFERENCE'),
+        'verifiedAt' => $nullableEnv('PRIVACY_CALENDAR_VERIFIED_AT'),
     ],
 
     'client' => [

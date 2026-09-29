@@ -17,6 +17,7 @@ use App\Core\Privacy\Application\ProcessingRoleRegistry;
 use App\Core\Privacy\Application\ProcessingInformationRegistry;
 use App\Core\Privacy\Application\ProcessorRegistry;
 use App\Core\Privacy\Application\RetentionPolicyRegistry;
+use App\Core\Privacy\Infrastructure\ConfiguredBusinessCalendar;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -41,5 +42,17 @@ final class PrivacyReadinessTest extends TestCase
         $result = $checker->check(true);
         self::assertSame('FAIL', $result['result']);
         self::assertContains('residency_evidence', $result['missingRequirements']);
+        self::assertContains('rkn_notification_evidence', $result['missingRequirements']);
+        self::assertContains('business_calendar_coverage', $result['missingRequirements']);
+    }
+
+    public function testExpiredProductionCalendarCoverageFails(): void
+    {
+        $calendar = new ConfiguredBusinessCalendar('2026-01-01', '2026-09-30',
+            sourceReference: 'urn:calendar:approved', verifiedAt: '2026-09-01T00:00:00Z');
+        self::assertFalse($calendar->coversCurrentPeriod(new DateTimeImmutable('2026-09-30T10:00:00Z')));
+        self::assertTrue((new ConfiguredBusinessCalendar('2026-01-01', '2026-12-31',
+            sourceReference: 'urn:calendar:approved', verifiedAt: '2026-09-01T00:00:00Z'))
+            ->coversCurrentPeriod(new DateTimeImmutable('2026-09-30T10:00:00Z')));
     }
 }

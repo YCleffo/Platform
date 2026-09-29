@@ -30,9 +30,7 @@ final readonly class CrossBorderTransferPolicy
             return;
         }
         $transfer = $this->transfers->find($providerCode, $provider->country, $purposeCode);
-        if ($transfer === null || !$transfer->activeAt($now) || !$transfer->allowed
-            || $transfer->notificationStatus !== 'notified'
-            || trim((string) $transfer->evidenceReference) === ''
+        if ($transfer === null || !$transfer->permits($now)
             || array_diff($dataCategories, $transfer->dataCategories) !== []) {
             throw new DomainException('Cross-border transfer is not approved.');
         }

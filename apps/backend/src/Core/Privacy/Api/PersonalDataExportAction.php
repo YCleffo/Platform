@@ -30,9 +30,11 @@ final readonly class PersonalDataExportAction
         }
         try {
             $actor = AuthenticatedIdentity::fromRequest($request);
-            $result = $representationId === null
+            $result = $route->getArgument('operator') === true
+                ? $service->exportOperator($actor, $id)
+                : ($representationId === null
                 ? $service->exportSelf($actor, $id)
-                : $service->exportRepresentative($actor, $id, $representationId);
+                : $service->exportRepresentative($actor, $id, $representationId));
             return $psrResponses->createResponse(200)
                 ->withHeader('Content-Type', 'application/json; charset=utf-8')
                 ->withHeader('Cache-Control', 'no-store')

@@ -271,6 +271,17 @@ return [
         ->action(ProcessingInformationAction::class)
         ->name('auth/me/privacy/requests/processing-information'),
 
+    Route::get('/api/core/privacy/requests/{id}/data')
+        ->defaults(['operator' => true])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
+        ->action(PersonalDataExportAction::class)
+        ->name('core/privacy/requests/data'),
+    Route::get('/api/core/privacy/requests/{id}/processing-information')
+        ->defaults(['operator' => true])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
+        ->action(ProcessingInformationAction::class)
+        ->name('core/privacy/requests/processing-information'),
+
     Route::get('/api/auth/me/privacy/representations/{representationId}/requests/{id}/data')
         ->middleware(RequireAuthentication::class)
         ->action(PersonalDataExportAction::class)
@@ -292,6 +303,12 @@ return [
         ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.read'))
         ->action(ManagePrivacyRequestsAction::class)
         ->name('core/privacy/requests/list'),
+
+    Route::post('/api/core/privacy/requests/intake')
+        ->defaults(['operation' => 'intake'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
+        ->action(ManagePrivacyRequestsAction::class)
+        ->name('core/privacy/requests/intake'),
 
     Route::get('/api/core/privacy/requests/{id}')
         ->defaults(['operation' => 'get'])
@@ -379,6 +396,10 @@ return [
         ->defaults(['operation' => 'evidence'])
         ->middleware(RequireAuthentication::class, $permission('core.privacy.read'))
         ->action(ManageErasureAction::class)->name('core/privacy/erasure-cases/evidence'),
+    Route::post('/api/core/privacy/erasure-cases/{id}/evidence/attest')
+        ->defaults(['operation' => 'attest'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.erasure.manage'))
+        ->action(ManageErasureAction::class)->name('core/privacy/erasure-cases/evidence/attest'),
 
     Route::post('/api/core/privacy/incidents')
         ->defaults(['operation' => 'detect'])

@@ -16,7 +16,8 @@ final readonly class ControlPrivacyReadinessChecker
         private ControlProviderEgressPolicy $egress,
         private array $residency, private array $providerDecisions,
         private array $securityReferences, private bool $erasurePolicyApproved,
-        private ?int $identityRetentionDays, private ?int $billingContactRetentionDays)
+        private ?int $identityRetentionDays, private ?int $billingContactRetentionDays,
+        private array $operatorNotification = [])
     {
     }
 
@@ -64,11 +65,26 @@ final readonly class ControlPrivacyReadinessChecker
                 }
             }
         }
-        foreach (['threat_model','harm_assessment','ispdn_protection_level','responsible_person'] as $field) {
+        foreach (['threat_model','harm_assessment','ispdn_protection_level','responsible_person',
+            'security_approval','backup_recovery','vulnerability_updates','admin_access_review',
+            'secrets_management','processor_contracts'] as $field) {
             if (!is_string($this->securityReferences[$field] ?? null)
                 || trim($this->securityReferences[$field]) === '') {
                 $missing[] = 'security.' . $field;
             }
+        }
+        if (($this->operatorNotification['required'] ?? null) === false) {
+            if (trim((string) ($this->operatorNotification['exemption_reference'] ?? '')) === '') {
+                $missing[] = 'rkn_notification_evidence';
+            }
+        } elseif (($this->operatorNotification['required'] ?? null) !== true
+            || ($this->operatorNotification['status'] ?? null) !== 'submitted'
+            || trim((string) ($this->operatorNotification['number'] ?? '')) === ''
+            || trim((string) ($this->operatorNotification['date'] ?? '')) === ''
+            || trim((string) ($this->operatorNotification['evidence_reference'] ?? '')) === ''
+            || ($this->operatorNotification['registered_purposes'] ?? []) === []
+            || trim((string) ($this->operatorNotification['database_location_reference'] ?? '')) === '') {
+            $missing[] = 'rkn_notification_evidence';
         }
         sort($missing);
         return ['result' => $missing === [] ? 'PASS' : 'FAIL', 'missingRequirements' => $missing];

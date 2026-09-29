@@ -110,6 +110,8 @@ final readonly class PrivacyCleanupService
             'destruction_evidence' => ['privacy_destruction_evidence',
                 "e.evidence_retain_until < CAST(:now AS timestamptz)
                 AND e.executed_at + interval '3 years' < CAST(:now AS timestamptz)
+                AND NOT EXISTS (SELECT 1 FROM core.privacy_legal_destruction_packages p
+                    WHERE p.evidence_id = e.id AND p.retain_until >= CAST(:now AS timestamptz))
                 AND " . $subjectHold('(SELECT c.subject_person_id FROM core.privacy_erasure_cases c WHERE c.id = e.case_id)')],
             default => throw new DomainException('Unknown privacy cleanup category.'),
         };

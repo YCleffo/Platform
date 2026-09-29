@@ -1,0 +1,48 @@
+{
+  "consentDefinitions": [],
+  "privacyDistributionConsentDefinitions": [],
+  "processingPurposeDefinitions": [],
+  "dataCategoryDefinitions": [],
+  "retentionPolicyDefinitions": [],
+  "privacyProcessingRoleDefinitions": [],
+  "privacyProcessingInformationDefinitions": [],
+  "privacyProcessorDefinitions": [],
+  "privacyRecipientDefinitions": [],
+  "privacyTransferDefinitions": [],
+  "privacyBusinessCalendar": {
+    "coverageFrom": "1970-01-01",
+    "coverageUntil": "1970-01-01",
+    "weekends": [6, 7],
+    "nonWorkingDates": [],
+    "workingOverrideDates": [],
+    "sourceReference": "",
+    "verifiedAt": ""
+  },
+  "privacyOperatorIdentity": {"name": "", "address": ""},
+  "privacyOperatorNotification": {
+    "required": true,
+    "status": "",
+    "number": "",
+    "date": "",
+    "evidenceReference": "",
+    "registeredPurposes": [],
+    "databaseLocationReference": ""
+  },
+  "privacySecurityReferences": {
+    "threatModelReference": "",
+    "harmAssessmentReference": "",
+    "ispdnProtectionLevel": "",
+    "responsiblePersonReference": "",
+    "securityApprovalReference": "",
+    "backupRecoveryReference": "",
+    "vulnerabilityUpdateReference": "",
+    "adminAccessReviewReference": "",
+    "secretsManagementReference": "",
+    "processorContractsReference": ""
+  },
+  "privacyDataResidency": {},
+  "privacyDestructionEvidence": {"code": "", "duration": null, "unit": "hours", "hmacKey": ""},
+  "privacyLegalEvidence": {"informationSystemName": "", "informationSystemCode": "", "destructionMethod": ""},
+  "privacyIncidentDeadlines": {"initialHours": 24, "investigationHours": 72},
+  "privacyCleanup": {}
+}

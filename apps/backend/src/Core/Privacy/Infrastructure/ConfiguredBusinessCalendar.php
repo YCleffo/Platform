@@ -18,6 +18,8 @@ final readonly class ConfiguredBusinessCalendar implements BusinessCalendarInter
         private array $weekends = [6, 7],
         private array $nonWorkingDates = [],
         private array $workingOverrideDates = [],
+        private ?string $sourceReference = null,
+        private ?string $verifiedAt = null,
     ) {
         if ($coverageFrom > $coverageUntil || $weekends === [] || array_diff($weekends, range(1, 7)) !== []
             || count($weekends) !== count(array_unique($weekends))) {
@@ -30,6 +32,19 @@ final readonly class ConfiguredBusinessCalendar implements BusinessCalendarInter
         }
         if (array_intersect($nonWorkingDates, $workingOverrideDates) !== []) {
             throw new InvalidArgumentException('Conflicting business calendar override.');
+        }
+    }
+
+    public function coversCurrentPeriod(DateTimeImmutable $now): bool
+    {
+        try {
+            $verified = $this->verifiedAt === null ? null : new DateTimeImmutable($this->verifiedAt);
+            return $this->coverageFrom <= $now->format('Y-m-d')
+                && $this->coverageUntil >= $now->modify('+31 days')->format('Y-m-d')
+                && is_string($this->sourceReference) && trim($this->sourceReference) !== ''
+                && $verified !== null && $verified <= $now;
+        } catch (\Throwable) {
+            return false;
         }
     }
 

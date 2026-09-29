@@ -38,6 +38,53 @@ final readonly class DataSubjectRequestService
         return $this->submit($actor, $subjectPersonId, $representationId, $type);
     }
 
+    public function intake(AuthenticatedIdentity $operator, string $subjectPersonId, string $type,
+        DateTimeImmutable $receivedAt, string $identityVerificationCode,
+        string $identityEvidenceReference, ?string $representativeVerificationReference,
+        string $sourceChannel): string
+    {
+        $definition = $this->types->get($type);
+        MachineCode::assert($identityVerificationCode);
+        if (!in_array($sourceChannel, ['paper', 'email', 'signed_electronic_document'], true)
+            || $receivedAt > $this->clock->now()
+            || !self::evidenceReference($identityEvidenceReference)
+            || ($representativeVerificationReference !== null
+                && !self::evidenceReference($representativeVerificationReference))) {
+            throw new DomainException('Invalid offline request intake.');
+        }
+        return $this->db->transaction(function () use ($operator, $subjectPersonId, $type, $definition,
+            $receivedAt, $identityVerificationCode, $identityEvidenceReference,
+            $representativeVerificationReference, $sourceChannel): string {
+            $this->assertHumanActor($operator);
+            $id = $this->db->createCommand(<<<'SQL'
+                INSERT INTO core.data_subject_requests
+                    (subject_person_id, submitted_by_person_id, submitted_by_account_id,
+                     request_type, submitted_at, intake_channel, identity_verification_code,
+                     identity_evidence_reference, representative_verification_reference)
+                VALUES (CAST(:subject AS uuid), NULL, CAST(:account AS uuid), :type,
+                    CAST(:received AS timestamptz), :channel, :verification, :evidence, :representative)
+                RETURNING id::text
+                SQL, [':subject' => $subjectPersonId, ':account' => $operator->accountId,
+                ':type' => $type, ':received' => $receivedAt->format(DATE_ATOM),
+                ':channel' => $sourceChannel, ':verification' => $identityVerificationCode,
+                ':evidence' => $identityEvidenceReference,
+                ':representative' => $representativeVerificationReference])->queryScalar();
+            if (!is_string($id)) {
+                throw new DomainException('Request could not be saved.');
+            }
+            $this->createDeadline($id, $definition['deadline'], $receivedAt);
+            $this->event($id, 'submitted', null, 'submitted', $operator, null, $this->clock->now());
+            $this->record($operator, 'privacy.request.submitted', $id, ['requestType' => $type]);
+            return $id;
+        });
+    }
+
+    private static function evidenceReference(string $value): bool
+    {
+        return strlen($value) <= 500
+            && preg_match('/\A(?:vault|document|case|paper|email|signed):\/\/[^\s]+\z/D', $value) === 1;
+    }
+
     private function submit(AuthenticatedIdentity $actor, ?string $subject, ?string $representation, string $type): string
     {
         $definition = $this->types->get($type);
@@ -62,23 +109,26 @@ final readonly class DataSubjectRequestService
             if (!is_string($id)) {
                 throw new DomainException('Request could not be saved.');
             }
-            if ($definition['deadline'] !== null) {
-                $deadlineCode = $definition['deadline'];
-                $rule = $this->deadlines->definition($deadlineCode);
-                $due = $this->deadlines->dueAt($rule['calendarType'], $rule['amount'], $now);
-                $this->db->createCommand(<<<'SQL'
-                    INSERT INTO core.data_subject_request_deadlines
-                        (request_id, deadline_code, triggered_at, calendar_type, due_at, extension_allowed)
-                    VALUES (CAST(:id AS uuid), :code, CAST(:trigger AS timestamptz), :calendar,
-                            CAST(:due AS timestamptz), :allowed)
-                    SQL, [':id' => $id, ':code' => $deadlineCode, ':trigger' => $now->format(DATE_ATOM),
-                    ':calendar' => $rule['calendarType'], ':due' => $due->format(DATE_ATOM),
-                    ':allowed' => $rule['extensionDays'] > 0])->execute();
-            }
+            $this->createDeadline($id, $definition['deadline'], $now);
             $this->event($id, 'submitted', null, 'submitted', $actor, null, $now);
             $this->record($actor, 'privacy.request.submitted', $id, ['requestType' => $type]);
             return $id;
         });
+    }
+
+    private function createDeadline(string $id, ?string $deadlineCode, DateTimeImmutable $receivedAt): void
+    {
+        if ($deadlineCode === null) { return; }
+        $rule = $this->deadlines->definition($deadlineCode);
+        $due = $this->deadlines->dueAt($rule['calendarType'], $rule['amount'], $receivedAt);
+        $this->db->createCommand(<<<'SQL'
+            INSERT INTO core.data_subject_request_deadlines
+                (request_id, deadline_code, triggered_at, calendar_type, due_at, extension_allowed)
+            VALUES (CAST(:id AS uuid), :code, CAST(:trigger AS timestamptz), :calendar,
+                    CAST(:due AS timestamptz), :allowed)
+            SQL, [':id' => $id, ':code' => $deadlineCode,
+            ':trigger' => $receivedAt->format(DATE_ATOM), ':calendar' => $rule['calendarType'],
+            ':due' => $due->format(DATE_ATOM), ':allowed' => $rule['extensionDays'] > 0])->execute();
     }
 
     /** @return list<DataSubjectRequestView> */
