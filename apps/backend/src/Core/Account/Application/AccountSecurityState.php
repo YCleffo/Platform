@@ -20,11 +20,17 @@ final readonly class AccountSecurityState
         public ?string $timezone,
         public ?string $disabledAt,
         public ?string $archivedAt,
+        public ?string $personStatus,
+        public ?string $personArchivedAt,
     ) {}
 
-    public function allowsAuthentication(DateTimeImmutable $now): bool
+    public function allowsHumanAuthentication(DateTimeImmutable $now): bool
     {
-        return $this->status === 'active'
+        return $this->accountType === 'human'
+            && $this->personId !== null
+            && $this->personStatus === 'active'
+            && $this->personArchivedAt === null
+            && $this->status === 'active'
             && $this->disabledAt === null
             && $this->archivedAt === null
             && ($this->lockedUntil === null || new DateTimeImmutable($this->lockedUntil) <= $now);

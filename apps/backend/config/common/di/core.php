@@ -75,6 +75,8 @@ use App\Core\Person\Application\PersonRepository;
 use App\Core\Person\Infrastructure\PostgresPersonContactRepository;
 use App\Core\Person\Infrastructure\PostgresPersonRepository;
 use App\Core\Person\Infrastructure\CanonicalContactNormalizer;
+use App\Core\Organization\Application\OrganizationRepository;
+use App\Core\Organization\Infrastructure\PostgresOrganizationRepository;
 use App\Core\Rbac\Application\PermissionRepository;
 use App\Core\Rbac\Application\RoleRepository;
 use App\Core\Rbac\Infrastructure\PostgresPermissionRepository;
@@ -230,6 +232,7 @@ return [
     PersonRepository::class => [
         'class' => PostgresPersonRepository::class,
     ],
+    OrganizationRepository::class => ['class' => PostgresOrganizationRepository::class],
     PersonContactRepository::class => [
         'class' => PostgresPersonContactRepository::class,
     ],

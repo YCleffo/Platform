@@ -9,7 +9,7 @@ use App\Api\Shared\ResponseFactory;
 use App\Api\Shared\Uuid;
 use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Organization\Application\OrganizationAccessPolicy;
-use App\Core\Organization\Infrastructure\PostgresOrganizationRepository;
+use App\Core\Organization\Application\OrganizationService;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Yiisoft\Http\Status;
@@ -20,7 +20,7 @@ final readonly class OrganizationAction
     public function __invoke(
         ServerRequestInterface $request,
         CurrentRoute $route,
-        PostgresOrganizationRepository $organizations,
+        OrganizationService $organizations,
         OrganizationAccessPolicy $access,
         ResponseFactory $responses,
     ): ResponseInterface {
@@ -37,11 +37,8 @@ final readonly class OrganizationAction
             ));
         }
         if ($operation === 'create') {
-            if (!$identity->hasRole('core.superadmin')) {
-                return $responses->error(ApiMessage::AUTH_PERMISSION_DENIED, httpCode: Status::FORBIDDEN);
-            }
             $input = OrganizationInput::organization($request->getParsedBody());
-            $organization = $organizations->create($input['code'], $input['name']);
+            $organization = $organizations->create($input['code'], $input['name'], $identity->accountId);
             return $organization === null
                 ? $responses->error(ApiMessage::VALIDATION_FAILED, httpCode: Status::CONFLICT)
                 : $responses->success($organization->toArray())->withStatus(Status::CREATED);
@@ -63,7 +60,7 @@ final readonly class OrganizationAction
         }
         if ($operation === 'add') {
             $personId = OrganizationInput::member($request->getParsedBody());
-            $membership = $organizations->addMember($organizationId, $personId);
+            $membership = $organizations->addMember($organizationId, $personId, $identity->accountId);
             return $membership === null
                 ? $responses->error(ApiMessage::VALIDATION_FAILED, httpCode: Status::CONFLICT)
                 : $responses->success($membership->toArray())->withStatus(Status::CREATED);
@@ -75,7 +72,7 @@ final readonly class OrganizationAction
         if ($operation !== 'leave') {
             return $responses->notFound();
         }
-        $membership = $organizations->leave($organizationId, $personId);
+        $membership = $organizations->leave($organizationId, $personId, $identity->accountId);
         return $membership === null
             ? $responses->notFound()
             : $responses->success($membership->toArray());

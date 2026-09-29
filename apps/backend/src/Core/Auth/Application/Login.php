@@ -84,7 +84,7 @@ final readonly class Login
             && $identifier->canLogin
             && (!$verificationRequired || $identifier->verifiedAt !== null)
             && $account !== null
-            && $account->allowsAuthentication($this->clock->now())
+            && $account->allowsHumanAuthentication($this->clock->now())
             && $credential !== null
             && $passwordMatches;
         if (!$valid) {

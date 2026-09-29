@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Core\Organization\Application\OrganizationAccessPolicy;
+use App\Core\Organization\Application\OrganizationContext;
+use App\Core\Organization\Application\OrganizationRepository;
+use App\Core\Organization\Application\OrganizationService;
+use App\Core\Organization\Api\OrganizationAction;
+use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Organization\Infrastructure\OrganizationMembershipErasureHandler;
 use App\Core\Organization\Infrastructure\OrganizationMembershipPersonalDataContributor;
 use App\Core\Privacy\Application\PersonalDataExportContext;
@@ -40,6 +45,14 @@ final readonly class OrganizationFoundationCest
 
             $policy = $container->get(OrganizationAccessPolicy::class);
             $policy->assertPersonBelongsToOrganization($person, $organization);
+            $repository = $container->get(OrganizationRepository::class);
+            assertTrue($repository->activeMember($person, $organization));
+            assertSame(OrganizationRepository::class,
+                (new \ReflectionMethod(OrganizationContext::class, '__construct'))->getParameters()[0]->getType()->getName());
+            assertSame(OrganizationRepository::class,
+                (new \ReflectionMethod(OrganizationService::class, '__construct'))->getParameters()[0]->getType()->getName());
+            assertSame(OrganizationService::class,
+                (new \ReflectionMethod(OrganizationAction::class, '__invoke'))->getParameters()[2]->getType()->getName());
             try {
                 $policy->assertPersonBelongsToOrganization($outside, $organization);
                 throw new \RuntimeException('Outside person was accepted.');
@@ -56,6 +69,25 @@ final readonly class OrganizationFoundationCest
             assertSame($organization, $section->records[0]['organizationId']);
             assertCount(0, $contributor->collect($context($outside))->records);
 
+            $db->createCommand("UPDATE core.persons SET status = 'archived', archived_at = now() WHERE id = CAST(:id AS uuid)",
+                [':id' => $person])->execute();
+            assertFalse($repository->activeMember($person, $organization));
+            $identity = new AuthenticatedIdentity($membership, $person, $membership, [], [], null, null);
+            try {
+                $container->get(OrganizationContext::class)->resolve($identity, $organization);
+                throw new \RuntimeException('Archived person retained organization scope.');
+            } catch (DomainException) {
+                // Expected even when a previously issued identity still names the person.
+            }
+            try {
+                $container->get(OrganizationContext::class)->resolve(
+                    new AuthenticatedIdentity($membership, $person, $membership, ['core.superadmin'], [], null, null),
+                    $organization,
+                );
+                throw new \RuntimeException('Archived superadmin person retained organization scope.');
+            } catch (DomainException) {
+                // Privileged access still requires an active person.
+            }
             $handler = new OrganizationMembershipErasureHandler($db);
             assertTrue($handler->owns($person, $membership));
             assertFalse($handler->owns($outside, $membership));

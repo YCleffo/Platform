@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Core\Organization\Application;
 
 use App\Core\Auth\Application\AuthenticatedIdentity;
-use App\Core\Organization\Infrastructure\PostgresOrganizationRepository;
 use App\Core\Rbac\Application\PermissionService;
 use DomainException;
 
@@ -13,7 +12,7 @@ final readonly class OrganizationAccessPolicy
 {
     public function __construct(
         private OrganizationContext $context,
-        private PostgresOrganizationRepository $organizations,
+        private OrganizationRepository $organizations,
         private PermissionService $permissions,
     ) {}
 

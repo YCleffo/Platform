@@ -38,7 +38,7 @@ final readonly class AuthenticationService
 
         $account = $this->accounts->findSecurityState($session->accountId);
         if ($account === null
-            || !$account->allowsAuthentication($now)
+            || !$account->allowsHumanAuthentication($now)
             || !hash_equals($account->securityStamp, $session->securityStamp)
         ) {
             return null;
@@ -53,7 +53,6 @@ final readonly class AuthenticationService
         ));
         $activity = $this->activity->touch($session->id, $account->accountId, $localizedContext);
         if ($activity === null) {
-            error_log('[DEBUG AUTH] activity touch returned null');
             return null;
         }
 

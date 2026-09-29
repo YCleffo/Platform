@@ -69,11 +69,6 @@ UPDATE commercial.billing_profiles SET contact_name = NULL, contact_email = NULL
 WHERE contact_email = ? AND commercial_account_id IN
  (SELECT commercial_account_id FROM commercial.commercial_account_memberships WHERE control_user_id = ?)
 SQL, [$user['email_normalized'], $controlUserId]);
-            if ($financial > 0) {
-                $connection->executeStatement("UPDATE commercial.control_users SET status = 'disabled', password_hash = '!erased-disabled!', updated_at = now(), archived_at = COALESCE(archived_at, now()) WHERE id = ?", [$controlUserId]);
-                $connection->executeStatement("SELECT set_config('app.privacy_lifecycle', 'off', true)");
-                return $this->record($connection, $controlUserId, 'partially_completed', 'financial_evidence_retained', $financial);
-            }
             $alias = 'erased-' . $controlUserId . '@privacy.invalid';
             $connection->executeStatement(<<<'SQL'
 UPDATE commercial.control_users
@@ -82,6 +77,9 @@ SET status = 'disabled', email = ?, email_normalized = ?, password_hash = '!eras
 WHERE id = ?
 SQL, [$alias, $alias, $controlUserId]);
             $connection->executeStatement("SELECT set_config('app.privacy_lifecycle', 'off', true)");
+            if ($financial > 0) {
+                return $this->record($connection, $controlUserId, 'partially_completed', 'financial_evidence_retained', $financial);
+            }
             return $this->record($connection, $controlUserId, 'completed', 'identity_pseudonymized', 0);
         });
     }

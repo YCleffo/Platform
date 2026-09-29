@@ -55,7 +55,7 @@ final readonly class SessionIssuer
         }
         $account = $this->accounts->findSecurityState($accountId);
         $now = $this->clock->now();
-        if ($account === null || !$account->allowsAuthentication($now)) {
+        if ($account === null || !$account->allowsHumanAuthentication($now)) {
             throw new InvalidCredentialsException();
         }
         $context = $context->withLocale(LocaleContext::fromResolved(

@@ -141,10 +141,15 @@ final readonly class PostgresAccountLifecycleRepository implements AccountLifecy
         $targetIsSuperadmin = self::boolean($this->db->createCommand(
             <<<'SQL'
             SELECT EXISTS (
-                SELECT 1 FROM core.account_roles
-                WHERE account_id = CAST(:account_id AS uuid)
-                  AND role_id = CAST(:role_id AS uuid)
-                  AND (expires_at IS NULL OR expires_at > now())
+                SELECT 1 FROM core.account_roles ar
+                JOIN core.accounts a ON a.id = ar.account_id
+                JOIN core.persons p ON p.id = a.person_id
+                WHERE ar.account_id = CAST(:account_id AS uuid)
+                  AND ar.role_id = CAST(:role_id AS uuid)
+                  AND (ar.expires_at IS NULL OR ar.expires_at > now())
+                  AND a.account_type = 'human' AND a.status = 'active'
+                  AND a.disabled_at IS NULL AND a.archived_at IS NULL
+                  AND p.status = 'active' AND p.archived_at IS NULL
             )
             SQL,
             [':account_id' => $accountId, ':role_id' => $roleId],
@@ -157,9 +162,12 @@ final readonly class PostgresAccountLifecycleRepository implements AccountLifecy
             SELECT COUNT(*)
             FROM core.account_roles ar
             INNER JOIN core.accounts a ON a.id = ar.account_id
+            INNER JOIN core.persons p ON p.id = a.person_id
             WHERE ar.role_id = CAST(:role_id AS uuid)
               AND (ar.expires_at IS NULL OR ar.expires_at > now())
+              AND a.account_type = 'human'
               AND a.status = 'active' AND a.disabled_at IS NULL AND a.archived_at IS NULL
+              AND p.status = 'active' AND p.archived_at IS NULL
             SQL,
             [':role_id' => $roleId],
         )->queryScalar();

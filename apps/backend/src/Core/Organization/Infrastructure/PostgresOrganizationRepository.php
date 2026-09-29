@@ -6,9 +6,10 @@ namespace App\Core\Organization\Infrastructure;
 
 use App\Core\Organization\Application\Organization;
 use App\Core\Organization\Application\OrganizationMembership;
+use App\Core\Organization\Application\OrganizationRepository;
 use Yiisoft\Db\Connection\ConnectionInterface;
 
-final readonly class PostgresOrganizationRepository
+final readonly class PostgresOrganizationRepository implements OrganizationRepository
 {
     public function __construct(private ConnectionInterface $db) {}
 
@@ -21,7 +22,9 @@ final readonly class PostgresOrganizationRepository
             WHERE o.status = 'active' AND (
                 CAST(:person AS uuid) IS NULL OR EXISTS (
                     SELECT 1 FROM core.organization_memberships m
-                    WHERE m.organization_id = o.id AND m.person_id = CAST(:person AS uuid) AND m.status = 'active'
+                    JOIN core.persons p ON p.id = m.person_id
+                    WHERE m.organization_id = o.id AND m.person_id = CAST(:person AS uuid)
+                      AND m.status = 'active' AND p.status = 'active' AND p.archived_at IS NULL
                 )
             ) ORDER BY o.code LIMIT 1000
             SQL, [':person' => $personId])->queryAll();
@@ -46,14 +49,24 @@ final readonly class PostgresOrganizationRepository
         )->queryScalar();
     }
 
+    public function activePerson(string $personId): bool
+    {
+        return (bool) $this->db->createCommand(
+            "SELECT EXISTS(SELECT 1 FROM core.persons WHERE id = CAST(:id AS uuid) AND status = 'active' AND archived_at IS NULL)",
+            [':id' => $personId],
+        )->queryScalar();
+    }
+
     public function activeMember(string $personId, string $organizationId): bool
     {
         return (bool) $this->db->createCommand(<<<'SQL'
             SELECT EXISTS(SELECT 1 FROM core.organization_memberships m
                 JOIN core.organizations o ON o.id = m.organization_id
+                JOIN core.persons p ON p.id = m.person_id
                 WHERE m.person_id = CAST(:person AS uuid)
                 AND m.organization_id = CAST(:organization AS uuid)
-                AND m.status = 'active' AND o.status = 'active')
+                AND m.status = 'active' AND o.status = 'active'
+                AND p.status = 'active' AND p.archived_at IS NULL)
             SQL, [':person' => $personId, ':organization' => $organizationId])->queryScalar();
     }
 
@@ -75,7 +88,7 @@ final readonly class PostgresOrganizationRepository
             INSERT INTO core.organization_memberships (organization_id, person_id)
             SELECT o.id, p.id FROM core.organizations o CROSS JOIN core.persons p
             WHERE o.id = CAST(:organization AS uuid) AND o.status = 'active'
-              AND p.id = CAST(:person AS uuid) AND p.archived_at IS NULL
+              AND p.id = CAST(:person AS uuid) AND p.status = 'active' AND p.archived_at IS NULL
             ON CONFLICT (organization_id, person_id) WHERE status = 'active' DO NOTHING
             RETURNING id::text, organization_id::text, person_id::text, status,
                       joined_at::text, left_at::text, created_at::text, updated_at::text

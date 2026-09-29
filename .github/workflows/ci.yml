@@ -54,7 +54,7 @@ jobs:
 
       - name: Verify Core migration and required schema objects
         run: |
-          ready=$(docker compose --profile test exec -T postgres-test psql -U "${POSTGRES_USER}" -d "${POSTGRES_TEST_DB}" -tA -c "SELECT to_regclass('core.accounts') IS NOT NULL AND to_regclass('core.privacy_consents') IS NOT NULL AND to_regclass('core.legal_representations') IS NOT NULL AND to_regclass('core.legal_representation_scopes') IS NOT NULL AND EXISTS (SELECT 1 FROM public.platform_migrations WHERE migration_name = '021_core_representation_scopes.sql');")
+          ready=$(docker compose --profile test exec -T postgres-test psql -U "${POSTGRES_USER}" -d "${POSTGRES_TEST_DB}" -tA -c "SELECT to_regclass('core.accounts') IS NOT NULL AND to_regclass('core.privacy_consents') IS NOT NULL AND to_regclass('core.legal_representations') IS NOT NULL AND to_regclass('core.legal_representation_scopes') IS NOT NULL AND to_regclass('core.organizations') IS NOT NULL AND to_regclass('core.organization_memberships') IS NOT NULL AND to_regclass('core.privacy_cleanup_runs') IS NOT NULL AND to_regclass('platform_runtime.installations') IS NOT NULL AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL;")
           test "$ready" = "t"
 
       - name: Verify Platform Runtime Objects
@@ -139,18 +139,16 @@ jobs:
       - name: Verify clean migration, repeat and required objects
         run: |
           docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate --no-interaction
-          ready=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT to_regclass('commercial.outbox_events') IS NOT NULL AND to_regclass('commercial.refunds') IS NOT NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'commercial' AND table_name = 'outbox_events' AND column_name = 'lock_token');")
+          ready=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT to_regclass('commercial.outbox_events') IS NOT NULL AND to_regclass('commercial.refunds') IS NOT NULL AND to_regclass('commercial.privacy_erasure_cases') IS NOT NULL AND to_regclass('commercial.privacy_holds') IS NOT NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'commercial' AND table_name = 'outbox_events' AND column_name = 'lock_token');")
           test "$ready" = "t"
           versions=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT count(*) FROM public.doctrine_migration_versions;")
           expected=$(find apps/control-plane/migrations -maxdepth 1 -name 'Version*.php' | wc -l)
           test "$versions" = "$expected"
-          latest=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT version FROM public.doctrine_migration_versions ORDER BY version DESC LIMIT 1;")
-          test "$latest" = 'ControlPlane\Migrations\Version20260924002000'
 
       - name: Database constraints and integration tests
         run: bash ./scripts/control-test-run.sh
 
-      - name: Verify Commercial 017 through 020 upgrade and rollback cycle
+      - name: Verify Commercial 017 through 021 upgrade and rollback cycle
         run: |
           docker compose --profile control-test run --rm control-plane-test php bin/console control:test:reset
           docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924001700' --no-interaction
@@ -161,8 +159,9 @@ jobs:
           docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924001800' --no-interaction
           docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924001900' --no-interaction
           docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924002000' --no-interaction
-          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924001900' --no-interaction
+          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924002100' --no-interaction
           docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924002000' --no-interaction
+          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924002100' --no-interaction
           ready=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'commercial' AND table_name = 'outbox_events' AND column_name = 'lock_token');")
           test "$ready" = "t"
           versions=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT count(*) FROM public.doctrine_migration_versions;")

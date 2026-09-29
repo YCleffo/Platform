@@ -33,7 +33,7 @@ final readonly class PostgresCredentialLifecycleRepository implements Credential
     public function ensurePrimaryEmail(string $accountId, string $email, string $normalizedEmail): ?CredentialTarget
     {
         $accountExists = $this->db->createCommand(
-            'SELECT EXISTS (SELECT 1 FROM core.accounts WHERE id = CAST(:id AS uuid) AND archived_at IS NULL)',
+            "SELECT EXISTS (SELECT 1 FROM core.accounts a JOIN core.persons p ON p.id = a.person_id WHERE a.id = CAST(:id AS uuid) AND a.account_type = 'human' AND a.archived_at IS NULL AND p.status = 'active' AND p.archived_at IS NULL)",
             [':id' => $accountId],
         )->queryScalar();
         if (!self::boolean($accountExists)) {
@@ -142,13 +142,18 @@ final readonly class PostgresCredentialLifecycleRepository implements Credential
     {
         $row = $this->db->createCommand(
             <<<'SQL'
-            SELECT id::text AS id, account_id::text AS account_id, target_normalized
-            FROM core.auth_challenges
-            WHERE secret_hash = decode(:hash, 'hex')
-              AND challenge_type = :type
-              AND consumed_at IS NULL AND cancelled_at IS NULL
-              AND expires_at > now() AND attempts < max_attempts
-            FOR UPDATE
+            SELECT c.id::text AS id, c.account_id::text AS account_id, c.target_normalized
+            FROM core.auth_challenges c
+            JOIN core.accounts a ON a.id = c.account_id
+            JOIN core.persons p ON p.id = a.person_id
+            WHERE c.secret_hash = decode(:hash, 'hex')
+              AND c.challenge_type = :type
+              AND a.account_type = 'human' AND a.archived_at IS NULL
+              AND p.status = 'active' AND p.archived_at IS NULL
+              AND (c.challenge_type <> 'password_reset' OR (a.status = 'active' AND a.disabled_at IS NULL))
+              AND c.consumed_at IS NULL AND c.cancelled_at IS NULL
+              AND c.expires_at > now() AND c.attempts < c.max_attempts
+            FOR UPDATE OF c
             SQL,
             [':hash' => $secretHashHex, ':type' => $type],
         )->queryOne();
@@ -193,9 +198,10 @@ final readonly class PostgresCredentialLifecycleRepository implements Credential
                    COALESCE(a.locale, 'ru-RU') AS locale
             FROM core.auth_identifiers i
             INNER JOIN core.accounts a ON a.id = i.account_id
+            INNER JOIN core.persons p ON p.id = a.person_id
             SQL
             . ' ' . $where
-            . " AND a.status <> 'archived' AND a.archived_at IS NULL LIMIT 1",
+            . " AND a.account_type = 'human' AND a.status <> 'archived' AND a.archived_at IS NULL AND p.status = 'active' AND p.archived_at IS NULL LIMIT 1",
             [':value' => $value],
         )->queryOne();
 

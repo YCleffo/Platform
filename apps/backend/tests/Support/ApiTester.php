@@ -77,13 +77,16 @@ class ApiTester extends \Codeception\Actor
     {
         $db = self::getDb();
         $suffix = bin2hex(random_bytes(6));
+        $personId = (string) $db->createCommand(
+            "INSERT INTO core.persons (given_name, family_name) VALUES ('API', 'Fixture') RETURNING id::text",
+        )->queryScalar();
         $account = $db->createCommand(
             <<<'SQL'
-            INSERT INTO core.accounts (account_type, status, label, locale)
-            VALUES ('service', 'active', :label, :locale)
+            INSERT INTO core.accounts (person_id, account_type, status, label, locale)
+            VALUES (CAST(:person AS uuid), 'human', 'active', :label, :locale)
             RETURNING id::text AS id, security_stamp::text AS security_stamp
             SQL,
-            [':label' => 'API authorization fixture ' . $suffix, ':locale' => $locale],
+            [':person' => $personId, ':label' => 'API authorization fixture ' . $suffix, ':locale' => $locale],
         )->queryOne();
         if (!is_array($account)) {
             throw new \RuntimeException('Authentication fixture account could not be created.');
@@ -195,13 +198,16 @@ class ApiTester extends \Codeception\Actor
         $suffix = bin2hex(random_bytes(8));
         $email = 'auth-' . $suffix . '@example.test';
         $password = 'Correct Horse ' . $suffix;
+        $personId = (string) $db->createCommand(
+            "INSERT INTO core.persons (given_name, family_name) VALUES ('Password', 'Fixture') RETURNING id::text",
+        )->queryScalar();
         $account = $db->createCommand(
             <<<'SQL'
             INSERT INTO core.accounts (
-                account_type, status, label, locale, locked_until, disabled_at, archived_at
+                person_id, account_type, status, label, locale, locked_until, disabled_at, archived_at
             )
             VALUES (
-                'service', CAST(:status AS core.account_status), :label, :locale,
+                CAST(:person AS uuid), 'human', CAST(:status AS core.account_status), :label, :locale,
                 CASE WHEN :locked THEN now() + interval '1 hour' ELSE NULL END,
                 CASE WHEN :status = 'disabled' THEN now() ELSE NULL END,
                 CASE WHEN :status = 'archived' THEN now() ELSE NULL END
@@ -210,6 +216,7 @@ class ApiTester extends \Codeception\Actor
             SQL,
             [
                 ':status' => $status,
+                ':person' => $personId,
                 ':label' => 'API password fixture ' . $suffix,
                 ':locale' => $locale,
                 ':locked' => $locked,
@@ -444,13 +451,16 @@ class ApiTester extends \Codeception\Actor
     {
         $db = self::getDb();
         $suffix = bin2hex(random_bytes(6));
+        $personId = (string) $db->createCommand(
+            "INSERT INTO core.persons (given_name, family_name) VALUES ('API', 'Fixture') RETURNING id::text",
+        )->queryScalar();
         $account = $db->createCommand(
             <<<'SQL'
-            INSERT INTO core.accounts (account_type, status, label)
-            VALUES ('service', 'active', :label)
+            INSERT INTO core.accounts (person_id, account_type, status, label)
+            VALUES (CAST(:person AS uuid), 'human', 'active', :label)
             RETURNING id::text AS id, security_stamp::text AS security_stamp
             SQL,
-            [':label' => 'API authorization fixture ' . $suffix],
+            [':person' => $personId, ':label' => 'API authorization fixture ' . $suffix],
         )->queryOne();
         if (!is_array($account)) {
             throw new \RuntimeException('Authentication fixture account could not be created.');

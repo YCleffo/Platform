@@ -6,6 +6,9 @@ namespace App\Tests\Api;
 
 use App\Tests\Support\ApiTester;
 use Codeception\Util\HttpCode;
+use function PHPUnit\Framework\assertCount;
+use function PHPUnit\Framework\assertSame;
+use function PHPUnit\Framework\assertStringNotContainsString;
 
 final readonly class OrganizationsCest
 {
@@ -89,6 +92,37 @@ final readonly class OrganizationsCest
         $withoutScope = $I->amAuthenticatedWithPermissions(['core.organization_memberships.read']);
         $this->attachPerson($withoutScope['accountId'], $outsider);
         $I->sendGET('/api/core/organizations/' . $a . '/members');
+        $I->seeResponseCodeIs(HttpCode::FORBIDDEN);
+    }
+
+    public function createPermissionAndMutationAudit(ApiTester $I): void
+    {
+        $I->amAuthenticatedSuperadmin();
+        $person = $this->person();
+        $organization = $this->organization($I, 'test.audit.first');
+        $I->sendPOST('/api/core/organizations/' . $organization . '/members', ['personId' => $person]);
+        $I->seeResponseCodeIs(HttpCode::CREATED);
+        $I->sendPOST('/api/core/organizations/' . $organization . '/members/' . $person . '/leave');
+        $I->seeResponseCodeIs(HttpCode::OK);
+        $rows = ApiTester::getDb()->createCommand(<<<'SQL'
+            SELECT action, metadata::text FROM core.audit_events
+            WHERE action IN ('organization.created', 'organization_membership.added', 'organization_membership.left')
+            ORDER BY id
+            SQL)->queryAll();
+        assertCount(3, $rows);
+        assertSame(['organization.created', 'organization_membership.added', 'organization_membership.left'],
+            array_column($rows, 'action'));
+        foreach ($rows as $row) {
+            assertStringNotContainsString('name', $row['metadata']);
+            assertStringNotContainsString('email', $row['metadata']);
+            assertStringNotContainsString('phone', $row['metadata']);
+        }
+
+        $I->amAuthenticatedWithPermissions(['core.organizations.manage']);
+        $I->sendPOST('/api/core/organizations', ['code' => 'test.audit.allowed', 'name' => 'Allowed']);
+        $I->seeResponseCodeIs(HttpCode::CREATED);
+        $I->amAuthenticatedWithPermissions([]);
+        $I->sendPOST('/api/core/organizations', ['code' => 'test.audit.denied', 'name' => 'Denied']);
         $I->seeResponseCodeIs(HttpCode::FORBIDDEN);
     }
 

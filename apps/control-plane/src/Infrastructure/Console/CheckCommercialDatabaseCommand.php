@@ -24,7 +24,8 @@ final class CheckCommercialDatabaseCommand extends Command
         $expected = is_string($expected) ? ltrim($expected, '/') : '';
         $actual = (string) $this->connection->fetchOne('SELECT current_database()');
         $tableCount = (int) $this->connection->fetchOne("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'commercial' AND table_type = 'BASE TABLE'");
-        $latest = (bool) $this->connection->fetchOne("SELECT EXISTS (SELECT 1 FROM doctrine_migration_versions WHERE version LIKE '%Version20260924002000' AND executed_at IS NOT NULL)");
+        $applied = (int) $this->connection->fetchOne('SELECT count(*) FROM doctrine_migration_versions WHERE executed_at IS NOT NULL');
+        $expectedMigrations = count(glob(dirname(__DIR__, 3) . '/migrations/Version*.php') ?: []);
         $objects = (bool) $this->connection->fetchOne(<<<'SQL'
 SELECT to_regclass('commercial.control_users') IS NOT NULL
    AND to_regclass('commercial.subscriptions') IS NOT NULL
@@ -37,12 +38,16 @@ SELECT to_regclass('commercial.control_users') IS NOT NULL
    AND to_regclass('commercial.receipts') IS NOT NULL
    AND to_regclass('commercial.receipt_items') IS NOT NULL
    AND to_regclass('commercial.outbox_events') IS NOT NULL
+   AND to_regclass('commercial.privacy_holds') IS NOT NULL
+   AND to_regclass('commercial.privacy_erasure_cases') IS NOT NULL
+   AND to_regclass('commercial.privacy_lifecycle_runs') IS NOT NULL
 SQL);
         $outboxLease = (bool) $this->connection->fetchOne("SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'commercial' AND table_name = 'outbox_events' AND column_name = 'lock_token')");
         $yii = (bool) $this->connection->fetchOne("SELECT to_regclass('core.accounts') IS NOT NULL OR to_regclass('core.users') IS NOT NULL");
-        $ready = $expected !== '' && $actual === $expected && $latest && $objects && $outboxLease && !$yii;
+        $ready = $expected !== '' && $actual === $expected && $expectedMigrations > 0
+            && $applied === $expectedMigrations && $objects && $outboxLease && !$yii;
         $output->writeln($ready
-            ? sprintf('Commercial database: ready (migration 020, %d base tables).', $tableCount)
+            ? sprintf('Commercial database: ready (%d applied migrations, %d base tables).', $applied, $tableCount)
             : 'Commercial database: not ready.');
 
         return $ready ? Command::SUCCESS : Command::FAILURE;

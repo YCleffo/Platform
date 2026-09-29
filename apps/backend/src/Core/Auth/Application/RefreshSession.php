@@ -39,7 +39,7 @@ final readonly class RefreshSession
 
         $account = $this->accounts->findSecurityState($session->accountId);
         if ($account === null
-            || !$account->allowsAuthentication($now)
+            || !$account->allowsHumanAuthentication($now)
             || !hash_equals($account->securityStamp, $session->securityStamp)
         ) {
             return null;

@@ -18,6 +18,14 @@ final class AuditEventDefinitionRegistry
         foreach (SecurityAction::all() as $action) {
             $this->definitions[$action] = self::coreDefinition($action);
         }
+        $this->definitions['organization.created'] = new AuditEventDefinition(
+            'organization.created', ['organizationId' => 'uuid', 'organizationCode' => 'code'],
+        );
+        foreach (['organization_membership.added', 'organization_membership.left'] as $action) {
+            $this->definitions[$action] = new AuditEventDefinition(
+                $action, ['organizationId' => 'uuid', 'personId' => 'uuid'],
+            );
+        }
         foreach ($additionalDefinitions as $definition) {
             if (str_starts_with($definition->action, 'privacy.') || isset($this->definitions[$definition->action])) {
                 throw new InvalidArgumentException('Duplicate or reserved audit action definition.');

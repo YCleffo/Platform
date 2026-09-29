@@ -587,7 +587,7 @@ final readonly class PasskeyService
         }
 
         $account = $this->accounts->findSecurityState($passkey->accountId);
-        if ($account === null || !$account->allowsAuthentication($this->clock->now())) {
+        if ($account === null || !$account->allowsHumanAuthentication($this->clock->now())) {
             $this->audit->record(new SecurityAuditCommand(
                 action: SecurityAction::PASSKEY_AUTHENTICATION_FAILED,
                 actorAccountId: $passkey->accountId,

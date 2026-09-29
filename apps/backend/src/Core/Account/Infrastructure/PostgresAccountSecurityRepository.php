@@ -17,18 +17,21 @@ final readonly class PostgresAccountSecurityRepository implements AccountSecurit
         $row = $this->db->createCommand(
             <<<'SQL'
             SELECT
-                id::text AS account_id,
-                person_id::text AS person_id,
-                account_type::text AS account_type,
-                status::text AS status,
-                security_stamp::text AS security_stamp,
-                to_char(locked_until AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS locked_until,
-                locale,
-                timezone,
-                to_char(disabled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS disabled_at,
-                to_char(archived_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS archived_at
-            FROM core.accounts
-            WHERE id = CAST(:account_id AS uuid)
+                a.id::text AS account_id,
+                a.person_id::text AS person_id,
+                a.account_type::text AS account_type,
+                a.status::text AS status,
+                a.security_stamp::text AS security_stamp,
+                to_char(a.locked_until AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS locked_until,
+                a.locale,
+                a.timezone,
+                to_char(a.disabled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS disabled_at,
+                to_char(a.archived_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS archived_at,
+                p.status::text AS person_status,
+                to_char(p.archived_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS person_archived_at
+            FROM core.accounts a
+            LEFT JOIN core.persons p ON p.id = a.person_id
+            WHERE a.id = CAST(:account_id AS uuid)
             SQL,
             [':account_id' => $accountId],
         )->queryOne();
@@ -44,6 +47,8 @@ final readonly class PostgresAccountSecurityRepository implements AccountSecurit
             timezone: self::nullable($row['timezone']),
             disabledAt: self::nullable($row['disabled_at']),
             archivedAt: self::nullable($row['archived_at']),
+            personStatus: self::nullable($row['person_status']),
+            personArchivedAt: self::nullable($row['person_archived_at']),
         ) : null;
     }
 
