@@ -20,11 +20,11 @@ SELECT id, installation_id, commercial_account_id, status, archived_at
 FROM commercial.deployments WHERE id = ? FOR UPDATE
 SQL, [$deploymentId]);
             if ($deployment === false || $deployment['archived_at'] !== null
-                || !in_array($deployment['status'], ['active', 'suspended'], true)) {
+                || !in_array($deployment['status'], ['active', 'provisioning', 'suspended'], true)) {
                 throw new \DomainException('Deployment cannot receive entitlements.');
             }
             $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
-            $status = $deployment['status'];
+            $status = $deployment['status'] === 'provisioning' ? 'active' : $deployment['status'];
             $state = $status === 'active'
                 ? $this->effective->forDeploymentAccount($deployment['commercial_account_id'])
                 : null;

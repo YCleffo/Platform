@@ -38,3 +38,28 @@ Configure `RUNTIME_ENTITLEMENT_TRUSTED_KEYS` as JSON mapping key IDs to
 permit rotation. An empty trust map denies all documents. Core stores the exact
 canonical bytes as base64 in its existing JSONB snapshot and only exposes
 features from the latest valid, verified, active applied snapshot.
+
+## Bootstrap credential and runtime sync
+
+`control:deployments:provision:start --deployment-id=<uuid>` issues one
+deployment credential with `entitlements.read`, `usage.write`, and
+`deployment.status.write`. Its raw secret appears only in that command's
+one-time JSON output. Configure the new runtime with
+`PLATFORM_INSTALLATION_ID`, `PLATFORM_DEPLOYMENT_MODE`, `APP_ENV`,
+`APPLICATION_VERSION`, `PLATFORM_RELEASE_ID`, and
+`PLATFORM_RELEASE_CHANNEL`. `runtime:installation:init` creates the local
+singleton as `provisioned` or confirms an exact replay; conflicting identity
+fails closed. Configure `CONTROL_PLANE_URL` and
+`CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF=env:VARIABLE_NAME`, with the named
+environment variable containing `<credentialId>.<secret>`. The credential is
+never stored in Core PostgreSQL. `runtime:entitlements:sync` calls the Control
+Plane pull endpoint directly and invokes the existing local
+`EntitlementApplier`. It prints only the applied sequence.
+
+The runtime then sends `POST /api/m2m/deployment/status` using its deployment
+credential and `deployment.status.write`. A ready body has exactly `status`
+(`ready`) and `entitlementSequence` (positive integer); a failed body has
+exactly `status` (`failed`) and a machine-only `errorCode` such as
+`runtime.bootstrap_failed`. The deployment identity comes only from the
+credential. The ready report succeeds only for a running provision operation
+and an issued entitlement with the deployment's installation ID.

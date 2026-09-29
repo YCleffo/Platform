@@ -66,6 +66,8 @@ if (Environment::isProd() && $totpEncryptionKey === null) {
 
 return [
     'runtimeTrustedEntitlementKeys' => json_decode($envOr('RUNTIME_ENTITLEMENT_TRUSTED_KEYS', '{}'), true, 16, JSON_THROW_ON_ERROR),
+    'runtimeControlPlaneUrl' => $envOr('CONTROL_PLANE_URL', ''),
+    'runtimeDeploymentCredentialReference' => $envOr('CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF', ''),
     'application' => require __DIR__ . '/application.php',
 
     'yiisoft/aliases' => [

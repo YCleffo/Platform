@@ -235,16 +235,41 @@ directories.
 `issued_entitlement_documents`, `releases` and `release_entitlements` remain
 schema foundations. Phase 4.6 uses the separate immutable
 `deployment_entitlement_documents` table for signed deployment snapshots.
-`ReserveDeployment` creates a durable reservation;
-`deployment_operations` does not yet have an executor and must not be reported
-as a successful deployment. Control current-user/session APIs and paginated
+`ReserveDeployment` creates a durable reservation. Phase 4.7 adds an operator
+start and authenticated runtime readiness report for the application bootstrap
+lifecycle; it does not create infrastructure. Control current-user/session APIs and paginated
 commercial read models belong to Phase 4.1. M2M service credentials and usage
 ingestion and signed entitlement delivery are implemented.
 
 Plan switching, additional payment providers and methods, bank cards,
 saved/recurring credentials,
-usage-based and overage billing, tenant DB creation, provisioning, DNS/TLS, custom
+usage-based and overage billing, tenant DB creation, infrastructure provisioning, DNS/TLS, custom
 domains, On-Prem activation, MFA and updater execution remain future phases.
+
+## Application deployment bootstrap (Phase 4.7)
+
+Reserve a shared or dedicated deployment, then run
+`control:deployments:provision:start --deployment-id=<uuid>`. This locks the
+reserved deployment and its existing provision operation, moves them to
+`provisioning` / `running`, increments `attempt_count`, and returns
+`installationId`, `credentialId`, `credentialSecret`, and scopes once. The
+credential is created through `DeploymentCredentialService`; only its hash is
+stored. A repeated start is rejected and cannot retrieve the old secret.
+
+Pass the installation ID and bootstrap credential to the runtime deployment
+environment through its secret/config boundary. Run `runtime:installation:init`
+to create the singleton local installation, then `runtime:entitlements:sync` to
+pull the signed snapshot and apply it. During provisioning the issuer signs
+the desired runtime state `active` with current effective features. Moving the
+Control Plane deployment from `provisioning` to `active` alone does not issue a
+duplicate snapshot. After a successful sync, report
+`{"status":"ready","entitlementSequence":<applied sequence>}` to
+`POST /api/m2m/deployment/status`. Control Plane checks the authenticated
+deployment, running operation and issued sequence before atomically marking
+the deployment active and the operation succeeded and auditing
+`deployment.provisioned`. A machine-code failed report marks both failed.
+The runtime report confirms application activation; VM/container creation,
+tenant DB creation, DNS and TLS remain separate external operations.
 
 ## Signed deployment entitlement delivery
 

@@ -7,6 +7,8 @@ use App\Console;
 return [
     'auth/cleanup' => Console\AuthCleanupCommand::class,
     'db:check' => Console\DbCheckCommand::class,
+    'runtime:installation:init' => Console\RuntimeInstallationInitCommand::class,
+    'runtime:entitlements:sync' => Console\RuntimeEntitlementsSyncCommand::class,
     'communication:process-email' => Console\ProcessEmailOutboxCommand::class,
     'core:bootstrap-superadmin' => Console\BootstrapSuperadminCommand::class,
     'privacy/retention/evaluate' => Console\RetentionEvaluateCommand::class,

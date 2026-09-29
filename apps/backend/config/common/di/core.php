@@ -107,6 +107,9 @@ use App\PlatformRuntime\PostgresEntitlementApplier;
 use App\PlatformRuntime\EffectiveRuntimeEntitlements;
 use App\PlatformRuntime\PostgresEffectiveRuntimeEntitlements;
 use App\PlatformRuntime\TrustedEntitlementKeyRegistry;
+use App\PlatformRuntime\DeploymentEntitlementPuller;
+use App\PlatformRuntime\HttpDeploymentEntitlementPuller;
+use App\PlatformRuntime\RuntimeEntitlementSynchronizer;
 
 /** @var array<string, mixed> $params */
 return [
@@ -117,6 +120,13 @@ return [
     EffectiveRuntimeEntitlements::class => ['class' => PostgresEffectiveRuntimeEntitlements::class],
     TrustedEntitlementKeyRegistry::class => [
         '__construct()' => ['keys' => $params['runtimeTrustedEntitlementKeys'] ?? []],
+    ],
+    DeploymentEntitlementPuller::class => ['class' => HttpDeploymentEntitlementPuller::class],
+    RuntimeEntitlementSynchronizer::class => [
+        '__construct()' => [
+            'controlPlaneUrl' => $params['runtimeControlPlaneUrl'] ?? '',
+            'credentialReference' => $params['runtimeDeploymentCredentialReference'] ?? '',
+        ],
     ],
     EmailOutboxProcessor::class => [
         '__construct()' => ['cipher' => Reference::to(AuthenticationPayloadCipher::class)],
