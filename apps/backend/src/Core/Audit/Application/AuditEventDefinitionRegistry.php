@@ -39,7 +39,10 @@ final class AuditEventDefinitionRegistry
                 'privacy.legal_hold.created', 'privacy.legal_hold.released',
                 'privacy.retention.evaluated', 'privacy.retention.decision_changed',
                 'privacy.processing_termination.started', 'privacy.processing_termination.completed',
-                'privacy.processing_termination.partially_completed', 'privacy.processing_termination.failed'
+                'privacy.processing_termination.partially_completed', 'privacy.processing_termination.failed',
+                'privacy.erasure.created', 'privacy.erasure.started',
+                'privacy.erasure.item_completed', 'privacy.erasure.item_blocked',
+                'privacy.erasure.failed', 'privacy.erasure.completed'
                     => new AuditEventDefinition($action, [
                     'requestType' => 'code', 'fromStatus' => 'code', 'toStatus' => 'code',
                     'deadlineCode' => 'code', 'reasonCode' => 'code',
@@ -47,6 +50,7 @@ final class AuditEventDefinitionRegistry
                     'executionCode' => 'code', 'contributorCode' => 'code',
                     'resourceType' => 'code', 'changedPaths' => 'path_list',
                     'policyCode' => 'code', 'decisionCode' => 'code',
+                    'action' => 'code', 'result' => 'code',
                     'stoppedPurposeCodes' => 'code_list', 'retainedPurposeCodes' => 'code_list',
                 ], [], []),
                 default => $this->definitions[$action] ?? null,

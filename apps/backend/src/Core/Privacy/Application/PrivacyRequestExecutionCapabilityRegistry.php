@@ -14,7 +14,9 @@ final readonly class PrivacyRequestExecutionCapabilityRegistry
         private ProcessingRestrictionContributorRegistry $restrictionContributors,
         private DataSubjectRequestTypeRegistry $types,
         private ?RetentionCandidateContributorRegistry $retentionCandidates = null,
-        private ?ProcessingPurposeRegistry $purposes = null) {}
+        private ?ProcessingPurposeRegistry $purposes = null,
+        private ?PersonalDataErasureHandlerRegistry $erasureHandlers = null,
+        private ?DestructionEvidencePolicy $destructionEvidence = null) {}
 
     public function available(string $requestType): bool
     {
@@ -28,6 +30,11 @@ final readonly class PrivacyRequestExecutionCapabilityRegistry
                 && ($this->purposes?->codes() ?? []) !== []
                 && ($this->retentionCandidates?->coversAll($this->purposes?->codes() ?? []) ?? false)
                 && $this->restrictionContributors->available(),
+            'privacy.data.erasure' => ($this->retentionCandidates?->available() ?? false)
+                && ($this->purposes?->codes() ?? []) !== []
+                && ($this->retentionCandidates?->coversAll($this->purposes?->codes() ?? []) ?? false)
+                && ($this->erasureHandlers?->available() ?? false)
+                && ($this->destructionEvidence?->available() ?? false),
             default => false,
         };
     }

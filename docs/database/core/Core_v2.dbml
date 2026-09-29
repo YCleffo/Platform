@@ -313,6 +313,10 @@ Table core.data_subject_request_executions {
   stopped_purpose_codes text[]
   retained_purpose_codes text[]
   reason_codes text[]
+  erasure_case_id uuid
+  erasure_completed_items integer
+  erasure_blocked_items integer
+  erasure_failed_items integer
   error_code varchar(120)
   started_at timestamptz [not null]
   completed_at timestamptz
@@ -322,7 +326,7 @@ Table core.data_subject_request_executions {
     (request_id, started_at) [name: 'idx_dsar_executions_request']
     (execution_code, status) [name: 'idx_dsar_executions_code_status']
   }
-  Note: 'Migration 023. Terminal execution evidence is immutable. Stores only machine codes, paths, digest and size; never exported data or correction values.'
+  Note: 'Migrations 023 and 025. Terminal evidence is immutable. B4 adds erasure case and result counts; never exported data or destroyed values.'
 }
 
 Table core.privacy_processing_blocks {
@@ -1010,7 +1014,79 @@ Table core.inbox_events {
   '''
 }
 
+Table core.privacy_erasure_cases {
+  id uuid [pk, not null]
+  subject_person_id uuid [not null]
+  source_request_id uuid [unique]
+  reason_code varchar(120) [not null]
+  status varchar(32) [not null]
+  created_at timestamptz [not null]
+  started_at timestamptz
+  completed_at timestamptz
+  updated_at timestamptz [not null]
+  created_by_account_id uuid [not null]
+  Note: 'B4 erasure case; completed_at only for completed status.'
+}
+
+Table core.privacy_erasure_items {
+  id uuid [pk, not null]
+  case_id uuid [not null]
+  resource_type varchar(120) [not null]
+  resource_id uuid [not null]
+  policy_code varchar(120) [not null]
+  planned_action varchar(24)
+  status varchar(24) [not null]
+  attempts integer [not null, default: 0]
+  started_at timestamptz
+  completed_at timestamptz
+  failure_code varchar(120)
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  indexes {
+    (case_id, resource_type, resource_id) [unique]
+  }
+}
+
+Table core.privacy_erasure_item_purposes {
+  item_id uuid [not null]
+  purpose_code varchar(120) [not null]
+  policy_code varchar(120) [not null]
+  trigger_code varchar(120) [not null]
+  triggered_at timestamptz
+  contributor_code varchar(120) [not null]
+  indexes {
+    (item_id, purpose_code, contributor_code) [pk]
+  }
+}
+
+Table core.privacy_destruction_evidence {
+  id uuid [pk, not null]
+  case_id uuid [not null]
+  item_id uuid [not null, unique]
+  resource_type varchar(120) [not null]
+  resource_reference_hash char(64) [not null]
+  policy_code varchar(120) [not null]
+  evidence_policy_code varchar(120) [not null]
+  evidence_retain_until timestamptz [not null]
+  action varchar(24) [not null]
+  result varchar(24) [not null]
+  executed_at timestamptz [not null]
+  executor_account_id uuid
+  journal_event_id uuid [not null]
+  Note: 'Immutable technical evidence; separate retention; no destroyed value.'
+}
+
 /* ========================= FOREIGN KEYS ========================= */
+
+Ref: core.privacy_erasure_cases.subject_person_id > core.persons.id [delete: restrict]
+Ref: core.data_subject_request_executions.erasure_case_id > core.privacy_erasure_cases.id [delete: restrict]
+Ref: core.privacy_erasure_cases.source_request_id > core.data_subject_requests.id [delete: restrict]
+Ref: core.privacy_erasure_cases.created_by_account_id > core.accounts.id [delete: restrict]
+Ref: core.privacy_erasure_items.case_id > core.privacy_erasure_cases.id [delete: restrict]
+Ref: core.privacy_erasure_item_purposes.item_id > core.privacy_erasure_items.id [delete: restrict]
+Ref: core.privacy_destruction_evidence.case_id > core.privacy_erasure_cases.id [delete: restrict]
+Ref: core.privacy_destruction_evidence.item_id > core.privacy_erasure_items.id [delete: restrict]
+Ref: core.privacy_destruction_evidence.executor_account_id > core.accounts.id [delete: restrict]
 
 Ref: core.person_contacts.person_id > core.persons.id [delete: cascade]
 

@@ -10,4 +10,5 @@ return [
     'communication:process-email' => Console\ProcessEmailOutboxCommand::class,
     'core:bootstrap-superadmin' => Console\BootstrapSuperadminCommand::class,
     'privacy/retention/evaluate' => Console\RetentionEvaluateCommand::class,
+    'privacy/erasure/execute' => Console\ErasureExecuteCommand::class,
 ];

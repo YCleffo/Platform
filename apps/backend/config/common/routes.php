@@ -19,6 +19,7 @@ use App\Core\Privacy\Api\ManagePrivacyRequestsAction;
 use App\Core\Privacy\Api\ManageProcessingBlocksAction;
 use App\Core\Privacy\Api\ManageLegalHoldsAction;
 use App\Core\Privacy\Api\ExecuteProcessingTerminationAction;
+use App\Core\Privacy\Api\ManageErasureAction;
 use App\Core\Privacy\Api\PersonalDataExportAction;
 use App\Core\Privacy\Api\ManagePrivacyCorrectionAction;
 use App\Core\Auth\Api\ListSessionsAction;
@@ -346,6 +347,23 @@ return [
         ->defaults(['operation' => 'release'])
         ->middleware(RequireAuthentication::class, $permission('core.privacy.legal_holds.manage'))
         ->action(ManageLegalHoldsAction::class)->name('core/privacy/legal-holds/release'),
+
+    Route::post('/api/core/privacy/erasure-cases')
+        ->defaults(['operation' => 'create'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.erasure.manage'))
+        ->action(ManageErasureAction::class)->name('core/privacy/erasure-cases/create'),
+    Route::get('/api/core/privacy/erasure-cases/{id}')
+        ->defaults(['operation' => 'get'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.read'))
+        ->action(ManageErasureAction::class)->name('core/privacy/erasure-cases/get'),
+    Route::post('/api/core/privacy/erasure-cases/{id}/execute')
+        ->defaults(['operation' => 'execute'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.erasure.manage'))
+        ->action(ManageErasureAction::class)->name('core/privacy/erasure-cases/execute'),
+    Route::get('/api/core/privacy/erasure-cases/{id}/evidence')
+        ->defaults(['operation' => 'evidence'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.read'))
+        ->action(ManageErasureAction::class)->name('core/privacy/erasure-cases/evidence'),
 
     Route::post('/api/auth/me/presence/heartbeat')
         ->middleware(RequireAuthentication::class)

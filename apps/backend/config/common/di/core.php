@@ -21,6 +21,9 @@ use App\Core\Privacy\Application\LawfulProcessingBasisContributorRegistry;
 use App\Core\Privacy\Application\RetentionCandidateContributorRegistry;
 use App\Core\Privacy\Application\RetentionDependencyContributorRegistry;
 use App\Core\Privacy\Application\PrivacyRequestExecutionCapabilityRegistry;
+use App\Core\Privacy\Application\DestructionEvidencePolicy;
+use App\Core\Privacy\Application\PersonalDataErasureHandlerRegistry;
+use App\Core\Privacy\Infrastructure\CoreErasureHandlerProvider;
 use App\Core\Privacy\Application\RepresentativeAuthorityPolicy;
 use App\Core\Privacy\Application\RepresentationScopeRegistry;
 use App\Core\Privacy\Application\BusinessCalendarInterface;
@@ -112,10 +115,21 @@ return [
     RetentionDependencyContributorRegistry::class => [
         '__construct()' => ['contributors' => $params['retentionDependencyContributors'] ?? []],
     ],
+    DestructionEvidencePolicy::class => [
+        '__construct()' => ['configuration' => $params['privacyDestructionEvidence'] ?? []],
+    ],
+    CoreErasureHandlerProvider::class => [
+        '__construct()' => ['moduleHandlers' => $params['personalDataErasureHandlers'] ?? []],
+    ],
+    PersonalDataErasureHandlerRegistry::class => [
+        '__construct()' => ['handlers' => Reference::to(CoreErasureHandlerProvider::class)],
+    ],
     PrivacyRequestExecutionCapabilityRegistry::class => [
         '__construct()' => [
             'retentionCandidates' => Reference::to(RetentionCandidateContributorRegistry::class),
             'purposes' => Reference::to(ProcessingPurposeRegistry::class),
+            'erasureHandlers' => Reference::to(PersonalDataErasureHandlerRegistry::class),
+            'destructionEvidence' => Reference::to(DestructionEvidencePolicy::class),
         ],
     ],
     ProcessingPurposeRegistry::class => [

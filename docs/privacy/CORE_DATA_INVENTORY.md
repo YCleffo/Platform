@@ -1,6 +1,6 @@
 # Core personal data inventory (Phase 4.1 review)
 
-This inventory started from the 25-table baseline through migration 018 and includes migrations 019-023. It is a technical classification, not a deployment's legal basis or retention schedule. Deployment policy must assign the actual purposes, lawful bases, retention periods, export rules, and processors before production use. `Policy` below means no duration is currently established in Core.
+This inventory started from the 25-table baseline through migration 018 and includes migrations 019-025. It is a technical classification, not a deployment's legal basis or retention schedule. Deployment policy must assign the actual purposes, lawful bases, retention periods, export rules, and processors before production use. `Policy` below means no duration is currently established in Core.
 
 | Table and significant fields | Data category and PII | Processing purpose | Retention owner | Audit / logs / export | Special handling |
 | --- | --- | --- | --- | --- | --- |
@@ -38,6 +38,17 @@ This inventory started from the 25-table baseline through migration 018 and incl
 The classification also covers network and device values generated in `ClientContext` and ephemeral Redis presence. Presence uses a TTL and has no durable SQL heartbeat history. External email delivery and backup copies require separate deployment processor and retention records. No current Core table stores biometric templates or special-category health data; future modules adding either require a separate design review.
 
 Until deployment policy assigns a duration, retention is **policy-required / deployment-defined**. This document does not authorize deletion or publication of any category.
+
+## B4 erasure records (migration 025)
+
+| Table | Personal data and purpose | Retention and handling |
+| --- | --- | --- |
+| `privacy_erasure_cases` | Subject and source DSAR IDs; erasure workflow state | Case policy is deployment-defined; no resource value is stored. |
+| `privacy_erasure_items` | Resource type and UUID, policy/action/status codes | Indirect identifiers remain after physical deletion; restricted case evidence. |
+| `privacy_erasure_item_purposes` | Purpose, trigger, policy and contributor codes | Explains multi-purpose decisions without a resource snapshot. |
+| `privacy_destruction_evidence` | HMAC reference, executor ID, journal event ID and action/result | Separate evidence policy and `evidence_retain_until`; immutable ordinary path; no old value. |
+
+Core B4 deletes only owned PersonContact and AccountSettings records when all purpose evaluations allow it. Person, auth, consent, representation, DSAR, audit, outbox and inbox erasure remain unsupported. A technical evidence export is not a signed organizational act. Backups need expiry and restore-time re-erasure controls.
 
 ## B2 export allowlists
 

@@ -7,6 +7,12 @@ use App\Core\Privacy\Domain\ProcessingPurposeDefinition;
 use App\Core\Privacy\Domain\RetentionPolicyDefinition;
 
 return [
+    'privacyDestructionEvidence' => [
+        'code' => 'test.destruction_evidence',
+        'duration' => 365,
+        'unit' => 'calendar_days',
+        'hmacKey' => str_repeat('x', 32),
+    ],
     'privacyBusinessCalendar' => [
         'coverageFrom' => '2026-01-01',
         'coverageUntil' => '2027-12-31',
