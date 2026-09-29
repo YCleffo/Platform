@@ -46,6 +46,20 @@ final class UsageConcurrencyTest extends TestCase
         self::assertSame(1, (int) $this->connection->fetchOne('SELECT quantity FROM commercial.usage_counters uc JOIN commercial.usage_periods up ON up.id = uc.usage_period_id WHERE up.subscription_id = ?', [$subscription]));
     }
 
+    public function testDeploymentReplayAndDistinctKeysUnderConcurrency(): void
+    {
+        [, $account, $subscription, $featureCode] = $this->activeFixture('m2m-usage-race', 3);
+        $deployment = $this->connection->fetchOne("INSERT INTO commercial.deployments (commercial_account_id, installation_id, mode, status) VALUES (?, uuidv7(), 'on_prem', 'active') RETURNING id", [$account]);
+        self::assertIsString($deployment);
+        $same = implode('|', [$deployment, $featureCode, '1', 'm2m-same-' . $deployment]);
+        self::assertSame([0, 0], $this->race('ingest_usage', $subscription, $same, 'ingest_usage', $subscription, $same));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT quantity FROM commercial.usage_counters uc JOIN commercial.usage_periods up ON up.id = uc.usage_period_id WHERE up.subscription_id = ?', [$subscription]));
+        $first = implode('|', [$deployment, $featureCode, '1', 'm2m-first-' . $deployment]);
+        $second = implode('|', [$deployment, $featureCode, '1', 'm2m-second-' . $deployment]);
+        self::assertSame([0, 0], $this->race('ingest_usage', $subscription, $first, 'ingest_usage', $subscription, $second));
+        self::assertSame(3, (int) $this->connection->fetchOne('SELECT quantity FROM commercial.usage_counters uc JOIN commercial.usage_periods up ON up.id = uc.usage_period_id WHERE up.subscription_id = ?', [$subscription]));
+    }
+
     public function testUsageAndCancellationCannotMutateClosedHistory(): void
     {
         [$user, $account, $subscription, $featureCode] = $this->activeFixture('usage-cancel-race', 5);

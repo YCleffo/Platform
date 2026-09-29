@@ -33,6 +33,8 @@ use ControlPlane\Payment\Application\SettlePayment;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPayment;
 use ControlPlane\Usage\Application\ApplyUsageDelta;
+use ControlPlane\Usage\Application\IngestDeploymentUsage;
+use ControlPlane\M2m\DeploymentIdentity;
 use ControlPlane\Tests\Support\FakeFiscalReceiptProviderGateway;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasher;
@@ -163,6 +165,13 @@ SQL, [$value]);
         case 'apply_usage':
             [$accountId, $featureCode, $delta, $idempotencyKey] = explode('|', $extra);
             (new ApplyUsageDelta($connection))->apply($accountId, $featureCode, (int) $delta, $idempotencyKey);
+            break;
+        case 'ingest_usage':
+            [$deploymentId, $featureCode, $delta, $idempotencyKey] = explode('|', $extra);
+            (new IngestDeploymentUsage($connection, new ApplyUsageDelta($connection)))->apply(
+                new DeploymentIdentity($deploymentId, $deploymentId, ['usage.write']),
+                $featureCode, (int) $delta, $idempotencyKey,
+            );
             break;
         default:
             exit(3);

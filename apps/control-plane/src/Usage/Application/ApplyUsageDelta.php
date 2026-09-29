@@ -16,18 +16,19 @@ final readonly class ApplyUsageDelta
     }
 
     /** @return array{feature_code: string, mode: 'counter'|'gauge', used: int, limit: int, remaining: int, exhausted: bool} */
-    public function apply(string $commercialAccountId, string $featureCode, int $delta, string $idempotencyKey): array
+    public function apply(string $commercialAccountId, string $featureCode, int $delta, string $idempotencyKey, ?UsageWriteSource $source = null): array
     {
         if (!Uuid::isValid($commercialAccountId)) {
             throw new \InvalidArgumentException('Invalid public identifier.');
         }
         $featureCode = IdentifierPolicy::machineCode($featureCode, 160);
         $idempotencyKey = IdentifierPolicy::opaqueKey($idempotencyKey);
+        $idempotencyKey = $source?->namespaceKey($idempotencyKey) ?? $idempotencyKey;
         if ($delta === 0) {
             throw new \InvalidArgumentException('Usage delta must not be zero.');
         }
 
-        return $this->connection->transactional(function (Connection $connection) use ($commercialAccountId, $featureCode, $delta, $idempotencyKey): array {
+        return $this->connection->transactional(function (Connection $connection) use ($commercialAccountId, $featureCode, $delta, $idempotencyKey, $source): array {
             $subscription = $connection->fetchAssociative(<<<'SQL'
 SELECT id, current_period_start, current_period_end
 FROM commercial.subscriptions
@@ -89,17 +90,22 @@ SQL, [$subscription['id'], $featureCode]);
             $scope = 'usage.apply.' . str_replace('-', '', $period['id']) . '.' . str_replace('-', '', $featureId);
             foreach ($existingScopes as $existingScope) {
                 if (!is_string($existingScope) || $existingScope !== $scope) {
-                    throw new \DomainException('Idempotency key was reused for a different request.');
+                    throw new UsageIdempotencyConflict('Idempotency key was reused for a different request.');
                 }
             }
-            $hash = hash('sha256', json_encode([
+            $request = [
                 'operation' => 'usage.apply',
                 'commercial_account_id' => strtolower($commercialAccountId),
                 'usage_period_id' => strtolower($period['id']),
                 'feature_id' => strtolower($featureId),
                 'feature_code' => $featureCode,
                 'delta' => $delta,
-            ], JSON_THROW_ON_ERROR));
+            ];
+            if ($source !== null) {
+                $request['source_type'] = $source->sourceType;
+                $request['source_id'] = $source->sourceId;
+            }
+            $hash = hash('sha256', json_encode($request, JSON_THROW_ON_ERROR));
             $inserted = $connection->executeStatement(
                 "INSERT INTO commercial.idempotency_keys (scope, idempotency_key, request_sha256, status, expires_at) VALUES (?, ?, decode(?, 'hex'), 'pending', NULL) ON CONFLICT (scope, idempotency_key) DO NOTHING",
                 [$scope, $idempotencyKey, $hash],
@@ -109,7 +115,7 @@ SQL, [$subscription['id'], $featureCode]);
                 throw new \LogicException('Idempotency record unavailable.');
             }
             if (!hash_equals($idempotency['request_hash'], $hash)) {
-                throw new \DomainException('Idempotency key was reused with a different request.');
+                throw new UsageIdempotencyConflict('Idempotency key was reused with a different request.');
             }
             if ($inserted === 0) {
                 if ($idempotency['status'] !== 'completed') {

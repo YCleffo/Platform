@@ -3,12 +3,16 @@ security:
         ControlPlane\Identity\Security\ControlUserPrincipal:
             algorithm: auto
     firewalls:
+        m2m:
+            pattern: '^/api/m2m/'
+            stateless: true
         main:
             stateless: true
             custom_authenticators:
                 - ControlPlane\Identity\Security\AccessTokenAuthenticator
             entry_point: ControlPlane\Identity\Security\AccessTokenAuthenticator
     access_control:
+        - { path: '^/api/m2m/', roles: PUBLIC_ACCESS }
         - { path: '^/health$', roles: PUBLIC_ACCESS }
         - { path: '^/api/control/auth/(register|verify|verification/resend|login|refresh|logout)$', roles: PUBLIC_ACCESS }
         - { path: '^/api/control/catalog/plans$', roles: PUBLIC_ACCESS }

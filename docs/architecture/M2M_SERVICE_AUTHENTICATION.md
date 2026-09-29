@@ -6,7 +6,7 @@ Human and machine principals are separate. A human `Account` uses the existing s
 
 Core credentials belong only to service or system Accounts. Control Plane credentials belong to a deployment. Their databases, secrets, scopes and lifecycle are independent; there is no cross database foreign key or automatic secret synchronization. A 32 byte cryptographically random secret is returned only by create and rotate. Both databases store only its SHA-256 hash. The public UUID `credentialId` and secret form `Authorization: Service <credentialId>.<secret>`. Authentication checks the hash in constant time, credential status and expiry, and the current owner state. Invalid attempts use the existing rate limit facilities. `last_used_at` is updated at most once a minute on a best effort basis.
 
-Rotation atomically marks the old credential unusable and inserts a new credential with the same scopes and expiry. Revocation is idempotent. An expired or revoked credential cannot authenticate. There is no implicit privilege for a `system` Account. Future machine endpoints must authenticate through these dedicated services and call the scope policy explicitly; this phase does not add usage, entitlement or provisioning endpoints.
+Rotation atomically marks the old credential unusable and inserts a new credential with the same scopes and expiry. Revocation is idempotent. An expired or revoked credential cannot authenticate. There is no implicit privilege for a `system` Account. Machine endpoints authenticate through these dedicated services and call the scope policy explicitly.
 
 ## Scopes and management
 
@@ -17,3 +17,7 @@ Core's human admin API lists metadata with `core.service_credentials.read`, and 
 ## Retention
 
 Core `auth/cleanup` deletes bounded batches of revoked, rotated or expired credential metadata after `AUTH_SERVICE_CREDENTIAL_RETENTION_DAYS` (90 days by default). Control Plane privacy cleanup has a `service_credential` category configured through `CONTROL_PRIVACY_RETENTION_DAYS`. Existing audit retention handles lifecycle events. Machine credentials are excluded from human Person DSAR export. No durable raw secret exists.
+
+## Usage ingestion
+
+`POST /api/m2m/usage` accepts a Control Plane deployment credential with `usage.write` only while the deployment is active and not archived. Send `Authorization: Service <credentialId>.<secret>`, `Idempotency-Key`, and JSON `{"featureCode":"some.feature","delta":1}`. The body has exactly those two fields. The deployment and commercial account are resolved server side from the credential. The response contains only `featureCode`, `mode`, `used`, `limit`, `remaining`, and `exhausted`. The existing `ApplyUsageDelta` enforces subscription, quota and metering rules; its idempotency namespace includes the deployment source. Successful usage writes create no per-request audit or outbox event.

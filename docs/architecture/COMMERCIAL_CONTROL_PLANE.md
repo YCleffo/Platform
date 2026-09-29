@@ -179,6 +179,13 @@ resource is authorized from active account membership; an account UUID from
 the URL is never trusted by itself. Roles and permissions live in the central
 `AccountAuthorization` policy, not in controllers and not in Diary RBAC.
 
+`POST /api/m2m/usage` accepts a deployment service credential with
+`usage.write` and an `Idempotency-Key`. The server resolves the deployment's
+commercial account and accepts writes only for active deployments. It uses
+`ApplyUsageDelta`; replay is scoped to the deployment, and successful writes
+do not create audit or outbox events. See `M2M_SERVICE_AUTHENTICATION.md` for
+the request and response contract.
+
 Registration stores the trimmed presentation email and a lowercase normalized
 lookup key. Passwords use Symfony PasswordHasher `auto`. Verification tokens
 are authenticated from an artifact UUID with `CONTROL_TOKEN_SECRET`; only the
@@ -232,11 +239,11 @@ repository/verification/application ports, but no production key trust or
 issuance implementation. `ReserveDeployment` creates a durable reservation;
 `deployment_operations` does not yet have an executor and must not be reported
 as a successful deployment. Control current-user/session APIs and paginated
-commercial read models belong to Phase 4.1; M2M usage ingestion, entitlement
-issuance/delivery and service credentials belong to Phase 4.2.
+commercial read models belong to Phase 4.1. M2M service credentials and usage
+ingestion are now implemented; entitlement issuance and delivery remain separate.
 
 Plan switching, additional payment providers and methods, bank cards,
 saved/recurring credentials,
-usage-based and overage billing, service-to-service usage ingestion, signed
+usage-based and overage billing, signed
 entitlement issuance, tenant DB creation, provisioning, DNS/TLS, custom
 domains, On-Prem activation, MFA and updater execution remain future phases.

@@ -13,7 +13,7 @@ final readonly class ControlPrivacyCleanup
     }
 
     /** @return array{category: string, selected: int, deleted: int, dry_run: bool} */
-    public function run(string $category, int $limit = 100, bool $dryRun = true): array
+    public function run(string $category, int $limit = 100, bool $dryRun = true, ?string $recordId = null): array
     {
         if ($limit < 1 || $limit > 1000) {
             throw new \InvalidArgumentException('Cleanup limit must be 1..1000.');
@@ -29,8 +29,13 @@ final readonly class ControlPrivacyCleanup
             'service_credential' => ['service_credentials', 'id', "COALESCE(CASE WHEN t.status <> 'active' THEN COALESCE(t.revoked_at, t.rotated_at) END, t.expires_at) < now() - (? * interval '1 day') AND NOT EXISTS (SELECT 1 FROM commercial.privacy_holds h WHERE h.released_at IS NULL)"],
             default => throw new \DomainException('Unknown Control Plane cleanup category.'),
         };
-        [$selected, $deleted] = $this->connection->transactional(function (Connection $connection) use ($category, $table, $key, $eligible, $days, $limit, $dryRun): array {
-            $ids = $connection->fetchFirstColumn("SELECT t.$key FROM commercial.$table t WHERE $eligible ORDER BY t.$key LIMIT ? FOR UPDATE SKIP LOCKED", [$days, $limit]);
+        if ($recordId !== null && ($key === 'ctid' || !\Symfony\Component\Uid\Uuid::isValid($recordId))) {
+            throw new \InvalidArgumentException('Cleanup record ID must be a UUID.');
+        }
+        [$selected, $deleted] = $this->connection->transactional(function (Connection $connection) use ($category, $table, $key, $eligible, $days, $limit, $dryRun, $recordId): array {
+            $whereId = $recordId === null ? '' : " AND t.$key = ?";
+            $parameters = $recordId === null ? [$days, $limit] : [$days, $recordId, $limit];
+            $ids = $connection->fetchFirstColumn("SELECT t.$key FROM commercial.$table t WHERE $eligible$whereId ORDER BY t.$key LIMIT ? FOR UPDATE SKIP LOCKED", $parameters);
             $deleted = 0;
             if (!$dryRun && $ids !== []) {
                 // The cleanup database role must also be restricted in production.

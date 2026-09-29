@@ -38,7 +38,8 @@ final class SecurityBaselineSubscriber implements EventSubscriberInterface
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('Referrer-Policy', 'no-referrer');
         $response->headers->set('Content-Security-Policy', "frame-ancestors 'none'");
-        if (str_starts_with($event->getRequest()->getPathInfo(), '/api/control/auth')) {
+        if (str_starts_with($event->getRequest()->getPathInfo(), '/api/control/auth')
+            || str_starts_with($event->getRequest()->getPathInfo(), '/api/m2m/')) {
             $response->headers->set('Cache-Control', 'no-store');
             $response->headers->set('Pragma', 'no-cache');
         }

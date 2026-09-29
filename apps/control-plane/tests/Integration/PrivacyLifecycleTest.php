@@ -26,21 +26,23 @@ final class PrivacyLifecycleTest extends DatabaseTestCase
     public function testCleanupDryRunAndHold(): void
     {
         $user = $this->user();
-        $this->connection->executeStatement(
-            "INSERT INTO commercial.control_user_email_verifications (control_user_id, token_hash, created_at, expires_at) VALUES (?, decode(repeat('ab', 32), 'hex'), now() - interval '5 days', now() - interval '4 days')",
+        $verificationId = $this->connection->fetchOne(
+            "INSERT INTO commercial.control_user_email_verifications (control_user_id, token_hash, created_at, expires_at) VALUES (?, decode(repeat('ab', 32), 'hex'), now() - interval '5 days', now() - interval '4 days') RETURNING id",
             [$user],
         );
         $cleanup = new ControlPrivacyCleanup($this->connection, new ControlPrivacyRetentionPolicy(['verification' => 1]));
-        self::assertSame(1, $cleanup->run('verification', 10)['selected']);
-        self::assertSame(1, $cleanup->run('verification', 10, false)['deleted']);
-        self::assertSame(0, $cleanup->run('verification', 10, false)['deleted']);
+        self::assertSame(1, $cleanup->run('verification', recordId: $verificationId)['selected']);
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.control_user_email_verifications WHERE id = ?', [$verificationId]));
+        self::assertSame(1, $cleanup->run('verification', dryRun: false, recordId: $verificationId)['deleted']);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.control_user_email_verifications WHERE id = ?', [$verificationId]));
 
-        $this->connection->executeStatement(
-            "INSERT INTO commercial.control_user_email_verifications (control_user_id, token_hash, created_at, expires_at) VALUES (?, decode(repeat('ac', 32), 'hex'), now() - interval '5 days', now() - interval '4 days')",
+        $heldId = $this->connection->fetchOne(
+            "INSERT INTO commercial.control_user_email_verifications (control_user_id, token_hash, created_at, expires_at) VALUES (?, decode(repeat('ac', 32), 'hex'), now() - interval '5 days', now() - interval '4 days') RETURNING id",
             [$user],
         );
         $this->connection->executeStatement("INSERT INTO commercial.privacy_holds (control_user_id, reason_code) VALUES (?, 'legal_hold')", [$user]);
-        self::assertSame(0, $cleanup->run('verification', 10, false)['deleted']);
+        self::assertSame(0, $cleanup->run('verification', dryRun: false, recordId: $heldId)['deleted']);
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.control_user_email_verifications WHERE id = ?', [$heldId]));
     }
 
     public function testSelfExportUsesExplicitSafeFields(): void
