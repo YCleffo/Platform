@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Privacy\Infrastructure;
 
 use App\Core\Privacy\Application\PersonalDataErasureHandler;
+use App\Core\Organization\Infrastructure\OrganizationMembershipErasureHandler;
 use IteratorAggregate;
 use Traversable;
 use Yiisoft\Db\Connection\ConnectionInterface;
@@ -19,6 +20,7 @@ final readonly class CoreErasureHandlerProvider implements IteratorAggregate
     public function getIterator(): Traversable
     {
         yield new CorePersonContactErasureHandler($this->db);
+        yield new OrganizationMembershipErasureHandler($this->db);
         yield new CoreAccountSettingsErasureHandler($this->db);
         yield from $this->moduleHandlers;
     }

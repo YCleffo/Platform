@@ -77,7 +77,7 @@ final readonly class PersonalDataContributorsCest
             foreach ($export->sections as $section) {
                 assertTrue($section->records !== []);
             }
-            assertSame(9, count($container->get(PersonalDataContributorRegistry::class)->all()));
+            assertSame(10, count($container->get(PersonalDataContributorRegistry::class)->all()));
             assertTrue(str_contains($export->json, 'export@example.test'));
             assertTrue(str_contains($export->json, 'contact@example.test'));
             assertTrue(!str_contains($export->json, 'SECRET_HASH_123'));

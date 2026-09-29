@@ -53,6 +53,7 @@ use App\Core\Auth\Api\RequestPasswordResetAction;
 use App\Core\Auth\Api\RevokeOtherSessionsAction;
 use App\Core\Auth\Api\RevokeSessionAction;
 use App\Core\Auth\Api\UpdatePreferencesAction;
+use App\Core\Organization\Api\OrganizationAction;
 use App\Core\Auth\Api\TotpConfirmAction;
 use App\Core\Auth\Api\TotpDisableAction;
 use App\Core\Auth\Api\TotpSetupAction;
@@ -483,6 +484,37 @@ return [
         ->middleware(RequireAuthentication::class)
         ->action(RevokeOtherSessionsAction::class)
         ->name('auth/sessions/revoke-others'),
+
+    // Platform administration only. Domain APIs must enforce their own organization and relationship scope.
+    Route::get('/api/core/organizations')
+        ->defaults(['operation' => 'list'])
+        ->middleware(RequireAuthentication::class, $permission('core.organizations.read'))
+        ->action(OrganizationAction::class)
+        ->name('core/organizations/index'),
+
+    Route::post('/api/core/organizations')
+        ->defaults(['operation' => 'create'])
+        ->middleware(RequireAuthentication::class, $permission('core.organizations.manage'))
+        ->action(OrganizationAction::class)
+        ->name('core/organizations/create'),
+
+    Route::get('/api/core/organizations/{id}/members')
+        ->defaults(['operation' => 'members'])
+        ->middleware(RequireAuthentication::class, $permission('core.organization_memberships.read'))
+        ->action(OrganizationAction::class)
+        ->name('core/organization-memberships/index'),
+
+    Route::post('/api/core/organizations/{id}/members')
+        ->defaults(['operation' => 'add'])
+        ->middleware(RequireAuthentication::class, $permission('core.organization_memberships.manage'))
+        ->action(OrganizationAction::class)
+        ->name('core/organization-memberships/create'),
+
+    Route::post('/api/core/organizations/{id}/members/{personId}/leave')
+        ->defaults(['operation' => 'leave'])
+        ->middleware(RequireAuthentication::class, $permission('core.organization_memberships.manage'))
+        ->action(OrganizationAction::class)
+        ->name('core/organization-memberships/leave'),
 
     Route::get('/api/core/persons')
         ->middleware(RequireAuthentication::class, $permission('core.persons.read'))

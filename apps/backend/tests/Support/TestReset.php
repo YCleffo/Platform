@@ -27,6 +27,8 @@ final class TestReset
             $db->createCommand('DELETE FROM core.inbox_events')->execute();
             $db->createCommand('DELETE FROM core.audit_events')->execute();
             $db->createCommand('DELETE FROM core.auth_challenges')->execute();
+            $db->createCommand('DELETE FROM core.organization_memberships')->execute();
+            $db->createCommand('DELETE FROM core.organizations')->execute();
             $db->createCommand('DELETE FROM core.privacy_cleanup_runs')->execute();
 
             // Isolated test reset may discard consent history; production writes cannot.

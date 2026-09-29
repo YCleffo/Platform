@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Privacy\Infrastructure;
 
 use App\Core\Privacy\Application\PersonalDataContributor;
+use App\Core\Organization\Infrastructure\OrganizationMembershipPersonalDataContributor;
 use IteratorAggregate;
 use Traversable;
 use Yiisoft\Db\Connection\ConnectionInterface;
@@ -21,6 +22,7 @@ final readonly class CorePersonalDataContributorProvider implements IteratorAggr
     public function getIterator(): Traversable
     {
         yield new AuthPersonalDataContributor($this->db);
+        yield new OrganizationMembershipPersonalDataContributor($this->db);
         foreach (CorePersonalDataContributor::codes() as $code) {
             yield new CorePersonalDataContributor($this->db, $code);
         }
