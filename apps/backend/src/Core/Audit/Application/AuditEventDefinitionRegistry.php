@@ -26,6 +26,11 @@ final class AuditEventDefinitionRegistry
                 $action, ['organizationId' => 'uuid', 'personId' => 'uuid'],
             );
         }
+        foreach (['service_credential.created', 'service_credential.rotated', 'service_credential.revoked'] as $action) {
+            $this->definitions[$action] = new AuditEventDefinition(
+                $action, ['accountId' => 'uuid', 'scopes' => 'code_list'],
+            );
+        }
         foreach ($additionalDefinitions as $definition) {
             if (str_starts_with($definition->action, 'privacy.') || isset($this->definitions[$definition->action])) {
                 throw new InvalidArgumentException('Duplicate or reserved audit action definition.');

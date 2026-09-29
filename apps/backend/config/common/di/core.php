@@ -77,6 +77,9 @@ use App\Core\Person\Infrastructure\PostgresPersonRepository;
 use App\Core\Person\Infrastructure\CanonicalContactNormalizer;
 use App\Core\Organization\Application\OrganizationRepository;
 use App\Core\Organization\Infrastructure\PostgresOrganizationRepository;
+use App\Core\Auth\Application\ServiceCredentialRepository;
+use App\Core\Auth\Application\ServiceCredentialScopeRegistry;
+use App\Core\Auth\Infrastructure\PostgresServiceCredentialRepository;
 use App\Core\Rbac\Application\PermissionRepository;
 use App\Core\Rbac\Application\RoleRepository;
 use App\Core\Rbac\Infrastructure\PostgresPermissionRepository;
@@ -233,6 +236,10 @@ return [
         'class' => PostgresPersonRepository::class,
     ],
     OrganizationRepository::class => ['class' => PostgresOrganizationRepository::class],
+    ServiceCredentialRepository::class => ['class' => PostgresServiceCredentialRepository::class],
+    ServiceCredentialScopeRegistry::class => [
+        '__construct()' => ['additionalScopes' => $params['serviceCredentialScopes'] ?? []],
+    ],
     PersonContactRepository::class => [
         'class' => PostgresPersonContactRepository::class,
     ],

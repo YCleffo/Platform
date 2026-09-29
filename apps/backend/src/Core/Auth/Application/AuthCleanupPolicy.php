@@ -12,8 +12,9 @@ final readonly class AuthCleanupPolicy
         public int $challengeRetentionDays,
         public int $recoveryCodeRetentionDays,
         public int $batchSize,
+        public int $serviceCredentialRetentionDays = 90,
     ) {
-        if ($challengeRetentionDays < 1 || $recoveryCodeRetentionDays < 1) {
+        if ($challengeRetentionDays < 1 || $recoveryCodeRetentionDays < 1 || $serviceCredentialRetentionDays < 1) {
             throw new InvalidArgumentException('Authentication cleanup retention must be at least one day.');
         }
         if ($batchSize < 1 || $batchSize > 10_000) {

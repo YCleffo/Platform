@@ -19,7 +19,7 @@ final readonly class ControlPrivacyRetentionPolicy
     /** @return list<string> */
     public static function categories(): array
     {
-        return ['verification', 'session', 'rate_limit', 'idempotency', 'outbox', 'audit'];
+        return ['verification', 'session', 'rate_limit', 'idempotency', 'outbox', 'audit', 'service_credential'];
     }
 
     public function days(string $category): int

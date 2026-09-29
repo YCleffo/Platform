@@ -36,6 +36,7 @@ final readonly class PostgresAuthCleanupRepository implements AuthCleanupReposit
             ),
             recoveryCodes: $this->deleteRecoveryCodes($policy),
             pendingTotpFactors: $this->deletePendingTotpFactors($policy->batchSize),
+            serviceCredentials: $this->deleteServiceCredentials($policy),
         );
     }
 
@@ -111,5 +112,18 @@ final readonly class PostgresAuthCleanupRepository implements AuthCleanupReposit
             SQL,
             [':batch_size' => $batchSize],
         )->execute();
+    }
+
+    private function deleteServiceCredentials(AuthCleanupPolicy $policy): int
+    {
+        return $this->db->createCommand(<<<'SQL'
+            WITH candidates AS (
+                SELECT id FROM core.service_credentials
+                WHERE (status <> 'active' AND COALESCE(revoked_at, rotated_at) < now() - make_interval(days => CAST(:days AS integer)))
+                   OR (expires_at < now() - make_interval(days => CAST(:days AS integer)))
+                ORDER BY created_at, id FOR UPDATE SKIP LOCKED LIMIT :batch_size
+            )
+            DELETE FROM core.service_credentials t USING candidates WHERE t.id = candidates.id
+            SQL, [':days' => $policy->serviceCredentialRetentionDays, ':batch_size' => $policy->batchSize])->execute();
     }
 }

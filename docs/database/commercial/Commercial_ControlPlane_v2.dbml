@@ -632,3 +632,17 @@ Table commercial.payment_methods {
   status varchar(24) [not null]
   Note: 'Planned. No PAN/CVV. SBP is a method capability.'
 }
+
+Table commercial.service_credentials {
+  id uuid [pk, not null, default: `uuidv7()`]
+  deployment_id uuid [not null, ref: > commercial.deployments.id]
+  credential_id uuid [not null, unique, default: `uuidv4()`]
+  secret_hash bytea [not null, note: 'SHA-256 only, 32 bytes']
+  status varchar(16) [not null, default: 'active', note: 'active / rotated / revoked']
+  scopes text[] [not null]
+  created_at timestamptz [not null, default: `now()`]
+  expires_at timestamptz
+  last_used_at timestamptz
+  rotated_at timestamptz
+  revoked_at timestamptz
+}

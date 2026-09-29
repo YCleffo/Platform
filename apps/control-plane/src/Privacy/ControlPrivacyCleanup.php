@@ -26,6 +26,7 @@ final readonly class ControlPrivacyCleanup
             'idempotency' => ['idempotency_keys', 'id', "t.status <> 'pending' AND t.expires_at IS NOT NULL AND t.expires_at < now() - (? * interval '1 day')"],
             'outbox' => ['outbox_events', 'id', "t.status IN ('published','dead') AND COALESCE(t.published_at, t.created_at) < now() - (? * interval '1 day') AND NOT EXISTS (SELECT 1 FROM commercial.privacy_holds h WHERE h.released_at IS NULL)"],
             'audit' => ['audit_events', 'id', "t.occurred_at < now() - (? * interval '1 day') AND NOT EXISTS (SELECT 1 FROM commercial.privacy_holds h WHERE h.released_at IS NULL)"],
+            'service_credential' => ['service_credentials', 'id', "COALESCE(CASE WHEN t.status <> 'active' THEN COALESCE(t.revoked_at, t.rotated_at) END, t.expires_at) < now() - (? * interval '1 day') AND NOT EXISTS (SELECT 1 FROM commercial.privacy_holds h WHERE h.released_at IS NULL)"],
             default => throw new \DomainException('Unknown Control Plane cleanup category.'),
         };
         [$selected, $deleted] = $this->connection->transactional(function (Connection $connection) use ($category, $table, $key, $eligible, $days, $limit, $dryRun): array {

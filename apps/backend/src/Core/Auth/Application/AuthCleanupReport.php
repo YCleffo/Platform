@@ -12,6 +12,7 @@ final readonly class AuthCleanupReport
         public int $cancelledChallenges,
         public int $recoveryCodes,
         public int $pendingTotpFactors,
+        public int $serviceCredentials = 0,
     ) {}
 
     public function total(): int
@@ -20,6 +21,7 @@ final readonly class AuthCleanupReport
             + $this->consumedChallenges
             + $this->cancelledChallenges
             + $this->recoveryCodes
-            + $this->pendingTotpFactors;
+            + $this->pendingTotpFactors
+            + $this->serviceCredentials;
     }
 }

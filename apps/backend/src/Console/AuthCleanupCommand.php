@@ -32,6 +32,7 @@ final class AuthCleanupCommand extends Command
         $output->writeln(sprintf('Cancelled challenges removed: %d', $report->cancelledChallenges));
         $output->writeln(sprintf('Revoked/used recovery codes removed: %d', $report->recoveryCodes));
         $output->writeln(sprintf('Expired TOTP setups removed: %d', $report->pendingTotpFactors));
+        $output->writeln(sprintf('Obsolete service credentials removed: %d', $report->serviceCredentials));
         $output->writeln(sprintf('Total removed: %d', $report->total()));
         return Command::SUCCESS;
     }

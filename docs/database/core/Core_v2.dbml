@@ -1244,3 +1244,18 @@ Table core.organization_memberships {
     (person_id, organization_id) [name: 'idx_organization_memberships_person']
   }
 }
+
+Table core.service_credentials {
+  id uuid [pk, not null, default: `uuidv7()`]
+  account_id uuid [not null, ref: > core.accounts.id]
+  credential_id uuid [not null, unique, default: `uuidv4()`]
+  secret_hash bytea [not null, note: 'SHA-256 only, 32 bytes']
+  status varchar(16) [not null, default: 'active', note: 'active / rotated / revoked']
+  scopes text[] [not null]
+  created_at timestamptz [not null, default: `now()`]
+  expires_at timestamptz
+  last_used_at timestamptz
+  rotated_at timestamptz
+  revoked_at timestamptz
+  created_by_account_id uuid [ref: > core.accounts.id]
+}

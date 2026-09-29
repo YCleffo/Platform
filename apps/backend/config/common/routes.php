@@ -53,6 +53,7 @@ use App\Core\Auth\Api\RequestPasswordResetAction;
 use App\Core\Auth\Api\RevokeOtherSessionsAction;
 use App\Core\Auth\Api\RevokeSessionAction;
 use App\Core\Auth\Api\UpdatePreferencesAction;
+use App\Core\Auth\Api\ServiceCredentialAction;
 use App\Core\Organization\Api\OrganizationAction;
 use App\Core\Auth\Api\TotpConfirmAction;
 use App\Core\Auth\Api\TotpDisableAction;
@@ -550,6 +551,30 @@ return [
         ->middleware(RequireAuthentication::class, $permission('core.persons.manage'))
         ->action(CreatePersonContactAction::class)
         ->name('core/person-contacts/create'),
+
+    Route::post('/api/core/accounts/{accountId}/service-credentials')
+        ->defaults(['operation' => 'create'])
+        ->middleware(RequireAuthentication::class, $permission('core.service_credentials.manage'))
+        ->action(ServiceCredentialAction::class)
+        ->name('core/service-credentials/create'),
+
+    Route::get('/api/core/accounts/{accountId}/service-credentials')
+        ->defaults(['operation' => 'list'])
+        ->middleware(RequireAuthentication::class, $permission('core.service_credentials.read'))
+        ->action(ServiceCredentialAction::class)
+        ->name('core/service-credentials/index'),
+
+    Route::post('/api/core/accounts/{accountId}/service-credentials/{credentialId}/rotate')
+        ->defaults(['operation' => 'rotate'])
+        ->middleware(RequireAuthentication::class, $permission('core.service_credentials.manage'))
+        ->action(ServiceCredentialAction::class)
+        ->name('core/service-credentials/rotate'),
+
+    Route::post('/api/core/accounts/{accountId}/service-credentials/{credentialId}/revoke')
+        ->defaults(['operation' => 'revoke'])
+        ->middleware(RequireAuthentication::class, $permission('core.service_credentials.manage'))
+        ->action(ServiceCredentialAction::class)
+        ->name('core/service-credentials/revoke'),
 
     Route::get('/api/core/accounts')
         ->middleware(RequireAuthentication::class, $permission('core.accounts.read'))

@@ -126,6 +126,7 @@ return [
         'cleanup' => [
             'challengeRetentionDays' => (int) $envOr('AUTH_CHALLENGE_RETENTION_DAYS', '30'),
             'recoveryCodeRetentionDays' => (int) $envOr('AUTH_RECOVERY_CODE_RETENTION_DAYS', '30'),
+            'serviceCredentialRetentionDays' => (int) $envOr('AUTH_SERVICE_CREDENTIAL_RETENTION_DAYS', '90'),
             'batchSize' => (int) $envOr('AUTH_CLEANUP_BATCH_SIZE', '500'),
         ],
         'recentAuthenticationSeconds' => (int) $envOr('AUTH_RECENT_AUTH_SECONDS', '600'),
