@@ -35,4 +35,9 @@ final readonly class ProcessingRestrictionContributorRegistry
             static fn(ProcessingRestrictionContributor $contributor): bool =>
                 $contributor->supports($scopeType, $purposeCode, $resourceType)));
     }
+
+    public function available(): bool
+    {
+        return $this->contributors !== [];
+    }
 }

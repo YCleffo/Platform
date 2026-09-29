@@ -17,6 +17,8 @@ use App\Core\Privacy\Api\ManageRepresentationAction;
 use App\Core\Privacy\Api\OwnPrivacyRequestsAction;
 use App\Core\Privacy\Api\ManagePrivacyRequestsAction;
 use App\Core\Privacy\Api\ManageProcessingBlocksAction;
+use App\Core\Privacy\Api\ManageLegalHoldsAction;
+use App\Core\Privacy\Api\ExecuteProcessingTerminationAction;
 use App\Core\Privacy\Api\PersonalDataExportAction;
 use App\Core\Privacy\Api\ManagePrivacyCorrectionAction;
 use App\Core\Auth\Api\ListSessionsAction;
@@ -322,6 +324,28 @@ return [
         ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
         ->action(ManageProcessingBlocksAction::class)
         ->name('core/privacy/blocks/release'),
+
+    Route::post('/api/core/privacy/requests/{id}/processing-termination/execute')
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
+        ->action(ExecuteProcessingTerminationAction::class)
+        ->name('core/privacy/requests/processing-termination/execute'),
+
+    Route::post('/api/core/privacy/legal-holds')
+        ->defaults(['operation' => 'create'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.legal_holds.manage'))
+        ->action(ManageLegalHoldsAction::class)->name('core/privacy/legal-holds/create'),
+    Route::get('/api/core/privacy/legal-holds')
+        ->defaults(['operation' => 'list'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.legal_holds.read'))
+        ->action(ManageLegalHoldsAction::class)->name('core/privacy/legal-holds/list'),
+    Route::get('/api/core/privacy/legal-holds/{id}')
+        ->defaults(['operation' => 'get'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.legal_holds.read'))
+        ->action(ManageLegalHoldsAction::class)->name('core/privacy/legal-holds/get'),
+    Route::post('/api/core/privacy/legal-holds/{id}/release')
+        ->defaults(['operation' => 'release'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.legal_holds.manage'))
+        ->action(ManageLegalHoldsAction::class)->name('core/privacy/legal-holds/release'),
 
     Route::post('/api/auth/me/presence/heartbeat')
         ->middleware(RequireAuthentication::class)

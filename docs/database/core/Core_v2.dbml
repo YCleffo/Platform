@@ -310,6 +310,9 @@ Table core.data_subject_request_executions {
   result_sha256 char(64)
   result_size_bytes bigint
   changed_paths text[]
+  stopped_purpose_codes text[]
+  retained_purpose_codes text[]
+  reason_codes text[]
   error_code varchar(120)
   started_at timestamptz [not null]
   completed_at timestamptz
@@ -344,6 +347,53 @@ Table core.privacy_processing_blocks {
     source_request_id [name: 'idx_privacy_blocks_request']
   }
   Note: 'Migration 022. Subject, purpose and semantic resource scopes; expiration is evaluated at read time.'
+}
+
+Table core.privacy_legal_holds {
+  id uuid [pk, not null, default: `uuidv7()`]
+  subject_person_id uuid
+  scope_type varchar(20) [not null]
+  purpose_code varchar(120)
+  resource_type varchar(120)
+  resource_id uuid
+  reason_code varchar(120) [not null]
+  source_type varchar(120)
+  source_reference varchar(160)
+  created_at timestamptz [not null]
+  created_by_account_id uuid [not null]
+  expires_at timestamptz
+  released_at timestamptz
+  released_by_account_id uuid
+  release_reason_code varchar(120)
+
+  indexes {
+    (subject_person_id, scope_type, expires_at) [name: 'idx_privacy_hold_subject_active']
+    (resource_type, resource_id) [name: 'idx_privacy_hold_resource_active']
+  }
+  Note: 'Migration 024. Machine code scoped hold evidence; active when unreleased and unexpired.'
+}
+
+Table core.privacy_retention_decisions {
+  id uuid [pk, not null, default: `uuidv7()`]
+  subject_person_id uuid [not null]
+  resource_type varchar(120) [not null]
+  resource_id uuid [not null]
+  purpose_code varchar(120) [not null]
+  policy_code varchar(120) [not null]
+  decision_code varchar(120) [not null]
+  trigger_code varchar(120) [not null]
+  triggered_at timestamptz
+  eligible_at timestamptz
+  legal_hold_id uuid
+  source_request_id uuid
+  evaluated_at timestamptz [not null]
+  evaluator_version varchar(40) [not null]
+
+  indexes {
+    (subject_person_id, evaluated_at) [name: 'idx_privacy_retention_subject']
+    (resource_type, resource_id, evaluated_at) [name: 'idx_privacy_retention_resource']
+  }
+  Note: 'Migration 024. Append-only decisions are eligibility evidence, not deletion evidence.'
 }
 
 Table core.privacy_consents {
@@ -986,6 +1036,12 @@ Ref: core.privacy_processing_blocks.subject_person_id > core.persons.id [delete:
 Ref: core.privacy_processing_blocks.source_request_id > core.data_subject_requests.id [delete: restrict]
 Ref: core.privacy_processing_blocks.released_by_account_id > core.accounts.id [delete: restrict]
 Ref: core.privacy_processing_blocks.created_by_account_id > core.accounts.id [delete: restrict]
+Ref: core.privacy_legal_holds.subject_person_id > core.persons.id [delete: restrict]
+Ref: core.privacy_legal_holds.created_by_account_id > core.accounts.id [delete: restrict]
+Ref: core.privacy_legal_holds.released_by_account_id > core.accounts.id [delete: restrict]
+Ref: core.privacy_retention_decisions.subject_person_id > core.persons.id [delete: restrict]
+Ref: core.privacy_retention_decisions.legal_hold_id > core.privacy_legal_holds.id [delete: restrict]
+Ref: core.privacy_retention_decisions.source_request_id > core.data_subject_requests.id [delete: restrict]
 Ref: core.privacy_consents.granted_by_account_id > core.accounts.id [delete: restrict]
 Ref: core.privacy_consents.subject_person_id > core.persons.id [delete: restrict]
 Ref: core.privacy_consents.granted_by_person_id > core.persons.id [delete: restrict]

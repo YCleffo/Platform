@@ -35,12 +35,19 @@ final class AuditEventDefinitionRegistry
                 'privacy.request.cancelled', 'privacy.processing_block.created',
                 'privacy.processing_block.released', 'privacy.request.correction_confirmed',
                 'privacy.request.execution_completed', 'privacy.request.execution_failed',
-                'privacy.data.export.issued', 'privacy.data.correction.completed' => new AuditEventDefinition($action, [
+                'privacy.data.export.issued', 'privacy.data.correction.completed',
+                'privacy.legal_hold.created', 'privacy.legal_hold.released',
+                'privacy.retention.evaluated', 'privacy.retention.decision_changed',
+                'privacy.processing_termination.started', 'privacy.processing_termination.completed',
+                'privacy.processing_termination.partially_completed', 'privacy.processing_termination.failed'
+                    => new AuditEventDefinition($action, [
                     'requestType' => 'code', 'fromStatus' => 'code', 'toStatus' => 'code',
                     'deadlineCode' => 'code', 'reasonCode' => 'code',
                     'scopeType' => 'code', 'purposeCode' => 'code',
                     'executionCode' => 'code', 'contributorCode' => 'code',
                     'resourceType' => 'code', 'changedPaths' => 'path_list',
+                    'policyCode' => 'code', 'decisionCode' => 'code',
+                    'stoppedPurposeCodes' => 'code_list', 'retainedPurposeCodes' => 'code_list',
                 ], [], []),
                 default => $this->definitions[$action] ?? null,
             };

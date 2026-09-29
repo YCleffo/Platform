@@ -9,4 +9,5 @@ return [
     'db:check' => Console\DbCheckCommand::class,
     'communication:process-email' => Console\ProcessEmailOutboxCommand::class,
     'core:bootstrap-superadmin' => Console\BootstrapSuperadminCommand::class,
+    'privacy/retention/evaluate' => Console\RetentionEvaluateCommand::class,
 ];

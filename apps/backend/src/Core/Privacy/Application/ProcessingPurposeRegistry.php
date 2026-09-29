@@ -38,4 +38,10 @@ final class ProcessingPurposeRegistry
     {
         return $this->definitions[$code] ?? null;
     }
+
+    /** @return list<string> */
+    public function codes(): array
+    {
+        return array_keys($this->definitions);
+    }
 }

@@ -12,7 +12,9 @@ final readonly class PrivacyRequestExecutionCapabilityRegistry
     public function __construct(private PersonalDataContributorRegistry $exportContributors,
         private PersonalDataCorrectionContributorRegistry $correctionContributors,
         private ProcessingRestrictionContributorRegistry $restrictionContributors,
-        private DataSubjectRequestTypeRegistry $types) {}
+        private DataSubjectRequestTypeRegistry $types,
+        private ?RetentionCandidateContributorRegistry $retentionCandidates = null,
+        private ?ProcessingPurposeRegistry $purposes = null) {}
 
     public function available(string $requestType): bool
     {
@@ -22,6 +24,10 @@ final readonly class PrivacyRequestExecutionCapabilityRegistry
             'privacy.data.correction' => $this->correctionContributors->available(),
             // Restriction requires scope-specific enforcement before completion can be offered.
             'privacy.processing.restriction' => false,
+            'privacy.processing.termination' => ($this->retentionCandidates?->available() ?? false)
+                && ($this->purposes?->codes() ?? []) !== []
+                && ($this->retentionCandidates?->coversAll($this->purposes?->codes() ?? []) ?? false)
+                && $this->restrictionContributors->available(),
             default => false,
         };
     }

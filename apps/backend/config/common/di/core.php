@@ -17,6 +17,10 @@ use App\Core\Consent\Application\ConsentDefinitionRegistry;
 use App\Core\Privacy\Application\DataCategoryRegistry;
 use App\Core\Privacy\Application\ProcessingPurposeRegistry;
 use App\Core\Privacy\Application\RetentionPolicyRegistry;
+use App\Core\Privacy\Application\LawfulProcessingBasisContributorRegistry;
+use App\Core\Privacy\Application\RetentionCandidateContributorRegistry;
+use App\Core\Privacy\Application\RetentionDependencyContributorRegistry;
+use App\Core\Privacy\Application\PrivacyRequestExecutionCapabilityRegistry;
 use App\Core\Privacy\Application\RepresentativeAuthorityPolicy;
 use App\Core\Privacy\Application\RepresentationScopeRegistry;
 use App\Core\Privacy\Application\BusinessCalendarInterface;
@@ -70,6 +74,7 @@ use App\Core\Settings\Infrastructure\PostgresModuleSettingsRepository;
 use App\Core\Settings\Infrastructure\PostgresSystemSettingsRepository;
 use Yiisoft\Definitions\Reference;
 
+/** @var array<string, mixed> $params */
 return [
     AccountRepository::class => [
         'class' => PostgresAccountRepository::class,
@@ -97,6 +102,21 @@ return [
     ],
     RetentionPolicyRegistry::class => [
         '__construct()' => ['definitions' => $params['retentionPolicyDefinitions'] ?? []],
+    ],
+    LawfulProcessingBasisContributorRegistry::class => [
+        '__construct()' => ['contributors' => $params['lawfulProcessingBasisContributors'] ?? []],
+    ],
+    RetentionCandidateContributorRegistry::class => [
+        '__construct()' => ['contributors' => $params['retentionCandidateContributors'] ?? []],
+    ],
+    RetentionDependencyContributorRegistry::class => [
+        '__construct()' => ['contributors' => $params['retentionDependencyContributors'] ?? []],
+    ],
+    PrivacyRequestExecutionCapabilityRegistry::class => [
+        '__construct()' => [
+            'retentionCandidates' => Reference::to(RetentionCandidateContributorRegistry::class),
+            'purposes' => Reference::to(ProcessingPurposeRegistry::class),
+        ],
     ],
     ProcessingPurposeRegistry::class => [
         '__construct()' => ['definitions' => $params['processingPurposeDefinitions'] ?? []],
