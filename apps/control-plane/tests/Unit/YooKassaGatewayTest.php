@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ControlPlane\Tests\Unit;
 
+use ControlPlane\Privacy\ControlProviderEgressPolicy;
 use ControlPlane\Payment\Provider\PaymentProviderException;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPaymentRequest;
@@ -26,6 +27,17 @@ final class YooKassaGatewayTest extends TestCase
     protected function tearDown(): void
     {
         putenv(self::SECRET_VARIABLE);
+    }
+
+    public function testUnknownEgressDecisionBlocksBeforeHttp(): void
+    {
+        $client = new MockHttpClient(static function (): never {
+            self::fail('HTTP must not be called for unknown egress.');
+        });
+        $gateway = new YooKassaGateway($client, new EnvPaymentProviderSecretResolver(),
+            'https://platform.example/payments/return', new ControlProviderEgressPolicy([]));
+        $this->expectException(\DomainException::class);
+        $gateway->getPayment($this->account(), 'yk-payment-1');
     }
 
     public function testCreatesExactSbpRedirectRequestWithoutExposingSecret(): void
@@ -137,7 +149,12 @@ final class YooKassaGatewayTest extends TestCase
 
     private function gateway(MockHttpClient $client): YooKassaGateway
     {
-        return new YooKassaGateway($client, new EnvPaymentProviderSecretResolver(), 'https://platform.example/payments/return');
+        return new YooKassaGateway($client, new EnvPaymentProviderSecretResolver(),
+            'https://platform.example/payments/return', new ControlProviderEgressPolicy(['yookassa' => [
+                'status' => 'allowed', 'country' => 'RU', 'purposes' => ['payment'],
+                'data_categories' => ['payment_reference', 'billing_contact'],
+                'evidence_reference' => 'test-provider', 'notification_status' => 'not_required',
+            ]]));
     }
 
     private function account(): ProviderAccount

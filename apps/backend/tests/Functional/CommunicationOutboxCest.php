@@ -108,6 +108,39 @@ final readonly class CommunicationOutboxCest
         }
     }
 
+    public function deadEmailPayloadIsScrubbed(FunctionalTester $tester): void
+    {
+        [$db, $outbox] = $this->dependencies();
+        $transaction = $db->beginTransaction();
+        try {
+            $event = $outbox->enqueue($this->emailEvent(bin2hex(random_bytes(6))));
+            $sender = new SequenceEmailSender([
+                EmailDeliveryResult::failure('secret'),
+                EmailDeliveryResult::failure('secret'),
+                EmailDeliveryResult::failure('secret'),
+            ]);
+            $processor = $this->processor($outbox, $sender);
+            for ($attempt = 0; $attempt < 3; ++$attempt) {
+                $processor->process('communication-dead-' . $event->id);
+                if ($attempt < 2) {
+                    $db->createCommand('UPDATE core.outbox_events SET available_at = now() WHERE id = :id',
+                        [':id' => $event->id])->execute();
+                }
+            }
+            assertSame('dead', $this->status($db, $event->id));
+            assertSame('{}', (string) $db->createCommand(
+                'SELECT payload::text FROM core.outbox_events WHERE id = :id',
+                [':id' => $event->id])->queryScalar());
+            assertSame('{}', (string) $db->createCommand(
+                'SELECT headers::text FROM core.outbox_events WHERE id = :id',
+                [':id' => $event->id])->queryScalar());
+        } finally {
+            if ($transaction->isActive()) {
+                $transaction->rollBack();
+            }
+        }
+    }
+
     public function backgroundLocaleAndQueuedEmailAreDeterministic(FunctionalTester $tester): void
     {
         $runner = new HttpApplicationRunner(

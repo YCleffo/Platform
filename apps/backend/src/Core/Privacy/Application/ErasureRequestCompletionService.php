@@ -19,8 +19,10 @@ final readonly class ErasureRequestCompletionService
     /** @param array{status:string,completed:int,blocked:int,failed:int,pending:int} $summary */
     public function completeIfReady(AuthenticatedIdentity $actor, string $caseId, array $summary): ?string
     {
-        if ($summary['pending'] > 0 || $summary['completed'] === 0
-            || !in_array($summary['status'], ['completed', 'partially_completed'], true)) {
+        if ($summary['pending'] > 0 || $summary['failed'] > 0 || $summary['completed'] === 0
+            || !in_array($summary['status'], ['completed', 'partially_completed'], true)
+            || ($summary['status'] === 'completed' && $summary['blocked'] !== 0)
+            || ($summary['status'] === 'partially_completed' && $summary['blocked'] === 0)) {
             return null;
         }
         return $this->db->transaction(function () use ($actor, $caseId, $summary): ?string {
@@ -30,6 +32,17 @@ final readonly class ErasureRequestCompletionService
                 SQL, [':case' => $caseId])->queryOne();
             if (!is_array($case) || $case['source_request_id'] === null) {
                 return null;
+            }
+            if ($summary['blocked'] > 0) {
+                $nonLegalBlocks = (int) $this->db->createCommand(<<<'SQL'
+                    SELECT count(*) FROM core.privacy_erasure_items
+                    WHERE case_id = CAST(:case AS uuid) AND status = 'blocked'
+                        AND failure_code NOT IN
+                            ('blocked_by_legal_hold', 'blocked_by_active_basis', 'not_yet_eligible')
+                    SQL, [':case' => $caseId])->queryScalar();
+                if ($nonLegalBlocks > 0) {
+                    return null;
+                }
             }
             $requestId = (string) $case['source_request_id'];
             $request = $this->db->createCommand(<<<'SQL'

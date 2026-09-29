@@ -15,6 +15,7 @@ final readonly class EmailMessage
         public string $htmlBody,
         public string $textBody,
         public string $messageId,
+        public string $privacyPurposeCode = 'communication_email',
     ) {
         if (filter_var($recipientAddress, FILTER_VALIDATE_EMAIL) === false) {
             throw new InvalidArgumentException('Recipient address is invalid.');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ControlPlane\Payment\Provider\YooKassa;
 
 use ControlPlane\Billing\Domain\Money;
+use ControlPlane\Privacy\ControlProviderEgressPolicy;
 use ControlPlane\Payment\Provider\FiscalReceiptItem;
 use ControlPlane\Payment\Provider\FiscalReceiptProviderGateway;
 use ControlPlane\Payment\Provider\FiscalReceiptRequest;
@@ -20,7 +21,8 @@ final readonly class YooKassaReceiptGateway implements FiscalReceiptProviderGate
 {
     private const API_BASE = 'https://api.yookassa.ru/v3/receipts';
 
-    public function __construct(private HttpClientInterface $httpClient, private PaymentProviderSecretResolver $secrets)
+    public function __construct(private HttpClientInterface $httpClient, private PaymentProviderSecretResolver $secrets,
+        private ControlProviderEgressPolicy $egress)
     {
     }
 
@@ -85,6 +87,7 @@ final readonly class YooKassaReceiptGateway implements FiscalReceiptProviderGate
     /** @param array<string, mixed> $options */
     private function request(string $method, string $url, ProviderAccount $account, array $options): ProviderReceipt
     {
+        $this->egress->assertAllowed('yookassa', 'fiscal_receipt', ['billing_contact', 'fiscal_details']);
         $options['auth_basic'] = [$account->externalAccountId, $this->secrets->resolve($account->secretRef)];
         $options['timeout'] = 10.0;
         $options['max_duration'] = 15.0;

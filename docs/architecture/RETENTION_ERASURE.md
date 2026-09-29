@@ -12,4 +12,6 @@ Processing blocks restrict processing; legal holds independently prevent destruc
 
 Backup expiry and restoration controls are a deployment responsibility: a primary-data deletion does not immediately remove immutable backup copies. A restore must suppress use of data erased after its backup was taken and reapply those erasures before serving restored data. See [ERASURE.md](ERASURE.md).
 
-Status: retention evaluation **IMPLEMENTED**; Legal Hold **IMPLEMENTED**; erasure orchestration **IMPLEMENTED**; physical Core erasure **IMPLEMENTED where a handler exists**; destruction evidence **IMPLEMENTED**. Audit/Outbox/Inbox cleanup **NOT IMPLEMENTED**.
+Pass B5 prevents technical failure from satisfying an erasure request. Failed items remain retryable and the DSAR deadline stays open. Partial completion is reserved for deliberate legal/basis/eligibility blocks. Destruction evidence policy rejects periods shorter than three years. `privacy/cleanup` handles audit, outbox, inbox, DSAR history, expired blocks and holds, retention decisions, obsolete sessions and destruction evidence in bounded batches. It requires an approved duration per category and honors active holds. Dry-run is the default. Financial and other unconfigured categories remain retained.
+
+Status: retention evaluation, legal hold, erasure orchestration and policy-gated cleanup are implemented. Physical erasure remains limited to registered handlers and retention policy. The separate Control Plane boundary is documented in [CONTROL_PLANE_PRIVACY.md](../privacy/CONTROL_PLANE_PRIVACY.md).

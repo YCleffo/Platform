@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ControlPlane\Tests\Unit;
 
+use ControlPlane\Privacy\ControlProviderEgressPolicy;
+
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\RefundProviderRequest;
 use ControlPlane\Payment\Provider\YooKassa\EnvPaymentProviderSecretResolver;
@@ -37,7 +39,12 @@ final class YooKassaRefundGatewayTest extends TestCase
 
             return new MockResponse(json_encode(['id' => 'provider-refund', 'payment_id' => 'provider-payment', 'status' => 'succeeded', 'amount' => ['value' => '10.00', 'currency' => 'RUB'], 'description' => 'Refund ' . $localId, 'created_at' => '2026-09-27T10:00:00Z'], JSON_THROW_ON_ERROR));
         });
-        $gateway = new YooKassaRefundGateway($client, new EnvPaymentProviderSecretResolver());
+        $gateway = new YooKassaRefundGateway($client, new EnvPaymentProviderSecretResolver(),
+            new ControlProviderEgressPolicy(['yookassa' => [
+                'status' => 'allowed', 'country' => 'RU', 'purposes' => ['refund'],
+                'data_categories' => ['payment_reference', 'billing_contact'],
+                'evidence_reference' => 'test-provider', 'notification_status' => 'not_required',
+            ]]));
         $refund = $gateway->createRefund(new ProviderAccount('account', 'yookassa', 'shop', 'env:CONTROL_TEST_REFUND_SECRET'), new RefundProviderRequest('stable-refund-key', 'provider-payment', 1000, 'RUB', $localId));
 
         self::assertSame('succeeded', $refund->status);

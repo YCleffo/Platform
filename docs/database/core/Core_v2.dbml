@@ -1155,3 +1155,67 @@ Ref: core.feature_flags.updated_by_account_id > core.accounts.id [delete: set nu
 Ref: core.system_settings.updated_by_account_id > core.accounts.id [delete: set null]
 
 Ref: core.audit_events.actor_account_id > core.accounts.id [delete: set null]
+
+// Phase 4.1 Pass B5 (migrations 026-027).
+Table core.privacy_incidents {
+  id uuid [pk]
+  incident_type varchar(120) [not null]
+  status varchar(24) [not null]
+  containment_status varchar(24) [not null]
+  detected_at timestamptz [not null]
+  initial_notification_due_at timestamptz [not null]
+  initial_notification_at timestamptz
+  initial_notification_reference varchar(120)
+  investigation_notification_due_at timestamptz [not null]
+  investigation_notification_at timestamptz
+  investigation_notification_reference varchar(120)
+  estimated_subjects integer
+  safe_reason_code varchar(120) [not null]
+  created_by_account_id uuid [not null, ref: > core.accounts.id]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+Table core.privacy_incident_categories {
+  incident_id uuid [not null, ref: > core.privacy_incidents.id]
+  category_code varchar(120) [not null]
+  indexes { (incident_id, category_code) [pk] }
+}
+Table core.privacy_incident_subject_scope {
+  incident_id uuid [not null, ref: > core.privacy_incidents.id]
+  subject_person_id uuid [not null, ref: > core.persons.id]
+  indexes { (incident_id, subject_person_id) [pk] }
+}
+Table core.privacy_incident_events {
+  id uuid [pk]
+  incident_id uuid [not null, ref: > core.privacy_incidents.id]
+  event_code varchar(120) [not null]
+  from_status varchar(24)
+  to_status varchar(24)
+  reason_code varchar(120)
+  actor_account_id uuid [not null, ref: > core.accounts.id]
+  occurred_at timestamptz [not null]
+}
+Table core.privacy_distribution_consents {
+  id uuid [pk]
+  subject_person_id uuid [not null, ref: > core.persons.id]
+  granted_by_person_id uuid [not null, ref: > core.persons.id]
+  granted_by_account_id uuid [not null, ref: > core.accounts.id]
+  legal_representation_id uuid [ref: > core.legal_representations.id]
+  purpose_code varchar(120) [not null]
+  category_codes text[] [not null]
+  field_codes text[] [not null]
+  condition_codes text[] [not null]
+  restriction_codes text[] [not null]
+  document_version varchar(80) [not null]
+  document_sha256 char(64) [not null]
+  granted_at timestamptz [not null]
+  withdrawn_at timestamptz
+  created_at timestamptz [not null]
+}
+Table core.privacy_cleanup_runs {
+  id uuid [pk]
+  category_code varchar(120) [not null]
+  deleted_count integer [not null]
+  policy_days integer
+  executed_at timestamptz [not null]
+}

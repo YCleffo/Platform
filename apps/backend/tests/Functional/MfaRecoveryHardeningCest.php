@@ -92,7 +92,7 @@ final readonly class MfaRecoveryHardeningCest
 
             // Step 1: Request MFA recovery email
             $recoveryService->request($email, $context);
-            $emailToken = $this->grabAuthActionToken($db, $email);
+            $emailToken = $this->grabAuthActionToken($container, $db, $email);
 
             // Step 2: Confirm email token (no password) -> must require external reauth
             $confirmResult = $recoveryService->confirm($emailToken, null, $context);
@@ -203,7 +203,7 @@ final readonly class MfaRecoveryHardeningCest
 
             // Account A requests recovery
             $recoveryService->request($emailA, $context);
-            $emailToken = $this->grabAuthActionToken($db, $emailA);
+            $emailToken = $this->grabAuthActionToken($container, $db, $emailA);
             $confirmResult = $recoveryService->confirm($emailToken, null, $context);
 
             // Attacker or confused user completes OAuth callback returning Account B's profile
@@ -274,7 +274,7 @@ final readonly class MfaRecoveryHardeningCest
             $externalService = $this->service($container, $this->registry('telegram', $telegramProfile));
 
             $recoveryService->request($email, $context);
-            $emailToken = $this->grabAuthActionToken($db, $email);
+            $emailToken = $this->grabAuthActionToken($container, $db, $email);
 
             $confirmResult = $recoveryService->confirm($emailToken, null, $context);
             assertSame('external_reauth_required', $confirmResult->status);
@@ -324,7 +324,7 @@ final readonly class MfaRecoveryHardeningCest
             $externalService = $this->service($container, $this->registry('google', $profile));
 
             $recoveryService->request($email, $context);
-            $emailToken = $this->grabAuthActionToken($db, $email);
+            $emailToken = $this->grabAuthActionToken($container, $db, $email);
             $confirmResult = $recoveryService->confirm($emailToken, null, $context);
 
             $start = $externalService->startRecoveryReauthentication('google', (string) $confirmResult->recoveryToken, $context);
@@ -370,7 +370,7 @@ final readonly class MfaRecoveryHardeningCest
             $recoveryService = $container->get(MfaRecoveryService::class);
 
             $recoveryService->request($email, $context);
-            $emailToken = $this->grabAuthActionToken($db, $email);
+            $emailToken = $this->grabAuthActionToken($container, $db, $email);
 
             // Wrong password fails
             try {
@@ -409,7 +409,7 @@ final readonly class MfaRecoveryHardeningCest
             $recoveryService = $container->get(MfaRecoveryService::class);
 
             $recoveryService->request($email, $context);
-            $emailToken = $this->grabAuthActionToken($db, $email);
+            $emailToken = $this->grabAuthActionToken($container, $db, $email);
 
             $result = $recoveryService->confirm($emailToken, null, $context);
             assertSame('additional_recovery_required', $result->status);
@@ -506,7 +506,7 @@ final readonly class MfaRecoveryHardeningCest
         ));
     }
 
-    private function grabAuthActionToken(ConnectionInterface $db, string $email): string
+    private function grabAuthActionToken(ContainerInterface $container, ConnectionInterface $db, string $email): string
     {
         $payload = $db->createCommand(
             <<<'SQL'
@@ -523,7 +523,12 @@ final readonly class MfaRecoveryHardeningCest
             throw new RuntimeException('Authentication email event was not queued.');
         }
         $decoded = json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
-        $url = $decoded['variables']['actionUrl'] ?? null;
+        $variables = $decoded['variables'] ?? [];
+        assertFalse(isset($variables['actionUrl']));
+        assertFalse(str_contains($payload, 'token='));
+        $url = isset($variables['actionUrlCiphertext'], $variables['actionUrlKeyVersion'])
+            ? $container->get(AuthenticationPayloadCipher::class)->decrypt($variables['actionUrlCiphertext'], $variables['actionUrlKeyVersion'])
+            : ($variables['actionUrl'] ?? null);
         if (!is_string($url)) {
             throw new RuntimeException('Authentication action URL is missing.');
         }

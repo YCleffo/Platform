@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Communication\Application;
 
+use App\Core\Auth\Application\AuthenticationPayloadCipher;
 use App\Core\Internationalization\Application\SupportedLocales;
 use App\Core\Messaging\Application\OutboxEvent;
 
@@ -18,7 +19,8 @@ final readonly class EmailRequest
         public array $variables,
     ) {}
 
-    public static function fromEvent(OutboxEvent $event, SupportedLocales $supportedLocales): self
+    public static function fromEvent(OutboxEvent $event, SupportedLocales $supportedLocales,
+        ?AuthenticationPayloadCipher $cipher = null): self
     {
         $payload = $event->payload;
         if (($payload['schemaVersion'] ?? null) !== 1) {
@@ -66,6 +68,19 @@ final readonly class EmailRequest
                 throw new EmailEventPayloadException('Email variables must contain scalar values.');
             }
             $variables[$key] = $value;
+        }
+        if (isset($variables['actionUrlCiphertext'], $variables['actionUrlKeyVersion'])) {
+            if ($cipher === null || !is_string($variables['actionUrlCiphertext'])
+                || !is_int($variables['actionUrlKeyVersion'])) {
+                throw new EmailEventPayloadException('Encrypted action URL is invalid.');
+            }
+            try {
+                $variables['actionUrl'] = $cipher->decrypt(
+                    $variables['actionUrlCiphertext'], $variables['actionUrlKeyVersion']);
+            } catch (\RuntimeException $exception) {
+                throw new EmailEventPayloadException('Encrypted action URL cannot be read.', previous: $exception);
+            }
+            unset($variables['actionUrlCiphertext'], $variables['actionUrlKeyVersion']);
         }
 
         return new self(

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "status": "evidence_required",
+  "required_references": [
+    "threat_model", "harm_assessment", "ispdn_protection_level",
+    "authentication", "authorization", "access_logging", "event_registration",
+    "backup_recovery", "vulnerability_management", "security_updates",
+    "incident_handling", "transport_encryption", "storage_encryption",
+    "admin_access", "secrets_management", "data_residency",
+    "responsible_person", "processor_contracts", "transfer_decisions"
+  ],
+  "evidence": {}
+}

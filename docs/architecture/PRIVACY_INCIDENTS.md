@@ -1,3 +1,5 @@
-# Incident workflow boundary
+# Privacy incidents
 
-The incident registry and deadline policy belong to the remaining Phase 4.1 incident pass. No incident table or notification automation is present in the foundation pass. Future incident records must use safe bounded descriptions, normalized subject/category mapping when needed, policy-supplied deadlines, and audited state transitions. No hardcoded notification deadline or automatic authority submission is implied by this document.
+Core migration 026 stores incidents, affected category codes, subject scope and immutable status events. `PrivacyIncidentService` supports detected, investigating, contained and resolved states, records safe reason codes, and sets initial and investigation notification due times at 24 and 72 hours from detection. External notification timestamps are recorded only after an authorized person reports the action. The service never sends an authority notification.
+
+Incident records store no leaked payload, password, token, or raw contact list. `export()` provides structured evidence for a responsible person. Operator runbooks must separately verify incident scope, notification duty, submission channel, responsible staff and actual external receipt. The deadline fields are reminders and evidence, not proof of submission.

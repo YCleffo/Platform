@@ -194,6 +194,34 @@ return [
         'auditRetentionDays' => (int) $envOr('SECURITY_AUDIT_RETENTION_DAYS', '365'),
     ],
 
+    'privacyDataResidency' => [
+        'primaryDbCountry' => $nullableEnv('PRIVACY_PRIMARY_DB_COUNTRY'),
+        'backupCountry' => $nullableEnv('PRIVACY_BACKUP_COUNTRY'),
+        'objectStorageCountry' => $nullableEnv('PRIVACY_OBJECT_STORAGE_COUNTRY'),
+        'logStorageCountry' => $nullableEnv('PRIVACY_LOG_STORAGE_COUNTRY'),
+        'cacheCountry' => $nullableEnv('PRIVACY_CACHE_COUNTRY'),
+        'verifiedAt' => $nullableEnv('PRIVACY_RESIDENCY_VERIFIED_AT'),
+        'verificationReference' => $nullableEnv('PRIVACY_RESIDENCY_VERIFICATION_REFERENCE'),
+    ],
+    'privacySecurityReferences' => [
+        'threatModelReference' => $nullableEnv('PRIVACY_THREAT_MODEL_REFERENCE'),
+        'harmAssessmentReference' => $nullableEnv('PRIVACY_HARM_ASSESSMENT_REFERENCE'),
+        'ispdnProtectionLevel' => $nullableEnv('PRIVACY_ISPDN_PROTECTION_LEVEL'),
+        'responsiblePersonReference' => $nullableEnv('PRIVACY_RESPONSIBLE_PERSON_REFERENCE'),
+        'securityApprovalReference' => $nullableEnv('PRIVACY_SECURITY_APPROVAL_REFERENCE'),
+    ],
+    'privacyIncidentDeadlines' => ['initialHours' => 24, 'investigationHours' => 72],
+    'privacyCleanup' => [
+        'auditDays' => (int) $envOr('SECURITY_AUDIT_RETENTION_DAYS', '365'),
+        'outboxDays' => $nullableEnv('PRIVACY_OUTBOX_RETENTION_DAYS'),
+        'inboxDays' => $nullableEnv('PRIVACY_INBOX_RETENTION_DAYS'),
+        'dsarDays' => $nullableEnv('PRIVACY_DSAR_RETENTION_DAYS'),
+        'blockDays' => $nullableEnv('PRIVACY_BLOCK_RETENTION_DAYS'),
+        'holdDays' => $nullableEnv('PRIVACY_HOLD_RETENTION_DAYS'),
+        'decisionDays' => $nullableEnv('PRIVACY_DECISION_RETENTION_DAYS'),
+        'sessionDays' => $nullableEnv('PRIVACY_SESSION_RETENTION_DAYS'),
+    ],
+
     'communication' => [
         'templates' => [
             'path' => dirname(__DIR__, 2) . '/resources/email',

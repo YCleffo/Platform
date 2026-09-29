@@ -102,6 +102,28 @@ final readonly class DataSubjectRequestExecutionService
         });
     }
 
+    public function recordProcessingInformationIssued(AuthenticatedIdentity $actor,
+        string $requestId, string $sha256, int $sizeBytes): string
+    {
+        if (preg_match('/^[a-f0-9]{64}$/D', $sha256) !== 1 || $sizeBytes < 0) {
+            throw new DomainException('Invalid processing information evidence.');
+        }
+        return $this->db->transaction(function () use ($actor, $requestId, $sha256, $sizeBytes): string {
+            $request = $this->lockRequest($requestId, 'processing_information');
+            $this->capabilities->assertAvailable('processing_information');
+            if ($request['status'] !== 'in_progress') {
+                throw new DomainException('Processing information request is not in progress.');
+            }
+            $now = $this->clock->now();
+            $id = $this->insertExecution($requestId, 'processing_information_response',
+                'completed', $actor, $now, schemaVersion: 'privacy.processing_information.v1',
+                sha256: $sha256, sizeBytes: $sizeBytes);
+            $this->satisfyDeadline($requestId, 'processing_information_response', $id, $now);
+            $this->complete($actor, $requestId, $request, $now);
+            return $id;
+        });
+    }
+
     /** @param list<string> $changedPaths */
     public function recordCorrectionCompleted(AuthenticatedIdentity $actor, string $requestId,
         string $contributorCode, string $resourceType, string $resourceId, array $changedPaths): string

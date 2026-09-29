@@ -16,7 +16,8 @@ final readonly class PrivacyRequestExecutionCapabilityRegistry
         private ?RetentionCandidateContributorRegistry $retentionCandidates = null,
         private ?ProcessingPurposeRegistry $purposes = null,
         private ?PersonalDataErasureHandlerRegistry $erasureHandlers = null,
-        private ?DestructionEvidencePolicy $destructionEvidence = null) {}
+        private ?DestructionEvidencePolicy $destructionEvidence = null,
+        private ?ProcessingInformationRegistry $processingInformation = null) {}
 
     public function available(string $requestType): bool
     {
@@ -24,6 +25,10 @@ final readonly class PrivacyRequestExecutionCapabilityRegistry
         return match ($capability) {
             'privacy.data.access', 'privacy.data.export' => $this->exportContributors->all() !== [],
             'privacy.data.correction' => $this->correctionContributors->available(),
+            'privacy.processing_information.response' => ($this->retentionCandidates?->available() ?? false)
+                && ($this->purposes?->codes() ?? []) !== []
+                && ($this->retentionCandidates?->coversAll($this->purposes?->codes() ?? []) ?? false)
+                && ($this->processingInformation?->coversAll($this->purposes?->codes() ?? []) ?? false),
             // Restriction requires scope-specific enforcement before completion can be offered.
             'privacy.processing.restriction' => false,
             'privacy.processing.termination' => ($this->retentionCandidates?->available() ?? false)

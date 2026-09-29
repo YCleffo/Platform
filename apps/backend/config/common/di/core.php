@@ -22,6 +22,14 @@ use App\Core\Privacy\Application\RetentionCandidateContributorRegistry;
 use App\Core\Privacy\Application\RetentionDependencyContributorRegistry;
 use App\Core\Privacy\Application\PrivacyRequestExecutionCapabilityRegistry;
 use App\Core\Privacy\Application\DestructionEvidencePolicy;
+use App\Core\Privacy\Application\ProcessorRegistry;
+use App\Core\Privacy\Application\DataRecipientRegistry;
+use App\Core\Privacy\Application\CrossBorderTransferRegistry;
+use App\Core\Privacy\Application\ProcessingRoleRegistry;
+use App\Core\Privacy\Application\DataResidencyEvidence;
+use App\Core\Privacy\Application\ComplianceReadinessChecker;
+use App\Core\Privacy\Application\ProcessingInformationRegistry;
+use App\Core\Privacy\Application\PrivacyCleanupPolicy;
 use App\Core\Privacy\Application\PersonalDataErasureHandlerRegistry;
 use App\Core\Privacy\Infrastructure\CoreErasureHandlerProvider;
 use App\Core\Privacy\Application\RepresentativeAuthorityPolicy;
@@ -40,6 +48,8 @@ use App\Core\Audit\Application\AuditWriter;
 use App\Core\Audit\Application\AuditEventDefinitionRegistry;
 use App\Core\Audit\Infrastructure\PostgresAuditWriter;
 use App\Core\Auth\Application\AuthChallengeRepository;
+use App\Core\Auth\Application\AuthenticationPayloadCipher;
+use App\Core\Communication\Application\EmailOutboxProcessor;
 use App\Core\Auth\Application\AuthCleanupRepository;
 use App\Core\Auth\Application\CredentialLifecycleRepository;
 use App\Core\Auth\Application\AuthProviderRepository;
@@ -79,6 +89,9 @@ use Yiisoft\Definitions\Reference;
 
 /** @var array<string, mixed> $params */
 return [
+    EmailOutboxProcessor::class => [
+        '__construct()' => ['cipher' => Reference::to(AuthenticationPayloadCipher::class)],
+    ],
     AccountRepository::class => [
         'class' => PostgresAccountRepository::class,
     ],
@@ -118,6 +131,33 @@ return [
     DestructionEvidencePolicy::class => [
         '__construct()' => ['configuration' => $params['privacyDestructionEvidence'] ?? []],
     ],
+    ProcessorRegistry::class => [
+        '__construct()' => ['definitions' => $params['privacyProcessorDefinitions'] ?? []],
+    ],
+    DataRecipientRegistry::class => [
+        '__construct()' => ['definitions' => $params['privacyRecipientDefinitions'] ?? []],
+    ],
+    CrossBorderTransferRegistry::class => [
+        '__construct()' => ['definitions' => $params['privacyTransferDefinitions'] ?? []],
+    ],
+    ProcessingRoleRegistry::class => [
+        '__construct()' => ['definitions' => $params['privacyProcessingRoleDefinitions'] ?? []],
+    ],
+    ProcessingInformationRegistry::class => [
+        '__construct()' => ['definitions' => $params['privacyProcessingInformationDefinitions'] ?? []],
+    ],
+    PrivacyCleanupPolicy::class => [
+        '__construct()' => ['configuration' => $params['privacyCleanup'] ?? []],
+    ],
+    DataResidencyEvidence::class => [
+        '__construct()' => ['configuration' => $params['privacyDataResidency'] ?? []],
+    ],
+    ComplianceReadinessChecker::class => [
+        '__construct()' => [
+            'securityReferences' => $params['privacySecurityReferences'] ?? [],
+            'incidentDeadlines' => $params['privacyIncidentDeadlines'] ?? [],
+        ],
+    ],
     CoreErasureHandlerProvider::class => [
         '__construct()' => ['moduleHandlers' => $params['personalDataErasureHandlers'] ?? []],
     ],
@@ -130,6 +170,7 @@ return [
             'purposes' => Reference::to(ProcessingPurposeRegistry::class),
             'erasureHandlers' => Reference::to(PersonalDataErasureHandlerRegistry::class),
             'destructionEvidence' => Reference::to(DestructionEvidencePolicy::class),
+            'processingInformation' => Reference::to(ProcessingInformationRegistry::class),
         ],
     ],
     ProcessingPurposeRegistry::class => [

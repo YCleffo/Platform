@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ControlPlane\Payment\Provider\YooKassa;
 
 use ControlPlane\Billing\Domain\Money;
+use ControlPlane\Privacy\ControlProviderEgressPolicy;
 use ControlPlane\Payment\Provider\PaymentProviderException;
 use ControlPlane\Payment\Provider\PaymentProviderSecretResolver;
 use ControlPlane\Payment\Provider\ProviderAccount;
@@ -19,7 +20,8 @@ final readonly class YooKassaRefundGateway implements RefundProviderGateway
 {
     private const API_BASE = 'https://api.yookassa.ru/v3/refunds';
 
-    public function __construct(private HttpClientInterface $httpClient, private PaymentProviderSecretResolver $secrets)
+    public function __construct(private HttpClientInterface $httpClient, private PaymentProviderSecretResolver $secrets,
+        private ControlProviderEgressPolicy $egress)
     {
     }
 
@@ -50,6 +52,7 @@ final readonly class YooKassaRefundGateway implements RefundProviderGateway
     /** @param array<string, mixed> $options */
     private function request(string $method, string $url, ProviderAccount $account, array $options): ProviderRefund
     {
+        $this->egress->assertAllowed('yookassa', 'refund', ['payment_reference', 'billing_contact']);
         $options['auth_basic'] = [$account->externalAccountId, $this->secrets->resolve($account->secretRef)];
         $options['timeout'] = 10.0;
         $options['max_duration'] = 15.0;

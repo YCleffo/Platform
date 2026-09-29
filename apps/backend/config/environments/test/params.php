@@ -9,8 +9,8 @@ use App\Core\Privacy\Domain\RetentionPolicyDefinition;
 return [
     'privacyDestructionEvidence' => [
         'code' => 'test.destruction_evidence',
-        'duration' => 365,
-        'unit' => 'calendar_days',
+        'duration' => 26304,
+        'unit' => 'hours',
         'hmacKey' => str_repeat('x', 32),
     ],
     'privacyBusinessCalendar' => [

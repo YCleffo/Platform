@@ -1,3 +1,22 @@
+parameters:
+    env(CONTROL_PRIVACY_RETENTION_DAYS): '{}'
+    env(CONTROL_PRIVACY_PROCESSING_ROLES): '{}'
+    env(CONTROL_PRIVACY_RESIDENCY): '{}'
+    env(CONTROL_PRIVACY_PROVIDER_DECISIONS): '{}'
+    env(CONTROL_PRIVACY_SECURITY_REFERENCES): '{}'
+    env(CONTROL_PRIVACY_ERASURE_POLICY_APPROVED): 'false'
+    env(CONTROL_PRIVACY_IDENTITY_RETENTION_DAYS): '-1'
+    env(CONTROL_PRIVACY_BILLING_CONTACT_RETENTION_DAYS): '-1'
+    # Deployment must set reviewed per-category periods before cleanup can run.
+    control_privacy_retention_days: '%env(json:CONTROL_PRIVACY_RETENTION_DAYS)%'
+    control_privacy_erasure_policy_approved: '%env(bool:CONTROL_PRIVACY_ERASURE_POLICY_APPROVED)%'
+    control_privacy_identity_retention_days: '%env(int:CONTROL_PRIVACY_IDENTITY_RETENTION_DAYS)%'
+    control_privacy_billing_contact_retention_days: '%env(int:CONTROL_PRIVACY_BILLING_CONTACT_RETENTION_DAYS)%'
+    control_privacy_processing_roles: '%env(json:CONTROL_PRIVACY_PROCESSING_ROLES)%'
+    control_privacy_residency: '%env(json:CONTROL_PRIVACY_RESIDENCY)%'
+    control_privacy_provider_decisions: '%env(json:CONTROL_PRIVACY_PROVIDER_DECISIONS)%'
+    control_privacy_security_references: '%env(json:CONTROL_PRIVACY_SECURITY_REFERENCES)%'
+
 services:
     _defaults:
         autowire: true
@@ -10,6 +29,9 @@ services:
             - '../src/**/Domain/'
 
     ControlPlane\Infrastructure\Http\HealthController:
+        tags: ['controller.service_arguments']
+
+    ControlPlane\Infrastructure\Http\PrivacyController:
         tags: ['controller.service_arguments']
 
     ControlPlane\Identity\Security\TokenCodec:
@@ -44,6 +66,15 @@ services:
     ControlPlane\Payment\Provider\YooKassa\YooKassaGateway:
         arguments:
             $returnUrl: '%env(CONTROL_YOOKASSA_RETURN_URL)%'
+            $egress: '@ControlPlane\Privacy\ControlProviderEgressPolicy'
+
+    ControlPlane\Payment\Provider\YooKassa\YooKassaReceiptGateway:
+        arguments:
+            $egress: '@ControlPlane\Privacy\ControlProviderEgressPolicy'
+
+    ControlPlane\Payment\Provider\YooKassa\YooKassaRefundGateway:
+        arguments:
+            $egress: '@ControlPlane\Privacy\ControlProviderEgressPolicy'
 
     ControlPlane\Subscription\Application\ExpireSubscription:
         arguments:
@@ -64,8 +95,43 @@ services:
         arguments:
             $dsn: '%env(CONTROL_MAILER_DSN)%'
             $fromAddress: '%env(CONTROL_MAIL_FROM)%'
+            $egress: '@ControlPlane\Privacy\ControlProviderEgressPolicy'
 
     ControlPlane\Infrastructure\Outbox\VerificationEmailProcessor:
         arguments:
             $verificationUrl: '%env(CONTROL_VERIFICATION_URL)%'
             $messageIdDomain: '%env(CONTROL_MESSAGE_ID_DOMAIN)%'
+
+    ControlPlane\Privacy\ControlPrivacyRetentionPolicy:
+        arguments:
+            $daysByCategory: '%control_privacy_retention_days%'
+
+    ControlPlane\Privacy\ControlPersonalDataExporter:
+        arguments:
+            $contributors:
+                - '@ControlPlane\Privacy\IdentityPersonalDataContributor'
+                - '@ControlPlane\Privacy\SecurityPersonalDataContributor'
+                - '@ControlPlane\Privacy\CommercialPersonalDataContributor'
+
+    ControlPlane\Privacy\ControlUserErasure:
+        arguments:
+            $policyApproved: '%control_privacy_erasure_policy_approved%'
+            $identityRetentionDays: '%control_privacy_identity_retention_days%'
+            $billingContactRetentionDays: '%control_privacy_billing_contact_retention_days%'
+
+    ControlPlane\Privacy\ControlProcessingRoleRegistry:
+        arguments:
+            $definitions: '%control_privacy_processing_roles%'
+
+    ControlPlane\Privacy\ControlProviderEgressPolicy:
+        arguments:
+            $decisions: '%control_privacy_provider_decisions%'
+
+    ControlPlane\Privacy\ControlPrivacyReadinessChecker:
+        arguments:
+            $residency: '%control_privacy_residency%'
+            $providerDecisions: '%control_privacy_provider_decisions%'
+            $securityReferences: '%control_privacy_security_references%'
+            $erasurePolicyApproved: '%control_privacy_erasure_policy_approved%'
+            $identityRetentionDays: '%control_privacy_identity_retention_days%'
+            $billingContactRetentionDays: '%control_privacy_billing_contact_retention_days%'

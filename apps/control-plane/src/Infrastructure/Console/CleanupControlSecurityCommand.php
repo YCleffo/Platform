@@ -4,31 +4,46 @@ declare(strict_types=1);
 
 namespace ControlPlane\Infrastructure\Console;
 
-use Doctrine\DBAL\Connection;
+use ControlPlane\Privacy\ControlPrivacyCleanup;
+use ControlPlane\Privacy\ControlPrivacyRetentionPolicy;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-#[AsCommand(name: 'control:security:cleanup', description: 'Delete expired Control Plane verification, session, rate-limit and idempotency records')]
+#[AsCommand(name: 'control:security:cleanup', description: 'Bounded Control Plane privacy lifecycle cleanup')]
 final class CleanupControlSecurityCommand extends Command
 {
-    public function __construct(private readonly Connection $connection)
+    public function __construct(private readonly ControlPrivacyCleanup $cleanup)
     {
         parent::__construct();
     }
 
+    protected function configure(): void
+    {
+        $this->addOption('category', null, InputOption::VALUE_REQUIRED, 'Configured category, or all', 'all');
+        $this->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Maximum records per category', '100');
+        $this->addOption('execute', null, InputOption::VALUE_NONE, 'Delete eligible records; default is dry-run');
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $counts = $this->connection->transactional(function (Connection $connection): array {
-            $verification = $connection->executeStatement("DELETE FROM commercial.control_user_email_verifications WHERE expires_at < now() - interval '7 days'");
-            $sessions = $connection->executeStatement("DELETE FROM commercial.control_sessions WHERE expires_at < now() - interval '7 days' OR revoked_at < now() - interval '30 days'");
-            $rates = $connection->executeStatement('DELETE FROM commercial.rate_limit_counters WHERE expires_at < now()');
-            $idempotency = $connection->executeStatement("DELETE FROM commercial.idempotency_keys WHERE expires_at IS NOT NULL AND expires_at < now() AND status <> 'pending'");
-
-            return compact('verification', 'sessions', 'rates', 'idempotency');
-        });
-        $output->writeln(json_encode($counts, JSON_THROW_ON_ERROR));
+        $requested = (string) $input->getOption('category');
+        $categories = $requested === 'all' ? ControlPrivacyRetentionPolicy::categories() : [$requested];
+        $limit = filter_var($input->getOption('limit'), FILTER_VALIDATE_INT);
+        if ($limit === false || $limit < 1 || $limit > 1000) {
+            $output->writeln('Invalid limit (1..1000).');
+            return Command::INVALID;
+        }
+        try {
+            foreach ($categories as $category) {
+                $output->writeln(json_encode($this->cleanup->run($category, $limit, !$input->getOption('execute')), JSON_THROW_ON_ERROR));
+            }
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $output->writeln($exception->getMessage());
+            return Command::FAILURE;
+        }
 
         return Command::SUCCESS;
     }

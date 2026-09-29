@@ -27,4 +27,10 @@ final class RetentionPolicyRegistry
     {
         return $this->definitions[$code] ?? null;
     }
+
+    /** @return list<RetentionPolicyDefinition> */
+    public function all(): array
+    {
+        return array_values($this->definitions);
+    }
 }

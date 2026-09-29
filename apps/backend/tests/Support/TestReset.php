@@ -27,9 +27,10 @@ final class TestReset
             $db->createCommand('DELETE FROM core.inbox_events')->execute();
             $db->createCommand('DELETE FROM core.audit_events')->execute();
             $db->createCommand('DELETE FROM core.auth_challenges')->execute();
+            $db->createCommand('DELETE FROM core.privacy_cleanup_runs')->execute();
 
             // Isolated test reset may discard consent history; production writes cannot.
-            $db->createCommand('TRUNCATE core.privacy_destruction_evidence, core.privacy_erasure_item_purposes, core.privacy_erasure_items, core.privacy_erasure_cases, core.privacy_retention_decisions, core.privacy_legal_holds, core.data_subject_request_executions, core.privacy_processing_blocks, core.data_subject_request_events, core.data_subject_request_deadlines, core.data_subject_requests, core.privacy_consents, core.legal_representation_scopes, core.legal_representations')->execute();
+            $db->createCommand('TRUNCATE core.privacy_incident_events, core.privacy_incident_subject_scope, core.privacy_incident_categories, core.privacy_incidents, core.privacy_distribution_consents, core.privacy_destruction_evidence, core.privacy_erasure_item_purposes, core.privacy_erasure_items, core.privacy_erasure_cases, core.privacy_retention_decisions, core.privacy_legal_holds, core.data_subject_request_executions, core.privacy_processing_blocks, core.data_subject_request_events, core.data_subject_request_deadlines, core.data_subject_requests, core.privacy_consents, core.legal_representation_scopes, core.legal_representations')->execute();
 
             // Deleting accounts cascades to auth_sessions, auth_identifiers, credentials, passkeys, factors, tokens
             $db->createCommand('DELETE FROM core.accounts')->execute();

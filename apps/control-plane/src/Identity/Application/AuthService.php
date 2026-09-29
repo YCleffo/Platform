@@ -58,9 +58,9 @@ SQL, [$userId, $userId, $correlationId]);
                 $connection->executeStatement(<<<'SQL'
 INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload)
 VALUES ('control_user.email_verification_requested', 'control_user', ?, jsonb_build_object(
-  'user_id', ?::text, 'verification_id', ?::text, 'recipient', ?::text
+  'user_id', ?::text, 'verification_id', ?::text
 ))
-SQL, [$userId, $userId, $verificationId, $email['email']]);
+SQL, [$userId, $userId, $verificationId]);
             });
         } catch (UniqueConstraintViolationException) {
             throw new AuthFailure('email_unavailable', 'The email cannot be registered.');
@@ -85,7 +85,7 @@ SQL, [$userId, $userId, $verificationId, $email['email']]);
             $token = $this->tokens->verificationToken($verificationId);
             $connection->executeStatement("INSERT INTO commercial.control_user_email_verifications (id, control_user_id, token_hash, expires_at) VALUES (?, ?, decode(?, 'hex'), now() + (? * interval '1 second'))", [$verificationId, $user['id'], $this->tokens->hash($token), $this->verificationTtlSeconds]);
             $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, actor_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('control_user', ?, 'control_user.email_verification_requested', 'control_user', ?, ?, 'success')", [$user['id'], $user['id'], $correlationId]);
-            $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('control_user.email_verification_requested', 'control_user', ?, jsonb_build_object('user_id', ?::text, 'verification_id', ?::text, 'recipient', ?::text))", [$user['id'], $user['id'], $verificationId, $user['email']]);
+            $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('control_user.email_verification_requested', 'control_user', ?, jsonb_build_object('user_id', ?::text, 'verification_id', ?::text))", [$user['id'], $user['id'], $verificationId]);
 
             return $token;
         });

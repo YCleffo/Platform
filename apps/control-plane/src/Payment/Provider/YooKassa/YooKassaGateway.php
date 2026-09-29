@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ControlPlane\Payment\Provider\YooKassa;
 
 use ControlPlane\Billing\Domain\Money;
+use ControlPlane\Privacy\ControlProviderEgressPolicy;
 use ControlPlane\Payment\Provider\PaymentProviderException;
 use ControlPlane\Payment\Provider\PaymentProviderGateway;
 use ControlPlane\Payment\Provider\PaymentProviderSecretResolver;
@@ -23,6 +24,7 @@ final readonly class YooKassaGateway implements PaymentProviderGateway
         private HttpClientInterface $httpClient,
         private PaymentProviderSecretResolver $secrets,
         private string $returnUrl,
+        private ControlProviderEgressPolicy $egress,
     ) {
         $parts = parse_url($returnUrl);
         if (!is_array($parts) || !isset($parts['scheme'], $parts['host']) || !in_array(strtolower((string) $parts['scheme']), ['http', 'https'], true)) {
@@ -70,6 +72,7 @@ final readonly class YooKassaGateway implements PaymentProviderGateway
     /** @param array<string, mixed> $options */
     private function request(string $method, string $url, ProviderAccount $account, array $options, bool $create): ProviderPayment
     {
+        $this->egress->assertAllowed('yookassa', 'payment', ['payment_reference', 'billing_contact']);
         $options['auth_basic'] = [$account->externalAccountId, $this->secrets->resolve($account->secretRef)];
         $options['timeout'] = 10.0;
         $options['max_duration'] = 15.0;

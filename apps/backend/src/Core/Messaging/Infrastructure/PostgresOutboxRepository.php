@@ -108,6 +108,12 @@ final readonly class PostgresOutboxRepository implements OutboxRepository
             SET
                 status = 'published',
                 published_at = now(),
+                payload = CASE WHEN event_type IN ('communication.email.requested',
+                    'auth.password.reset.requested', 'auth.email.verification.requested',
+                    'auth.account.created') THEN '{}'::jsonb ELSE payload END,
+                headers = CASE WHEN event_type IN ('communication.email.requested',
+                    'auth.password.reset.requested', 'auth.email.verification.requested',
+                    'auth.account.created') THEN '{}'::jsonb ELSE headers END,
                 locked_by = NULL,
                 locked_until = NULL,
                 last_error = NULL
@@ -145,6 +151,14 @@ final readonly class PostgresOutboxRepository implements OutboxRepository
                 available_at = COALESCE(CAST(:available_at AS timestamptz), available_at),
                 locked_by = NULL,
                 locked_until = NULL,
+                payload = CASE WHEN CAST(:scrub_payload AS boolean) AND event_type IN
+                    ('communication.email.requested', 'auth.password.reset.requested',
+                     'auth.email.verification.requested', 'auth.account.created')
+                    THEN '{}'::jsonb ELSE payload END,
+                headers = CASE WHEN CAST(:scrub_headers AS boolean) AND event_type IN
+                    ('communication.email.requested', 'auth.password.reset.requested',
+                     'auth.email.verification.requested', 'auth.account.created')
+                    THEN '{}'::jsonb ELSE headers END,
                 last_error = :last_error
             WHERE id = :id
               AND status = 'processing'
@@ -154,6 +168,8 @@ final readonly class PostgresOutboxRepository implements OutboxRepository
         $params = [
             ':id' => $id,
             ':status' => $dead ? 'dead' : 'failed',
+            ':scrub_payload' => $dead ? 'true' : 'false',
+            ':scrub_headers' => $dead ? 'true' : 'false',
             ':available_at' => $availableAt,
             ':last_error' => $error,
         ];

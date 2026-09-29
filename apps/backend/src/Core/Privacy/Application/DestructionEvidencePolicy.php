@@ -20,7 +20,13 @@ final readonly class DestructionEvidencePolicy
         $unit = $this->configuration['unit'] ?? null;
         $key = $this->configuration['hmacKey'] ?? null;
         try {
-            if (!is_string($code) || !is_int($duration) || $duration < 1
+            $minimum = match ($unit) {
+                'calendar_days', 'working_days' => 1096,
+                'hours' => 26304,
+                default => null,
+            };
+            if (!is_string($code) || !is_int($duration) || $minimum === null
+                || $duration < $minimum
                 || !in_array($unit, ['calendar_days', 'working_days', 'hours'], true)
                 || !is_string($key) || strlen($key) < 32) {
                 return false;
@@ -41,8 +47,12 @@ final readonly class DestructionEvidencePolicy
     public function retainUntil(DateTimeImmutable $executedAt): DateTimeImmutable
     {
         $this->assertConfigured();
-        return $this->calendar->dueAt($this->configuration['unit'],
+        $due = $this->calendar->dueAt($this->configuration['unit'],
             $this->configuration['duration'], $executedAt);
+        if ($due < $executedAt->modify('+3 years')) {
+            throw new DomainException('Destruction evidence retention is shorter than three years.');
+        }
+        return $due;
     }
 
     public function referenceHash(string $resourceType, string $resourceId): string

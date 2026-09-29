@@ -22,18 +22,22 @@ final class OutboxEmailTest extends DatabaseTestCase
     public function testVerificationEmailPublishesWithStableMessageId(): void
     {
         $registered = $this->authService()->register('mail@example.test', 'correct horse battery staple', '192.0.2.1', $this->uuid());
+        $queuedPayload = (string) $this->connection->fetchOne('SELECT payload::text FROM commercial.outbox_events WHERE aggregate_id = ?', [$registered['user_id']]);
+        self::assertStringNotContainsString('mail@example.test', $queuedPayload);
+        self::assertStringNotContainsString('recipient', $queuedPayload);
         $transport = new RecordingEmailTransport();
         $processor = $this->processor($transport);
 
         self::assertTrue($processor->processOne());
         self::assertFalse($processor->processOne());
         self::assertCount(1, $transport->messages);
-        $row = $this->connection->fetchAssociative("SELECT event_id, status, attempts, published_at, lock_token FROM commercial.outbox_events WHERE aggregate_id = ?", [$registered['user_id']]);
+        $row = $this->connection->fetchAssociative("SELECT event_id, status, attempts, published_at, lock_token, payload FROM commercial.outbox_events WHERE aggregate_id = ?", [$registered['user_id']]);
         self::assertIsArray($row);
         self::assertSame('published', $row['status']);
         self::assertSame(1, (int) $row['attempts']);
         self::assertNotNull($row['published_at']);
         self::assertNull($row['lock_token']);
+        self::assertSame('{}', $row['payload']);
         self::assertSame($row['event_id'] . '@platform.test', $transport->messages[0]['message_id']);
         self::assertStringContainsString('v1.', $transport->messages[0]['text']);
         $this->expectDatabaseRejection(fn () => $this->connection->executeStatement("UPDATE commercial.outbox_events SET status = 'failed' WHERE aggregate_id = ?", [$registered['user_id']]));

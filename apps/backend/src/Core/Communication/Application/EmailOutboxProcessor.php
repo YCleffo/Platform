@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Communication\Application;
 
+use App\Core\Auth\Application\AuthenticationPayloadCipher;
 use App\Core\Communication\Domain\EmailDeliveryResult;
 use App\Core\Communication\Domain\EmailMessage;
 use App\Core\Internationalization\Application\SupportedLocales;
@@ -20,6 +21,7 @@ final readonly class EmailOutboxProcessor
         private EmailSenderInterface $sender,
         private EmailOutboxPolicy $policy,
         private SupportedLocales $supportedLocales,
+        private ?AuthenticationPayloadCipher $cipher = null,
     ) {}
 
     public function process(string $worker, int $limit = 50): EmailProcessingReport
@@ -45,7 +47,7 @@ final readonly class EmailOutboxProcessor
             } catch (TemplateRenderingException | InvalidArgumentException $exception) {
                 $updated = $this->outbox->markFailed(
                     id: $event->id,
-                    error: $this->safeError($exception->getMessage()),
+                    error: 'email_payload_invalid',
                     dead: true,
                     worker: $worker,
                 );
@@ -56,7 +58,7 @@ final readonly class EmailOutboxProcessor
             try {
                 $result = $this->sender->send($message);
             } catch (Throwable $exception) {
-                $result = EmailDeliveryResult::failure($exception->getMessage());
+                $result = EmailDeliveryResult::failure('email_delivery_failed');
             }
 
             if ($result->successful) {
@@ -68,7 +70,7 @@ final readonly class EmailOutboxProcessor
             $isDead = $event->attempts >= $this->policy->maxAttempts;
             $updated = $this->outbox->markFailed(
                 id: $event->id,
-                error: $this->safeError($result->error ?? 'Unknown SMTP delivery failure.'),
+                error: 'email_delivery_failed',
                 dead: $isDead,
                 availableAt: $isDead ? null : $this->policy->retryAt($event->attempts),
                 worker: $worker,
@@ -93,7 +95,7 @@ final readonly class EmailOutboxProcessor
 
     private function message(OutboxEvent $event): EmailMessage
     {
-        $request = EmailRequest::fromEvent($event, $this->supportedLocales);
+        $request = EmailRequest::fromEvent($event, $this->supportedLocales, $this->cipher);
         $template = $this->renderer->render(
             $request->templateCode,
             $request->locale,
@@ -107,12 +109,9 @@ final readonly class EmailOutboxProcessor
             htmlBody: $template->htmlBody,
             textBody: $template->textBody,
             messageId: $event->eventId . '@' . $this->policy->messageIdDomain,
+            privacyPurposeCode: $event->eventType === EmailEventType::EMAIL_REQUESTED
+                ? 'communication_email' : 'security_email',
         );
     }
 
-    private function safeError(string $error): string
-    {
-        $normalized = trim(preg_replace('/\s+/', ' ', $error) ?? $error);
-        return mb_substr($normalized === '' ? 'Unknown email delivery failure.' : $normalized, 0, 2000);
-    }
 }

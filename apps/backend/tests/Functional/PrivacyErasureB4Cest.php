@@ -473,13 +473,24 @@ final readonly class PrivacyErasureB4Cest
                 $decisions, $retryHandlers, $container->get(DestructionEvidencePolicy::class),
                 new ErasureCaseStateMachine(), $audit,
                 $container->get(ErasureRequestCompletionService::class));
-            $retryCase = $retryCases->create($actor, $subject, 'verified_erasure');
+            $retryRequest = $requests->submitSelf($actor, 'erasure');
+            $requests->transition($actor, $retryRequest, 'in_review', null);
+            $requests->transition($actor, $retryRequest, 'in_progress', null);
+            $retryCase = $retryCases->create($actor, $subject, 'verified_erasure', $retryRequest,
+                $clock->now()->modify('+2 days'), 'calendar_days');
             assertSame('failed', $retryExecutor->executeBatch($actor, $retryCase)['status']);
+            assertSame('in_progress', $requests->getVisible($actor, $retryRequest, true)?->status);
+            assertSame(0, (int) $db->createCommand(<<<'SQL'
+                SELECT count(*) FROM core.data_subject_request_deadlines
+                WHERE request_id = CAST(:request AS uuid) AND deadline_code = 'erasure_completion'
+                    AND satisfied_at IS NOT NULL
+                SQL, [':request' => $retryRequest])->queryScalar());
             assertSame(0, (int) $db->createCommand('SELECT count(*) FROM core.privacy_destruction_evidence WHERE case_id = CAST(:id AS uuid)',
                 [':id' => $retryCase])->queryScalar());
             assertTrue($db->createCommand('SELECT 1 FROM core.person_contacts WHERE id = CAST(:id AS uuid)',
                 [':id' => $contributor->contact])->queryScalar() !== false);
             assertSame('completed', $retryExecutor->executeBatch($actor, $retryCase)['status']);
+            assertSame('completed', $requests->getVisible($actor, $retryRequest, true)?->status);
             assertSame(1, (int) $db->createCommand('SELECT count(*) FROM core.privacy_destruction_evidence WHERE case_id = CAST(:id AS uuid)',
                 [':id' => $retryCase])->queryScalar());
         } finally {

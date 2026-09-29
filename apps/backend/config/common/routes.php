@@ -20,7 +20,10 @@ use App\Core\Privacy\Api\ManageProcessingBlocksAction;
 use App\Core\Privacy\Api\ManageLegalHoldsAction;
 use App\Core\Privacy\Api\ExecuteProcessingTerminationAction;
 use App\Core\Privacy\Api\ManageErasureAction;
+use App\Core\Privacy\Api\ManagePrivacyIncidentAction;
+use App\Core\Privacy\Api\ManageDistributionConsentAction;
 use App\Core\Privacy\Api\PersonalDataExportAction;
+use App\Core\Privacy\Api\ProcessingInformationAction;
 use App\Core\Privacy\Api\ManagePrivacyCorrectionAction;
 use App\Core\Auth\Api\ListSessionsAction;
 use App\Core\Auth\Api\ActivationAction;
@@ -261,10 +264,20 @@ return [
         ->action(PersonalDataExportAction::class)
         ->name('auth/me/privacy/requests/data'),
 
+    Route::get('/api/auth/me/privacy/requests/{id}/processing-information')
+        ->middleware(RequireAuthentication::class)
+        ->action(ProcessingInformationAction::class)
+        ->name('auth/me/privacy/requests/processing-information'),
+
     Route::get('/api/auth/me/privacy/representations/{representationId}/requests/{id}/data')
         ->middleware(RequireAuthentication::class)
         ->action(PersonalDataExportAction::class)
         ->name('auth/me/privacy/representations/requests/data'),
+
+    Route::get('/api/auth/me/privacy/representations/{representationId}/requests/{id}/processing-information')
+        ->middleware(RequireAuthentication::class)
+        ->action(ProcessingInformationAction::class)
+        ->name('auth/me/privacy/representations/requests/processing-information'),
 
     Route::post('/api/auth/me/privacy/representations/{representationId}/requests')
         ->defaults(['operation' => 'submit_representative'])
@@ -364,6 +377,32 @@ return [
         ->defaults(['operation' => 'evidence'])
         ->middleware(RequireAuthentication::class, $permission('core.privacy.read'))
         ->action(ManageErasureAction::class)->name('core/privacy/erasure-cases/evidence'),
+
+    Route::post('/api/core/privacy/incidents')
+        ->defaults(['operation' => 'detect'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.incidents.manage'))
+        ->action(ManagePrivacyIncidentAction::class)->name('core/privacy/incidents/detect'),
+    Route::get('/api/core/privacy/incidents/{id}')
+        ->defaults(['operation' => 'get'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.incidents.read'))
+        ->action(ManagePrivacyIncidentAction::class)->name('core/privacy/incidents/get'),
+    Route::post('/api/core/privacy/incidents/{id}/transition')
+        ->defaults(['operation' => 'transition'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.incidents.manage'))
+        ->action(ManagePrivacyIncidentAction::class)->name('core/privacy/incidents/transition'),
+    Route::post('/api/core/privacy/incidents/{id}/notification-record')
+        ->defaults(['operation' => 'notification'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.incidents.manage'))
+        ->action(ManagePrivacyIncidentAction::class)->name('core/privacy/incidents/notification'),
+
+    Route::post('/api/core/privacy/distribution-consents')
+        ->defaults(['operation' => 'grant'])
+        ->middleware(RequireAuthentication::class)
+        ->action(ManageDistributionConsentAction::class)->name('core/privacy/distribution-consents/grant'),
+    Route::post('/api/core/privacy/distribution-consents/{id}/withdraw')
+        ->defaults(['operation' => 'withdraw'])
+        ->middleware(RequireAuthentication::class)
+        ->action(ManageDistributionConsentAction::class)->name('core/privacy/distribution-consents/withdraw'),
 
     Route::post('/api/auth/me/presence/heartbeat')
         ->middleware(RequireAuthentication::class)

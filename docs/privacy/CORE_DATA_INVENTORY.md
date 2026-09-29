@@ -1,6 +1,6 @@
 # Core personal data inventory (Phase 4.1 review)
 
-This inventory started from the 25-table baseline through migration 018 and includes migrations 019-025. It is a technical classification, not a deployment's legal basis or retention schedule. Deployment policy must assign the actual purposes, lawful bases, retention periods, export rules, and processors before production use. `Policy` below means no duration is currently established in Core.
+This inventory started from the 25-table baseline through migration 018 and includes migrations 019-027. It is a technical classification, not a deployment's legal basis or retention schedule. Deployment policy must assign the actual purposes, lawful bases, retention periods, export rules, and processors before production use. `Policy` below means no duration is currently established in Core.
 
 | Table and significant fields | Data category and PII | Processing purpose | Retention owner | Audit / logs / export | Special handling |
 | --- | --- | --- | --- | --- | --- |
@@ -38,6 +38,10 @@ This inventory started from the 25-table baseline through migration 018 and incl
 The classification also covers network and device values generated in `ClientContext` and ephemeral Redis presence. Presence uses a TTL and has no durable SQL heartbeat history. External email delivery and backup copies require separate deployment processor and retention records. No current Core table stores biometric templates or special-category health data; future modules adding either require a separate design review.
 
 Until deployment policy assigns a duration, retention is **policy-required / deployment-defined**. This document does not authorize deletion or publication of any category.
+
+## B5 records (migrations 026-027)
+
+`privacy_incidents`, category/scope rows and incident events store safe incident codes, affected subject references and 24/72-hour workflow evidence. `privacy_distribution_consents` stores dedicated public-distribution permissions, field/category codes and document digest. `privacy_cleanup_runs` stores category, policy period and deletion count only. These records require their own reviewed retention and authorized access. Outbox email payloads are cleared on successful delivery; terminal audit/outbox/inbox and DSAR history are eligible for policy-gated, hold-aware bounded cleanup. The separate Commercial inventory is in [CONTROL_PLANE_PRIVACY.md](CONTROL_PLANE_PRIVACY.md).
 
 ## B4 erasure records (migration 025)
 

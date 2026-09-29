@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace ControlPlane\Infrastructure\Outbox;
 
+use ControlPlane\Privacy\ControlProviderEgressPolicy;
+
 /** SMTP delivery via libcurl; no external mail dependency or shell command. */
 final readonly class SmtpEmailTransport implements EmailTransport
 {
-    public function __construct(private string $dsn, private string $fromAddress)
+    public function __construct(private string $dsn, private string $fromAddress,
+        private ControlProviderEgressPolicy $egress)
     {
         $parts = parse_url($dsn);
         if (!is_array($parts) || !in_array($parts['scheme'] ?? null, ['smtp', 'smtps'], true)
@@ -20,6 +23,7 @@ final readonly class SmtpEmailTransport implements EmailTransport
 
     public function send(string $recipient, string $subject, string $text, string $html, string $messageId): void
     {
+        $this->egress->assertAllowed('smtp', 'control_email_verification', ['contact_email', 'verification_link']);
         if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false
             || preg_match('/[\r\n]/', $recipient . $subject . $messageId) === 1
             || preg_match('/^[a-z0-9.-]+@[a-z0-9.-]+$/i', $messageId) !== 1

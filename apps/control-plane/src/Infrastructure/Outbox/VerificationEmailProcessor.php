@@ -41,7 +41,8 @@ final readonly class VerificationEmailProcessor
             $this->transport->send($message['recipient'], $message['subject'], $message['text'], $message['html'], $message['message_id']);
             $this->connection->executeStatement(<<<'SQL'
 UPDATE commercial.outbox_events
-SET status = 'published', published_at = now(), locked_at = NULL, lock_token = NULL, last_error = NULL
+SET status = 'published', published_at = now(), locked_at = NULL, lock_token = NULL,
+    last_error = NULL, payload = '{}'::jsonb
 WHERE id = ? AND status = 'processing' AND lock_token = ?
 SQL, [$claim['id'], $claim['lock_token']]);
         } catch (InvalidEmailEvent) {
@@ -106,23 +107,19 @@ SQL, [$lockToken, $row['id']]);
         }
         $verificationId = $payload['verification_id'] ?? null;
         $userId = $payload['user_id'] ?? null;
-        $recipient = $payload['recipient'] ?? null;
         if (!is_string($verificationId) || !Uuid::isValid($verificationId)
             || !is_string($userId) || !Uuid::isValid($userId)
-            || !is_string($recipient) || filter_var($recipient, FILTER_VALIDATE_EMAIL) === false
         ) {
             throw new InvalidEmailEvent();
         }
-        $valid = (bool) $this->connection->fetchOne(<<<'SQL'
-SELECT EXISTS (
- SELECT 1 FROM commercial.control_user_email_verifications v
+        $recipient = $this->connection->fetchOne(<<<'SQL'
+SELECT u.email FROM commercial.control_user_email_verifications v
  JOIN commercial.control_users u ON u.id = v.control_user_id
- WHERE v.id = ? AND v.control_user_id = ? AND u.email = ?
+ WHERE v.id = ? AND v.control_user_id = ?
    AND u.status = 'pending_verification'
    AND v.consumed_at IS NULL AND v.invalidated_at IS NULL AND v.expires_at > now()
-)
-SQL, [$verificationId, $userId, $recipient]);
-        if (!$valid) {
+SQL, [$verificationId, $userId]);
+        if (!is_string($recipient) || filter_var($recipient, FILTER_VALIDATE_EMAIL) === false) {
             throw new InvalidEmailEvent();
         }
         $url = $this->verificationUrl . (str_contains($this->verificationUrl, '?') ? '&' : '?')

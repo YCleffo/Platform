@@ -589,6 +589,40 @@ Table commercial.receipt_items {
 }
 
 // Planned after Phase 3.9: stored methods, plan switching and usage-based billing.
+// Phase 4.1 Pass B5 privacy boundary (migration 021).
+Table commercial.privacy_holds {
+  id uuid [pk]
+  control_user_id uuid [not null, ref: > commercial.control_users.id]
+  reason_code varchar(80) [not null]
+  opened_at timestamptz [not null]
+  released_at timestamptz
+}
+Table commercial.privacy_lifecycle_runs {
+  id uuid [pk]
+  category varchar(80) [not null]
+  dry_run boolean [not null]
+  selected_count integer [not null]
+  deleted_count integer [not null]
+  executed_at timestamptz [not null]
+}
+Table commercial.privacy_erasure_cases {
+  id uuid [pk]
+  control_user_id uuid [not null, ref: > commercial.control_users.id]
+  status varchar(32) [not null]
+  reason_code varchar(80) [not null]
+  financial_evidence_count integer [not null]
+  created_at timestamptz [not null]
+  completed_at timestamptz
+}
+Table commercial.privacy_export_events {
+  id uuid [pk]
+  control_user_id uuid [not null, ref: > commercial.control_users.id]
+  actor_id uuid [not null, ref: > commercial.control_users.id]
+  schema_version smallint [not null]
+  item_count integer [not null]
+  exported_at timestamptz [not null]
+}
+
 Table commercial.payment_methods {
   id uuid [pk]
   commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]

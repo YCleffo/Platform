@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ControlPlane\Tests\Unit;
 
+use ControlPlane\Privacy\ControlProviderEgressPolicy;
+
 use ControlPlane\Payment\Provider\FiscalReceiptItem;
 use ControlPlane\Payment\Provider\FiscalReceiptRequest;
 use ControlPlane\Payment\Provider\PaymentProviderException;
@@ -98,7 +100,12 @@ final class YooKassaReceiptGatewayTest extends TestCase
 
     private function gateway(MockHttpClient $client): YooKassaReceiptGateway
     {
-        return new YooKassaReceiptGateway($client, new EnvPaymentProviderSecretResolver());
+        return new YooKassaReceiptGateway($client, new EnvPaymentProviderSecretResolver(),
+            new ControlProviderEgressPolicy(['yookassa' => [
+                'status' => 'allowed', 'country' => 'RU', 'purposes' => ['fiscal_receipt'],
+                'data_categories' => ['billing_contact', 'fiscal_details'],
+                'evidence_reference' => 'test-provider', 'notification_status' => 'not_required',
+            ]]));
     }
 
     private function account(): ProviderAccount
