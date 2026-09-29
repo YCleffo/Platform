@@ -646,3 +646,25 @@ Table commercial.service_credentials {
   rotated_at timestamptz
   revoked_at timestamptz
 }
+
+Table commercial.deployment_entitlement_documents {
+  id uuid [pk, not null, default: `uuidv7()`]
+  deployment_id uuid [not null, ref: > commercial.deployments.id]
+  installation_id uuid [not null]
+  document_version integer [not null, note: 'Exactly 1']
+  sequence bigint [not null, note: 'Positive and increasing per deployment']
+  canonical_document bytea [not null, note: 'Exact canonical signed JSON bytes']
+  document_sha256 bytea [not null, note: '32-byte SHA-256 of canonical_document']
+  signature bytea [not null, note: '64-byte Ed25519 detached signature']
+  signing_key_id varchar(160) [not null, ref: > commercial.signing_keys.key_id]
+  source_fingerprint bytea [not null, note: '32-byte SHA-256 of effective source state']
+  issued_at timestamptz [not null]
+  valid_from timestamptz [not null]
+  valid_until timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (deployment_id, sequence) [unique]
+  }
+  Note: 'Immutable after insert. A new row and entitlement.issued v1 outbox event share one transaction.'
+}

@@ -58,7 +58,7 @@ Table platform_runtime.entitlement_documents {
   issued_at timestamptz [not null]
   valid_from timestamptz [not null]
   valid_until timestamptz [note: 'NULL or later than valid_from']
-  payload jsonb [not null, note: 'JSON object: future edition, features, limits, maintenance and update rights']
+  payload jsonb [not null, note: 'JSON object with canonicalDocumentBase64, preserving the exact verified v1 bytes']
   signature bytea [not null, note: 'Exactly 64 Ed25519 signature bytes; private key is external']
   signing_key_id varchar(160) [not null, note: 'Canonical lowercase machine identifier']
   status platform_runtime_entitlement_status [not null, default: 'pending', note: 'New snapshots must be pending; only pending may transition to applied/rejected']
@@ -71,5 +71,5 @@ Table platform_runtime.entitlement_documents {
     valid_until [name: 'idx_entitlement_documents_valid_until', note: 'Partial: valid_until IS NOT NULL']
   }
 
-  Note: 'Signed fields are immutable. Trigger serializes application on the installation row and rejects sequence at or below current_entitlement_sequence. Snapshots cannot be deleted.'
+  Note: 'Signed fields are immutable. Phase 4.6 verifies trusted Ed25519 keys, installation, format and validity before pending-to-applied transition. The trigger serializes application and advances current_entitlement_sequence; exact replay is idempotent.'
 }

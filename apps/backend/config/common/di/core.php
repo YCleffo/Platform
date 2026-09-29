@@ -96,9 +96,28 @@ use App\Core\Settings\Infrastructure\PostgresFeatureFlagRepository;
 use App\Core\Settings\Infrastructure\PostgresModuleSettingsRepository;
 use App\Core\Settings\Infrastructure\PostgresSystemSettingsRepository;
 use Yiisoft\Definitions\Reference;
+use App\PlatformRuntime\InstallationRepository;
+use App\PlatformRuntime\PostgresInstallationRepository;
+use App\PlatformRuntime\EntitlementDocumentRepository;
+use App\PlatformRuntime\PostgresEntitlementDocumentRepository;
+use App\PlatformRuntime\EntitlementSignatureVerifier;
+use App\PlatformRuntime\SodiumEntitlementSignatureVerifier;
+use App\PlatformRuntime\EntitlementApplier;
+use App\PlatformRuntime\PostgresEntitlementApplier;
+use App\PlatformRuntime\EffectiveRuntimeEntitlements;
+use App\PlatformRuntime\PostgresEffectiveRuntimeEntitlements;
+use App\PlatformRuntime\TrustedEntitlementKeyRegistry;
 
 /** @var array<string, mixed> $params */
 return [
+    InstallationRepository::class => ['class' => PostgresInstallationRepository::class],
+    EntitlementDocumentRepository::class => ['class' => PostgresEntitlementDocumentRepository::class],
+    EntitlementSignatureVerifier::class => ['class' => SodiumEntitlementSignatureVerifier::class],
+    EntitlementApplier::class => ['class' => PostgresEntitlementApplier::class],
+    EffectiveRuntimeEntitlements::class => ['class' => PostgresEffectiveRuntimeEntitlements::class],
+    TrustedEntitlementKeyRegistry::class => [
+        '__construct()' => ['keys' => $params['runtimeTrustedEntitlementKeys'] ?? []],
+    ],
     EmailOutboxProcessor::class => [
         '__construct()' => ['cipher' => Reference::to(AuthenticationPayloadCipher::class)],
     ],

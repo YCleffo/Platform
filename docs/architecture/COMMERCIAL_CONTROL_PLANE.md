@@ -231,19 +231,34 @@ directories.
 
 ## Deferred
 
-`signing_keys`, `licenses`, `license_installations`, `maintenance_contracts`,
-`issued_entitlement_documents`, `releases` and `release_entitlements` are
-schema foundations, not completed entitlement delivery. Yii
-`platform_runtime.installations` and `entitlement_documents` now have explicit
-repository/verification/application ports, but no production key trust or
-issuance implementation. `ReserveDeployment` creates a durable reservation;
+`licenses`, `license_installations`, `maintenance_contracts`,
+`issued_entitlement_documents`, `releases` and `release_entitlements` remain
+schema foundations. Phase 4.6 uses the separate immutable
+`deployment_entitlement_documents` table for signed deployment snapshots.
+`ReserveDeployment` creates a durable reservation;
 `deployment_operations` does not yet have an executor and must not be reported
 as a successful deployment. Control current-user/session APIs and paginated
 commercial read models belong to Phase 4.1. M2M service credentials and usage
-ingestion are now implemented; entitlement issuance and delivery remain separate.
+ingestion and signed entitlement delivery are implemented.
 
 Plan switching, additional payment providers and methods, bank cards,
 saved/recurring credentials,
-usage-based and overage billing, signed
-entitlement issuance, tenant DB creation, provisioning, DNS/TLS, custom
+usage-based and overage billing, tenant DB creation, provisioning, DNS/TLS, custom
 domains, On-Prem activation, MFA and updater execution remain future phases.
+
+## Signed deployment entitlement delivery
+
+`GET /api/m2m/entitlements/latest` authenticates a deployment credential with
+`entitlements.read` and derives the deployment only from that credential. Active
+deployments receive the current `EffectiveEntitlements` composition; suspended
+deployments receive `{}` features. Archived and decommissioned deployments are
+denied. A deployment row lock serializes issuance. A source fingerprint makes
+repeat fetches return identical canonical bytes, signature and sequence until
+the effective state, validity boundary or signing key changes. Each new snapshot
+is an immutable v1 Ed25519 document; the same transaction inserts the
+`entitlement.issued` outbox event. Signing uses an active `commercial.signing_keys`
+row and resolves its `private_key_secret_ref` to an external read-only secret
+file. `CONTROL_ENTITLEMENT_SECRET_FILES` maps references to container paths;
+the file contains base64 of a 64-byte Ed25519 secret key. An absent or invalid
+mapping fails issuance closed. The Core runtime receives only trusted public
+keys, never signing secrets.

@@ -22,6 +22,15 @@ final readonly class EffectiveEntitlements
             throw new \InvalidArgumentException('Invalid public identifier.');
         }
         $this->authorization->requirePermission($userId, $accountId, 'account.read');
+        return $this->forDeploymentAccount($accountId);
+    }
+
+    /** Internal server-side composition. Callers must already hold a trusted deployment boundary. */
+    public function forDeploymentAccount(string $accountId): array
+    {
+        if (!Uuid::isValid($accountId)) {
+            throw new \InvalidArgumentException('Invalid commercial account identifier.');
+        }
         $subscription = $this->connection->fetchAssociative(<<<'SQL'
 SELECT id, current_period_start, current_period_end
 FROM commercial.subscriptions

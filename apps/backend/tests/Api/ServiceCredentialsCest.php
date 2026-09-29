@@ -21,6 +21,23 @@ use function PHPUnit\Framework\assertStringNotContainsString;
 
 final readonly class ServiceCredentialsCest
 {
+    public function entitlementApplyRequiresMachineScope(ApiTester $I): void
+    {
+        $db = ApiTester::getDb();
+        $account = (string) $db->createCommand(
+            "INSERT INTO core.accounts (account_type, status) VALUES ('service', 'active') RETURNING id::text",
+        )->queryScalar();
+        $I->sendPOST('/api/core/accounts/' . $account . '/service-credentials',
+            ['scopes' => ['usage.report']]);
+        $I->seeResponseCodeIs(HttpCode::CREATED);
+        $credential = $this->data($I);
+        $I->haveHttpHeader('Authorization', 'Service ' . $credential['credentialId'] . '.' . $credential['secret']);
+        $I->sendPOST('/api/m2m/runtime/entitlements/apply', [
+            'documentBase64' => 'e30=', 'signatureBase64' => 'e30=', 'keyId' => 'test-key',
+        ]);
+        $I->seeResponseCodeIs(HttpCode::FORBIDDEN);
+    }
+
     public function _before(ApiTester $I): void
     {
         $I->cleanupCoreTestFixtures();

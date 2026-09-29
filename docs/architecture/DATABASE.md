@@ -1,5 +1,17 @@
 # Архитектура базы данных — Core v2 и Commercial Phase 4.0
 
+## Phase 4.6 signed deployment documents
+
+Commercial migration 024 adds immutable `commercial.deployment_entitlement_documents`.
+It stores exact canonical v1 bytes (`bytea`), SHA-256 digest, Ed25519 signature,
+signing key ID, source fingerprint, installation ID, validity window and a
+unique `(deployment_id, sequence)`. The issuer locks the deployment row and
+inserts the document and `entitlement.issued` v1 outbox event atomically.
+Core retains its existing `platform_runtime.entitlement_documents` schema:
+verified exact bytes are encoded in `payload.canonicalDocumentBase64`, and
+its trigger advances `installations.current_entitlement_sequence` on apply.
+No private signing key is stored in Core.
+
 Yii runtime использует одну базу данных PostgreSQL. Модули владеют отдельными схемами PostgreSQL:
 
 ```text

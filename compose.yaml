@@ -129,6 +129,7 @@ services:
     environment:
       APP_ENV: ${BACKEND_APP_ENV:-dev}
       APP_DEBUG: ${BACKEND_APP_DEBUG:-true}
+      RUNTIME_ENTITLEMENT_TRUSTED_KEYS: '${RUNTIME_ENTITLEMENT_TRUSTED_KEYS:-{}}'
       PRIVACY_CONFIG_FILE: /run/privacy/deployment.json
 
       DB_HOST: postgres
@@ -358,6 +359,7 @@ services:
     environment:
       APP_ENV: test
       APP_DEBUG: "false"
+      RUNTIME_ENTITLEMENT_TRUSTED_KEYS: '${RUNTIME_ENTITLEMENT_TRUSTED_KEYS:-{}}'
       TEST_ISOLATED_RUNTIME: "1"
       XDEBUG_MODE: "off"
 
@@ -525,6 +527,7 @@ services:
       CONTROL_PRIVACY_PROVIDER_DECISIONS: '${CONTROL_PRIVACY_PROVIDER_DECISIONS:-{}}'
       CONTROL_PRIVACY_SECURITY_REFERENCES: '${CONTROL_PRIVACY_SECURITY_REFERENCES:-{}}'
       CONTROL_PRIVACY_OPERATOR_NOTIFICATION: '${CONTROL_PRIVACY_OPERATOR_NOTIFICATION:-{}}'
+      CONTROL_ENTITLEMENT_SECRET_FILES: '${CONTROL_ENTITLEMENT_SECRET_FILES:-{}}'
       CONTROL_PRIVACY_ERASURE_POLICY_APPROVED: ${CONTROL_PRIVACY_ERASURE_POLICY_APPROVED:-false}
       CONTROL_PRIVACY_IDENTITY_RETENTION_DAYS: ${CONTROL_PRIVACY_IDENTITY_RETENTION_DAYS:--1}
       CONTROL_PRIVACY_BILLING_CONTACT_RETENTION_DAYS: ${CONTROL_PRIVACY_BILLING_CONTACT_RETENTION_DAYS:--1}
@@ -546,6 +549,8 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:${CONTROL_PORT:-8090}:8000"
+    volumes:
+      - ./deployment/entitlements/signing:/run/entitlement-signing:ro
     healthcheck:
       test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/health') === false ? 1 : 0);"]
       interval: 5s

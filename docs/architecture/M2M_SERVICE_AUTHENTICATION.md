@@ -21,3 +21,20 @@ Core `auth/cleanup` deletes bounded batches of revoked, rotated or expired crede
 ## Usage ingestion
 
 `POST /api/m2m/usage` accepts a Control Plane deployment credential with `usage.write` only while the deployment is active and not archived. Send `Authorization: Service <credentialId>.<secret>`, `Idempotency-Key`, and JSON `{"featureCode":"some.feature","delta":1}`. The body has exactly those two fields. The deployment and commercial account are resolved server side from the credential. The response contains only `featureCode`, `mode`, `used`, `limit`, `remaining`, and `exhausted`. The existing `ApplyUsageDelta` enforces subscription, quota and metering rules; its idempotency namespace includes the deployment source. Successful usage writes create no per-request audit or outbox event.
+
+## Signed entitlement transport
+
+Control Plane `GET /api/m2m/entitlements/latest` requires a deployment credential
+with `entitlements.read`; its response has exactly `documentBase64`,
+`signatureBase64`, and `keyId`. Core `POST /api/m2m/runtime/entitlements/apply`
+requires a local service credential with `runtime.entitlements.apply` and the
+same three-field JSON body. The local installation ID comes from Core storage,
+never from a request parameter. The v1 signed bytes contain exactly
+`documentVersion`, `sequence`, `installationId`, `issuedAt`, `validFrom`,
+`validUntil`, `deploymentStatus`, and `features`. Core verifies Ed25519 over the
+exact decoded bytes before applying; unknown or revoked key IDs fail closed.
+Configure `RUNTIME_ENTITLEMENT_TRUSTED_KEYS` as JSON mapping key IDs to
+`{"publicKeyBase64":"...","status":"trusted"}` or `"revoked"`; multiple IDs
+permit rotation. An empty trust map denies all documents. Core stores the exact
+canonical bytes as base64 in its existing JSONB snapshot and only exposes
+features from the latest valid, verified, active applied snapshot.

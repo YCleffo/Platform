@@ -1,5 +1,6 @@
 parameters:
     env(CONTROL_PRIVACY_RETENTION_DAYS): '{}'
+    env(CONTROL_ENTITLEMENT_SECRET_FILES): '{}'
     env(CONTROL_PRIVACY_OPERATOR_NOTIFICATION): '{}'
     env(CONTROL_PRIVACY_PROCESSING_ROLES): '{}'
     env(CONTROL_PRIVACY_RESIDENCY): '{}'
@@ -107,6 +108,13 @@ services:
     ControlPlane\Privacy\ControlPrivacyRetentionPolicy:
         arguments:
             $daysByCategory: '%control_privacy_retention_days%'
+
+    ControlPlane\Entitlement\Application\SigningKeyResolver:
+        alias: ControlPlane\Entitlement\Application\FileSigningKeyResolver
+
+    ControlPlane\Entitlement\Application\FileSigningKeyResolver:
+        arguments:
+            $filesByReference: '%env(json:CONTROL_ENTITLEMENT_SECRET_FILES)%'
 
     ControlPlane\Privacy\ControlPersonalDataExporter:
         arguments:

@@ -87,6 +87,7 @@ use App\Core\Settings\Api\ModuleSettingsAction;
 use App\Core\Settings\Api\PublicConfigAction;
 use App\Core\Settings\Api\SystemSettingsAction;
 use Yiisoft\Router\Route;
+use App\PlatformRuntime\ApplyEntitlementsAction;
 
 $permission = static fn(string $code): array => [
     'class' => RequirePermission::class,
@@ -94,6 +95,9 @@ $permission = static fn(string $code): array => [
 ];
 
 return [
+    Route::post('/api/m2m/runtime/entitlements/apply')
+        ->action(ApplyEntitlementsAction::class)
+        ->name('m2m/runtime/entitlements/apply'),
     Route::get('/')
         ->action(Api\IndexAction::class)
         ->name('app/index'),

@@ -39,6 +39,8 @@ apps/control-plane/var/
 *.mmdb
 backups/
 deployment/privacy/*.json
+deployment/entitlements/signing/*
+!deployment/entitlements/signing/.gitkeep
 
 # OS
 .DS_Store
