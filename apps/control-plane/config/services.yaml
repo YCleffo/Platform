@@ -87,6 +87,10 @@ services:
         arguments:
             $leadDays: '%env(int:CONTROL_RENEWAL_LEAD_DAYS)%'
 
+    ControlPlane\Infrastructure\Console\SchedulerRunCommand:
+        arguments:
+            $leadDays: '%env(int:CONTROL_RENEWAL_LEAD_DAYS)%'
+
     ControlPlane\Infrastructure\Console\CheckCommercialDatabaseCommand:
         arguments:
             $databaseUrl: '%env(resolve:CONTROL_DATABASE_URL)%'

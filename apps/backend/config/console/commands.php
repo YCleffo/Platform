@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Console;
 
 return [
+    'scheduler:run' => Console\SchedulerRunCommand::class,
     'auth/cleanup' => Console\AuthCleanupCommand::class,
     'db:check' => Console\DbCheckCommand::class,
     'runtime:installation:init' => Console\RuntimeInstallationInitCommand::class,

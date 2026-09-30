@@ -126,7 +126,7 @@ services:
 
     restart: unless-stopped
 
-    environment:
+    environment: &backend_environment
       APP_ENV: ${BACKEND_APP_ENV:-dev}
       APP_DEBUG: ${BACKEND_APP_DEBUG:-true}
       PLATFORM_INSTALLATION_ID: ${PLATFORM_INSTALLATION_ID:-}
@@ -266,6 +266,65 @@ services:
 
     networks:
       - backend_net
+
+  backend-email-worker:
+    build:
+      context: ./apps/backend
+      dockerfile: docker/Dockerfile
+      target: dev
+    restart: unless-stopped
+    command: ["php", "yii", "communication:process-email", "--loop"]
+    environment:
+      <<: *backend_environment
+    volumes:
+      - ./apps/backend:/app
+      - ./deployment/privacy:/run/privacy:ro
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [backend_net]
+
+  backend-scheduler:
+    build:
+      context: ./apps/backend
+      dockerfile: docker/Dockerfile
+      target: dev
+    restart: unless-stopped
+    command: ["php", "yii", "scheduler:run"]
+    environment:
+      <<: *backend_environment
+      CORE_SCHEDULER_ENABLED: ${CORE_SCHEDULER_ENABLED:-true}
+      CORE_AUTH_CLEANUP_ENABLED: ${CORE_AUTH_CLEANUP_ENABLED:-true}
+      CORE_AUTH_CLEANUP_INTERVAL_SECONDS: ${CORE_AUTH_CLEANUP_INTERVAL_SECONDS:-3600}
+      CORE_AUTH_CLEANUP_BATCH_LIMIT: ${CORE_AUTH_CLEANUP_BATCH_LIMIT:-500}
+      CORE_PRIVACY_RETENTION_ENABLED: ${CORE_PRIVACY_RETENTION_ENABLED:-true}
+      CORE_PRIVACY_RETENTION_INTERVAL_SECONDS: ${CORE_PRIVACY_RETENTION_INTERVAL_SECONDS:-3600}
+      CORE_PRIVACY_RETENTION_BATCH_LIMIT: ${CORE_PRIVACY_RETENTION_BATCH_LIMIT:-100}
+      CORE_PRIVACY_ERASURE_ENABLED: ${CORE_PRIVACY_ERASURE_ENABLED:-false}
+      CORE_PRIVACY_ERASURE_INTERVAL_SECONDS: ${CORE_PRIVACY_ERASURE_INTERVAL_SECONDS:-300}
+      CORE_PRIVACY_ERASURE_BATCH_LIMIT: ${CORE_PRIVACY_ERASURE_BATCH_LIMIT:-10}
+      CORE_PRIVACY_ERASURE_ITEM_LIMIT: ${CORE_PRIVACY_ERASURE_ITEM_LIMIT:-25}
+      PRIVACY_AUTOMATION_ACCOUNT_ID: ${PRIVACY_AUTOMATION_ACCOUNT_ID:-}
+      CORE_PRIVACY_CLEANUP_ENABLED: ${CORE_PRIVACY_CLEANUP_ENABLED:-false}
+      CORE_PRIVACY_CLEANUP_INTERVAL_SECONDS: ${CORE_PRIVACY_CLEANUP_INTERVAL_SECONDS:-3600}
+      CORE_PRIVACY_CLEANUP_BATCH_LIMIT: ${CORE_PRIVACY_CLEANUP_BATCH_LIMIT:-100}
+      CORE_ENTITLEMENT_SYNC_ENABLED: ${CORE_ENTITLEMENT_SYNC_ENABLED:-true}
+      CORE_ENTITLEMENT_SYNC_INTERVAL_SECONDS: ${CORE_ENTITLEMENT_SYNC_INTERVAL_SECONDS:-300}
+    volumes:
+      - ./apps/backend:/app
+      - ./deployment/privacy:/run/privacy:ro
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [backend_net]
 
   # ================================================================
   # TEST INFRASTRUCTURE (Completely isolated from development)
@@ -530,7 +589,7 @@ services:
       dockerfile: docker/Dockerfile
       target: app
     restart: unless-stopped
-    environment:
+    environment: &control_environment
       APP_ENV: ${CONTROL_APP_ENV:-prod}
       APP_DEBUG: "0"
       CONTROL_APP_SECRET: ${CONTROL_APP_SECRET:-}
@@ -570,6 +629,43 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    networks: [control_net]
+
+  control-scheduler:
+    profiles: ["control"]
+    build:
+      context: ./apps/control-plane
+      dockerfile: docker/Dockerfile
+      target: app
+    restart: unless-stopped
+    command: ["php", "bin/console", "control:scheduler:run"]
+    environment:
+      <<: *control_environment
+      CONTROL_SCHEDULER_ENABLED: ${CONTROL_SCHEDULER_ENABLED:-true}
+      CONTROL_RENEWALS_ENABLED: ${CONTROL_RENEWALS_ENABLED:-true}
+      CONTROL_RENEWALS_INTERVAL_SECONDS: ${CONTROL_RENEWALS_INTERVAL_SECONDS:-300}
+      CONTROL_SUBSCRIPTIONS_ENABLED: ${CONTROL_SUBSCRIPTIONS_ENABLED:-true}
+      CONTROL_SUBSCRIPTIONS_INTERVAL_SECONDS: ${CONTROL_SUBSCRIPTIONS_INTERVAL_SECONDS:-300}
+      CONTROL_EXPIRATION_ENABLED: ${CONTROL_EXPIRATION_ENABLED:-true}
+      CONTROL_EXPIRATION_INTERVAL_SECONDS: ${CONTROL_EXPIRATION_INTERVAL_SECONDS:-300}
+      CONTROL_SUBSCRIPTION_BATCH_LIMIT: ${CONTROL_SUBSCRIPTION_BATCH_LIMIT:-100}
+      CONTROL_PAYMENT_RECONCILIATION_ENABLED: ${CONTROL_PAYMENT_RECONCILIATION_ENABLED:-true}
+      CONTROL_PAYMENT_RECONCILIATION_INTERVAL_SECONDS: ${CONTROL_PAYMENT_RECONCILIATION_INTERVAL_SECONDS:-120}
+      CONTROL_REFUND_RECONCILIATION_ENABLED: ${CONTROL_REFUND_RECONCILIATION_ENABLED:-true}
+      CONTROL_REFUND_RECONCILIATION_INTERVAL_SECONDS: ${CONTROL_REFUND_RECONCILIATION_INTERVAL_SECONDS:-120}
+      CONTROL_RECEIPT_RECONCILIATION_ENABLED: ${CONTROL_RECEIPT_RECONCILIATION_ENABLED:-true}
+      CONTROL_RECEIPT_RECONCILIATION_INTERVAL_SECONDS: ${CONTROL_RECEIPT_RECONCILIATION_INTERVAL_SECONDS:-120}
+      CONTROL_RECONCILIATION_BATCH_LIMIT: ${CONTROL_RECONCILIATION_BATCH_LIMIT:-100}
+      CONTROL_PRIVACY_CLEANUP_ENABLED: ${CONTROL_PRIVACY_CLEANUP_ENABLED:-false}
+      CONTROL_PRIVACY_CLEANUP_INTERVAL_SECONDS: ${CONTROL_PRIVACY_CLEANUP_INTERVAL_SECONDS:-3600}
+      CONTROL_PRIVACY_CLEANUP_BATCH_LIMIT: ${CONTROL_PRIVACY_CLEANUP_BATCH_LIMIT:-100}
+    volumes:
+      - ./deployment/entitlements/signing:/run/entitlement-signing:ro
+    depends_on:
+      control-migrate:
+        condition: service_completed_successfully
+      control-postgres:
+        condition: service_healthy
     networks: [control_net]
 
   control-outbox-worker:

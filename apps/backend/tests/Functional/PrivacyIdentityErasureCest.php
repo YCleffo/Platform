@@ -27,6 +27,7 @@ use App\Core\Privacy\Application\LawfulProcessingBasisResolver;
 use App\Core\Privacy\Application\LegalDestructionPackageService;
 use App\Core\Privacy\Application\LegalHoldService;
 use App\Core\Privacy\Application\PersonalDataErasureHandlerRegistry;
+use App\Core\Privacy\Application\PendingErasureProcessor;
 use App\Core\Privacy\Application\PersonalDataContributorRegistry;
 use App\Core\Privacy\Application\PersonalDataCorrectionContributorRegistry;
 use App\Core\Privacy\Application\PrivacyRequestExecutionCapabilityRegistry;
@@ -276,8 +277,25 @@ final readonly class PrivacyIdentityErasureCest
                 $handlers, $container->get(DestructionEvidencePolicy::class),
                 new ErasureCaseStateMachine(), $audit,
                 $container->get(ErasureRequestCompletionService::class), $legal);
-            $result = $executor->executeBatch($actor, $caseId);
-            assertSame('completed', $result['status']);
+            $system = (string) $db->createCommand(
+                "INSERT INTO core.accounts (account_type, status, label) VALUES ('system', 'active', 'Privacy automation') RETURNING id::text"
+            )->queryScalar();
+            $pending = new PendingErasureProcessor($db, $executor,
+                $container->get(DestructionEvidencePolicy::class), $legal);
+            $invalidActor = false;
+            try { $pending->assertActor($account); }
+            catch (\DomainException) { $invalidActor = true; }
+            assertTrue($invalidActor);
+            $db->createCommand("UPDATE core.privacy_erasure_cases SET status = 'blocked' WHERE id = CAST(:id AS uuid)",
+                [':id' => $caseId])->execute();
+            $pending->process($system, 10, 25);
+            assertSame('blocked', $db->createCommand('SELECT status FROM core.privacy_erasure_cases
+                WHERE id = CAST(:id AS uuid)', [':id' => $caseId])->queryScalar());
+            $db->createCommand("UPDATE core.privacy_erasure_cases SET status = 'failed' WHERE id = CAST(:id AS uuid)",
+                [':id' => $caseId])->execute();
+            assertTrue($pending->process($system, 10, 25) >= 1);
+            assertSame('completed', $db->createCommand('SELECT status FROM core.privacy_erasure_cases
+                WHERE id = CAST(:id AS uuid)', [':id' => $caseId])->queryScalar());
             assertSame('completed', $requests->getVisible($actor, $requestId, true)?->status);
             assertSame(6, (int) $db->createCommand('SELECT count(*) FROM core.privacy_destruction_evidence
                 WHERE case_id = CAST(:id AS uuid)', [':id' => $caseId])->queryScalar());

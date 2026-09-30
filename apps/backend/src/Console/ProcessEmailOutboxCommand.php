@@ -26,7 +26,8 @@ final class ProcessEmailOutboxCommand extends Command
     {
         $this
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Batch size (1-100).', '50')
-            ->addOption('worker', null, InputOption::VALUE_REQUIRED, 'Stable worker name.');
+            ->addOption('worker', null, InputOption::VALUE_REQUIRED, 'Stable worker name.')
+            ->addOption('loop', null, InputOption::VALUE_NONE, 'Run continuously for a supervised worker.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -42,17 +43,23 @@ final class ProcessEmailOutboxCommand extends Command
         $worker = is_string($configuredWorker) && trim($configuredWorker) !== ''
             ? $configuredWorker
             : sprintf('%s:%d', gethostname() ?: 'platform', $processId === false ? 0 : $processId);
-        $report = $this->processor->process($worker, $limit);
-
-        $output->writeln(sprintf(
-            'claimed=%d sent=%d retrying=%d dead=%d state_conflicts=%d',
-            $report->claimed,
-            $report->sent,
-            $report->retrying,
-            $report->dead,
-            $report->stateConflicts,
-        ));
-
-        return $report->stateConflicts === 0 ? Command::SUCCESS : Command::FAILURE;
+        do {
+            try {
+                $report = $this->processor->process($worker, $limit);
+                $output->writeln(sprintf(
+                    'claimed=%d sent=%d retrying=%d dead=%d state_conflicts=%d',
+                    $report->claimed, $report->sent, $report->retrying, $report->dead, $report->stateConflicts,
+                ));
+            } catch (\Throwable) {
+                $output->writeln('Core email worker batch failed.');
+                if (!$input->getOption('loop')) { return Command::FAILURE; }
+                sleep(5);
+                continue;
+            }
+            if (!$input->getOption('loop')) {
+                return $report->stateConflicts === 0 ? Command::SUCCESS : Command::FAILURE;
+            }
+            if ($report->claimed === 0) { sleep(5); }
+        } while (true);
     }
 }
