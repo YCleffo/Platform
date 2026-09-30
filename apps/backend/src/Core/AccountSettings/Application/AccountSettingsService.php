@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Core\AccountSettings\Application;
 
 use App\Core\Client\Domain\ClientContext;
+use App\Core\Privacy\Application\PrivacyResourceUsePolicy;
 use App\Core\Security\Application\SecurityAction;
 use App\Core\Security\Application\SecurityAuditCommand;
 use App\Core\Security\Application\SecurityAuditService;
 use Yiisoft\Db\Connection\ConnectionInterface;
+use DomainException;
 
 final readonly class AccountSettingsService
 {
@@ -17,10 +19,12 @@ final readonly class AccountSettingsService
         private SettingsSchemaRegistry $registry,
         private SecurityAuditService $audit,
         private ConnectionInterface $db,
+        private PrivacyResourceUsePolicy $privacy,
     ) {}
 
     public function get(string $accountId): AccountSettings
     {
+        $this->assertAllowed($accountId);
         $stored = $this->repository->find($accountId);
         /** @var array<string, mixed> $storedSettings */
         $storedSettings = $stored?->settings ?? [];
@@ -33,6 +37,7 @@ final readonly class AccountSettingsService
     /** @param array<string, mixed> $patch */
     public function patch(string $accountId, array $patch, ClientContext $context): AccountSettings
     {
+        $this->assertAllowed($accountId);
         $patch = $this->registry->validatePatch($patch);
         return $this->db->transaction(function () use ($accountId, $patch, $context): AccountSettings {
             $stored = $this->repository->findForUpdate($accountId);
@@ -62,6 +67,18 @@ final readonly class AccountSettingsService
                 $this->registry->schemaVersion(),
             );
         });
+    }
+
+    private function assertAllowed(string $accountId): void
+    {
+        $subject = $this->db->createCommand(<<<'SQL'
+            SELECT person_id::text FROM core.accounts
+            WHERE id = CAST(:id AS uuid) AND account_type = 'human'
+            SQL, [':id' => $accountId])->queryScalar();
+        if (is_string($subject) && !$this->privacy->allowed($subject,
+            'core.account_settings', $accountId, 'preferences')) {
+            throw new DomainException('Account settings processing is restricted.');
+        }
     }
 
     /**

@@ -2,6 +2,20 @@
 
 This inventory started from the 25-table baseline through migration 018 and includes migrations 019-027. It is a technical classification, not a deployment's legal basis or retention schedule. Deployment policy must assign the actual purposes, lawful bases, retention periods, export rules, and processors before production use. `Policy` below means no duration is currently established in Core.
 
+## Core production lifecycle coverage
+
+| Resource | Export | Retention | Lawful basis | Restriction | Erasure | Production contributor |
+| --- | --- | --- | --- | --- | --- | --- |
+| Person | Yes | No safe destructive lifecycle | Configured purpose only | No general flow | Unsupported | Export only |
+| PersonContacts | Yes | Configured trigger | Consent runtime; other basis unknown | Contact flows | Delete, policy gated | Core resource adapter |
+| Account | Yes | No safe destructive lifecycle | Configured purpose only | No general flow | Unsupported | Export only |
+| AccountSettings | Yes | Configured trigger | Consent runtime; other basis unknown | Settings service | Delete, policy gated | Core resource adapter |
+| OrganizationMembership | Yes | Configured trigger; active relation blocks delete | Consent runtime; other basis unknown | Organization flows | Delete after relation ends | Core resource adapter |
+| Auth/security metadata | Restricted export, no secrets | Existing Auth cleanup | Auth lifecycle | Auth boundary | No general privacy handler | Existing Auth cleanup |
+| Consent | Yes | Deployment policy | Consent record | Consent runtime | Unsupported | Core export |
+| LegalRepresentation | Yes | Deployment policy | Authority record | Authority boundary | Unsupported | Core export |
+| DSAR/privacy execution | Yes | Existing cleanup policy | Request evidence | Request state | Unsupported | Core export/cleanup |
+
 | Table and significant fields | Data category and PII | Processing purpose | Retention owner | Audit / logs / export | Special handling |
 | --- | --- | --- | --- | --- | --- |
 | `persons`: name, display name, birth date | Direct identity; birth date can identify a minor | Person identity and lifecycle | Person/privacy policy | Audit: IDs and status only; logs: no values; export: subject access policy | Birth date and minor status require restricted access; archive does not erase data |

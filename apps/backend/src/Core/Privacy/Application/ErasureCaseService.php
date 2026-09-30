@@ -19,7 +19,8 @@ final readonly class ErasureCaseService
     public function __construct(private ConnectionInterface $db, private ClockInterface $clock,
         private RetentionCandidateContributorRegistry $candidates,
         private ProcessingPurposeRegistry $purposes, private RetentionDecisionService $decisions,
-        private PersonalDataErasureHandlerRegistry $handlers, private AuditService $audit) {}
+        private PersonalDataErasureHandlerRegistry $handlers, private AuditService $audit,
+        private ?CorePrivacyContributorCoverage $coverage = null) {}
 
     public function create(AuthenticatedIdentity $actor, string $subjectPersonId, string $reasonCode,
         ?string $sourceRequestId = null, ?DateTimeImmutable $deadlineAt = null,
@@ -29,6 +30,9 @@ final readonly class ErasureCaseService
         if ($sourceRequestId !== null && ($deadlineAt === null
             || !in_array($deadlineCalendarType, ['calendar_days', 'working_days', 'hours'], true))) {
             throw new DomainException('Erasure request requires an approved deadline.');
+        }
+        if ($sourceRequestId !== null && $this->coverage !== null && $this->coverage->missing(true) !== []) {
+            throw new DomainException('Erasure contributor coverage is incomplete.');
         }
         if ($sourceRequestId !== null) {
             $existing = $this->db->createCommand(

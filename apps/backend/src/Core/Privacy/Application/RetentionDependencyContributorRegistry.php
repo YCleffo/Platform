@@ -41,4 +41,12 @@ final readonly class RetentionDependencyContributorRegistry
         }
         return true;
     }
+
+    public function supports(string $resourceType): bool
+    {
+        foreach ($this->contributors as $contributor) {
+            if ($contributor->supports($resourceType)) { return true; }
+        }
+        return false;
+    }
 }

@@ -23,6 +23,9 @@ final class PrivacyComplianceCheckCommand extends Command
         foreach ($result['missingRequirements'] as $requirement) {
             $output->writeln('missing: ' . $requirement);
         }
+        foreach ($result['missingContributor'] as $contributor) {
+            $output->writeln('missingContributor: ' . $contributor);
+        }
         return $result['result'] === 'PASS' ? Command::SUCCESS : Command::FAILURE;
     }
 }

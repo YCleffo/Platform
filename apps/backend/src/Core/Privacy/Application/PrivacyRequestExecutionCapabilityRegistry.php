@@ -17,7 +17,8 @@ final readonly class PrivacyRequestExecutionCapabilityRegistry
         private ?ProcessingPurposeRegistry $purposes = null,
         private ?PersonalDataErasureHandlerRegistry $erasureHandlers = null,
         private ?DestructionEvidencePolicy $destructionEvidence = null,
-        private ?ProcessingInformationRegistry $processingInformation = null) {}
+        private ?ProcessingInformationRegistry $processingInformation = null,
+        private ?CorePrivacyContributorCoverage $coverage = null) {}
 
     public function available(string $requestType): bool
     {
@@ -34,12 +35,14 @@ final readonly class PrivacyRequestExecutionCapabilityRegistry
             'privacy.processing.termination' => ($this->retentionCandidates?->available() ?? false)
                 && ($this->purposes?->codes() ?? []) !== []
                 && ($this->retentionCandidates?->coversAll($this->purposes?->codes() ?? []) ?? false)
-                && $this->restrictionContributors->available(),
+                && $this->restrictionContributors->available()
+                && ($this->coverage?->missing(false) ?? ['coverage_unavailable']) === [],
             'privacy.data.erasure' => ($this->retentionCandidates?->available() ?? false)
                 && ($this->purposes?->codes() ?? []) !== []
                 && ($this->retentionCandidates?->coversAll($this->purposes?->codes() ?? []) ?? false)
                 && ($this->erasureHandlers?->available() ?? false)
-                && ($this->destructionEvidence?->available() ?? false),
+                && ($this->destructionEvidence?->available() ?? false)
+                && ($this->coverage?->missing(true) ?? ['coverage_unavailable']) === [],
             default => false,
         };
     }

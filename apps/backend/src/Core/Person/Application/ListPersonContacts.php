@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Core\Person\Application;
 
+use App\Core\Privacy\Application\PrivacyResourceUsePolicy;
+
 final readonly class ListPersonContacts
 {
     public function __construct(
         private PersonRepository $persons,
         private PersonContactRepository $contacts,
+        private PrivacyResourceUsePolicy $privacy,
     ) {}
 
     /**
@@ -20,6 +23,8 @@ final readonly class ListPersonContacts
             return null;
         }
 
-        return $this->contacts->findByPersonId($personId);
+        return array_values(array_filter($this->contacts->findByPersonId($personId),
+            fn(PersonContactView $contact): bool => $this->privacy->allowed($personId,
+                'core.person_contact', $contact->id, 'identity')));
     }
 }

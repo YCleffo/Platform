@@ -54,6 +54,20 @@ final readonly class RetentionCandidateContributorRegistry
         return $this->contributors !== [];
     }
 
+    public function coversResourcePurpose(string $resourceType, string $purposeCode): bool
+    {
+        foreach ($this->contributors as $contributor) {
+            try {
+                if (method_exists($contributor, 'resourceType')
+                    && $contributor->resourceType() === $resourceType
+                    && $contributor->supportsPurpose($purposeCode)) {
+                    return true;
+                }
+            } catch (\Throwable) { return false; }
+        }
+        return false;
+    }
+
     /** @param list<string> $purposeCodes */
     public function coversAll(array $purposeCodes): bool
     {

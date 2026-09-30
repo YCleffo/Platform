@@ -7,11 +7,14 @@ namespace App\Core\Organization\Infrastructure;
 use App\Core\Organization\Application\Organization;
 use App\Core\Organization\Application\OrganizationMembership;
 use App\Core\Organization\Application\OrganizationRepository;
+use App\Core\Privacy\Application\PrivacyResourceUsePolicy;
 use Yiisoft\Db\Connection\ConnectionInterface;
+use DomainException;
 
 final readonly class PostgresOrganizationRepository implements OrganizationRepository
 {
-    public function __construct(private ConnectionInterface $db) {}
+    public function __construct(private ConnectionInterface $db,
+        private PrivacyResourceUsePolicy $privacy) {}
 
     /** @return list<Organization> */
     public function listFor(?string $personId): array
@@ -28,7 +31,9 @@ final readonly class PostgresOrganizationRepository implements OrganizationRepos
                 )
             ) ORDER BY o.code LIMIT 1000
             SQL, [':person' => $personId])->queryAll();
-        return array_map(self::organization(...), $rows);
+        $organizations = array_map(self::organization(...), $rows);
+        return $personId === null ? $organizations : array_values(array_filter($organizations,
+            fn(Organization $organization): bool => $this->activeMember($personId, $organization->id)));
     }
 
     public function create(string $code, string $name): ?Organization
@@ -59,6 +64,15 @@ final readonly class PostgresOrganizationRepository implements OrganizationRepos
 
     public function activeMember(string $personId, string $organizationId): bool
     {
+        $membershipId = $this->db->createCommand(<<<'SQL'
+            SELECT id::text FROM core.organization_memberships
+            WHERE person_id = CAST(:person AS uuid) AND organization_id = CAST(:organization AS uuid)
+                AND status = 'active' LIMIT 1
+            SQL, [':person' => $personId, ':organization' => $organizationId])->queryScalar();
+        if (is_string($membershipId) && !$this->privacy->allowed($personId,
+            'core.organization_membership', $membershipId, 'identity')) {
+            return false;
+        }
         return (bool) $this->db->createCommand(<<<'SQL'
             SELECT EXISTS(SELECT 1 FROM core.organization_memberships m
                 JOIN core.organizations o ON o.id = m.organization_id
@@ -79,11 +93,17 @@ final readonly class PostgresOrganizationRepository implements OrganizationRepos
             FROM core.organization_memberships WHERE organization_id = CAST(:organization AS uuid)
             ORDER BY joined_at, id LIMIT 1000
             SQL, [':organization' => $organizationId])->queryAll();
-        return array_map(self::membership(...), $rows);
+        return array_values(array_filter(array_map(self::membership(...), $rows),
+            fn(OrganizationMembership $membership): bool => $this->privacy->allowed(
+                $membership->personId, 'core.organization_membership', $membership->id, 'identity')));
     }
 
     public function addMember(string $organizationId, string $personId): ?OrganizationMembership
     {
+        if (!$this->privacy->allowed($personId, 'core.organization_membership',
+            $organizationId, 'identity')) {
+            throw new DomainException('Organization membership processing is restricted.');
+        }
         $row = $this->db->createCommand(<<<'SQL'
             INSERT INTO core.organization_memberships (organization_id, person_id)
             SELECT o.id, p.id FROM core.organizations o CROSS JOIN core.persons p

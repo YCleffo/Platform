@@ -27,6 +27,7 @@ use App\Core\Privacy\Application\ProcessingInformationService;
 use App\Core\Privacy\Application\PersonalDataExporter;
 use App\Core\Privacy\Application\LegalDestructionPackageService;
 use App\Core\Privacy\Application\ErasureExecutor;
+use App\Core\Privacy\Application\ErasureCaseService;
 use App\Core\Privacy\Application\ProcessorRegistry;
 use App\Core\Privacy\Application\DataRecipientRegistry;
 use App\Core\Privacy\Application\CrossBorderTransferRegistry;
@@ -42,12 +43,18 @@ use App\Core\Privacy\Application\RepresentationScopeRegistry;
 use App\Core\Privacy\Application\BusinessCalendarInterface;
 use App\Core\Privacy\Application\ProcessingBlockPolicy;
 use App\Core\Privacy\Application\ProcessingBlockService;
+use App\Core\Privacy\Application\PrivacyResourceUsePolicy;
+use App\Core\Privacy\Application\CorePrivacyContributorCoverage;
 use App\Core\Privacy\Application\PersonalDataContributorRegistry;
 use App\Core\Privacy\Application\PersonalDataCorrectionContributorRegistry;
 use App\Core\Privacy\Application\ProcessingRestrictionContributorRegistry;
 use App\Core\Privacy\Infrastructure\CorePersonalDataContributorProvider;
 use App\Core\Privacy\Infrastructure\CorePersonalDataCorrectionContributorProvider;
 use App\Core\Privacy\Infrastructure\ConfiguredBusinessCalendar;
+use App\Core\Privacy\Infrastructure\CoreRetentionCandidateProvider;
+use App\Core\Privacy\Infrastructure\CoreResourceBasisContributor;
+use App\Core\Privacy\Infrastructure\CoreResourceDependencyContributor;
+use App\Core\Privacy\Infrastructure\CoreProcessingRestrictionContributor;
 use App\Core\Privacy\Infrastructure\PostgresRepresentativeAuthorityPolicy;
 use App\Core\Audit\Application\AuditWriter;
 use App\Core\Audit\Application\AuditEventDefinitionRegistry;
@@ -159,13 +166,18 @@ return [
         '__construct()' => ['definitions' => $params['retentionPolicyDefinitions'] ?? []],
     ],
     LawfulProcessingBasisContributorRegistry::class => [
-        '__construct()' => ['contributors' => $params['lawfulProcessingBasisContributors'] ?? []],
+        '__construct()' => ['contributors' => [Reference::to(CoreResourceBasisContributor::class),
+            ...($params['lawfulProcessingBasisContributors'] ?? [])]],
+    ],
+    CoreRetentionCandidateProvider::class => [
+        '__construct()' => ['moduleContributors' => $params['retentionCandidateContributors'] ?? []],
     ],
     RetentionCandidateContributorRegistry::class => [
-        '__construct()' => ['contributors' => $params['retentionCandidateContributors'] ?? []],
+        '__construct()' => ['contributors' => Reference::to(CoreRetentionCandidateProvider::class)],
     ],
     RetentionDependencyContributorRegistry::class => [
-        '__construct()' => ['contributors' => $params['retentionDependencyContributors'] ?? []],
+        '__construct()' => ['contributors' => [Reference::to(CoreResourceDependencyContributor::class),
+            ...($params['retentionDependencyContributors'] ?? [])]],
     ],
     DestructionEvidencePolicy::class => [
         '__construct()' => ['configuration' => $params['privacyDestructionEvidence'] ?? []],
@@ -181,6 +193,9 @@ return [
     ],
     ErasureExecutor::class => [
         '__construct()' => ['legalPackages' => Reference::to(LegalDestructionPackageService::class)],
+    ],
+    ErasureCaseService::class => [
+        '__construct()' => ['coverage' => Reference::to(CorePrivacyContributorCoverage::class)],
     ],
     ProcessorRegistry::class => [
         '__construct()' => ['definitions' => $params['privacyProcessorDefinitions'] ?? []],
@@ -218,6 +233,7 @@ return [
             'operatorIdentity' => $params['privacyOperatorIdentity'] ?? [],
             'distributionDefinitions' => Reference::to(DistributionConsentDefinitionRegistry::class),
             'legalPackages' => Reference::to(LegalDestructionPackageService::class),
+            'coverage' => Reference::to(CorePrivacyContributorCoverage::class),
         ],
     ],
     CoreErasureHandlerProvider::class => [
@@ -233,6 +249,7 @@ return [
             'erasureHandlers' => Reference::to(PersonalDataErasureHandlerRegistry::class),
             'destructionEvidence' => Reference::to(DestructionEvidencePolicy::class),
             'processingInformation' => Reference::to(ProcessingInformationRegistry::class),
+            'coverage' => Reference::to(CorePrivacyContributorCoverage::class),
         ],
     ],
     ProcessingPurposeRegistry::class => [
@@ -252,6 +269,9 @@ return [
         ],
     ],
     ProcessingBlockPolicy::class => ['class' => ProcessingBlockService::class],
+    PrivacyResourceUsePolicy::class => [
+        '__construct()' => ['blocks' => Reference::to(ProcessingBlockPolicy::class)],
+    ],
     CorePersonalDataContributorProvider::class => [
         '__construct()' => ['moduleContributors' => $params['personalDataContributors'] ?? []],
     ],
@@ -265,7 +285,8 @@ return [
         '__construct()' => ['contributors' => Reference::to(CorePersonalDataCorrectionContributorProvider::class)],
     ],
     ProcessingRestrictionContributorRegistry::class => [
-        '__construct()' => ['contributors' => $params['processingRestrictionContributors'] ?? []],
+        '__construct()' => ['contributors' => [Reference::to(CoreProcessingRestrictionContributor::class),
+            ...($params['processingRestrictionContributors'] ?? [])]],
     ],
     RepresentationScopeRegistry::class => [
         '__construct()' => ['additionalCodes' => $params['representationScopeCodes'] ?? []],

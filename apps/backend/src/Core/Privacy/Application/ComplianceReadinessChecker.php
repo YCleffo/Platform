@@ -22,9 +22,10 @@ final readonly class ComplianceReadinessChecker
         private array $operatorNotification = [],
         private array $operatorIdentity = [],
         private ?DistributionConsentDefinitionRegistry $distributionDefinitions = null,
-        private ?LegalDestructionPackageService $legalPackages = null) {}
+        private ?LegalDestructionPackageService $legalPackages = null,
+        private ?CorePrivacyContributorCoverage $coverage = null) {}
 
-    /** @return array{result:string,missingRequirements:list<string>} */
+    /** @return array{result:string,missingRequirements:list<string>,missingContributor:list<string>} */
     public function check(bool $productionRequired): array
     {
         $missing = [];
@@ -108,6 +109,8 @@ final readonly class ComplianceReadinessChecker
         }
         $missing = array_values(array_unique($missing));
         sort($missing);
-        return ['result' => $missing === [] ? 'PASS' : 'FAIL', 'missingRequirements' => $missing];
+        $missingContributor = $this->coverage?->missing(true) ?? ['coverage_unavailable'];
+        return ['result' => $missing === [] && $missingContributor === [] ? 'PASS' : 'FAIL',
+            'missingRequirements' => $missing, 'missingContributor' => $missingContributor];
     }
 }

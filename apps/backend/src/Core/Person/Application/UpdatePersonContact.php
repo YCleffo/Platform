@@ -5,17 +5,21 @@ declare(strict_types=1);
 namespace App\Core\Person\Application;
 
 use App\Core\Shared\Domain\ValueNormalizer;
+use App\Core\Privacy\Application\PrivacyResourceUsePolicy;
 use DomainException;
 use InvalidArgumentException;
 
 final readonly class UpdatePersonContact
 {
     public function __construct(private PersonContactRepository $contacts,
-        private ContactNormalizer $normalizer) {}
+        private ContactNormalizer $normalizer, private PrivacyResourceUsePolicy $privacy) {}
 
     /** @param array<string, mixed> $changes */
     public function execute(string $personId, string $contactId, array $changes): ?PersonContactView
     {
+        if (!$this->privacy->allowed($personId, 'core.person_contact', $contactId, 'identity')) {
+            throw new DomainException('Person contact processing is restricted.');
+        }
         if ($changes === [] || array_diff(array_keys($changes), ['value', 'label', 'isPrimary']) !== []) {
             throw new DomainException('Invalid contact correction fields.');
         }
