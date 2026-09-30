@@ -22,8 +22,11 @@ final readonly class M2mDeploymentStatusController
         $identity = $this->credentials->authenticate((string) $request->headers->get('Authorization', ''),
             $request->getClientIp() ?? 'unknown');
         if ($identity === null) { return new JsonResponse(['error' => ['code' => 'authentication_required']], 401); }
-        try { $this->scopes->requireScope($identity, 'deployment.status.write'); }
-        catch (\DomainException) { return new JsonResponse(['error' => ['code' => 'scope_denied']], 403); }
+        if (!in_array('deployment.status.write', $identity->scopes, true)
+            && !(in_array('entitlements.read', $identity->scopes, true)
+                && in_array('usage.write', $identity->scopes, true))) {
+            return new JsonResponse(['error' => ['code' => 'scope_denied']], 403);
+        }
         if (strlen($request->getContent()) > 4096 || !str_starts_with($request->headers->get('Content-Type', ''), 'application/json')) {
             return new JsonResponse(['error' => ['code' => 'invalid_report']], 422);
         }
@@ -32,14 +35,17 @@ final readonly class M2mDeploymentStatusController
             if (!is_array($body)) { throw new \DomainException('Invalid report.'); }
             if (($body['status'] ?? null) === 'ready' && count($body) === 2
                 && isset($body['entitlementSequence']) && is_int($body['entitlementSequence'])) {
-                $this->reporter->ready($identity->deploymentId, $body['entitlementSequence']);
+                $status = $this->reporter->ready($identity, $body['entitlementSequence']);
             } elseif (($body['status'] ?? null) === 'failed' && count($body) === 2
                 && isset($body['errorCode']) && is_string($body['errorCode'])) {
+                try { $this->scopes->requireScope($identity, 'deployment.status.write'); }
+                catch (\DomainException) { return new JsonResponse(['error' => ['code' => 'scope_denied']], 403); }
                 $this->reporter->failed($identity->deploymentId, $body['errorCode']);
+                $status = 'failed';
             } else {
                 throw new \DomainException('Invalid report.');
             }
-            return new JsonResponse(['status' => $body['status']]);
+            return new JsonResponse(['status' => $status]);
         } catch (\DomainException|\JsonException) {
             return new JsonResponse(['error' => ['code' => 'invalid_report']], 422);
         }

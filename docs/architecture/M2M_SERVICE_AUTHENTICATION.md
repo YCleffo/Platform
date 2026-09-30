@@ -6,7 +6,7 @@ Human and machine principals are separate. A human `Account` uses the existing s
 
 Core credentials belong only to service or system Accounts. Control Plane credentials belong to a deployment. Their databases, secrets, scopes and lifecycle are independent; there is no cross database foreign key or automatic secret synchronization. A 32 byte cryptographically random secret is returned only by create and rotate. Both databases store only its SHA-256 hash. The public UUID `credentialId` and secret form `Authorization: Service <credentialId>.<secret>`. Authentication checks the hash in constant time, credential status and expiry, and the current owner state. Invalid attempts use the existing rate limit facilities. `last_used_at` is updated at most once a minute on a best effort basis.
 
-Rotation atomically marks the old credential unusable and inserts a new credential with the same scopes and expiry. Revocation is idempotent. An expired or revoked credential cannot authenticate. There is no implicit privilege for a `system` Account. Machine endpoints authenticate through these dedicated services and call the scope policy explicitly.
+Rotation atomically marks the old credential unusable and inserts a new credential with the same scopes. Control Plane runtime rotation gets a fresh expiry from `CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS`; an expired or revoked credential cannot authenticate. Revocation is idempotent. There is no implicit privilege for a `system` Account. Machine endpoints authenticate through these dedicated services and call the scope policy explicitly.
 
 ## Scopes and management
 
@@ -43,16 +43,16 @@ features from the latest valid, verified, active applied snapshot.
 
 `control:deployments:provision:start --deployment-id=<uuid>` issues one
 deployment credential with `entitlements.read`, `usage.write`, and
-`deployment.status.write`. Its raw secret appears only in that command's
+`deployment.status.write` and a finite expiry from `CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS`. Invalid or missing TTL configuration fails provisioning closed. Its raw secret appears only in that command's
 one-time JSON output. Configure the new runtime with
 `PLATFORM_INSTALLATION_ID`, `PLATFORM_DEPLOYMENT_MODE`, `APP_ENV`,
 `APPLICATION_VERSION`, `PLATFORM_RELEASE_ID`, and
-`PLATFORM_RELEASE_CHANNEL`. `runtime:installation:init` creates the local
+`PLATFORM_RELEASE_CHANNEL`. `runtime:deployment:activate` is the application bootstrap entry point: it creates the local installation, syncs the signed entitlement, and reports the applied sequence as ready. `runtime:installation:init` creates the local
 singleton as `provisioned` or confirms an exact replay; conflicting identity
 fails closed. Configure `CONTROL_PLANE_URL` and
 `CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF=env:VARIABLE_NAME`, with the named
 environment variable containing `<credentialId>.<secret>`. The credential is
-never stored in Core PostgreSQL. `runtime:entitlements:sync` calls the Control
+never stored in Core PostgreSQL. Both status reporting and `runtime:entitlements:sync` resolve the same `env:VARIABLE_NAME` reference through `RuntimeSecretResolver`. `runtime:entitlements:sync` calls the Control
 Plane pull endpoint directly and invokes the existing local
 `EntitlementApplier`. It prints only the applied sequence.
 
@@ -62,4 +62,6 @@ credential and `deployment.status.write`. A ready body has exactly `status`
 exactly `status` (`failed`) and a machine-only `errorCode` such as
 `runtime.bootstrap_failed`. The deployment identity comes only from the
 credential. The ready report succeeds only for a running provision operation
-and an issued entitlement with the deployment's installation ID.
+and the latest issued entitlement with the deployment's installation ID. On first success, the same transaction removes `deployment.status.write`; the credential remains usable for `entitlements.read` and `usage.write`. A retry with the same latest sequence returns `already_ready` without a new audit event or scope change. An old or incorrect sequence is rejected.
+
+`control:deployments:credential:status --deployment-id=<uuid>` shows the single active runtime credential's `expiresAt` and `daysUntilExpiry` without a secret. `control:deployments:credential:rotate --deployment-id=<uuid>` atomically invalidates it and returns a new `credentialId.secret` once, preserving its current runtime scopes and assigning a fresh expiry. Ambiguous active credentials fail closed. After rotation, the operator must update the deployment's external secret source and restart or recreate the runtime process that reads its environment. Control Plane does not edit remote files or containers.

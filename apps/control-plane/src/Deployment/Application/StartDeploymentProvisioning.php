@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace ControlPlane\Deployment\Application;
 
 use ControlPlane\M2m\DeploymentCredentialService;
+use ControlPlane\M2m\DeploymentCredentialLifetime;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Uid\Uuid;
 
 final readonly class StartDeploymentProvisioning
 {
-    public function __construct(private Connection $db, private DeploymentCredentialService $credentials) {}
+    public function __construct(private Connection $db, private DeploymentCredentialService $credentials,
+        private DeploymentCredentialLifetime $lifetime) {}
 
     /** @return array{installationId:string,credentialId:string,credentialSecret:string,scopes:list<string>} */
     public function start(string $deploymentId): array
@@ -32,7 +34,7 @@ final readonly class StartDeploymentProvisioning
                 throw new \DomainException('Provision operation is unavailable.');
             }
             $scopes = ['entitlements.read', 'usage.write', 'deployment.status.write'];
-            $issued = $this->credentials->create($deploymentId, $scopes);
+            $issued = $this->credentials->create($deploymentId, $scopes, $this->lifetime->expiresAt());
             if ($issued === null) { throw new \DomainException('Bootstrap credential is unavailable.'); }
             $db->executeStatement("UPDATE commercial.deployments
                 SET status = 'provisioning', provisioning_state = 'running', updated_at = now()

@@ -117,6 +117,8 @@ use App\PlatformRuntime\TrustedEntitlementKeyRegistry;
 use App\PlatformRuntime\DeploymentEntitlementPuller;
 use App\PlatformRuntime\HttpDeploymentEntitlementPuller;
 use App\PlatformRuntime\RuntimeEntitlementSynchronizer;
+use App\PlatformRuntime\DeploymentStatusReporter;
+use App\PlatformRuntime\HttpDeploymentStatusReporter;
 
 /** @var array<string, mixed> $params */
 return [
@@ -129,6 +131,13 @@ return [
         '__construct()' => ['keys' => $params['runtimeTrustedEntitlementKeys'] ?? []],
     ],
     DeploymentEntitlementPuller::class => ['class' => HttpDeploymentEntitlementPuller::class],
+    DeploymentStatusReporter::class => ['class' => HttpDeploymentStatusReporter::class],
+    HttpDeploymentStatusReporter::class => [
+        '__construct()' => [
+            'controlPlaneUrl' => $params['runtimeControlPlaneUrl'] ?? '',
+            'credentialReference' => $params['runtimeDeploymentCredentialReference'] ?? '',
+        ],
+    ],
     RuntimeEntitlementSynchronizer::class => [
         '__construct()' => [
             'controlPlaneUrl' => $params['runtimeControlPlaneUrl'] ?? '',

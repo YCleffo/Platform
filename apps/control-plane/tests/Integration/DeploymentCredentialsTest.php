@@ -7,6 +7,7 @@ namespace ControlPlane\Tests\Integration;
 use ControlPlane\Identity\Security\DatabaseRateLimiter;
 use ControlPlane\Identity\Security\TokenCodec;
 use ControlPlane\M2m\DeploymentCredentialService;
+use ControlPlane\M2m\DeploymentCredentialLifetime;
 use ControlPlane\M2m\DeploymentScopePolicy;
 use ControlPlane\M2m\DeploymentScopeRegistry;
 use ControlPlane\Privacy\ControlPrivacyCleanup;
@@ -25,12 +26,12 @@ final class DeploymentCredentialsTest extends DatabaseTestCase
         $service = new DeploymentCredentialService($this->connection, new DeploymentScopeRegistry(), new DatabaseRateLimiter($this->connection, $tokens));
 
         try {
-            $service->create($deployment, ['unknown.scope']);
+            $service->create($deployment, ['unknown.scope'], (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM));
             self::fail('Unknown scope was accepted.');
         } catch (InvalidArgumentException) {
         }
 
-        $issued = $service->create($deployment, ['usage.write']);
+        $issued = $service->create($deployment, ['usage.write'], (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM));
         self::assertNotNull($issued);
         $id = $issued['credential']['credentialId'];
         $secret = $issued['secret'];
@@ -49,7 +50,7 @@ final class DeploymentCredentialsTest extends DatabaseTestCase
         self::assertNull($service->authenticate('Service ' . $id . '.' . str_repeat('A', 43), 'client-a'));
         self::assertNull($service->authenticate('Bearer ' . $secret, 'client-a'));
 
-        $rotated = $service->rotate($deployment, $id);
+        $rotated = $service->rotate($deployment, $id, (new \DateTimeImmutable('+30 days'))->format(DATE_ATOM));
         self::assertNotNull($rotated);
         self::assertNull($service->authenticate($header, 'client-a'));
         $newId = $rotated['credential']['credentialId'];
@@ -68,6 +69,43 @@ final class DeploymentCredentialsTest extends DatabaseTestCase
         self::assertNotNull($expiring);
         $this->connection->executeStatement("UPDATE commercial.service_credentials SET created_at = now() - interval '3 days', expires_at = now() - interval '1 day' WHERE credential_id = ?", [$expiring['credential']['credentialId']]);
         self::assertNull($service->authenticate('Service ' . $expiring['credential']['credentialId'] . '.' . $expiring['secret'], 'client-a'));
+    }
+
+    public function testOperatorRotationIsFiniteAndFailsClosedOnAmbiguity(): void
+    {
+        $account = $this->account();
+        $deployment = $this->connection->fetchOne("INSERT INTO commercial.deployments
+            (commercial_account_id, installation_id, mode) VALUES (?, uuidv7(), 'on_prem') RETURNING id", [$account]);
+        $service = new DeploymentCredentialService($this->connection, new DeploymentScopeRegistry(),
+            new DatabaseRateLimiter($this->connection,
+                new TokenCodec('test-only-control-token-secret-at-least-32-chars')));
+        $old = $service->create($deployment, ['entitlements.read', 'usage.write'],
+            (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM));
+        self::assertNotNull($old);
+        $metadata = $service->activeRuntimeCredential($deployment);
+        self::assertSame($old['credential']['credentialId'], $metadata['credentialId']);
+        self::assertGreaterThanOrEqual(1, $metadata['daysUntilExpiry']);
+        $command = new \ControlPlane\Infrastructure\Console\RotateDeploymentCredentialCommand(
+            $service, new DeploymentCredentialLifetime('30'));
+        $tester = new \Symfony\Component\Console\Tester\CommandTester($command);
+        self::assertSame(0, $tester->execute(['--deployment-id' => $deployment]));
+        $output = json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame(1, substr_count($tester->getDisplay(), $output['credential']));
+        self::assertSame(['entitlements.read', 'usage.write'], $output['scopes']);
+        self::assertNull($service->authenticate('Service ' . $old['credential']['credentialId'] . '.'
+            . $old['secret'], 'rotation-test'));
+        self::assertNotNull($service->authenticate('Service ' . $output['credential'], 'rotation-test'));
+        self::assertGreaterThan(new \DateTimeImmutable('+29 days'), new \DateTimeImmutable($output['expiresAt']));
+        $status = new \Symfony\Component\Console\Tester\CommandTester(
+            new \ControlPlane\Infrastructure\Console\DeploymentCredentialStatusCommand($service));
+        self::assertSame(0, $status->execute(['--deployment-id' => $deployment]));
+        self::assertStringNotContainsString($output['credential'], $status->getDisplay());
+        self::assertGreaterThanOrEqual(29, json_decode($status->getDisplay(), true)['daysUntilExpiry']);
+        $service->create($deployment, ['entitlements.read', 'usage.write'],
+            (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM));
+        self::assertSame(1, (new \Symfony\Component\Console\Tester\CommandTester($command))
+            ->execute(['--deployment-id' => $deployment]));
+        self::assertNotNull($service->authenticate('Service ' . $output['credential'], 'rotation-test'));
     }
 
     private function expectScopeDenied(\ControlPlane\M2m\DeploymentIdentity $identity): void

@@ -91,6 +91,10 @@ services:
         arguments:
             $leadDays: '%env(int:CONTROL_RENEWAL_LEAD_DAYS)%'
 
+    ControlPlane\M2m\DeploymentCredentialLifetime:
+        arguments:
+            $ttlDays: '%env(CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS)%'
+
     ControlPlane\Infrastructure\Console\CheckCommercialDatabaseCommand:
         arguments:
             $databaseUrl: '%env(resolve:CONTROL_DATABASE_URL)%'

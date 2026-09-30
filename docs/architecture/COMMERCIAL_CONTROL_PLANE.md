@@ -253,23 +253,22 @@ Reserve a shared or dedicated deployment, then run
 reserved deployment and its existing provision operation, moves them to
 `provisioning` / `running`, increments `attempt_count`, and returns
 `installationId`, `credentialId`, `credentialSecret`, and scopes once. The
-credential is created through `DeploymentCredentialService`; only its hash is
+credential has a finite expiry from `CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS` and is created through `DeploymentCredentialService`; only its hash is
 stored. A repeated start is rejected and cannot retrieve the old secret.
 
 Pass the installation ID and bootstrap credential to the runtime deployment
-environment through its secret/config boundary. Run `runtime:installation:init`
-to create the singleton local installation, then `runtime:entitlements:sync` to
-pull the signed snapshot and apply it. During provisioning the issuer signs
+environment through its secret/config boundary. Run `runtime:deployment:activate` to initialize the singleton local installation, pull and apply the signed snapshot, then report its applied sequence. The existing `runtime:installation:init` and `runtime:entitlements:sync` remain available as bounded manual steps. During provisioning the issuer signs
 the desired runtime state `active` with current effective features. Moving the
 Control Plane deployment from `provisioning` to `active` alone does not issue a
-duplicate snapshot. After a successful sync, report
-`{"status":"ready","entitlementSequence":<applied sequence>}` to
+duplicate snapshot. Activation sends `{"status":"ready","entitlementSequence":<applied sequence>}` to
 `POST /api/m2m/deployment/status`. Control Plane checks the authenticated
 deployment, running operation and issued sequence before atomically marking
 the deployment active and the operation succeeded and auditing
-`deployment.provisioned`. A machine-code failed report marks both failed.
+`deployment.provisioned`. It removes `deployment.status.write` from that credential in the same transaction and leaves `entitlements.read` plus `usage.write`. A repeated ready report for the latest accepted sequence returns `already_ready` without another audit event. A machine-code failed report marks both failed.
 The runtime report confirms application activation; VM/container creation,
 tenant DB creation, DNS and TLS remain separate external operations.
+
+Operators can inspect expiry using `control:deployments:credential:status --deployment-id=<uuid>` and rotate the single active runtime credential using `control:deployments:credential:rotate --deployment-id=<uuid>`. Rotation issues a new finite credential once and invalidates the old one immediately. The operator must update the external deployment secret source and restart or recreate the runtime process that reads it; Control Plane does not update remote `.env` files.
 
 ## Signed deployment entitlement delivery
 

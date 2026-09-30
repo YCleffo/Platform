@@ -41,7 +41,8 @@ final class CrossPlaneBootstrapTest extends DatabaseTestCase
             $credentials = new DeploymentCredentialService($this->connection, new DeploymentScopeRegistry(),
                 new DatabaseRateLimiter($this->connection,
                     new TokenCodec('test-only-control-token-secret-at-least-32-chars')));
-            $bootstrapCredential = (new StartDeploymentProvisioning($this->connection, $credentials))->start($deployment);
+            $bootstrapCredential = (new StartDeploymentProvisioning($this->connection, $credentials,
+                new \ControlPlane\M2m\DeploymentCredentialLifetime('30')))->start($deployment);
             $installationId = $bootstrapCredential['installationId'];
             $bootstrap = new \App\PlatformRuntime\RuntimeInstallationBootstrap($core);
             self::assertSame($installationId, $bootstrap->initialize([
@@ -85,12 +86,13 @@ final class CrossPlaneBootstrapTest extends DatabaseTestCase
                 ]]));
             $sync = new \App\PlatformRuntime\RuntimeEntitlementSynchronizer($installations,
                 new \App\PlatformRuntime\PostgresEntitlementApplier($core, $verifier), $puller,
-                'https://control.example', 'env:CROSS_PLANE_CREDENTIAL');
+                'https://control.example', 'env:CROSS_PLANE_CREDENTIAL',
+                new \App\PlatformRuntime\RuntimeSecretResolver());
             $sequence = $sync->sync();
             self::assertSame(1, $sequence);
             self::assertSame('active', $core->createCommand('SELECT status::text FROM platform_runtime.installations')->queryScalar());
             $reportController = new M2mDeploymentStatusController($credentials, new DeploymentScopePolicy(),
-                new ReportDeploymentStatus($this->connection));
+                new ReportDeploymentStatus($this->connection, $credentials));
             $reported = $reportController->report(Request::create('/api/m2m/deployment/status', 'POST',
                 [], [], [], ['CONTENT_TYPE' => 'application/json',
                     'HTTP_AUTHORIZATION' => 'Service ' . $bootstrapCredential['credentialId'] . '.'

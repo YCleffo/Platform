@@ -47,8 +47,8 @@ final class M2mEntitlementTest extends DatabaseTestCase
             new DeploymentEntitlementIssuer($this->connection,
                 new EffectiveEntitlements($this->connection, new AccountAuthorization($this->connection)),
                 new EntitlementSigner($this->connection, $resolver)));
-        $withoutScope = $credentials->create($first, ['usage.write']);
-        $withScope = $credentials->create($second, ['entitlements.read']);
+        $withoutScope = $credentials->create($first, ['usage.write'], (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM));
+        $withScope = $credentials->create($second, ['entitlements.read'], (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM));
         self::assertNotNull($withoutScope);
         self::assertNotNull($withScope);
         self::assertSame(401, $controller->latest(Request::create('/api/m2m/entitlements/latest'))->getStatusCode());

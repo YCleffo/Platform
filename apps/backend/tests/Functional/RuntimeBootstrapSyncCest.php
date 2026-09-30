@@ -6,9 +6,11 @@ namespace App\Tests\Functional;
 
 use App\Environment;
 use App\PlatformRuntime\DeploymentEntitlementPuller;
+use App\PlatformRuntime\DeploymentStatusReporter;
 use App\PlatformRuntime\PostgresEntitlementApplier;
 use App\PlatformRuntime\PostgresInstallationRepository;
 use App\PlatformRuntime\RuntimeEntitlementSynchronizer;
+use App\PlatformRuntime\RuntimeActivationService;
 use App\PlatformRuntime\RuntimeInstallationBootstrap;
 use App\PlatformRuntime\SodiumEntitlementSignatureVerifier;
 use App\PlatformRuntime\TrustedEntitlementKeyRegistry;
@@ -69,13 +71,39 @@ final readonly class RuntimeBootstrapSyncCest
             putenv('TEST_BOOTSTRAP_CREDENTIAL=' . $credential);
             $sync = new RuntimeEntitlementSynchronizer(new PostgresInstallationRepository($db),
                 new PostgresEntitlementApplier($db, new SodiumEntitlementSignatureVerifier($keys)),
-                $puller, 'https://control.example', 'env:TEST_BOOTSTRAP_CREDENTIAL');
+                $puller, 'https://control.example', 'env:TEST_BOOTSTRAP_CREDENTIAL',
+                new \App\PlatformRuntime\RuntimeSecretResolver());
             try { $sync->sync(); throw new \RuntimeException('Invalid signature was accepted.'); }
             catch (DomainException) { assertSame('provisioned', $db->createCommand(
                 'SELECT status::text FROM platform_runtime.installations')->queryScalar()); }
             $puller->response['signatureBase64'] = base64_encode(sodium_crypto_sign_detached($document, $secret));
+            $reporter = new class($db) implements DeploymentStatusReporter {
+                public array $readySequences = [];
+                public array $failureCodes = [];
+                public function __construct(private ConnectionInterface $db) {}
+                public function ready(int $entitlementSequence): string
+                {
+                    if ($this->db->createCommand('SELECT status::text FROM platform_runtime.installations')->queryScalar()
+                        !== 'active') { throw new DomainException('Ready preceded entitlement application.'); }
+                    $this->readySequences[] = $entitlementSequence;
+                    return 'ready';
+                }
+                public function failed(string $machineErrorCode): void
+                {
+                    $this->failureCodes[] = $machineErrorCode;
+                }
+            };
+            $activation = new RuntimeActivationService($bootstrap, $sync, $reporter);
+            assertSame(['installationId' => $id, 'entitlementSequence' => 1, 'status' => 'ready'],
+                $activation->activate($identity));
+            assertSame([1], $reporter->readySequences);
             assertSame(1, $sync->sync());
-            assertSame(1, $sync->sync());
+            assertSame('active', $db->createCommand('SELECT status::text FROM platform_runtime.installations')->queryScalar());
+            $puller->response['signatureBase64'] = base64_encode(str_repeat('x', 64));
+            try { $activation->activate($identity);
+                throw new \RuntimeException('Invalid signature activated runtime.'); }
+            catch (DomainException) { assertSame(['runtime.entitlement_sync_failed'], $reporter->failureCodes); }
+            assertSame([1], $reporter->readySequences);
             assertSame('active', $db->createCommand('SELECT status::text FROM platform_runtime.installations')->queryScalar());
         } finally {
             putenv('TEST_BOOTSTRAP_CREDENTIAL');

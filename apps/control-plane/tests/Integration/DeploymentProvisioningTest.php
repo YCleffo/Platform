@@ -32,9 +32,14 @@ final class DeploymentProvisioningTest extends SubscriptionTestCase
         $deployment = (new ReserveDeployment($this->connection, 'platform.example'))
             ->reserveCloud($account, 'shared', 'provisioning-flow', 'provisioning-flow-operation');
         $credentials = $this->credentials();
-        $start = new StartDeploymentProvisioning($this->connection, $credentials);
+        $start = new StartDeploymentProvisioning($this->connection, $credentials,
+            new \ControlPlane\M2m\DeploymentCredentialLifetime('30'));
         $bootstrap = $start->start($deployment);
         self::assertSame(['entitlements.read', 'usage.write', 'deployment.status.write'], $bootstrap['scopes']);
+        $expiry = $this->connection->fetchOne('SELECT expires_at::text FROM commercial.service_credentials
+            WHERE credential_id = ?', [$bootstrap['credentialId']]);
+        self::assertIsString($expiry);
+        self::assertGreaterThan(new \DateTimeImmutable('+29 days'), new \DateTimeImmutable($expiry));
         self::assertSame('provisioning', $this->field($deployment, 'status'));
         self::assertSame('running', $this->operationField($deployment, 'status'));
         self::assertSame('runtime_bootstrap', $this->operationField($deployment, 'current_step'));
@@ -43,12 +48,12 @@ final class DeploymentProvisioningTest extends SubscriptionTestCase
         catch (\DomainException) { self::assertSame(1, (int) $this->connection->fetchOne(
             'SELECT count(*) FROM commercial.service_credentials WHERE deployment_id = ?', [$deployment])); }
 
-        $reporter = new ReportDeploymentStatus($this->connection);
+        $reporter = new ReportDeploymentStatus($this->connection, $credentials);
         $controller = new M2mDeploymentStatusController($credentials, new DeploymentScopePolicy(), $reporter);
         $header = 'Service ' . $bootstrap['credentialId'] . '.' . $bootstrap['credentialSecret'];
         self::assertSame(422, $controller->report($this->request($header,
             ['status' => 'ready', 'entitlementSequence' => 1]))->getStatusCode());
-        $withoutScope = $credentials->create($deployment, ['usage.write']);
+        $withoutScope = $credentials->create($deployment, ['usage.write'], (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM));
         self::assertNotNull($withoutScope);
         self::assertSame(403, $controller->report($this->request('Service '
             . $withoutScope['credential']['credentialId'] . '.' . $withoutScope['secret'],
@@ -77,14 +82,41 @@ final class DeploymentProvisioningTest extends SubscriptionTestCase
         $document = json_decode(base64_decode($issued['documentBase64'], true), true, 16, JSON_THROW_ON_ERROR);
         self::assertSame('active', $document['deploymentStatus']);
         self::assertSame(['provisioning.module.crm' => true], $document['features']);
-        self::assertSame(200, $controller->report($this->request($header,
-            ['status' => 'ready', 'entitlementSequence' => $issued['sequence']], $this->uuid()))->getStatusCode());
+        $ready = $controller->report($this->request($header,
+            ['status' => 'ready', 'entitlementSequence' => $issued['sequence']], $this->uuid()));
+        self::assertSame(200, $ready->getStatusCode());
+        self::assertSame('ready', json_decode($ready->getContent(), true)['status']);
         self::assertSame('active', $this->field($deployment, 'status'));
         self::assertSame('ready', $this->field($deployment, 'provisioning_state'));
         self::assertSame('succeeded', $this->operationField($deployment, 'status'));
         self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events
             WHERE action = 'deployment.provisioned' AND resource_id = ?", [$deployment]));
+        $active = $credentials->authenticate($header, 'provisioning-retry');
+        self::assertNotNull($active);
+        self::assertSame(['entitlements.read', 'usage.write'], $active->scopes);
+        $repeat = $controller->report($this->request($header,
+            ['status' => 'ready', 'entitlementSequence' => $issued['sequence']]));
+        self::assertSame(200, $repeat->getStatusCode());
+        self::assertSame('already_ready', json_decode($repeat->getContent(), true)['status']);
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events
+            WHERE action = 'deployment.provisioned' AND resource_id = ?", [$deployment]));
+        self::assertSame(422, $controller->report($this->request($header,
+            ['status' => 'ready', 'entitlementSequence' => $issued['sequence'] + 1]))->getStatusCode());
+        self::assertSame(403, $controller->report($this->request($header,
+            ['status' => 'failed', 'errorCode' => 'runtime.bootstrap_failed']))->getStatusCode());
         self::assertSame($issued, $issuer->ensureLatest($deployment));
+        $rotated = $credentials->rotate($deployment, $bootstrap['credentialId'],
+            (new \DateTimeImmutable('+30 days'))->format(DATE_ATOM));
+        self::assertNotNull($rotated);
+        $rotatedHeader = 'Service ' . $rotated['credential']['credentialId'] . '.' . $rotated['secret'];
+        self::assertSame(200, $controller->report($this->request($rotatedHeader,
+            ['status' => 'ready', 'entitlementSequence' => $issued['sequence']]))->getStatusCode());
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events
+            WHERE action = 'deployment.provisioned' AND resource_id = ?", [$deployment]));
+        $this->connection->executeStatement("UPDATE commercial.service_credentials
+            SET expires_at = now() - interval '1 second' WHERE credential_id = ?", [$rotated['credential']['credentialId']]);
+        self::assertSame(401, $controller->report($this->request($rotatedHeader,
+            ['status' => 'ready', 'entitlementSequence' => $issued['sequence']]))->getStatusCode());
     }
 
     public function testFailedReportAcceptsOnlyMachineCode(): void
@@ -93,9 +125,10 @@ final class DeploymentProvisioningTest extends SubscriptionTestCase
         $deployment = (new ReserveDeployment($this->connection, 'platform.example'))
             ->reserveCloud($account, 'dedicated', 'provisioning-failed', 'provisioning-failed-operation');
         $credentials = $this->credentials();
-        $bootstrap = (new StartDeploymentProvisioning($this->connection, $credentials))->start($deployment);
+        $bootstrap = (new StartDeploymentProvisioning($this->connection, $credentials,
+            new \ControlPlane\M2m\DeploymentCredentialLifetime('30')))->start($deployment);
         $controller = new M2mDeploymentStatusController($credentials, new DeploymentScopePolicy(),
-            new ReportDeploymentStatus($this->connection));
+            new ReportDeploymentStatus($this->connection, $credentials));
         $header = 'Service ' . $bootstrap['credentialId'] . '.' . $bootstrap['credentialSecret'];
         self::assertSame(422, $controller->report($this->request($header,
             ['status' => 'failed', 'errorCode' => 'Stack trace: a secret']))->getStatusCode());

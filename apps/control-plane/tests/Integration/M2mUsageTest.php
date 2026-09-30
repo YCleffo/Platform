@@ -21,14 +21,14 @@ final class M2mUsageTest extends SubscriptionTestCase
     {
         [$account, $controller, $credentials] = $this->fixture('m2m-auth');
         $deployment = $this->deployment($account);
-        $issued = $credentials->create($deployment, ['usage.write']);
+        $issued = $credentials->create($deployment, ['usage.write'], (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM));
         self::assertNotNull($issued);
         $header = $this->header($issued);
         self::assertSame(401, $this->post($controller, null, 'auth-missing')->getStatusCode());
         self::assertSame(401, $this->post($controller, 'Bearer ' . $issued['secret'], 'auth-bearer')->getStatusCode());
         self::assertSame(401, $this->post($controller, 'Service ' . $issued['credential']['credentialId'] . '.' . str_repeat('A', 43), 'auth-wrong')->getStatusCode());
 
-        $noScope = $credentials->create($deployment, ['entitlements.read']);
+        $noScope = $credentials->create($deployment, ['entitlements.read'], (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM));
         self::assertNotNull($noScope);
         self::assertSame(403, $this->post($controller, $this->header($noScope), 'auth-no-scope')->getStatusCode());
 
@@ -61,8 +61,8 @@ final class M2mUsageTest extends SubscriptionTestCase
         [$account, $controller, $credentials] = $this->fixture('m2m-usage');
         $firstDeployment = $this->deployment($account);
         $secondDeployment = $this->deployment($account);
-        $first = $credentials->create($firstDeployment, ['usage.write']);
-        $second = $credentials->create($secondDeployment, ['usage.write']);
+        $first = $credentials->create($firstDeployment, ['usage.write'], (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM));
+        $second = $credentials->create($secondDeployment, ['usage.write'], (new \DateTimeImmutable('+1 day'))->format(DATE_ATOM));
         self::assertNotNull($first);
         self::assertNotNull($second);
         $auditBefore = (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.audit_events');

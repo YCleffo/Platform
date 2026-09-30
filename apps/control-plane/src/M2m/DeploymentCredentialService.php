@@ -22,7 +22,7 @@ final readonly class DeploymentCredentialService
     /** @param list<string> $scopes
      * @return array{credential: array<string, mixed>, secret: string}|null
      */
-    public function create(string $deploymentId, array $scopes, ?string $expiresAt = null): ?array
+    public function create(string $deploymentId, array $scopes, string $expiresAt): ?array
     {
         $scopes = $this->scopes->validate($scopes);
         self::validateExpiry($expiresAt);
@@ -49,12 +49,13 @@ final readonly class DeploymentCredentialService
     }
 
     /** @return array{credential: array<string, mixed>, secret: string}|null */
-    public function rotate(string $deploymentId, string $credentialId): ?array
+    public function rotate(string $deploymentId, string $credentialId, string $expiresAt): ?array
     {
+        self::validateExpiry($expiresAt);
         $secret = self::secret();
-        return $this->connection->transactional(function (Connection $db) use ($deploymentId, $credentialId, $secret): ?array {
+        return $this->connection->transactional(function (Connection $db) use ($deploymentId, $credentialId, $secret, $expiresAt): ?array {
             $old = $db->fetchAssociative(<<<'SQL'
-                SELECT c.scopes, c.expires_at::text AS expires_at
+                SELECT c.scopes
                 FROM commercial.service_credentials c JOIN commercial.deployments d ON d.id = c.deployment_id
                 WHERE c.deployment_id = ? AND c.credential_id = ? AND c.status = 'active'
                   AND (c.expires_at IS NULL OR c.expires_at > now())
@@ -73,8 +74,68 @@ final readonly class DeploymentCredentialService
                     array_to_json(scopes)::text AS scopes_json, status,
                     created_at::text, expires_at::text, last_used_at::text,
                     rotated_at::text, revoked_at::text
-                SQL, [$deploymentId, Uuid::v4()->toRfc4122(), hash('sha256', $secret), $old['scopes'], $old['expires_at']]);
+                SQL, [$deploymentId, Uuid::v4()->toRfc4122(), hash('sha256', $secret), $old['scopes'], $expiresAt]);
             return $row === false ? null : ['credential' => self::present($row), 'secret' => $secret];
+        });
+    }
+
+    /** Only a strict subset of the current permissions may replace active scopes. */
+    public function restrictScopes(string $deploymentId, string $credentialId, array $reducedScopes): void
+    {
+        $reducedScopes = $this->scopes->validate($reducedScopes);
+        $this->connection->transactional(function (Connection $db) use ($deploymentId, $credentialId, $reducedScopes): void {
+            $row = $db->fetchAssociative(<<<'SQL'
+                SELECT array_to_json(scopes)::text AS scopes_json FROM commercial.service_credentials
+                WHERE deployment_id = ? AND credential_id = ? AND status = 'active'
+                    AND (expires_at IS NULL OR expires_at > now()) FOR UPDATE
+                SQL, [$deploymentId, $credentialId]);
+            if ($row === false) { throw new \DomainException('Deployment credential is unavailable.'); }
+            $current = json_decode($row['scopes_json'], true, flags: JSON_THROW_ON_ERROR);
+            if (count($reducedScopes) >= count($current)
+                || array_diff($reducedScopes, $current) !== []) {
+                throw new \DomainException('Deployment credential scopes cannot be expanded.');
+            }
+            $db->executeStatement('UPDATE commercial.service_credentials SET scopes = ?::text[]
+                WHERE deployment_id = ? AND credential_id = ?',
+                [self::pgArray($reducedScopes), $deploymentId, $credentialId]);
+        });
+    }
+
+    /** @return array<string,mixed> Metadata only; never includes a secret. */
+    public function activeRuntimeCredential(string $deploymentId): array
+    {
+        $rows = $this->connection->fetchAllAssociative(<<<'SQL'
+            SELECT c.id::text, c.credential_id::text, c.deployment_id::text,
+                array_to_json(c.scopes)::text AS scopes_json, c.status,
+                c.created_at::text, c.expires_at::text, c.last_used_at::text,
+                c.rotated_at::text, c.revoked_at::text
+            FROM commercial.service_credentials c JOIN commercial.deployments d ON d.id = c.deployment_id
+            WHERE c.deployment_id = ? AND c.status = 'active'
+                AND (c.expires_at IS NULL OR c.expires_at > now())
+                AND d.archived_at IS NULL AND d.status <> 'decommissioned'
+                AND c.scopes @> ARRAY['entitlements.read','usage.write']::text[]
+            ORDER BY c.created_at, c.id LIMIT 2
+            SQL, [$deploymentId]);
+        if (count($rows) !== 1) {
+            throw new \DomainException('Active runtime credential is missing or ambiguous.');
+        }
+        $metadata = self::present($rows[0]);
+        $seconds = $metadata['expiresAt'] === null ? null
+            : (new \DateTimeImmutable($metadata['expiresAt']))->getTimestamp() - time();
+        $metadata['daysUntilExpiry'] = $seconds === null ? null : max(0, (int) ceil($seconds / 86400));
+        return $metadata;
+    }
+
+    /** @return array{credential:array<string,mixed>,secret:string} */
+    public function rotateActiveRuntime(string $deploymentId, string $expiresAt): array
+    {
+        self::validateExpiry($expiresAt);
+        return $this->connection->transactional(function (Connection $db) use ($deploymentId, $expiresAt): array {
+            $db->fetchOne('SELECT id FROM commercial.deployments WHERE id = ? FOR UPDATE', [$deploymentId]);
+            $current = $this->activeRuntimeCredential($deploymentId);
+            $rotated = $this->rotate($deploymentId, $current['credentialId'], $expiresAt);
+            if ($rotated === null) { throw new \DomainException('Runtime credential rotation failed.'); }
+            return $rotated;
         });
     }
 
@@ -175,9 +236,11 @@ final readonly class DeploymentCredentialService
             'rotatedAt' => $row['rotated_at'], 'revokedAt' => $row['revoked_at']];
     }
 
-    private static function validateExpiry(?string $expiresAt): void
+    private static function validateExpiry(string $expiresAt): void
     {
-        if ($expiresAt !== null && new \DateTimeImmutable($expiresAt) <= new \DateTimeImmutable()) {
+        try { $expiry = new \DateTimeImmutable($expiresAt); }
+        catch (\Throwable) { throw new InvalidArgumentException('Invalid deployment credential expiry.'); }
+        if ($expiry <= new \DateTimeImmutable()) {
             throw new InvalidArgumentException('Deployment credential expiry must be in the future.');
         }
     }
