@@ -57,8 +57,8 @@ final class PrivacyProductionContributorsTest extends TestCase
             new ProcessingRestrictionContributorRegistry([new CoreProcessingRestrictionContributor($purposes)]),
             new PersonalDataErasureHandlerRegistry(new CoreErasureHandlerProvider($db)));
         $missing = $coverage->missing(true);
-        self::assertContains('test.purpose:core.person:erasure_handler', $missing);
-        self::assertContains('test.purpose:core.account:erasure_handler', $missing);
+        self::assertContains('core.person:anonymization_policy', $missing);
+        self::assertContains('core.human_account:anonymization_policy', $missing);
         self::assertContains('test.purpose:core.person_contact:lawful_basis', $missing);
         self::assertNotContains('test.purpose:core.person_contact:retention', $missing);
         self::assertNotContains('test.purpose:core.organization_membership:dependency', $missing);

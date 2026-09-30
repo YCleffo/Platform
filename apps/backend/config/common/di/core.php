@@ -237,10 +237,16 @@ return [
         ],
     ],
     CoreErasureHandlerProvider::class => [
-        '__construct()' => ['moduleHandlers' => $params['personalDataErasureHandlers'] ?? []],
+        '__construct()' => ['moduleHandlers' => $params['personalDataErasureHandlers'] ?? [],
+            'accounts' => Reference::to(AccountLifecycleRepository::class),
+            'auth' => Reference::to(AuthCleanupRepository::class),
+            'roles' => Reference::to(RoleRepository::class)],
     ],
     PersonalDataErasureHandlerRegistry::class => [
         '__construct()' => ['handlers' => Reference::to(CoreErasureHandlerProvider::class)],
+    ],
+    CorePrivacyContributorCoverage::class => [
+        '__construct()' => ['db' => Reference::to(\Yiisoft\Db\Connection\ConnectionInterface::class)],
     ],
     PrivacyRequestExecutionCapabilityRegistry::class => [
         '__construct()' => [

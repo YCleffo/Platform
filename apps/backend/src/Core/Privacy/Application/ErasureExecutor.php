@@ -48,7 +48,9 @@ final readonly class ErasureExecutor
             }
             $items = $this->db->createCommand(<<<'SQL'
                 SELECT id::text FROM core.privacy_erasure_items WHERE case_id = CAST(:case AS uuid)
-                    AND status <> 'completed' ORDER BY attempts, id LIMIT :limit
+                    AND status <> 'completed'
+                ORDER BY CASE resource_type WHEN 'core.person' THEN 2
+                    WHEN 'core.human_account' THEN 1 ELSE 0 END, attempts, id LIMIT :limit
                 SQL, [':case' => $caseId, ':limit' => $limit])->queryAll();
             foreach ($items as $item) {
                 try {
@@ -192,6 +194,17 @@ final readonly class ErasureExecutor
         };
         if ($result !== $expected) {
             throw new DomainException('Erasure handler returned the wrong result.');
+        }
+        $identityAction = match ($item['resource_type']) {
+            'core.person' => 'privacy.identity.person_anonymized',
+            'core.human_account' => 'privacy.identity.account_anonymized',
+            default => null,
+        };
+        if ($identityAction !== null) {
+            $this->audit->record(new WriteAuditEventCommand('account', $actor->accountId,
+                $identityAction, resourceType: (string) $item['resource_type'],
+                resourceId: (string) $item['resource_id'],
+                metadata: ['caseId' => $caseId, 'action' => 'anonymize', 'result' => $result]));
         }
         $now = $this->clock->now();
         $receipt = $this->audit->record(new WriteAuditEventCommand('account', $actor->accountId,

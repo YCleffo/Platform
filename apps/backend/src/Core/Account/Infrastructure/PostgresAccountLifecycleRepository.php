@@ -97,7 +97,7 @@ final readonly class PostgresAccountLifecycleRepository implements AccountLifecy
                 throw new ConflictException(sprintf('Account is already %s.', $before));
             }
             $this->assertNotLastSuperadmin($accountId);
-            $disabledAt = $target === 'disabled' ? 'now()' : 'disabled_at';
+            $disabledAt = 'COALESCE(disabled_at, now())';
             $archivedAt = $target === 'archived' ? 'now()' : 'archived_at';
             $this->db->createCommand(
                 sprintf(

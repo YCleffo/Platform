@@ -13,6 +13,30 @@ final readonly class PostgresAuthCleanupRepository implements AuthCleanupReposit
 {
     public function __construct(private ConnectionInterface $db) {}
 
+    public function eraseHumanIdentity(string $accountId): void
+    {
+        $account = $this->db->createCommand(<<<'SQL'
+            SELECT account_type::text FROM core.accounts WHERE id = CAST(:id AS uuid) FOR UPDATE
+            SQL, [':id' => $accountId])->queryScalar();
+        if ($account !== 'human') {
+            throw new \DomainException('Privacy credential erasure requires a human account.');
+        }
+        // Delete unbound activation/reset challenges while identifiers still identify their target.
+        $this->db->createCommand(<<<'SQL'
+            DELETE FROM core.auth_challenges c
+            WHERE c.account_id = CAST(:id AS uuid)
+                OR (c.account_id IS NULL AND EXISTS (
+                    SELECT 1 FROM core.auth_identifiers i
+                    WHERE i.account_id = CAST(:id AS uuid)
+                        AND i.normalized_value = c.target_normalized))
+            SQL, [':id' => $accountId])->execute();
+        foreach (['auth_sessions', 'auth_recovery_codes', 'auth_totp_factors', 'auth_passkeys',
+            'auth_external_identities', 'auth_password_credentials', 'auth_identifiers'] as $table) {
+            $this->db->createCommand("DELETE FROM core.{$table} WHERE account_id = CAST(:id AS uuid)",
+                [':id' => $accountId])->execute();
+        }
+    }
+
     public function cleanup(AuthCleanupPolicy $policy): AuthCleanupReport
     {
         return new AuthCleanupReport(

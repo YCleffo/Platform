@@ -20,7 +20,8 @@ final readonly class CoreRetentionCandidateProvider implements IteratorAggregate
 
     public function getIterator(): Traversable
     {
-        foreach (['core.person_contact', 'core.account_settings', 'core.organization_membership'] as $type) {
+        foreach (['core.person_contact', 'core.account_settings', 'core.organization_membership',
+            'core.human_account', 'core.person'] as $type) {
             yield new CoreResourceRetentionCandidateContributor($this->db, $this->purposes, $this->policies, $type);
         }
         yield from $this->moduleContributors;

@@ -18,7 +18,8 @@ final readonly class CoreResourceBasisContributor implements LawfulProcessingBas
     public function supports(string $purposeCode, string $resourceType): bool
     {
         $category = match ($resourceType) {
-            'core.person_contact', 'core.organization_membership' => 'identity',
+            'core.person', 'core.human_account', 'core.person_contact',
+                'core.organization_membership' => 'identity',
             'core.account_settings' => 'preferences',
             default => null,
         };

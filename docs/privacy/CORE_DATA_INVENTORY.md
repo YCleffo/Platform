@@ -6,9 +6,9 @@ This inventory started from the 25-table baseline through migration 018 and incl
 
 | Resource | Export | Retention | Lawful basis | Restriction | Erasure | Production contributor |
 | --- | --- | --- | --- | --- | --- | --- |
-| Person | Yes | No safe destructive lifecycle | Configured purpose only | No general flow | Unsupported | Export only |
+| Person | Yes | Configured anonymize policy and trigger | Consent runtime; other basis unknown | Archived identity cannot be edited or receive contacts | Irreversible neutral tombstone after contacts, memberships and human Account | Core root adapter and handler |
 | PersonContacts | Yes | Configured trigger | Consent runtime; other basis unknown | Contact flows | Delete, policy gated | Core resource adapter |
-| Account | Yes | No safe destructive lifecycle | Configured purpose only | No general flow | Unsupported | Export only |
+| Human Account | Yes | Configured anonymize policy and trigger | Consent runtime; other basis unknown | Archived account cannot authenticate or reactivate | Auth cleanup, RBAC revocation and irreversible tombstone after settings | Core root adapter and handler |
 | AccountSettings | Yes | Configured trigger | Consent runtime; other basis unknown | Settings service | Delete, policy gated | Core resource adapter |
 | OrganizationMembership | Yes | Configured trigger; active relation blocks delete | Consent runtime; other basis unknown | Organization flows | Delete after relation ends | Core resource adapter |
 | Auth/security metadata | Restricted export, no secrets | Existing Auth cleanup | Auth lifecycle | Auth boundary | No general privacy handler | Existing Auth cleanup |

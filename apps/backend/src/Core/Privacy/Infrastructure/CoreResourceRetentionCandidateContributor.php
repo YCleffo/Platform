@@ -19,6 +19,8 @@ final readonly class CoreResourceRetentionCandidateContributor implements Retent
         'core.person_contact' => 'identity',
         'core.account_settings' => 'preferences',
         'core.organization_membership' => 'identity',
+        'core.person' => 'identity',
+        'core.human_account' => 'identity',
     ];
 
     public function __construct(private ConnectionInterface $db, private ProcessingPurposeRegistry $purposes,
@@ -34,8 +36,12 @@ final readonly class CoreResourceRetentionCandidateContributor implements Retent
 
     public function supportsPurpose(string $purposeCode): bool
     {
-        return in_array(self::CATEGORIES[$this->resourceType],
-            $this->purposes->get($purposeCode)?->dataCategories ?? [], true);
+        $purpose = $this->purposes->get($purposeCode);
+        $policy = $purpose === null ? null : $this->policies->get($purpose->retentionPolicyCode);
+        $root = in_array($this->resourceType, ['core.person', 'core.human_account'], true);
+        return $policy !== null && ($root ? $policy->action === 'anonymize'
+            : $policy->action !== 'anonymize')
+            && in_array(self::CATEGORIES[$this->resourceType], $purpose->dataCategories, true);
     }
 
     public function candidates(int $limit, ?string $subjectPersonId = null): iterable
@@ -64,6 +70,21 @@ final readonly class CoreResourceRetentionCandidateContributor implements Retent
                 WHERE (CAST(:subject AS uuid) IS NULL OR m.person_id = CAST(:subject AS uuid))
                 ORDER BY m.id LIMIT :limit
                 SQL,
+            'core.person' => <<<'SQL'
+                SELECT p.id::text AS resource_id, p.id::text AS subject_id,
+                    p.archived_at::text AS lifecycle_at
+                FROM core.persons p
+                WHERE (CAST(:subject AS uuid) IS NULL OR p.id = CAST(:subject AS uuid))
+                ORDER BY p.id LIMIT :limit
+                SQL,
+            'core.human_account' => <<<'SQL'
+                SELECT a.id::text AS resource_id, a.person_id::text AS subject_id,
+                    a.archived_at::text AS lifecycle_at
+                FROM core.accounts a
+                WHERE a.account_type = 'human' AND a.person_id IS NOT NULL
+                    AND (CAST(:subject AS uuid) IS NULL OR a.person_id = CAST(:subject AS uuid))
+                ORDER BY a.id LIMIT :limit
+                SQL,
         };
         $rows = $this->db->createCommand($sql,
             [':subject' => $subjectPersonId, ':limit' => $limit])->queryAll();
@@ -83,8 +104,10 @@ final readonly class CoreResourceRetentionCandidateContributor implements Retent
                         SQL, [':subject' => $row['subject_id'], ':purpose' => $purposeCode])->queryScalar();
                     $triggeredAt = is_string($withdrawn) ? new DateTimeImmutable($withdrawn) : null;
                 } elseif (($this->resourceType === 'core.organization_membership' && $policy->trigger === 'relationship_end')
-                    || ($this->resourceType === 'core.account_settings' && $policy->trigger === 'account_archived')
-                    || ($this->resourceType === 'core.person_contact' && $policy->trigger === 'person_archived')) {
+                    || (in_array($this->resourceType, ['core.account_settings', 'core.human_account'], true)
+                        && $policy->trigger === 'account_archived')
+                    || (in_array($this->resourceType, ['core.person_contact', 'core.person'], true)
+                        && $policy->trigger === 'person_archived')) {
                     $triggeredAt = is_string($row['lifecycle_at']) ? new DateTimeImmutable($row['lifecycle_at']) : null;
                 }
                 $result[] = new RetentionCandidate((string) $row['subject_id'], $this->resourceType,

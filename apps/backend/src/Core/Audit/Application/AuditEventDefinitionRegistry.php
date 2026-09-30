@@ -55,7 +55,8 @@ final class AuditEventDefinitionRegistry
                 'privacy.processing_termination.partially_completed', 'privacy.processing_termination.failed',
                 'privacy.erasure.created', 'privacy.erasure.started',
                 'privacy.erasure.item_completed', 'privacy.erasure.item_blocked',
-                'privacy.erasure.failed', 'privacy.erasure.completed'
+                'privacy.erasure.failed', 'privacy.erasure.completed',
+                'privacy.identity.account_anonymized', 'privacy.identity.person_anonymized'
                     => new AuditEventDefinition($action, [
                     'requestType' => 'code', 'fromStatus' => 'code', 'toStatus' => 'code',
                     'deadlineCode' => 'code', 'reasonCode' => 'code',
@@ -64,6 +65,7 @@ final class AuditEventDefinitionRegistry
                     'resourceType' => 'code', 'changedPaths' => 'path_list',
                     'policyCode' => 'code', 'decisionCode' => 'code',
                     'action' => 'code', 'result' => 'code',
+                    'caseId' => 'uuid',
                     'stoppedPurposeCodes' => 'code_list', 'retainedPurposeCodes' => 'code_list',
                 ], [], []),
                 default => $this->definitions[$action] ?? null,

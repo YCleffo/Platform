@@ -31,9 +31,6 @@ final readonly class ErasureCaseService
             || !in_array($deadlineCalendarType, ['calendar_days', 'working_days', 'hours'], true))) {
             throw new DomainException('Erasure request requires an approved deadline.');
         }
-        if ($sourceRequestId !== null && $this->coverage !== null && $this->coverage->missing(true) !== []) {
-            throw new DomainException('Erasure contributor coverage is incomplete.');
-        }
         if ($sourceRequestId !== null) {
             $existing = $this->db->createCommand(
                 'SELECT id::text FROM core.privacy_erasure_cases WHERE source_request_id = CAST(:id AS uuid) AND subject_person_id = CAST(:subject AS uuid)',
@@ -50,6 +47,10 @@ final readonly class ErasureCaseService
         $all = $this->candidates->collect(1001, $subjectPersonId);
         if ($all === [] || count($all) > 1000) {
             throw new DomainException('Erasure candidate set is missing or exceeds safe batch.');
+        }
+        if ($sourceRequestId !== null && $this->coverage !== null
+            && $this->coverage->missingForSubject($subjectPersonId, $all) !== []) {
+            throw new DomainException('Erasure contributor coverage is incomplete for subject.');
         }
         $groups = [];
         foreach ($all as $candidate) {
