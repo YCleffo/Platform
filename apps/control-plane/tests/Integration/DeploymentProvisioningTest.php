@@ -114,7 +114,8 @@ final class DeploymentProvisioningTest extends SubscriptionTestCase
         self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events
             WHERE action = 'deployment.provisioned' AND resource_id = ?", [$deployment]));
         $this->connection->executeStatement("UPDATE commercial.service_credentials
-            SET expires_at = now() - interval '1 second' WHERE credential_id = ?", [$rotated['credential']['credentialId']]);
+            SET created_at = now() - interval '2 days', expires_at = now() - interval '1 second'
+            WHERE credential_id = ?", [$rotated['credential']['credentialId']]);
         self::assertSame(401, $controller->report($this->request($rotatedHeader,
             ['status' => 'ready', 'entitlementSequence' => $issued['sequence']]))->getStatusCode());
     }

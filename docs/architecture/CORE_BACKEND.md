@@ -104,31 +104,22 @@ php yii auth/cleanup
 Удаление выполняется порциями с использованием конструкций `WITH candidates AS (SELECT id FROM ... FOR UPDATE SKIP LOCKED LIMIT :batch_size) DELETE FROM ... USING candidates WHERE target.id = candidates.id AND target.<predicate>`. Условие удаления перепроверяется непосредственно в DELETE-выражении целевой таблицы, что исключает удаление строк, ставших активными/подтверждёнными между выборкой и удалением.
 
 ### Планирование запуска:
-Platform намеренно не включает собственный фоновый scheduler daemon. Запуск команды `auth/cleanup` настраивается стандартными системными инструментами:
-- **Cron** (Linux/Docker): `0 3 * * * /path/to/php /app/yii auth/cleanup > /dev/null 2>&1`;
-- **Windows Task Scheduler**: периодический запуск задачи по расписанию;
-- **Container Job**: одноразовый запуск контейнера в Kubernetes CronJob / Nomad / Docker Swarm task.
+Phase 5.0 включает отдельный `backend-scheduler`: команда `php yii scheduler:run` запускает ограниченные фоновые задачи, включая `auth_cleanup`. Состояние scheduler и email worker проверяется через `/health/ready` и `php yii ops:status`.
 
 ## Политика резервного копирования (Backup Policy)
 
-Локальные резервные копии базы данных PostgreSQL создаются скриптом `scripts/backup-db.ps1` в директорию `backups/`.
+Резервные копии Core и Control Plane создаёт отдельный `backup-worker`; ручной интерфейс — `scripts/backup-db.ps1 -Target Core|Control|All`. Проверка и изолированное восстановление описаны в `docs/operations/BACKUP_RESTORE.md`.
 
 ### Формат и восстановление:
 - Резервная копия создаётся утилитой `pg_dump` в **CUSTOM binary format** (`-Fc`) с расширением `.dump`.
-- Формат `.dump` содержит сжатые данные каталога PostgreSQL и восстанавливается через `scripts/restore-db.ps1` или напрямую через `pg_restore`:
+- Формат `.dump` проверяется `pg_restore --list`, SHA-256 и manifest. Для проверки восстановления используется `scripts/restore-drill.ps1`. Live restore требует явных `-Target`, `-DumpPath`, `-Force`, `-AllowLiveRestore` и для production `-ConfirmProductionRestore`:
   ```powershell
-  # Автоматическое восстановление последнего дампа из backups/:
-  powershell -ExecutionPolicy Bypass -File .\scripts\restore-db.ps1
-
-  # Восстановление конкретного файла дампа:
-  powershell -ExecutionPolicy Bypass -File .\scripts\restore-db.ps1 -DumpPath .\backups\platform-20260923-010000.dump -Force
-  ```
-  Команда `pg_restore` использует учётные данные из `.env`:
-  ```bash
-  pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --clean --if-exists /path/to/backup.dump
+  .\scripts\backup-db.ps1 -Target All
+  .\scripts\verify-backup.ps1
+  .\scripts\restore-drill.ps1
   ```
 
 ### Безопасность и защита данных:
 - **Чувствительность артефакта**: файл `.dump` содержит полную копию базы данных, включая учетные записи, хэши паролей (Argon2id), зашифрованные секреты TOTP, хэши резервных кодов, хэши токенов сессий и журнал аудита безопасности. Несмотря на хэширование и шифрование секретов, dump считается критически чувствительным артефактом (`sensitive artifact`) и не подлежит публичной передаче.
 - **Git & ZIP exclusion**: директория `backups/` и файлы `*.dump` зафиксированы в `.gitignore` и **никогда не включаются в архивы проекта** (`scripts/create-project-zip.ps1`), а также не коммитятся в систему контроля версий.
-- **Production**: для продуктивных сред резервные копии должны автоматически передаваться в защищённое изолированное хранилище (S3/GCS с шифрованием на стороне сервера и политикой доступа с наименьшими привилегиями).
+- **Production**: хранилище резервных копий должно обеспечивать утверждённое шифрование данных на носителе и контроль доступа. После live restore обязательна сверка privacy erasure до обслуживания пользователей.

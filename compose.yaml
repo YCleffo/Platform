@@ -750,6 +750,44 @@ services:
         condition: service_completed_successfully
     networks: [control_net]
 
+  backup-worker:
+    profiles: ["backup"]
+    build:
+      context: ./infra/backup
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      BACKUP_ROOT: /backups
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-false}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_MIN_SUCCESSFUL_SETS: ${BACKUP_MIN_SUCCESSFUL_SETS:-3}
+      BACKUP_HEALTH_TIMEOUT_SECONDS: ${BACKUP_HEALTH_TIMEOUT_SECONDS:-172800}
+      APPLICATION_VERSION: ${APPLICATION_VERSION:-}
+      PLATFORM_RELEASE_ID: ${PLATFORM_RELEASE_ID:-}
+      CORE_DB_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      CONTROL_DB_HOST: control-postgres
+      CONTROL_POSTGRES_DB: ${CONTROL_POSTGRES_DB:-platform_commercial}
+      CONTROL_POSTGRES_USER: ${CONTROL_POSTGRES_USER:-platform_control}
+      CONTROL_POSTGRES_PASSWORD: ${CONTROL_POSTGRES_PASSWORD:-}
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+      control-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "/opt/backup/backup.sh", "health"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10m
+    networks: [backend_net, control_net]
+
   control-postgres-test:
     profiles: ["control-test"]
     image: postgres:18
@@ -794,6 +832,15 @@ services:
       YOOKASSA_SECRET_KEY: test-only-yookassa-secret
       CONTROL_DATABASE_URL: postgresql://${CONTROL_TEST_USER:-platform_control_test}:${CONTROL_TEST_PASSWORD:-}@control-postgres-test:5432/${CONTROL_TEST_DB:-platform_commercial_test}?serverVersion=18&charset=utf8
       PLATFORM_BASE_DOMAIN: platform.example
+      PHASE47_CROSS_PLANE: "1"
+      DB_HOST: postgres-test
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_TEST_DB:-platform_test}
+      DB_USER: ${POSTGRES_USER:-platform_app}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis-test
+    volumes:
+      - ./apps/backend:/backend:ro
     depends_on:
       control-postgres-test:
         condition: service_healthy
@@ -803,7 +850,7 @@ services:
       timeout: 3s
       retries: 20
       start_period: 5s
-    networks: [control_test_net]
+    networks: [control_test_net, test_net]
 
 volumes:
   postgres_data:
