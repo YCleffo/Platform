@@ -129,6 +129,10 @@ services:
     environment: &backend_environment
       APP_ENV: ${BACKEND_APP_ENV:-dev}
       APP_DEBUG: ${BACKEND_APP_DEBUG:-true}
+      CORE_SCHEDULER_ENABLED: ${CORE_SCHEDULER_ENABLED:-true}
+      CORE_EMAIL_WORKER_ENABLED: ${CORE_EMAIL_WORKER_ENABLED:-true}
+      CORE_SCHEDULER_HEALTH_TIMEOUT_SECONDS: ${CORE_SCHEDULER_HEALTH_TIMEOUT_SECONDS:-120}
+      CORE_EMAIL_WORKER_HEALTH_TIMEOUT_SECONDS: ${CORE_EMAIL_WORKER_HEALTH_TIMEOUT_SECONDS:-120}
       PLATFORM_INSTALLATION_ID: ${PLATFORM_INSTALLATION_ID:-}
       PLATFORM_DEPLOYMENT_MODE: ${PLATFORM_DEPLOYMENT_MODE:-}
       APPLICATION_VERSION: ${APPLICATION_VERSION:-}
@@ -258,7 +262,7 @@ services:
           "CMD",
           "php",
           "-r",
-          "exit(@file_get_contents('http://127.0.0.1/health') === false ? 1 : 0);",
+          "exit(@file_get_contents('http://127.0.0.1/health/ready') === false ? 1 : 0);",
         ]
       interval: 5s
       timeout: 5s
@@ -275,6 +279,12 @@ services:
       target: dev
     restart: unless-stopped
     command: ["php", "yii", "communication:process-email", "--loop"]
+    healthcheck:
+      test: ["CMD", "php", "yii", "ops:health", "backend-email-worker"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     environment:
       <<: *backend_environment
     volumes:
@@ -296,6 +306,12 @@ services:
       target: dev
     restart: unless-stopped
     command: ["php", "yii", "scheduler:run"]
+    healthcheck:
+      test: ["CMD", "php", "yii", "ops:health", "backend-scheduler"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     environment:
       <<: *backend_environment
       CORE_SCHEDULER_ENABLED: ${CORE_SCHEDULER_ENABLED:-true}
@@ -593,6 +609,10 @@ services:
       target: app
     restart: unless-stopped
     environment: &control_environment
+      CONTROL_SCHEDULER_ENABLED: ${CONTROL_SCHEDULER_ENABLED:-true}
+      CONTROL_OUTBOX_WORKER_ENABLED: ${CONTROL_OUTBOX_WORKER_ENABLED:-true}
+      CONTROL_SCHEDULER_HEALTH_TIMEOUT_SECONDS: ${CONTROL_SCHEDULER_HEALTH_TIMEOUT_SECONDS:-120}
+      CONTROL_OUTBOX_WORKER_HEALTH_TIMEOUT_SECONDS: ${CONTROL_OUTBOX_WORKER_HEALTH_TIMEOUT_SECONDS:-120}
       APP_ENV: ${CONTROL_APP_ENV:-prod}
       APP_DEBUG: "0"
       CONTROL_APP_SECRET: ${CONTROL_APP_SECRET:-}
@@ -624,12 +644,14 @@ services:
     depends_on:
       control-postgres:
         condition: service_healthy
+      control-migrate:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:${CONTROL_PORT:-8090}:8000"
     volumes:
       - ./deployment/entitlements/signing:/run/entitlement-signing:ro
     healthcheck:
-      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/health') === false ? 1 : 0);"]
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/health/ready') === false ? 1 : 0);"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -643,6 +665,12 @@ services:
       target: app
     restart: unless-stopped
     command: ["php", "bin/console", "control:scheduler:run"]
+    healthcheck:
+      test: ["CMD", "php", "bin/console", "control:ops:health", "control-scheduler"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     environment:
       <<: *control_environment
       CONTROL_SCHEDULER_ENABLED: ${CONTROL_SCHEDULER_ENABLED:-true}
@@ -681,10 +709,16 @@ services:
     restart: unless-stopped
     command: ["php", "bin/console", "control:outbox:process-email", "--loop"]
     healthcheck:
-      disable: true
+      test: ["CMD", "php", "bin/console", "control:ops:health", "control-outbox-worker"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     environment:
       APP_ENV: ${CONTROL_APP_ENV:-prod}
       APP_DEBUG: "0"
+      CONTROL_OUTBOX_WORKER_ENABLED: ${CONTROL_OUTBOX_WORKER_ENABLED:-true}
+      CONTROL_OUTBOX_WORKER_HEALTH_TIMEOUT_SECONDS: ${CONTROL_OUTBOX_WORKER_HEALTH_TIMEOUT_SECONDS:-120}
       CONTROL_APP_SECRET: ${CONTROL_APP_SECRET:-}
       CONTROL_TOKEN_SECRET: ${CONTROL_TOKEN_SECRET:-}
       CONTROL_PRIVACY_RETENTION_DAYS: '${CONTROL_PRIVACY_RETENTION_DAYS:-{}}'
@@ -712,6 +746,8 @@ services:
     depends_on:
       control-postgres:
         condition: service_healthy
+      control-migrate:
+        condition: service_completed_successfully
     networks: [control_net]
 
   control-postgres-test:

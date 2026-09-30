@@ -105,6 +105,12 @@ return [
     Route::get('/health')
         ->action(Api\HealthAction::class)
         ->name('app/health'),
+    Route::get('/health/live')
+        ->action(Api\LiveHealthAction::class)
+        ->name('app/health/live'),
+    Route::get('/health/ready')
+        ->action(Api\ReadyHealthAction::class)
+        ->name('app/health/ready'),
 
     Route::get('/api/public/config')
         ->action(PublicConfigAction::class)

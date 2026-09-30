@@ -1,0 +1,1 @@
+DROP TABLE platform_runtime.background_job_status;

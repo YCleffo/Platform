@@ -4,30 +4,25 @@ declare(strict_types=1);
 
 namespace ControlPlane\Infrastructure\Http;
 
-use Doctrine\DBAL\Connection;
+use ControlPlane\Infrastructure\Scheduler\OperationalStatus;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
 final readonly class HealthController
 {
-    #[Route('/health', name: 'control_health', methods: ['GET'])]
-    public function __invoke(Connection $connection): JsonResponse
-    {
-        try {
-            $ready = (bool) $connection->fetchOne(<<<'SQL'
-SELECT to_regclass('commercial.control_users') IS NOT NULL
-   AND to_regclass('commercial.control_user_email_verifications') IS NOT NULL
-   AND to_regclass('commercial.control_sessions') IS NOT NULL
-   AND to_regclass('commercial.control_session_refresh_history') IS NOT NULL
-   AND to_regclass('commercial.rate_limit_counters') IS NOT NULL
-   AND to_regclass('commercial.refunds') IS NOT NULL
-   AND to_regclass('commercial.refund_items') IS NOT NULL
-   AND to_regclass('commercial.receipts') IS NOT NULL
-SQL);
-        } catch (\Throwable) {
-            $ready = false;
-        }
+    #[Route('/health/live', name: 'control_health_live', methods: ['GET'])]
+    public function live(): JsonResponse { return new JsonResponse(['status' => 'ok']); }
 
+    #[Route('/health/ready', name: 'control_health_ready', methods: ['GET'])]
+    public function ready(OperationalStatus $status): JsonResponse
+    {
+        $ready = $status->ready();
         return new JsonResponse(['status' => $ready ? 'ok' : 'not_ready'], $ready ? 200 : 503);
+    }
+
+    #[Route('/health', name: 'control_health', methods: ['GET'])]
+    public function __invoke(OperationalStatus $status): JsonResponse
+    {
+        return $this->ready($status);
     }
 }

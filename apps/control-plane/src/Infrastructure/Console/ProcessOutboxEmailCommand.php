@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ControlPlane\Infrastructure\Console;
 
 use ControlPlane\Infrastructure\Outbox\VerificationEmailProcessor;
+use ControlPlane\Infrastructure\Scheduler\BackgroundJobStatusRecorder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -14,7 +15,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'control:outbox:process-email', description: 'Deliver leased Control email events')]
 final class ProcessOutboxEmailCommand extends Command
 {
-    public function __construct(private readonly VerificationEmailProcessor $processor)
+    public function __construct(private readonly VerificationEmailProcessor $processor,
+        private readonly BackgroundJobStatusRecorder $status)
     {
         parent::__construct();
     }
@@ -33,9 +35,22 @@ final class ProcessOutboxEmailCommand extends Command
             return Command::INVALID;
         }
         do {
+            $started = microtime(true);
             $processed = 0;
-            while ($processed < $limit && $this->processor->processOne()) {
-                ++$processed;
+            try {
+                $this->status->started('control_outbox_worker');
+                while ($processed < $limit && $this->processor->processOne()) {
+                    ++$processed;
+                }
+                $this->status->succeeded('control_outbox_worker',
+                    max(0, (int) ((microtime(true) - $started) * 1000)), $processed);
+            } catch (\Throwable) {
+                try { $this->status->failed('control_outbox_worker', 'outbox_batch_failed'); }
+                catch (\Throwable) { /* Keep bounded retry behavior. */ }
+                $output->writeln('Control outbox worker batch failed.');
+                if (!$input->getOption('loop')) { return Command::FAILURE; }
+                sleep(5);
+                continue;
             }
             $output->writeln("Processed $processed email event(s).");
             if (!$input->getOption('loop')) {

@@ -10,6 +10,7 @@ use ControlPlane\Infrastructure\Scheduler\JobSkipped;
 use ControlPlane\Infrastructure\Scheduler\ScheduledJob;
 use ControlPlane\Infrastructure\Scheduler\SchedulerConfig as Config;
 use ControlPlane\Infrastructure\Scheduler\SchedulerLoop;
+use ControlPlane\Infrastructure\Scheduler\BackgroundJobStatusRecorder;
 use ControlPlane\Payment\Application\ReconcileYooKassaPayments;
 use ControlPlane\Privacy\ControlPrivacyCleanup;
 use ControlPlane\Privacy\ControlPrivacyRetentionPolicy;
@@ -30,7 +31,8 @@ final class SchedulerRunCommand extends Command
         private readonly AdvanceSubscriptionPeriod $advance, private readonly ExpireSubscription $expire,
         private readonly ReconcileYooKassaPayments $payments, private readonly ReconcileYooKassaRefunds $refunds,
         private readonly ReconcileYooKassaReceipts $receipts, private readonly ControlPrivacyCleanup $cleanup,
-        private readonly ControlPrivacyRetentionPolicy $cleanupPolicy, private readonly int $leadDays = 7)
+        private readonly ControlPrivacyRetentionPolicy $cleanupPolicy,
+        private readonly BackgroundJobStatusRecorder $status, private readonly int $leadDays = 7)
     { parent::__construct(); }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -79,7 +81,8 @@ final class SchedulerRunCommand extends Command
                         throw new JobSkipped('privacy_policy_missing');
                     }),
             ];
-            (new SchedulerLoop($this->db, $jobs, static fn(string $line) => $output->writeln($line)))->run();
+            (new SchedulerLoop($this->db, $jobs, static fn(string $line) => $output->writeln($line),
+                recorder: $this->status))->run();
         } catch (\Throwable) {
             $output->writeln('Scheduler startup failed.');
             return Command::FAILURE;

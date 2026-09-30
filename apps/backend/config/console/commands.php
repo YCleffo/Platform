@@ -6,6 +6,8 @@ use App\Console;
 
 return [
     'scheduler:run' => Console\SchedulerRunCommand::class,
+    'ops:status' => Console\OpsStatusCommand::class,
+    'ops:health' => Console\OpsHealthCommand::class,
     'auth/cleanup' => Console\AuthCleanupCommand::class,
     'db:check' => Console\DbCheckCommand::class,
     'runtime:installation:init' => Console\RuntimeInstallationInitCommand::class,

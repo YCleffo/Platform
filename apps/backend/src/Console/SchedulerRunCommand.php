@@ -16,6 +16,7 @@ use App\PlatformRuntime\Scheduler\JobSkipped;
 use App\PlatformRuntime\Scheduler\ScheduledJob;
 use App\PlatformRuntime\Scheduler\SchedulerConfig as Config;
 use App\PlatformRuntime\Scheduler\SchedulerLoop;
+use App\PlatformRuntime\Scheduler\BackgroundJobStatusRecorder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -30,7 +31,8 @@ final class SchedulerRunCommand extends Command
         private readonly RetentionBatchEvaluator $retention, private readonly PendingErasureProcessor $erasure,
         private readonly PrivacyCleanupService $cleanup, private readonly PrivacyCleanupPolicy $cleanupPolicy,
         private readonly DestructionEvidencePolicy $evidencePolicy,
-        private readonly RuntimeEntitlementSynchronizer $entitlements) { parent::__construct(); }
+        private readonly RuntimeEntitlementSynchronizer $entitlements,
+        private readonly BackgroundJobStatusRecorder $status) { parent::__construct(); }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
@@ -81,7 +83,8 @@ final class SchedulerRunCommand extends Command
                     $enabled && Config::enabled('CORE_ENTITLEMENT_SYNC_ENABLED', true), 1,
                     function (int $limit): int { $this->entitlements->sync(); return 1; }),
             ];
-            (new SchedulerLoop($this->db, $jobs, static fn(string $line) => $output->writeln($line)))->run();
+            (new SchedulerLoop($this->db, $jobs, static fn(string $line) => $output->writeln($line),
+                recorder: $this->status))->run();
         } catch (\Throwable) {
             $output->writeln('Scheduler startup failed.');
             return Command::FAILURE;
