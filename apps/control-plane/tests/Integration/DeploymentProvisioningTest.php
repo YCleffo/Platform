@@ -88,6 +88,7 @@ final class DeploymentProvisioningTest extends SubscriptionTestCase
         self::assertSame('ready', json_decode($ready->getContent(), true)['status']);
         self::assertSame('active', $this->field($deployment, 'status'));
         self::assertSame('ready', $this->field($deployment, 'provisioning_state'));
+        self::assertSame($this->field($deployment, 'desired_release_id'), $this->field($deployment, 'current_release_id'));
         self::assertSame('succeeded', $this->operationField($deployment, 'status'));
         self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events
             WHERE action = 'deployment.provisioned' AND resource_id = ?", [$deployment]));

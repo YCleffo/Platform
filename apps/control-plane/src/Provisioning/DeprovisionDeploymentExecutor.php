@@ -68,7 +68,7 @@ final readonly class DeprovisionDeploymentExecutor
             $this->step($operationId, 'final_backup');
             $started = new \DateTimeImmutable((string) $this->db->fetchOne(
                 'SELECT started_at::text FROM commercial.deployment_operations WHERE id = ?', [$operationId]));
-            if (!$this->backups->hasFinalBackup($id, $installation, $started)) {
+            if (!$this->backups->hasFinalBackup($id, $installation, $operationId, $started)) {
                 throw new ProvisioningFailure('infrastructure.awaiting_final_backup', true);
             }
             $this->step($operationId, 'infrastructure_destroy');
@@ -80,7 +80,7 @@ final readonly class DeprovisionDeploymentExecutor
                 throw new ProvisioningFailure('infrastructure.secret_storage_failed', true);
             }
             $this->step($operationId, 'finalize');
-            if (!$this->backups->hasFinalBackup($id, $installation, $started)) {
+            if (!$this->backups->hasFinalBackup($id, $installation, $operationId, $started)) {
                 throw new ProvisioningFailure('infrastructure.backup_evidence_unavailable', true);
             }
             $this->assertAbsent($id);

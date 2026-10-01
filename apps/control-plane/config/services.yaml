@@ -55,6 +55,10 @@ services:
         arguments:
             $environment: '%env(APP_ENV)%'
 
+    ControlPlane\Deployment\Application\RequestDeploymentUpdate:
+        arguments:
+            $environment: '%env(APP_ENV)%'
+
     ControlPlane\Provisioning\DeploymentInfrastructureProvider:
         alias: ControlPlane\Provisioning\LocalDockerInfrastructureProvider
 
@@ -80,6 +84,10 @@ services:
             $readyTimeout: '%env(int:RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS)%'
 
     ControlPlane\Provisioning\ReconcileDeploymentInfrastructureCommand:
+        arguments:
+            $environment: '%env(APP_ENV)%'
+
+    ControlPlane\Provisioning\ReconcileDeploymentReleaseCommand:
         arguments:
             $environment: '%env(APP_ENV)%'
 

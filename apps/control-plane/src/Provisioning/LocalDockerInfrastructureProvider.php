@@ -38,6 +38,8 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
                 throw new ProvisioningFailure('infrastructure.release_digest_mismatch');
             }
         }
+        $this->docker->run(['exec', $this->names($id)[0], 'php', '/app/yii', 'runtime:release:verify',
+            '--started-at=1970-01-01T00:00:00+00:00'], 'infrastructure.release_digest_mismatch');
     }
 
     private function ensure(ProvisioningRequest $request, bool $migrate): ProvisioningResult
@@ -230,14 +232,15 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
         if ($image === null || strtolower((string) ($image['Id'] ?? '')) !== $request->imageDigest) {
             throw new ProvisioningFailure('infrastructure.release_digest_mismatch');
         }
-        // The migration command is executed from the pinned target artifact, never from this checkout.
+        // Both validation and application execute from the pinned target artifact.
         [$runtime, $database, $network] = $this->names($id);
-        $this->docker->run(['run', '--rm', '--network', $network,
+        $base = ['run', '--rm', '--network', $network,
             '--mount', $this->secretMount($request->databaseSecretPath, 'db_password'),
-            '-e', 'PGHOST=' . $database, '-e', 'POSTGRES_DB=platform', '-e', 'POSTGRES_USER=platform_runtime',
-            '-e', 'POSTGRES_PASSWORD_FILE=/run/provisioning-secrets/db_password',
-            '--entrypoint', 'php', $request->imageDigest, '/app/yii', 'migrate/up', '--interactive=0'],
-            'infrastructure.migration_failed');
+            '-e', 'DB_HOST=' . $database, '-e', 'DB_PORT=5432', '-e', 'DB_NAME=platform', '-e', 'DB_USER=platform_runtime',
+            '-e', 'DB_PASSWORD_FILE=/run/provisioning-secrets/db_password', '--entrypoint', 'php', $request->imageDigest, '/app/yii'];
+        $this->docker->run(array_merge($base, ['runtime:migrations:validate-history']),
+            'infrastructure.release_migration_history_invalid');
+        $this->docker->run(array_merge($base, ['runtime:migrations:apply']), 'infrastructure.migration_failed');
     }
 
     public function replaceApplicationRuntime(ProvisioningRequest $request): void
@@ -246,6 +249,7 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
         $id = strtolower($request->deploymentId);
         [$runtime, $database, $network] = $this->names($id);
         $redis = $this->resource($id, 'redis');
+        // Target availability was checked before any old process is removed. DB, Redis, network and secrets remain untouched.
         foreach (['runtime' => $runtime, 'scheduler' => $this->resource($id, 'scheduler'),
             'emailWorker' => $this->resource($id, 'email-worker')] as $role => $name) {
             $details = $this->docker->inspect('container', $name);
@@ -255,10 +259,6 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
             }
             if ($details !== null && strtolower((string)($details['Image'] ?? '')) === $request->imageDigest
                 && (bool)($details['State']['Running'] ?? false)) { continue; }
-        }
-        // Target availability was checked before any old process is removed. DB, Redis, network and secrets remain untouched.
-        foreach (['runtime' => $runtime, 'scheduler' => $this->resource($id, 'scheduler'),
-            'emailWorker' => $this->resource($id, 'email-worker')] as $role => $name) {
             if ($details !== null) $this->docker->run(['rm', '-f', '-v', $name], 'infrastructure.runtime_replace_failed');
             $this->createCore($request, $role, $name, $database, $redis, $network);
             $this->connect($name, $this->controlNetwork);

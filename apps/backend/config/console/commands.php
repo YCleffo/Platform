@@ -14,6 +14,8 @@ return [
     'runtime:deployment:activate' => Console\RuntimeDeploymentActivateCommand::class,
     'runtime:release:apply' => Console\RuntimeReleaseApplyCommand::class,
     'runtime:release:verify' => Console\RuntimeReleaseVerifyCommand::class,
+    'runtime:migrations:validate-history' => Console\RuntimeMigrationsValidateHistoryCommand::class,
+    'runtime:migrations:apply' => Console\RuntimeMigrationsApplyCommand::class,
     'runtime:entitlements:sync' => Console\RuntimeEntitlementsSyncCommand::class,
     'communication:process-email' => Console\ProcessEmailOutboxCommand::class,
     'core:bootstrap-superadmin' => Console\BootstrapSuperadminCommand::class,

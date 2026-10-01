@@ -96,7 +96,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
         };
         $evidence = new class implements DeploymentBackupEvidenceReader {
             public bool $ready = false;
-            public function hasFinalBackup(string $deploymentId, string $installationId, \DateTimeImmutable $startedAt): bool
+            public function hasFinalBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool
             { return $this->ready; }
             public function hasUpdateBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool { return false; }
         };
@@ -170,7 +170,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
             public function isClean(string $deploymentId): bool { return $this->clean; }
         };
         $evidence = new class implements DeploymentBackupEvidenceReader {
-            public function hasFinalBackup(string $deploymentId, string $installationId, \DateTimeImmutable $startedAt): bool
+            public function hasFinalBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool
             { return true; }
             public function hasUpdateBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool { return false; }
         };

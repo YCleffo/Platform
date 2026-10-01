@@ -26,7 +26,7 @@ final readonly class UpdateDeploymentExecutor
         try {
             $row = $this->db->transactional(function (Connection $db) use ($operationId): ?array {
                 $row = $db->fetchAssociative("SELECT o.*, d.installation_id, d.commercial_account_id, d.mode, d.status AS deployment_status,
-                    d.archived_at, d.current_release_id, d.desired_release_id, d.core_db_secret_ref, r.version, r.channel,
+                    d.archived_at, d.provisioning_state, d.current_release_id, d.desired_release_id, d.core_db_secret_ref, r.version, r.channel,
                     r.status AS release_status, r.oci_reference, r.image_digest
                     FROM commercial.deployment_operations o JOIN commercial.deployments d ON d.id=o.deployment_id
                     JOIN commercial.releases r ON r.id=d.desired_release_id WHERE o.id=? AND o.operation_type='update'
@@ -47,6 +47,9 @@ final readonly class UpdateDeploymentExecutor
             if ($row['core_db_secret_ref'] !== $stored['reference']) throw new ProvisioningFailure('infrastructure.secret_storage_failed');
             $request=$this->requests->create($row, $stored);
             $step=(string)$this->db->fetchOne('SELECT current_step FROM commercial.deployment_operations WHERE id=?',[$operationId]);
+            if (!in_array($step, ['quiesce','pre_update_backup','migrate','replace_runtime','runtime_verify','finalize'], true)) {
+                throw new ProvisioningFailure('infrastructure.deployment_ineligible');
+            }
             if ($step === 'quiesce') { $this->provider->quiesce($id); $this->step($operationId, 'pre_update_backup'); $step='pre_update_backup'; }
             $started=new \DateTimeImmutable((string)$this->db->fetchOne('SELECT started_at::text FROM commercial.deployment_operations WHERE id=?',[$operationId]));
             if ($step === 'pre_update_backup' && !$this->backups->hasUpdateBackup($id,(string)$row['installation_id'],$operationId,$started)) throw new ProvisioningFailure('infrastructure.awaiting_update_backup',true);

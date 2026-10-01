@@ -15,7 +15,7 @@ deployment_dir() { valid_id "$1" || die 'invalid deployment ID'; echo "deploymen
 deployment_inventory() {
   db_config control
   psql -X -A -t -F '|' -h "$dbhost" -U "$dbuser" -d "$dbname" -v ON_ERROR_STOP=1 -c \
-    "SELECT d.id, d.installation_id, r.version, r.id FROM commercial.deployments d JOIN commercial.releases r ON r.id = d.current_release_id WHERE d.mode = 'dedicated' AND d.status IN ('active','suspended') AND d.archived_at IS NULL AND d.core_db_secret_ref = 'localdev://' || d.id::text || '/db' UNION ALL SELECT d.id,d.installation_id,r.version,r.id FROM commercial.deployments d JOIN commercial.releases r ON r.id=d.current_release_id JOIN commercial.deployment_operations o ON o.deployment_id=d.id WHERE d.mode='dedicated' AND d.status='provisioning' AND d.archived_at IS NULL AND d.core_db_secret_ref='localdev://' || d.id::text || '/db' AND o.operation_type='update' AND o.status IN ('running','retry') AND o.current_step='pre_update_backup' ORDER BY 1"
+    "SELECT d.id,d.installation_id,r.version,r.id FROM commercial.deployments d JOIN commercial.releases r ON r.id=d.current_release_id WHERE d.mode='dedicated' AND d.archived_at IS NULL AND d.core_db_secret_ref='localdev://' || d.id::text || '/db' AND (d.status IN ('active','suspended') OR (d.status='provisioning' AND EXISTS (SELECT 1 FROM commercial.deployment_operations o WHERE o.deployment_id=d.id AND o.operation_type='update' AND o.status IN ('running','retry') AND o.current_step='pre_update_backup'))) ORDER BY COALESCE((SELECT min(CASE WHEN o.operation_type='update' AND o.current_step='pre_update_backup' THEN 1 WHEN o.operation_type='deprovision' AND o.current_step='final_backup' THEN 2 ELSE 3 END) FROM commercial.deployment_operations o WHERE o.deployment_id=d.id AND o.status IN ('running','retry')),3),d.created_at,d.id"
 }
 deployment_row() {
   local wanted=$1 rows id installation version release
@@ -33,6 +33,8 @@ deployment_manifest_ok() {
   jq -e --arg d "$expected" '(.schemaVersion == 1) and (.backupType == "deployment") and
     (.deploymentId == $d) and (.backupId|type == "string") and
     (.installationId|type == "string") and (.createdAt|type == "string") and
+    (((.purpose // "periodic") == "periodic" and ((has("operationId")|not) or .operationId == null)) or
+     ((.purpose == "pre_update" or .purpose == "decommission_final") and (.operationId|type == "string"))) and
     (.applicationVersion|type == "string") and (.releaseId|type == "string") and
     (.dump|type == "object") and (.dump.file|type == "string") and
     (.dump.sizeBytes|type == "number" and . > 0) and
@@ -41,6 +43,7 @@ deployment_manifest_ok() {
   id=$(jq -r .deploymentId "$manifest"); backup_id=$(jq -r .backupId "$manifest")
   valid_id "$id" && valid_id "$backup_id" || return 1
   valid_id "$(jq -r .installationId "$manifest")" || return 1
+  if [[ $(jq -r '.purpose // "periodic"' "$manifest") != periodic ]]; then valid_id "$(jq -r .operationId "$manifest")" || return 1; fi
   valid_id "$(jq -r .releaseId "$manifest")" || return 1
   [[ $(jq -r .createdAt "$manifest") =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || return 1
   local created_epoch
@@ -86,6 +89,7 @@ deployment_verify() {
 }
 deployment_due() {
   local id=$1 latest stamp epoch final_epoch installation
+  [[ -n $(deployment_backup_purpose "$id" || true) ]] && return 0
   latest=$(deployment_latest "$id") || return 0
   stamp=$(jq -r .createdAt "$latest"); epoch=$(date -u -d "$stamp" +%s 2>/dev/null) || return 0
   final_epoch=$(deployment_final_epoch "$id") || return 0
@@ -104,8 +108,9 @@ deployment_final_epoch() {
 }
 deployment_backup_purpose() {
   local id=$1 row
+  declare -F db_config >/dev/null || return 0
   db_config control
-  row=$(psql -X -A -t -F '|' -h "$dbhost" -U "$dbuser" -d "$dbname" -v ON_ERROR_STOP=1 -c "SELECT CASE WHEN operation_type='update' THEN 'pre_update' ELSE 'decommission_final' END,id FROM commercial.deployment_operations WHERE deployment_id='$id' AND operation_type IN ('update','deprovision') AND status IN ('running','retry') AND current_step IN ('pre_update_backup','final_backup') ORDER BY created_at DESC LIMIT 1") || return 1
+  row=$(psql -X -A -t -F '|' -h "$dbhost" -U "$dbuser" -d "$dbname" -v ON_ERROR_STOP=1 -c "SELECT CASE WHEN operation_type='update' THEN 'pre_update' ELSE 'decommission_final' END,id FROM commercial.deployment_operations WHERE deployment_id='$id' AND operation_type IN ('update','deprovision') AND status IN ('running','retry') AND current_step IN ('pre_update_backup','final_backup') ORDER BY CASE WHEN operation_type='update' THEN 1 ELSE 2 END,created_at DESC LIMIT 1") || return 1
   [[ -n $row ]] && printf '%s\n' "$row"
 }
 deployment_backup() (
@@ -141,7 +146,7 @@ deployment_backup() (
   deployment_retention "$id"
 )
 deployment_retention() {
-  local id=$1 f backup_id epoch cutoff count=0
+  local id=$1 f backup_id epoch cutoff operation count=0
   local -a good=()
   valid_id "$id" || die 'invalid deployment ID'
   cutoff=$(( $(date +%s) - ${DEPLOYMENT_BACKUP_RETENTION_DAYS:-30}*86400 ))
@@ -165,8 +170,6 @@ deployment_retention() {
 deployment_batch() {
   local id installation version release rows count=0 failures=0
   rows=$(deployment_inventory) || die 'deployment inventory unavailable'
-  # Operation-bound checkpoints are selected before normal interval backups.
-  rows=$(printf '%s\n' "$rows" | awk -F'|' '{print $0}')
   while IFS='|' read -r id installation version release; do
     valid_id "$id" || continue
     if deployment_due "$id"; then

@@ -23,27 +23,28 @@ final class LocalDeploymentBackupEvidenceReaderTest extends TestCase
         $manifest = [
             'schemaVersion' => 1, 'backupType' => 'deployment', 'backupId' => $backup,
             'deploymentId' => $deployment, 'installationId' => $installation,
+            'purpose' => 'decommission_final', 'operationId' => $backup,
             'createdAt' => '2026-10-01T10:00:00Z', 'pgRestoreList' => true,
             'dump' => ['file' => "deployments/$deployment/dumps/$backup.dump",
-                'sizeBytes' => 7, 'sha256' => str_repeat('a', 64)],
+                'sizeBytes' => 7, 'sha256' => hash('sha256', 'archive')],
         ];
         $file = $path . '/manifests/' . $backup . '.json';
         $reader = new LocalDeploymentBackupEvidenceReader($root, 'test');
         try {
             file_put_contents($file . '.partial', json_encode($manifest, JSON_THROW_ON_ERROR));
-            self::assertFalse($reader->hasFinalBackup($deployment, $installation,
+            self::assertFalse($reader->hasFinalBackup($deployment, $installation, $backup,
                 new \DateTimeImmutable('2026-10-01T09:00:00Z')));
             file_put_contents($file, json_encode($manifest, JSON_THROW_ON_ERROR));
-            self::assertFalse($reader->hasFinalBackup($deployment, $installation,
+            self::assertFalse($reader->hasFinalBackup($deployment, $installation, $backup,
                 new \DateTimeImmutable('2026-10-01T10:00:01Z')));
             self::assertFalse($reader->hasFinalBackup($deployment,
-                '44444444-4444-4444-8444-444444444444', new \DateTimeImmutable('2026-10-01T09:00:00Z')));
+                '44444444-4444-4444-8444-444444444444', $backup, new \DateTimeImmutable('2026-10-01T09:00:00Z')));
             $manifest['createdAt'] = gmdate('Y-m-d\TH:i:s\Z');
             file_put_contents($file, json_encode($manifest, JSON_THROW_ON_ERROR));
-            self::assertTrue($reader->hasFinalBackup($deployment, $installation,
+            self::assertTrue($reader->hasFinalBackup($deployment, $installation, $backup,
                 new \DateTimeImmutable('-1 minute')));
             unlink($dump);
-            self::assertFalse($reader->hasFinalBackup($deployment, $installation,
+            self::assertFalse($reader->hasFinalBackup($deployment, $installation, $backup,
                 new \DateTimeImmutable('-1 minute')));
         } finally {
             @unlink($file . '.partial'); @unlink($file); @unlink($dump);

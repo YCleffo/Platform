@@ -37,14 +37,16 @@ final class ReconcileDeploymentInfrastructureCommand extends Command
         }
         try {
             $row = $this->db->fetchAssociative("SELECT d.id AS deployment_id, d.installation_id,
-                d.mode, d.status AS deployment_status, d.archived_at, d.desired_release_id,
+                d.mode, d.status AS deployment_status, d.archived_at, d.current_release_id AS desired_release_id,
                 d.core_db_secret_ref, r.version, r.channel, r.status AS release_status,
                 r.oci_reference, r.image_digest
-                FROM commercial.deployments d LEFT JOIN commercial.releases r ON r.id = d.desired_release_id
+                FROM commercial.deployments d LEFT JOIN commercial.releases r ON r.id = d.current_release_id
                 WHERE d.id = ?", [$id]);
             if ($row === false || $row['mode'] !== 'dedicated'
                 || !in_array($row['deployment_status'], ['active', 'suspended'], true)
-                || $row['archived_at'] !== null) {
+                || $row['archived_at'] !== null || $row['desired_release_id'] === null
+                || $this->db->fetchOne("SELECT 1 FROM commercial.deployment_operations WHERE deployment_id=?
+                    AND operation_type='update' AND status IN ('pending','running','retry')", [$id]) !== false) {
                 throw new ProvisioningFailure('infrastructure.deployment_ineligible');
             }
             $stored = $this->secrets->existing($id);

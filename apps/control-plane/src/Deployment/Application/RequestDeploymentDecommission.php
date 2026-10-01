@@ -35,6 +35,9 @@ final readonly class RequestDeploymentDecommission
             foreach ($operations as $operation) {
                 if ($operation['idempotency_key'] === $idempotencyKey) { return (string) $operation['id']; }
             }
+            $busy = $db->fetchOne("SELECT 1 FROM commercial.deployment_operations WHERE deployment_id = ?
+                AND operation_type IN ('update','deprovision') AND status IN ('pending','running','retry')", [$deploymentId]);
+            if ($busy !== false) { throw new \DomainException('Another deployment operation is in progress.'); }
             if ($deployment['archived_at'] !== null
                 || !in_array($deployment['status'], ['active', 'suspended'], true)) {
                 throw new \DomainException('Deployment is not eligible for decommission.');

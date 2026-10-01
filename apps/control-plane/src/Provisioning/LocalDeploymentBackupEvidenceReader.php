@@ -8,8 +8,8 @@ final readonly class LocalDeploymentBackupEvidenceReader implements DeploymentBa
 {
     public function __construct(private string $directory, private string $environment) {}
 
-    public function hasFinalBackup(string $deploymentId, string $installationId, \DateTimeImmutable $startedAt): bool
-    { return $this->hasPurpose($deploymentId, $installationId, null, $startedAt, 'decommission_final'); }
+    public function hasFinalBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool
+    { return $this->hasPurpose($deploymentId, $installationId, $operationId, $startedAt, 'decommission_final'); }
 
     public function hasUpdateBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool
     { return $this->hasPurpose($deploymentId, $installationId, $operationId, $startedAt, 'pre_update'); }
@@ -53,7 +53,8 @@ final readonly class LocalDeploymentBackupEvidenceReader implements DeploymentBa
                 || $manifest['dump']['sizeBytes'] < 1
                 || filesize($dump) !== $manifest['dump']['sizeBytes']
                 || !is_string($manifest['dump']['sha256'] ?? null)
-                || preg_match('/\A[a-f0-9]{64}\z/D', $manifest['dump']['sha256']) !== 1) {
+                || preg_match('/\A[a-f0-9]{64}\z/D', $manifest['dump']['sha256']) !== 1
+                || !hash_equals($manifest['dump']['sha256'], (string) hash_file('sha256', $dump))) {
                 continue;
             }
             // The backup worker verifies SHA and pg_restore before publishing the manifest last.
