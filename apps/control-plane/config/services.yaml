@@ -51,6 +51,31 @@ services:
         arguments:
             $baseDomain: '%env(PLATFORM_BASE_DOMAIN)%'
 
+    ControlPlane\Provisioning\DeploymentInfrastructureProvider:
+        alias: ControlPlane\Provisioning\LocalDockerInfrastructureProvider
+
+    ControlPlane\Provisioning\ProvisioningSecretStore:
+        alias: ControlPlane\Provisioning\LocalProvisioningSecretStore
+
+    ControlPlane\Provisioning\LocalDockerInfrastructureProvider:
+        arguments:
+            $environment: '%env(APP_ENV)%'
+            $controlNetwork: '%env(PROVISIONER_CONTROL_NETWORK)%'
+            $controlUrl: '%env(PROVISIONER_CONTROL_PLANE_URL)%'
+            $migratorImage: '%env(PROVISIONER_MIGRATOR_IMAGE)%'
+
+    ControlPlane\Provisioning\LocalProvisioningSecretStore:
+        arguments:
+            $directory: '/run/provisioning-secrets'
+            $hostDirectory: '%env(PROVISIONER_SECRET_HOST_DIR)%'
+            $environment: '%env(APP_ENV)%'
+
+    ControlPlane\Provisioning\ProvisionDeploymentExecutor:
+        arguments:
+            $environment: '%env(APP_ENV)%'
+            $maxAttempts: '%env(int:PROVISIONER_MAX_ATTEMPTS)%'
+            $retryBaseSeconds: '%env(int:PROVISIONER_RETRY_BASE_SECONDS)%'
+
     ControlPlane\Infrastructure\Logging\CorrelationIdProcessor:
         tags: ['monolog.processor']
 

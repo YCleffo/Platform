@@ -243,10 +243,12 @@ ingestion and signed entitlement delivery are implemented.
 
 Plan switching, additional payment providers and methods, bank cards,
 saved/recurring credentials,
-usage-based and overage billing, tenant DB creation, infrastructure provisioning, DNS/TLS, custom
+usage-based and overage billing, DNS/TLS, custom
 domains, On-Prem activation, MFA and updater execution remain future phases.
 
 ## Application deployment bootstrap (Phase 4.7)
+
+Phase 5.4 adds a separate local Docker `provisioner-worker` for dedicated dev/test deployments. It consumes `deployment_operations`, checks a published digest-pinned release, creates isolated runtime infrastructure, then invokes the existing activation command. The HTTP Control Plane has no Docker socket. See `docs/operations/PROVISIONING.md` for the boundary and retry behavior.
 
 Reserve a shared or dedicated deployment, then run
 `control:deployments:provision:start --deployment-id=<uuid>`. This locks the

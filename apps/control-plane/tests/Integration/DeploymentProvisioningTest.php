@@ -64,7 +64,7 @@ final class DeploymentProvisioningTest extends SubscriptionTestCase
         $this->connection->executeStatement("INSERT INTO commercial.signing_keys
             (key_id, algorithm, purpose, public_key, private_key_secret_ref, status, valid_from)
             VALUES ('test-provisioning-key', 'Ed25519', 'entitlement', decode(?, 'hex'),
-                    'vault://test/provisioning', 'active', now() - interval '1 day')",
+                    'vault://test/provisioning', 'active', now())",
             [bin2hex(sodium_crypto_sign_publickey($pair))]);
         $resolver = new class($secret) implements SigningKeyResolver {
             public function __construct(private string $secret) {}

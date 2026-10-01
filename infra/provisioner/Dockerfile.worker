@@ -1,0 +1,11 @@
+FROM docker:29-cli AS dockercli
+FROM platform-control-plane:latest
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends jq \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=dockercli /usr/local/bin/docker /usr/local/bin/docker
+COPY infra/provisioner/start.sh /opt/provisioner/start.sh
+COPY infra/provisioner/health.sh /opt/provisioner/health.sh
+RUN chmod 0755 /opt/provisioner/start.sh /opt/provisioner/health.sh
+ENTRYPOINT ["bash", "/opt/provisioner/start.sh"]
+CMD []

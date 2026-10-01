@@ -3,7 +3,12 @@ set -Eeuo pipefail
 
 # Deterministic migration runner. Migration history lives in PUBLIC, not CORE.
 
-export PGPASSWORD="${POSTGRES_PASSWORD}"
+if [[ -n "${POSTGRES_PASSWORD_FILE:-}" ]]; then
+  [[ "${POSTGRES_PASSWORD_FILE}" == /run/provisioning-secrets/db_password && -r "${POSTGRES_PASSWORD_FILE}" ]] || exit 1
+  export PGPASSWORD="$(cat "${POSTGRES_PASSWORD_FILE}")"
+else
+  export PGPASSWORD="${POSTGRES_PASSWORD}"
+fi
 
 psql_base=(
   psql

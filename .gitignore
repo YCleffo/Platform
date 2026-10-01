@@ -38,6 +38,7 @@ apps/control-plane/var/
 *.sql.gz
 *.mmdb
 backups/
+runtime/provisioning-secrets/
 deployment/privacy/*.json
 deployment/entitlements/signing/*
 !deployment/entitlements/signing/.gitkeep

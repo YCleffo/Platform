@@ -103,4 +103,7 @@ COPY --from=prod-builder \
     /app \
     /app
 
+RUN mkdir -p /data/caddy /config/caddy \
+    && chown -R www-data:www-data /data /config
+
 USER www-data

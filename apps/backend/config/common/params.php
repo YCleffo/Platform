@@ -89,7 +89,17 @@ return [
         ),
 
         'username' => $env('DB_USER', 'POSTGRES_USER'),
-        'password' => $env('DB_PASSWORD', 'POSTGRES_PASSWORD'),
+        'password' => ($databasePasswordFile = getenv('DB_PASSWORD_FILE')) !== false && $databasePasswordFile !== ''
+            ? (static function () use ($databasePasswordFile): string {
+                if ($databasePasswordFile !== '/run/provisioning-secrets/db_password'
+                    || !is_readable($databasePasswordFile)) {
+                    throw new \RuntimeException('Database password file is unavailable.');
+                }
+                $value = trim((string) file_get_contents($databasePasswordFile));
+                if ($value === '') { throw new \RuntimeException('Database password file is empty.'); }
+                return $value;
+            })()
+            : $env('DB_PASSWORD', 'POSTGRES_PASSWORD'),
     ],
 
     'internationalization' => [

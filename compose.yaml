@@ -494,6 +494,13 @@ services:
       AUTH_IDENTIFIER_HMAC_KEY: ${AUTH_IDENTIFIER_HMAC_KEY:-0123456789abcdef0123456789abcdef}
       AUTH_PUBLIC_BASE_URL: ${AUTH_PUBLIC_BASE_URL:-http://localhost:5173}
       REDIS_HOST: redis-test
+      PROVISIONER_ENABLED: "false"
+      PROVISIONER_MAX_ATTEMPTS: "5"
+      PROVISIONER_RETRY_BASE_SECONDS: "30"
+      PROVISIONER_CONTROL_NETWORK: platform_control_test_net
+      PROVISIONER_CONTROL_PLANE_URL: http://control-plane-test:8000
+      PROVISIONER_MIGRATOR_IMAGE: platform-provisioner-migrator:local
+      PROVISIONER_SECRET_HOST_DIR: /tmp/provisioning-secrets
       REDIS_PORT: "6379"
       REDIS_DATABASE: "0"
       REDIS_RATE_LIMIT_PREFIX: platform:auth:test
@@ -851,6 +858,57 @@ services:
       retries: 20
       start_period: 5s
     networks: [control_test_net, test_net]
+
+  provisioner-migrator:
+    profiles: ["provisioner-build"]
+    image: platform-provisioner-migrator:local
+    build:
+      context: .
+      dockerfile: infra/provisioner/Dockerfile.migrator
+    entrypoint: ["true"]
+    restart: "no"
+
+  provisioner-worker:
+    profiles: ["provisioner"]
+    image: platform-provisioner-worker:local
+    build:
+      context: .
+      dockerfile: infra/provisioner/Dockerfile.worker
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${CONTROL_APP_ENV:-prod}
+      APP_DEBUG: "0"
+      CONTROL_APP_SECRET: ${CONTROL_APP_SECRET:-}
+      CONTROL_TOKEN_SECRET: ${CONTROL_TOKEN_SECRET:-}
+      CONTROL_YOOKASSA_RETURN_URL: ${CONTROL_YOOKASSA_RETURN_URL:-}
+      CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS: ${CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS:-30}
+      CONTROL_DATABASE_URL: postgresql://${CONTROL_POSTGRES_USER:-platform_control}:${CONTROL_POSTGRES_PASSWORD:-}@control-postgres:5432/${CONTROL_POSTGRES_DB:-platform_commercial}?serverVersion=18&charset=utf8
+      PLATFORM_BASE_DOMAIN: ${PLATFORM_BASE_DOMAIN:-platform.example}
+      PROVISIONER_ENABLED: ${PROVISIONER_ENABLED:-false}
+      PROVISIONER_PROVIDER: ${PROVISIONER_PROVIDER:-local-docker}
+      PROVISIONER_BATCH_SIZE: ${PROVISIONER_BATCH_SIZE:-2}
+      PROVISIONER_POLL_INTERVAL_SECONDS: ${PROVISIONER_POLL_INTERVAL_SECONDS:-30}
+      PROVISIONER_MAX_ATTEMPTS: ${PROVISIONER_MAX_ATTEMPTS:-5}
+      PROVISIONER_RETRY_BASE_SECONDS: ${PROVISIONER_RETRY_BASE_SECONDS:-30}
+      PROVISIONER_HEALTH_TIMEOUT_SECONDS: ${PROVISIONER_HEALTH_TIMEOUT_SECONDS:-120}
+      PROVISIONER_CONTROL_NETWORK: ${PROVISIONER_CONTROL_NETWORK:-platform_control_net}
+      PROVISIONER_CONTROL_PLANE_URL: ${PROVISIONER_CONTROL_PLANE_URL:-http://control-plane:8000}
+      PROVISIONER_MIGRATOR_IMAGE: ${PROVISIONER_MIGRATOR_IMAGE:-platform-provisioner-migrator:local}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./runtime/provisioning-secrets:/run/provisioning-secrets
+    depends_on:
+      control-postgres:
+        condition: service_healthy
+      control-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "bash", "/opt/provisioner/health.sh"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 2m
+    networks: [control_net]
 
 volumes:
   postgres_data:

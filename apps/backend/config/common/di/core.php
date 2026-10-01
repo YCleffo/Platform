@@ -131,7 +131,13 @@ return [
         '__construct()' => ['keys' => $params['runtimeTrustedEntitlementKeys'] ?? []],
     ],
     DeploymentEntitlementPuller::class => ['class' => HttpDeploymentEntitlementPuller::class],
-    DeploymentStatusReporter::class => ['class' => HttpDeploymentStatusReporter::class],
+    DeploymentStatusReporter::class => [
+        'class' => HttpDeploymentStatusReporter::class,
+        '__construct()' => [
+            'controlPlaneUrl' => $params['runtimeControlPlaneUrl'] ?? '',
+            'credentialReference' => $params['runtimeDeploymentCredentialReference'] ?? '',
+        ],
+    ],
     HttpDeploymentStatusReporter::class => [
         '__construct()' => [
             'controlPlaneUrl' => $params['runtimeControlPlaneUrl'] ?? '',

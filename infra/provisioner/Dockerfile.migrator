@@ -1,0 +1,4 @@
+FROM postgres:18
+COPY infra/postgres/migrate.sh /migrate.sh
+COPY apps/backend/migrations/sql /migrations
+ENTRYPOINT ["bash", "/migrate.sh"]
