@@ -214,24 +214,47 @@ drill() {
   done
 }
 health() {
-  [[ ${BACKUP_ENABLED:-false} == true ]] || exit 0
-  local last epoch
-  last=$(status_field lastSuccessAt); [[ -n $last ]] || exit 1
-  epoch=$(date -u -d "$last" +%s 2>/dev/null) || exit 1
-  (( $(date +%s) - epoch <= timeout ))
+  if [[ ${BACKUP_ENABLED:-false} == true ]]; then
+    local last epoch
+    last=$(status_field lastSuccessAt); [[ -n $last ]] || return 1
+    epoch=$(date -u -d "$last" +%s 2>/dev/null) || return 1
+    (( $(date +%s) - epoch <= timeout )) || return 1
+  fi
+  deployment_health
 }
 
+source "$(dirname "${BASH_SOURCE[0]}")/deployment.sh"
+deployment_config
 shift || :
 case $command in
   once) backup_once "${2:-${1:-all}}" ;;
   verify) [[ ${1:-} == --manifest ]] && shift; verify "${1:-}" ;;
   drill) [[ ${1:-} == --manifest ]] && shift; drill "${1:-}" ;;
   health) health ;;
+  deployment) deployment_backup "${1:?deployment ID required}" ;;
+  deployments) deployment_batch ;;
+  verify-deployment) deployment_verify "${1:?deployment ID required}" "${2:-}" ;;
+  drill-deployment) deployment_drill "${1:?deployment ID required}" "${2:-}" ;;
+  deployment-status) deployment_status ;;
+  status)
+    platform_status=$(cat status.json 2>/dev/null || echo '{}')
+    deployment_statuses=$(deployment_status | jq -s .)
+    jq -n --argjson platform "$platform_status" --argjson deployments "$deployment_statuses" \
+      '{platform:$platform,deployments:$deployments}' ;;
+  retain-deployment) deployment_retention "${1:?deployment ID required}" ;;
   retain) exec 9>backup.lock; flock -n 9 || die 'another backup or retention run is active'; apply_retention ;;
   loop)
+    next_platform=0
     while true; do
-      if [[ ${BACKUP_ENABLED:-false} == true ]]; then bash /opt/backup/backup.sh once --target all || :; fi
-      sleep "$interval"
+      tick=$(date +%s)
+      if [[ ${BACKUP_ENABLED:-false} == true ]] && (( tick >= next_platform )); then
+        bash /opt/backup/backup.sh once --target all || :
+        next_platform=$(( $(date +%s) + interval ))
+      fi
+      if [[ ${DEPLOYMENT_BACKUP_ENABLED:-false} == true ]]; then
+        bash /opt/backup/backup.sh deployments || :
+      fi
+      sleep 30
     done ;;
-  *) die 'usage: loop | once --target core|control|all | verify [--manifest filename] | drill [--manifest filename] | health' ;;
+  *) die 'usage: loop | once --target core|control|all | deployment UUID | deployments | verify | drill | verify-deployment UUID [manifest] | drill-deployment UUID [manifest] | status | health' ;;
 esac

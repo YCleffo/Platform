@@ -33,3 +33,21 @@ Live restore is a manual destructive operation. `restore-db.ps1` requires **all*
 **Restore does not mean privacy-safe restore.** An older dump can reintroduce personal data erased after its capture. After any live restore, operational state remains blocked: privacy reconciliation is required before serving traffic. Phase 5.3 does not automate re-erasure.
 
 Dump files, manifests, and status files are sensitive artifacts. The `backups/` directory is excluded from Git and project ZIP archives. Production backup storage **must provide approved encryption at rest and access control**; the worker does not implement its own encryption wrapper. Operators must retain separate evidence of the actual storage controls.
+
+## Dedicated deployment databases (Phase 5.5)
+
+Core + Control sets and dedicated deployment backups are separate chains. Each eligible dedicated deployment has its own `backups/deployments/<deploymentId>/dumps/` and `manifests/` directory. There is no cross-deployment atomic snapshot. A failed deployment backup does not prevent other deployments or the independent Core + Control schedule from running.
+
+Set `DEPLOYMENT_BACKUP_ENABLED=true` only after the dedicated `platform_backup_net` and backup worker are running. The provisioner connects each dedicated PostgreSQL container to this network and repairs a missing connection on replay. Runtime and Control Plane HTTP containers do not join it. The backup worker has no Docker socket. It reads the Control Plane deployment inventory and a read-only mount of `runtime/provisioning-secrets/`; it selects only unarchived, active or suspended dedicated deployments whose DB secret reference exactly matches `localdev://<deploymentId>/db`. External secret providers require a later adapter.
+
+The worker checks due deployments every 30 seconds and backs up at most `DEPLOYMENT_BACKUP_BATCH_SIZE` per check. A deployment with no verified backup is due immediately after activation. Otherwise it is due after `DEPLOYMENT_BACKUP_INTERVAL_SECONDS`. Per-deployment retention preserves the newest verified backup and at least `DEPLOYMENT_BACKUP_MIN_SUCCESSFUL_SETS` verified backups. `DEPLOYMENT_BACKUP_HEALTH_TIMEOUT_SECONDS` controls freshness health. Deployment health is reported by the backup worker only; it does not change public Core or Control HTTP readiness.
+
+```powershell
+.\scripts\backup-db.ps1 -Target Deployment -DeploymentId <uuid>
+.\scripts\backup-db.ps1 -Target Deployments
+.\scripts\verify-backup.ps1 -DeploymentId <uuid> [-ManifestPath <backupId.json>]
+.\scripts\restore-drill.ps1 -DeploymentId <uuid> [-ManifestPath <backupId.json>]
+docker compose --profile control --profile backup exec backup-worker bash /opt/backup/backup.sh status
+```
+
+The `status` command separates `platform` and `deployments`. Each deployment record contains only `deploymentId`, backup status, last backup timestamp, age, and verification result. Deployment manifests have `schemaVersion=1`, `backupType=deployment`, UUID identities, version and release metadata, relative dump path, size, SHA-256, and `pgRestoreList=true`. Passwords, credentials, and personal data are absent. Publication writes a partial dump, checks it with `pg_restore --list`, computes SHA-256, renames the dump, then publishes the manifest last. Verify is read-only. Drill restores into a disposable database, checks required Core and runtime schema plus migration 031, compares the restored installation ID to the manifest, and drops the disposable database. Live restore remains a separate manual procedure.

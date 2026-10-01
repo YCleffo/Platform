@@ -29,6 +29,10 @@ The worker passes an explicit runtime configuration allowlist: installation and 
 
 After the infrastructure is ready, the worker invokes `php /app/yii runtime:deployment:activate` inside the runtime. That existing command initializes the installation, pulls and verifies a signed entitlement, and sends the authenticated ready report. Only Control Plane's status endpoint sets the deployment `active` and operation `succeeded`.
 
+The backup worker uses `platform_backup_net` to reach each dedicated PostgreSQL container after activation. Start the `backup` Compose profile before provisioning so that the network exists. The provider attaches a new DB to `PROVISIONER_BACKUP_NETWORK` and repairs a missing attachment on replay. Neither runtime nor Control Plane HTTP joins the backup network. A successful activation makes the deployment backup due immediately; provisioning does not wait for a dump. See [BACKUP_RESTORE.md](BACKUP_RESTORE.md) for commands, retention, and drill behavior.
+
+`commercial.deployment_domains.status` is a reservation and workflow state. Even `active` is **not evidence that DNS resolves or TLS is available**. Infrastructure readiness must not infer DNS or TLS availability from this field; those checks belong to a later domain phase.
+
 ## Failure handling
 
 The operation row stores the bounded attempt count, machine error code, step, and next retry time. Transient failures use bounded exponential backoff. A stale running attempt is recovered after ten minutes; any old bootstrap credential is revoked before retry. A permanent failure marks the deployment failed. Cleanup removes only containers and network whose exact name and ownership labels match the deployment, and only before successful activation; an active deployment is not automatically removed. Resource deletion after activation and upgrade are outside this phase.

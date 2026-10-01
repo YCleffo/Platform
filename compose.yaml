@@ -770,6 +770,12 @@ services:
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
       BACKUP_MIN_SUCCESSFUL_SETS: ${BACKUP_MIN_SUCCESSFUL_SETS:-3}
       BACKUP_HEALTH_TIMEOUT_SECONDS: ${BACKUP_HEALTH_TIMEOUT_SECONDS:-172800}
+      DEPLOYMENT_BACKUP_ENABLED: ${DEPLOYMENT_BACKUP_ENABLED:-false}
+      DEPLOYMENT_BACKUP_INTERVAL_SECONDS: ${DEPLOYMENT_BACKUP_INTERVAL_SECONDS:-86400}
+      DEPLOYMENT_BACKUP_BATCH_SIZE: ${DEPLOYMENT_BACKUP_BATCH_SIZE:-2}
+      DEPLOYMENT_BACKUP_RETENTION_DAYS: ${DEPLOYMENT_BACKUP_RETENTION_DAYS:-30}
+      DEPLOYMENT_BACKUP_MIN_SUCCESSFUL_SETS: ${DEPLOYMENT_BACKUP_MIN_SUCCESSFUL_SETS:-3}
+      DEPLOYMENT_BACKUP_HEALTH_TIMEOUT_SECONDS: ${DEPLOYMENT_BACKUP_HEALTH_TIMEOUT_SECONDS:-172800}
       APPLICATION_VERSION: ${APPLICATION_VERSION:-}
       PLATFORM_RELEASE_ID: ${PLATFORM_RELEASE_ID:-}
       CORE_DB_HOST: postgres
@@ -782,6 +788,7 @@ services:
       CONTROL_POSTGRES_PASSWORD: ${CONTROL_POSTGRES_PASSWORD:-}
     volumes:
       - ./backups:/backups
+      - ./runtime/provisioning-secrets:/run/provisioning-secrets:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -793,7 +800,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10m
-    networks: [backend_net, control_net]
+    networks: [backend_net, control_net, backup_net]
 
   control-postgres-test:
     profiles: ["control-test"]
@@ -892,6 +899,7 @@ services:
       PROVISIONER_RETRY_BASE_SECONDS: ${PROVISIONER_RETRY_BASE_SECONDS:-30}
       PROVISIONER_HEALTH_TIMEOUT_SECONDS: ${PROVISIONER_HEALTH_TIMEOUT_SECONDS:-120}
       PROVISIONER_CONTROL_NETWORK: ${PROVISIONER_CONTROL_NETWORK:-platform_control_net}
+      PROVISIONER_BACKUP_NETWORK: ${PROVISIONER_BACKUP_NETWORK:-platform_backup_net}
       PROVISIONER_CONTROL_PLANE_URL: ${PROVISIONER_CONTROL_PLANE_URL:-http://control-plane:8000}
       PROVISIONER_MIGRATOR_IMAGE: ${PROVISIONER_MIGRATOR_IMAGE:-platform-provisioner-migrator:local}
     volumes:
@@ -930,6 +938,9 @@ volumes:
     name: platform_control_postgres_test_data
 
 networks:
+  backup_net:
+    name: platform_backup_net
+    internal: true
   backend_net:
     name: platform_backend_net
     internal: false

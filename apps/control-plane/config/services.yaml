@@ -63,6 +63,7 @@ services:
             $controlNetwork: '%env(PROVISIONER_CONTROL_NETWORK)%'
             $controlUrl: '%env(PROVISIONER_CONTROL_PLANE_URL)%'
             $migratorImage: '%env(PROVISIONER_MIGRATOR_IMAGE)%'
+            $backupNetwork: '%env(PROVISIONER_BACKUP_NETWORK)%'
 
     ControlPlane\Provisioning\LocalProvisioningSecretStore:
         arguments:

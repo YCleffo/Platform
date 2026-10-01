@@ -9,7 +9,7 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
 {
     public function __construct(private DockerCommand $docker, private string $environment,
         private string $controlNetwork, private string $controlUrl,
-        private string $migratorImage) {}
+        private string $migratorImage, private string $backupNetwork = 'platform_backup_net') {}
 
     public function provision(ProvisioningRequest $request): ProvisioningResult
     {
@@ -59,6 +59,11 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
                 'postgres:18'], 'infrastructure.database_failed');
         } elseif (!(bool) ($this->docker->inspect('container', $database)['State']['Running'] ?? false)) {
             $this->docker->run(['start', $database], 'infrastructure.database_failed');
+        }
+        $details = $this->docker->inspect('container', $database);
+        if (!isset($details['NetworkSettings']['Networks'][$this->backupNetwork])) {
+            $this->docker->run(['network', 'connect', $this->backupNetwork, $database],
+                'infrastructure.network_failed');
         }
         $this->migrate($database, $network, $request->databaseSecretPath);
         if (!$existing['runtime']) {
