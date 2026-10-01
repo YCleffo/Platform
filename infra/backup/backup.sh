@@ -242,6 +242,7 @@ case $command in
     jq -n --argjson platform "$platform_status" --argjson deployments "$deployment_statuses" \
       '{platform:$platform,deployments:$deployments}' ;;
   retain-deployment) deployment_retention "${1:?deployment ID required}" ;;
+  purge-decommissioned) deployment_purge ;;
   retain) exec 9>backup.lock; flock -n 9 || die 'another backup or retention run is active'; apply_retention ;;
   loop)
     next_platform=0
@@ -253,6 +254,9 @@ case $command in
       fi
       if [[ ${DEPLOYMENT_BACKUP_ENABLED:-false} == true ]]; then
         bash /opt/backup/backup.sh deployments || :
+      fi
+      if [[ -n ${DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS:-} ]]; then
+        bash /opt/backup/backup.sh purge-decommissioned || :
       fi
       sleep 30
     done ;;

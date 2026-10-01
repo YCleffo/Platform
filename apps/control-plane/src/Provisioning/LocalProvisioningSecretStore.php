@@ -43,12 +43,21 @@ final class LocalProvisioningSecretStore implements ProvisioningSecretStore
     {
         $this->guard($deploymentId);
         $path = $this->directory . '/' . $deploymentId;
-        if (!is_dir($path) || is_link($path)) { return; }
+        if (is_link($path)) { throw new ProvisioningFailure('infrastructure.secret_storage_failed'); }
+        if (!is_dir($path)) { return; }
         foreach (['db_password', 'deployment_credential'] as $name) {
             $file = $path . '/' . $name;
-            if (is_file($file) && !is_link($file)) { unlink($file); }
+            if (is_link($file)) { throw new ProvisioningFailure('infrastructure.secret_storage_failed'); }
+            if (is_file($file) && !@unlink($file)) { throw new ProvisioningFailure('infrastructure.secret_storage_failed', true); }
         }
-        rmdir($path);
+        if (!@rmdir($path)) { throw new ProvisioningFailure('infrastructure.secret_storage_failed', true); }
+    }
+
+    public function isClean(string $deploymentId): bool
+    {
+        $this->guard($deploymentId);
+        $path = $this->directory . '/' . $deploymentId;
+        return !file_exists($path) && !is_link($path);
     }
 
     private function guard(string $deploymentId): void

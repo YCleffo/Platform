@@ -69,6 +69,9 @@ final class ProvisionerBoundaryTest extends TestCase
         try { $provider->cleanup(self::ID); self::fail('Foreign resource was accepted.'); }
         catch (ProvisioningFailure $e) { self::assertSame('infrastructure.resource_conflict', $e->machineCode); }
         self::assertSame([], $docker->calls);
+        try { $provider->quiesce(self::ID); self::fail('Foreign runtime was stopped.'); }
+        catch (ProvisioningFailure $e) { self::assertSame('infrastructure.resource_conflict', $e->machineCode); }
+        self::assertSame([], $docker->calls);
         try {
             (new LocalDockerInfrastructureProvider($docker, 'prod', 'test-net',
                 'http://control-plane-test:8000', 'migrator'))->status(self::ID);
@@ -100,6 +103,40 @@ final class ProvisionerBoundaryTest extends TestCase
         self::assertSame(['rm', '-f', '-v'], array_slice($docker->calls[0], 0, 3));
         self::assertSame(['rm', '-f', '-v'], array_slice($docker->calls[1], 0, 3));
         self::assertSame(['network', 'rm'], array_slice($docker->calls[2], 0, 2));
+    }
+
+    public function testQuiesceStopsOnlyOwnedRuntimeAndKeepsDatabase(): void
+    {
+        $docker = new class extends DockerCommand {
+            public array $calls = [];
+            public function inspect(string $kind, string $name): ?array
+            {
+                if ($kind === 'network') { return ['Labels' => ['platform.deployment.id' => ProvisionerBoundaryTest::ID]]; }
+                return ['Config' => ['Labels' => [
+                    'platform.deployment.id' => ProvisionerBoundaryTest::ID,
+                    'platform.resource.role' => str_ends_with($name, '-runtime') ? 'runtime' : 'database',
+                ]], 'State' => ['Running' => true]];
+            }
+            public function run(array $arguments, string $code = 'infrastructure.docker_failed'): string
+            { $this->calls[] = $arguments; return ''; }
+        };
+        (new LocalDockerInfrastructureProvider($docker, 'test', 'test-net',
+            'http://control-plane-test:8000', 'migrator'))->quiesce(self::ID);
+        self::assertCount(1, $docker->calls);
+        self::assertSame(['stop', 'platform-deployment-' . str_replace('-', '', self::ID) . '-runtime'], $docker->calls[0]);
+    }
+
+    public function testDecommissionOfAlreadyAbsentResourcesIsIdempotent(): void
+    {
+        $docker = new class extends DockerCommand {
+            public array $calls = [];
+            public function inspect(string $kind, string $name): ?array { return null; }
+            public function run(array $arguments, string $code = 'infrastructure.docker_failed'): string
+            { $this->calls[] = $arguments; return ''; }
+        };
+        (new LocalDockerInfrastructureProvider($docker, 'test', 'test-net',
+            'http://control-plane-test:8000', 'migrator'))->decommission(self::ID);
+        self::assertSame([], $docker->calls);
     }
 
     private function request(string $mode = 'dedicated', string $image = 'platform-runtime:local'): ProvisioningRequest

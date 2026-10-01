@@ -146,6 +146,22 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
         }
     }
 
+    public function quiesce(string $deploymentId): void
+    {
+        $this->allowed();
+        $id = strtolower($deploymentId);
+        $runtime = $this->names($id)[0];
+        $existing = $this->status($id); // Check all deterministic names before stopping anything.
+        if ($existing['runtime'] && (bool) ($this->docker->inspect('container', $runtime)['State']['Running'] ?? false)) {
+            $this->docker->run(['stop', $runtime], 'infrastructure.quiesce_failed');
+        }
+    }
+
+    public function decommission(string $deploymentId): void
+    {
+        $this->cleanup($deploymentId);
+    }
+
     private function migrate(string $database, string $network, string $passwordPath): void
     {
         $this->docker->run(['run', '--rm', '--network', $network,

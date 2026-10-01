@@ -15,6 +15,7 @@ die() { echo "$*" >&2; exit 1; }
 valid_id() { [[ $1 =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; }
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 source "$repo/infra/backup/deployment.sh"
+deployment_final_epoch() { printf '%s\n' "${test_final_epoch:-}"; }
 a=11111111-1111-4111-8111-111111111111
 b=22222222-2222-4222-8222-222222222222
 installation=33333333-3333-4333-8333-333333333333
@@ -58,8 +59,31 @@ deployment_due "$a" || die 'old backup not due'
 jq --arg at "$(now)" '.createdAt=$at' "deployments/$a/manifests/$three.json" > latest.tmp
 mv latest.tmp "deployments/$a/manifests/$three.json"
 if deployment_due "$a"; then die 'fresh backup is due'; fi
+test_installation=$installation
+deployment_row() { printf '%s|%s|5.5.0|%s\n' "$a" "$test_installation" "$release"; }
+test_final_epoch=$(( $(date +%s) + 1 ))
+deployment_due "$a" || die 'pre-request backup satisfied final request'
+jq --arg at "$(date -u -d '+2 seconds' +%Y-%m-%dT%H:%M:%SZ)" '.createdAt=$at' \
+  "deployments/$a/manifests/$three.json" > latest.tmp
+mv latest.tmp "deployments/$a/manifests/$three.json"
+if deployment_due "$a"; then die 'final backup remains due after a newer verified manifest'; fi
 export DEPLOYMENT_BACKUP_RETENTION_DAYS=1 DEPLOYMENT_BACKUP_MIN_SUCCESSFUL_SETS=2
 deployment_retention "$a"
 [[ ! -e "deployments/$a/manifests/$one.json" && -e "deployments/$a/manifests/$two.json" && -e "deployments/$a/manifests/$three.json" ]] || die 'retention or latest protection failed'
 [[ -e "deployments/$b/manifests/$one.json" ]] || die 'retention crossed deployment boundary'
-echo 'deployment manifest, identity, SHA, missing dump, partial, due and retention tests passed'
+deployment_purge
+[[ -d "deployments/$a" ]] || die 'disabled purge removed backup chain'
+cat > "$test_root/bin/psql" <<EOF
+#!/usr/bin/env bash
+case "\$*" in
+  *'SELECT id FROM commercial.deployments'*) echo '$a' ;;
+  *'SELECT count(*) FROM commercial.deployments'*) echo 1 ;;
+  *) exit 1 ;;
+esac
+EOF
+chmod +x "$test_root/bin/psql"
+db_config() { dbhost=local; dbuser=local; dbname=local; }
+export DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS=1
+deployment_purge
+[[ ! -e "deployments/$a" && -f "deployments/$b/manifests/$one.json" ]] || die 'purge crossed deployment boundary'
+echo 'deployment manifest, identity, SHA, missing dump, partial, final due, retention and purge tests passed'

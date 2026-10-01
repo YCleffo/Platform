@@ -29,8 +29,10 @@ final readonly class DeploymentCredentialService
         $secret = self::secret();
         return $this->connection->transactional(function (Connection $db) use ($deploymentId, $scopes, $expiresAt, $secret): ?array {
             $allowed = $db->fetchOne(<<<'SQL'
-                SELECT 1 FROM commercial.deployments WHERE id = ? AND archived_at IS NULL
-                    AND status <> 'decommissioned' FOR SHARE
+                SELECT 1 FROM commercial.deployments d WHERE d.id = ? AND d.archived_at IS NULL
+                    AND d.status <> 'decommissioned'
+                    AND NOT EXISTS (SELECT 1 FROM commercial.deployment_operations o
+                        WHERE o.deployment_id = d.id AND o.operation_type = 'deprovision') FOR SHARE
                 SQL, [$deploymentId]);
             if ($allowed === false) {
                 return null;
@@ -54,12 +56,22 @@ final readonly class DeploymentCredentialService
         self::validateExpiry($expiresAt);
         $secret = self::secret();
         return $this->connection->transactional(function (Connection $db) use ($deploymentId, $credentialId, $secret, $expiresAt): ?array {
+            $allowed = $db->fetchOne(<<<'SQL'
+                SELECT 1 FROM commercial.deployments d WHERE d.id = ? AND d.archived_at IS NULL
+                  AND d.status <> 'decommissioned'
+                  AND NOT EXISTS (SELECT 1 FROM commercial.deployment_operations o
+                      WHERE o.deployment_id = d.id AND o.operation_type = 'deprovision')
+                FOR SHARE
+                SQL, [$deploymentId]);
+            if ($allowed === false) { return null; }
             $old = $db->fetchAssociative(<<<'SQL'
                 SELECT c.scopes
                 FROM commercial.service_credentials c JOIN commercial.deployments d ON d.id = c.deployment_id
                 WHERE c.deployment_id = ? AND c.credential_id = ? AND c.status = 'active'
                   AND (c.expires_at IS NULL OR c.expires_at > now())
                   AND d.archived_at IS NULL AND d.status <> 'decommissioned'
+                  AND NOT EXISTS (SELECT 1 FROM commercial.deployment_operations o
+                      WHERE o.deployment_id = d.id AND o.operation_type = 'deprovision')
                 FOR UPDATE OF c
                 SQL, [$deploymentId, $credentialId]);
             if ($old === false) {

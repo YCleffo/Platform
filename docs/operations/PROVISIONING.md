@@ -35,4 +35,19 @@ The backup worker uses `platform_backup_net` to reach each dedicated PostgreSQL 
 
 ## Failure handling
 
-The operation row stores the bounded attempt count, machine error code, step, and next retry time. Transient failures use bounded exponential backoff. A stale running attempt is recovered after ten minutes; any old bootstrap credential is revoked before retry. A permanent failure marks the deployment failed. Cleanup removes only containers and network whose exact name and ownership labels match the deployment, and only before successful activation; an active deployment is not automatically removed. Resource deletion after activation and upgrade are outside this phase.
+The operation row stores the bounded attempt count, machine error code, step, and next retry time. Transient failures use bounded exponential backoff. A stale running attempt is recovered after ten minutes; any old bootstrap credential is revoked before retry. A permanent failure marks the deployment failed. Phase 5.4 cleanup removes only owned resources before successful activation; it does not automatically remove an active deployment. Upgrade remains outside this phase.
+
+## Safe local decommission (Phase 5.6)
+
+For an active or suspended, unarchived dedicated deployment in dev/test, run:
+
+```powershell
+docker compose --profile control exec control-plane php bin/console control:deployments:decommission --deployment-id=<uuid> --confirm-installation-id=<installation-uuid> --idempotency-key=<unique-key>
+docker compose --profile control --profile provisioner exec provisioner-worker php /app/bin/console control:deployments:decommission-status --deployment-id=<uuid>
+```
+
+The first command only queues a durable `deprovision` operation. In the same transaction it suspends the deployment, revokes every active service credential, and writes one audit event. The idempotency key returns the same operation on replay. The existing provisioner worker then stops the runtime, waits for a new published deployment backup made after the operation began, deletes only owned runtime/DB/network resources, removes local provisioning secrets, and finally archives the deployment and disables its domain rows. It retains installation and release identity. Missing final backup leaves the operation in `retry` at `final_backup`, with the runtime stopped and DB intact. Worker retries are safe after a crash at any step.
+
+The backup worker must be running with `DEPLOYMENT_BACKUP_ENABLED=true` to service final backup requests automatically. The provisioner mounts `backups/` read-only and only reads published manifest evidence; it does not make dumps. `DECOMMISSION_BACKUP_CHECK_INTERVAL_SECONDS` controls how often a waiting operation retries. Production and other deployment modes fail closed.
+
+Decommission does not delete DNS/TLS records, perform DSAR erasure, or immediately remove backups. Domain `disabled` is a Control Plane workflow state, not DNS deletion.

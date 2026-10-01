@@ -10,5 +10,7 @@ interface DeploymentInfrastructureProvider
     /** @return array{runtime:bool,database:bool,network:bool} */
     public function status(string $deploymentId): array;
     public function activate(ProvisioningRequest $request): void;
+    public function quiesce(string $deploymentId): void;
+    public function decommission(string $deploymentId): void;
     public function cleanup(string $deploymentId): void;
 }

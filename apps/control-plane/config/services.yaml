@@ -51,11 +51,23 @@ services:
         arguments:
             $baseDomain: '%env(PLATFORM_BASE_DOMAIN)%'
 
+    ControlPlane\Deployment\Application\RequestDeploymentDecommission:
+        arguments:
+            $environment: '%env(APP_ENV)%'
+
     ControlPlane\Provisioning\DeploymentInfrastructureProvider:
         alias: ControlPlane\Provisioning\LocalDockerInfrastructureProvider
 
     ControlPlane\Provisioning\ProvisioningSecretStore:
         alias: ControlPlane\Provisioning\LocalProvisioningSecretStore
+
+    ControlPlane\Provisioning\DeploymentBackupEvidenceReader:
+        alias: ControlPlane\Provisioning\LocalDeploymentBackupEvidenceReader
+
+    ControlPlane\Provisioning\LocalDeploymentBackupEvidenceReader:
+        arguments:
+            $directory: '/backups/deployments'
+            $environment: '%env(APP_ENV)%'
 
     ControlPlane\Provisioning\LocalDockerInfrastructureProvider:
         arguments:
@@ -76,6 +88,13 @@ services:
             $environment: '%env(APP_ENV)%'
             $maxAttempts: '%env(int:PROVISIONER_MAX_ATTEMPTS)%'
             $retryBaseSeconds: '%env(int:PROVISIONER_RETRY_BASE_SECONDS)%'
+
+    ControlPlane\Provisioning\DeprovisionDeploymentExecutor:
+        arguments:
+            $environment: '%env(APP_ENV)%'
+            $maxAttempts: '%env(int:PROVISIONER_MAX_ATTEMPTS)%'
+            $retryBaseSeconds: '%env(int:PROVISIONER_RETRY_BASE_SECONDS)%'
+            $backupCheckIntervalSeconds: '%env(int:DECOMMISSION_BACKUP_CHECK_INTERVAL_SECONDS)%'
 
     ControlPlane\Infrastructure\Logging\CorrelationIdProcessor:
         tags: ['monolog.processor']

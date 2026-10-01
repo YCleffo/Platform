@@ -7,6 +7,9 @@ deployment_config() {
   integer DEPLOYMENT_BACKUP_MIN_SUCCESSFUL_SETS "${DEPLOYMENT_BACKUP_MIN_SUCCESSFUL_SETS:-3}" 1 10000
   integer DEPLOYMENT_BACKUP_HEALTH_TIMEOUT_SECONDS "${DEPLOYMENT_BACKUP_HEALTH_TIMEOUT_SECONDS:-172800}" 60 31536000
   [[ ${DEPLOYMENT_BACKUP_ENABLED:-false} == true || ${DEPLOYMENT_BACKUP_ENABLED:-false} == false ]] || die 'invalid DEPLOYMENT_BACKUP_ENABLED'
+  if [[ -n ${DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS:-} ]]; then
+    integer DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS "$DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS" 1 3650
+  fi
 }
 deployment_dir() { valid_id "$1" || die 'invalid deployment ID'; echo "deployments/$1"; }
 deployment_inventory() {
@@ -82,10 +85,22 @@ deployment_verify() {
   echo "verified $manifest"
 }
 deployment_due() {
-  local id=$1 latest stamp epoch
+  local id=$1 latest stamp epoch final_epoch installation
   latest=$(deployment_latest "$id") || return 0
   stamp=$(jq -r .createdAt "$latest"); epoch=$(date -u -d "$stamp" +%s 2>/dev/null) || return 0
+  final_epoch=$(deployment_final_epoch "$id") || return 0
+  if [[ -n $final_epoch ]]; then
+    installation=$(deployment_row "$id" | cut -d'|' -f2) || return 0
+    [[ $(jq -r .installationId "$latest") == "$installation" && $epoch -ge $final_epoch ]] || return 0
+  fi
   (( $(date +%s) - epoch >= ${DEPLOYMENT_BACKUP_INTERVAL_SECONDS:-86400} ))
+}
+deployment_final_epoch() {
+  local id=$1
+  valid_id "$id" || return 1
+  db_config control
+  psql -X -A -t -h "$dbhost" -U "$dbuser" -d "$dbname" -v ON_ERROR_STOP=1 -c \
+    "SELECT ceil(extract(epoch from started_at))::bigint FROM commercial.deployment_operations WHERE deployment_id = '$id' AND operation_type = 'deprovision' AND status IN ('running','retry') AND current_step = 'final_backup' AND started_at IS NOT NULL ORDER BY created_at DESC LIMIT 1"
 }
 deployment_backup() (
   local id=$1 row installation version release dir backup_id stamp dump size hash password_file
@@ -191,4 +206,42 @@ deployment_drill() {
     [[ $actual == "$expected" ]] || die 'deployment installation mismatch'
     echo "deployment restore drill passed $id"
   )
+}
+deployment_purge() {
+  local id dir f name count=0 rows eligible
+  [[ -n ${DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS:-} ]] || return 0
+  [[ -d deployments && ! -L deployments ]] || die 'unsafe deployment backup root'
+  db_config control
+  rows=$(psql -X -A -t -h "$dbhost" -U "$dbuser" -d "$dbname" -v ON_ERROR_STOP=1 -c \
+    "SELECT id FROM commercial.deployments WHERE mode = 'dedicated' AND status = 'decommissioned' AND archived_at IS NOT NULL AND archived_at <= now() - (${DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS} * interval '1 day') ORDER BY archived_at, id") || die 'purge inventory unavailable'
+  while IFS= read -r id; do
+    valid_id "$id" || continue
+    dir="deployments/$id"
+    [[ -d $dir || -L $dir ]] || continue
+    [[ ! -L $dir && -d $dir ]] || die 'unsafe deployment backup directory'
+    # Recheck the exact deployment before deleting any artifact.
+    eligible=$(psql -X -A -t -h "$dbhost" -U "$dbuser" -d "$dbname" -v ON_ERROR_STOP=1 -c \
+      "SELECT count(*) FROM commercial.deployments WHERE id = '$id' AND mode = 'dedicated' AND status = 'decommissioned' AND archived_at IS NOT NULL AND archived_at <= now() - (${DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS} * interval '1 day')") || die 'purge eligibility unavailable'
+    [[ $eligible == 1 ]] || continue
+    for name in dumps manifests; do
+      [[ ! -L $dir/$name ]] || die 'unsafe deployment backup directory'
+      [[ -d $dir/$name ]] || continue
+      for f in "$dir/$name/"*; do
+        [[ -e $f || -L $f ]] || continue
+        [[ ! -L $f && -f $f ]] || die 'unsafe deployment backup artifact'
+        if [[ $name == dumps ]]; then
+          [[ ${f##*/} =~ ^[0-9a-f-]{36}\.dump(\.partial)?$ ]] || die 'unexpected deployment dump'
+        else
+          [[ ${f##*/} =~ ^[0-9a-f-]{36}\.json(\.partial)?$ ]] || die 'unexpected deployment manifest'
+        fi
+        rm -f -- "$f"
+      done
+      rmdir -- "$dir/$name"
+    done
+    [[ ! -L $dir/backup.lock ]] || die 'unsafe deployment backup lock'
+    [[ ! -e $dir/backup.lock ]] || rm -f -- "$dir/backup.lock"
+    rmdir -- "$dir"
+    ((count+=1))
+    (( count < ${DEPLOYMENT_BACKUP_BATCH_SIZE:-2} )) || break
+  done <<< "$rows"
 }

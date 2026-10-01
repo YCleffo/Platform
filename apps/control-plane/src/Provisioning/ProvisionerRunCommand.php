@@ -10,10 +10,11 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-#[AsCommand(name: 'provisioner:run', description: 'Process bounded deployment provision operations')]
+#[AsCommand(name: 'provisioner:run', description: 'Process bounded deployment provision and deprovision operations')]
 final class ProvisionerRunCommand extends Command
 {
-    public function __construct(private readonly ProvisionDeploymentExecutor $executor) { parent::__construct(); }
+    public function __construct(private readonly ProvisionDeploymentExecutor $executor,
+        private readonly DeprovisionDeploymentExecutor $deprovision) { parent::__construct(); }
 
     protected function configure(): void
     {
@@ -34,10 +35,12 @@ final class ProvisionerRunCommand extends Command
             if ($enabled) {
                 $status['lastAttemptAt'] = $status['heartbeatAt'];
                 try {
+                    $deprovisioned = $this->deprovision->runBatch($batch);
                     $count = $this->executor->runBatch($batch);
                     $status['lastSuccessAt'] = gmdate('Y-m-d\TH:i:s\Z');
                     $status['consecutiveFailures'] = 0;
                     if ($count > 0) { $output->writeln('Provision operations processed: ' . $count); }
+                    if ($deprovisioned > 0) { $output->writeln('Deprovision operations processed: ' . $deprovisioned); }
                 } catch (\Throwable) {
                     $status['lastFailureAt'] = gmdate('Y-m-d\TH:i:s\Z');
                     $status['consecutiveFailures'] = min(1000000, $status['consecutiveFailures'] + 1);

@@ -94,6 +94,8 @@ final class ProvisionDeploymentExecutorTest extends DatabaseTestCase
             { return ['runtime' => true, 'database' => true, 'network' => true]; }
             public function activate(ProvisioningRequest $request): void
             { throw new ProvisioningFailure('infrastructure.activation_failed', true); }
+            public function quiesce(string $deploymentId): void {}
+            public function decommission(string $deploymentId): void {}
             public function cleanup(string $deploymentId): void {}
         };
         self::assertSame(1, $this->executor($provider)->runBatch(1));
@@ -151,6 +153,8 @@ final class ProvisionDeploymentExecutorTest extends DatabaseTestCase
             public function status(string $deploymentId): array
             { return ['runtime' => false, 'database' => false, 'network' => false]; }
             public function activate(ProvisioningRequest $request): void { throw new \LogicException('Unexpected activation'); }
+            public function quiesce(string $deploymentId): void {}
+            public function decommission(string $deploymentId): void {}
             public function cleanup(string $deploymentId): void {}
         };
     }

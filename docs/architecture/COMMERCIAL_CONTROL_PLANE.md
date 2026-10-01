@@ -288,3 +288,9 @@ file. `CONTROL_ENTITLEMENT_SECRET_FILES` maps references to container paths;
 the file contains base64 of a 64-byte Ed25519 secret key. An absent or invalid
 mapping fails issuance closed. The Core runtime receives only trusted public
 keys, never signing secrets.
+
+## Local dedicated decommission (Phase 5.6)
+
+The existing `commercial.deployment_operations` table carries `deprovision` through `pending`, `running`, `retry`, and `succeeded` or `failed`. An operator request confirms deployment and installation IDs, suspends the deployment, and revokes active M2M credentials transactionally. The existing provisioner worker quiesces runtime, waits for a new verified deployment backup, destroys owned infrastructure, cleans secrets, and archives the deployment. Audit events contain only deployment, installation, and operation UUIDs. Status output contains IDs and machine state only.
+
+The Control Plane's domain `disabled` state does not remove DNS or TLS resources. Decommission is not DSAR erasure, and deployment backups follow their own explicitly configured retention.

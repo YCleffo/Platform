@@ -51,3 +51,11 @@ docker compose --profile control --profile backup exec backup-worker bash /opt/b
 ```
 
 The `status` command separates `platform` and `deployments`. Each deployment record contains only `deploymentId`, backup status, last backup timestamp, age, and verification result. Deployment manifests have `schemaVersion=1`, `backupType=deployment`, UUID identities, version and release metadata, relative dump path, size, SHA-256, and `pgRestoreList=true`. Passwords, credentials, and personal data are absent. Publication writes a partial dump, checks it with `pg_restore --list`, computes SHA-256, renames the dump, then publishes the manifest last. Verify is read-only. Drill restores into a disposable database, checks required Core and runtime schema plus migration 031, compares the restored installation ID to the manifest, and drops the disposable database. Live restore remains a separate manual procedure.
+
+## Final backup and decommission retention
+
+When a `deprovision` operation reaches `final_backup`, the backup worker treats that deployment as immediately due even if its prior backup is fresh. The provisioner waits for a published manifest with matching deployment and installation IDs and `createdAt` at or after the operation start. It never performs dump or hash work itself. A failed final backup leaves the DB running for a later attempt; infrastructure destruction cannot proceed on an older manifest.
+
+Decommission does **not** immediately delete the backup chain. `DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS` is blank by default, disabling automatic purge. Set an approved positive period to allow the backup worker to delete an archived, decommissioned deployment's entire chain after that period. Purge is bounded per cycle and checks the exact deployment ID and DB state before deleting files in that deployment's directory. The active deployment minimum set count does not extend decommission retention. Core, Control, and other deployments are untouched.
+
+Decommission is not privacy erasure. Backup retention, legal holds, and restore/re-erasure procedures remain separate privacy obligations.
