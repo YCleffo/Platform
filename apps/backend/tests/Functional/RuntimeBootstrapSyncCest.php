@@ -12,6 +12,7 @@ use App\PlatformRuntime\PostgresInstallationRepository;
 use App\PlatformRuntime\RuntimeEntitlementSynchronizer;
 use App\PlatformRuntime\RuntimeActivationService;
 use App\PlatformRuntime\RuntimeInstallationBootstrap;
+use App\PlatformRuntime\Scheduler\OperationalStatus;
 use App\PlatformRuntime\SodiumEntitlementSignatureVerifier;
 use App\PlatformRuntime\TrustedEntitlementKeyRegistry;
 use App\Tests\Support\FunctionalTester;
@@ -93,20 +94,35 @@ final readonly class RuntimeBootstrapSyncCest
                     $this->failureCodes[] = $machineErrorCode;
                 }
             };
-            $activation = new RuntimeActivationService($bootstrap, $sync, $reporter);
+            $activation = new RuntimeActivationService($bootstrap, $sync, $reporter,
+                $container->get(OperationalStatus::class));
+            $db->createCommand("INSERT INTO platform_runtime.background_job_status
+                (job_code, heartbeat_at) VALUES ('__scheduler__', clock_timestamp()),
+                ('backend_email_worker', clock_timestamp())
+                ON CONFLICT (job_code) DO UPDATE SET heartbeat_at = EXCLUDED.heartbeat_at")->execute();
             assertSame(['installationId' => $id, 'entitlementSequence' => 1, 'status' => 'ready'],
                 $activation->activate($identity));
             assertSame([1], $reporter->readySequences);
             assertSame(1, $sync->sync());
             assertSame('active', $db->createCommand('SELECT status::text FROM platform_runtime.installations')->queryScalar());
+            $db->createCommand("DELETE FROM platform_runtime.background_job_status
+                WHERE job_code = 'backend_email_worker'")->execute();
+            putenv('RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS=1');
+            try { $activation->activate($identity); throw new \RuntimeException('Missing worker reported ready.'); }
+            catch (DomainException $e) { assertSame('runtime.background_workers_not_ready', $e->getMessage()); }
+            assertSame(['runtime.background_workers_not_ready'], $reporter->failureCodes);
+            assertSame([1], $reporter->readySequences);
+            putenv('RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS');
             $puller->response['signatureBase64'] = base64_encode(str_repeat('x', 64));
             try { $activation->activate($identity);
                 throw new \RuntimeException('Invalid signature activated runtime.'); }
-            catch (DomainException) { assertSame(['runtime.entitlement_sync_failed'], $reporter->failureCodes); }
+            catch (DomainException) { assertSame(['runtime.background_workers_not_ready',
+                'runtime.entitlement_sync_failed'], $reporter->failureCodes); }
             assertSame([1], $reporter->readySequences);
             assertSame('active', $db->createCommand('SELECT status::text FROM platform_runtime.installations')->queryScalar());
         } finally {
             putenv('TEST_BOOTSTRAP_CREDENTIAL');
+            putenv('RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS');
             $transaction->rollBack();
         }
     }

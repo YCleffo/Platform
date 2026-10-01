@@ -4,18 +4,36 @@ declare(strict_types=1);
 
 namespace ControlPlane\Provisioning;
 
-/** One isolated network, PostgreSQL container and runtime container per dedicated deployment. */
+/** Owned Docker topology for one local dedicated deployment. */
 final readonly class LocalDockerInfrastructureProvider implements DeploymentInfrastructureProvider
 {
     public function __construct(private DockerCommand $docker, private string $environment,
         private string $controlNetwork, private string $controlUrl,
-        private string $migratorImage, private string $backupNetwork = 'platform_backup_net') {}
+        private string $migratorImage, private string $backupNetwork = 'platform_backup_net',
+        private string $redisImage = 'redis:8-alpine', private int $readyTimeout = 60,
+        private ?DeploymentRuntimeEnvironment $runtimeEnvironment = null) {}
 
     public function provision(ProvisioningRequest $request): ProvisioningResult
     {
+        return $this->ensure($request, true);
+    }
+
+    public function reconcile(ProvisioningRequest $request): ProvisioningResult
+    {
+        return $this->ensure($request, false);
+    }
+
+    private function ensure(ProvisioningRequest $request, bool $migrate): ProvisioningResult
+    {
         $this->allowed();
+        if ($this->readyTimeout < 1 || $this->readyTimeout > 300 || $this->redisImage !== 'redis:8-alpine') {
+            throw new ProvisioningFailure('infrastructure.configuration_invalid');
+        }
         $id = strtolower($request->deploymentId);
         [$runtime, $database, $network] = $this->names($id);
+        $redis = $this->resource($id, 'redis');
+        $scheduler = $this->resource($id, 'scheduler');
+        $emailWorker = $this->resource($id, 'email-worker');
         $image = $this->docker->inspect('image', $request->ociReference);
         if ($image === null || strtolower((string) ($image['Id'] ?? '')) !== $request->imageDigest) {
             throw new ProvisioningFailure('infrastructure.release_digest_mismatch');
@@ -33,6 +51,7 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
                 throw new ProvisioningFailure('infrastructure.resource_conflict');
             }
         }
+        $replaceLegacyRuntime = false;
         if ($existing['runtime']) {
             $details = $this->docker->inspect('container', $runtime);
             $env = $details['Config']['Env'] ?? [];
@@ -41,12 +60,47 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
                 || !in_array('DB_HOST=' . $database, $env, true)
                 || !$this->hasSecretMount($details, $request->databaseSecretPath, 'db_password')
                 || !$this->hasSecretMount($details, $request->credentialSecretPath, 'deployment_credential')
-                || !isset($details['NetworkSettings']['Networks'][$network])) {
+                || !isset($details['NetworkSettings']['Networks'][$network])
+                || !$this->isolatedCore($details, $network)) {
+                throw new ProvisioningFailure('infrastructure.resource_conflict');
+            }
+            if (in_array('REDIS_HOST=' . $redis, $env, true) === false) {
+                if ($migrate) {
+                    throw new ProvisioningFailure('infrastructure.resource_conflict');
+                }
+                $replaceLegacyRuntime = true;
+            }
+        }
+        if ($existing['redis']) {
+            $details = $this->docker->inspect('container', $redis);
+            if (($details['Config']['Image'] ?? null) !== $this->redisImage
+                || array_keys($details['NetworkSettings']['Networks'] ?? []) !== [$network]
+                || !empty($details['HostConfig']['PortBindings'])) {
+                throw new ProvisioningFailure('infrastructure.resource_conflict');
+            }
+        }
+        foreach (['scheduler' => $scheduler, 'emailWorker' => $emailWorker] as $role => $name) {
+            if (!$existing[$role]) { continue; }
+            $details = $this->docker->inspect('container', $name);
+            $env = $details['Config']['Env'] ?? [];
+            if (($details['Image'] ?? null) !== $request->imageDigest
+                || !in_array('DB_HOST=' . $database, $env, true)
+                || !in_array('REDIS_HOST=' . $redis, $env, true)
+                || !in_array('PLATFORM_INSTALLATION_ID=' . $request->installationId, $env, true)
+                || !$this->hasSecretMount($details, $request->databaseSecretPath, 'db_password')
+                || !$this->hasSecretMount($details, $request->credentialSecretPath, 'deployment_credential')
+                || !isset($details['NetworkSettings']['Networks'][$network])
+                || !$this->isolatedCore($details, $network)) {
+                throw new ProvisioningFailure('infrastructure.resource_conflict');
+            }
+            if ($role === 'emailWorker' && (!in_array('SMTP_HOST=mailpit', $env, true)
+                || !in_array('SMTP_PORT=1025', $env, true))) {
                 throw new ProvisioningFailure('infrastructure.resource_conflict');
             }
         }
         if (!$existing['network']) {
             $this->docker->run(['network', 'create', '--label', 'platform.deployment.id=' . $id,
+                '--label', 'platform.resource.role=network',
                 $network], 'infrastructure.network_failed');
         }
         if (!$existing['database']) {
@@ -65,37 +119,33 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
             $this->docker->run(['network', 'connect', $this->backupNetwork, $database],
                 'infrastructure.network_failed');
         }
-        $this->migrate($database, $network, $request->databaseSecretPath);
-        if (!$existing['runtime']) {
-            $this->docker->run(['run', '-d', '--name', $runtime, '--network', $network,
+        if (!$existing['redis']) {
+            $this->docker->run(['run', '-d', '--name', $redis, '--network', $network,
                 '--restart', 'unless-stopped', '--label', 'platform.deployment.id=' . $id,
-                '--label', 'platform.resource.role=runtime',
-                '--mount', $this->secretMount($request->databaseSecretPath, 'db_password'),
-                '--mount', $this->secretMount($request->credentialSecretPath, 'deployment_credential'),
-                '-e', 'APP_ENV=' . $this->environment, '-e', 'DB_HOST=' . $database,
-                '-e', 'DB_PORT=5432', '-e', 'DB_NAME=platform', '-e', 'DB_USER=platform_runtime',
-                '-e', 'DB_PASSWORD_FILE=/run/provisioning-secrets/db_password',
-                '-e', 'PLATFORM_INSTALLATION_ID=' . $request->installationId,
-                '-e', 'PLATFORM_DEPLOYMENT_MODE=dedicated',
-                '-e', 'APPLICATION_VERSION=' . $request->applicationVersion,
-                '-e', 'PLATFORM_RELEASE_ID=' . $request->releaseId,
-                '-e', 'PLATFORM_RELEASE_CHANNEL=' . $request->releaseChannel,
-                '-e', 'CONTROL_PLANE_URL=' . $this->controlUrl,
-                '-e', 'CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF=file:/run/provisioning-secrets/deployment_credential',
-                '-e', 'RUNTIME_ENTITLEMENT_TRUSTED_KEYS=' . $request->trustedEntitlementKeys,
-                $request->imageDigest], 'infrastructure.runtime_failed');
+                '--label', 'platform.resource.role=redis', $this->redisImage], 'infrastructure.redis_failed');
+        } elseif (!(bool) ($this->docker->inspect('container', $redis)['State']['Running'] ?? false)) {
+            $this->docker->run(['start', $redis], 'infrastructure.redis_failed');
+        }
+        if ($migrate) { $this->migrate($database, $network, $request->databaseSecretPath); }
+        foreach (['scheduler' => $scheduler, 'emailWorker' => $emailWorker] as $role => $name) {
+            if (!$existing[$role]) {
+                $this->createCore($request, $role, $name, $database, $redis, $network);
+            } elseif (!(bool) ($this->docker->inspect('container', $name)['State']['Running'] ?? false)) {
+                $this->docker->run(['start', $name], 'infrastructure.worker_failed');
+            }
+            $this->connect($name, $this->controlNetwork);
+        }
+        if ($replaceLegacyRuntime) {
+            // Replace the verified legacy process only after dependencies are running.
+            $this->docker->run(['rm', '-f', '-v', $runtime], 'infrastructure.runtime_failed');
+            $existing['runtime'] = false;
+        }
+        if (!$existing['runtime']) {
+            $this->createCore($request, 'runtime', $runtime, $database, $redis, $network);
         } elseif (!(bool) ($this->docker->inspect('container', $runtime)['State']['Running'] ?? false)) {
             $this->docker->run(['start', $runtime], 'infrastructure.runtime_failed');
         }
-        $details = $this->docker->inspect('container', $runtime);
-        if ($details === null || (string) ($details['Image'] ?? '') !== $request->imageDigest) {
-            throw new ProvisioningFailure('infrastructure.resource_conflict');
-        }
-        $connected = array_keys($details['NetworkSettings']['Networks'] ?? []);
-        if (!in_array($this->controlNetwork, $connected, true)) {
-            $this->docker->run(['network', 'connect', $this->controlNetwork, $runtime],
-                'infrastructure.network_failed');
-        }
+        $this->connect($runtime, $this->controlNetwork);
         return new ProvisioningResult($runtime, $database, $network,
             $existing['runtime'] || $existing['database']);
     }
@@ -106,14 +156,18 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
         $id = strtolower($deploymentId);
         [$runtime, $database, $network] = $this->names($id);
         $result = [];
-        foreach (['runtime' => $runtime, 'database' => $database, 'network' => $network] as $role => $name) {
+        foreach (['runtime' => $runtime, 'database' => $database,
+            'redis' => $this->resource($id, 'redis'),
+            'scheduler' => $this->resource($id, 'scheduler'),
+            'emailWorker' => $this->resource($id, 'email-worker'), 'network' => $network] as $role => $name) {
             $object = $this->docker->inspect($role === 'network' ? 'network' : 'container', $name);
             if ($object !== null && ($object['Labels']['platform.deployment.id']
                     ?? $object['Config']['Labels']['platform.deployment.id'] ?? null) !== $id) {
                 throw new ProvisioningFailure('infrastructure.resource_conflict');
             }
             if ($object !== null && $role !== 'network'
-                && ($object['Config']['Labels']['platform.resource.role'] ?? null) !== $role) {
+                && ($object['Config']['Labels']['platform.resource.role'] ?? null)
+                !== ($role === 'emailWorker' ? 'email-worker' : $role)) {
                 throw new ProvisioningFailure('infrastructure.resource_conflict');
             }
             $result[$role] = $object !== null;
@@ -125,11 +179,30 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
     {
         $this->allowed();
         $runtime = $this->names(strtolower($request->deploymentId))[0];
-        if (!$this->status($request->deploymentId)['runtime']) {
-            throw new ProvisioningFailure('infrastructure.runtime_missing', true);
+        $id = strtolower($request->deploymentId);
+        $existing = $this->status($id);
+        foreach (['runtime' => $runtime, 'scheduler' => $this->resource($id, 'scheduler'),
+            'emailWorker' => $this->resource($id, 'email-worker'),
+            'redis' => $this->resource($id, 'redis')] as $role => $name) {
+            if (!$existing[$role] || !(bool) ($this->docker->inspect('container', $name)['State']['Running'] ?? false)) {
+                throw new ProvisioningFailure('runtime.background_workers_not_ready', true);
+            }
         }
         $this->docker->run(['exec', $runtime, 'php', '/app/yii', 'runtime:deployment:activate'],
             'infrastructure.activation_failed');
+        foreach (['runtime' => $runtime, 'scheduler' => $this->resource($id, 'scheduler'),
+            'emailWorker' => $this->resource($id, 'email-worker')] as $name) {
+            if (!(bool) ($this->docker->inspect('container', $name)['State']['Running'] ?? false)) {
+                throw new ProvisioningFailure('runtime.background_workers_not_ready', true);
+            }
+        }
+        $this->docker->run(['exec', $runtime, 'php', '-r',
+            "exit(@file_get_contents('http://127.0.0.1/health/ready') === false ? 1 : 0);"],
+            'infrastructure.runtime_not_ready');
+        $this->docker->run(['exec', $this->resource($id, 'scheduler'), 'php', '/app/yii',
+            'ops:health', 'backend-scheduler'], 'runtime.background_workers_not_ready');
+        $this->docker->run(['exec', $this->resource($id, 'email-worker'), 'php', '/app/yii',
+            'ops:health', 'backend-email-worker'], 'runtime.background_workers_not_ready');
     }
 
     public function cleanup(string $deploymentId): void
@@ -138,7 +211,9 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
         $id = strtolower($deploymentId);
         [$runtime, $database, $network] = $this->names($id);
         $existing = $this->status($id); // Fail before deleting anything if a name belongs to someone else.
-        foreach (['runtime' => $runtime, 'database' => $database] as $role => $name) {
+        foreach (['runtime' => $runtime, 'scheduler' => $this->resource($id, 'scheduler'),
+            'emailWorker' => $this->resource($id, 'email-worker'), 'redis' => $this->resource($id, 'redis'),
+            'database' => $database] as $role => $name) {
             if ($existing[$role]) { $this->docker->run(['rm', '-f', '-v', $name], 'infrastructure.cleanup_failed'); }
         }
         if ($existing['network']) {
@@ -152,8 +227,11 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
         $id = strtolower($deploymentId);
         $runtime = $this->names($id)[0];
         $existing = $this->status($id); // Check all deterministic names before stopping anything.
-        if ($existing['runtime'] && (bool) ($this->docker->inspect('container', $runtime)['State']['Running'] ?? false)) {
-            $this->docker->run(['stop', $runtime], 'infrastructure.quiesce_failed');
+        foreach (['runtime' => $runtime, 'scheduler' => $this->resource($id, 'scheduler'),
+            'emailWorker' => $this->resource($id, 'email-worker')] as $role => $name) {
+            if ($existing[$role] && (bool) ($this->docker->inspect('container', $name)['State']['Running'] ?? false)) {
+                $this->docker->run(['stop', $name], 'infrastructure.quiesce_failed');
+            }
         }
     }
 
@@ -170,6 +248,49 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
             '-e', 'POSTGRES_USER=platform_runtime',
             '-e', 'POSTGRES_PASSWORD_FILE=/run/provisioning-secrets/db_password',
             $this->migratorImage], 'infrastructure.migration_failed');
+    }
+
+    private function createCore(ProvisioningRequest $request, string $role, string $name,
+        string $database, string $redis, string $network): void
+    {
+        $args = ['run', '-d', '--name', $name, '--network', $network, '--restart', 'unless-stopped',
+            '--label', 'platform.deployment.id=' . strtolower($request->deploymentId),
+            '--label', 'platform.resource.role=' . ($role === 'emailWorker' ? 'email-worker' : $role),
+            '--mount', $this->secretMount($request->databaseSecretPath, 'db_password'),
+            '--mount', $this->secretMount($request->credentialSecretPath, 'deployment_credential')];
+        $builder = $this->runtimeEnvironment ?? new DeploymentRuntimeEnvironment();
+        $args = array_merge($args, $builder->arguments($request, $database, $redis, $this->controlUrl,
+            $role, $this->readyTimeout, $this->environment));
+        if ($role !== 'runtime') { $args = array_merge($args, ['--entrypoint', 'php']); }
+        $args[] = $request->imageDigest;
+        if ($role === 'scheduler') { $args = array_merge($args, ['/app/yii', 'scheduler:run']); }
+        if ($role === 'emailWorker') { $args = array_merge($args, ['/app/yii', 'communication:process-email', '--loop']); }
+        $this->docker->run($args, 'infrastructure.' . $role . '_failed');
+    }
+
+    private function connect(string $name, string $network): void
+    {
+        $details = $this->docker->inspect('container', $name);
+        if (!isset($details['NetworkSettings']['Networks'][$network])) {
+            $this->docker->run(['network', 'connect', $network, $name], 'infrastructure.network_failed');
+        }
+    }
+
+    private function isolatedCore(array $details, string $network): bool
+    {
+        $networks = array_keys($details['NetworkSettings']['Networks'] ?? []);
+        if (array_diff($networks, [$network, $this->controlNetwork]) !== []) { return false; }
+        foreach ($details['Mounts'] ?? [] as $mount) {
+            if (($mount['Source'] ?? null) === '/var/run/docker.sock'
+                || ($mount['Destination'] ?? null) === '/var/run/docker.sock'
+                || ($mount['Destination'] ?? null) === '/backups') { return false; }
+        }
+        return true;
+    }
+
+    private function resource(string $id, string $role): string
+    {
+        return 'platform-deployment-' . str_replace('-', '', $id) . '-' . $role;
     }
 
     private function secretMount(string $path, string $name): string

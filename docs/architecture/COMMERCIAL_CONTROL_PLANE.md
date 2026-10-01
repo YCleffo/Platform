@@ -291,6 +291,8 @@ keys, never signing secrets.
 
 ## Local dedicated decommission (Phase 5.6)
 
+Phase 5.7 local dedicated topology has deployment PostgreSQL and Redis plus HTTP runtime, scheduler, and email worker. All Core processes share the same immutable release image and isolated DB/Redis endpoints. Redis has only the deployment network; PostgreSQL also joins the backup network; Core processes also join the control network. `ready` requires fresh scheduler/email heartbeats and Redis access before Control Plane accepts activation. The local operator reconcile command repairs older active or suspended deployments without a new credential or release change. Decommission quiesces all three Core processes before final backup and removes all owned topology after backup verification.
+
 The existing `commercial.deployment_operations` table carries `deprovision` through `pending`, `running`, `retry`, and `succeeded` or `failed`. An operator request confirms deployment and installation IDs, suspends the deployment, and revokes active M2M credentials transactionally. The existing provisioner worker quiesces runtime, waits for a new verified deployment backup, destroys owned infrastructure, cleans secrets, and archives the deployment. Audit events contain only deployment, installation, and operation UUIDs. Status output contains IDs and machine state only.
 
 The Control Plane's domain `disabled` state does not remove DNS or TLS resources. Decommission is not DSAR erasure, and deployment backups follow their own explicitly configured retention.

@@ -11,7 +11,8 @@ final readonly class ProvisionDeploymentExecutor
 {
     public function __construct(private Connection $db, private StartDeploymentProvisioning $start,
         private DeploymentInfrastructureProvider $provider, private ProvisioningSecretStore $secrets,
-        private string $environment, private int $maxAttempts, private int $retryBaseSeconds) {}
+        private string $environment, private int $maxAttempts, private int $retryBaseSeconds,
+        private ?ProvisioningRequestFactory $requestFactory = null) {}
 
     public function runBatch(int $limit): int
     {
@@ -76,11 +77,7 @@ final readonly class ProvisionDeploymentExecutor
                 $credential['credentialId'] . '.' . $credential['credentialSecret']);
             $this->db->executeStatement('UPDATE commercial.deployments SET core_db_secret_ref = ? WHERE id = ?',
                 [$stored['reference'], $deploymentId]);
-            $keys = $this->trustedKeys();
-            $request = new ProvisioningRequest($deploymentId, (string) $row['installation_id'],
-                (string) $row['mode'], (string) $row['desired_release_id'], (string) $row['version'],
-                (string) $row['channel'], (string) $row['oci_reference'], (string) $row['image_digest'],
-                $stored['databasePath'], $stored['credentialPath'], $keys);
+            $request = ($this->requestFactory ?? new ProvisioningRequestFactory($this->db))->create($row, $stored);
             $this->db->executeStatement("UPDATE commercial.deployment_operations SET current_step = 'infrastructure'
                 WHERE id = ? AND status = 'running'", [$operationId]);
             $this->provider->provision($request);
@@ -103,21 +100,6 @@ final readonly class ProvisionDeploymentExecutor
                 new ProvisioningFailure('infrastructure.unavailable', true));
             return true;
         }
-    }
-
-    private function trustedKeys(): string
-    {
-        $rows = $this->db->fetchAllAssociative("SELECT key_id, encode(public_key, 'base64') AS encoded
-            FROM commercial.signing_keys WHERE purpose = 'entitlement' AND status = 'active'
-            AND revoked_at IS NULL AND algorithm = 'Ed25519'
-            AND valid_from <= now() AND (valid_until IS NULL OR valid_until > now())");
-        $keys = [];
-        foreach ($rows as $row) {
-            $keys[$row['key_id']] = ['publicKeyBase64' => preg_replace('/\s+/', '', $row['encoded']),
-                'status' => 'trusted'];
-        }
-        if ($keys === []) { throw new ProvisioningFailure('infrastructure.entitlement_keys_unavailable'); }
-        return json_encode($keys, JSON_THROW_ON_ERROR);
     }
 
     private function recordFailure(string $operationId, ?string $deploymentId, ProvisioningFailure $failure): void

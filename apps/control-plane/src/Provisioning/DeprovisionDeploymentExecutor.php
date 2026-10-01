@@ -142,7 +142,7 @@ final readonly class DeprovisionDeploymentExecutor
 
     private function assertAbsent(string $deploymentId): void
     {
-        if ($this->provider->status($deploymentId) !== ['runtime' => false, 'database' => false, 'network' => false]) {
+        if (in_array(true, $this->provider->status($deploymentId), true)) {
             throw new ProvisioningFailure('infrastructure.cleanup_failed', true);
         }
     }

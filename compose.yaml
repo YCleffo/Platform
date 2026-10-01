@@ -904,6 +904,8 @@ services:
       DECOMMISSION_BACKUP_CHECK_INTERVAL_SECONDS: ${DECOMMISSION_BACKUP_CHECK_INTERVAL_SECONDS:-30}
       PROVISIONER_CONTROL_PLANE_URL: ${PROVISIONER_CONTROL_PLANE_URL:-http://control-plane:8000}
       PROVISIONER_MIGRATOR_IMAGE: ${PROVISIONER_MIGRATOR_IMAGE:-platform-provisioner-migrator:local}
+      PROVISIONER_RUNTIME_REDIS_IMAGE: ${PROVISIONER_RUNTIME_REDIS_IMAGE:-redis:8-alpine}
+      RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS: ${RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS:-60}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./runtime/provisioning-secrets:/run/provisioning-secrets

@@ -7,7 +7,7 @@ namespace ControlPlane\Provisioning;
 interface DeploymentInfrastructureProvider
 {
     public function provision(ProvisioningRequest $request): ProvisioningResult;
-    /** @return array{runtime:bool,database:bool,network:bool} */
+    /** @return array{runtime:bool,database:bool,redis:bool,scheduler:bool,emailWorker:bool,network:bool} */
     public function status(string $deploymentId): array;
     public function activate(ProvisioningRequest $request): void;
     public function quiesce(string $deploymentId): void;

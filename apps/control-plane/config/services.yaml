@@ -76,6 +76,12 @@ services:
             $controlUrl: '%env(PROVISIONER_CONTROL_PLANE_URL)%'
             $migratorImage: '%env(PROVISIONER_MIGRATOR_IMAGE)%'
             $backupNetwork: '%env(PROVISIONER_BACKUP_NETWORK)%'
+            $redisImage: '%env(PROVISIONER_RUNTIME_REDIS_IMAGE)%'
+            $readyTimeout: '%env(int:RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS)%'
+
+    ControlPlane\Provisioning\ReconcileDeploymentInfrastructureCommand:
+        arguments:
+            $environment: '%env(APP_ENV)%'
 
     ControlPlane\Provisioning\LocalProvisioningSecretStore:
         arguments:

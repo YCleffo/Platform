@@ -54,6 +54,44 @@ final class OperationalStatusTest extends TestCase
         self::assertFalse((new OperationalStatus($db, $redis))->ready());
     }
 
+    public function testReadyRequiresRedisAndEachWorkerHeartbeat(): void
+    {
+        putenv('CORE_SCHEDULER_ENABLED=true');
+        putenv('CORE_EMAIL_WORKER_ENABLED=true');
+        try {
+            $ages = ['__scheduler__' => null, 'backend_email_worker' => 1];
+            $redisReply = 'PONG';
+            $schema = $this->createMock(CommandInterface::class);
+            $schema->method('queryScalar')->willReturn(true);
+            $db = $this->createMock(ConnectionInterface::class);
+            $db->method('createCommand')->willReturnCallback(
+                function (?string $sql, array $params = []) use (&$ages, $schema): CommandInterface {
+                    if (str_contains($sql ?? '', 'to_regclass')) { return $schema; }
+                    $heartbeat = $this->createMock(CommandInterface::class);
+                    $heartbeat->method('queryScalar')->willReturnCallback(
+                        static fn() => $ages[$params[':code']] ?? null);
+                    return $heartbeat;
+                });
+            $redis = $this->createMock(ClientInterface::class);
+            $redis->method('__call')->willReturnCallback(static function () use (&$redisReply): string {
+                return $redisReply;
+            });
+            $status = new OperationalStatus($db, $redis);
+            self::assertFalse($status->ready()); // scheduler absent
+            $ages['__scheduler__'] = 1;
+            $ages['backend_email_worker'] = null;
+            self::assertFalse($status->ready()); // email absent
+            $ages['backend_email_worker'] = 1;
+            $redisReply = 'DOWN';
+            self::assertFalse($status->ready()); // Redis unavailable
+            $redisReply = 'PONG';
+            self::assertTrue($status->ready());
+        } finally {
+            putenv('CORE_SCHEDULER_ENABLED');
+            putenv('CORE_EMAIL_WORKER_ENABLED');
+        }
+    }
+
     public function testRecorderRejectsUnsafeErrorBeforeDatabaseWrite(): void
     {
         $db = $this->createMock(ConnectionInterface::class);

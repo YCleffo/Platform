@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ControlPlane\Tests\Unit;
 
 use ControlPlane\Provisioning\DockerCommand;
+use ControlPlane\Provisioning\DeploymentRuntimeEnvironment;
 use ControlPlane\Provisioning\LocalDockerInfrastructureProvider;
 use ControlPlane\Provisioning\LocalProvisioningSecretStore;
 use ControlPlane\Provisioning\ProvisioningFailure;
@@ -26,6 +27,36 @@ final class ProvisionerBoundaryTest extends TestCase
         try { $this->request('dedicated', 'latest'); self::fail('Mutable tag accepted.'); }
         catch (ProvisioningFailure $e) { self::assertSame('infrastructure.release_invalid', $e->machineCode); }
         self::assertSame('dedicated', $this->request()->mode);
+    }
+
+    public function testAllCoreProcessesReceiveSameIsolatedDbRedisAndReleaseIdentity(): void
+    {
+        $builder = new DeploymentRuntimeEnvironment();
+        $shared = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD_FILE',
+            'REDIS_HOST', 'REDIS_PORT', 'REDIS_DATABASE', 'PLATFORM_INSTALLATION_ID',
+            'APPLICATION_VERSION', 'PLATFORM_RELEASE_ID', 'PLATFORM_RELEASE_CHANNEL',
+            'CONTROL_PLANE_URL', 'CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF',
+            'RUNTIME_ENTITLEMENT_TRUSTED_KEYS'];
+        $environments = [];
+        foreach (['runtime', 'scheduler', 'emailWorker'] as $role) {
+            $args = $builder->arguments($this->request(), 'dedicated-db', 'dedicated-redis',
+                'http://control:8000', $role, 60, 'test');
+            $values = [];
+            for ($i = 0; $i < count($args); $i += 2) {
+                self::assertSame('-e', $args[$i]);
+                [$key, $value] = explode('=', $args[$i + 1], 2);
+                $values[$key] = $value;
+            }
+            self::assertSame('dedicated-db', $values['DB_HOST']);
+            self::assertSame('dedicated-redis', $values['REDIS_HOST']);
+            self::assertSame('false', $values['CORE_PRIVACY_ERASURE_ENABLED']);
+            self::assertSame('false', $values['CORE_PRIVACY_CLEANUP_ENABLED']);
+            self::assertArrayNotHasKey('DOCKER_HOST', $values);
+            $environments[$role] = array_intersect_key($values, array_flip($shared));
+        }
+        self::assertSame($environments['runtime'], $environments['scheduler']);
+        self::assertSame($environments['runtime'], $environments['emailWorker']);
+        self::assertSame('mailpit', $values['SMTP_HOST']);
     }
 
     public function testLocalSecretStoreIsRandomAndProductionFailsClosed(): void
@@ -81,6 +112,28 @@ final class ProvisionerBoundaryTest extends TestCase
         }
     }
 
+    public function testForeignRedisOrWorkerBlocksCleanupBeforeAnyMutation(): void
+    {
+        foreach (['-redis', '-scheduler', '-email-worker'] as $suffix) {
+            $docker = new class($suffix) extends DockerCommand {
+                public array $calls = [];
+                public function __construct(private string $suffix) {}
+                public function inspect(string $kind, string $name): ?array
+                {
+                    return $kind === 'container' && str_ends_with($name, $this->suffix)
+                        ? ['Config' => ['Labels' => ['platform.deployment.id' => 'foreign']]] : null;
+                }
+                public function run(array $arguments, string $code = 'infrastructure.docker_failed'): string
+                { $this->calls[] = $arguments; return ''; }
+            };
+            $provider = new LocalDockerInfrastructureProvider($docker, 'test', 'test-net',
+                'http://control-plane-test:8000', 'migrator');
+            try { $provider->cleanup(self::ID); self::fail('Foreign resource was removed.'); }
+            catch (ProvisioningFailure $e) { self::assertSame('infrastructure.resource_conflict', $e->machineCode); }
+            self::assertSame([], $docker->calls);
+        }
+    }
+
     public function testCleanupRemovesOnlyMatchingOwnedResourcesAndTheirAnonymousVolumes(): void
     {
         $docker = new class extends DockerCommand {
@@ -91,7 +144,9 @@ final class ProvisionerBoundaryTest extends TestCase
                     ? ['Labels' => ['platform.deployment.id' => ProvisionerBoundaryTest::ID]]
                     : ['Config' => ['Labels' => [
                         'platform.deployment.id' => ProvisionerBoundaryTest::ID,
-                        'platform.resource.role' => str_ends_with($name, '-runtime') ? 'runtime' : 'database',
+                        'platform.resource.role' => str_ends_with($name, '-db') ? 'database'
+                            : (str_ends_with($name, '-email-worker') ? 'email-worker'
+                            : substr($name, strrpos($name, '-') + 1)),
                     ]]];
             }
             public function run(array $arguments, string $code = 'infrastructure.docker_failed'): string
@@ -99,10 +154,10 @@ final class ProvisionerBoundaryTest extends TestCase
         };
         (new LocalDockerInfrastructureProvider($docker, 'test', 'test-net',
             'http://control-plane-test:8000', 'migrator'))->cleanup(self::ID);
-        self::assertCount(3, $docker->calls);
+        self::assertCount(6, $docker->calls);
         self::assertSame(['rm', '-f', '-v'], array_slice($docker->calls[0], 0, 3));
         self::assertSame(['rm', '-f', '-v'], array_slice($docker->calls[1], 0, 3));
-        self::assertSame(['network', 'rm'], array_slice($docker->calls[2], 0, 2));
+        self::assertSame(['network', 'rm'], array_slice($docker->calls[5], 0, 2));
     }
 
     public function testQuiesceStopsOnlyOwnedRuntimeAndKeepsDatabase(): void
@@ -114,7 +169,9 @@ final class ProvisionerBoundaryTest extends TestCase
                 if ($kind === 'network') { return ['Labels' => ['platform.deployment.id' => ProvisionerBoundaryTest::ID]]; }
                 return ['Config' => ['Labels' => [
                     'platform.deployment.id' => ProvisionerBoundaryTest::ID,
-                    'platform.resource.role' => str_ends_with($name, '-runtime') ? 'runtime' : 'database',
+                    'platform.resource.role' => str_ends_with($name, '-db') ? 'database'
+                        : (str_ends_with($name, '-email-worker') ? 'email-worker'
+                        : substr($name, strrpos($name, '-') + 1)),
                 ]], 'State' => ['Running' => true]];
             }
             public function run(array $arguments, string $code = 'infrastructure.docker_failed'): string
@@ -122,8 +179,10 @@ final class ProvisionerBoundaryTest extends TestCase
         };
         (new LocalDockerInfrastructureProvider($docker, 'test', 'test-net',
             'http://control-plane-test:8000', 'migrator'))->quiesce(self::ID);
-        self::assertCount(1, $docker->calls);
+        self::assertCount(3, $docker->calls);
         self::assertSame(['stop', 'platform-deployment-' . str_replace('-', '', self::ID) . '-runtime'], $docker->calls[0]);
+        self::assertSame(['stop', 'platform-deployment-' . str_replace('-', '', self::ID) . '-scheduler'], $docker->calls[1]);
+        self::assertSame(['stop', 'platform-deployment-' . str_replace('-', '', self::ID) . '-email-worker'], $docker->calls[2]);
     }
 
     public function testDecommissionOfAlreadyAbsentResourcesIsIdempotent(): void

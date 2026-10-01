@@ -40,8 +40,9 @@ $request = new ProvisioningRequest($id, $row['installation_id'], 'dedicated', $r
 $provider = new LocalDockerInfrastructureProvider(new DockerCommand(), 'test',
     'platform_control_test_net', 'http://platform-provisioner-control-test:8000',
     'platform-provisioner-migrator:local');
-$result = $provider->provision($request);
-if (!$result->reused || $provider->status($id) !== ['runtime' => true, 'database' => true, 'network' => true]) {
+$result = $provider->reconcile($request);
+if (!$result->reused || $provider->status($id) !== ['runtime' => true, 'database' => true,
+    'redis' => true, 'scheduler' => true, 'emailWorker' => true, 'network' => true]) {
     throw new RuntimeException('Idempotent resource reuse failed.');
 }
 echo 'existing dedicated resources reused', PHP_EOL;

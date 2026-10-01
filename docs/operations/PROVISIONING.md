@@ -2,7 +2,7 @@
 
 Phase 5.4 runs a dedicated `provisioner-worker` process. The Control Plane HTTP process owns deployment reservations, published releases, the durable `commercial.deployment_operations` queue, credentials, entitlements, and the authenticated ready transition. It has no Docker socket. The worker alone has that socket; **Docker socket access is a privileged infrastructure capability**.
 
-This provider is restricted to `APP_ENV=dev|test`, `PROVISIONER_PROVIDER=local-docker`, and `mode=dedicated`. Production, `shared`, and `on_prem` fail closed. It does not manage DNS, TLS, cloud resources, upgrades, rollback, or decommissioning.
+This provider is restricted to `APP_ENV=dev|test`, `PROVISIONER_PROVIDER=local-docker`, and `mode=dedicated`. Production, `shared`, and `on_prem` fail closed. It does not manage DNS, TLS, cloud resources, upgrades, or rollback.
 
 ## Local setup
 
@@ -23,11 +23,22 @@ The worker writes `runtime/provisioning-secrets/status.json` with heartbeat, las
 
 ## Resource and secret boundary
 
-For each deployment UUID, the worker creates a deterministically named Docker network, PostgreSQL container, and Backend runtime container with ownership labels. It checks labels, image digest, installation ID, network, and database configuration before reusing resources after a crash. A conflicting name fails closed. Each deployment has a separate database and random 256-bit password. The password and bootstrap M2M credential are stored in files under `runtime/provisioning-secrets/<deploymentId>/`, mounted read-only into the applicable containers. Only a `localdev://<deploymentId>/db` reference is stored in Control Plane. No raw password or credential enters the operation row, audit, or logs. The local file scheme is valid only in dev/test; production requires an external secret-store scheme.
+```text
+Dedicated deployment
+├── PostgreSQL
+├── Redis
+├── Runtime HTTP
+├── Scheduler
+└── Email worker
+```
 
-The worker passes an explicit runtime configuration allowlist: installation and release identity, dedicated mode, database host/name/user and password file, Control Plane URL, deployment credential file reference, and trusted entitlement public keys. It does not mount the host `.env`, the Control Plane database credentials, or the Docker socket into the runtime. The migration container runs the existing Core SQL migration mechanism against **only the new deployment database** before activation.
+For each deployment UUID, the worker owns one network and five deterministic containers: PostgreSQL, Redis, HTTP runtime, Core scheduler, and email worker. Each resource has deployment and role ownership labels. All three Core processes use the same release image digest, deployment DB, and deployment Redis. PostgreSQL joins the deployment and backup networks; Redis joins only the deployment network; Core processes join the deployment and control networks. Core processes have no Docker socket or backup network. A conflicting name fails closed. Each deployment has a separate database and random 256-bit password. The password and bootstrap M2M credential are stored in files under `runtime/provisioning-secrets/<deploymentId>/`, mounted read-only into the applicable containers. Only a `localdev://<deploymentId>/db` reference is stored in Control Plane. No raw password or credential enters the operation row, audit, or logs. The local file scheme is valid only in dev/test; production requires an external secret-store scheme.
 
-After the infrastructure is ready, the worker invokes `php /app/yii runtime:deployment:activate` inside the runtime. That existing command initializes the installation, pulls and verifies a signed entitlement, and sends the authenticated ready report. Only Control Plane's status endpoint sets the deployment `active` and operation `succeeded`.
+The worker passes one explicit configuration allowlist to all Core processes: installation and release identity, dedicated mode, database and Redis endpoints, Control Plane URL, deployment credential file reference, and trusted entitlement public keys. It does not mount the host `.env` or Control Plane database credentials. Scheduler privacy automation is disabled without deployment-specific policy. The migration container runs the existing Core SQL migration mechanism against **only the deployment database** before activation. The provider starts scheduler and email worker before HTTP runtime.
+
+After the infrastructure is ready, the worker invokes `php /app/yii runtime:deployment:activate` inside the runtime. That command initializes the installation, pulls and verifies a signed entitlement, waits up to `RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS` for Redis and fresh scheduler/email heartbeats, and sends the authenticated ready report. Only Control Plane's status endpoint sets the deployment `active` and operation `succeeded`. The provider then checks `/health/ready`, both `ops:health` commands, and that all Core containers remain running. An active deployment therefore includes healthy required background processes.
+
+For an existing active or suspended local dedicated deployment, run `php /app/bin/console control:deployments:infrastructure:reconcile --deployment-id=<uuid>` in the provisioner worker environment. This adds missing Redis/workers, restarts owned stopped resources, and replaces a verified legacy HTTP container whose immutable environment lacks dedicated Redis. It does not issue a credential, change a release, migrate the DB, or change deployment state. Repeating the command reuses the completed topology.
 
 The backup worker uses `platform_backup_net` to reach each dedicated PostgreSQL container after activation. Start the `backup` Compose profile before provisioning so that the network exists. The provider attaches a new DB to `PROVISIONER_BACKUP_NETWORK` and repairs a missing attachment on replay. Neither runtime nor Control Plane HTTP joins the backup network. A successful activation makes the deployment backup due immediately; provisioning does not wait for a dump. See [BACKUP_RESTORE.md](BACKUP_RESTORE.md) for commands, retention, and drill behavior.
 
@@ -46,7 +57,7 @@ docker compose --profile control exec control-plane php bin/console control:depl
 docker compose --profile control --profile provisioner exec provisioner-worker php /app/bin/console control:deployments:decommission-status --deployment-id=<uuid>
 ```
 
-The first command only queues a durable `deprovision` operation. In the same transaction it suspends the deployment, revokes every active service credential, and writes one audit event. The idempotency key returns the same operation on replay. The existing provisioner worker then stops the runtime, waits for a new published deployment backup made after the operation began, deletes only owned runtime/DB/network resources, removes local provisioning secrets, and finally archives the deployment and disables its domain rows. It retains installation and release identity. Missing final backup leaves the operation in `retry` at `final_backup`, with the runtime stopped and DB intact. Worker retries are safe after a crash at any step.
+The first command only queues a durable `deprovision` operation. In the same transaction it suspends the deployment, revokes every active service credential, and writes one audit event. The idempotency key returns the same operation on replay. The provisioner worker then stops HTTP runtime, scheduler, and email worker before final backup, leaves PostgreSQL running for that backup, and removes all six owned resources after verified evidence. It then cleans secrets, archives the deployment, and disables its domain rows. Missing final backup leaves the operation in `retry` at `final_backup`, with writers stopped and DB intact. Worker retries are safe after a crash at any step.
 
 The backup worker must be running with `DEPLOYMENT_BACKUP_ENABLED=true` to service final backup requests automatically. The provisioner mounts `backups/` read-only and only reads published manifest evidence; it does not make dumps. `DECOMMISSION_BACKUP_CHECK_INTERVAL_SECONDS` controls how often a waiting operation retries. Production and other deployment modes fail closed.
 
