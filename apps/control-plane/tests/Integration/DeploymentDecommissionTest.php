@@ -91,6 +91,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
             public bool $clean = false;
             public array $events = [];
             public function prepare(string $deploymentId, string $credential): array { throw new \LogicException(); }
+            public function existing(string $deploymentId): array { throw new \LogicException(); }
             public function cleanup(string $deploymentId): void { $this->clean = true; $this->events[] = 'secret_cleanup'; }
             public function isClean(string $deploymentId): bool { return $this->clean; }
         };
@@ -98,7 +99,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
             public bool $ready = false;
             public function hasFinalBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool
             { return $this->ready; }
-            public function hasUpdateBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool { return false; }
+            public function hasUpdateBackup(string $deploymentId, string $installationId, string $operationId, string $sourceReleaseId, \DateTimeImmutable $startedAt): bool { return false; }
         };
         $executor = new DeprovisionDeploymentExecutor($this->connection, $provider, $secrets,
             $evidence, 'test', 5, 1, 5);
@@ -161,6 +162,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
             public bool $clean = false;
             public int $calls = 0;
             public function prepare(string $deploymentId, string $credential): array { throw new \LogicException(); }
+            public function existing(string $deploymentId): array { throw new \LogicException(); }
             public function cleanup(string $deploymentId): void
             {
                 ++$this->calls;
@@ -172,7 +174,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
         $evidence = new class implements DeploymentBackupEvidenceReader {
             public function hasFinalBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool
             { return true; }
-            public function hasUpdateBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool { return false; }
+            public function hasUpdateBackup(string $deploymentId, string $installationId, string $operationId, string $sourceReleaseId, \DateTimeImmutable $startedAt): bool { return false; }
         };
         $executor = new DeprovisionDeploymentExecutor($this->connection, $provider, $secrets,
             $evidence, 'test', 5, 1, 5);

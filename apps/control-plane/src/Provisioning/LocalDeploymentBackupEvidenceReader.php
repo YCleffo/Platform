@@ -11,10 +11,12 @@ final readonly class LocalDeploymentBackupEvidenceReader implements DeploymentBa
     public function hasFinalBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool
     { return $this->hasPurpose($deploymentId, $installationId, $operationId, $startedAt, 'decommission_final'); }
 
-    public function hasUpdateBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool
-    { return $this->hasPurpose($deploymentId, $installationId, $operationId, $startedAt, 'pre_update'); }
+    public function hasUpdateBackup(string $deploymentId, string $installationId, string $operationId,
+        string $sourceReleaseId, \DateTimeImmutable $startedAt): bool
+    { return $this->hasPurpose($deploymentId, $installationId, $operationId, $startedAt, 'pre_update', $sourceReleaseId); }
 
-    private function hasPurpose(string $deploymentId, string $installationId, ?string $operationId, \DateTimeImmutable $startedAt, string $purpose): bool
+    private function hasPurpose(string $deploymentId, string $installationId, ?string $operationId,
+        \DateTimeImmutable $startedAt, string $purpose, ?string $sourceReleaseId = null): bool
     {
         if (!in_array($this->environment, ['dev', 'test'], true)
             || preg_match('/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/D', $deploymentId) !== 1
@@ -37,6 +39,7 @@ final readonly class LocalDeploymentBackupEvidenceReader implements DeploymentBa
                 || ($manifest['installationId'] ?? null) !== $installationId
                 || ($manifest['purpose'] ?? null) !== $purpose
                 || ($manifest['operationId'] ?? null) !== $operationId
+                || ($sourceReleaseId !== null && ($manifest['releaseId'] ?? null) !== $sourceReleaseId)
                 || ($manifest['backupId'] ?? null) !== substr($file->getFilename(), 0, -5)
                 || ($manifest['pgRestoreList'] ?? null) !== true
                 || !is_string($manifest['createdAt'] ?? null)

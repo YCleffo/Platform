@@ -137,7 +137,7 @@ deployment_backup() (
   jq -n --arg id "$backup_id" --arg d "$id" --arg i "$installation" --arg at "$stamp" \
     --arg v "$version" --arg r "$release" --arg p "$purpose" --arg o "$operation" --arg f "$dump" --arg h "$hash" --argjson s "$size" \
     '{schemaVersion:1,backupType:"deployment",backupId:$id,deploymentId:$d,installationId:$i,
-      createdAt:$at,applicationVersion:$v,releaseId:$r,purpose:$p,operationId:($o|select(length>0)),dump:{file:$f,sizeBytes:$s,sha256:$h},pgRestoreList:true}' \
+      createdAt:$at,applicationVersion:$v,releaseId:$r,purpose:$p,operationId:(if $o=="" then null else $o end),dump:{file:$f,sizeBytes:$s,sha256:$h},pgRestoreList:true}' \
     > "$dir/manifests/$backup_id.json.partial"
   mv "$dir/manifests/$backup_id.json.partial" "$dir/manifests/$backup_id.json"
   deployment_manifest_ok "$id" "$dir/manifests/$backup_id.json" || die 'published deployment backup failed verification'
@@ -158,7 +158,7 @@ deployment_retention() {
     epoch=$(date -u -d "$(jq -r .createdAt "$f")" +%s 2>/dev/null) || continue
     (( epoch < cutoff )) || continue
     deployment_manifest_ok "$id" "$f" || continue
-    if [[ $(jq -r '.purpose // "periodic"' "$f") == pre_update ]]; then
+    if [[ $(jq -r '.purpose // "periodic"' "$f") =~ ^(pre_update|decommission_final)$ ]]; then
       operation=$(jq -r '.operationId // empty' "$f")
       db_config control
       [[ $(psql -X -A -t -h "$dbhost" -U "$dbuser" -d "$dbname" -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM commercial.deployment_operations WHERE id='$operation' AND status IN ('running','retry','failed')") == 1 ]] && continue

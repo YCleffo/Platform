@@ -8,6 +8,8 @@ interface ProvisioningSecretStore
 {
     /** @return array{reference:string,databasePath:string,credentialPath:string} */
     public function prepare(string $deploymentId, string $credential): array;
+    /** @return array{reference:string,databasePath:string,credentialPath:string} */
+    public function existing(string $deploymentId): array;
     public function cleanup(string $deploymentId): void;
     public function isClean(string $deploymentId): bool;
 }

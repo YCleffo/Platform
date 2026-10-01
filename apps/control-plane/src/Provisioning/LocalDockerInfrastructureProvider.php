@@ -236,6 +236,7 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
         [$runtime, $database, $network] = $this->names($id);
         $base = ['run', '--rm', '--network', $network,
             '--mount', $this->secretMount($request->databaseSecretPath, 'db_password'),
+            '-e', 'APP_ENV=' . $this->environment, '-e', 'APP_DEBUG=0',
             '-e', 'DB_HOST=' . $database, '-e', 'DB_PORT=5432', '-e', 'DB_NAME=platform', '-e', 'DB_USER=platform_runtime',
             '-e', 'DB_PASSWORD_FILE=/run/provisioning-secrets/db_password', '--entrypoint', 'php', $request->imageDigest, '/app/yii'];
         $this->docker->run(array_merge($base, ['runtime:migrations:validate-history']),

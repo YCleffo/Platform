@@ -16,6 +16,55 @@ use ControlPlane\Provisioning\UpdateDeploymentExecutor;
 
 final class UpdateDeploymentExecutorTest extends DatabaseTestCase
 {
+    public function testEveryPersistedStepResumesWithoutRepeatingCompletedWork(): void
+    {
+        $cases = [
+            'quiesce' => ['quiesce','migrate','replace','verify'],
+            'pre_update_backup' => ['migrate','replace','verify'],
+            'migrate' => ['migrate','replace','verify'],
+            'replace_runtime' => ['replace','verify'],
+            'runtime_verify' => ['verify'],
+            'finalize' => [],
+        ];
+        $suiteSuffix=bin2hex(random_bytes(4));
+        $this->connection->executeStatement("INSERT INTO commercial.signing_keys(key_id,algorithm,purpose,public_key,private_key_secret_ref,status,valid_from) VALUES (?,'Ed25519','entitlement',decode(repeat('01',32),'hex'),'vault://keys/test','active',now()-interval '1 day')",['entitlement-'.$suiteSuffix]);
+        foreach ($cases as $step => $expected) {
+            $suffix=bin2hex(random_bytes(4)); $account=$this->account('update-resume-'.$suffix);
+            $a=$this->release('81.0.0-'.$suffix,'a',$suffix); $b=$this->release('81.1.0-'.$suffix,'b',$suffix);
+            $deployment=(new ReserveDeployment($this->connection,'platform.example'))->reserveCloud($account,'dedicated','resume-'.$suffix,'provision-'.$suffix);
+            $this->connection->executeStatement("UPDATE commercial.deployments SET status='active',provisioning_state='ready',current_release_id=?,desired_release_id=? WHERE id=?",[$a,$a,$deployment]);
+            $this->connection->executeStatement("UPDATE commercial.deployment_operations SET status='succeeded',finished_at=now() WHERE deployment_id=?",[$deployment]);
+            $operation=(new RequestDeploymentUpdate($this->connection,'test'))->request($deployment,$b,'update-'.$suffix);
+            $this->connection->executeStatement("UPDATE commercial.deployments SET status='provisioning',provisioning_state='running' WHERE id=?",[$deployment]);
+            $this->connection->executeStatement("UPDATE commercial.deployment_operations SET status='retry',current_step=?,started_at=now(),next_retry_at=now() WHERE id=?",[$step,$operation]);
+            $dir='/tmp/update-resume-'.$suffix; $secrets=new LocalProvisioningSecretStore($dir,$dir,'test');
+            $stored=$secrets->prepare($deployment,'credential.test');
+            $this->connection->executeStatement('UPDATE commercial.deployments SET core_db_secret_ref=? WHERE id=?',[$stored['reference'],$deployment]);
+            $provider=new class implements DeploymentInfrastructureProvider {
+                public array $events=[];
+                public function provision(ProvisioningRequest $request): ProvisioningResult { throw new \LogicException(); }
+                public function status(string $deploymentId): array { return []; }
+                public function activate(ProvisioningRequest $request): void { throw new \LogicException(); }
+                public function applyTargetMigrations(ProvisioningRequest $request): void { $this->events[]='migrate'; }
+                public function replaceApplicationRuntime(ProvisioningRequest $request): void { $this->events[]='replace'; }
+                public function verifyUpdate(ProvisioningRequest $request, \DateTimeImmutable $startedAt): void { $this->events[]='verify'; }
+                public function quiesce(string $deploymentId): void { $this->events[]='quiesce'; }
+                public function decommission(string $deploymentId): void {}
+                public function cleanup(string $deploymentId): void {}
+            };
+            $backups=new class implements DeploymentBackupEvidenceReader {
+                public function hasFinalBackup(string $deploymentId,string $installationId,string $operationId,\DateTimeImmutable $startedAt): bool { return false; }
+                public function hasUpdateBackup(string $deploymentId,string $installationId,string $operationId,string $sourceReleaseId,\DateTimeImmutable $startedAt): bool { return true; }
+            };
+            $executor=new UpdateDeploymentExecutor($this->connection,$provider,$secrets,$backups,new ProvisioningRequestFactory($this->connection),'test',5,1,5);
+            self::assertSame(1,$executor->runBatch(1),$step);
+            self::assertSame($expected,$provider->events,$step);
+            self::assertSame('succeeded',$this->connection->fetchOne('SELECT status FROM commercial.deployment_operations WHERE id=?',[$operation]),$step);
+            self::assertSame($b,$this->connection->fetchOne('SELECT current_release_id FROM commercial.deployments WHERE id=?',[$deployment]),$step);
+            $secrets->cleanup($deployment); @rmdir($dir);
+        }
+    }
+
     public function testBackupRetryResumesWhileDeploymentIsProvisioning(): void
     {
         $suffix=bin2hex(random_bytes(4)); $account=$this->account('update-executor-'.$suffix);
@@ -43,7 +92,7 @@ final class UpdateDeploymentExecutorTest extends DatabaseTestCase
         $backups=new class implements DeploymentBackupEvidenceReader {
             public bool $ready=false;
             public function hasFinalBackup(string $deploymentId,string $installationId,string $operationId,\DateTimeImmutable $startedAt): bool { return false; }
-            public function hasUpdateBackup(string $deploymentId,string $installationId,string $operationId,\DateTimeImmutable $startedAt): bool { return $this->ready; }
+            public function hasUpdateBackup(string $deploymentId,string $installationId,string $operationId,string $sourceReleaseId,\DateTimeImmutable $startedAt): bool { return $this->ready; }
         };
         $executor=new UpdateDeploymentExecutor($this->connection,$provider,$secrets,$backups,new ProvisioningRequestFactory($this->connection),'test',5,1,5);
         self::assertSame(1,$executor->runBatch(1));

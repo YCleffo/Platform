@@ -26,7 +26,7 @@ final readonly class UpdateDeploymentExecutor
         try {
             $row = $this->db->transactional(function (Connection $db) use ($operationId): ?array {
                 $row = $db->fetchAssociative("SELECT o.*, d.installation_id, d.commercial_account_id, d.mode, d.status AS deployment_status,
-                    d.archived_at, d.provisioning_state, d.current_release_id, d.desired_release_id, d.core_db_secret_ref, r.version, r.channel,
+                    d.archived_at, d.updated_at AS deployment_updated_at, d.provisioning_state, d.current_release_id, d.desired_release_id, d.core_db_secret_ref, r.version, r.channel,
                     r.status AS release_status, r.oci_reference, r.image_digest
                     FROM commercial.deployment_operations o JOIN commercial.deployments d ON d.id=o.deployment_id
                     JOIN commercial.releases r ON r.id=d.desired_release_id WHERE o.id=? AND o.operation_type='update'
@@ -37,7 +37,13 @@ final readonly class UpdateDeploymentExecutor
                 if (!in_array($this->environment, ['dev','test'], true) || $row['mode'] !== 'dedicated'
                     || (!($row['deployment_status'] === 'active' || $resuming)) || $row['archived_at'] !== null || $row['current_release_id'] === null
                     || $row['release_status'] !== 'published') throw new ProvisioningFailure('infrastructure.deployment_ineligible');
-                $db->executeStatement("UPDATE commercial.deployments SET status='provisioning', provisioning_state='running', updated_at=now() WHERE id=?", [$row['deployment_id']]);
+                if ($resuming && (new \DateTimeImmutable((string)$row['deployment_updated_at']))
+                    > new \DateTimeImmutable((string)$row['started_at'])) {
+                    throw new ProvisioningFailure('infrastructure.deployment_ineligible');
+                }
+                if (!$resuming) {
+                    $db->executeStatement("UPDATE commercial.deployments SET status='provisioning', provisioning_state='running', updated_at=now() WHERE id=?", [$row['deployment_id']]);
+                }
                 $db->executeStatement("UPDATE commercial.deployment_operations SET status='running', current_step=COALESCE(current_step,'quiesce'),
                     started_at=COALESCE(started_at,clock_timestamp()), attempt_count=attempt_count+1, last_error_code=NULL WHERE id=?", [$operationId]);
                 return $row;
@@ -52,7 +58,8 @@ final readonly class UpdateDeploymentExecutor
             }
             if ($step === 'quiesce') { $this->provider->quiesce($id); $this->step($operationId, 'pre_update_backup'); $step='pre_update_backup'; }
             $started=new \DateTimeImmutable((string)$this->db->fetchOne('SELECT started_at::text FROM commercial.deployment_operations WHERE id=?',[$operationId]));
-            if ($step === 'pre_update_backup' && !$this->backups->hasUpdateBackup($id,(string)$row['installation_id'],$operationId,$started)) throw new ProvisioningFailure('infrastructure.awaiting_update_backup',true);
+            if ($step === 'pre_update_backup' && !$this->backups->hasUpdateBackup($id,(string)$row['installation_id'],
+                $operationId,(string)$row['current_release_id'],$started)) throw new ProvisioningFailure('infrastructure.awaiting_update_backup',true);
             if ($step === 'pre_update_backup') { $this->step($operationId, 'migrate'); $step='migrate'; }
             if ($step === 'migrate') { $this->provider->applyTargetMigrations($request); $this->step($operationId, 'replace_runtime'); $step='replace_runtime'; }
             if ($step === 'replace_runtime') { $this->provider->replaceApplicationRuntime($request); $this->step($operationId, 'runtime_verify'); $step='runtime_verify'; }
@@ -63,6 +70,15 @@ final readonly class UpdateDeploymentExecutor
     }
     private function step(string $id,string $step): void { $this->db->executeStatement("UPDATE commercial.deployment_operations SET current_step=? WHERE id=? AND status='running'",[$step,$id]); }
     private function finalize(string $op,array $row): void { $this->db->transactional(function(Connection $db) use($op,$row):void {
+        $state=$db->fetchAssociative("SELECT o.operation_type,o.status AS operation_status,o.current_step,d.status AS deployment_status,
+            d.provisioning_state,d.current_release_id,d.desired_release_id,d.archived_at FROM commercial.deployment_operations o
+            JOIN commercial.deployments d ON d.id=o.deployment_id WHERE o.id=? FOR UPDATE OF o,d",[$op]);
+        if($state===false || $state['operation_type']!=='update' || $state['operation_status']!=='running'
+            || $state['current_step']!=='finalize' || $state['deployment_status']!=='provisioning'
+            || $state['provisioning_state']!=='running' || $state['archived_at']!==null
+            || $state['current_release_id']!==$row['current_release_id'] || $state['desired_release_id']!==$row['desired_release_id']) {
+            throw new ProvisioningFailure('infrastructure.deployment_ineligible');
+        }
         $db->executeStatement("UPDATE commercial.deployments SET current_release_id=desired_release_id,status='active',provisioning_state='ready',updated_at=now() WHERE id=?",[$row['deployment_id']]);
         $db->executeStatement("UPDATE commercial.deployment_operations SET status='succeeded',current_step='updated',finished_at=now(),last_error_code=NULL,next_retry_at=NULL WHERE id=?",[$op]);
         $db->executeStatement("INSERT INTO commercial.audit_events (actor_type,commercial_account_id,action,resource_type,resource_id,outcome,metadata) VALUES ('system',?,'deployment.updated','deployment',?,'success',jsonb_build_object('deploymentId',?::text,'sourceReleaseId',?::text,'targetReleaseId',?::text,'operationId',?::text))",[$row['commercial_account_id'],$row['deployment_id'],$row['deployment_id'],$row['current_release_id'],$row['desired_release_id'],$op]);

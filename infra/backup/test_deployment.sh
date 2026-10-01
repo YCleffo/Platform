@@ -40,6 +40,14 @@ make_set "$a" "$two" 2020-01-02T00:00:00Z
 make_set "$a" "$three" 2020-01-03T00:00:00Z
 make_set "$b" "$one" 2020-01-01T00:00:00Z
 deployment_manifest_ok "$a" "deployments/$a/manifests/$one.json"
+cp "deployments/$a/manifests/$one.json" purpose-original.tmp
+jq '.purpose="unknown"' purpose-original.tmp > "deployments/$a/manifests/$one.json"
+if deployment_manifest_ok "$a" "deployments/$a/manifests/$one.json"; then die 'unknown purpose accepted'; fi
+jq '.purpose="pre_update"' purpose-original.tmp > "deployments/$a/manifests/$one.json"
+if deployment_manifest_ok "$a" "deployments/$a/manifests/$one.json"; then die 'operation-bound purpose without operation accepted'; fi
+jq --arg op "$one" '.purpose="pre_update" | .operationId=$op' purpose-original.tmp > "deployments/$a/manifests/$one.json"
+deployment_manifest_ok "$a" "deployments/$a/manifests/$one.json" || die 'valid pre-update manifest rejected'
+mv purpose-original.tmp "deployments/$a/manifests/$one.json"
 jq '.schemaVersion=2' "deployments/$a/manifests/$one.json" > invalid.tmp
 mv "deployments/$a/manifests/$one.json" original.tmp
 mv invalid.tmp "deployments/$a/manifests/$one.json"
@@ -59,6 +67,12 @@ deployment_due "$a" || die 'old backup not due'
 jq --arg at "$(now)" '.createdAt=$at' "deployments/$a/manifests/$three.json" > latest.tmp
 mv latest.tmp "deployments/$a/manifests/$three.json"
 if deployment_due "$a"; then die 'fresh backup is due'; fi
+original_purpose_function=$(declare -f deployment_backup_purpose)
+deployment_backup_purpose() { printf 'pre_update|%s\n' "$one"; }
+deployment_due "$a" || die 'pre-update backup was not immediately due'
+deployment_backup_purpose() { printf 'decommission_final|%s\n' "$one"; }
+deployment_due "$a" || die 'decommission final backup was not immediately due'
+eval "$original_purpose_function"
 test_installation=$installation
 deployment_row() { printf '%s|%s|5.5.0|%s\n' "$a" "$test_installation" "$release"; }
 test_final_epoch=$(( $(date +%s) + 1 ))
@@ -78,12 +92,25 @@ cat > "$test_root/bin/psql" <<EOF
 case "\$*" in
   *'SELECT id FROM commercial.deployments'*) echo '$a' ;;
   *'SELECT count(*) FROM commercial.deployments'*) echo 1 ;;
+  *'SELECT count(*) FROM commercial.deployment_operations'*) echo "\${TEST_OPERATION_PROTECTED:-1}" ;;
   *) exit 1 ;;
 esac
 EOF
 chmod +x "$test_root/bin/psql"
 db_config() { dbhost=local; dbuser=local; dbname=local; }
+export TEST_OPERATION_PROTECTED=1
+make_set "$a" "$one" 2020-01-01T00:00:00Z
+jq --arg op "$one" '.purpose="decommission_final" | .operationId=$op' "deployments/$a/manifests/$one.json" > protected.tmp
+mv protected.tmp "deployments/$a/manifests/$one.json"
+jq --arg op "$two" '.purpose="pre_update" | .operationId=$op' "deployments/$a/manifests/$two.json" > protected.tmp
+mv protected.tmp "deployments/$a/manifests/$two.json"
+export DEPLOYMENT_BACKUP_MIN_SUCCESSFUL_SETS=1
+deployment_retention "$a"
+[[ -e "deployments/$a/manifests/$one.json" && -e "deployments/$a/manifests/$two.json" ]] || die 'operation-bound retention protection failed'
+export TEST_OPERATION_PROTECTED=0
+deployment_retention "$a"
+[[ ! -e "deployments/$a/manifests/$one.json" && ! -e "deployments/$a/manifests/$two.json" ]] || die 'successful operation checkpoint remained retention-protected'
 export DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS=1
 deployment_purge
 [[ ! -e "deployments/$a" && -f "deployments/$b/manifests/$one.json" ]] || die 'purge crossed deployment boundary'
-echo 'deployment manifest, identity, SHA, missing dump, partial, final due, retention and purge tests passed'
+echo 'deployment manifest, purpose, identity, SHA, missing dump, partial, final due, operation retention and purge tests passed'

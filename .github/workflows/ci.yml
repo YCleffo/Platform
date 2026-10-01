@@ -148,20 +148,19 @@ jobs:
       - name: Database constraints and integration tests
         run: bash ./scripts/control-test-run.sh
 
-      - name: Verify Commercial 017 through 021 upgrade and rollback cycle
+      - name: Verify latest Commercial migration upgrade and rollback cycle
         run: |
           docker compose --profile control-test run --rm control-plane-test php bin/console control:test:reset
-          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924001700' --no-interaction
-          latest=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT version FROM public.doctrine_migration_versions ORDER BY version DESC LIMIT 1;")
-          test "$latest" = 'ControlPlane\Migrations\Version20260924001700'
-          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924001800' --no-interaction
-          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924001900' --no-interaction
-          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924001800' --no-interaction
-          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924001900' --no-interaction
-          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924002000' --no-interaction
-          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924002100' --no-interaction
-          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924002000' --no-interaction
-          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate 'ControlPlane\Migrations\Version20260924002100' --no-interaction
+          mapfile -t migration_files < <(find apps/control-plane/migrations -maxdepth 1 -name 'Version*.php' -printf '%f\n' | sort)
+          test "${#migration_files[@]}" -ge 2
+          previous="ControlPlane\\Migrations\\${migration_files[-2]%.php}"
+          latest="ControlPlane\\Migrations\\${migration_files[-1]%.php}"
+          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate "$previous" --no-interaction
+          applied=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT version FROM public.doctrine_migration_versions ORDER BY version DESC LIMIT 1;")
+          test "$applied" = "$previous"
+          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate "$latest" --no-interaction
+          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate "$previous" --no-interaction
+          docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate "$latest" --no-interaction
           ready=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'commercial' AND table_name = 'outbox_events' AND column_name = 'lock_token');")
           test "$ready" = "t"
           versions=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT count(*) FROM public.doctrine_migration_versions;")

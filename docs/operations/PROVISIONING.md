@@ -2,7 +2,7 @@
 
 Phase 5.4 runs a dedicated `provisioner-worker` process. The Control Plane HTTP process owns deployment reservations, published releases, the durable `commercial.deployment_operations` queue, credentials, entitlements, and the authenticated ready transition. It has no Docker socket. The worker alone has that socket; **Docker socket access is a privileged infrastructure capability**.
 
-This provider is restricted to `APP_ENV=dev|test`, `PROVISIONER_PROVIDER=local-docker`, and `mode=dedicated`. Production, `shared`, and `on_prem` fail closed. It does not manage DNS, TLS, cloud resources, upgrades, or rollback.
+This provider is restricted to `APP_ENV=dev|test`, `PROVISIONER_PROVIDER=local-docker`, and `mode=dedicated`. Production, `shared`, and `on_prem` fail closed. It does not manage DNS, TLS, or cloud resources. Local dedicated deployments support the safe forward release-update workflow described below; automatic rollback and production/cloud updates remain unsupported.
 
 ## Local setup
 
@@ -46,7 +46,7 @@ The backup worker uses `platform_backup_net` to reach each dedicated PostgreSQL 
 
 ## Failure handling
 
-The operation row stores the bounded attempt count, machine error code, step, and next retry time. Transient failures use bounded exponential backoff. A stale running attempt is recovered after ten minutes; any old bootstrap credential is revoked before retry. A permanent failure marks the deployment failed. Phase 5.4 cleanup removes only owned resources before successful activation; it does not automatically remove an active deployment. Upgrade remains outside this phase.
+The operation row stores the bounded attempt count, machine error code, step, and next retry time. Transient failures use bounded exponential backoff. A stale running attempt is recovered after ten minutes; any old bootstrap credential is revoked before retry. A permanent failure marks the deployment failed. Phase 5.4 cleanup removes only owned resources before successful activation; it does not automatically remove an active deployment.
 
 ## Safe local decommission (Phase 5.6)
 

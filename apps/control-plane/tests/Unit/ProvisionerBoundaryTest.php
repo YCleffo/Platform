@@ -198,6 +198,94 @@ final class ProvisionerBoundaryTest extends TestCase
         self::assertSame([], $docker->calls);
     }
 
+    public function testTargetMigrationValidationAlwaysPrecedesApplication(): void
+    {
+        $docker = new class extends DockerCommand {
+            public array $calls = [];
+            public function inspect(string $kind, string $name): ?array
+            { return $kind === 'image' ? ['Id' => 'sha256:' . str_repeat('a', 64)] : null; }
+            public function run(array $arguments, string $code = 'infrastructure.docker_failed'): string
+            { $this->calls[] = [$arguments, $code]; return ''; }
+        };
+        (new LocalDockerInfrastructureProvider($docker, 'test', 'test-net',
+            'http://control-plane-test:8000', 'migrator'))->applyTargetMigrations($this->request());
+        self::assertCount(2, $docker->calls);
+        self::assertContains('APP_ENV=test', $docker->calls[0][0]);
+        self::assertContains('APP_DEBUG=0', $docker->calls[0][0]);
+        self::assertSame('runtime:migrations:validate-history', $docker->calls[0][0][count($docker->calls[0][0]) - 1]);
+        self::assertSame('infrastructure.release_migration_history_invalid', $docker->calls[0][1]);
+        self::assertSame('runtime:migrations:apply', $docker->calls[1][0][count($docker->calls[1][0]) - 1]);
+        self::assertSame('infrastructure.migration_failed', $docker->calls[1][1]);
+    }
+
+    public function testRuntimeReplacementReusesTargetAndRepairsPartialSourceState(): void
+    {
+        $scenarios = [
+            ['runtime' => 'b', 'scheduler' => 'a', 'email-worker' => 'a'],
+            ['runtime' => 'b', 'scheduler' => 'b', 'email-worker' => 'a'],
+            ['runtime' => 'absent', 'scheduler' => 'b', 'email-worker' => 'b'],
+        ];
+        foreach ($scenarios as $state) {
+            $docker = new class($state) extends DockerCommand {
+                public array $calls = [];
+                private array $created = [];
+                public function __construct(private readonly array $state) {}
+                public function inspect(string $kind, string $name): ?array
+                {
+                    if ($kind !== 'container') { return null; }
+                    $role = str_ends_with($name, '-email-worker') ? 'email-worker'
+                        : (str_ends_with($name, '-scheduler') ? 'scheduler' : 'runtime');
+                    if (($this->state[$role] ?? 'absent') === 'absent' && !isset($this->created[$name])) { return null; }
+                    return ['Image' => (($this->state[$role] ?? null) === 'b' || isset($this->created[$name]))
+                            ? 'sha256:' . str_repeat('a', 64) : 'sha256:' . str_repeat('b', 64),
+                        'State' => ['Running' => true],
+                        'Config' => ['Labels' => ['platform.deployment.id' => ProvisionerBoundaryTest::ID,
+                            'platform.resource.role' => $role]],
+                        'NetworkSettings' => ['Networks' => ['platform-deployment-' . str_replace('-', '', ProvisionerBoundaryTest::ID) => []]]];
+                }
+                public function run(array $arguments, string $code = 'infrastructure.docker_failed'): string
+                {
+                    $this->calls[] = $arguments;
+                    if (($arguments[0] ?? null) === 'run' && ($index = array_search('--name', $arguments, true)) !== false) {
+                        $this->created[$arguments[$index + 1]] = true;
+                    }
+                    return '';
+                }
+            };
+            (new LocalDockerInfrastructureProvider($docker, 'test', 'test-net',
+                'http://control-plane-test:8000', 'migrator'))->replaceApplicationRuntime($this->request());
+            $commands = implode("\n", array_map(static fn(array $call): string => implode(' ', $call), $docker->calls));
+            foreach ($state as $role => $version) {
+                $name = 'platform-deployment-' . str_replace('-', '', self::ID) . '-' . $role;
+                self::assertSame($version === 'a', str_contains($commands, 'rm -f -v ' . $name), $role);
+                self::assertSame($version !== 'b', str_contains($commands, '--name ' . $name), $role);
+            }
+        }
+    }
+
+    public function testRuntimeReplacementRejectsForeignPartialStateBeforeMutation(): void
+    {
+        $docker = new class extends DockerCommand {
+            public array $calls = [];
+            public function inspect(string $kind, string $name): ?array
+            {
+                if ($kind !== 'container') { return null; }
+                $role = str_ends_with($name, '-scheduler') ? 'scheduler' : 'runtime';
+                return ['Image' => 'sha256:' . str_repeat('a', 64), 'State' => ['Running' => true],
+                    'Config' => ['Labels' => ['platform.deployment.id' => $role === 'scheduler' ? 'foreign' : ProvisionerBoundaryTest::ID,
+                        'platform.resource.role' => $role]]];
+            }
+            public function run(array $arguments, string $code = 'infrastructure.docker_failed'): string
+            { $this->calls[] = $arguments; return ''; }
+        };
+        try {
+            (new LocalDockerInfrastructureProvider($docker, 'test', 'test-net',
+                'http://control-plane-test:8000', 'migrator'))->replaceApplicationRuntime($this->request());
+            self::fail('Foreign partial runtime state was accepted.');
+        } catch (ProvisioningFailure $e) { self::assertSame('infrastructure.resource_conflict', $e->machineCode); }
+        self::assertSame([], $docker->calls);
+    }
+
     private function request(string $mode = 'dedicated', string $image = 'platform-runtime:local'): ProvisioningRequest
     {
         return new ProvisioningRequest(self::ID, self::INSTALLATION, $mode, self::RELEASE,
