@@ -10,11 +10,12 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-#[AsCommand(name: 'provisioner:run', description: 'Process bounded deployment provision and deprovision operations')]
+#[AsCommand(name: 'provisioner:run', description: 'Process bounded deployment lifecycle operations')]
 final class ProvisionerRunCommand extends Command
 {
     public function __construct(private readonly ProvisionDeploymentExecutor $executor,
-        private readonly DeprovisionDeploymentExecutor $deprovision) { parent::__construct(); }
+        private readonly DeprovisionDeploymentExecutor $deprovision,
+        private readonly UpdateDeploymentExecutor $updates) { parent::__construct(); }
 
     protected function configure(): void
     {
@@ -36,11 +37,13 @@ final class ProvisionerRunCommand extends Command
                 $status['lastAttemptAt'] = $status['heartbeatAt'];
                 try {
                     $deprovisioned = $this->deprovision->runBatch($batch);
+                    $updated = $this->updates->runBatch($batch);
                     $count = $this->executor->runBatch($batch);
                     $status['lastSuccessAt'] = gmdate('Y-m-d\TH:i:s\Z');
                     $status['consecutiveFailures'] = 0;
                     if ($count > 0) { $output->writeln('Provision operations processed: ' . $count); }
                     if ($deprovisioned > 0) { $output->writeln('Deprovision operations processed: ' . $deprovisioned); }
+                    if ($updated > 0) { $output->writeln('Update operations processed: ' . $updated); }
                 } catch (\Throwable) {
                     $status['lastFailureAt'] = gmdate('Y-m-d\TH:i:s\Z');
                     $status['consecutiveFailures'] = min(1000000, $status['consecutiveFailures'] + 1);

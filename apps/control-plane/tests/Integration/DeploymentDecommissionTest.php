@@ -76,6 +76,8 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
             public array $events = [];
             public function provision(ProvisioningRequest $request): ProvisioningResult { throw new \LogicException(); }
             public function activate(ProvisioningRequest $request): void { throw new \LogicException(); }
+            public function update(ProvisioningRequest $request): void { throw new \LogicException(); }
+            public function verifyUpdate(ProvisioningRequest $request, \DateTimeImmutable $startedAt): void { throw new \LogicException(); }
             public function status(string $deploymentId): array
             { return ['runtime' => $this->exists, 'database' => $this->exists, 'network' => $this->exists]; }
             public function quiesce(string $deploymentId): void
@@ -138,6 +140,8 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
             public bool $network = true;
             public function provision(ProvisioningRequest $request): ProvisioningResult { throw new \LogicException(); }
             public function activate(ProvisioningRequest $request): void { throw new \LogicException(); }
+            public function update(ProvisioningRequest $request): void { throw new \LogicException(); }
+            public function verifyUpdate(ProvisioningRequest $request, \DateTimeImmutable $startedAt): void { throw new \LogicException(); }
             public function status(string $deploymentId): array
             { return ['runtime' => $this->runtime, 'database' => $this->database, 'network' => $this->network]; }
             public function quiesce(string $deploymentId): void {}

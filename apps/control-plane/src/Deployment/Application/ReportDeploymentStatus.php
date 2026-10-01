@@ -56,8 +56,11 @@ final readonly class ReportDeploymentStatus
             }
             $this->credentials->restrictScopes($deploymentId, $identity->credentialId,
                 ['entitlements.read', 'usage.write']);
+            // current_release_id is the release that has actually completed activation.
+            // Do not advance it while a runtime is merely being provisioned.
             $db->executeStatement("UPDATE commercial.deployments SET status = 'active',
-                provisioning_state = 'ready', updated_at = now() WHERE id = ?", [$deploymentId]);
+                provisioning_state = 'ready', current_release_id = desired_release_id,
+                updated_at = now() WHERE id = ?", [$deploymentId]);
             $db->executeStatement("UPDATE commercial.deployment_operations SET status = 'succeeded',
                 current_step = 'ready', finished_at = now(), last_error_code = NULL WHERE id = ?", [$operation['id']]);
             $db->executeStatement("INSERT INTO commercial.audit_events

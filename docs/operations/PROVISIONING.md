@@ -62,3 +62,11 @@ The first command only queues a durable `deprovision` operation. In the same tra
 The backup worker must be running with `DEPLOYMENT_BACKUP_ENABLED=true` to service final backup requests automatically. The provisioner mounts `backups/` read-only and only reads published manifest evidence; it does not make dumps. `DECOMMISSION_BACKUP_CHECK_INTERVAL_SECONDS` controls how often a waiting operation retries. Production and other deployment modes fail closed.
 
 Decommission does not delete DNS/TLS records, perform DSAR erasure, or immediately remove backups. Domain `disabled` is a Control Plane workflow state, not DNS deletion.
+# Safe release updates
+
+For an active dedicated deployment, `current_release_id` is the proven runtime release and
+`desired_release_id` is the requested target. `control:deployments:update` creates a durable
+update operation. The provisioner quiesces application writers, requires a fresh verified
+backup, runs migrations from the pinned target image, and replaces only runtime, scheduler,
+and email-worker. It advances `current_release_id` only after runtime verification succeeds.
+Failed updates preserve deployment data and do not perform automatic rollback.

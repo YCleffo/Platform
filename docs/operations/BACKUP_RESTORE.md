@@ -59,3 +59,9 @@ When a `deprovision` operation reaches `final_backup`, the backup worker treats 
 Decommission does **not** immediately delete the backup chain. `DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS` is blank by default, disabling automatic purge. Set an approved positive period to allow the backup worker to delete an archived, decommissioned deployment's entire chain after that period. Purge is bounded per cycle and checks the exact deployment ID and DB state before deleting files in that deployment's directory. The active deployment minimum set count does not extend decommission retention. Core, Control, and other deployments are untouched.
 
 Decommission is not privacy erasure. Backup retention, legal holds, and restore/re-erasure procedures remain separate privacy obligations.
+# Update checkpoints
+
+An update in `pre_update_backup` is immediately eligible for a deployment backup. The backup
+must have been created after quiescing and have verified manifest, SHA-256, and pg_restore-list
+evidence before target migrations can begin. The checkpoint is recovery evidence; automated
+restore or database rollback is intentionally not implemented.

@@ -296,3 +296,10 @@ Phase 5.7 local dedicated topology has deployment PostgreSQL and Redis plus HTTP
 The existing `commercial.deployment_operations` table carries `deprovision` through `pending`, `running`, `retry`, and `succeeded` or `failed`. An operator request confirms deployment and installation IDs, suspends the deployment, and revokes active M2M credentials transactionally. The existing provisioner worker quiesces runtime, waits for a new verified deployment backup, destroys owned infrastructure, cleans secrets, and archives the deployment. Audit events contain only deployment, installation, and operation UUIDs. Status output contains IDs and machine state only.
 
 The Control Plane's domain `disabled` state does not remove DNS or TLS resources. Decommission is not DSAR erasure, and deployment backups follow their own explicitly configured retention.
+# Release update invariant
+
+`current_release_id` records the release proven to be active; `desired_release_id` records a
+requested update target. Initial provisioning sets both only when activation completes. Legacy
+active deployments may use `control:deployments:release:reconcile`, which verifies all three
+application containers use the desired immutable digest before recording it. Normal infrastructure
+reconciliation must not adopt `desired_release_id` or perform a release update.

@@ -23,6 +23,23 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
         return $this->ensure($request, false);
     }
 
+    /** Read-only proof used for legacy release adoption. */
+    public function validateRelease(ProvisioningRequest $request): void
+    {
+        $this->allowed();
+        $id = strtolower($request->deploymentId);
+        foreach (['runtime' => $this->names($id)[0], 'scheduler' => $this->resource($id, 'scheduler'),
+            'emailWorker' => $this->resource($id, 'email-worker')] as $role => $name) {
+            $details = $this->docker->inspect('container', $name);
+            if ($details === null || !(bool)($details['State']['Running'] ?? false)
+                || strtolower((string)($details['Image'] ?? '')) !== $request->imageDigest
+                || ($details['Config']['Labels']['platform.deployment.id'] ?? null) !== $id
+                || ($details['Config']['Labels']['platform.resource.role'] ?? null) !== ($role === 'emailWorker' ? 'email-worker' : $role)) {
+                throw new ProvisioningFailure('infrastructure.release_digest_mismatch');
+            }
+        }
+    }
+
     private function ensure(ProvisioningRequest $request, bool $migrate): ProvisioningResult
     {
         $this->allowed();
@@ -203,6 +220,56 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
             'ops:health', 'backend-scheduler'], 'runtime.background_workers_not_ready');
         $this->docker->run(['exec', $this->resource($id, 'email-worker'), 'php', '/app/yii',
             'ops:health', 'backend-email-worker'], 'runtime.background_workers_not_ready');
+    }
+
+    public function update(ProvisioningRequest $request): void
+    {
+        $this->allowed();
+        $id = strtolower($request->deploymentId);
+        $image = $this->docker->inspect('image', $request->ociReference);
+        if ($image === null || strtolower((string) ($image['Id'] ?? '')) !== $request->imageDigest) {
+            throw new ProvisioningFailure('infrastructure.release_digest_mismatch');
+        }
+        // The migration command is executed from the pinned target artifact, never from this checkout.
+        [$runtime, $database, $network] = $this->names($id);
+        $this->docker->run(['run', '--rm', '--network', $network,
+            '--mount', $this->secretMount($request->databaseSecretPath, 'db_password'),
+            '-e', 'PGHOST=' . $database, '-e', 'POSTGRES_DB=platform', '-e', 'POSTGRES_USER=platform_runtime',
+            '-e', 'POSTGRES_PASSWORD_FILE=/run/provisioning-secrets/db_password',
+            '--entrypoint', 'php', $request->imageDigest, '/app/yii', 'migrate/up', '--interactive=0'],
+            'infrastructure.migration_failed');
+        $redis = $this->resource($id, 'redis');
+        foreach (['runtime' => $runtime, 'scheduler' => $this->resource($id, 'scheduler'),
+            'emailWorker' => $this->resource($id, 'email-worker')] as $role => $name) {
+            $details = $this->docker->inspect('container', $name);
+            if ($details === null || ($details['Config']['Labels']['platform.deployment.id'] ?? null) !== $id
+                || ($details['Config']['Labels']['platform.resource.role'] ?? null) !== ($role === 'emailWorker' ? 'email-worker' : $role)) {
+                throw new ProvisioningFailure('infrastructure.resource_conflict');
+            }
+        }
+        // Target availability was checked before any old process is removed. DB, Redis, network and secrets remain untouched.
+        foreach (['runtime' => $runtime, 'scheduler' => $this->resource($id, 'scheduler'),
+            'emailWorker' => $this->resource($id, 'email-worker')] as $role => $name) {
+            $this->docker->run(['rm', '-f', '-v', $name], 'infrastructure.runtime_replace_failed');
+            $this->createCore($request, $role, $name, $database, $redis, $network);
+            $this->connect($name, $this->controlNetwork);
+        }
+    }
+
+    public function verifyUpdate(ProvisioningRequest $request, \DateTimeImmutable $startedAt): void
+    {
+        $this->allowed();
+        $id = strtolower($request->deploymentId);
+        $runtime = $this->names($id)[0];
+        $this->docker->run(['exec', $runtime, 'php', '/app/yii', 'runtime:release:apply'], 'infrastructure.runtime_metadata_failed');
+        $this->docker->run(['exec', $runtime, 'php', '/app/yii', 'runtime:entitlements:sync'], 'infrastructure.entitlement_sync_failed');
+        $this->docker->run(['exec', $runtime, 'php', '-r', "exit(@file_get_contents('http://127.0.0.1/health/ready') === false ? 1 : 0);"], 'infrastructure.runtime_not_ready');
+        foreach (['scheduler' => 'backend-scheduler', 'email-worker' => 'backend-email-worker'] as $role => $health) {
+            $this->docker->run(['exec', $this->resource($id, $role), 'php', '/app/yii', 'ops:health', $health],
+                'runtime.background_workers_not_ready');
+        }
+        $this->docker->run(['exec', $runtime, 'php', '/app/yii', 'runtime:release:verify',
+            '--started-at=' . $startedAt->format('c')], 'infrastructure.runtime_verification_failed');
     }
 
     public function cleanup(string $deploymentId): void
