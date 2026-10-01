@@ -94,7 +94,8 @@ final class ProvisionDeploymentExecutorTest extends DatabaseTestCase
             { return ['runtime' => true, 'database' => true, 'network' => true]; }
             public function activate(ProvisioningRequest $request): void
             { throw new ProvisioningFailure('infrastructure.activation_failed', true); }
-            public function update(ProvisioningRequest $request): void { throw new \LogicException('Unexpected update'); }
+            public function applyTargetMigrations(ProvisioningRequest $request): void { throw new \LogicException('Unexpected update'); }
+            public function replaceApplicationRuntime(ProvisioningRequest $request): void { throw new \LogicException('Unexpected update'); }
             public function verifyUpdate(ProvisioningRequest $request, \DateTimeImmutable $startedAt): void { throw new \LogicException('Unexpected update'); }
             public function quiesce(string $deploymentId): void {}
             public function decommission(string $deploymentId): void {}
@@ -155,7 +156,8 @@ final class ProvisionDeploymentExecutorTest extends DatabaseTestCase
             public function status(string $deploymentId): array
             { return ['runtime' => false, 'database' => false, 'network' => false]; }
             public function activate(ProvisioningRequest $request): void { throw new \LogicException('Unexpected activation'); }
-            public function update(ProvisioningRequest $request): void { throw new \LogicException('Unexpected update'); }
+            public function applyTargetMigrations(ProvisioningRequest $request): void { throw new \LogicException('Unexpected update'); }
+            public function replaceApplicationRuntime(ProvisioningRequest $request): void { throw new \LogicException('Unexpected update'); }
             public function verifyUpdate(ProvisioningRequest $request, \DateTimeImmutable $startedAt): void { throw new \LogicException('Unexpected update'); }
             public function quiesce(string $deploymentId): void {}
             public function decommission(string $deploymentId): void {}

@@ -10,8 +10,8 @@ interface DeploymentInfrastructureProvider
     /** @return array{runtime:bool,database:bool,redis:bool,scheduler:bool,emailWorker:bool,network:bool} */
     public function status(string $deploymentId): array;
     public function activate(ProvisioningRequest $request): void;
-    /** Applies target-release migrations and replaces only the three application containers. */
-    public function update(ProvisioningRequest $request): void;
+    public function applyTargetMigrations(ProvisioningRequest $request): void;
+    public function replaceApplicationRuntime(ProvisioningRequest $request): void;
     /** Verifies the new runtime after entitlement synchronization. */
     public function verifyUpdate(ProvisioningRequest $request, \DateTimeImmutable $startedAt): void;
     public function quiesce(string $deploymentId): void;

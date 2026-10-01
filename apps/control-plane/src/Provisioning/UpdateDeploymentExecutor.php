@@ -32,8 +32,10 @@ final readonly class UpdateDeploymentExecutor
                     JOIN commercial.releases r ON r.id=d.desired_release_id WHERE o.id=? AND o.operation_type='update'
                     AND (o.status='pending' OR (o.status='retry' AND o.next_retry_at<=now())) FOR UPDATE OF o,d SKIP LOCKED", [$operationId]);
                 if ($row === false) return null;
+                $resuming = $row['deployment_status'] === 'provisioning' && $row['provisioning_state'] === 'running'
+                    && $row['status'] === 'retry' && $row['current_release_id'] !== null;
                 if (!in_array($this->environment, ['dev','test'], true) || $row['mode'] !== 'dedicated'
-                    || $row['deployment_status'] !== 'active' || $row['archived_at'] !== null || $row['current_release_id'] === null
+                    || (!($row['deployment_status'] === 'active' || $resuming)) || $row['archived_at'] !== null || $row['current_release_id'] === null
                     || $row['release_status'] !== 'published') throw new ProvisioningFailure('infrastructure.deployment_ineligible');
                 $db->executeStatement("UPDATE commercial.deployments SET status='provisioning', provisioning_state='running', updated_at=now() WHERE id=?", [$row['deployment_id']]);
                 $db->executeStatement("UPDATE commercial.deployment_operations SET status='running', current_step=COALESCE(current_step,'quiesce'),
@@ -44,13 +46,15 @@ final readonly class UpdateDeploymentExecutor
             $id=(string)$row['deployment_id']; $stored=$this->secrets->existing($id);
             if ($row['core_db_secret_ref'] !== $stored['reference']) throw new ProvisioningFailure('infrastructure.secret_storage_failed');
             $request=$this->requests->create($row, $stored);
-            $this->step($operationId, 'quiesce'); $this->provider->quiesce($id);
-            $this->step($operationId, 'pre_update_backup');
+            $step=(string)$this->db->fetchOne('SELECT current_step FROM commercial.deployment_operations WHERE id=?',[$operationId]);
+            if ($step === 'quiesce') { $this->provider->quiesce($id); $this->step($operationId, 'pre_update_backup'); $step='pre_update_backup'; }
             $started=new \DateTimeImmutable((string)$this->db->fetchOne('SELECT started_at::text FROM commercial.deployment_operations WHERE id=?',[$operationId]));
-            if (!$this->backups->hasFinalBackup($id,(string)$row['installation_id'],$started)) throw new ProvisioningFailure('infrastructure.awaiting_update_backup',true);
-            $this->step($operationId, 'migrate'); $this->step($operationId, 'replace_runtime'); $this->provider->update($request);
-            $this->step($operationId, 'runtime_verify'); $this->provider->verifyUpdate($request,$started);
-            $this->step($operationId, 'finalize'); $this->finalize($operationId,$row);
+            if ($step === 'pre_update_backup' && !$this->backups->hasUpdateBackup($id,(string)$row['installation_id'],$operationId,$started)) throw new ProvisioningFailure('infrastructure.awaiting_update_backup',true);
+            if ($step === 'pre_update_backup') { $this->step($operationId, 'migrate'); $step='migrate'; }
+            if ($step === 'migrate') { $this->provider->applyTargetMigrations($request); $this->step($operationId, 'replace_runtime'); $step='replace_runtime'; }
+            if ($step === 'replace_runtime') { $this->provider->replaceApplicationRuntime($request); $this->step($operationId, 'runtime_verify'); $step='runtime_verify'; }
+            if ($step === 'runtime_verify') { $this->provider->verifyUpdate($request,$started); $this->step($operationId, 'finalize'); }
+            $this->finalize($operationId,$row);
         } catch (ProvisioningFailure $e) { $this->failure($operationId,$e); }
         catch (\Throwable) { $this->failure($operationId,new ProvisioningFailure('infrastructure.unavailable',true)); }
     }

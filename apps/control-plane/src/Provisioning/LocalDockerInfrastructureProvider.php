@@ -222,7 +222,7 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
             'ops:health', 'backend-email-worker'], 'runtime.background_workers_not_ready');
     }
 
-    public function update(ProvisioningRequest $request): void
+    public function applyTargetMigrations(ProvisioningRequest $request): void
     {
         $this->allowed();
         $id = strtolower($request->deploymentId);
@@ -238,19 +238,28 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
             '-e', 'POSTGRES_PASSWORD_FILE=/run/provisioning-secrets/db_password',
             '--entrypoint', 'php', $request->imageDigest, '/app/yii', 'migrate/up', '--interactive=0'],
             'infrastructure.migration_failed');
+    }
+
+    public function replaceApplicationRuntime(ProvisioningRequest $request): void
+    {
+        $this->allowed();
+        $id = strtolower($request->deploymentId);
+        [$runtime, $database, $network] = $this->names($id);
         $redis = $this->resource($id, 'redis');
         foreach (['runtime' => $runtime, 'scheduler' => $this->resource($id, 'scheduler'),
             'emailWorker' => $this->resource($id, 'email-worker')] as $role => $name) {
             $details = $this->docker->inspect('container', $name);
-            if ($details === null || ($details['Config']['Labels']['platform.deployment.id'] ?? null) !== $id
-                || ($details['Config']['Labels']['platform.resource.role'] ?? null) !== ($role === 'emailWorker' ? 'email-worker' : $role)) {
+            if ($details !== null && (($details['Config']['Labels']['platform.deployment.id'] ?? null) !== $id
+                || ($details['Config']['Labels']['platform.resource.role'] ?? null) !== ($role === 'emailWorker' ? 'email-worker' : $role))) {
                 throw new ProvisioningFailure('infrastructure.resource_conflict');
             }
+            if ($details !== null && strtolower((string)($details['Image'] ?? '')) === $request->imageDigest
+                && (bool)($details['State']['Running'] ?? false)) { continue; }
         }
         // Target availability was checked before any old process is removed. DB, Redis, network and secrets remain untouched.
         foreach (['runtime' => $runtime, 'scheduler' => $this->resource($id, 'scheduler'),
             'emailWorker' => $this->resource($id, 'email-worker')] as $role => $name) {
-            $this->docker->run(['rm', '-f', '-v', $name], 'infrastructure.runtime_replace_failed');
+            if ($details !== null) $this->docker->run(['rm', '-f', '-v', $name], 'infrastructure.runtime_replace_failed');
             $this->createCore($request, $role, $name, $database, $redis, $network);
             $this->connect($name, $this->controlNetwork);
         }

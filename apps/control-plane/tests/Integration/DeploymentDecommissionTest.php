@@ -76,7 +76,8 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
             public array $events = [];
             public function provision(ProvisioningRequest $request): ProvisioningResult { throw new \LogicException(); }
             public function activate(ProvisioningRequest $request): void { throw new \LogicException(); }
-            public function update(ProvisioningRequest $request): void { throw new \LogicException(); }
+            public function applyTargetMigrations(ProvisioningRequest $request): void { throw new \LogicException(); }
+            public function replaceApplicationRuntime(ProvisioningRequest $request): void { throw new \LogicException(); }
             public function verifyUpdate(ProvisioningRequest $request, \DateTimeImmutable $startedAt): void { throw new \LogicException(); }
             public function status(string $deploymentId): array
             { return ['runtime' => $this->exists, 'database' => $this->exists, 'network' => $this->exists]; }
@@ -97,6 +98,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
             public bool $ready = false;
             public function hasFinalBackup(string $deploymentId, string $installationId, \DateTimeImmutable $startedAt): bool
             { return $this->ready; }
+            public function hasUpdateBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool { return false; }
         };
         $executor = new DeprovisionDeploymentExecutor($this->connection, $provider, $secrets,
             $evidence, 'test', 5, 1, 5);
@@ -140,7 +142,8 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
             public bool $network = true;
             public function provision(ProvisioningRequest $request): ProvisioningResult { throw new \LogicException(); }
             public function activate(ProvisioningRequest $request): void { throw new \LogicException(); }
-            public function update(ProvisioningRequest $request): void { throw new \LogicException(); }
+            public function applyTargetMigrations(ProvisioningRequest $request): void { throw new \LogicException(); }
+            public function replaceApplicationRuntime(ProvisioningRequest $request): void { throw new \LogicException(); }
             public function verifyUpdate(ProvisioningRequest $request, \DateTimeImmutable $startedAt): void { throw new \LogicException(); }
             public function status(string $deploymentId): array
             { return ['runtime' => $this->runtime, 'database' => $this->database, 'network' => $this->network]; }
@@ -169,6 +172,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
         $evidence = new class implements DeploymentBackupEvidenceReader {
             public function hasFinalBackup(string $deploymentId, string $installationId, \DateTimeImmutable $startedAt): bool
             { return true; }
+            public function hasUpdateBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool { return false; }
         };
         $executor = new DeprovisionDeploymentExecutor($this->connection, $provider, $secrets,
             $evidence, 'test', 5, 1, 5);

@@ -9,6 +9,12 @@ final readonly class LocalDeploymentBackupEvidenceReader implements DeploymentBa
     public function __construct(private string $directory, private string $environment) {}
 
     public function hasFinalBackup(string $deploymentId, string $installationId, \DateTimeImmutable $startedAt): bool
+    { return $this->hasPurpose($deploymentId, $installationId, null, $startedAt, 'decommission_final'); }
+
+    public function hasUpdateBackup(string $deploymentId, string $installationId, string $operationId, \DateTimeImmutable $startedAt): bool
+    { return $this->hasPurpose($deploymentId, $installationId, $operationId, $startedAt, 'pre_update'); }
+
+    private function hasPurpose(string $deploymentId, string $installationId, ?string $operationId, \DateTimeImmutable $startedAt, string $purpose): bool
     {
         if (!in_array($this->environment, ['dev', 'test'], true)
             || preg_match('/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/D', $deploymentId) !== 1
@@ -29,6 +35,8 @@ final readonly class LocalDeploymentBackupEvidenceReader implements DeploymentBa
                 || ($manifest['backupType'] ?? null) !== 'deployment'
                 || ($manifest['deploymentId'] ?? null) !== $deploymentId
                 || ($manifest['installationId'] ?? null) !== $installationId
+                || ($manifest['purpose'] ?? null) !== $purpose
+                || ($manifest['operationId'] ?? null) !== $operationId
                 || ($manifest['backupId'] ?? null) !== substr($file->getFilename(), 0, -5)
                 || ($manifest['pgRestoreList'] ?? null) !== true
                 || !is_string($manifest['createdAt'] ?? null)
