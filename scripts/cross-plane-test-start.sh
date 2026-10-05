@@ -12,18 +12,14 @@ echo "=== Starting isolated Core test infrastructure ==="
 docker compose --profile test up -d postgres-test redis-test
 docker compose --profile test run --rm db-migrate-test
 
-echo "=== Preparing independent Core dependencies ==="
+echo "=== Building deterministic cross-plane test image ==="
 docker compose --profile control-test build control-plane-test
-docker compose --profile control-test run --rm --no-deps --user root \
-  -v platform_cross_plane_backend_vendor:/backend/vendor \
-  control-plane-test \
-  sh -lc 'COMPOSER_VENDOR_DIR=/backend/vendor composer install --working-dir=/backend --no-interaction --prefer-dist --no-progress --no-scripts'
-docker compose --profile control-test run --rm --no-deps control-plane-test \
-  test -f /backend/vendor/autoload.php
+docker compose --profile control-test build cross-plane-test
+docker compose --profile control-test run --rm --no-deps cross-plane-test test -f /backend/vendor/autoload.php
 
 echo "=== Starting isolated Commercial test infrastructure ==="
 docker compose --profile control-test up -d control-postgres-test
-docker compose --profile control-test run --rm control-plane-test php bin/console doctrine:migrations:migrate --no-interaction
+docker compose --profile control-test run --rm --no-deps cross-plane-test php bin/console doctrine:migrations:migrate --no-interaction
 core_ready=$(docker compose --profile test exec -T postgres-test psql -U "${POSTGRES_USER:-platform_app}" \
   -d "${POSTGRES_TEST_DB:-platform_test}" -tA \
   -c "SELECT to_regclass('platform_runtime.installations') IS NOT NULL AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL;")

@@ -144,8 +144,7 @@ security email. `must_change_password` uses a short-lived
 `password_change_required` challenge before normal session issuance;
 `POST /api/auth/password/change-required` consumes it once. Yii already
 implements reset, MFA, step-up/recent-auth and session self-service. The
-separate Control Plane does not: reset, MFA, step-up and Control session
-self-service remain Phase 4.1.
+separate Control Plane has its own authentication implementation: password reset, TOTP MFA, recovery codes, recent-auth, sensitive-MFA step-up, and Control Plane session self-service. It does not share Core sessions; the two remain separate authentication planes.
 
 ## Жизненный цикл аккаунта
 

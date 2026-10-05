@@ -43,6 +43,4 @@ Git metadata, and makes only `var/cache`, `var/log` plus FrankenPHP data/config
 directories writable. CI reports High vulnerabilities and fails on any
 Critical vulnerability.
 
-MFA is intentionally deferred. The central user/session model does not embed
-TOTP/WebAuthn fields and can add authenticators, recovery codes and step-up
-authentication in separate tables later.
+The Commercial Control Plane is a separate authentication boundary from Core. It implements encrypted TOTP secrets, pending-to-active enrollment, replay protection, bounded single-use MFA login challenges, one-time recovery codes with concurrency protection, password reset with hash-only/expiring single-use artifacts, and session/security-artifact revocation after reset. Recent primary authentication plus recent MFA protects sensitive Control Plane mutations including billing, refunds, subscriptions, and saved payment methods.

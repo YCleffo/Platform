@@ -7,5 +7,5 @@ cd "${ROOT_DIR}"
 
 bash "${SCRIPT_DIR}/cross-plane-test-start.sh"
 echo "=== Running required CrossPlaneBootstrapTest ==="
-docker compose --profile control-test run --rm -e CROSS_PLANE_REQUIRED=1 control-plane-test \
+docker compose --profile control-test run --rm --no-deps -e CROSS_PLANE_REQUIRED=1 cross-plane-test \
   vendor/bin/phpunit --configuration phpunit.cross-plane.xml --testdox

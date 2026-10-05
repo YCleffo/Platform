@@ -15,7 +15,7 @@ final class PrivacyProductionConfigurationTest extends TestCase
         $fixture = dirname(__DIR__, 3) . '/Fixtures/privacy/synthetic-production-policy.json';
         self::assertFileExists($fixture);
         $loaded = (new PrivacyDeploymentConfigLoader())->load($fixture);
-        self::assertSame('synthetic.purpose', $loaded['processingPurposeDefinitions'][0]->code);
+        self::assertSame('synthetic.identity', $loaded['processingPurposeDefinitions'][0]->code);
     }
 
     /** @dataProvider invalidConfigurations */

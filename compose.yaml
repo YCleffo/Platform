@@ -894,6 +894,15 @@ services:
       start_period: 5s
     networks: [control_test_net, test_net]
 
+  cross-plane-test:
+    profiles: ["control-test"]
+    extends:
+      service: control-plane-test
+    build:
+      context: .
+      dockerfile: infra/cross-plane/Dockerfile
+    volumes: []
+
   provisioner-migrator:
     profiles: ["provisioner-build"]
     image: platform-provisioner-migrator:local
