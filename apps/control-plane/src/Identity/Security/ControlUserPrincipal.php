@@ -13,6 +13,9 @@ final class ControlUserPrincipal implements UserInterface, PasswordAuthenticated
         private readonly string $id,
         private readonly string $emailNormalized,
         private readonly string $passwordHash,
+        private readonly ?string $sessionId = null,
+        private readonly ?\DateTimeImmutable $primaryAuthenticatedAt = null,
+        private readonly ?\DateTimeImmutable $mfaAuthenticatedAt = null,
     ) {
     }
 
@@ -20,6 +23,10 @@ final class ControlUserPrincipal implements UserInterface, PasswordAuthenticated
     {
         return $this->id;
     }
+
+    public function sessionId(): ?string { return $this->sessionId; }
+    public function primaryAuthenticatedAt(): ?\DateTimeImmutable { return $this->primaryAuthenticatedAt; }
+    public function mfaAuthenticatedAt(): ?\DateTimeImmutable { return $this->mfaAuthenticatedAt; }
 
     public function getUserIdentifier(): string
     {

@@ -10,6 +10,7 @@ use ControlPlane\Account\Application\MembershipService;
 use ControlPlane\Account\Authorization\AccountAuthorization;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
 use ControlPlane\Identity\Security\DatabaseRateLimiter;
+use ControlPlane\Identity\Application\AuthSecurityService;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -27,6 +28,7 @@ final class AccountController extends AbstractController
         private readonly BillingProfileService $billing,
         private readonly AccountAuthorization $authorization,
         private readonly DatabaseRateLimiter $rateLimiter,
+        private readonly AuthSecurityService $authSecurity,
     ) {
     }
 
@@ -60,6 +62,7 @@ final class AccountController extends AbstractController
     #[Route('/{accountId}/memberships', name: 'membership_add', methods: ['POST'])]
     public function addMembership(string $accountId, Request $request): JsonResponse
     {
+        $this->authSecurity->requireRecent($this->user(), true);
         $data = ApiRequest::json($request);
         $id = $this->memberships->add($this->user()->id(), $accountId, ApiRequest::string($data, 'user_id'), ApiRequest::string($data, 'role'), ApiRequest::correlationId($request));
 
@@ -69,6 +72,7 @@ final class AccountController extends AbstractController
     #[Route('/{accountId}/memberships/{membershipId}', name: 'membership_change', methods: ['PATCH'])]
     public function changeMembership(string $accountId, string $membershipId, Request $request): JsonResponse
     {
+        $this->authSecurity->requireRecent($this->user(), true);
         $data = ApiRequest::json($request);
         $this->memberships->changeRole($this->user()->id(), $accountId, $membershipId, ApiRequest::string($data, 'role'), ApiRequest::correlationId($request));
 
@@ -78,6 +82,7 @@ final class AccountController extends AbstractController
     #[Route('/{accountId}/memberships/{membershipId}', name: 'membership_remove', methods: ['DELETE'])]
     public function removeMembership(string $accountId, string $membershipId, Request $request): Response
     {
+        $this->authSecurity->requireRecent($this->user(), true);
         $this->memberships->remove($this->user()->id(), $accountId, $membershipId, ApiRequest::correlationId($request));
 
         return new Response(status: Response::HTTP_NO_CONTENT);
@@ -86,6 +91,7 @@ final class AccountController extends AbstractController
     #[Route('/{accountId}/billing-profile', name: 'billing_profile', methods: ['PUT'])]
     public function billingProfile(string $accountId, Request $request): JsonResponse
     {
+        $this->authSecurity->requireRecent($this->user(), true);
         $data = ApiRequest::json($request);
         $address = $data['address'] ?? [];
         if (!is_array($address) || array_is_list($address)) {

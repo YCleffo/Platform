@@ -25,8 +25,15 @@ final class CrossPlaneBootstrapTest extends DatabaseTestCase
 {
     public function testStartInitSyncReadyAcrossIsolatedDatabases(): void
     {
-        if (getenv('PHASE47_CROSS_PLANE') !== '1' || !is_file('/backend/vendor/autoload.php')) {
+        $required = getenv('CROSS_PLANE_REQUIRED') === '1';
+        if (!$required) {
             self::markTestSkipped('Cross-plane test requires the mounted Backend and isolated Core test DB.');
+        }
+        if (getenv('PHASE47_CROSS_PLANE') !== '1') {
+            self::fail('CROSS_PLANE_REQUIRED=1 requires PHASE47_CROSS_PLANE=1.');
+        }
+        if (!is_file('/backend/vendor/autoload.php')) {
+            self::fail('Required cross-plane prerequisite is missing: /backend/vendor/autoload.php.');
         }
         require_once '/backend/vendor/autoload.php';
         \App\Environment::prepare();
@@ -77,6 +84,8 @@ final class CrossPlaneBootstrapTest extends DatabaseTestCase
                     return json_decode($response->getContent(), true, 8, JSON_THROW_ON_ERROR);
                 }
             };
+            self::assertSame(401, $pullController->latest(Request::create('/api/m2m/entitlements/latest',
+                'GET', [], [], [], ['HTTP_AUTHORIZATION' => 'Service ' . $bootstrapCredential['credentialId'] . '.' . str_repeat('A', 43)]))->getStatusCode());
             putenv('CROSS_PLANE_CREDENTIAL=' . $bootstrapCredential['credentialId'] . '.'
                 . $bootstrapCredential['credentialSecret']);
             $installations = new \App\PlatformRuntime\PostgresInstallationRepository($core);
@@ -104,6 +113,13 @@ final class CrossPlaneBootstrapTest extends DatabaseTestCase
             self::assertSame('succeeded', $this->connection->fetchOne(
                 "SELECT status FROM commercial.deployment_operations WHERE deployment_id = ? AND operation_type = 'provision'",
                 [$deployment]));
+            $repeat = $reportController->report(Request::create('/api/m2m/deployment/status', 'POST',
+                [], [], [], ['CONTENT_TYPE' => 'application/json',
+                    'HTTP_AUTHORIZATION' => 'Service ' . $bootstrapCredential['credentialId'] . '.'
+                        . $bootstrapCredential['credentialSecret']],
+                json_encode(['status' => 'ready', 'entitlementSequence' => $sequence], JSON_THROW_ON_ERROR)));
+            self::assertSame(200, $repeat->getStatusCode());
+            self::assertSame('already_ready', json_decode($repeat->getContent(), true, 8, JSON_THROW_ON_ERROR)['status']);
         } finally {
             putenv('CROSS_PLANE_CREDENTIAL');
             $coreTransaction->rollBack();

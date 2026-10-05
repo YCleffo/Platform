@@ -8,7 +8,7 @@ use ControlPlane\Identity\Security\TokenCodec;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Uid\Uuid;
 
-final readonly class VerificationEmailProcessor
+final readonly class VerificationEmailProcessor implements EmailEventProcessor
 {
     private const EVENT = 'control_user.email_verification_requested';
     private const MAX_ATTEMPTS = 5;

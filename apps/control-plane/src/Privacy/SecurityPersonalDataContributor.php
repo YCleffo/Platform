@@ -19,9 +19,9 @@ final readonly class SecurityPersonalDataContributor implements PersonalDataCont
 
     public function export(string $controlUserId): array
     {
-        return $this->connection->fetchAllAssociative(<<<'SQL'
+        return ['sessions' => $this->connection->fetchAllAssociative(<<<'SQL'
 SELECT id, issued_at, expires_at, revoked_at, revoke_reason
 FROM commercial.control_sessions WHERE control_user_id = ? ORDER BY issued_at, id
-SQL, [$controlUserId]);
+SQL, [$controlUserId]), 'mfa' => $this->connection->fetchAllAssociative("SELECT id, status, created_at, confirmed_at, revoked_at FROM commercial.control_user_totp_factors WHERE control_user_id = ? ORDER BY created_at, id", [$controlUserId])];
     }
 }

@@ -32,13 +32,27 @@ final readonly class TokenCodec
 
     public function validateVerificationToken(string $token): void
     {
-        $parts = explode('.', $token);
-        if (count($parts) !== 3 || $parts[0] !== 'v1' || !Uuid::isValid($parts[1])) {
-            throw new \DomainException('Invalid verification token.');
-        }
-        if (!hash_equals($this->verificationToken($parts[1]), $token)) {
-            throw new \DomainException('Invalid verification token.');
-        }
+        $this->validateArtifactToken($token, 'v1', 'verify');
+    }
+
+    public function passwordResetToken(string $resetId): string
+    {
+        return $this->artifactToken($resetId, 'r1', 'password-reset');
+    }
+
+    public function validatePasswordResetToken(string $token): void
+    {
+        $this->validateArtifactToken($token, 'r1', 'password-reset');
+    }
+
+    public function mfaChallengeToken(string $challengeId): string
+    {
+        return $this->artifactToken($challengeId, 'm1', 'mfa-challenge');
+    }
+
+    public function validateMfaChallengeToken(string $token): void
+    {
+        $this->validateArtifactToken($token, 'm1', 'mfa-challenge');
     }
 
     public function hash(string $token): string
@@ -54,5 +68,23 @@ final readonly class TokenCodec
     private static function base64Url(string $bytes): string
     {
         return rtrim(strtr(base64_encode($bytes), '+/', '-_'), '=');
+    }
+
+    private function artifactToken(string $id, string $version, string $domain): string
+    {
+        if (!Uuid::isValid($id)) {
+            throw new \InvalidArgumentException('Invalid authentication artifact.');
+        }
+        $id = strtolower($id);
+        return $version . '.' . $id . '.' . self::base64Url(hash_hmac('sha256', $domain . ':' . $id, $this->secret, true));
+    }
+
+    private function validateArtifactToken(string $token, string $version, string $domain): void
+    {
+        $parts = explode('.', $token);
+        if (count($parts) !== 3 || $parts[0] !== $version || !Uuid::isValid($parts[1])
+            || !hash_equals($this->artifactToken($parts[1], $version, $domain), $token)) {
+            throw new \DomainException('Invalid authentication artifact token.');
+        }
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ControlPlane\Infrastructure\Http;
 
 use ControlPlane\Identity\Security\ControlUserPrincipal;
+use ControlPlane\Identity\Application\AuthSecurityService;
 use ControlPlane\Fiscalization\Application\GetReceipt;
 use ControlPlane\Payment\Application\CreatePayment;
 use ControlPlane\Payment\Application\GetPayment;
@@ -22,6 +23,7 @@ final class PaymentController extends AbstractController
         private readonly GetPayment $reader,
         private readonly StartYooKassaPayment $checkout,
         private readonly GetReceipt $receipts,
+        private readonly AuthSecurityService $authSecurity,
     )
     {
     }
@@ -29,6 +31,7 @@ final class PaymentController extends AbstractController
     #[Route('/api/control/accounts/{accountId}/invoices/{invoiceId}/payment', name: 'control_payment_create', methods: ['POST'])]
     public function create(string $accountId, string $invoiceId, Request $request): JsonResponse
     {
+        $this->authSecurity->requireRecent($this->user(), true);
         $key = $request->headers->get('Idempotency-Key');
         if (!is_string($key)) {
             throw new \InvalidArgumentException('Idempotency-Key is required.');
@@ -47,6 +50,7 @@ final class PaymentController extends AbstractController
     #[Route('/api/control/accounts/{accountId}/payments/{paymentId}/checkout', name: 'control_payment_checkout', methods: ['POST'])]
     public function checkout(string $accountId, string $paymentId, Request $request): JsonResponse
     {
+        $this->authSecurity->requireRecent($this->user(), true);
         $key = $request->headers->get('Idempotency-Key');
         if (!is_string($key)) {
             throw new \InvalidArgumentException('Idempotency-Key is required.');

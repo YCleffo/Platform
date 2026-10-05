@@ -58,6 +58,10 @@ SQL, [$controlUserId]) !== false) {
             $connection->executeStatement("SELECT set_config('app.privacy_lifecycle', 'on', true)");
             $connection->executeStatement('DELETE FROM commercial.control_sessions WHERE control_user_id = ?', [$controlUserId]);
             $connection->executeStatement('DELETE FROM commercial.control_user_email_verifications WHERE control_user_id = ?', [$controlUserId]);
+            $connection->executeStatement('DELETE FROM commercial.control_auth_challenges WHERE control_user_id = ?', [$controlUserId]);
+            $connection->executeStatement('DELETE FROM commercial.control_user_recovery_codes WHERE control_user_id = ?', [$controlUserId]);
+            $connection->executeStatement('DELETE FROM commercial.control_user_totp_factors WHERE control_user_id = ?', [$controlUserId]);
+            $connection->executeStatement('DELETE FROM commercial.control_user_password_resets WHERE control_user_id = ?', [$controlUserId]);
             $connection->executeStatement(<<<'SQL'
 UPDATE commercial.outbox_events SET status = 'dead', payload = '{}'::jsonb,
     last_error = 'subject_erasure', locked_at = NULL, lock_token = NULL

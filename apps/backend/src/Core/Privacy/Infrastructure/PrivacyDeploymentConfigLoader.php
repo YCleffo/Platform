@@ -14,6 +14,7 @@ use App\Core\Privacy\Application\ProcessorDefinition;
 use App\Core\Privacy\Domain\DataCategoryDefinition;
 use App\Core\Privacy\Domain\ProcessingPurposeDefinition;
 use App\Core\Privacy\Domain\RetentionPolicyDefinition;
+use App\Core\Privacy\Domain\SubjectCategoryDefinition;
 use DateTimeImmutable;
 use ReflectionClass;
 use RuntimeException;
@@ -27,6 +28,7 @@ final class PrivacyDeploymentConfigLoader
         'privacyDistributionConsentDefinitions' => DistributionConsentDefinition::class,
         'processingPurposeDefinitions' => ProcessingPurposeDefinition::class,
         'dataCategoryDefinitions' => DataCategoryDefinition::class,
+        'subjectCategoryDefinitions' => SubjectCategoryDefinition::class,
         'retentionPolicyDefinitions' => RetentionPolicyDefinition::class,
         'privacyProcessingRoleDefinitions' => ProcessingRoleDefinition::class,
         'privacyProcessingInformationDefinitions' => ProcessingInformationDefinition::class,
@@ -58,9 +60,30 @@ final class PrivacyDeploymentConfigLoader
         $result = [];
         foreach (self::DEFINITIONS as $key => $class) {
             if (!isset($data[$key]) || !is_array($data[$key]) || !array_is_list($data[$key])) {
-                throw new RuntimeException('Privacy definition list is missing: ' . $key);
+                throw new RuntimeException("Invalid configuration path {$key}: required definition list is missing.");
             }
-            $result[$key] = array_map(static fn(mixed $row): object => self::hydrate($class, $row), $data[$key]);
+            $result[$key] = [];
+            $seen = [];
+            foreach ($data[$key] as $index => $row) {
+                $path = "{$key}[{$index}]";
+                if ($class === ProcessingPurposeDefinition::class && is_array($row)) {
+                    if (!array_key_exists('legalBasisCode', $row) || !is_string($row['legalBasisCode'])
+                        || trim($row['legalBasisCode']) === '') {
+                        throw new RuntimeException("Invalid configuration path {$path}.legalBasisCode: legal basis is required.");
+                    }
+                    if (!array_key_exists('description', $row)) {
+                        throw new RuntimeException("Invalid configuration path {$path}.description: purpose description is required.");
+                    }
+                }
+                $object = self::hydrate($class, $row, $path);
+                $identity = property_exists($object, 'code') ? $object->code
+                    : (property_exists($object, 'purposeCode') ? $object->purposeCode : null);
+                if ($identity !== null && isset($seen[$identity])) {
+                    throw new RuntimeException("Invalid configuration path {$key}[{$index}]: duplicate code {$identity}.");
+                }
+                if ($identity !== null) { $seen[$identity] = true; }
+                $result[$key][] = $object;
+            }
         }
         foreach (self::OBJECTS as $key) {
             if (!isset($data[$key]) || !is_array($data[$key])
@@ -92,41 +115,86 @@ final class PrivacyDeploymentConfigLoader
             static fn(object $object): string => $object->$property, $objects);
         $purposes = $codes($result['processingPurposeDefinitions'], 'code');
         $categories = $codes($result['dataCategoryDefinitions'], 'code');
+        $subjects = $codes($result['subjectCategoryDefinitions'], 'code');
         $policies = $codes($result['retentionPolicyDefinitions'], 'code');
         $roles = $codes($result['privacyProcessingRoleDefinitions'], 'purposeCode');
         $information = $codes($result['privacyProcessingInformationDefinitions'], 'purposeCode');
         foreach ($result['processingPurposeDefinitions'] as $purpose) {
-            if (!in_array($purpose->retentionPolicyCode, $policies, true)
-                || array_diff($purpose->dataCategories, $categories) !== []
-                || !in_array($purpose->code, $roles, true)
-                || !in_array($purpose->code, $information, true)) {
-                throw new RuntimeException('Privacy purpose definition has unresolved references.');
+            $path = 'processingPurposeDefinitions[' . array_search($purpose, $result['processingPurposeDefinitions'], true) . ']';
+            if (trim($purpose->description) === '') {
+                throw new RuntimeException("Invalid configuration path {$path}.description: purpose description is required.");
+            }
+            if ($purpose->legalBasisCode === '' || !in_array($purpose->legalBasisCode,
+                ['consent', 'contract', 'legal_obligation', 'vital_interests', 'public_task', 'legitimate_interests'], true)) {
+                throw new RuntimeException("Invalid configuration path {$path}.legalBasisCode: unsupported legal basis.");
+            }
+            if (array_diff($purpose->dataCategories, $categories) !== []) {
+                throw new RuntimeException("Invalid configuration path {$path}.dataCategories: unknown data category.");
+            }
+            if (array_diff($purpose->subjectCategories, $subjects) !== []) {
+                throw new RuntimeException("Invalid configuration path {$path}.subjectCategories: unknown subject category.");
+            }
+            if (!in_array($purpose->retentionPolicyCode, $policies, true)) {
+                throw new RuntimeException("Invalid configuration path {$path}.retentionPolicyCode: unknown retention policy.");
+            }
+            if (!in_array($purpose->code, $roles, true)) {
+                throw new RuntimeException("Invalid configuration path {$path}.processingRole: processing role definition is missing.");
+            }
+            if (!in_array($purpose->code, $information, true)) {
+                throw new RuntimeException("Invalid configuration path {$path}: processing-information definition is missing.");
             }
         }
-        foreach (['consentDefinitions', 'privacyDistributionConsentDefinitions'] as $key) {
-            foreach ($result[$key] as $definition) {
-                if (!in_array($definition->purposeCode, $purposes, true)) {
-                    throw new RuntimeException('Consent purpose is not configured.');
+        foreach ($result['privacyProcessingRoleDefinitions'] as $index => $role) {
+            if (!in_array($role->purposeCode, $purposes, true)) {
+                throw new RuntimeException("Invalid configuration path privacyProcessingRoleDefinitions[{$index}].purposeCode: unknown purpose.");
+            }
+            if (array_diff($role->dataCategories, $categories) !== []) {
+                throw new RuntimeException("Invalid configuration path privacyProcessingRoleDefinitions[{$index}].dataCategories: unknown category.");
+            }
+        }
+        foreach (['privacyProcessorDefinitions', 'privacyRecipientDefinitions'] as $key) {
+            foreach ($result[$key] as $index => $definition) {
+                if (array_diff($definition->purposes, $purposes) !== [] || array_diff($definition->dataCategories, $categories) !== []) {
+                    throw new RuntimeException("Invalid configuration path {$key}[{$index}]: unknown purpose or data category.");
                 }
             }
         }
+        foreach ($result['privacyTransferDefinitions'] as $index => $transfer) {
+            if (!in_array($transfer->providerCode, array_merge($codes($result['privacyProcessorDefinitions'], 'code'), $codes($result['privacyRecipientDefinitions'], 'code')), true)
+                || !in_array($transfer->purposeCode, $purposes, true) || array_diff($transfer->dataCategories, $categories) !== []) {
+                throw new RuntimeException("Invalid configuration path privacyTransferDefinitions[{$index}]: unknown provider, purpose, or data category.");
+            }
+        }
+        foreach (['consentDefinitions', 'privacyDistributionConsentDefinitions'] as $key) {
+            foreach ($result[$key] as $index => $definition) {
+                if (!in_array($definition->purposeCode, $purposes, true)) {
+                    throw new RuntimeException("Invalid configuration path {$key}[{$index}].purposeCode: unknown purpose.");
+                }
+                if ($key === 'privacyDistributionConsentDefinitions'
+                    && (array_diff($definition->allowedCategories, $categories) !== []
+                        || $result['processingPurposeDefinitions'][array_search($definition->purposeCode, $purposes, true)]->distributionAllowed !== true)) {
+                    throw new RuntimeException("Invalid configuration path {$key}[{$index}]: distribution is not allowed for the purpose or category is unknown.");
+                }
+            }
+        }
+        self::assertNoPlaceholders($data);
         return $result;
     }
 
-    private static function hydrate(string $class, mixed $row): object
+    private static function hydrate(string $class, mixed $row, string $path): object
     {
         if (!is_array($row) || array_is_list($row)) {
-            throw new RuntimeException('Privacy definition must be an object.');
+            throw new RuntimeException("Invalid configuration path {$path}: definition must be an object.");
         }
         $parameters = (new ReflectionClass($class))->getConstructor()?->getParameters() ?? [];
         $allowed = array_map(static fn($parameter): string => $parameter->getName(), $parameters);
         if (array_diff(array_keys($row), $allowed) !== []) {
-            throw new RuntimeException('Unknown privacy definition field.');
+            throw new RuntimeException("Invalid configuration path {$path}: unknown field.");
         }
         foreach (['activeFrom', 'activeUntil', 'notificationSubmittedAt', 'regulatorReviewUntil'] as $field) {
             if (isset($row[$field])) {
                 if (!is_string($row[$field]) || trim($row[$field]) === '') {
-                    throw new RuntimeException('Invalid privacy definition date.');
+                    throw new RuntimeException("Invalid configuration path {$path}.{$field}: invalid date.");
                 }
                 $row[$field] = new DateTimeImmutable($row[$field]);
             }
@@ -134,7 +202,18 @@ final class PrivacyDeploymentConfigLoader
         try {
             return new $class(...$row);
         } catch (Throwable $exception) {
-            throw new RuntimeException('Invalid privacy definition: ' . $class, 0, $exception);
+            throw new RuntimeException("Invalid configuration path {$path}: {$exception->getMessage()}", 0, $exception);
+        }
+    }
+
+    private static function assertNoPlaceholders(mixed $value, string $path = 'root'): void
+    {
+        if (is_array($value)) {
+            foreach ($value as $key => $child) { self::assertNoPlaceholders($child, $path . '.' . $key); }
+            return;
+        }
+        if (is_string($value) && preg_match('/(?:TODO|CHANGE_ME|REPLACE_ME|EXAMPLE_ONLY|<[^>]+>|^$)/i', trim($value)) === 1) {
+            throw new RuntimeException("Invalid configuration path {$path}: unresolved template placeholder.");
         }
     }
 }

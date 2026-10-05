@@ -41,11 +41,22 @@ services:
         arguments:
             $secret: '%env(CONTROL_TOKEN_SECRET)%'
 
+    ControlPlane\Identity\Security\TotpSecretCipher:
+        arguments:
+            $encodedKey: '%env(CONTROL_TOTP_ENCRYPTION_KEY)%'
+
     ControlPlane\Identity\Application\AuthService:
         arguments:
             $verificationTtlSeconds: '%env(int:CONTROL_VERIFICATION_TTL_SECONDS)%'
             $accessTokenTtlSeconds: '%env(int:CONTROL_ACCESS_TOKEN_TTL_SECONDS)%'
             $sessionTtlSeconds: '%env(int:CONTROL_SESSION_TTL_SECONDS)%'
+
+    ControlPlane\Identity\Application\AuthSecurityService:
+        arguments:
+            $passwordResetTtlSeconds: '%env(int:CONTROL_PASSWORD_RESET_TTL_SECONDS)%'
+            $mfaChallengeTtlSeconds: '%env(int:CONTROL_MFA_CHALLENGE_TTL_SECONDS)%'
+            $totpSetupTtlSeconds: '%env(int:CONTROL_TOTP_SETUP_TTL_SECONDS)%'
+            $recentAuthenticationTtlSeconds: '%env(int:CONTROL_RECENT_AUTH_TTL_SECONDS)%'
 
     ControlPlane\Deployment\Application\ReserveDeployment:
         arguments:
@@ -178,6 +189,17 @@ services:
         arguments:
             $verificationUrl: '%env(CONTROL_VERIFICATION_URL)%'
             $messageIdDomain: '%env(CONTROL_MESSAGE_ID_DOMAIN)%'
+
+    ControlPlane\Infrastructure\Outbox\SecurityEmailProcessor:
+        arguments:
+            $passwordResetUrl: '%env(CONTROL_PASSWORD_RESET_URL)%'
+            $messageIdDomain: '%env(CONTROL_MESSAGE_ID_DOMAIN)%'
+
+    ControlPlane\Infrastructure\Outbox\ControlEmailOutboxDispatcher:
+        arguments:
+            $processors:
+                - '@ControlPlane\Infrastructure\Outbox\VerificationEmailProcessor'
+                - '@ControlPlane\Infrastructure\Outbox\SecurityEmailProcessor'
 
     ControlPlane\Privacy\ControlPrivacyRetentionPolicy:
         arguments:

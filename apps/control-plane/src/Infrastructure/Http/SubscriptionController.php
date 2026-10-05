@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ControlPlane\Infrastructure\Http;
 
 use ControlPlane\Identity\Security\ControlUserPrincipal;
+use ControlPlane\Identity\Application\AuthSecurityService;
 use ControlPlane\Subscription\Application\CancelSubscription;
 use ControlPlane\Subscription\Application\CreateSubscription;
 use ControlPlane\Subscription\Application\GetSubscription;
@@ -17,13 +18,14 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/control/accounts/{accountId}/subscriptions', name: 'control_subscriptions_')]
 final class SubscriptionController extends AbstractController
 {
-    public function __construct(private readonly CreateSubscription $creator, private readonly GetSubscription $reader, private readonly CancelSubscription $canceller)
+    public function __construct(private readonly CreateSubscription $creator, private readonly GetSubscription $reader, private readonly CancelSubscription $canceller, private readonly AuthSecurityService $authSecurity)
     {
     }
 
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(string $accountId, Request $request): JsonResponse
     {
+        $this->authSecurity->requireRecent($this->user(), true);
         $key = $request->headers->get('Idempotency-Key');
         if (!is_string($key)) {
             throw new \InvalidArgumentException('Idempotency-Key is required.');
@@ -50,6 +52,7 @@ final class SubscriptionController extends AbstractController
     #[Route('/{subscriptionId}/cancel', name: 'cancel', methods: ['POST'])]
     public function cancel(string $accountId, string $subscriptionId, Request $request): JsonResponse
     {
+        $this->authSecurity->requireRecent($this->user(), true);
         $key = $request->headers->get('Idempotency-Key');
         if (!is_string($key)) {
             throw new \InvalidArgumentException('Idempotency-Key is required.');

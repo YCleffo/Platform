@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace ControlPlane\Infrastructure\Console;
 
-use ControlPlane\Infrastructure\Outbox\VerificationEmailProcessor;
+use ControlPlane\Infrastructure\Outbox\ControlEmailOutboxDispatcher;
 use ControlPlane\Infrastructure\Scheduler\BackgroundJobStatusRecorder;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -15,7 +15,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'control:outbox:process-email', description: 'Deliver leased Control email events')]
 final class ProcessOutboxEmailCommand extends Command
 {
-    public function __construct(private readonly VerificationEmailProcessor $processor,
+    public function __construct(private readonly ControlEmailOutboxDispatcher $processor,
         private readonly BackgroundJobStatusRecorder $status)
     {
         parent::__construct();

@@ -23,6 +23,7 @@ final readonly class ProcessingPurposeDefinition
         public string $processingRole,
         public bool $distributionAllowed = false,
         public string $crossBorderPolicy = 'none',
+        public string $description = '',
     ) {
         MachineCode::assert($code);
         MachineCode::assert($legalBasisCode);

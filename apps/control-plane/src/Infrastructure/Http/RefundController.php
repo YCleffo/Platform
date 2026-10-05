@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ControlPlane\Infrastructure\Http;
 
 use ControlPlane\Identity\Security\ControlUserPrincipal;
+use ControlPlane\Identity\Application\AuthSecurityService;
 use ControlPlane\Refund\Application\CreateRefund;
 use ControlPlane\Refund\Application\GetRefunds;
 use ControlPlane\Refund\Application\SubmitYooKassaRefund;
@@ -16,13 +17,14 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class RefundController extends AbstractController
 {
-    public function __construct(private readonly CreateRefund $creator, private readonly GetRefunds $reader, private readonly SubmitYooKassaRefund $submission)
+    public function __construct(private readonly CreateRefund $creator, private readonly GetRefunds $reader, private readonly SubmitYooKassaRefund $submission, private readonly AuthSecurityService $authSecurity)
     {
     }
 
     #[Route('/api/control/accounts/{accountId}/payments/{paymentId}/refunds', name: 'control_refund_create', methods: ['POST'])]
     public function create(string $accountId, string $paymentId, Request $request): JsonResponse
     {
+        $this->authSecurity->requireRecent($this->user(), true);
         $key = $request->headers->get('Idempotency-Key');
         if (!is_string($key)) {
             throw new \InvalidArgumentException('Idempotency-Key is required.');

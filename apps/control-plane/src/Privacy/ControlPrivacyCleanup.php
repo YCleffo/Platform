@@ -21,6 +21,9 @@ final readonly class ControlPrivacyCleanup
         $days = $this->policy->days($category);
         [$table, $key, $eligible] = match ($category) {
             'verification' => ['control_user_email_verifications', 'id', "t.expires_at < now() - (? * interval '1 day') AND NOT EXISTS (SELECT 1 FROM commercial.privacy_holds h WHERE h.control_user_id = t.control_user_id AND h.released_at IS NULL)"],
+            'password_reset' => ['control_user_password_resets', 'id', "t.expires_at < now() - (? * interval '1 day') AND NOT EXISTS (SELECT 1 FROM commercial.privacy_holds h WHERE h.control_user_id = t.control_user_id AND h.released_at IS NULL)"],
+            'auth_challenge' => ['control_auth_challenges', 'id', "t.expires_at < now() - (? * interval '1 day') AND NOT EXISTS (SELECT 1 FROM commercial.privacy_holds h WHERE h.control_user_id = t.control_user_id AND h.released_at IS NULL)"],
+            'totp_pending' => ['control_user_totp_factors', 'id', "t.status = 'pending' AND t.expires_at < now() - (? * interval '1 day') AND NOT EXISTS (SELECT 1 FROM commercial.privacy_holds h WHERE h.control_user_id = t.control_user_id AND h.released_at IS NULL)"],
             'session' => ['control_sessions', 'id', "COALESCE(t.revoked_at, t.expires_at) < now() - (? * interval '1 day') AND NOT EXISTS (SELECT 1 FROM commercial.privacy_holds h WHERE h.control_user_id = t.control_user_id AND h.released_at IS NULL)"],
             'rate_limit' => ['rate_limit_counters', 'ctid', "t.expires_at < now() - (? * interval '1 day')"],
             'idempotency' => ['idempotency_keys', 'id', "t.status <> 'pending' AND t.expires_at IS NOT NULL AND t.expires_at < now() - (? * interval '1 day')"],

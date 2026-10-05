@@ -209,3 +209,29 @@ jobs:
       - name: Stop isolated Commercial test runtime
         if: always()
         run: bash ./scripts/control-test-stop.sh
+
+  cross-plane-e2e:
+    name: Strict Core to Control Plane Cross-Plane E2E
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_TEST_DB: platform_test
+      POSTGRES_USER: platform_app
+      POSTGRES_PASSWORD: platform_ci_test_password
+      CONTROL_TEST_DB: platform_commercial_test
+      CONTROL_TEST_USER: platform_control_test
+      CONTROL_TEST_PASSWORD: platform_control_ci_only
+      CONTROL_APP_SECRET: test-only-not-a-production-secret
+      CONTROL_TOKEN_SECRET: test-only-control-token-secret-at-least-32-chars
+      PLATFORM_BASE_DOMAIN: platform.example
+      CROSS_PLANE_REQUIRED: "1"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run required cross-plane integration independently
+        run: bash ./scripts/cross-plane-test-run.sh
+
+      - name: Stop isolated cross-plane resources
+        if: always()
+        run: bash ./scripts/cross-plane-test-stop.sh

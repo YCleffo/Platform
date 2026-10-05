@@ -249,7 +249,8 @@ SQL, [$this->tokens->hash($newRefreshToken), $this->tokens->hash($accessToken), 
             throw new AuthFailure('invalid_access_token');
         }
         $user = $this->connection->fetchAssociative(<<<'SQL'
-SELECT u.id, u.email_normalized, u.password_hash, u.status
+SELECT u.id, u.email_normalized, u.password_hash, u.status, s.id AS session_id,
+       s.primary_authenticated_at, s.mfa_authenticated_at
 FROM commercial.control_sessions s
 JOIN commercial.control_users u ON u.id = s.control_user_id
 WHERE s.access_token_hash = decode(?, 'hex') AND s.revoked_at IS NULL
@@ -260,21 +261,32 @@ SQL, [$this->tokens->hash($accessToken)]);
         }
         $this->connection->executeStatement("UPDATE commercial.control_sessions SET last_used_at = now() WHERE access_token_hash = decode(?, 'hex')", [$this->tokens->hash($accessToken)]);
 
-        return new ControlUserPrincipal($user['id'], $user['email_normalized'], $user['password_hash']);
+        return new ControlUserPrincipal($user['id'], $user['email_normalized'], $user['password_hash'],
+            is_string($user['session_id'] ?? null) ? $user['session_id'] : null,
+            isset($user['primary_authenticated_at']) ? new \DateTimeImmutable((string) $user['primary_authenticated_at']) : null,
+            $user['mfa_authenticated_at'] === null ? null : new \DateTimeImmutable((string) $user['mfa_authenticated_at']));
     }
 
     /** @return array{access_token: string, refresh_token: string, access_expires_in: int, session_expires_in: int} */
-    private function issueSession(string $userId, string $emailNormalized, string $ip, string $userAgent, string $correlationId): array
+    public function issueMfaSession(string $userId, string $emailNormalized, string $ip, string $userAgent, string $correlationId, string $method): array
+    {
+        if (!in_array($method, ['password_totp', 'password_recovery'], true)) {
+            throw new \InvalidArgumentException('Invalid MFA session method.');
+        }
+        return $this->issueSession($userId, $emailNormalized, $ip, $userAgent, $correlationId, $method);
+    }
+
+    private function issueSession(string $userId, string $emailNormalized, string $ip, string $userAgent, string $correlationId, string $method = 'password'): array
     {
         $accessToken = $this->tokens->randomToken();
         $refreshToken = $this->tokens->randomToken();
         $sessionId = Uuid::v7()->toRfc4122();
-        $this->connection->transactional(function (Connection $connection) use ($userId, $accessToken, $refreshToken, $ip, $userAgent, $sessionId, $correlationId): void {
+        $this->connection->transactional(function (Connection $connection) use ($userId, $accessToken, $refreshToken, $ip, $userAgent, $sessionId, $correlationId, $method): void {
             $connection->executeStatement(<<<'SQL'
 INSERT INTO commercial.control_sessions
- (id, control_user_id, access_token_hash, refresh_token_hash, access_expires_at, expires_at, ip_hash, user_agent)
-VALUES (?, ?, decode(?, 'hex'), decode(?, 'hex'), now() + (? * interval '1 second'), now() + (? * interval '1 second'), decode(?, 'hex'), ?)
-SQL, [$sessionId, $userId, $this->tokens->hash($accessToken), $this->tokens->hash($refreshToken), $this->accessTokenTtlSeconds, $this->sessionTtlSeconds, $this->tokens->pseudonym($ip), mb_substr($userAgent, 0, 300)]);
+ (id, control_user_id, access_token_hash, refresh_token_hash, access_expires_at, expires_at, ip_hash, user_agent, authentication_method, mfa_authenticated_at)
+VALUES (?, ?, decode(?, 'hex'), decode(?, 'hex'), now() + (? * interval '1 second'), now() + (? * interval '1 second'), decode(?, 'hex'), ?, ?, CASE WHEN ? = 'password' THEN NULL ELSE now() END)
+SQL, [$sessionId, $userId, $this->tokens->hash($accessToken), $this->tokens->hash($refreshToken), $this->accessTokenTtlSeconds, $this->sessionTtlSeconds, $this->tokens->pseudonym($ip), mb_substr($userAgent, 0, 300), $method, $method]);
             $connection->executeStatement('UPDATE commercial.control_users SET last_login_at = now(), updated_at = now() WHERE id = ?', [$userId]);
             $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, actor_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('control_user', ?, 'control_session.login', 'control_session', ?, ?, 'success')", [$userId, $sessionId, $correlationId]);
         });

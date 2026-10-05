@@ -7,6 +7,7 @@ namespace ControlPlane\Infrastructure\Http;
 use ControlPlane\Billing\Application\GetInvoice;
 use ControlPlane\Billing\Application\IssueInvoice;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
+use ControlPlane\Identity\Application\AuthSecurityService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,13 +16,14 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class InvoiceController extends AbstractController
 {
-    public function __construct(private readonly IssueInvoice $issuer, private readonly GetInvoice $reader)
+    public function __construct(private readonly IssueInvoice $issuer, private readonly GetInvoice $reader, private readonly AuthSecurityService $authSecurity)
     {
     }
 
     #[Route('/api/control/accounts/{accountId}/subscriptions/{subscriptionId}/invoice', name: 'control_invoice_issue', methods: ['POST'])]
     public function issue(string $accountId, string $subscriptionId, Request $request): JsonResponse
     {
+        $this->authSecurity->requireRecent($this->user(), true);
         $key = $request->headers->get('Idempotency-Key');
         if (!is_string($key)) {
             throw new \InvalidArgumentException('Idempotency-Key is required.');
