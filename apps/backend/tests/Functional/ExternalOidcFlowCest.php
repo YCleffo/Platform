@@ -252,9 +252,12 @@ final readonly class ExternalOidcFlowCest
 
     private function account(ConnectionInterface $db, string $label): string
     {
+        $personId = (string) $db->createCommand(
+            "INSERT INTO core.persons (given_name, family_name) VALUES ('External', 'Identity') RETURNING id::text",
+        )->queryScalar();
         return (string) $db->createCommand(
-            "INSERT INTO core.accounts (account_type, status, label) VALUES ('service', 'active', :label) RETURNING id::text",
-            [':label' => $label],
+            "INSERT INTO core.accounts (person_id, account_type, status, label) VALUES (CAST(:person_id AS uuid), 'human', 'active', :label) RETURNING id::text",
+            [':person_id' => $personId, ':label' => $label],
         )->queryScalar();
     }
 

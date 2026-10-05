@@ -12,8 +12,9 @@ final class AuthenticationMethod
     public const GOOGLE = 'google';
     public const TELEGRAM = 'telegram';
     public const PASSKEY = 'passkey';
+    public const EXTERNAL = 'external';
 
-    private const FIRST_FACTORS = [self::PASSWORD, self::GOOGLE, self::TELEGRAM, self::PASSKEY];
+    private const FIRST_FACTORS = [self::PASSWORD, self::GOOGLE, self::TELEGRAM, self::PASSKEY, self::EXTERNAL];
     private const SECOND_FACTORS = ['totp', 'recovery_code'];
 
     public static function firstFactor(string $method): string

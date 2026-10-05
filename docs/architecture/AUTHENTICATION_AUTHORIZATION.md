@@ -7,8 +7,10 @@ authentication and authorization:
 
 - `accounts` separates system identity from `persons` and contains lifecycle,
   lock, security-stamp, locale, and timezone state;
-- `auth_identifiers`, `auth_password_credentials`, `auth_sessions`, and
-  `auth_challenges` are the authoritative credential/session stores;
+- `auth_identifiers`, `auth_password_credentials`, `auth_external_identities`, `auth_sessions`, and
+  `auth_challenges` are the authoritative credential/session stores. A provider adapter passes
+  only `VerifiedExternalIdentity` to Core; Core never persists or audits raw launch payloads,
+  signatures, headers, or provider secrets and reuses the normal account session flow;
 - passkey обслуживается полноценным WebAuthn Level 3 runtime (migration 014); TOTP, recovery-code и external-identity
   таблицы обслуживаются полноценным runtime;
 - `roles`, `permissions`, `role_permissions`, and `account_roles` implement the
@@ -20,6 +22,19 @@ authentication and authorization:
 `SessionActivityService`, own-session use cases, `PermissionService`,
 `SecurityAuditService`, `ClientContext`, account preference handling, and safe
 session presenters.
+
+## External identity namespace
+
+`auth_providers.code` identifies an identity namespace; `protocol` identifies
+only the verification transport. The existing `telegram` row currently uses
+OIDC and stores Telegram's OIDC `sub`. A future Telegram Mini App adapter may
+use the same `telegram` namespace only after it proves that its verified user
+identifier is the same stable Telegram user ID as that OIDC `sub`, with the
+same collision guarantees. Until that is verified, it must use a distinct
+provider code rather than silently linking identities across protocols.
+
+`VerifiedExternalIdentityService` deliberately does not inspect `protocol`:
+the provider adapter has already performed protocol-specific verification.
 
 В начале этого этапа недостающей частью было применение правил во время выполнения:
 в существующем хранилище не было полного протокола паролей, выпуска токенов,

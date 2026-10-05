@@ -17,6 +17,9 @@ interface ExternalIdentityRepository
 
     public function updateSnapshotAndLogin(string $id, ExternalIdentityProfile $profile): ?ExternalIdentity;
 
+    /** Marks a verified identity as used without accepting or persisting provider data. */
+    public function markUsed(string $id): ?ExternalIdentity;
+
     public function unlink(string $accountId, string $providerId): ?ExternalIdentity;
 
     public function countByAccount(string $accountId): int;

@@ -7,6 +7,8 @@ namespace App\Tests\Unit\Core\Auth;
 use App\Core\Auth\Application\AuthenticationMethod;
 use App\Core\Auth\Application\Base32;
 use App\Core\Auth\Application\ExternalIdentityProfile;
+use App\Core\Auth\Application\ExternalIdentityProviderCode;
+use App\Core\Auth\Application\VerifiedExternalIdentity;
 use App\Core\Auth\Application\OidcProviderConfiguration;
 use App\Core\Auth\Application\RecoveryCodeService;
 use App\Core\Auth\Application\TotpService;
@@ -83,8 +85,32 @@ final class MfaSecurityPrimitivesTest extends Unit
     public function testAuthenticationMethodVocabularyRejectsArbitraryValues(): void
     {
         assertSame('google+totp', AuthenticationMethod::withSecondFactor('google', 'totp'));
+        assertSame('external', AuthenticationMethod::firstFactor('external'));
         $this->expectException(InvalidArgumentException::class);
         AuthenticationMethod::firstFactor('custom-provider');
+    }
+
+    public function testVerifiedExternalIdentityHasNoProviderPayloadAndRequiresCanonicalProvider(): void
+    {
+        $identity = new VerifiedExternalIdentity('max', '99887766');
+        assertSame('max', $identity->provider);
+        assertSame('99887766', $identity->externalUserId);
+        ExternalIdentityProviderCode::assert('mini-app.v2');
+
+        $this->expectException(InvalidArgumentException::class);
+        new VerifiedExternalIdentity('Telegram', '123');
+    }
+
+    public function testVerifiedExternalIdentityRejectsWhitespaceOnlyAndOversizedSubjects(): void
+    {
+        foreach (['', '   ', str_repeat('a', 256)] as $subject) {
+            try {
+                new VerifiedExternalIdentity('max', $subject);
+                self::fail('Invalid external user ID was accepted.');
+            } catch (InvalidArgumentException) {
+                // Expected.
+            }
+        }
     }
 
     public function testExternalProfileAcceptsOnlySafeClaimsAndHttpsAvatar(): void

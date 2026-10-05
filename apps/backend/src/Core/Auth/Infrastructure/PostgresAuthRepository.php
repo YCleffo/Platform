@@ -14,6 +14,7 @@ use App\Core\Auth\Application\CreateAuthChallengeCommand;
 use App\Core\Auth\Application\CreateSessionCommand;
 use App\Core\Auth\Application\CreateTotpFactorCommand;
 use App\Core\Auth\Application\ExternalIdentity;
+use App\Core\Auth\Application\ExternalIdentityPersistenceException;
 use App\Core\Auth\Application\ExternalIdentityProfile;
 use App\Core\Auth\Application\ExternalIdentityRepository;
 use App\Core\Auth\Application\IdentifierRepository;
@@ -298,6 +299,7 @@ final readonly class PostgresAuthRepository implements
                     CAST(:account_id AS uuid), CAST(:provider_id AS uuid), :provider_subject,
                     :email, :email_verified, :display_name, :avatar_url, CAST(:claims AS jsonb)
                 )
+                ON CONFLICT DO NOTHING
                 RETURNING id::text
                 SQL,
                 [
@@ -312,7 +314,13 @@ final readonly class PostgresAuthRepository implements
                 ],
             )->queryScalar();
         } catch (IntegrityException $exception) {
-            throw new ConflictException('External identity is already linked.', previous: $exception);
+            throw new ExternalIdentityPersistenceException(
+                'External identity could not be persisted.',
+                previous: $exception,
+            );
+        }
+        if ($id === false || $id === null) {
+            throw new ConflictException('External identity is already linked.');
         }
         if (!is_string($id)) {
             throw new RuntimeException('PostgreSQL did not return the linked external identity.');
@@ -333,7 +341,9 @@ final readonly class PostgresAuthRepository implements
                 display_name = :display_name,
                 avatar_url = :avatar_url,
                 claims = CAST(:claims AS jsonb),
-                last_login_at = now()
+                last_login_at = now(),
+                last_used_at = now(),
+                updated_at = now()
             WHERE id = CAST(:id AS uuid)
               AND provider_subject = :provider_subject
             RETURNING account_id::text AS account_id, provider_id::text AS provider_id
@@ -347,6 +357,24 @@ final readonly class PostgresAuthRepository implements
                 ':avatar_url' => $profile->avatarUrl,
                 ':claims' => json_encode($profile->claims, JSON_THROW_ON_ERROR),
             ],
+        )->queryOne();
+        if (!is_array($row)) {
+            return null;
+        }
+
+        return $this->findByAccountProvider((string) $row['account_id'], (string) $row['provider_id']);
+    }
+
+    public function markUsed(string $id): ?ExternalIdentity
+    {
+        $row = $this->db->createCommand(
+            <<<'SQL'
+            UPDATE core.auth_external_identities
+            SET last_login_at = now(), last_used_at = now(), updated_at = now()
+            WHERE id = CAST(:id AS uuid)
+            RETURNING account_id::text AS account_id, provider_id::text AS provider_id
+            SQL,
+            [':id' => $id],
         )->queryOne();
         if (!is_array($row)) {
             return null;
@@ -1793,6 +1821,7 @@ final readonly class PostgresAuthRepository implements
     {
         return $value === true || $value === 't' || $value === 1;
     }
+
 
     private static function nullableString(mixed $value): ?string
     {
