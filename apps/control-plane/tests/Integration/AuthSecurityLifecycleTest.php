@@ -5,6 +5,21 @@ use ControlPlane\Identity\Application\AuthFailure;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
 final class AuthSecurityLifecycleTest extends DatabaseTestCase
 {
+    public function testMfaChallengeIsSingleUseAndRefreshPreservesEvidence(): void
+    {
+        $auth=$this->authService(); $security=$this->authSecurityService(); $correlation=$this->uuid();
+        $registered=$auth->register('mfa@example.test','correct horse battery staple','192.0.2.2',$correlation); $auth->verifyEmail($registered['verification_token'],$correlation);
+        $secret='GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'; $factor=$this->uuid(); $cipher=new \ControlPlane\Identity\Security\TotpSecretCipher('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');
+        $this->connection->executeStatement("INSERT INTO commercial.control_user_totp_factors (id,control_user_id,secret_ciphertext,key_version,status,confirmed_at) VALUES (?, ?, decode(?, 'hex'),'v1','active',now())",[$factor,$registered['user_id'],bin2hex($cipher->encrypt($secret))]);
+        $pending=$security->login('mfa@example.test','correct horse battery staple','192.0.2.2','test',$correlation);
+        self::assertSame('mfa_required',$pending['status']); self::assertArrayNotHasKey('access_token',$pending);
+        $session=$security->verifyMfaLogin((string)$pending['challenge_token'],$this->totp($secret,time()),null,'192.0.2.2','test',$correlation);
+        $row=$this->connection->fetchAssociative("SELECT id,authentication_method,primary_authenticated_at,mfa_authenticated_at FROM commercial.control_sessions WHERE access_token_hash=decode(?,'hex')",[hash('sha256',$session['access_token'])]); self::assertSame('password_totp',$row['authentication_method']);
+        $before=[$row['id'],$row['authentication_method'],$row['primary_authenticated_at'],$row['mfa_authenticated_at']]; $rotated=$auth->refresh($session['refresh_token'],'192.0.2.2','other',$correlation);
+        $after=$this->connection->fetchAssociative('SELECT id,authentication_method,primary_authenticated_at,mfa_authenticated_at FROM commercial.control_sessions WHERE id=?',[$row['id']]); self::assertSame($before,[$after['id'],$after['authentication_method'],$after['primary_authenticated_at'],$after['mfa_authenticated_at']]);
+        try{$security->verifyMfaLogin((string)$pending['challenge_token'],$this->totp($secret,time()),null,'192.0.2.2','test',$correlation);self::fail('Consumed challenge reused.');}catch(AuthFailure $e){self::assertSame('mfa_challenge_invalid',$e->errorCode);}
+        self::assertNotSame($session['refresh_token'],$rotated['refresh_token']);
+    }
     public function testPasswordResetUsesHashOnlyArtifactsAndRevokesSessions(): void
     {
         $auth=$this->authService(); $security=$this->authSecurityService(); $id=$this->uuid();
@@ -29,5 +44,20 @@ final class AuthSecurityLifecycleTest extends DatabaseTestCase
         $this->connection->executeStatement("INSERT INTO commercial.control_user_totp_factors (id,control_user_id,secret_ciphertext,key_version,status,confirmed_at) VALUES (?, ?, decode(?, 'hex'),'v1','active',now())",[$factor,$user,bin2hex($cipher->encrypt($secret))]);
         $security->requireSensitiveMfa($principal);
         $rows=$security->sessions($principal); self::assertCount(2,$rows); self::assertArrayHasKey('mfa_authenticated_at',$rows[0]);
+    }
+
+    public function testDatabaseAllowsOnlyOneActiveChallengeAndPendingSetup(): void
+    {
+        $user=$this->user(); $challenge=$this->uuid();
+        $this->connection->executeStatement("INSERT INTO commercial.control_auth_challenges (id,control_user_id,token_hash,kind,expires_at) VALUES (?, ?, decode(?,'hex'),'mfa_login',now()+interval '5 minutes')",[$challenge,$user,hash('sha256','first')]);
+        $this->expectDatabaseRejection(fn()=>$this->connection->executeStatement("INSERT INTO commercial.control_auth_challenges (id,control_user_id,token_hash,kind,expires_at) VALUES (?, ?, decode(?,'hex'),'mfa_login',now()+interval '5 minutes')",[$this->uuid(),$user,hash('sha256','second')]));
+        $cipher=new \ControlPlane\Identity\Security\TotpSecretCipher('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');
+        $this->connection->executeStatement("INSERT INTO commercial.control_user_totp_factors (id,control_user_id,secret_ciphertext,key_version,status,expires_at) VALUES (?, ?, decode(?,'hex'),'v1','pending',now()+interval '5 minutes')",[$this->uuid(),$user,bin2hex($cipher->encrypt('JBSWY3DPEHPK3PXP'))]);
+        $this->expectDatabaseRejection(fn()=>$this->connection->executeStatement("INSERT INTO commercial.control_user_totp_factors (id,control_user_id,secret_ciphertext,key_version,status,expires_at) VALUES (?, ?, decode(?,'hex'),'v1','pending',now()+interval '5 minutes')",[$this->uuid(),$user,bin2hex($cipher->encrypt('JBSWY3DPEHPK3PXP'))]));
+    }
+
+    private function totp(string $secret, int $timestamp): string
+    {
+        $alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';$bits='';foreach(str_split($secret) as $char){$bits.=str_pad(decbin((int)strpos($alphabet,$char)),5,'0',STR_PAD_LEFT);}$key='';foreach(str_split(substr($bits,0,intdiv(strlen($bits),8)*8),8) as $part){$key.=chr(bindec($part));}$counter=intdiv($timestamp,30);$mac=hash_hmac('sha1',pack('N2',intdiv($counter,4294967296),$counter%4294967296),$key,true);$offset=ord($mac[19])&15;$value=((ord($mac[$offset])&127)<<24)|(ord($mac[$offset+1])<<16)|(ord($mac[$offset+2])<<8)|ord($mac[$offset+3]);return str_pad((string)($value%1000000),6,'0',STR_PAD_LEFT);
     }
 }

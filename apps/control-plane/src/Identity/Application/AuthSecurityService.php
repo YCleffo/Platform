@@ -30,22 +30,22 @@ final readonly class AuthSecurityService
         $email = EmailPolicy::normalize($emailInput)['normalized'];
         $this->rateLimiter->consume('auth.login.ip', $ip, 30, 300);
         $this->rateLimiter->consume('auth.login.identity', $email, 10, 300);
-        $user = $this->connection->fetchAssociative('SELECT id, email_normalized, password_hash, status FROM commercial.control_users WHERE email_normalized = ?', [$email]);
-        $valid = $user !== false && is_string($user['id']) && is_string($user['password_hash'])
-            && $this->passwordHasher->isPasswordValid(new ControlUserPrincipal($user['id'], $email, $user['password_hash']), $password);
-        if (!$valid || $user === false || $user['status'] !== 'active' || !is_string($user['id'])) {
-            throw new AuthFailure('invalid_credentials', 'Invalid credentials.');
-        }
-        $factor = $this->connection->fetchAssociative("SELECT id FROM commercial.control_user_totp_factors WHERE control_user_id = ? AND status = 'active'", [$user['id']]);
-        if ($factor === false) { return $this->sessions->login($emailInput, $password, $ip, $agent, $correlation); }
-        $challengeId = Uuid::v7()->toRfc4122();
-        $token = $this->tokens->mfaChallengeToken($challengeId);
-        $this->connection->transactional(function (Connection $db) use ($user, $challengeId, $token, $correlation): void {
+        return $this->connection->transactional(function (Connection $db) use ($email, $password, $ip, $agent, $correlation): array {
+            $user = $db->fetchAssociative('SELECT id, email_normalized, password_hash, status FROM commercial.control_users WHERE email_normalized = ? FOR UPDATE', [$email]);
+            $valid = $user !== false && is_string($user['id']) && is_string($user['password_hash'])
+                && $this->passwordHasher->isPasswordValid(new ControlUserPrincipal($user['id'], $email, $user['password_hash']), $password);
+            if (!$valid) { $this->passwordHasher->hashPassword(new ControlUserPrincipal(Uuid::v7()->toRfc4122(), $email, ''), $password); }
+            if (!$valid || $user === false || $user['status'] !== 'active' || !is_string($user['id']) || !is_string($user['email_normalized'])) {
+                $this->sessions->recordLoginFailure($email, $correlation); throw new AuthFailure('invalid_credentials', 'Invalid credentials.');
+            }
+            $factor = $db->fetchAssociative("SELECT id FROM commercial.control_user_totp_factors WHERE control_user_id = ? AND status = 'active' FOR UPDATE", [$user['id']]);
+            if ($factor === false) { return $this->sessions->issuePasswordSessionForAuthenticatedUser($user['id'], $user['email_normalized'], $ip, $agent, $correlation); }
+            $challengeId = Uuid::v7()->toRfc4122(); $token = $this->tokens->mfaChallengeToken($challengeId);
             $db->executeStatement("UPDATE commercial.control_auth_challenges SET invalidated_at = now() WHERE control_user_id = ? AND kind = 'mfa_login' AND consumed_at IS NULL AND invalidated_at IS NULL", [$user['id']]);
             $db->executeStatement("INSERT INTO commercial.control_auth_challenges (id, control_user_id, token_hash, kind, expires_at) VALUES (?, ?, decode(?, 'hex'), 'mfa_login', now() + (? * interval '1 second'))", [$challengeId, $user['id'], $this->tokens->hash($token), $this->mfaChallengeTtlSeconds]);
             $this->audit($db, $user['id'], 'control_mfa.challenge_created', 'control_auth_challenge', $challengeId, $correlation);
+            return ['status' => 'mfa_required', 'challenge_token' => $token, 'expires_in' => $this->mfaChallengeTtlSeconds];
         });
-        return ['status' => 'mfa_required', 'challenge_token' => $token, 'expires_in' => $this->mfaChallengeTtlSeconds];
     }
 
     public function requestPasswordReset(string $emailInput, string $ip, string $correlation): void
@@ -85,8 +85,9 @@ final readonly class AuthSecurityService
     {
         $this->requireRecentPrimary($user); $this->rateLimiter->consume('auth.mfa.totp_setup', $user->id(), 10, 3600); $id = Uuid::v7()->toRfc4122(); $secret = Totp::newSecret();
         $this->connection->transactional(function (Connection $db) use ($user, $id, $secret, $correlation): void {
+            $db->fetchOne('SELECT id FROM commercial.control_users WHERE id = ? FOR UPDATE', [$user->id()]);
             $db->executeStatement("UPDATE commercial.control_user_totp_factors SET status = 'revoked', revoked_at = now() WHERE control_user_id = ? AND status = 'pending'", [$user->id()]);
-            $db->executeStatement("INSERT INTO commercial.control_user_totp_factors (id, control_user_id, secret_ciphertext, key_version, expires_at) VALUES (?, ?, ?, 'v1', now() + (? * interval '1 second'))", [$id, $user->id(), $this->cipher->encrypt($secret), $this->totpSetupTtlSeconds]);
+            $db->executeStatement("INSERT INTO commercial.control_user_totp_factors (id, control_user_id, secret_ciphertext, key_version, expires_at) VALUES (?, ?, decode(?, 'hex'), 'v1', now() + (? * interval '1 second'))", [$id, $user->id(), bin2hex($this->cipher->encrypt($secret)), $this->totpSetupTtlSeconds]);
             $this->audit($db, $user->id(), 'control_mfa.setup_started', 'control_totp_factor', $id, $correlation);
         });
         return ['factor_id' => $id, 'secret' => $secret, 'otpauth_uri' => 'otpauth://totp/' . rawurlencode('Platform:' . $user->getUserIdentifier()) . '?secret=' . rawurlencode($secret) . '&issuer=Platform&algorithm=SHA1&digits=6&period=30'];
@@ -97,9 +98,10 @@ final readonly class AuthSecurityService
     {
         $this->requireRecentPrimary($user); $this->rateLimiter->consume('auth.mfa.totp_confirm', $user->id(), 10, 3600);
         return $this->connection->transactional(function (Connection $db) use ($user, $factorId, $code, $correlation): array {
-            $factor = $db->fetchAssociative("SELECT * FROM commercial.control_user_totp_factors WHERE id = ? AND control_user_id = ? FOR UPDATE", [$factorId, $user->id()]);
+            $db->fetchOne('SELECT id FROM commercial.control_users WHERE id = ? FOR UPDATE', [$user->id()]);
+            $factor = $db->fetchAssociative("SELECT f.*, encode(f.secret_ciphertext, 'hex') AS secret_ciphertext_hex FROM commercial.control_user_totp_factors f WHERE id = ? AND control_user_id = ? FOR UPDATE", [$factorId, $user->id()]);
             if ($factor === false || $factor['status'] !== 'pending' || strtotime((string) $factor['expires_at']) <= time()) throw new AuthFailure('totp_setup_invalid');
-            $counter = Totp::counterFor($this->cipher->decrypt((string) $factor['secret_ciphertext']), $code, time());
+            $counter = Totp::counterFor($this->decryptFactor($factor), $code, time());
             if ($counter === null || $counter <= (int) $factor['last_accepted_counter']) throw new AuthFailure('totp_code_invalid');
             $db->executeStatement("UPDATE commercial.control_user_totp_factors SET status = 'revoked', revoked_at = now() WHERE control_user_id = ? AND status = 'active'", [$user->id()]);
             if ($db->executeStatement("UPDATE commercial.control_user_totp_factors SET status = 'active', confirmed_at = now(), expires_at = NULL, last_accepted_counter = ? WHERE id = ? AND last_accepted_counter < ?", [$counter, $factorId, $counter]) !== 1) throw new AuthFailure('totp_code_replayed');
@@ -126,9 +128,9 @@ final readonly class AuthSecurityService
         return $this->connection->transactional(function (Connection $db) use ($token, $code, $recoveryCode, $ip, $agent, $correlation): array {
             $challenge = $db->fetchAssociative("SELECT c.*, u.email_normalized FROM commercial.control_auth_challenges c JOIN commercial.control_users u ON u.id=c.control_user_id WHERE c.token_hash=decode(?, 'hex') FOR UPDATE OF c, u", [$this->tokens->hash($token)]);
             if ($challenge === false || $challenge['consumed_at'] !== null || $challenge['invalidated_at'] !== null || strtotime((string) $challenge['expires_at']) <= time()) throw new AuthFailure('mfa_challenge_invalid');
-            $factor = $db->fetchAssociative("SELECT * FROM commercial.control_user_totp_factors WHERE control_user_id=? AND status='active' FOR UPDATE", [$challenge['control_user_id']]);
+            $factor = $db->fetchAssociative("SELECT f.*, encode(f.secret_ciphertext, 'hex') AS secret_ciphertext_hex FROM commercial.control_user_totp_factors f WHERE control_user_id=? AND status='active' FOR UPDATE", [$challenge['control_user_id']]);
             $method = null;
-            if ($factor !== false && $code !== null) { $counter = Totp::counterFor($this->cipher->decrypt((string)$factor['secret_ciphertext']), $code, time()); if ($counter !== null && $counter > (int)$factor['last_accepted_counter'] && $db->executeStatement('UPDATE commercial.control_user_totp_factors SET last_accepted_counter=? WHERE id=? AND last_accepted_counter < ?', [$counter, $factor['id'], $counter]) === 1) $method='password_totp'; }
+            if ($factor !== false && $code !== null) { $counter = Totp::counterFor($this->decryptFactor($factor), $code, time()); if ($counter !== null && $counter > (int)$factor['last_accepted_counter'] && $db->executeStatement('UPDATE commercial.control_user_totp_factors SET last_accepted_counter=? WHERE id=? AND last_accepted_counter < ?', [$counter, $factor['id'], $counter]) === 1) $method='password_totp'; }
             if ($factor !== false && $recoveryCode !== null) { $id=$db->fetchOne("UPDATE commercial.control_user_recovery_codes SET consumed_at=now() WHERE id=(SELECT id FROM commercial.control_user_recovery_codes WHERE factor_id=? AND code_hash=decode(?, 'hex') AND consumed_at IS NULL AND revoked_at IS NULL FOR UPDATE) RETURNING id", [$factor['id'], $this->tokens->hash($recoveryCode)]); if ($id !== false) { $method='password_recovery'; $this->audit($db, (string) $challenge['control_user_id'], 'control_mfa.recovery_code_consumed', 'control_user_recovery_code', (string) $id, $correlation); } }
             if ($method === null) { $db->executeStatement("UPDATE commercial.control_auth_challenges SET attempts=attempts+1, invalidated_at=CASE WHEN attempts+1 >= 8 THEN now() ELSE invalidated_at END WHERE id=?", [$challenge['id']]); $this->audit($db, (string) $challenge['control_user_id'], 'control_mfa.login_denied', 'control_auth_challenge', (string) $challenge['id'], $correlation, 'denied'); throw new AuthFailure('mfa_code_invalid'); }
             $db->executeStatement('UPDATE commercial.control_auth_challenges SET consumed_at=now() WHERE id=?', [$challenge['id']]); $this->audit($db, (string)$challenge['control_user_id'], 'control_mfa.login_verified', 'control_auth_challenge', (string)$challenge['id'], $correlation);
@@ -206,14 +208,16 @@ final readonly class AuthSecurityService
         if ($mfaEnabled && (($code === null) === ($recoveryCode === null))) throw new AuthFailure('mfa_method_required');
         if (!$mfaEnabled && ($code !== null || $recoveryCode !== null)) throw new AuthFailure('mfa_not_enabled');
         $this->connection->transactional(function (Connection $db) use ($user, $code, $recoveryCode, $correlation): void {
-            $factor=$db->fetchAssociative("SELECT * FROM commercial.control_user_totp_factors WHERE control_user_id=? AND status='active' FOR UPDATE",[$user->id()]); $mfaAt=null;
-            if($factor!==false){$ok=false;if($code!==null){$counter=Totp::counterFor($this->cipher->decrypt((string)$factor['secret_ciphertext']),$code,time());$ok=$counter!==null&&$counter>(int)$factor['last_accepted_counter']&&$db->executeStatement('UPDATE commercial.control_user_totp_factors SET last_accepted_counter=? WHERE id=? AND last_accepted_counter < ?',[$counter,$factor['id'],$counter])===1;}elseif($recoveryCode!==null){$ok=$db->executeStatement("UPDATE commercial.control_user_recovery_codes SET consumed_at=now() WHERE factor_id=? AND code_hash=decode(?, 'hex') AND consumed_at IS NULL AND revoked_at IS NULL",[$factor['id'],$this->tokens->hash($recoveryCode)])===1;}if(!$ok)throw new AuthFailure('mfa_code_invalid');$mfaAt=true;}
+            $factor=$db->fetchAssociative("SELECT f.*, encode(f.secret_ciphertext, 'hex') AS secret_ciphertext_hex FROM commercial.control_user_totp_factors f WHERE control_user_id=? AND status='active' FOR UPDATE",[$user->id()]); $mfaAt=null;
+            if($factor!==false){$ok=false;if($code!==null){$counter=Totp::counterFor($this->decryptFactor($factor),$code,time());$ok=$counter!==null&&$counter>(int)$factor['last_accepted_counter']&&$db->executeStatement('UPDATE commercial.control_user_totp_factors SET last_accepted_counter=? WHERE id=? AND last_accepted_counter < ?',[$counter,$factor['id'],$counter])===1;}elseif($recoveryCode!==null){$ok=$db->executeStatement("UPDATE commercial.control_user_recovery_codes SET consumed_at=now() WHERE factor_id=? AND code_hash=decode(?, 'hex') AND consumed_at IS NULL AND revoked_at IS NULL",[$factor['id'],$this->tokens->hash($recoveryCode)])===1;}if(!$ok)throw new AuthFailure('mfa_code_invalid');$mfaAt=true;}
             $db->executeStatement('UPDATE commercial.control_sessions SET primary_authenticated_at=now(), mfa_authenticated_at=CASE WHEN ?::boolean THEN now() ELSE mfa_authenticated_at END WHERE id=? AND control_user_id=? AND revoked_at IS NULL',[$mfaAt ? 'true':'false',$user->sessionId(),$user->id()]); $this->audit($db,$user->id(),'control_session.reauthenticated','control_session',$user->sessionId(),$correlation);
         });
     }
 
     private function revokeSecurityArtifacts(Connection $db, string $userId, string $reason): void
     { $db->executeStatement("UPDATE commercial.control_sessions SET revoked_at=COALESCE(revoked_at, now()), revoke_reason=COALESCE(revoke_reason, ?) WHERE control_user_id=?", [$reason, $userId]); $db->executeStatement('UPDATE commercial.control_user_password_resets SET invalidated_at=now() WHERE control_user_id=? AND consumed_at IS NULL AND invalidated_at IS NULL', [$userId]); $db->executeStatement('UPDATE commercial.control_auth_challenges SET invalidated_at=now() WHERE control_user_id=? AND consumed_at IS NULL AND invalidated_at IS NULL', [$userId]); }
+    /** @param array<string,mixed> $factor */ private function decryptFactor(array $factor): string
+    { $raw=isset($factor['secret_ciphertext_hex']) && is_string($factor['secret_ciphertext_hex']) ? hex2bin($factor['secret_ciphertext_hex']) : false; if($raw===false)throw new AuthFailure('totp_factor_invalid'); return $this->cipher->decrypt($raw); }
     /** @return list<string> */ private function createRecoveryCodes(Connection $db, string $userId, string $factorId): array
     { $codes=[]; for($i=0;$i<10;++$i){$code=strtoupper(substr(bin2hex(random_bytes(8)),0,4).'-'.substr(bin2hex(random_bytes(8)),0,4));$codes[]=$code;$db->executeStatement("INSERT INTO commercial.control_user_recovery_codes (control_user_id,factor_id,code_hash) VALUES (?, ?, decode(?, 'hex'))",[$userId,$factorId,$this->tokens->hash($code)]);} return $codes; }
     private function audit(Connection $db,string $user,string $action,string $type,string $resource,string $correlation,string $outcome = 'success'): void { $db->executeStatement("INSERT INTO commercial.audit_events (actor_type,actor_id,action,resource_type,resource_id,correlation_id,outcome) VALUES ('control_user', ?, ?, ?, ?, ?, ?)",[$user,$action,$type,$resource,$correlation,$outcome]); }

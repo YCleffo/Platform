@@ -276,6 +276,17 @@ SQL, [$this->tokens->hash($accessToken)]);
         return $this->issueSession($userId, $emailNormalized, $ip, $userAgent, $correlationId, $method);
     }
 
+    /** Internal application boundary: credentials were already checked and MFA was transactionally decided. */
+    public function issuePasswordSessionForAuthenticatedUser(string $userId, string $emailNormalized, string $ip, string $userAgent, string $correlationId): array
+    {
+        return $this->issueSession($userId, $emailNormalized, $ip, $userAgent, $correlationId);
+    }
+
+    public function recordLoginFailure(string $emailNormalized, string $correlationId): void
+    {
+        $this->auditLoginFailure($emailNormalized, $correlationId);
+    }
+
     private function issueSession(string $userId, string $emailNormalized, string $ip, string $userAgent, string $correlationId, string $method = 'password'): array
     {
         $accessToken = $this->tokens->randomToken();

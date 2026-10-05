@@ -25,6 +25,11 @@ final readonly class TotpSecretCipher
 
     public function decrypt(string $ciphertext): string
     {
+        if (str_starts_with($ciphertext, '\\x') && ctype_xdigit(substr($ciphertext, 2))) {
+            $decoded = hex2bin(substr($ciphertext, 2));
+            if ($decoded === false) { throw new \DomainException('Stored TOTP factor cannot be decrypted.'); }
+            $ciphertext = $decoded;
+        }
         $length = SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES;
         if (strlen($ciphertext) <= $length) {
             throw new \DomainException('Stored TOTP factor cannot be decrypted.');
