@@ -17,9 +17,11 @@ use ControlPlane\Fiscalization\Application\ReceiptSnapshot;
 use ControlPlane\Fiscalization\Application\SubmitYooKassaReceipt;
 use ControlPlane\Identity\Application\AuthFailure;
 use ControlPlane\Identity\Application\AuthService;
+use ControlPlane\Identity\Application\AuthSecurityService;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
 use ControlPlane\Identity\Security\DatabaseRateLimiter;
 use ControlPlane\Identity\Security\TokenCodec;
+use ControlPlane\Identity\Security\TotpSecretCipher;
 use ControlPlane\Subscription\Application\ActivateSubscription;
 use ControlPlane\Subscription\Application\CancelSubscription;
 use ControlPlane\Subscription\Application\ExpireSubscription;
@@ -29,6 +31,7 @@ use ControlPlane\Payment\Application\BindPaymentAttemptProviderReference;
 use ControlPlane\Payment\Application\CompletePaymentAttempt;
 use ControlPlane\Payment\Application\CreatePayment;
 use ControlPlane\Payment\Application\ProcessAuthoritativeProviderPayment;
+use ControlPlane\Payment\Application\RecordSavedPaymentMethod;
 use ControlPlane\Payment\Application\SettlePayment;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPayment;
@@ -87,6 +90,24 @@ try {
             break;
         case 'refresh':
             authService($connection)->refresh($value, '198.51.100.11', 'race-worker', $extra);
+            break;
+        case 'mfa_verify':
+            [$code, $correlationId] = explode('|', $extra, 2);
+            authSecurityService($connection)->verifyMfaLogin($value, $code, null, '198.51.100.12', 'race-worker', $correlationId);
+            break;
+        case 'mfa_recovery_verify':
+            [$code, $correlationId] = explode('|', $extra, 2);
+            authSecurityService($connection)->verifyMfaLogin($value, null, $code, '198.51.100.12', 'race-worker', $correlationId);
+            break;
+        case 'reauth_recovery':
+            [$userId, $email, $password, $code, $correlationId] = explode('|', $extra, 5);
+            $session = $connection->fetchAssociative('SELECT primary_authenticated_at, mfa_authenticated_at FROM commercial.control_sessions WHERE id = ?', [$value]);
+            if ($session === false) { exit(3); }
+            authSecurityService($connection)->reauthenticate(new ControlUserPrincipal($userId, $email, passwordHash($connection, $userId), $value, new DateTimeImmutable((string) $session['primary_authenticated_at']), $session['mfa_authenticated_at'] === null ? null : new DateTimeImmutable((string) $session['mfa_authenticated_at'])), $password, null, $code, $correlationId);
+            break;
+        case 'reset_confirm':
+            [$password, $correlationId] = explode('|', $extra, 2);
+            authSecurityService($connection)->confirmPasswordReset($value, $password, $correlationId);
             break;
         case 'membership':
             [$actorId, $accountId, $targetId, $correlationId] = explode('|', $extra);
@@ -156,6 +177,7 @@ SQL, [$value]);
                 new BindPaymentAttemptProviderReference($connection),
                 new CompletePaymentAttempt($connection, paymentSettlement($connection), new CreatePaymentReceiptObligation()),
                 new SubmitYooKassaReceipt($connection, new ReceiptSnapshot(), new FakeFiscalReceiptProviderGateway(), new ApplyAuthoritativeReceipt($connection)),
+                new RecordSavedPaymentMethod($connection),
             ))->process($providerAccount, $providerPayment, $correlationId);
             break;
         case 'expire_subscription':
@@ -200,6 +222,22 @@ function authService(\Doctrine\DBAL\Connection $connection): AuthService
     $factory = new PasswordHasherFactory([ControlUserPrincipal::class => ['algorithm' => 'auto']]);
 
     return new AuthService($connection, new UserPasswordHasher($factory), $tokens, new DatabaseRateLimiter($connection, $tokens), 3600, 900, 2592000);
+}
+
+function authSecurityService(\Doctrine\DBAL\Connection $connection): AuthSecurityService
+{
+    $tokens = new TokenCodec('test-only-control-token-secret-at-least-32-chars');
+    $factory = new PasswordHasherFactory([ControlUserPrincipal::class => ['algorithm' => 'auto']]);
+    return new AuthSecurityService($connection, new UserPasswordHasher($factory), $tokens,
+        new TotpSecretCipher('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='), new DatabaseRateLimiter($connection, $tokens),
+        authService($connection), 3600, 300, 600, 900);
+}
+
+function passwordHash(\Doctrine\DBAL\Connection $connection, string $userId): string
+{
+    $hash = $connection->fetchOne('SELECT password_hash FROM commercial.control_users WHERE id = ?', [$userId]);
+    if (!is_string($hash)) { throw new RuntimeException('User unavailable.'); }
+    return $hash;
 }
 
 function paymentSettlement(\Doctrine\DBAL\Connection $connection): SettlePayment

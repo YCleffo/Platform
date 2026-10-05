@@ -41,17 +41,19 @@ final readonly class StartYooKassaPayment
         string $paymentId,
         string $provider,
         string $method,
+        bool $savePaymentMethod,
         string $idempotencyKey,
         string $correlationId,
     ): array {
         if (!Uuid::isValid($controlUserId) || !Uuid::isValid($commercialAccountId) || !Uuid::isValid($paymentId) || !Uuid::isValid($correlationId)) {
             throw new \InvalidArgumentException('Invalid public identifier.');
         }
-        if ($provider !== 'yookassa' || $method !== 'sbp') {
-            throw new \InvalidArgumentException('Only YooKassa SBP checkout is supported.');
+        if ($provider !== 'yookassa' || !in_array($method, ['sbp', 'bank_card'], true)) {
+            throw new \InvalidArgumentException('Unsupported checkout method.');
         }
+        if ($method === 'sbp' && $savePaymentMethod) throw new \InvalidArgumentException('SBP cannot be saved as a payment method.');
         $idempotencyKey = IdentifierPolicy::opaqueKey($idempotencyKey);
-        [$account, $payment, $attempt] = $this->prepare($controlUserId, $commercialAccountId, $paymentId, $idempotencyKey, $correlationId);
+        [$account, $payment, $attempt] = $this->prepare($controlUserId, $commercialAccountId, $paymentId, $idempotencyKey, $correlationId, $method, $savePaymentMethod);
         $request = new ProviderPaymentRequest(
             Money::nonNegativeBigInt($payment['amount_minor']),
             (string) $payment['currency'],
@@ -60,6 +62,8 @@ final readonly class StartYooKassaPayment
             $paymentId,
             (string) $attempt['id'],
             (string) $payment['invoice_id'],
+            $method,
+            $savePaymentMethod,
         );
 
         if (is_string($attempt['provider_payment_id'])) {
@@ -87,7 +91,7 @@ final readonly class StartYooKassaPayment
             'payment_id' => $paymentId,
             'attempt_id' => $attempt['id'],
             'provider' => 'yookassa',
-            'method' => 'sbp',
+            'method' => $method,
             'status' => $providerPayment->status === 'canceled' ? 'cancelled' : $providerPayment->status,
             'confirmation' => $providerPayment->confirmationUrl === null ? null : [
                 'type' => 'redirect',
@@ -99,9 +103,9 @@ final readonly class StartYooKassaPayment
     /**
      * @return array{ProviderAccount, array<string, mixed>, array<string, mixed>}
      */
-    private function prepare(string $userId, string $accountId, string $paymentId, string $idempotencyKey, string $correlationId): array
+    private function prepare(string $userId, string $accountId, string $paymentId, string $idempotencyKey, string $correlationId, string $method, bool $savePaymentMethod): array
     {
-        return $this->connection->transactional(function (Connection $connection) use ($userId, $accountId, $paymentId, $idempotencyKey, $correlationId): array {
+        return $this->connection->transactional(function (Connection $connection) use ($userId, $accountId, $paymentId, $idempotencyKey, $correlationId, $method, $savePaymentMethod): array {
             $this->authorization->requirePermission($userId, $accountId, 'billing.manage');
             $payment = $connection->fetchAssociative('SELECT p.id, p.invoice_id, p.commercial_account_id, p.amount_minor, p.currency, p.status, i.bill_to_contact_email FROM commercial.payments p JOIN commercial.invoices i ON i.id = p.invoice_id WHERE p.id = ? AND p.commercial_account_id = ?', [$paymentId, $accountId]);
             if ($payment === false) {
@@ -114,7 +118,7 @@ final readonly class StartYooKassaPayment
                 throw new \DomainException('YooKassa checkout requires a positive payment amount.');
             }
             if ($payment['currency'] !== 'RUB') {
-                throw new \DomainException('YooKassa SBP supports RUB only.');
+                throw new \DomainException('YooKassa checkout supports RUB only.');
             }
             $providerAccount = $this->accounts->active();
             YooKassaFiscalPolicy::validate($providerAccount);
@@ -122,8 +126,8 @@ final readonly class StartYooKassaPayment
                 throw new \DomainException('YooKassa checkout requires invoice customer email.');
             }
             EmailPolicy::normalize($payment['bill_to_contact_email']);
-            $scope = 'payment.checkout.' . str_replace('-', '', strtolower($paymentId)) . '.yookassa.sbp';
-            $hash = hash('sha256', json_encode(['payment_id' => strtolower($paymentId), 'provider' => 'yookassa', 'method' => 'sbp'], JSON_THROW_ON_ERROR));
+            $scope = 'payment.checkout.' . str_replace('-', '', strtolower($paymentId)) . '.yookassa.' . $method;
+            $hash = hash('sha256', json_encode(['payment_id' => strtolower($paymentId), 'provider' => 'yookassa', 'method' => $method, 'save_payment_method' => $savePaymentMethod], JSON_THROW_ON_ERROR));
             $connection->executeQuery('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [$idempotencyKey]);
             if ($connection->fetchOne('SELECT scope FROM commercial.idempotency_keys WHERE idempotency_key = ? AND scope <> ? LIMIT 1', [$idempotencyKey, $scope]) !== false) {
                 throw new \DomainException('Idempotency key was reused for a different request.');
@@ -136,13 +140,13 @@ final readonly class StartYooKassaPayment
             if ($record['status'] === 'completed' && is_string($record['result_reference'])) {
                 $attemptId = $record['result_reference'];
             } else {
-                $begun = $this->attempts->beginOrReuse($paymentId, $providerAccount->id, 'sbp', $correlationId);
+                $begun = $this->attempts->beginOrReuse($paymentId, $providerAccount->id, $method, $correlationId);
                 $attemptId = $begun['attempt_id'];
                 $connection->executeStatement("UPDATE commercial.idempotency_keys SET status = 'completed', result_reference = ? WHERE scope = ? AND idempotency_key = ?", [$attemptId, $scope, $idempotencyKey]);
             }
             $attempt = $connection->fetchAssociative('SELECT id, payment_id, provider_account_id, method_type, provider_request_key, provider_payment_id, status, created_at FROM commercial.payment_attempts WHERE id = ?', [$attemptId]);
             if ($attempt === false || $attempt['payment_id'] !== $paymentId || $attempt['provider_account_id'] !== $providerAccount->id
-                || $attempt['method_type'] !== 'sbp' || $attempt['status'] !== 'pending') {
+                || $attempt['method_type'] !== $method || $attempt['status'] !== 'pending') {
                 throw new \DomainException('Idempotent checkout result is no longer pending.');
             }
 

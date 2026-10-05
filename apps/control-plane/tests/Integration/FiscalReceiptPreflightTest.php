@@ -18,7 +18,7 @@ final class FiscalReceiptPreflightTest extends PaymentTestCase
 
         $this->expectException(\DomainException::class);
         try {
-            $this->yooKassaCheckout($gateway)->start($owner, $account, $payment['id'], 'yookassa', 'sbp', 'missing-email', $this->uuid());
+            $this->yooKassaCheckout($gateway)->start($owner, $account, $payment['id'], 'yookassa', 'sbp', false, 'missing-email', $this->uuid());
         } finally {
             self::assertCount(0, $gateway->createCalls);
         }
@@ -33,7 +33,7 @@ final class FiscalReceiptPreflightTest extends PaymentTestCase
 
         $this->expectException(\DomainException::class);
         try {
-            $this->yooKassaCheckout($gateway)->start($owner, $account, $payment['id'], 'yookassa', 'sbp', 'disabled-fiscal', $this->uuid());
+            $this->yooKassaCheckout($gateway)->start($owner, $account, $payment['id'], 'yookassa', 'sbp', false, 'disabled-fiscal', $this->uuid());
         } finally {
             self::assertCount(0, $gateway->createCalls);
         }

@@ -15,6 +15,7 @@ use ControlPlane\Payment\Application\CompletePaymentAttempt;
 use ControlPlane\Payment\Application\CreatePayment;
 use ControlPlane\Payment\Application\GetPayment;
 use ControlPlane\Payment\Application\ProcessAuthoritativeProviderPayment;
+use ControlPlane\Payment\Application\RecordSavedPaymentMethod;
 use ControlPlane\Payment\Application\ReceiveYooKassaWebhook;
 use ControlPlane\Payment\Application\ReconcileYooKassaPayments;
 use ControlPlane\Payment\Application\SettlePayment;
@@ -89,7 +90,7 @@ abstract class PaymentTestCase extends InvoiceTestCase
 
     protected function authoritativeProcessor(?FiscalReceiptProviderGateway $gateway = null): ProcessAuthoritativeProviderPayment
     {
-        return new ProcessAuthoritativeProviderPayment($this->connection, $this->attemptBinder(), $this->attemptCompleter(), $this->receiptSubmission($gateway));
+        return new ProcessAuthoritativeProviderPayment($this->connection, $this->attemptBinder(), $this->attemptCompleter(), $this->receiptSubmission($gateway), new RecordSavedPaymentMethod($this->connection));
     }
 
     protected function receiptSubmission(?FiscalReceiptProviderGateway $gateway = null): SubmitYooKassaReceipt

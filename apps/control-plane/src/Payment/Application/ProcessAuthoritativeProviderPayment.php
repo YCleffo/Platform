@@ -19,6 +19,7 @@ final readonly class ProcessAuthoritativeProviderPayment
         private BindPaymentAttemptProviderReference $binder,
         private CompletePaymentAttempt $completer,
         private SubmitYooKassaReceipt $receipts,
+        private RecordSavedPaymentMethod $savedMethods,
     ) {
     }
 
@@ -63,6 +64,7 @@ SQL, [$attemptId]);
                 throw new \DomainException('Provider payment is not authoritatively settled.');
             }
             $this->completer->complete($attemptId, 'succeeded', null, $providerPayment->capturedAt, $correlationId);
+            $this->savedMethods->record($account, $providerPayment, $attemptId);
             try {
                 $this->receipts->submitForPayment($paymentId, $correlationId);
             } catch (PaymentProviderException|\DomainException) {

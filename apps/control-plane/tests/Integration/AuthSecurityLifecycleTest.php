@@ -20,6 +20,15 @@ final class AuthSecurityLifecycleTest extends DatabaseTestCase
         try{$security->verifyMfaLogin((string)$pending['challenge_token'],$this->totp($secret,time()),null,'192.0.2.2','test',$correlation);self::fail('Consumed challenge reused.');}catch(AuthFailure $e){self::assertSame('mfa_challenge_invalid',$e->errorCode);}
         self::assertNotSame($session['refresh_token'],$rotated['refresh_token']);
     }
+
+    public function testInvalidMfaAttemptsPersistAndTerminallyInvalidateChallenge(): void
+    {
+        $auth=$this->authService();$security=$this->authSecurityService();$correlation=$this->uuid();$email='attempts-'.bin2hex(random_bytes(5)).'@example.test';$registered=$auth->register($email,'correct horse battery staple','192.0.2.5',$correlation);$auth->verifyEmail($registered['verification_token'],$correlation);
+        $factor=$this->uuid();$cipher=new \ControlPlane\Identity\Security\TotpSecretCipher('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');$this->connection->executeStatement("INSERT INTO commercial.control_user_totp_factors (id,control_user_id,secret_ciphertext,key_version,status,confirmed_at) VALUES (?, ?, decode(?,'hex'),'v1','active',now())",[$factor,$registered['user_id'],bin2hex($cipher->encrypt('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'))]);
+        $pending=$security->login($email,'correct horse battery staple','192.0.2.5','test',$correlation);
+        for($i=1;$i<=8;++$i){try{$security->verifyMfaLogin((string)$pending['challenge_token'],'000000',null,'192.0.2.5','test',$correlation);self::fail('Invalid code accepted.');}catch(AuthFailure $e){self::assertSame('mfa_code_invalid',$e->errorCode);}}
+        $row=$this->connection->fetchAssociative('SELECT attempts,invalidated_at FROM commercial.control_auth_challenges WHERE token_hash=decode(?,\'hex\')',[hash('sha256',$pending['challenge_token'])]);self::assertSame(8,(int)$row['attempts']);self::assertNotNull($row['invalidated_at']);self::assertSame(8,(int)$this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='control_mfa.login_denied' AND outcome='denied'"));
+    }
     public function testPasswordResetUsesHashOnlyArtifactsAndRevokesSessions(): void
     {
         $auth=$this->authService(); $security=$this->authSecurityService(); $id=$this->uuid();

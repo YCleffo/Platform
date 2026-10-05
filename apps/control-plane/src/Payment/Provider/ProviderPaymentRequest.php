@@ -14,6 +14,9 @@ final readonly class ProviderPaymentRequest
         public string $paymentId,
         public string $attemptId,
         public string $invoiceId,
+        public string $methodType = 'sbp',
+        public bool $savePaymentMethod = false,
+        public ?string $providerPaymentMethodId = null,
     ) {
     }
 }

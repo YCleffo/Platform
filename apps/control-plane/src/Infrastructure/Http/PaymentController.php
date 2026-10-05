@@ -9,6 +9,7 @@ use ControlPlane\Identity\Application\AuthSecurityService;
 use ControlPlane\Fiscalization\Application\GetReceipt;
 use ControlPlane\Payment\Application\CreatePayment;
 use ControlPlane\Payment\Application\GetPayment;
+use ControlPlane\Payment\Application\ManageSavedPaymentMethods;
 use ControlPlane\Payment\Application\StartYooKassaPayment;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,6 +22,7 @@ final class PaymentController extends AbstractController
     public function __construct(
         private readonly CreatePayment $creator,
         private readonly GetPayment $reader,
+        private readonly ManageSavedPaymentMethods $savedMethods,
         private readonly StartYooKassaPayment $checkout,
         private readonly GetReceipt $receipts,
         private readonly AuthSecurityService $authSecurity,
@@ -47,6 +49,31 @@ final class PaymentController extends AbstractController
         return new JsonResponse($this->reader->get($this->user()->id(), $accountId, $paymentId));
     }
 
+    #[Route('/api/control/accounts/{accountId}/payment-methods', name: 'control_saved_payment_method_list', methods: ['GET'])]
+    public function listSavedMethods(string $accountId): JsonResponse
+    {
+        return new JsonResponse(['items' => $this->savedMethods->list($this->user()->id(), $accountId)]);
+    }
+
+    #[Route('/api/control/accounts/{accountId}/payment-methods/{methodId}/default', name: 'control_saved_payment_method_default', methods: ['POST'])]
+    public function setDefaultSavedMethod(string $accountId, string $methodId, Request $request): JsonResponse
+    {
+        $this->authSecurity->requireSensitiveMfa($this->user());
+        ApiRequest::emptyObject($request);
+
+        return new JsonResponse($this->savedMethods->setDefault($this->user()->id(), $accountId, $methodId, ApiRequest::correlationId($request)));
+    }
+
+    #[Route('/api/control/accounts/{accountId}/payment-methods/{methodId}', name: 'control_saved_payment_method_disable', methods: ['DELETE'])]
+    public function disableSavedMethod(string $accountId, string $methodId, Request $request): Response
+    {
+        $this->authSecurity->requireSensitiveMfa($this->user());
+        ApiRequest::emptyObject($request);
+        $this->savedMethods->disable($this->user()->id(), $accountId, $methodId, ApiRequest::correlationId($request));
+
+        return new Response(null, Response::HTTP_NO_CONTENT);
+    }
+
     #[Route('/api/control/accounts/{accountId}/payments/{paymentId}/checkout', name: 'control_payment_checkout', methods: ['POST'])]
     public function checkout(string $accountId, string $paymentId, Request $request): JsonResponse
     {
@@ -58,9 +85,11 @@ final class PaymentController extends AbstractController
         $body = ApiRequest::json($request);
         $keys = array_keys($body);
         sort($keys);
-        if ($keys !== ['method', 'provider']) {
-            throw new \InvalidArgumentException('Only provider and method fields are accepted.');
+        if ($keys !== ['method', 'provider'] && $keys !== ['method', 'provider', 'save_payment_method']) {
+            throw new \InvalidArgumentException('Only provider, method and save_payment_method fields are accepted.');
         }
+        $save = $body['save_payment_method'] ?? false;
+        if (!is_bool($save)) throw new \InvalidArgumentException('save_payment_method must be boolean.');
 
         return new JsonResponse($this->checkout->start(
             $this->user()->id(),
@@ -68,6 +97,7 @@ final class PaymentController extends AbstractController
             $paymentId,
             ApiRequest::string($body, 'provider'),
             ApiRequest::string($body, 'method'),
+            $save,
             $key,
             ApiRequest::correlationId($request),
         ));

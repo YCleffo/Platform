@@ -92,6 +92,41 @@ final class YooKassaGatewayTest extends TestCase
         self::assertSame('2026-09-26T07:11:12+00:00', $payment->capturedAt?->format(DATE_ATOM));
     }
 
+    public function testCreatesBankCardCheckoutWithOnlyHostedProviderFields(): void
+    {
+        $client = new MockHttpClient(function (string $method, string $url, array $options): MockResponse {
+            self::assertSame('POST', $method);
+            self::assertSame('https://api.yookassa.ru/v3/payments', $url);
+            $body = json_decode((string) $options['body'], true, 16, JSON_THROW_ON_ERROR);
+            self::assertSame(['type' => 'bank_card'], $body['payment_method_data']);
+            self::assertTrue($body['save_payment_method']);
+            self::assertArrayNotHasKey('payment_method_id', $body);
+            self::assertArrayNotHasKey('card', $body);
+
+            return new MockResponse(json_encode($this->pendingResponse(), JSON_THROW_ON_ERROR));
+        });
+        $this->gateway($client)->createPayment($this->account(), new ProviderPaymentRequest(
+            1050, 'RUB', 'provider-request-key', 'Invoice invoice-id', 'payment-id', 'attempt-id', 'invoice-id', 'bank_card', true,
+        ));
+    }
+
+    public function testParsesOnlySafeSavedCardFields(): void
+    {
+        $response = $this->pendingResponse();
+        $response['payment_method'] = [
+            'id' => 'payment-method-1', 'type' => 'bank_card', 'saved' => true, 'title' => 'Bank card *1234', 'status' => 'active',
+            'card' => ['first6' => '424242', 'last4' => '1234', 'expiry_month' => '12', 'expiry_year' => '2030', 'card_type' => 'MasterCard'],
+        ];
+        $client = new MockHttpClient(new MockResponse(json_encode($response, JSON_THROW_ON_ERROR)));
+        $payment = $this->gateway($client)->getPayment($this->account(), 'yk-payment-1');
+
+        self::assertSame('payment-method-1', $payment->paymentMethod?->id);
+        self::assertSame('1234', $payment->paymentMethod?->last4);
+        self::assertSame(12, $payment->paymentMethod?->expiryMonth);
+        self::assertSame(2030, $payment->paymentMethod?->expiryYear);
+        self::assertStringNotContainsString('424242', json_encode($payment, JSON_THROW_ON_ERROR));
+    }
+
     public function testRejectsUnsupportedCurrencyBeforeNetwork(): void
     {
         $client = new MockHttpClient();

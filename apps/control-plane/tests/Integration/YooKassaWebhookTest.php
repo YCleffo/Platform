@@ -6,6 +6,7 @@ namespace ControlPlane\Tests\Integration;
 
 use ControlPlane\Payment\Provider\PaymentProviderException;
 use ControlPlane\Payment\Provider\ProviderPayment;
+use ControlPlane\Payment\Provider\ProviderPaymentMethod;
 use ControlPlane\Tests\Support\FakePaymentProviderGateway;
 
 final class YooKassaWebhookTest extends PaymentTestCase
@@ -56,6 +57,38 @@ final class YooKassaWebhookTest extends PaymentTestCase
         self::assertSame('pending', $this->connection->fetchOne('SELECT status FROM commercial.payment_attempts WHERE id = ?', [$attempt['attempt_id']]));
         self::assertSame('pending', $this->connection->fetchOne('SELECT status FROM commercial.payments WHERE id = ?', [$payment['id']]));
         self::assertSame('failed', $this->connection->fetchOne('SELECT status FROM commercial.payment_provider_events WHERE provider_account_id = ?', [$provider]));
+    }
+
+    public function testAuthoritativeSavedCardCreatesOneSafeAccountScopedMethod(): void
+    {
+        [$owner, $account, , , , , $invoice] = $this->issuedRubInvoiceContext('yk-saved-card');
+        $payment = $this->paymentCreator()->create($owner, $account, $invoice['id'], 'yk-saved-card-create', $this->uuid());
+        $provider = $this->yooKassaProviderAccount();
+        $attempt = $this->attemptBeginner()->begin($payment['id'], $provider, 'bank_card', $this->uuid());
+        $providerId = 'yk-saved-card-payment';
+        $this->attemptBinder()->bind($attempt['attempt_id'], $providerId);
+        $gateway = new FakePaymentProviderGateway();
+        $gateway->payments[$providerId] = new ProviderPayment(
+            $providerId, 'succeeded', true, 1000, 'RUB',
+            ['payment_id' => $payment['id'], 'attempt_id' => $attempt['attempt_id'], 'invoice_id' => $invoice['id']],
+            null, new \DateTimeImmutable('2026-09-26T12:00:00Z'),
+            new ProviderPaymentMethod('saved-card-1', 'bank_card', true, 'Bank card *1234', 'MasterCard', '1234', 12, 2030, 'active'),
+        );
+        $webhook = $this->yooKassaWebhook($gateway);
+        $raw = $this->webhookBody('payment.succeeded', $providerId);
+        $webhook->receive($raw, 'application/json', $this->uuid());
+        $webhook->receive($raw, 'application/json', $this->uuid());
+
+        $method = $this->connection->fetchAssociative('SELECT method_type, display_title, card_brand, last4, expiry_month, expiry_year, is_default FROM commercial.saved_payment_methods WHERE commercial_account_id = ?', [$account]);
+        self::assertIsArray($method);
+        self::assertSame('bank_card', $method['method_type']);
+        self::assertSame('1234', $method['last4']);
+        self::assertSame(12, (int) $method['expiry_month']);
+        self::assertSame(2030, (int) $method['expiry_year']);
+        self::assertTrue((bool) $method['is_default']);
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.saved_payment_methods WHERE commercial_account_id = ?', [$account]));
+        self::assertFalse($this->connection->fetchOne("SELECT 1 FROM commercial.saved_payment_methods WHERE provider_method_reference LIKE '%saved-card-1%'") === false);
+        $this->expectDatabaseRejection(fn () => $this->connection->executeStatement('DELETE FROM commercial.saved_payment_methods WHERE commercial_account_id = ?', [$account]));
     }
 
     public function testMoneyMismatchFailsClosedWithoutSettlement(): void

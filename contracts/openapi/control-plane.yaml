@@ -207,6 +207,23 @@ paths:
       parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
       requestBody: {$ref: '#/components/requestBodies/Checkout'}
       responses: {'200': {$ref: '#/components/responses/Object'}, '503': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/payment-methods:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    get:
+      operationId: listSavedPaymentMethods
+      responses: {'200': {$ref: '#/components/responses/Object'}}
+  /api/control/accounts/{accountId}/payment-methods/{methodId}/default:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {name: methodId, in: path, required: true, schema: {type: string, format: uuid}}]
+    post:
+      operationId: setDefaultSavedPaymentMethod
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/payment-methods/{methodId}:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {name: methodId, in: path, required: true, schema: {type: string, format: uuid}}]
+    delete:
+      operationId: disableSavedPaymentMethod
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'204': {description: Saved payment method disabled}, '404': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/payments/{paymentId}/receipt:
     parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/PaymentId'}]
     get:
@@ -269,7 +286,21 @@ components:
     Reauthenticate: {required: true, content: {application/json: {schema: {type: object, required: [password], properties: {password: {type: string, format: password}, code: {type: [string, 'null']}, recovery_code: {type: [string, 'null']}}}}}}
     TotpConfirm: {required: true, content: {application/json: {schema: {type: object, required: [factor_id, code], properties: {factor_id: {type: string, format: uuid}, code: {type: string}}}}}}
     MfaVerify: {required: true, content: {application/json: {schema: {type: object, required: [challenge_token], properties: {challenge_token: {type: string}, code: {type: [string, 'null']}, recovery_code: {type: [string, 'null']}}}}}}
-    Checkout: {required: true, content: {application/json: {schema: {type: object, required: [provider, method], properties: {provider: {const: yookassa}, method: {const: sbp}}}}}}
+    Checkout:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [provider, method]
+            properties:
+              provider: {const: yookassa}
+              method: {type: string, enum: [sbp, bank_card]}
+              save_payment_method:
+                type: boolean
+                default: false
+                description: Applies only to bank_card. Card entry remains on the provider-hosted checkout page; raw card data is never accepted by this API.
   responses:
     Object: {description: Success, content: {application/json: {schema: {type: object}}}}
     Tokens: {description: Session tokens, content: {application/json: {schema: {type: object, required: [access_token, refresh_token], properties: {access_token: {type: string}, refresh_token: {type: string}}}}}}

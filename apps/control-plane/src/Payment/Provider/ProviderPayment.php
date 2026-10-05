@@ -16,6 +16,7 @@ final readonly class ProviderPayment
         public array $metadata,
         public ?string $confirmationUrl,
         public ?\DateTimeImmutable $capturedAt,
+        public ?ProviderPaymentMethod $paymentMethod = null,
     ) {
     }
 }

@@ -12,6 +12,7 @@ use ControlPlane\Payment\Provider\PaymentProviderSecretResolver;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPayment;
 use ControlPlane\Payment\Provider\ProviderPaymentRequest;
+use ControlPlane\Payment\Provider\ProviderPaymentMethod;
 use ControlPlane\Shared\Domain\IdentifierPolicy;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -36,17 +37,21 @@ final readonly class YooKassaGateway implements PaymentProviderGateway
     {
         $this->validateAccount($account);
         if ($request->currency !== 'RUB') {
-            throw new \DomainException('YooKassa SBP supports RUB only.');
+            throw new \DomainException('YooKassa checkout supports RUB only.');
         }
         if ($request->amountMinor <= 0) {
             throw new \DomainException('YooKassa checkout requires a positive payment amount.');
         }
         $requestKey = IdentifierPolicy::opaqueKey($request->providerRequestKey);
+        if (!in_array($request->methodType, ['sbp', 'bank_card'], true)) {
+            throw new \DomainException('Unsupported YooKassa payment method.');
+        }
+        if ($request->savePaymentMethod && $request->methodType !== 'bank_card') {
+            throw new \DomainException('Only bank cards can be saved.');
+        }
         $payload = [
             'amount' => ['value' => self::formatMinor($request->amountMinor), 'currency' => 'RUB'],
             'capture' => true,
-            'payment_method_data' => ['type' => 'sbp'],
-            'confirmation' => ['type' => 'redirect', 'return_url' => $this->returnUrl],
             'description' => $request->description,
             'metadata' => [
                 'payment_id' => $request->paymentId,
@@ -54,6 +59,13 @@ final readonly class YooKassaGateway implements PaymentProviderGateway
                 'invoice_id' => $request->invoiceId,
             ],
         ];
+        if ($request->providerPaymentMethodId !== null) {
+            $payload['payment_method_id'] = IdentifierPolicy::opaqueKey($request->providerPaymentMethodId);
+        } else {
+            $payload['payment_method_data'] = ['type' => $request->methodType];
+            $payload['confirmation'] = ['type' => 'redirect', 'return_url' => $this->returnUrl];
+            if ($request->savePaymentMethod) $payload['save_payment_method'] = true;
+        }
 
         return $this->request('POST', self::API_BASE . '/payments', $account, [
             'headers' => ['Idempotence-Key' => $requestKey],
@@ -182,7 +194,7 @@ final readonly class YooKassaGateway implements PaymentProviderGateway
                 throw new \UnexpectedValueException('Invalid provider confirmation URL.');
             }
         }
-        if (($create || $status === 'pending') && $status === 'pending' && $confirmationUrl === null) {
+        if ($create && $status === 'pending' && $confirmationUrl === null && ($data['payment_method'] ?? null) === null) {
             throw new \UnexpectedValueException('Pending provider payment has no confirmation URL.');
         }
         $capturedAt = null;
@@ -205,6 +217,45 @@ final readonly class YooKassaGateway implements PaymentProviderGateway
             self::metadata($data['metadata']),
             $confirmationUrl,
             $capturedAt,
+            self::paymentMethod($data['payment_method'] ?? null),
         );
+    }
+
+    private static function paymentMethod(mixed $method): ?ProviderPaymentMethod
+    {
+        if (!is_array($method) || !is_string($method['id'] ?? null) || !is_string($method['type'] ?? null) || !is_bool($method['saved'] ?? null)) {
+            return null;
+        }
+        $card = is_array($method['card'] ?? null) ? $method['card'] : [];
+        $last4 = $card['last4'] ?? null;
+        $month = self::cardInteger($card['expiry_month'] ?? null);
+        $year = self::cardInteger($card['expiry_year'] ?? null);
+        if (($last4 !== null && (!is_string($last4) || preg_match('/\A[0-9]{4}\z/D', $last4) !== 1))
+            || ($month !== null && ($month < 1 || $month > 12))
+            || ($year !== null && ($year < 2000 || $year > 2200))
+            || (($month === null) !== ($year === null))) {
+            throw new \UnexpectedValueException('Invalid provider payment method.');
+        }
+
+        return new ProviderPaymentMethod(
+            IdentifierPolicy::opaqueKey($method['id']),
+            $method['type'],
+            $method['saved'],
+            is_string($method['title'] ?? null) ? $method['title'] : null,
+            is_string($card['card_type'] ?? null) ? $card['card_type'] : null,
+            $last4,
+            $month,
+            $year,
+            is_string($method['status'] ?? null) ? $method['status'] : null,
+        );
+    }
+
+    private static function cardInteger(mixed $value): ?int
+    {
+        if ($value === null) return null;
+        if (is_int($value)) return $value;
+        if (is_string($value) && preg_match('/\A(?:0|[1-9][0-9]*)\z/D', $value) === 1) return (int) $value;
+
+        throw new \UnexpectedValueException('Invalid provider payment method.');
     }
 }
