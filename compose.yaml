@@ -882,6 +882,7 @@ services:
     volumes:
       - ./apps/backend:/backend:ro
       - cross_plane_backend_vendor:/backend/vendor
+      - ./contracts/openapi:/contracts:ro
     depends_on:
       control-postgres-test:
         condition: service_healthy

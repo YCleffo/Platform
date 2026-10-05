@@ -8,6 +8,16 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /health/live:
+    get:
+      security: []
+      operationId: healthLive
+      responses: {'200': {description: Process is live, content: {application/json: {schema: {$ref: '#/components/schemas/Health'}}}}}
+  /health/ready:
+    get:
+      security: []
+      operationId: healthReady
+      responses: {'200': {description: Dependencies are ready, content: {application/json: {schema: {$ref: '#/components/schemas/Health'}}}}, '503': {description: Dependencies are not ready, content: {application/json: {schema: {$ref: '#/components/schemas/Health'}}}}}
   /health:
     get:
       security: []
@@ -263,9 +273,61 @@ paths:
       description: Hash-only inbox. Notification data is never financial proof; payment/refund state is authoritatively re-fetched.
       requestBody: {$ref: '#/components/requestBodies/Object'}
       responses: {'200': {$ref: '#/components/responses/Object'}, '503': {$ref: '#/components/responses/Error'}}
+  /api/control/privacy/me/export:
+    get:
+      operationId: exportMyPersonalData
+      description: Returns the authenticated Control Plane user's export. Response is no-store.
+      responses: {'200': {$ref: '#/components/responses/Object'}, '401': {$ref: '#/components/responses/Error'}}
+  /api/control/privacy/operator/requests/intake:
+    post:
+      operationId: intakePrivacySubjectRequest
+      requestBody: {$ref: '#/components/requestBodies/PrivacyRequestIntake'}
+      responses: {'201': {$ref: '#/components/responses/Object'}, '400': {$ref: '#/components/responses/Error'}, '401': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}, '422': {$ref: '#/components/responses/Error'}}
+  /api/control/privacy/operator/requests/{id}/resolve:
+    parameters: [{$ref: '#/components/parameters/PrivacyRequestId'}]
+    post:
+      operationId: resolvePrivacySubjectRequest
+      requestBody: {$ref: '#/components/requestBodies/PrivacyRequestResolution'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '400': {$ref: '#/components/responses/Error'}, '401': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}, '422': {$ref: '#/components/responses/Error'}}
+  /api/control/privacy/operator/incidents:
+    post:
+      operationId: detectPrivacyIncident
+      requestBody: {$ref: '#/components/requestBodies/PrivacyIncidentDetect'}
+      responses: {'201': {$ref: '#/components/responses/Object'}, '400': {$ref: '#/components/responses/Error'}, '401': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}, '422': {$ref: '#/components/responses/Error'}}
+  /api/control/privacy/operator/incidents/{id}/events:
+    parameters: [{$ref: '#/components/parameters/PrivacyIncidentId'}]
+    post:
+      operationId: recordPrivacyIncidentEvent
+      requestBody: {$ref: '#/components/requestBodies/PrivacyIncidentEvent'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '400': {$ref: '#/components/responses/Error'}, '401': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}, '422': {$ref: '#/components/responses/Error'}}
+  /api/control/privacy/operator/incidents/{id}/close:
+    parameters: [{$ref: '#/components/parameters/PrivacyIncidentId'}]
+    post:
+      operationId: closePrivacyIncident
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '400': {$ref: '#/components/responses/Error'}, '401': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}, '422': {$ref: '#/components/responses/Error'}}
+  /api/m2m/deployment/status:
+    post:
+      security: [{serviceCredential: []}]
+      operationId: reportDeploymentStatus
+      requestBody: {$ref: '#/components/requestBodies/DeploymentStatus'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '401': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}, '422': {$ref: '#/components/responses/Error'}}
+  /api/m2m/entitlements/latest:
+    get:
+      security: [{serviceCredential: []}]
+      operationId: getLatestEntitlement
+      responses: {'200': {$ref: '#/components/responses/Entitlement'}, '401': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/m2m/usage:
+    post:
+      security: [{serviceCredential: []}]
+      operationId: ingestDeploymentUsage
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {$ref: '#/components/requestBodies/UsageIngest'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '401': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}, '413': {$ref: '#/components/responses/Error'}, '422': {$ref: '#/components/responses/Error'}}
 components:
   securitySchemes:
     bearerAuth: {type: http, scheme: bearer}
+    serviceCredential: {type: apiKey, in: header, name: Authorization, description: 'Service credential in the form Service credentialId.credentialSecret.'}
   parameters:
     IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 1, maxLength: 200}}
     AccountId: {name: accountId, in: path, required: true, schema: {type: string, format: uuid}}
@@ -275,6 +337,8 @@ components:
     PaymentId: {name: paymentId, in: path, required: true, schema: {type: string, format: uuid}}
     RefundId: {name: refundId, in: path, required: true, schema: {type: string, format: uuid}}
     SessionId: {name: sessionId, in: path, required: true, schema: {type: string, format: uuid}}
+    PrivacyRequestId: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    PrivacyIncidentId: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
   requestBodies:
     Object: {required: true, content: {application/json: {schema: {type: object}}}}
     Email: {required: true, content: {application/json: {schema: {type: object, required: [email], properties: {email: {type: string, format: email}}}}}}
@@ -301,6 +365,12 @@ components:
                 type: boolean
                 default: false
                 description: Applies only to bank_card. Card entry remains on the provider-hosted checkout page; raw card data is never accepted by this API.
+    PrivacyRequestIntake: {required: true, content: {application/json: {schema: {type: object, additionalProperties: true, description: 'Verified-subject request intake fields accepted by the operator workflow.'}}}}
+    PrivacyRequestResolution: {required: true, content: {application/json: {schema: {type: object, properties: {contactName: {type: [string, 'null']}, contactEmail: {type: [string, 'null'], format: email}, responseEvidenceReference: {type: [string, 'null']}}}}}}
+    PrivacyIncidentDetect: {required: true, content: {application/json: {schema: {type: object, required: [detectedAt, categories], properties: {detectedAt: {type: string, format: date-time}, categories: {type: array, items: {type: string}}, estimatedSubjects: {type: integer, minimum: 0}}}}}}
+    PrivacyIncidentEvent: {required: true, content: {application/json: {schema: {type: object, required: [eventCode, evidenceReference], properties: {eventCode: {type: string}, evidenceReference: {type: string}}}}}}
+    DeploymentStatus: {required: true, content: {application/json: {schema: {oneOf: [{type: object, required: [status, entitlementSequence], properties: {status: {const: ready}, entitlementSequence: {type: integer, minimum: 0}}}, {type: object, required: [status, errorCode], properties: {status: {const: failed}, errorCode: {type: string}}}]}}}}
+    UsageIngest: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [featureCode, delta], properties: {featureCode: {type: string}, delta: {type: integer, not: {const: 0}}}}}}}
   responses:
     Object: {description: Success, content: {application/json: {schema: {type: object}}}}
     Tokens: {description: Session tokens, content: {application/json: {schema: {type: object, required: [access_token, refresh_token], properties: {access_token: {type: string}, refresh_token: {type: string}}}}}}
@@ -312,6 +382,7 @@ components:
     Payment: {description: Payment, content: {application/json: {schema: {$ref: '#/components/schemas/Payment'}}}}
     Refund: {description: Refund, content: {application/json: {schema: {$ref: '#/components/schemas/Refund'}}}}
     Receipt: {description: Sanitized fiscal receipt, content: {application/json: {schema: {$ref: '#/components/schemas/Receipt'}}}}
+    Entitlement: {description: Signed entitlement package for the authenticated deployment, content: {application/json: {schema: {type: object, required: [documentBase64, signatureBase64, keyId], properties: {documentBase64: {type: string}, signatureBase64: {type: string}, keyId: {type: string}}}}}}
     Error: {description: Sanitized error, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
   schemas:
     Health: {type: object, additionalProperties: false, required: [status], properties: {status: {type: string, enum: [ok, not_ready]}}}

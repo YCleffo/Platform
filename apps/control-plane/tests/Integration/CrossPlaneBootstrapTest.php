@@ -20,17 +20,18 @@ use ControlPlane\M2m\DeploymentCredentialService;
 use ControlPlane\M2m\DeploymentScopePolicy;
 use ControlPlane\M2m\DeploymentScopeRegistry;
 use Symfony\Component\HttpFoundation\Request;
+use PHPUnit\Framework\Attributes\Group;
 
+#[Group('cross-plane')]
 final class CrossPlaneBootstrapTest extends DatabaseTestCase
 {
     public function testStartInitSyncReadyAcrossIsolatedDatabases(): void
     {
-        $required = getenv('CROSS_PLANE_REQUIRED') === '1';
-        if (!$required) {
-            self::markTestSkipped('Cross-plane test requires the mounted Backend and isolated Core test DB.');
+        if (getenv('CROSS_PLANE_REQUIRED') !== '1') {
+            self::fail('Required cross-plane test prerequisite is missing: CROSS_PLANE_REQUIRED=1.');
         }
         if (getenv('PHASE47_CROSS_PLANE') !== '1') {
-            self::fail('CROSS_PLANE_REQUIRED=1 requires PHASE47_CROSS_PLANE=1.');
+            self::fail('Required cross-plane test prerequisite is missing: PHASE47_CROSS_PLANE=1.');
         }
         if (!is_file('/backend/vendor/autoload.php')) {
             self::fail('Required cross-plane prerequisite is missing: /backend/vendor/autoload.php.');

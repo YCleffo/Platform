@@ -1,0 +1,22 @@
+{
+  "consentDefinitions": [{"code":"synthetic.consent","currentDocumentVersion":"v1","currentDocumentSha256Hex":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","withdrawable":true,"purposeCode":"synthetic.purpose"}],
+  "privacyDistributionConsentDefinitions": [],
+  "processingPurposeDefinitions": [{"code":"synthetic.purpose","legalBasisCode":"consent","requiresConsent":true,"representativeAllowed":false,"dataCategories":["contact"],"subjectCategories":["person"],"retentionPolicyCode":"synthetic.retention","processingRole":"operator","description":"Synthetic CI-only contact-processing purpose"}],
+  "dataCategoryDefinitions": [{"code":"contact"}],
+  "subjectCategoryDefinitions": [{"code":"person"}],
+  "retentionPolicyDefinitions": [{"code":"synthetic.retention","trigger":"purpose_completed","duration":30,"action":"delete","durationUnit":"calendar_days"}],
+  "privacyProcessingRoleDefinitions": [{"purposeCode":"synthetic.purpose","platformRole":"operator","operatorReference":"synthetic-ci:operator","instructionReference":null,"dataCategories":["contact"],"permittedOperations":["collect"],"securityRequirementsConfirmed":true,"incidentNotificationObligation":true,"deletionOrReturnObligation":"delete"}],
+  "privacyProcessingInformationDefinitions": [{"purposeCode":"synthetic.purpose","methodCodes":["automated"],"sourceCodes":["subject"],"rightsProcedureReference":"synthetic-ci:rights","complianceMethodCodes":["access_control"]}],
+  "privacyProcessorDefinitions": [],
+  "privacyRecipientDefinitions": [],
+  "privacyTransferDefinitions": [],
+  "privacyBusinessCalendar": {"coverageFrom":"2026-01-01","coverageUntil":"2027-12-31","weekends":[6,7],"nonWorkingDates":[],"workingOverrideDates":[],"sourceReference":"synthetic-ci:calendar","verifiedAt":"2026-09-01T00:00:00Z"},
+  "privacyOperatorIdentity": {"name":"Synthetic CI Operator","address":"Synthetic CI Address"},
+  "privacyOperatorNotification": {"required":true,"registeredPurposes":[]},
+  "privacySecurityReferences": {},
+  "privacyDataResidency": {},
+  "privacyDestructionEvidence": {},
+  "privacyLegalEvidence": {},
+  "privacyIncidentDeadlines": {},
+  "privacyCleanup": {}
+}

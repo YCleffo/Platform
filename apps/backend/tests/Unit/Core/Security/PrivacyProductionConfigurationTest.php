@@ -12,8 +12,10 @@ final class PrivacyProductionConfigurationTest extends TestCase
 {
     public function testValidConfigurationLoads(): void
     {
-        $loaded = $this->load($this->configuration());
-        self::assertSame('production.purpose', $loaded['processingPurposeDefinitions'][0]->code);
+        $fixture = dirname(__DIR__, 3) . '/Fixtures/privacy/synthetic-production-policy.json';
+        self::assertFileExists($fixture);
+        $loaded = (new PrivacyDeploymentConfigLoader())->load($fixture);
+        self::assertSame('synthetic.purpose', $loaded['processingPurposeDefinitions'][0]->code);
     }
 
     /** @dataProvider invalidConfigurations */
@@ -63,6 +65,9 @@ final class PrivacyProductionConfigurationTest extends TestCase
         }];
         yield 'unresolved placeholder' => ['unresolved template placeholder', static function (array &$c): void {
             $c['privacyOperatorIdentity']['name'] = '<operator-name>';
+        }];
+        yield 'missing business-calendar coverage' => ['Invalid business calendar field', static function (array &$c): void {
+            unset($c['privacyBusinessCalendar']['coverageUntil']);
         }];
     }
 

@@ -7,6 +7,7 @@ namespace ControlPlane\Tests\Unit;
 use ControlPlane\Identity\Security\TokenCodec;
 use ControlPlane\Infrastructure\Console\ProcessOutboxEmailCommand;
 use ControlPlane\Infrastructure\Outbox\EmailTransport;
+use ControlPlane\Infrastructure\Outbox\ControlEmailOutboxDispatcher;
 use ControlPlane\Infrastructure\Outbox\VerificationEmailProcessor;
 use ControlPlane\Infrastructure\Scheduler\BackgroundJobStatusRecorder;
 use Doctrine\DBAL\Connection;
@@ -28,7 +29,7 @@ final class OutboxWorkerStatusTest extends TestCase
         $processor = new VerificationEmailProcessor($db,
             new TokenCodec(str_repeat('x', 40)), $this->createMock(EmailTransport::class),
             'https://platform.example/verify', 'platform.example');
-        $tester = new CommandTester(new ProcessOutboxEmailCommand($processor,
+        $tester = new CommandTester(new ProcessOutboxEmailCommand(new ControlEmailOutboxDispatcher([$processor]),
             new BackgroundJobStatusRecorder($db)));
         self::assertSame(0, $tester->execute([]));
         self::assertStringContainsString('0 email event', $tester->getDisplay());
@@ -52,7 +53,7 @@ final class OutboxWorkerStatusTest extends TestCase
         $processor = new VerificationEmailProcessor($db,
             new TokenCodec(str_repeat('x', 40)), $this->createMock(EmailTransport::class),
             'https://platform.example/verify', 'platform.example');
-        $tester = new CommandTester(new ProcessOutboxEmailCommand($processor,
+        $tester = new CommandTester(new ProcessOutboxEmailCommand(new ControlEmailOutboxDispatcher([$processor]),
             new BackgroundJobStatusRecorder($db)));
         self::assertSame(1, $tester->execute([]));
         self::assertSame(['control_outbox_worker', 'outbox_batch_failed'], $writes[1][1]);

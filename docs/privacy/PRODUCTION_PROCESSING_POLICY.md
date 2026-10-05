@@ -2,6 +2,8 @@
 
 This document describes the machine-readable deployment contract. The authoritative file is the JSON path in `PRIVACY_CONFIG_FILE`; the loader rejects incomplete files and template sentinel values. The complete shape is [privacy-deployment.example.json](../../docs/privacy-deployment.example.json).
 
+The versioned example describes shape only. `apps/backend/tests/Fixtures/privacy/synthetic-production-policy.json` is a deliberately synthetic CI loader fixture. Neither is a production policy or legal evidence. The real operator-managed `deployment/privacy/deployment.json` remains outside Git and must be supplied through the deployment secret/configuration boundary.
+
 ## Repository-defined facts
 
 The application already defines the vocabulary and behaviour for data categories, subject categories, purpose codes, legal-basis codes, processing roles, retention actions/units, processor and recipient declarations, transfer decisions, distribution-consent rules, legal holds, restriction, erasure, anonymization and audit evidence. Loaded definitions are passed into the existing registries; services do not contain a second policy.
