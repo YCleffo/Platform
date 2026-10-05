@@ -2,6 +2,8 @@ FROM platform-control-plane-test:latest AS core-deps
 USER root
 WORKDIR /backend
 COPY apps/backend/composer.json apps/backend/composer.lock ./
+COPY apps/backend/config ./config
+COPY apps/backend/src ./src
 RUN composer install --no-interaction --prefer-dist --no-progress --no-scripts
 
 FROM platform-control-plane-test:latest AS test

@@ -588,7 +588,8 @@ Table commercial.receipt_items {
   Note: 'Phase 3.9. Immutable invoice-line snapshot: all invoice lines for payment, allocated refund items for refund.'
 }
 
-// Planned after Phase 3.9: stored methods, plan switching and usage-based billing.
+// Saved account-scoped payment methods are implemented; automatic recurring execution,
+// dunning, plan switching and usage-based billing remain deferred.
 // Phase 4.1 Pass B5 privacy boundary (migration 021).
 Table commercial.privacy_holds {
   id uuid [pk]
@@ -630,7 +631,7 @@ Table commercial.payment_methods {
   method_type varchar(40) [not null, note: 'card/sbp/bank_transfer/...']
   provider_token varchar(300)
   status varchar(24) [not null]
-  Note: 'Planned. No PAN/CVV. SBP is a method capability.'
+  Note: 'Implemented account-scoped saved method metadata. No PAN/CVV; SBP is a method capability.'
 }
 
 Table commercial.service_credentials {

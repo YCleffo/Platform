@@ -23,11 +23,14 @@ final class PrivacyRegistryTest extends Unit
         new ProcessingPurposeRegistry([$definition], $categories, new RetentionPolicyRegistry());
     }
 
-    public function testDuplicateCategoriesAndInvalidCodesFail(): void
+    public function testConfiguredCategoriesReplaceDefaultsAndDuplicatesFail(): void
     {
+        $categories = new DataCategoryRegistry([new DataCategoryDefinition('identity')]);
+        self::assertNotNull($categories->get('identity'));
+        self::assertNull($categories->get('contact'));
         try {
-            new DataCategoryRegistry([new DataCategoryDefinition('identity')]);
-            self::fail('Duplicate core category was accepted.');
+            new DataCategoryRegistry([new DataCategoryDefinition('identity'), new DataCategoryDefinition('identity')]);
+            self::fail('Duplicate configured category was accepted.');
         } catch (InvalidArgumentException) {
             self::assertTrue(true);
         }

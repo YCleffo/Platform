@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Core\Security;
 use App\Core\Privacy\Infrastructure\PrivacyDeploymentConfigLoader;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Symfony\Component\Process\Process;
 
 final class PrivacyProductionConfigurationTest extends TestCase
 {
@@ -75,6 +76,20 @@ final class PrivacyProductionConfigurationTest extends TestCase
     {
         $this->expectExceptionMessage('PRIVACY_CONFIG_FILE is missing or unreadable');
         (new PrivacyDeploymentConfigLoader())->load('');
+    }
+
+    public function testProductionConsoleReadinessPassesWithSyntheticDeploymentPolicy(): void
+    {
+        $fixture = dirname(__DIR__, 3) . '/Fixtures/privacy/synthetic-production-policy.json';
+        $process = new Process(['php', 'yii', 'privacy/compliance/check'], dirname(__DIR__, 4), [
+            ...getenv(),
+            'APP_ENV' => 'prod',
+            'PRIVACY_CONFIG_FILE' => $fixture,
+        ]);
+        $process->run();
+
+        self::assertSame(0, $process->getExitCode(), $process->getErrorOutput());
+        self::assertStringContainsString('technical readiness PASS', $process->getOutput());
     }
 
     /** @return array<string, mixed> */

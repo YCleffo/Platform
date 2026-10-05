@@ -241,12 +241,13 @@ lifecycle; it does not create infrastructure. Control current-user/session APIs 
 commercial read models belong to Phase 4.1. M2M service credentials and usage
 ingestion and signed entitlement delivery are implemented.
 
-Plan switching, additional payment providers and methods, bank cards,
-automatic saved-method recurring charges, retry/dunning/collections, past-due/grace lifecycle,
-subscription upgrade/downgrade, usage/overage billing, DNS/TLS, custom domains, On-Prem activation,
-production infrastructure provisioning, automatic rollback, and production observability remain future phases.
-Hosted YooKassa SBP and bank-card checkout, authoritative account-scoped saved payment methods,
-Control Plane MFA/password reset/recent-auth, and deployment update foundations are implemented.
+Plan switching, additional payment providers and methods, retry/dunning/collections,
+past-due/grace lifecycle, subscription upgrade/downgrade, usage/overage billing,
+DNS/TLS, custom domains, On-Prem activation, production infrastructure provisioning,
+automatic rollback, and production observability remain future phases. Hosted YooKassa
+SBP and bank-card checkout, authoritative account-scoped saved payment methods,
+Control Plane MFA/password reset/recent-auth, and
+deployment update foundations are implemented.
 
 ## Application deployment bootstrap (Phase 4.7)
 

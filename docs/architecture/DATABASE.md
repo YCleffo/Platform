@@ -48,8 +48,9 @@ subscription lifecycle, effective entitlements, Usage Core, immutable invoice
 snapshots, provider-neutral Payment Core, YooKassa webhook inbox и Fiscalization
 Core; после Phase 4.0 схема содержит `commercial.* = 39` таблиц и 20 миграций. Реализованы
 payment provider metadata, payments, payment attempts, hash-only provider events,
-immutable payment/refund receipt obligations, renewal periods и refund item
-snapshots. Payment methods, plan switching и usage-based billing пока остаются целевыми сущностями. Подробности:
+immutable payment/refund receipt obligations, renewal periods, refund item
+snapshots and account-scoped saved payment methods. Automatic recurring charge
+execution, dunning, plan switching and usage/overage billing remain deferred. Подробности:
 `docs/architecture/COMMERCIAL_CONTROL_PLANE.md`.
 Её планы, платежи, подписки и реестр
 лицензий сюда не входят.

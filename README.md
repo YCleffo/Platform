@@ -665,8 +665,9 @@ durable Consent, notification policy, Redis Presence и privacy gate,
 self-service/forced password change и guarded custom roles. Versioned contracts
 для межпроцессных событий лежат в `contracts/events/`; Commercial outbox
 получил leased email worker для подтверждения адреса. Entitlement issuance,
-M2M credentials и provisioning остаются следующими фазами, несмотря на
-подготовленные таблицы и интерфейсы. Актуальная модель Core —
+deployment M2M credentials, signed entitlement delivery, and bounded local-dev/test
+provisioning foundations are implemented. Production/cloud provisioning remains a
+separate future phase. Актуальная модель Core —
 `docs/database/core/Core_v2.dbml`.
 Phase 4.1 foundation adds purpose and data-category registries, verified generic
 legal representation, subject/actor consent evidence, and a shared Audit payload

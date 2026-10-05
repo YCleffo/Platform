@@ -44,6 +44,12 @@ final class PrivacyReadinessTest extends TestCase
         self::assertContains('residency_evidence', $result['missingRequirements']);
         self::assertContains('rkn_notification_evidence', $result['missingRequirements']);
         self::assertContains('business_calendar_coverage', $result['missingRequirements']);
+        self::assertContains('destruction_evidence_3_years', $result['missingRequirements']);
+        self::assertContains('processors_recipients', $result['missingRequirements']);
+        self::assertContains('legal_destruction_package', $result['missingRequirements']);
+        self::assertContains('operator_identity', $result['missingRequirements']);
+        self::assertContains('security_matrix_references', $result['missingRequirements']);
+        self::assertContains('coverage_unavailable', $result['missingContributor']);
     }
 
     public function testExpiredProductionCalendarCoverageFails(): void

@@ -15,8 +15,10 @@ final class DataCategoryRegistry
     /** @param list<DataCategoryDefinition> $definitions */
     public function __construct(array $definitions = [])
     {
-        foreach (['identity', 'contact', 'authentication', 'security', 'device', 'network', 'approximate_location', 'preferences'] as $code) {
-            $this->add(new DataCategoryDefinition($code));
+        if ($definitions === []) {
+            foreach (['identity', 'contact', 'authentication', 'security', 'device', 'network', 'approximate_location', 'preferences'] as $code) {
+                $this->add(new DataCategoryDefinition($code));
+            }
         }
         foreach ($definitions as $definition) {
             $this->add($definition);
