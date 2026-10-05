@@ -27,7 +27,10 @@ final class ApiExceptionSubscriber implements EventSubscriberInterface
         [$status, $code, $message] = match (true) {
             $exception instanceof RateLimitExceeded => [Response::HTTP_TOO_MANY_REQUESTS, 'rate_limited', 'Too many requests.'],
             $exception instanceof PaymentProviderException => [$exception->retryable ? Response::HTTP_SERVICE_UNAVAILABLE : Response::HTTP_BAD_GATEWAY, $exception->errorCode, 'The payment provider request could not be completed.'],
-            $exception instanceof AuthFailure => [in_array($exception->errorCode, ['invalid_credentials', 'invalid_access_token'], true) || str_starts_with($exception->errorCode, 'refresh_') ? Response::HTTP_UNAUTHORIZED : Response::HTTP_BAD_REQUEST, $exception->errorCode, $exception->getMessage()],
+            $exception instanceof AuthFailure => [
+                in_array($exception->errorCode, ['invalid_credentials', 'invalid_access_token'], true) || str_starts_with($exception->errorCode, 'refresh_') ? Response::HTTP_UNAUTHORIZED
+                : (in_array($exception->errorCode, ['mfa_enrollment_required', 'recent_authentication_required', 'recent_mfa_required'], true) ? Response::HTTP_FORBIDDEN : Response::HTTP_BAD_REQUEST),
+                $exception->errorCode, $exception->getMessage()],
             $exception instanceof AccessDeniedException && ApiRequest::bearer($request) === '' => [Response::HTTP_UNAUTHORIZED, 'authentication_required', 'Authentication is required.'],
             $exception instanceof AccessDeniedException => [Response::HTTP_NOT_FOUND, 'resource_not_found', 'The requested resource was not found.'],
             $exception instanceof UniqueConstraintViolationException => [Response::HTTP_CONFLICT, 'conflict', 'The requested resource conflicts with existing data.'],

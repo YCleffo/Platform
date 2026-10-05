@@ -24,7 +24,7 @@ final class RefundController extends AbstractController
     #[Route('/api/control/accounts/{accountId}/payments/{paymentId}/refunds', name: 'control_refund_create', methods: ['POST'])]
     public function create(string $accountId, string $paymentId, Request $request): JsonResponse
     {
-        $this->authSecurity->requireRecent($this->user(), true);
+        $this->authSecurity->requireSensitiveMfa($this->user());
         $key = $request->headers->get('Idempotency-Key');
         if (!is_string($key)) {
             throw new \InvalidArgumentException('Idempotency-Key is required.');

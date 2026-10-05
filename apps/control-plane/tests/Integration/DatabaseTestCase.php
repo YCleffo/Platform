@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace ControlPlane\Tests\Integration;
 
 use ControlPlane\Identity\Application\AuthService;
+use ControlPlane\Identity\Application\AuthSecurityService;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
 use ControlPlane\Identity\Security\DatabaseRateLimiter;
 use ControlPlane\Identity\Security\TokenCodec;
+use ControlPlane\Identity\Security\TotpSecretCipher;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Tools\DsnParser;
@@ -86,6 +88,15 @@ abstract class DatabaseTestCase extends TestCase
             900,
             2592000,
         );
+    }
+
+    protected function authSecurityService(): AuthSecurityService
+    {
+        $tokens = new TokenCodec('test-only-control-token-secret-at-least-32-chars');
+        $factory = new PasswordHasherFactory([ControlUserPrincipal::class => ['algorithm' => 'auto']]);
+        return new AuthSecurityService($this->connection, new UserPasswordHasher($factory), $tokens,
+            new TotpSecretCipher('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='), new DatabaseRateLimiter($this->connection, $tokens),
+            $this->authService(), 3600, 300, 600, 900);
     }
 
     protected function expectDatabaseRejection(callable $operation): void

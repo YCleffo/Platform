@@ -38,7 +38,7 @@ paths:
       security: []
       operationId: login
       requestBody: {$ref: '#/components/requestBodies/EmailPassword'}
-      responses: {'200': {$ref: '#/components/responses/Tokens'}, '401': {$ref: '#/components/responses/Error'}}
+      responses: {'200': {$ref: '#/components/responses/LoginResult'}, '401': {$ref: '#/components/responses/Error'}}
   /api/control/auth/refresh:
     post:
       security: []
@@ -49,6 +49,74 @@ paths:
     post:
       operationId: logout
       responses: {'204': {description: Logged out}, '401': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/password/reset/request:
+    post:
+      security: []
+      operationId: requestPasswordReset
+      requestBody: {$ref: '#/components/requestBodies/Email'}
+      responses: {'202': {$ref: '#/components/responses/Object'}, '429': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/password/reset/confirm:
+    post:
+      security: []
+      operationId: confirmPasswordReset
+      requestBody: {$ref: '#/components/requestBodies/ResetConfirm'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '400': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/password/change:
+    post:
+      operationId: changePassword
+      requestBody: {$ref: '#/components/requestBodies/PasswordChange'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/reauthenticate:
+    post:
+      operationId: reauthenticate
+      description: MFA-enabled users must provide exactly one of code or recovery_code; non-MFA users provide neither.
+      requestBody: {$ref: '#/components/requestBodies/Reauthenticate'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '400': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/mfa/status:
+    get:
+      operationId: mfaStatus
+      responses: {'200': {$ref: '#/components/responses/MfaStatus'}}
+  /api/control/auth/mfa/totp/setup:
+    post:
+      operationId: beginTotpSetup
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'201': {$ref: '#/components/responses/Object'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/mfa/totp/confirm:
+    post:
+      operationId: confirmTotpSetup
+      requestBody: {$ref: '#/components/requestBodies/TotpConfirm'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '400': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/mfa/login/verify:
+    post:
+      security: []
+      operationId: verifyMfaLogin
+      description: Provide exactly one of code or recovery_code.
+      requestBody: {$ref: '#/components/requestBodies/MfaVerify'}
+      responses: {'200': {$ref: '#/components/responses/Tokens'}, '400': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/mfa/recovery-codes/regenerate:
+    post:
+      operationId: regenerateRecoveryCodes
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'200': {$ref: '#/components/responses/Object'}, '403': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/mfa/disable:
+    post:
+      operationId: disableMfa
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'204': {description: MFA disabled}, '403': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/sessions:
+    get:
+      operationId: listSessions
+      responses: {'200': {$ref: '#/components/responses/Sessions'}}
+  /api/control/auth/sessions/{sessionId}:
+    delete:
+      operationId: revokeSession
+      parameters: [{$ref: '#/components/parameters/SessionId'}]
+      responses: {'204': {description: Session revoked}, '403': {$ref: '#/components/responses/Error'}}
+  /api/control/auth/sessions/revoke-others:
+    post:
+      operationId: revokeOtherSessions
+      requestBody: {$ref: '#/components/requestBodies/Object'}
+      responses: {'204': {description: Other sessions revoked}, '403': {$ref: '#/components/responses/Error'}}
   /api/control/catalog/plans:
     get:
       security: []
@@ -189,16 +257,25 @@ components:
     InvoiceId: {name: invoiceId, in: path, required: true, schema: {type: string, format: uuid}}
     PaymentId: {name: paymentId, in: path, required: true, schema: {type: string, format: uuid}}
     RefundId: {name: refundId, in: path, required: true, schema: {type: string, format: uuid}}
+    SessionId: {name: sessionId, in: path, required: true, schema: {type: string, format: uuid}}
   requestBodies:
     Object: {required: true, content: {application/json: {schema: {type: object}}}}
     Email: {required: true, content: {application/json: {schema: {type: object, required: [email], properties: {email: {type: string, format: email}}}}}}
     EmailPassword: {required: true, content: {application/json: {schema: {type: object, required: [email, password], properties: {email: {type: string, format: email}, password: {type: string, format: password}}}}}}
     Token: {required: true, content: {application/json: {schema: {type: object, required: [token], properties: {token: {type: string}}}}}}
     RefreshToken: {required: true, content: {application/json: {schema: {type: object, required: [refresh_token], properties: {refresh_token: {type: string}}}}}}
+    ResetConfirm: {required: true, content: {application/json: {schema: {type: object, required: [token, password], properties: {token: {type: string}, password: {type: string, format: password}}}}}}
+    PasswordChange: {required: true, content: {application/json: {schema: {type: object, required: [current_password, password], properties: {current_password: {type: string, format: password}, password: {type: string, format: password}}}}}}
+    Reauthenticate: {required: true, content: {application/json: {schema: {type: object, required: [password], properties: {password: {type: string, format: password}, code: {type: [string, 'null']}, recovery_code: {type: [string, 'null']}}}}}}
+    TotpConfirm: {required: true, content: {application/json: {schema: {type: object, required: [factor_id, code], properties: {factor_id: {type: string, format: uuid}, code: {type: string}}}}}}
+    MfaVerify: {required: true, content: {application/json: {schema: {type: object, required: [challenge_token], properties: {challenge_token: {type: string}, code: {type: [string, 'null']}, recovery_code: {type: [string, 'null']}}}}}}
     Checkout: {required: true, content: {application/json: {schema: {type: object, required: [provider, method], properties: {provider: {const: yookassa}, method: {const: sbp}}}}}}
   responses:
     Object: {description: Success, content: {application/json: {schema: {type: object}}}}
     Tokens: {description: Session tokens, content: {application/json: {schema: {type: object, required: [access_token, refresh_token], properties: {access_token: {type: string}, refresh_token: {type: string}}}}}}
+    LoginResult: {description: Tokens or an MFA challenge, content: {application/json: {schema: {oneOf: [{$ref: '#/components/schemas/Tokens'}, {$ref: '#/components/schemas/MfaChallenge'}]}}}}
+    MfaStatus: {description: MFA state, content: {application/json: {schema: {$ref: '#/components/schemas/MfaStatus'}}}}
+    Sessions: {description: Owned sessions only, content: {application/json: {schema: {type: object, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/Session'}}}}}}}
     Subscription: {description: Subscription, content: {application/json: {schema: {$ref: '#/components/schemas/Subscription'}}}}
     Invoice: {description: Invoice, content: {application/json: {schema: {$ref: '#/components/schemas/Invoice'}}}}
     Payment: {description: Payment, content: {application/json: {schema: {$ref: '#/components/schemas/Payment'}}}}
@@ -208,6 +285,10 @@ components:
   schemas:
     Health: {type: object, additionalProperties: false, required: [status], properties: {status: {type: string, enum: [ok, not_ready]}}}
     Error: {type: object, required: [error], properties: {error: {type: object, required: [code, message], properties: {code: {type: string}, message: {type: string}}}}}
+    Tokens: {type: object, required: [access_token, refresh_token], properties: {access_token: {type: string}, refresh_token: {type: string}, access_expires_in: {type: integer}, session_expires_in: {type: integer}}}
+    MfaChallenge: {type: object, required: [status, challenge_token, expires_in], properties: {status: {const: mfa_required}, challenge_token: {type: string}, expires_in: {type: integer}}}
+    MfaStatus: {type: object, required: [enabled, recovery_codes_remaining], properties: {enabled: {type: boolean}, factor_id: {type: [string, 'null'], format: uuid}, recovery_codes_remaining: {type: integer}}}
+    Session: {type: object, required: [id, authentication_method, primary_authenticated_at, current], properties: {id: {type: string, format: uuid}, issued_at: {type: string, format: date-time}, last_used_at: {type: string, format: date-time}, expires_at: {type: string, format: date-time}, revoked_at: {type: [string, 'null'], format: date-time}, revoke_reason: {type: [string, 'null']}, user_agent: {type: string}, authentication_method: {type: string, enum: [password, password_totp, password_recovery]}, primary_authenticated_at: {type: string, format: date-time}, mfa_authenticated_at: {type: [string, 'null'], format: date-time}, current: {type: boolean}}}
     Subscription:
       type: object
       required: [id, status, renewal_required]

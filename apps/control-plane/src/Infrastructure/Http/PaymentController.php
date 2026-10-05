@@ -31,7 +31,7 @@ final class PaymentController extends AbstractController
     #[Route('/api/control/accounts/{accountId}/invoices/{invoiceId}/payment', name: 'control_payment_create', methods: ['POST'])]
     public function create(string $accountId, string $invoiceId, Request $request): JsonResponse
     {
-        $this->authSecurity->requireRecent($this->user(), true);
+        $this->authSecurity->requireSensitiveMfa($this->user());
         $key = $request->headers->get('Idempotency-Key');
         if (!is_string($key)) {
             throw new \InvalidArgumentException('Idempotency-Key is required.');
@@ -50,7 +50,7 @@ final class PaymentController extends AbstractController
     #[Route('/api/control/accounts/{accountId}/payments/{paymentId}/checkout', name: 'control_payment_checkout', methods: ['POST'])]
     public function checkout(string $accountId, string $paymentId, Request $request): JsonResponse
     {
-        $this->authSecurity->requireRecent($this->user(), true);
+        $this->authSecurity->requireSensitiveMfa($this->user());
         $key = $request->headers->get('Idempotency-Key');
         if (!is_string($key)) {
             throw new \InvalidArgumentException('Idempotency-Key is required.');

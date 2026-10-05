@@ -25,7 +25,7 @@ final class SubscriptionController extends AbstractController
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(string $accountId, Request $request): JsonResponse
     {
-        $this->authSecurity->requireRecent($this->user(), true);
+        $this->authSecurity->requireSensitiveMfa($this->user());
         $key = $request->headers->get('Idempotency-Key');
         if (!is_string($key)) {
             throw new \InvalidArgumentException('Idempotency-Key is required.');
@@ -52,7 +52,7 @@ final class SubscriptionController extends AbstractController
     #[Route('/{subscriptionId}/cancel', name: 'cancel', methods: ['POST'])]
     public function cancel(string $accountId, string $subscriptionId, Request $request): JsonResponse
     {
-        $this->authSecurity->requireRecent($this->user(), true);
+        $this->authSecurity->requireSensitiveMfa($this->user());
         $key = $request->headers->get('Idempotency-Key');
         if (!is_string($key)) {
             throw new \InvalidArgumentException('Idempotency-Key is required.');

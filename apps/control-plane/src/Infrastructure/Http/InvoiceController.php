@@ -23,7 +23,7 @@ final class InvoiceController extends AbstractController
     #[Route('/api/control/accounts/{accountId}/subscriptions/{subscriptionId}/invoice', name: 'control_invoice_issue', methods: ['POST'])]
     public function issue(string $accountId, string $subscriptionId, Request $request): JsonResponse
     {
-        $this->authSecurity->requireRecent($this->user(), true);
+        $this->authSecurity->requireSensitiveMfa($this->user());
         $key = $request->headers->get('Idempotency-Key');
         if (!is_string($key)) {
             throw new \InvalidArgumentException('Idempotency-Key is required.');
