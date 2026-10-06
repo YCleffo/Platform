@@ -1,7 +1,10 @@
 [CmdletBinding()]
 param(
     [string]$OutputPath,
-    [switch]$Force
+    [switch]$Force,
+    [ValidateSet('Fastest', 'Optimal')]
+    [string]$Compression = 'Fastest',
+    [switch]$IncludeIgnoredStats
 )
 
 Set-StrictMode -Version Latest
@@ -574,9 +577,11 @@ Write-Host ""
 
 
 # ------------------------------------------------------------
-# Ignored file statistics
+# Optional ignored-file statistics. This Git walk is expensive in large working
+# trees, so it is deliberately opt-in and never affects file selection.
 # ------------------------------------------------------------
 
+if ($IncludeIgnoredStats) {
 try {
     $IgnoredOutput = Invoke-GitCapture `
         -WorkingDirectory $Root `
@@ -611,6 +616,7 @@ catch {
         "Ignored-file statistics unavailable." `
         -ForegroundColor DarkGray
 }
+}
 
 
 Write-Host ""
@@ -622,6 +628,12 @@ Write-Host ""
 
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+$ZipCompression = if ($Compression -eq 'Fastest') {
+    [IO.Compression.CompressionLevel]::Fastest
+} else {
+    [IO.Compression.CompressionLevel]::Optimal
+}
 
 
 $stopwatch = [Diagnostics.Stopwatch]::StartNew()
@@ -695,7 +707,7 @@ try {
                 $archive,
                 $file.FullName,
                 $zipPath,
-                [IO.Compression.CompressionLevel]::Optimal
+                $ZipCompression
             ) |
             Out-Null
 
@@ -804,6 +816,7 @@ Write-Host "Path:    $($archiveInfo.FullName)"
 Write-Host "Files:   $archiveEntryCount"
 Write-Host "Size:    $(Format-ByteSize -Bytes $archiveInfo.Length)"
 Write-Host "Time:    $([math]::Round($stopwatch.Elapsed.TotalSeconds, 1)) sec"
+Write-Host "Compression: $Compression"
 
 Write-Host ""
 
