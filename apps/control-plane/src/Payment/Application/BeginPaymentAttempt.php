@@ -26,15 +26,24 @@ final readonly class BeginPaymentAttempt
         return $this->beginInternal($paymentId, $providerAccountId, $methodType, $correlationId, true);
     }
 
+    /**
+     * Use only for a durable business operation with a deterministic provider idempotency identity.
+     * @return array{attempt_id: string, payment_id: string, provider_account_id: string, provider_request_key: string, status: 'pending'}
+     */
+    public function beginOrReuseWithRequestKey(string $paymentId, string $providerAccountId, string $methodType, string $correlationId, string $providerRequestKey): array
+    {
+        return $this->beginInternal($paymentId, $providerAccountId, $methodType, $correlationId, true, IdentifierPolicy::opaqueKey($providerRequestKey));
+    }
+
     /** @return array{attempt_id: string, payment_id: string, provider_account_id: string, provider_request_key: string, status: 'pending'} */
-    private function beginInternal(string $paymentId, string $providerAccountId, string $methodType, string $correlationId, bool $reuse): array
+    private function beginInternal(string $paymentId, string $providerAccountId, string $methodType, string $correlationId, bool $reuse, ?string $providerRequestKey = null): array
     {
         if (!Uuid::isValid($paymentId) || !Uuid::isValid($providerAccountId) || !Uuid::isValid($correlationId)) {
             throw new \InvalidArgumentException('Invalid public identifier.');
         }
         $methodType = IdentifierPolicy::machineCode($methodType);
 
-        return $this->connection->transactional(function (Connection $connection) use ($paymentId, $providerAccountId, $methodType, $reuse): array {
+        return $this->connection->transactional(function (Connection $connection) use ($paymentId, $providerAccountId, $methodType, $reuse, $providerRequestKey): array {
             $identity = $connection->fetchAssociative('SELECT i.subscription_id, p.invoice_id FROM commercial.payments p JOIN commercial.invoices i ON i.id = p.invoice_id WHERE p.id = ?', [$paymentId]);
             if ($identity === false || !is_string($identity['subscription_id']) || !is_string($identity['invoice_id'])) {
                 throw new \DomainException('Payment was not found.');
@@ -64,7 +73,7 @@ final readonly class BeginPaymentAttempt
                 throw new \DomainException('A payment attempt is already in progress.');
             }
             $attemptId = Uuid::v7()->toRfc4122();
-            $providerRequestKey = Uuid::v7()->toRfc4122();
+            $providerRequestKey ??= Uuid::v7()->toRfc4122();
             $connection->executeStatement("INSERT INTO commercial.payment_attempts (id, payment_id, provider_account_id, method_type, provider_request_key, status) VALUES (?, ?, ?, ?, ?, 'pending')", [$attemptId, $paymentId, $providerAccountId, $methodType, $providerRequestKey]);
 
             return ['attempt_id' => $attemptId, 'payment_id' => $paymentId, 'provider_account_id' => $providerAccountId, 'provider_request_key' => $providerRequestKey, 'status' => 'pending'];

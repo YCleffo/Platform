@@ -12,7 +12,7 @@ $ErrorActionPreference = "Stop"
 #
 # Files are selected by Git:
 #
-#   git ls-files --cached --others --exclude-standard
+#   git status --porcelain=v1 -z
 #
 # Git automatically applies:
 #
@@ -167,7 +167,7 @@ Try:
 
     $process = New-Object System.Diagnostics.Process
 
-    $process.StartInfo = $startInfo
+    [void]($process.StartInfo = $startInfo)
 
 
     try {
@@ -190,7 +190,9 @@ Try:
             throw $message
         }
 
-        return $stdout
+        # Preserve NUL-delimited porcelain output as one string; otherwise
+        # PowerShell can enumerate it while returning from this helper.
+        return ,$stdout
     }
     finally {
         $process.Dispose()
@@ -365,47 +367,39 @@ Write-Progress `
     -PercentComplete 0
 
 
-# --cached
-#     Include tracked files.
-#
-# --others
-#     Include untracked files.
-#
-# --exclude-standard
-#     Apply:
-#
-#       .gitignore
-#       nested .gitignore files
-#       .git/info/exclude
-#       global Git excludes
-#
-# --full-name
-#     Paths relative to repository root.
-#
-# -z
-#     NUL-separated paths, allowing spaces and unusual filenames.
-
-$GitFileOutput = Invoke-GitCapture `
+# Porcelain is the single source of truth for current changes.  In -z form a
+# rename/copy record is followed by its old path; the first path is the current
+# physical destination and is the one that belongs in the archive.
+$GitStatusOutputItems = @(Invoke-GitCapture `
     -WorkingDirectory $Root `
     -Arguments @(
         "-c",
         "core.quotePath=false",
-        "ls-files",
-        "--cached",
-        "--others",
-        "--exclude-standard",
-        "--full-name",
+        "status",
+        "--porcelain=v1",
         "-z"
-    )
+    ))
+# ProcessStartInfo (or another non-string object) must never become a porcelain
+# record if a host writes it to the success stream.
+[string]$GitStatusOutput = @($GitStatusOutputItems | Where-Object { $_ -is [string] } | Select-Object -Last 1)[0]
+
+$StatusFields = @($GitStatusOutput.Split([char]0) | Where-Object { -not [string]::IsNullOrEmpty($_) })
+$RelativePaths = New-Object 'System.Collections.Generic.List[string]'
+$DeletedPaths = New-Object 'System.Collections.Generic.List[string]'
+for ($statusIndex = 0; $statusIndex -lt $StatusFields.Count; $statusIndex++) {
+    $record = $StatusFields[$statusIndex]
+    if ($record.Length -lt 4) { throw "Git returned an invalid porcelain record." }
+    $status = $record.Substring(0, 2)
+    $path = $record.Substring(3)
+    if ($status[0] -in @('R','C') -or $status[1] -in @('R','C')) { $statusIndex++ } # consume old source path
+    if ($status[0] -eq 'D' -or $status[1] -eq 'D') { $DeletedPaths.Add($path); continue }
+    $RelativePaths.Add($path)
+}
 
 
-$RelativePaths = @(
-    $GitFileOutput.Split(
-        [char]0,
-        [StringSplitOptions]::RemoveEmptyEntries
-    )
-)
-
+if ($DeletedPaths.Count -gt 0) {
+    foreach ($deletedPath in $DeletedPaths) { Write-Host "Deleted (not archived): $deletedPath" -ForegroundColor DarkYellow }
+}
 
 if ($RelativePaths.Count -eq 0) {
     Write-Progress `
@@ -413,7 +407,8 @@ if ($RelativePaths.Count -eq 0) {
         -Activity "Preparing project archive" `
         -Completed
 
-    throw "Git did not return any files to archive."
+    Write-Host "There is nothing to archive." -ForegroundColor Yellow
+    return
 }
 
 
@@ -544,7 +539,8 @@ $totalFiles = $Files.Count
 
 
 if ($totalFiles -eq 0) {
-    throw "No physical files found to archive."
+    Write-Host "There is nothing to archive." -ForegroundColor Yellow
+    return
 }
 
 
@@ -802,7 +798,7 @@ Write-Host ""
 Write-Host "File selection:" `
     -ForegroundColor Cyan
 
-Write-Host "  git ls-files --cached --others --exclude-standard"
+Write-Host "  git status --porcelain=v1 -z"
 
 Write-Host ""
 

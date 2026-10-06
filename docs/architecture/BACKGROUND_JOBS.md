@@ -10,6 +10,7 @@
 | `privacy_cleanup` | Core | One configured category per tick | 3600 s | 100 rows | Yes, disabled by default | `scheduler:core:privacy_cleanup` | Skip without policy; retry next interval |
 | `runtime_entitlement_sync` | Core | Pull signed entitlement | 300 s | 1 sync | No | `scheduler:core:runtime_entitlement_sync` | Retain current document; retry next interval |
 | `prepare_renewals` | Control | Prepare renewal invoices | 300 s | 100 subscriptions | No | `scheduler:control:prepare_renewals` | Retry next interval |
+| `collect_renewals` | Control | Initiate eligible saved-card renewal collections | 300 s | 100 invoices | No | `scheduler:control:collect_renewals` | Provider settlement/reconciliation remains authoritative |
 | `advance_subscriptions` | Control | Advance paid periods | 300 s | 100 subscriptions | No | `scheduler:control:advance_subscriptions` | Retry next interval |
 | `expire_subscriptions` | Control | Expire ended periods | 300 s | 100 subscriptions | No | `scheduler:control:expire_subscriptions` | Retry next interval |
 | `reconcile_yookassa_payments` | Control | Reconcile payments | 120 s | 100 attempts | No | `scheduler:control:reconcile_yookassa_payments` | Provider retry remains in service |
@@ -17,7 +18,7 @@
 | `reconcile_yookassa_receipts` | Control | Reconcile receipts | 120 s | 100 receipts | No | `scheduler:control:reconcile_yookassa_receipts` | Provider retry remains in service |
 | `control_privacy_cleanup` | Control | One configured category per tick | 3600 s | 100 rows | Yes, disabled by default | `scheduler:control:control_privacy_cleanup` | Skip without policy; retry next interval |
 
-Renewal preparation, advancement, and expiration run in that order in each cycle. Each job has its own interval and a failure does not prevent the next job from running. Core erasure requires `CORE_PRIVACY_ERASURE_ENABLED=true`, a valid active system account in `PRIVACY_AUTOMATION_ACCOUNT_ID`, and configured destruction evidence and legal package policy. Cleanup requires its explicit enable flag and a category retention policy. No automatic job creates a policy or system credential.
+Renewal preparation, collection, advancement, and expiration run in that order in each cycle. Collection selects issued due renewal invoices with an account-owned active default saved bank card; it creates/reuses the ordinary Payment and PaymentAttempt and never marks an invoice paid locally. Each job has its own interval and a failure does not prevent the next job from running. Core erasure requires `CORE_PRIVACY_ERASURE_ENABLED=true`, a valid active system account in `PRIVACY_AUTOMATION_ACCOUNT_ID`, and configured destruction evidence and legal package policy. Cleanup requires its explicit enable flag and a category retention policy. No automatic job creates a policy or system credential.
 
 `backend-email-worker` runs `php yii communication:process-email --loop` using the existing outbox processor. `control-outbox-worker` remains separate. Both sleep when the outbox is empty. The new compose services restart unless stopped and use the same application configuration and secrets as their API service.
 

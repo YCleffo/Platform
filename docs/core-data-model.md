@@ -2,8 +2,8 @@
 
 Этот документ описывает архитектуру контракта PostgreSQL, заданного файлами
 `apps/backend/migrations/sql/001_core_schema_and_types.sql`–
-`017_core_account_settings.sql`. Core содержит ровно 24 основные
-таблицы `core`. Миграции SQL остаются источником истины.
+`017_core_account_settings.sql`. Current schema inventory is defined by SQL
+migrations and verified by migration/schema tests.
 
 Миграция `016_platform_runtime.sql` добавляет отдельную схему с двумя таблицами
 для идентичности установки и подписанных entitlement snapshots. Она не меняет

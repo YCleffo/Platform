@@ -115,7 +115,7 @@ from the receipt read API, audit and outbox payloads. Zero payments do not
 create receipts.
 
 Phase 3.9 adds immutable `subscription_renewal` invoice periods and the bounded
-`control:billing:prepare-renewals` / `control:subscriptions:advance` jobs. Early
+`control:billing:prepare-renewals`, `control:billing:collect-renewals` / `control:subscriptions:advance` jobs. Automatic collection uses only an account-owned active default saved card, creates/reuses the existing Payment and PaymentAttempt, and leaves settlement to authoritative provider processing. Early
 payment funds the next period without changing the active period; rollover
 atomically closes the old usage period and opens a zeroed one. Expiration waits
 for the configurable settlement grace and serializes on the subscription row.

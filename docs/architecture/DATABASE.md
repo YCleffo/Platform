@@ -17,7 +17,7 @@ Yii runtime использует одну базу данных PostgreSQL. Мо
 ```text
 platform database
 ├── public.*       technical migration history only
-├── core.*         universal Core — 25 tables after migration 018
+├── core.*         universal Core — inventory is defined by current SQL migrations
 ├── platform_runtime.*  installation identity and signed entitlement snapshots — 2 tables
 ├── education.*    later
 ├── games.*        later
@@ -29,7 +29,7 @@ platform database
 
 ## Зафиксированная версия Core v2
 
-Схема `core.*` содержит 26 базовых таблиц после миграции 020. Миграция 017 добавляет
+Current schema inventory is defined by SQL migrations and verified by migration/schema tests. Миграция 017 добавляет
 `core.account_settings`, миграция 018 — историю authenticated согласий, а миграции 019–020
 развивают её в `core.privacy_consents` и добавляют `core.legal_representations`.
 Исторический артефакт `Core_v1_FINAL.dbml` не меняется;
@@ -46,11 +46,11 @@ release и reliability. Phase 2 добавляет 4 таблицы verification
 limit/session-history и расширяет identity/onboarding. Phase 3 добавляет
 subscription lifecycle, effective entitlements, Usage Core, immutable invoice
 snapshots, provider-neutral Payment Core, YooKassa webhook inbox и Fiscalization
-Core; после Phase 4.0 схема содержит `commercial.* = 39` таблиц и 20 миграций. Реализованы
+Core; current Commercial schema inventory is defined by migrations and schema tests. Реализованы
 payment provider metadata, payments, payment attempts, hash-only provider events,
 immutable payment/refund receipt obligations, renewal periods, refund item
 snapshots and account-scoped saved payment methods. Automatic recurring charge
-execution, dunning, plan switching and usage/overage billing remain deferred. Подробности:
+execution is implemented through the bounded `collect_renewals` scheduler job; dunning, plan switching and usage/overage billing remain deferred. Подробности:
 `docs/architecture/COMMERCIAL_CONTROL_PLANE.md`.
 Её планы, платежи, подписки и реестр
 лицензий сюда не входят.
