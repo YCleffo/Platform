@@ -386,6 +386,7 @@ $GitStatusOutputItems = @(Invoke-GitCapture `
 $StatusFields = @($GitStatusOutput.Split([char]0) | Where-Object { -not [string]::IsNullOrEmpty($_) })
 $RelativePaths = New-Object 'System.Collections.Generic.List[string]'
 $DeletedPaths = New-Object 'System.Collections.Generic.List[string]'
+$ArchiveMode = 'current Git changes'
 for ($statusIndex = 0; $statusIndex -lt $StatusFields.Count; $statusIndex++) {
     $record = $StatusFields[$statusIndex]
     if ($record.Length -lt 4) { throw "Git returned an invalid porcelain record." }
@@ -402,13 +403,25 @@ if ($DeletedPaths.Count -gt 0) {
 }
 
 if ($RelativePaths.Count -eq 0) {
-    Write-Progress `
-        -Id 1 `
-        -Activity "Preparing project archive" `
-        -Completed
-
-    Write-Host "There is nothing to archive." -ForegroundColor Yellow
-    return
+    # A clean worktree is intentionally useful too: create a full, Git-visible
+    # project archive, while retaining Git's ignore rules as the source of truth.
+    Write-Host "No current Git changes; archiving the full Git-visible project." -ForegroundColor Yellow
+    [string]$GitProjectOutput = Invoke-GitCapture `
+        -WorkingDirectory $Root `
+        -Arguments @(
+            "-c",
+            "core.quotePath=false",
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "--full-name",
+            "-z"
+        )
+    foreach ($path in ($GitProjectOutput.Split([char]0) | Where-Object { -not [string]::IsNullOrEmpty($_) })) {
+        $RelativePaths.Add($path)
+    }
+    $ArchiveMode = 'full Git-visible project (clean worktree fallback)'
 }
 
 
@@ -539,8 +552,7 @@ $totalFiles = $Files.Count
 
 
 if ($totalFiles -eq 0) {
-    Write-Host "There is nothing to archive." -ForegroundColor Yellow
-    return
+    throw "No physical files found to archive."
 }
 
 
@@ -798,7 +810,12 @@ Write-Host ""
 Write-Host "File selection:" `
     -ForegroundColor Cyan
 
-Write-Host "  git status --porcelain=v1 -z"
+if ($ArchiveMode -eq 'current Git changes') {
+    Write-Host "  git status --porcelain=v1 -z"
+}
+else {
+    Write-Host "  git ls-files --cached --others --exclude-standard -z (clean-worktree fallback)"
+}
 
 Write-Host ""
 
