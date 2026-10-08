@@ -22,7 +22,7 @@ final readonly class GetSubscription
         }
         $this->authorization->requirePermission($userId, $accountId, 'account.read');
         $subscription = $this->connection->fetchAssociative(<<<'SQL'
-SELECT id, status, commercial_account_id, billing_profile_id, current_period_start, current_period_end, created_at, updated_at
+SELECT id, status, billing_status, past_due_since, grace_until, commercial_account_id, billing_profile_id, current_period_start, current_period_end, created_at, updated_at
 FROM commercial.subscriptions
 WHERE id = ? AND commercial_account_id = ?
 SQL, [$subscriptionId, $accountId]);

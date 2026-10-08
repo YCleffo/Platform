@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$OutputPath,
+    [string]$RepositoryPath,
     [switch]$Force,
     [ValidateSet('Fastest', 'Optimal')]
     [string]$Compression = 'Fastest',
@@ -207,9 +208,11 @@ Try:
 # Locate project directory
 # ------------------------------------------------------------
 
-$CandidateRoot = (
-    Resolve-Path (Join-Path $PSScriptRoot "..")
-).Path
+$CandidateRoot = if ([string]::IsNullOrWhiteSpace($RepositoryPath)) {
+    (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+} else {
+    (Resolve-Path -LiteralPath $RepositoryPath).Path
+}
 
 
 Write-Host ""
@@ -389,7 +392,6 @@ $GitStatusOutputItems = @(Invoke-GitCapture `
 $StatusFields = @($GitStatusOutput.Split([char]0) | Where-Object { -not [string]::IsNullOrEmpty($_) })
 $RelativePaths = New-Object 'System.Collections.Generic.List[string]'
 $DeletedPaths = New-Object 'System.Collections.Generic.List[string]'
-$ArchiveMode = 'current Git changes'
 for ($statusIndex = 0; $statusIndex -lt $StatusFields.Count; $statusIndex++) {
     $record = $StatusFields[$statusIndex]
     if ($record.Length -lt 4) { throw "Git returned an invalid porcelain record." }
@@ -406,25 +408,8 @@ if ($DeletedPaths.Count -gt 0) {
 }
 
 if ($RelativePaths.Count -eq 0) {
-    # A clean worktree is intentionally useful too: create a full, Git-visible
-    # project archive, while retaining Git's ignore rules as the source of truth.
-    Write-Host "No current Git changes; archiving the full Git-visible project." -ForegroundColor Yellow
-    [string]$GitProjectOutput = Invoke-GitCapture `
-        -WorkingDirectory $Root `
-        -Arguments @(
-            "-c",
-            "core.quotePath=false",
-            "ls-files",
-            "--cached",
-            "--others",
-            "--exclude-standard",
-            "--full-name",
-            "-z"
-        )
-    foreach ($path in ($GitProjectOutput.Split([char]0) | Where-Object { -not [string]::IsNullOrEmpty($_) })) {
-        $RelativePaths.Add($path)
-    }
-    $ArchiveMode = 'full Git-visible project (clean worktree fallback)'
+    Write-Host "No Git changes found. Nothing to archive." -ForegroundColor Yellow
+    exit 0
 }
 
 
@@ -555,7 +540,8 @@ $totalFiles = $Files.Count
 
 
 if ($totalFiles -eq 0) {
-    throw "No physical files found to archive."
+    Write-Host "No physical changed files found. Nothing to archive." -ForegroundColor Yellow
+    exit 0
 }
 
 
@@ -823,12 +809,7 @@ Write-Host ""
 Write-Host "File selection:" `
     -ForegroundColor Cyan
 
-if ($ArchiveMode -eq 'current Git changes') {
-    Write-Host "  git status --porcelain=v1 -z"
-}
-else {
-    Write-Host "  git ls-files --cached --others --exclude-standard -z (clean-worktree fallback)"
-}
+Write-Host "  git status --porcelain=v1 -z"
 
 Write-Host ""
 

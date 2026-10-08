@@ -17,7 +17,7 @@ does not create a tenant database.
 
 ## Implemented schema
 
-Twenty ordered Doctrine migrations create 39 `commercial.*` tables. Migration
+Doctrine migrations and schema guard tests are the source of truth for the current `commercial.*` schema inventory. Migration
 020 changes the outbox lifecycle without adding another table. Runtime checks
 assert required objects and migration state rather than an exact table count.
 The 21 Phase 1 tables remain unchanged. Phase 2 adds:

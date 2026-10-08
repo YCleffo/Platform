@@ -32,10 +32,11 @@ final readonly class EffectiveEntitlements
             throw new \InvalidArgumentException('Invalid commercial account identifier.');
         }
         $subscription = $this->connection->fetchAssociative(<<<'SQL'
-SELECT id, current_period_start, current_period_end
+SELECT id, current_period_start, current_period_end, billing_status, past_due_since, grace_until
 FROM commercial.subscriptions
 WHERE commercial_account_id = ? AND status = 'active'
-  AND current_period_start <= now() AND now() < current_period_end
+  AND ((billing_status = 'current' AND current_period_start <= now() AND now() < current_period_end)
+    OR (billing_status = 'past_due' AND now() >= current_period_end AND now() < grace_until))
 SQL, [$accountId]);
         if ($subscription === false) {
             return [
