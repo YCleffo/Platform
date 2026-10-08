@@ -32,15 +32,21 @@ try {
     Set-Content -LiteralPath (Join-Path $temp 'unicode dir\old файл.txt') -Value 'old' -NoNewline
     Invoke-TestGit @('add', '.')
     Invoke-TestGit @('commit', '--quiet', '-m', 'base')
+    Set-Content -LiteralPath (Join-Path $temp 'ignored.txt') -Value 'ignored' -NoNewline
 
     & (Join-Path $root 'scripts\create-project-zip.ps1') -RepositoryPath $temp -OutputPath $archive
-    if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $archive)) { throw 'Clean repository created an archive.' }
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $archive)) { throw 'Clean repository did not create a full project archive.' }
+    $cleanEntries = ArchiveEntries $archive
+    foreach ($entry in @('.gitignore', 'tracked.txt', 'delete.txt', 'unicode dir/old файл.txt')) {
+        if ($cleanEntries -notcontains $entry) { throw "Clean archive is missing Git-visible path: $entry" }
+    }
+    if ($cleanEntries.Count -ne 4) { throw "Clean archive did not contain exactly the Git-visible project files: $($cleanEntries -join ', ')" }
+    if ($cleanEntries -contains 'ignored.txt') { throw 'Clean archive contains ignored content.' }
 
     Set-Content -LiteralPath (Join-Path $temp 'tracked.txt') -Value 'staged' -NoNewline
     Invoke-TestGit @('add', 'tracked.txt')
     Set-Content -LiteralPath (Join-Path $temp 'tracked.txt') -Value 'worktree wins' -NoNewline
     Set-Content -LiteralPath (Join-Path $temp 'untracked space.txt') -Value 'untracked' -NoNewline
-    Set-Content -LiteralPath (Join-Path $temp 'ignored.txt') -Value 'ignored' -NoNewline
     Remove-Item -LiteralPath (Join-Path $temp 'delete.txt')
     Rename-Item -LiteralPath (Join-Path $temp 'unicode dir\old файл.txt') -NewName 'new файл.txt'
     Invoke-TestGit @('add', '-A')
