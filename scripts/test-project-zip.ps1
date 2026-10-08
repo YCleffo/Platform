@@ -34,7 +34,13 @@ try {
     Invoke-TestGit @('commit', '--quiet', '-m', 'base')
 
     & (Join-Path $root 'scripts\create-project-zip.ps1') -RepositoryPath $temp -OutputPath $archive
-    if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $archive)) { throw 'Clean repository created an archive.' }
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $archive)) { throw 'Clean repository did not create a project archive.' }
+    $cleanEntries = ArchiveEntries $archive
+    foreach ($entry in @('.gitignore', 'tracked.txt', 'delete.txt')) {
+        if ($cleanEntries -notcontains $entry) { throw "Clean archive is missing Git-visible path: $entry" }
+    }
+    if ($cleanEntries.Count -ne 4) { throw "Clean archive did not contain exactly the Git-visible project files: $($cleanEntries -join ', ')" }
+    if ($cleanEntries -contains 'ignored.txt') { throw 'Clean archive contains ignored content.' }
 
     Set-Content -LiteralPath (Join-Path $temp 'tracked.txt') -Value 'staged' -NoNewline
     Invoke-TestGit @('add', 'tracked.txt')
@@ -53,7 +59,7 @@ try {
     foreach ($entry in $expected) { if ($entries -notcontains $entry) { throw "Archive is missing changed path: $entry" } }
     foreach ($entry in @('delete.txt', 'ignored.txt', '.gitignore')) { if ($entries -contains $entry) { throw "Archive contains non-current path: $entry" } }
     if ($entries.Count -ne $expected.Count) { throw "Archive contains unchanged files: $($entries -join ', ')" }
-    Write-Host 'Changed-only ZIP regression test passed.' -ForegroundColor Green
+    Write-Host 'Project ZIP regression test passed.' -ForegroundColor Green
 }
 finally {
     if (Test-Path -LiteralPath $temp) { Remove-Item -LiteralPath $temp -Recurse -Force }
