@@ -11,9 +11,9 @@ use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 abstract class RenewalTestCase extends PaymentTestCase
 {
     /** @return array{string, string, string} owner, account, subscription */
-    protected function activeRenewable(string $suffix): array
+    protected function activeRenewable(string $suffix, string $currency = 'USD'): array
     {
-        [$owner, $account, $profile, , $price, $subscription] = $this->invoiceContext($suffix, 1, 'month', 'USD');
+        [$owner, $account, $profile, , $price, $subscription] = $this->invoiceContext($suffix, 1, 'month', $currency);
         unset($profile, $price);
         $this->activatePaid($account, $subscription, new \DateTimeImmutable('2026-01-15T10:00:00Z'), $this->uuid());
 

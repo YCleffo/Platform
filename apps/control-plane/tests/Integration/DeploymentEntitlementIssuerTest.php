@@ -69,19 +69,26 @@ final class DeploymentEntitlementIssuerTest extends SubscriptionTestCase
             'validUntil', 'deploymentStatus', 'features'], array_keys($document));
         self::assertSame(['signed.module.crm' => true], $document['features']);
 
+        $this->connection->executeStatement("UPDATE commercial.subscriptions SET current_period_start=now()-interval '1 month', current_period_end=now()-interval '1 minute', billing_status='past_due', past_due_since=now()-interval '1 minute', grace_until=now()+interval '1 hour' WHERE id=?", [$subscription]);
+        $grace = $issuer->ensureLatest($deployment);
+        self::assertSame(2, $grace['sequence']);
+        $graceDocument = json_decode(base64_decode($grace['documentBase64'], true), true, 16, JSON_THROW_ON_ERROR);
+        self::assertSame(['signed.module.crm' => true], $graceDocument['features']);
+        self::assertGreaterThan(new \DateTimeImmutable('now'), new \DateTimeImmutable($graceDocument['validUntil']));
+
         $this->connection->executeStatement("UPDATE commercial.subscriptions SET status = 'expired'
             WHERE id = ?", [$subscription]);
         $changed = $issuer->ensureLatest($deployment);
-        self::assertSame(2, $changed['sequence']);
-        self::assertSame(2, $issuer->ensureLatest($deployment)['sequence']);
+        self::assertSame(3, $changed['sequence']);
+        self::assertSame(3, $issuer->ensureLatest($deployment)['sequence']);
 
         $this->connection->executeStatement("UPDATE commercial.deployments SET status = 'suspended' WHERE id = ?", [$deployment]);
         $suspended = $issuer->ensureLatest($deployment);
-        self::assertSame(3, $suspended['sequence']);
+        self::assertSame(4, $suspended['sequence']);
         $suspendedDocument = json_decode(base64_decode($suspended['documentBase64'], true), true, 16, JSON_THROW_ON_ERROR);
         self::assertSame('suspended', $suspendedDocument['deploymentStatus']);
         self::assertSame([], $suspendedDocument['features']);
-        self::assertSame(3, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events
+        self::assertSame(4, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events
             WHERE event_type = 'entitlement.issued' AND aggregate_id = ?", [$deployment]));
 
         $this->connection->executeStatement("UPDATE commercial.deployments SET status = 'decommissioned' WHERE id = ?", [$deployment]);

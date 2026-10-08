@@ -6,6 +6,7 @@ namespace ControlPlane\Infrastructure\Console;
 
 use ControlPlane\Billing\Application\IssueRenewalInvoice;
 use ControlPlane\Billing\Application\CollectRenewalInvoice;
+use ControlPlane\Billing\Application\ProcessRenewalDunning;
 use ControlPlane\Fiscalization\Application\ReconcileYooKassaReceipts;
 use ControlPlane\Infrastructure\Scheduler\JobSkipped;
 use ControlPlane\Infrastructure\Scheduler\ScheduledJob;
@@ -29,7 +30,7 @@ use Symfony\Component\Uid\Uuid;
 final class SchedulerRunCommand extends Command
 {
     public function __construct(private readonly Connection $db, private readonly IssueRenewalInvoice $renewals, private readonly CollectRenewalInvoice $collections,
-        private readonly AdvanceSubscriptionPeriod $advance, private readonly ExpireSubscription $expire,
+        private readonly ProcessRenewalDunning $dunning, private readonly AdvanceSubscriptionPeriod $advance, private readonly ExpireSubscription $expire,
         private readonly ReconcileYooKassaPayments $payments, private readonly ReconcileYooKassaRefunds $refunds,
         private readonly ReconcileYooKassaReceipts $receipts, private readonly ControlPrivacyCleanup $cleanup,
         private readonly ControlPrivacyRetentionPolicy $cleanupPolicy,
@@ -54,6 +55,10 @@ final class SchedulerRunCommand extends Command
                     $enabled && Config::enabled('CONTROL_RENEWAL_COLLECTION_ENABLED', true), $subscriptionLimit,
                     fn(int $limit): int => $this->collections->collectDue(new \DateTimeImmutable('now'), $limit,
                         Uuid::v7()->toRfc4122())),
+                new ScheduledJob('process_dunning', Config::integer('CONTROL_DUNNING_INTERVAL_SECONDS', 300, 1, 86400),
+                    $enabled && Config::enabled('CONTROL_DUNNING_ENABLED', true), $subscriptionLimit,
+                    fn(int $limit): int => $this->dunning->process(new \DateTimeImmutable('now'), $limit,
+                        Uuid::v7()->toRfc4122())['selected']),
                 new ScheduledJob('advance_subscriptions', Config::integer('CONTROL_SUBSCRIPTIONS_INTERVAL_SECONDS', 300, 1, 86400),
                     $enabled && Config::enabled('CONTROL_SUBSCRIPTIONS_ENABLED', true), $subscriptionLimit,
                     fn(int $limit): int => $this->advance->advanceDue(new \DateTimeImmutable('now'), $limit,

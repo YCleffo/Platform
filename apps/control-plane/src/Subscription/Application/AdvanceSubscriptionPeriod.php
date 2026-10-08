@@ -27,7 +27,7 @@ final readonly class AdvanceSubscriptionPeriod
     /** @return array{id: string, status: 'active', current_period_start: string, current_period_end: string} */
     public function advanceInTransaction(Connection $connection, string $accountId, string $subscriptionId, \DateTimeImmutable $instant, string $correlationId): array
     {
-        $subscription = $connection->fetchAssociative('SELECT id, commercial_account_id, status, current_period_start, current_period_end FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$subscriptionId, $accountId]);
+        $subscription = $connection->fetchAssociative('SELECT id, commercial_account_id, status, billing_status, current_period_start, current_period_end FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$subscriptionId, $accountId]);
         if ($subscription === false) {
             throw new \DomainException('Subscription was not found.');
         }
@@ -66,7 +66,7 @@ SQL, [$subscriptionId, $subscription['current_period_end']]);
         if ($closed !== 1) {
             throw new \LogicException('Current usage period is unavailable.');
         }
-        $advanced = $connection->fetchAssociative('UPDATE commercial.subscriptions SET current_period_start = ?::timestamptz, current_period_end = ?::timestamptz, updated_at = now() WHERE id = ? RETURNING id, status, current_period_start, current_period_end', [$renewal['service_period_start'], $renewal['service_period_end'], $subscriptionId]);
+        $advanced = $connection->fetchAssociative("UPDATE commercial.subscriptions SET current_period_start = ?::timestamptz, current_period_end = ?::timestamptz, billing_status='current', past_due_since=NULL, grace_until=NULL, updated_at = now() WHERE id = ? RETURNING id, status, current_period_start, current_period_end", [$renewal['service_period_start'], $renewal['service_period_end'], $subscriptionId]);
         if ($advanced === false) {
             throw new \LogicException('Advanced subscription state is unavailable.');
         }

@@ -12,8 +12,11 @@ use Symfony\Component\Uid\Uuid;
 
 final readonly class CreatePayment
 {
-    public function __construct(private Connection $connection, private AccountAuthorization $authorization, private SettlePayment $settlement)
+    private PaymentCreator $creator;
+
+    public function __construct(private Connection $connection, private AccountAuthorization $authorization, private SettlePayment $settlement, ?PaymentCreator $creator = null)
     {
+        $this->creator = $creator ?? new PaymentCreator($settlement);
     }
 
     /** @return array<string, mixed> */
@@ -60,7 +63,7 @@ final readonly class CreatePayment
                 return $this->result($connection, $commercialAccountId, $invoiceId, $idempotency['result_reference']);
             }
 
-            $existing = $connection->fetchAssociative('SELECT id, invoice_id, status, currency, amount_minor, created_at, succeeded_at FROM commercial.payments WHERE invoice_id = ? FOR UPDATE', [$invoiceId]);
+            $existing = $connection->fetchAssociative('SELECT id, invoice_id, commercial_account_id, status, currency, amount_minor, created_at, succeeded_at FROM commercial.payments WHERE invoice_id = ? FOR UPDATE', [$invoiceId]);
             if ($existing !== false) {
                 if (!is_string($existing['id'])) {
                     throw new \LogicException('Payment identity is unavailable.');
@@ -69,23 +72,8 @@ final readonly class CreatePayment
 
                 return $this->normalize($existing);
             }
-            if ($invoice['status'] !== 'issued') {
-                throw new \DomainException('Payment requires an issued invoice.');
-            }
-            $amount = Money::nonNegativeBigInt($invoice['total_minor']);
-            if (!is_string($invoice['currency'])) {
-                throw new \LogicException('Invoice currency is unavailable.');
-            }
-            $payment = $connection->fetchAssociative("INSERT INTO commercial.payments (invoice_id, commercial_account_id, amount_minor, currency, status) VALUES (?, ?, ?, ?, 'pending') RETURNING id, invoice_id, commercial_account_id, status, currency, amount_minor, created_at, succeeded_at", [$invoiceId, $commercialAccountId, $amount, $invoice['currency']]);
-            if ($payment === false || !is_string($payment['id'])) {
-                throw new \LogicException('Created payment state is unavailable.');
-            }
-            $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, actor_id, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('control_user', ?, ?, 'payment.created', 'payment', ?, ?, 'success')", [$controlUserId, $commercialAccountId, $payment['id'], $correlationId]);
-            $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('payment.created', 'payment', ?, jsonb_build_object('payment_id', ?::text, 'invoice_id', ?::text, 'commercial_account_id', ?::text, 'currency', ?::text, 'amount_minor', ?::bigint))", [$payment['id'], $payment['id'], $invoiceId, $commercialAccountId, $invoice['currency'], $amount]);
-
-            $result = $amount === 0
-                ? $this->settlement->succeed($connection, $payment, $invoice, new \DateTimeImmutable('now'), $correlationId)
-                : $this->normalize($payment);
+            $payment = $this->creator->createInTransaction($connection, $invoice, $correlationId, 'control_user', $controlUserId);
+            $result = $this->normalize($payment);
             $connection->executeStatement("UPDATE commercial.idempotency_keys SET status = 'completed', result_reference = ? WHERE scope = ? AND idempotency_key = ?", [$payment['id'], $scope, $idempotencyKey]);
 
             return $result;

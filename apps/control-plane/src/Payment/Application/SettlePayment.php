@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace ControlPlane\Payment\Application;
 
 use ControlPlane\Billing\Domain\Money;
+use ControlPlane\Billing\Application\RenewalCollectionLifecycle;
 use ControlPlane\Subscription\Application\ActivateSubscription;
 use ControlPlane\Subscription\Application\AdvanceSubscriptionPeriod;
 use Doctrine\DBAL\Connection;
 
 final readonly class SettlePayment
 {
-    public function __construct(private ActivateSubscription $activation, private ?AdvanceSubscriptionPeriod $advancement = null)
+    public function __construct(private ActivateSubscription $activation, private ?AdvanceSubscriptionPeriod $advancement = null, private ?RenewalCollectionLifecycle $renewalLifecycle = null)
     {
     }
 
@@ -58,6 +59,7 @@ final readonly class SettlePayment
         if ($invoice['billing_reason'] === 'subscription_create') {
             $this->activation->activateInTransaction($connection, $payment['commercial_account_id'], $invoice['subscription_id'], $settlementInstant, $correlationId);
         } elseif ($invoice['billing_reason'] === 'subscription_renewal') {
+            $this->renewalLifecycle?->succeededInTransaction($connection, $invoice, $payment['id'], $correlationId);
             $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('subscription.renewal_paid', 'subscription', ?, jsonb_build_object('subscription_id', ?::text, 'invoice_id', ?::text, 'payment_id', ?::text, 'commercial_account_id', ?::text))", [$invoice['subscription_id'], $invoice['subscription_id'], $invoice['id'], $payment['id'], $payment['commercial_account_id']]);
             $subscription = $connection->fetchAssociative('SELECT status, current_period_end FROM commercial.subscriptions WHERE id = ? FOR UPDATE', [$invoice['subscription_id']]);
             if ($subscription !== false && $subscription['status'] === 'active' && is_string($subscription['current_period_end'])

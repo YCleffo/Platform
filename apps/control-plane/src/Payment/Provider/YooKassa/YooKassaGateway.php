@@ -11,6 +11,7 @@ use ControlPlane\Payment\Provider\PaymentProviderGateway;
 use ControlPlane\Payment\Provider\PaymentProviderSecretResolver;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPayment;
+use ControlPlane\Payment\Provider\ProviderPaymentFailure;
 use ControlPlane\Payment\Provider\ProviderPaymentRequest;
 use ControlPlane\Payment\Provider\ProviderPaymentMethod;
 use ControlPlane\Shared\Domain\IdentifierPolicy;
@@ -218,7 +219,26 @@ final readonly class YooKassaGateway implements PaymentProviderGateway
             $confirmationUrl,
             $capturedAt,
             self::paymentMethod($data['payment_method'] ?? null),
+            $status === 'canceled' ? self::failure($data['cancellation_details'] ?? null) : null,
         );
+    }
+
+    private static function failure(mixed $details): ProviderPaymentFailure
+    {
+        $reason = is_array($details) && is_string($details['reason'] ?? null)
+            ? $details['reason'] : 'unknown';
+
+        return match ($reason) {
+            'expired_on_confirmation', 'expired_on_capture', 'insufficient_funds', 'general_decline',
+            'card_network_offline', 'issuer_unavailable', 'payment_method_limit_exceeded' =>
+                new ProviderPaymentFailure(ProviderPaymentFailure::RETRYABLE, $reason),
+            'expired_card' => new ProviderPaymentFailure(ProviderPaymentFailure::PAYMENT_METHOD_INVALID, $reason, true),
+            'fraud_suspected', 'identification_required', 'permission_revoked' =>
+                new ProviderPaymentFailure(ProviderPaymentFailure::NON_RETRYABLE, $reason),
+            'invalid_credentials', 'invalid_request' =>
+                new ProviderPaymentFailure(ProviderPaymentFailure::OPERATIONAL, $reason),
+            default => new ProviderPaymentFailure(ProviderPaymentFailure::UNKNOWN, 'provider_cancelled'),
+        };
     }
 
     private static function paymentMethod(mixed $method): ?ProviderPaymentMethod

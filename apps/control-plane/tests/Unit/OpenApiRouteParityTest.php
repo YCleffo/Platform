@@ -10,6 +10,19 @@ use Symfony\Component\Yaml\Yaml;
 
 final class OpenApiRouteParityTest extends TestCase
 {
+    public function testSubscriptionSchemaIncludesBillingHealthContract(): void
+    {
+        $path = getenv('CONTROL_OPENAPI_FILE') ?: '/contracts/control-plane.yaml';
+        if (!is_file($path)) $path = dirname(__DIR__, 4) . '/contracts/openapi/control-plane.yaml';
+        $contract = Yaml::parseFile($path);
+        $schema = $contract['components']['schemas']['Subscription'] ?? null;
+        self::assertIsArray($schema);
+        self::assertContains('billing_status', $schema['required']);
+        self::assertSame(['current', 'past_due'], $schema['properties']['billing_status']['enum']);
+        self::assertSame(['string', 'null'], $schema['properties']['past_due_since']['type']);
+        self::assertSame(['string', 'null'], $schema['properties']['grace_until']['type']);
+    }
+
     public function testEveryApplicationHttpRouteAndContractOperationRemainInParity(): void
     {
         $contractPath = getenv('CONTROL_OPENAPI_FILE') ?: '/contracts/control-plane.yaml';

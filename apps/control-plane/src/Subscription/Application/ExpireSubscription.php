@@ -24,7 +24,7 @@ final readonly class ExpireSubscription
         }
 
         return $this->connection->transactional(function (Connection $connection) use ($accountId, $subscriptionId, $effectiveInstant, $correlationId): array {
-            $subscription = $connection->fetchAssociative('SELECT id, commercial_account_id, status, current_period_end FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$subscriptionId, $accountId]);
+            $subscription = $connection->fetchAssociative('SELECT id, commercial_account_id, status, billing_status, current_period_end, grace_until FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$subscriptionId, $accountId]);
             if ($subscription === false) {
                 throw new \DomainException('Subscription was not found.');
             }
@@ -41,13 +41,16 @@ final readonly class ExpireSubscription
 
         return $this->connection->transactional(function (Connection $connection) use ($effectiveInstant, $batchSize, $correlationId): int {
             $rows = $connection->fetchAllAssociative(sprintf(<<<'SQL'
-SELECT id, commercial_account_id, status, current_period_end
+SELECT id, commercial_account_id, status, billing_status, current_period_end, grace_until
 FROM commercial.subscriptions
-WHERE status = 'active' AND current_period_end + (? * interval '1 second') <= ?::timestamptz
+WHERE status = 'active' AND (
+ (billing_status='past_due' AND grace_until <= ?::timestamptz) OR
+ (billing_status='current' AND current_period_end + (? * interval '1 second') <= ?::timestamptz
+  AND NOT EXISTS (SELECT 1 FROM commercial.invoices i WHERE i.subscription_id=subscriptions.id AND i.billing_reason='subscription_renewal' AND i.status='issued')))
 ORDER BY current_period_end, id
 LIMIT %d
 FOR UPDATE SKIP LOCKED
-SQL, $batchSize), [$this->graceSeconds, $this->timestamp($effectiveInstant)]);
+SQL, $batchSize), [$this->timestamp($effectiveInstant), $this->graceSeconds, $this->timestamp($effectiveInstant)]);
 
             foreach ($rows as $subscription) {
                 $this->expireLocked($connection, $subscription, $effectiveInstant, $correlationId);
@@ -76,7 +79,10 @@ SQL, $batchSize), [$this->graceSeconds, $this->timestamp($effectiveInstant)]);
             throw new \LogicException('Active subscription period is invalid.');
         }
         $periodEnd = new \DateTimeImmutable($subscription['current_period_end']);
-        if ($periodEnd->modify(sprintf('+%d seconds', $this->graceSeconds)) > $effectiveInstant) {
+        $expirationBoundary = $subscription['billing_status'] === 'past_due' && is_string($subscription['grace_until'] ?? null)
+            ? new \DateTimeImmutable($subscription['grace_until'])
+            : $periodEnd->modify(sprintf('+%d seconds', $this->graceSeconds));
+        if ($expirationBoundary > $effectiveInstant) {
             throw new \DomainException('Subscription has not reached its current period end.');
         }
 

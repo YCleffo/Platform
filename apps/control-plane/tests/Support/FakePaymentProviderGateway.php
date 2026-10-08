@@ -9,6 +9,7 @@ use ControlPlane\Payment\Provider\PaymentProviderGateway;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPayment;
 use ControlPlane\Payment\Provider\ProviderPaymentRequest;
+use ControlPlane\Payment\Provider\ProviderPaymentFailure;
 
 final class FakePaymentProviderGateway implements PaymentProviderGateway
 {
@@ -19,6 +20,7 @@ final class FakePaymentProviderGateway implements PaymentProviderGateway
     public array $getCalls = [];
 
     public ?PaymentProviderException $createFailure = null;
+    public ?ProviderPaymentFailure $createCancellation = null;
 
     /** @var array<string, ProviderPayment|PaymentProviderException> */
     public array $payments = [];
@@ -30,6 +32,16 @@ final class FakePaymentProviderGateway implements PaymentProviderGateway
             $failure = $this->createFailure;
             $this->createFailure = null;
             throw $failure;
+        }
+        if ($this->createCancellation !== null) {
+            $failure = $this->createCancellation;
+            $this->createCancellation = null;
+            return new ProviderPayment(
+                'yk-' . str_replace('-', '', $request->attemptId), 'canceled', false,
+                $request->amountMinor, $request->currency,
+                ['payment_id' => $request->paymentId, 'attempt_id' => $request->attemptId, 'invoice_id' => $request->invoiceId],
+                null, null, null, $failure,
+            );
         }
         $payment = new ProviderPayment(
             'yk-' . str_replace('-', '', $request->attemptId),

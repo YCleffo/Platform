@@ -17,6 +17,10 @@ final readonly class ProviderPayment
         public ?string $confirmationUrl,
         public ?\DateTimeImmutable $capturedAt,
         public ?ProviderPaymentMethod $paymentMethod = null,
+        public ?ProviderPaymentFailure $failure = null,
     ) {
+        if ($failure !== null && $status !== 'canceled') {
+            throw new \InvalidArgumentException('Only canceled provider payments carry a terminal failure.');
+        }
     }
 }

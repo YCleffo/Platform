@@ -50,7 +50,11 @@ Core; current Commercial schema inventory is defined by migrations and schema te
 payment provider metadata, payments, payment attempts, hash-only provider events,
 immutable payment/refund receipt obligations, renewal periods, refund item
 snapshots and account-scoped saved payment methods. Automatic recurring charge
-execution is implemented through the bounded `collect_renewals` scheduler job; dunning, plan switching and usage/overage billing remain deferred. Подробности:
+execution uses bounded `collect_renewals` and `process_dunning` jobs. The implemented
+billing foundation includes guarded renewal collection states, provider-uncertainty
+recovery, terminal retry scheduling, `payment_method_required`, subscription
+`past_due`/billing grace, entitlement grace, authoritative recovery, and exhaustion.
+Plan switching and usage/overage billing remain deferred. Подробности:
 `docs/architecture/COMMERCIAL_CONTROL_PLANE.md`.
 Её планы, платежи, подписки и реестр
 лицензий сюда не входят.
@@ -61,8 +65,8 @@ Auth, session и membership Control Plane не переиспользуют Diar
 
 ## Подпись entitlement documents
 
-Документы в будущей фазе будут подписываться асимметрично Ed25519. Сейчас
-Commercial Control Plane хранит только metadata ключей и secret reference;
+Deployment entitlement documents are currently signed with Ed25519. Commercial
+Control Plane stores key metadata and a secret reference;
 приватный ключ должен находиться во внешнем Vault/KMS/HSM. Он не попадает в Yii/Core,
 On-Prem Docker image или Git. Локальный runtime получает только доверенные публичные
 ключи для проверки. PostgreSQL обеспечивает порядок применения через монотонный

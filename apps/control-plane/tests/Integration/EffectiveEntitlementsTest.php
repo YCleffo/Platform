@@ -99,6 +99,26 @@ final class EffectiveEntitlementsTest extends SubscriptionTestCase
         }
     }
 
+    public function testPastDueGraceKeepsExistingFeaturesOnlyUntilGraceDeadline(): void
+    {
+        [$owner, $account, $profile] = $this->readyAccount('entitlements-grace');
+        $feature = $this->feature('grace.existing.feature', 'boolean');
+        [, $price] = $this->planPrice('entitlements-grace-plan', featureValues: [$feature => true]);
+        $subscription = $this->draftSubscription($account, $profile, [$price]);
+        $this->activatePaid($account, $subscription, $this->activationInstant(), $this->uuid());
+        $this->connection->executeStatement("UPDATE commercial.subscriptions SET current_period_start=now()-interval '1 month', current_period_end=now()-interval '1 minute', billing_status='past_due', past_due_since=now()-interval '1 minute', grace_until=now()+interval '1 hour' WHERE id=?", [$subscription]);
+
+        $inside = $this->resolver()->forAccount($owner, $account);
+        self::assertIsArray($inside['features']);
+        self::assertTrue($inside['features']['grace.existing.feature']);
+        self::assertSame('past_due', $inside['subscription']['billing_status']);
+
+        $this->connection->executeStatement("UPDATE commercial.subscriptions SET grace_until=now()-interval '1 second' WHERE id=?", [$subscription]);
+        $after = $this->resolver()->forAccount($owner, $account);
+        self::assertNull($after['subscription']);
+        self::assertInstanceOf(\stdClass::class, $after['features']);
+    }
+
     private function resolver(): EffectiveEntitlements
     {
         return new EffectiveEntitlements($this->connection, new AccountAuthorization($this->connection));

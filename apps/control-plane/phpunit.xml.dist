@@ -11,6 +11,10 @@
         <env name="CONTROL_YOOKASSA_RETURN_URL" value="https://platform.example/payments/return"/>
         <env name="CONTROL_RENEWAL_LEAD_DAYS" value="7"/>
         <env name="CONTROL_RENEWAL_SETTLEMENT_GRACE_SECONDS" value="900"/>
+        <env name="CONTROL_DUNNING_MAX_ATTEMPTS" value="5"/>
+        <env name="CONTROL_DUNNING_RETRY_DELAYS_SECONDS" value="3600,21600,86400,259200"/>
+        <env name="CONTROL_DUNNING_GRACE_SECONDS" value="604800"/>
+        <env name="CONTROL_DUNNING_UNCERTAIN_RETRY_SECONDS" value="300"/>
     </php>
     <testsuites>
         <testsuite name="Unit"><directory>tests/Unit</directory></testsuite>

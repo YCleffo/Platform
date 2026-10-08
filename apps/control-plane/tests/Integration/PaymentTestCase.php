@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace ControlPlane\Tests\Integration;
 
 use ControlPlane\Account\Authorization\AccountAuthorization;
+use ControlPlane\Billing\Application\RenewalCollectionLifecycle;
+use ControlPlane\Billing\Application\RenewalDunningPolicy;
 use ControlPlane\Fiscalization\Application\ApplyAuthoritativeReceipt;
 use ControlPlane\Fiscalization\Application\CreatePaymentReceiptObligation;
 use ControlPlane\Fiscalization\Application\ReceiptSnapshot;
@@ -90,7 +92,7 @@ abstract class PaymentTestCase extends InvoiceTestCase
 
     protected function authoritativeProcessor(?FiscalReceiptProviderGateway $gateway = null): ProcessAuthoritativeProviderPayment
     {
-        return new ProcessAuthoritativeProviderPayment($this->connection, $this->attemptBinder(), $this->attemptCompleter(), $this->receiptSubmission($gateway), new RecordSavedPaymentMethod($this->connection));
+        return new ProcessAuthoritativeProviderPayment($this->connection, $this->attemptBinder(), $this->attemptCompleter(), $this->receiptSubmission($gateway), new RecordSavedPaymentMethod($this->connection), $this->renewalLifecycle());
     }
 
     protected function receiptSubmission(?FiscalReceiptProviderGateway $gateway = null): SubmitYooKassaReceipt
@@ -129,6 +131,16 @@ abstract class PaymentTestCase extends InvoiceTestCase
 
     protected function settlement(): SettlePayment
     {
-        return new SettlePayment($this->activator(), new AdvanceSubscriptionPeriod($this->connection));
+        return new SettlePayment($this->activator(), new AdvanceSubscriptionPeriod($this->connection), $this->renewalLifecycle());
+    }
+
+    protected function dunningPolicy(): RenewalDunningPolicy
+    {
+        return new RenewalDunningPolicy(3, '60,300', 3600, 30);
+    }
+
+    protected function renewalLifecycle(): RenewalCollectionLifecycle
+    {
+        return new RenewalCollectionLifecycle($this->connection, $this->dunningPolicy());
     }
 }

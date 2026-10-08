@@ -11,6 +11,9 @@ use Doctrine\DBAL\Tools\DsnParser;
 use ControlPlane\Account\Application\MembershipService;
 use ControlPlane\Account\Authorization\AccountAuthorization;
 use ControlPlane\Billing\Application\IssueInvoice;
+use ControlPlane\Billing\Application\CollectRenewalInvoice;
+use ControlPlane\Billing\Application\RenewalCollectionLifecycle;
+use ControlPlane\Billing\Application\RenewalDunningPolicy;
 use ControlPlane\Fiscalization\Application\ApplyAuthoritativeReceipt;
 use ControlPlane\Fiscalization\Application\CreatePaymentReceiptObligation;
 use ControlPlane\Fiscalization\Application\ReceiptSnapshot;
@@ -23,6 +26,7 @@ use ControlPlane\Identity\Security\DatabaseRateLimiter;
 use ControlPlane\Identity\Security\TokenCodec;
 use ControlPlane\Identity\Security\TotpSecretCipher;
 use ControlPlane\Subscription\Application\ActivateSubscription;
+use ControlPlane\Subscription\Application\AdvanceSubscriptionPeriod;
 use ControlPlane\Subscription\Application\CancelSubscription;
 use ControlPlane\Subscription\Application\ExpireSubscription;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
@@ -31,6 +35,7 @@ use ControlPlane\Payment\Application\BindPaymentAttemptProviderReference;
 use ControlPlane\Payment\Application\CompletePaymentAttempt;
 use ControlPlane\Payment\Application\CreatePayment;
 use ControlPlane\Payment\Application\ProcessAuthoritativeProviderPayment;
+use ControlPlane\Payment\Application\PaymentCreator as InternalPaymentCreator;
 use ControlPlane\Payment\Application\RecordSavedPaymentMethod;
 use ControlPlane\Payment\Application\SettlePayment;
 use ControlPlane\Payment\Provider\ProviderAccount;
@@ -39,6 +44,7 @@ use ControlPlane\Usage\Application\ApplyUsageDelta;
 use ControlPlane\Usage\Application\IngestDeploymentUsage;
 use ControlPlane\M2m\DeploymentIdentity;
 use ControlPlane\Tests\Support\FakeFiscalReceiptProviderGateway;
+use ControlPlane\Tests\Support\FakePaymentProviderGateway;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasher;
 
@@ -133,6 +139,10 @@ try {
         case 'create_payment':
             [$userId, $accountId, $idempotencyKey, $correlationId] = explode('|', $extra);
             paymentCreator($connection)->create($userId, $accountId, $value, $idempotencyKey, $correlationId);
+            break;
+        case 'collect_renewal':
+            [$correlationId, $instant] = explode('|', $extra, 2);
+            renewalCollector($connection)->collect($value, $correlationId, new DateTimeImmutable($instant));
             break;
         case 'begin_payment_attempt':
             [$providerAccountId, $methodType, $correlationId] = explode('|', $extra);
@@ -248,4 +258,35 @@ function paymentSettlement(\Doctrine\DBAL\Connection $connection): SettlePayment
 function paymentCreator(\Doctrine\DBAL\Connection $connection): CreatePayment
 {
     return new CreatePayment($connection, new AccountAuthorization($connection), paymentSettlement($connection));
+}
+
+function renewalCollector(\Doctrine\DBAL\Connection $connection): CollectRenewalInvoice
+{
+    $policy = new RenewalDunningPolicy(3, '60,300', 3600, 30);
+    $lifecycle = new RenewalCollectionLifecycle($connection, $policy);
+    $settlement = new SettlePayment(
+        new ActivateSubscription($connection, new SubscriptionPeriodCalculator()),
+        new AdvanceSubscriptionPeriod($connection),
+        $lifecycle,
+    );
+    $completer = new CompletePaymentAttempt($connection, $settlement, new CreatePaymentReceiptObligation());
+    $processor = new ProcessAuthoritativeProviderPayment(
+        $connection,
+        new BindPaymentAttemptProviderReference($connection),
+        $completer,
+        new SubmitYooKassaReceipt($connection, new ReceiptSnapshot(), new FakeFiscalReceiptProviderGateway(), new ApplyAuthoritativeReceipt($connection)),
+        new RecordSavedPaymentMethod($connection),
+        $lifecycle,
+    );
+
+    return new CollectRenewalInvoice(
+        $connection,
+        new BeginPaymentAttempt($connection),
+        new BindPaymentAttemptProviderReference($connection),
+        $completer,
+        $processor,
+        new FakePaymentProviderGateway(),
+        new InternalPaymentCreator($settlement),
+        $lifecycle,
+    );
 }

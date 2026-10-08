@@ -6,6 +6,7 @@ namespace ControlPlane\Tests\Unit;
 
 use ControlPlane\Privacy\ControlProviderEgressPolicy;
 use ControlPlane\Payment\Provider\PaymentProviderException;
+use ControlPlane\Payment\Provider\ProviderPaymentFailure;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPaymentRequest;
 use ControlPlane\Payment\Provider\YooKassa\EnvPaymentProviderSecretResolver;
@@ -121,10 +122,48 @@ final class YooKassaGatewayTest extends TestCase
         $payment = $this->gateway($client)->getPayment($this->account(), 'yk-payment-1');
 
         self::assertSame('payment-method-1', $payment->paymentMethod?->id);
-        self::assertSame('1234', $payment->paymentMethod?->last4);
-        self::assertSame(12, $payment->paymentMethod?->expiryMonth);
-        self::assertSame(2030, $payment->paymentMethod?->expiryYear);
+        self::assertSame('1234', $payment->paymentMethod->last4);
+        self::assertSame(12, $payment->paymentMethod->expiryMonth);
+        self::assertSame(2030, $payment->paymentMethod->expiryYear);
         self::assertStringNotContainsString('424242', json_encode($payment, JSON_THROW_ON_ERROR));
+    }
+
+    public function testSavedCardChargeUsesProviderMethodWithoutRedirectOrRawCardData(): void
+    {
+        $client = new MockHttpClient(function (string $method, string $url, array $options): MockResponse {
+            $body = json_decode((string) $options['body'], true, 16, JSON_THROW_ON_ERROR);
+            self::assertSame('saved-method-1', $body['payment_method_id']);
+            self::assertArrayNotHasKey('confirmation', $body);
+            self::assertArrayNotHasKey('payment_method_data', $body);
+            self::assertArrayNotHasKey('card', $body);
+            $response = $this->pendingResponse();
+            unset($response['confirmation']);
+            $response['payment_method'] = ['id' => 'saved-method-1', 'type' => 'bank_card', 'saved' => true];
+            return new MockResponse(json_encode($response, JSON_THROW_ON_ERROR));
+        });
+        $this->gateway($client)->createPayment($this->account(), new ProviderPaymentRequest(
+            1050, 'RUB', 'provider-request-key', 'Renewal', 'payment-id', 'attempt-id', 'invoice-id',
+            'bank_card', false, 'saved-method-1',
+        ));
+    }
+
+    public function testCancellationDetailsMapToProviderNeutralFailure(): void
+    {
+        foreach ([
+            'insufficient_funds' => ProviderPaymentFailure::RETRYABLE,
+            'expired_card' => ProviderPaymentFailure::PAYMENT_METHOD_INVALID,
+            'fraud_suspected' => ProviderPaymentFailure::NON_RETRYABLE,
+            'unrecognized_new_reason' => ProviderPaymentFailure::UNKNOWN,
+        ] as $reason => $expectedClass) {
+            $response = $this->pendingResponse();
+            $response['status'] = 'canceled';
+            unset($response['confirmation']);
+            $response['cancellation_details'] = ['party' => 'yoo_money', 'reason' => $reason];
+            $payment = $this->gateway(new MockHttpClient(new MockResponse(json_encode($response, JSON_THROW_ON_ERROR))))
+                ->getPayment($this->account(), 'yk-payment-1');
+            self::assertSame($expectedClass, $payment->failure?->class);
+            self::assertSame($expectedClass === ProviderPaymentFailure::PAYMENT_METHOD_INVALID, $payment->failure->paymentMethodInvalid);
+        }
     }
 
     public function testRejectsUnsupportedCurrencyBeforeNetwork(): void

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace ControlPlane\Payment\Application;
 
+use ControlPlane\Billing\Application\RenewalCollectionLifecycle;
 use ControlPlane\Billing\Domain\Money;
 use ControlPlane\Fiscalization\Application\SubmitYooKassaReceipt;
 use ControlPlane\Payment\Provider\PaymentProviderException;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPayment;
+use ControlPlane\Payment\Provider\ProviderPaymentFailure;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Uid\Uuid;
 
@@ -20,12 +22,14 @@ final readonly class ProcessAuthoritativeProviderPayment
         private CompletePaymentAttempt $completer,
         private SubmitYooKassaReceipt $receipts,
         private RecordSavedPaymentMethod $savedMethods,
+        private ?RenewalCollectionLifecycle $renewalLifecycle = null,
     ) {
     }
 
     /** @return array{attempt_id: string, payment_id: string, provider_status: string, changed: bool} */
-    public function process(ProviderAccount $account, ProviderPayment $providerPayment, string $correlationId): array
+    public function process(ProviderAccount $account, ProviderPayment $providerPayment, string $correlationId, ?\DateTimeImmutable $observedAt = null): array
     {
+        $observedAt ??= new \DateTimeImmutable('now');
         if (!Uuid::isValid($correlationId)) {
             throw new \InvalidArgumentException('Invalid correlation identifier.');
         }
@@ -74,7 +78,17 @@ SQL, [$attemptId]);
             return ['attempt_id' => $attemptId, 'payment_id' => $paymentId, 'provider_status' => 'succeeded', 'changed' => $local['attempt_status'] === 'pending'];
         }
         if ($providerPayment->status === 'canceled') {
-            $this->completer->complete($attemptId, 'cancelled', null, new \DateTimeImmutable('now'), $correlationId);
+            $this->completer->complete($attemptId, 'cancelled', null, $observedAt, $correlationId);
+            if ($local['attempt_status'] === 'pending') {
+                $this->renewalLifecycle?->terminal(
+                    $invoiceId,
+                    $providerPayment->failure ?? new ProviderPaymentFailure(ProviderPaymentFailure::UNKNOWN, 'provider_cancelled'),
+                    $observedAt,
+                    $correlationId,
+                    $account->id,
+                    $providerPayment->paymentMethod?->id,
+                );
+            }
 
             return ['attempt_id' => $attemptId, 'payment_id' => $paymentId, 'provider_status' => 'canceled', 'changed' => $local['attempt_status'] === 'pending'];
         }

@@ -393,10 +393,13 @@ components:
     Session: {type: object, required: [id, authentication_method, primary_authenticated_at, current], properties: {id: {type: string, format: uuid}, issued_at: {type: string, format: date-time}, last_used_at: {type: string, format: date-time}, expires_at: {type: string, format: date-time}, revoked_at: {type: [string, 'null'], format: date-time}, revoke_reason: {type: [string, 'null']}, user_agent: {type: string}, authentication_method: {type: string, enum: [password, password_totp, password_recovery]}, primary_authenticated_at: {type: string, format: date-time}, mfa_authenticated_at: {type: [string, 'null'], format: date-time}, current: {type: boolean}}}
     Subscription:
       type: object
-      required: [id, status, renewal_required]
+      required: [id, status, billing_status, past_due_since, grace_until, renewal_required]
       properties:
         id: {type: string, format: uuid}
         status: {type: string, enum: [draft, active, cancelled, expired]}
+        billing_status: {type: string, enum: [current, past_due]}
+        past_due_since: {type: [string, 'null'], format: date-time}
+        grace_until: {type: [string, 'null'], format: date-time}
         current_period_start: {type: [string, 'null'], format: date-time}
         current_period_end: {type: [string, 'null'], format: date-time}
         renewal_required: {type: boolean}

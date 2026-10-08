@@ -120,6 +120,15 @@ payment funds the next period without changing the active period; rollover
 atomically closes the old usage period and opens a zeroed one. Expiration waits
 for the configurable settlement grace and serializes on the subscription row.
 
+Automatic renewal hardening adds the separate bounded
+`control:billing:process-dunning` job and a provider-neutral policy. A transport-
+uncertain CREATE keeps the same pending PaymentAttempt and provider request key;
+a terminal customer charge consumes one dunning attempt and any later charge uses
+a new PaymentAttempt on the same Payment. Guarded collection states drive
+payment-method-required restoration, retry scheduling, past-due billing grace,
+authoritative webhook/reconciliation recovery, and terminal exhaustion. The short
+renewal settlement race grace remains distinct from customer billing grace.
+
 The same phase adds `refunds` and `refund_items`. Refund money is derived from
 validated invoice-line allocations, while payment locking prevents concurrent
 over-refund. YooKassa create/get calls reuse a stable provider idempotency key;
@@ -241,8 +250,8 @@ lifecycle; it does not create infrastructure. Control current-user/session APIs 
 commercial read models belong to Phase 4.1. M2M service credentials and usage
 ingestion and signed entitlement delivery are implemented.
 
-Plan switching, additional payment providers and methods, retry/dunning/collections,
-past-due/grace lifecycle, subscription upgrade/downgrade, usage/overage billing,
+Plan switching, additional payment providers and methods,
+subscription upgrade/downgrade, usage/overage billing,
 DNS/TLS, custom domains, On-Prem activation, production infrastructure provisioning,
 automatic rollback, and production observability remain future phases. Hosted YooKassa
 SBP and bank-card checkout, authoritative account-scoped saved payment methods,

@@ -660,6 +660,11 @@ settlement, затем отдельно отправляет чек в YooKassa 
 атомарный rollover usage periods, full/partial refunds, YooKassa refund
 reconciliation/webhooks и отдельные refund receipts. Plan switching и
 usage-based billing отложены.
+Automatic saved-card renewal collection now includes bounded uncertain-request
+recovery, terminal dunning retries, payment-method-required restoration,
+past-due billing grace, entitlement grace, authoritative billing recovery, and
+dunning exhaustion. The customer billing grace is configured independently from
+the short renewal settlement race grace. Upgrade/downgrade and proration remain deferred.
 Phase 4.0 закрывает универсальный Yii Core: Settings v2 с module extensions,
 durable Consent, notification policy, Redis Presence и privacy gate,
 self-service/forced password change и guarded custom roles. Versioned contracts

@@ -30,12 +30,19 @@ SQL, [$deploymentId]);
                 : null;
             $features = $status === 'active' ? $state['features'] : new \stdClass();
             $features = self::canonicalValue($features);
-            $until = $status === 'active' && $state['subscription'] !== null
-                ? self::timestamp(new \DateTimeImmutable($state['subscription']['current_period_end'])) : null;
+            $until = null;
+            if ($status === 'active' && $state['subscription'] !== null) {
+                $boundary = $state['subscription']['billing_status'] === 'past_due'
+                    ? $state['subscription']['grace_until'] : $state['subscription']['current_period_end'];
+                $until = self::timestamp(new \DateTimeImmutable((string) $boundary));
+            }
             $keyId = $this->signer->activeKeyId();
             $fingerprint = hash('sha256', self::json([
                 'documentVersion' => 1, 'installationId' => $deployment['installation_id'],
                 'deploymentStatus' => $status, 'features' => $features,
+                'billingStatus' => $state['subscription']['billing_status'] ?? null,
+                'pastDueSince' => $state['subscription']['past_due_since'] ?? null,
+                'graceUntil' => $state['subscription']['grace_until'] ?? null,
                 'validUntil' => $until, 'keyId' => $keyId,
             ]));
             $latest = $db->fetchAssociative(<<<'SQL'

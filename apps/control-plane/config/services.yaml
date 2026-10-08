@@ -160,6 +160,13 @@ services:
         arguments:
             $graceSeconds: '%env(int:CONTROL_RENEWAL_SETTLEMENT_GRACE_SECONDS)%'
 
+    ControlPlane\Billing\Application\RenewalDunningPolicy:
+        arguments:
+            $maxAttempts: '%env(int:CONTROL_DUNNING_MAX_ATTEMPTS)%'
+            $retryDelaysSeconds: '%env(string:CONTROL_DUNNING_RETRY_DELAYS_SECONDS)%'
+            $graceSeconds: '%env(int:CONTROL_DUNNING_GRACE_SECONDS)%'
+            $uncertainRetrySeconds: '%env(int:CONTROL_DUNNING_UNCERTAIN_RETRY_SECONDS)%'
+
     ControlPlane\Infrastructure\Console\PrepareRenewalsCommand:
         arguments:
             $leadDays: '%env(int:CONTROL_RENEWAL_LEAD_DAYS)%'
