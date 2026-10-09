@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ControlPlane\Subscription\Application;
 
+use ControlPlane\Billing\Application\RenewalExecutionLock;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Uid\Uuid;
 
@@ -23,14 +24,26 @@ final readonly class ExpireSubscription
             throw new \InvalidArgumentException('Invalid public identifier.');
         }
 
-        return $this->connection->transactional(function (Connection $connection) use ($accountId, $subscriptionId, $effectiveInstant, $correlationId): array {
-            $subscription = $connection->fetchAssociative('SELECT id, commercial_account_id, status, billing_status, current_period_end, grace_until FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$subscriptionId, $accountId]);
-            if ($subscription === false) {
-                throw new \DomainException('Subscription was not found.');
-            }
+        RenewalExecutionLock::acquire($this->connection, $subscriptionId);
+        try {
+            return $this->connection->transactional(fn (Connection $connection): array =>
+                $this->expireInTransaction($connection, $accountId, $subscriptionId, $effectiveInstant, $correlationId));
+        } finally {
+            RenewalExecutionLock::release($this->connection, $subscriptionId);
+        }
+    }
 
-            return $this->expireLocked($connection, $subscription, $effectiveInstant, $correlationId);
-        });
+    /** The caller owns the transaction and has locked this subscription before its renewal invoice.
+     * @return array{id: string, status: 'expired'|'active'}
+     */
+    public function expireInTransaction(Connection $connection, string $accountId, string $subscriptionId, \DateTimeImmutable $effectiveInstant, string $correlationId): array
+    {
+        $subscription = $connection->fetchAssociative('SELECT id, commercial_account_id, status, billing_status, current_period_end, grace_until FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$subscriptionId, $accountId]);
+        if ($subscription === false) {
+            throw new \DomainException('Subscription was not found.');
+        }
+
+        return $this->expireLocked($connection, $subscription, $effectiveInstant, $correlationId);
     }
 
     public function expireDue(\DateTimeImmutable $effectiveInstant, int $batchSize, string $correlationId): int
@@ -39,9 +52,8 @@ final readonly class ExpireSubscription
             throw new \InvalidArgumentException('Invalid expiration batch request.');
         }
 
-        return $this->connection->transactional(function (Connection $connection) use ($effectiveInstant, $batchSize, $correlationId): int {
-            $rows = $connection->fetchAllAssociative(sprintf(<<<'SQL'
-SELECT id, commercial_account_id, status, billing_status, current_period_end, grace_until
+        $rows = $this->connection->fetchAllAssociative(sprintf(<<<'SQL'
+SELECT id, commercial_account_id
 FROM commercial.subscriptions
 WHERE status = 'active' AND (
  (billing_status='past_due' AND grace_until <= ?::timestamptz) OR
@@ -49,15 +61,27 @@ WHERE status = 'active' AND (
   AND NOT EXISTS (SELECT 1 FROM commercial.invoices i WHERE i.subscription_id=subscriptions.id AND i.billing_reason='subscription_renewal' AND i.status='issued')))
 ORDER BY current_period_end, id
 LIMIT %d
-FOR UPDATE SKIP LOCKED
 SQL, $batchSize), [$this->timestamp($effectiveInstant), $this->graceSeconds, $this->timestamp($effectiveInstant)]);
-
-            foreach ($rows as $subscription) {
-                $this->expireLocked($connection, $subscription, $effectiveInstant, $correlationId);
+        $count = 0;
+        foreach ($rows as $row) {
+            if (!is_string($row['id']) || !is_string($row['commercial_account_id'])) continue;
+            RenewalExecutionLock::acquire($this->connection, $row['id']);
+            try {
+                try {
+                    $count += $this->connection->transactional(function (Connection $connection) use ($row, $effectiveInstant, $correlationId): int {
+                        $subscription = $connection->fetchAssociative('SELECT id, commercial_account_id, status, billing_status, current_period_end, grace_until FROM commercial.subscriptions WHERE id=? AND commercial_account_id=? AND status=? FOR UPDATE SKIP LOCKED', [$row['id'], $row['commercial_account_id'], 'active']);
+                        if ($subscription === false) return 0;
+                        $this->expireLocked($connection, $subscription, $effectiveInstant, $correlationId);
+                        return 1;
+                    });
+                } catch (\DomainException) {
+                    // A settlement or cancellation changed eligibility after selection.
+                }
+            } finally {
+                RenewalExecutionLock::release($this->connection, $row['id']);
             }
-
-            return count($rows);
-        });
+        }
+        return $count;
     }
 
     /**
@@ -87,10 +111,26 @@ SQL, $batchSize), [$this->timestamp($effectiveInstant), $this->graceSeconds, $th
         }
 
         $paidRenewal = $connection->fetchOne("SELECT id FROM commercial.invoices WHERE subscription_id = ? AND billing_reason = 'subscription_renewal' AND status = 'paid' AND service_period_start = ?::timestamptz FOR UPDATE", [$subscription['id'], $subscription['current_period_end']]);
-        if (is_string($paidRenewal) && $this->advancement !== null) {
-            $advanced = $this->advancement->advanceInTransaction($connection, $subscription['commercial_account_id'], $subscription['id'], $effectiveInstant, $correlationId);
+        if (is_string($paidRenewal)) {
+            $advanced = ($this->advancement ?? new AdvanceSubscriptionPeriod($connection))->advanceInTransaction($connection, $subscription['commercial_account_id'], $subscription['id'], $effectiveInstant, $correlationId);
 
             return ['id' => $advanced['id'], 'status' => 'active'];
+        }
+
+        if ($subscription['billing_status'] === 'past_due') {
+            $renewal = $connection->fetchAssociative("SELECT id, status FROM commercial.invoices WHERE subscription_id=? AND billing_reason='subscription_renewal' AND service_period_start=?::timestamptz FOR UPDATE", [$subscription['id'], $subscription['current_period_end']]);
+            if ($renewal !== false && $renewal['status'] === 'issued') {
+                $payment = $connection->fetchAssociative('SELECT status FROM commercial.payments WHERE invoice_id=? FOR UPDATE', [$renewal['id']]);
+                $state = $connection->fetchAssociative('SELECT state FROM commercial.renewal_collection_states WHERE invoice_id=? FOR UPDATE', [$renewal['id']]);
+                if ($payment !== false && $payment['status'] === 'succeeded') {
+                    throw new \LogicException('Succeeded renewal payment has an unpaid invoice.');
+                }
+                if ($state !== false && !in_array($state['state'], ['succeeded', 'exhausted'], true)) {
+                    $connection->executeStatement("UPDATE commercial.renewal_collection_states SET state='exhausted', next_attempt_at=NULL, updated_at=now() WHERE invoice_id=?", [$renewal['id']]);
+                    $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, 'renewal.dunning_exhausted', 'invoice', ?, ?, 'failure')", [$subscription['commercial_account_id'], $renewal['id'], $correlationId]);
+                    $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('subscription.dunning_exhausted', 'subscription', ?, jsonb_build_object('subscription_id', ?::text, 'invoice_id', ?::text, 'commercial_account_id', ?::text))", [$subscription['id'], $subscription['id'], $renewal['id'], $subscription['commercial_account_id']]);
+                }
+            }
         }
 
         $connection->executeStatement("UPDATE commercial.subscriptions SET status = 'expired', updated_at = now() WHERE id = ?", [$subscription['id']]);

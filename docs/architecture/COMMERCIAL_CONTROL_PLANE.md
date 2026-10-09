@@ -129,6 +129,21 @@ payment-method-required restoration, retry scheduling, past-due billing grace,
 authoritative webhook/reconciliation recovery, and terminal exhaustion. The short
 renewal settlement race grace remains distinct from customer billing grace.
 
+Renewal writers lock the subscription, invoice, Payment, collection state and
+PaymentAttempt in that order when those rows are needed. Expiration and
+`dunning_exhausted` are one transaction; a committed settlement wins by making
+expiration a no-op. If expiration commits first, a later provider success pays
+the invoice and emits late settlement without reopening the subscription or
+usage period. A new saved-card CREATE is preceded by a short transaction that
+checks the invoice, Payment, subscription, collection, attempt, saved method and
+provider account. The provider call runs after that transaction commits. A
+session advisory lock keyed by subscription spans this recheck and provider call;
+authoritative attempt completion, cancellation and terminal expiration take the
+same key before their transactions.
+This prevents settlement from committing between the final check and a new
+CREATE without holding financial row locks during network I/O. The lock is
+per subscription, so independent subscriptions can proceed concurrently.
+
 The same phase adds `refunds` and `refund_items`. Refund money is derived from
 validated invoice-line allocations, while payment locking prevents concurrent
 over-refund. YooKassa create/get calls reuse a stable provider idempotency key;

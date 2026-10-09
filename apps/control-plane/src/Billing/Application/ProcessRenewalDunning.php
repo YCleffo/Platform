@@ -29,14 +29,14 @@ FROM commercial.renewal_collection_states r
 JOIN commercial.invoices i ON i.id=r.invoice_id
 JOIN commercial.subscriptions s ON s.id=r.subscription_id
 WHERE i.status='issued' AND s.status='active' AND (
- (r.state='retry_wait' AND r.next_attempt_at <= ?::timestamptz) OR
+ (r.state='retry_wait' AND r.attempt_count < ? AND r.next_attempt_at <= ?::timestamptz) OR
  (r.state='payment_method_required' AND EXISTS (
    SELECT 1 FROM commercial.saved_payment_methods m JOIN commercial.payment_provider_accounts pa ON pa.id=m.provider_account_id
    WHERE m.commercial_account_id=r.commercial_account_id AND m.status='active' AND m.is_default
      AND m.method_type='bank_card' AND pa.status='active' AND pa.provider_code='yookassa')))
 ORDER BY r.next_attempt_at NULLS FIRST, r.invoice_id
 LIMIT ? FOR UPDATE OF r SKIP LOCKED
-SQL, [$this->timestamp($now), $limit], [ParameterType::STRING, ParameterType::INTEGER]);
+SQL, [$this->policy->maximumAttempts(), $this->timestamp($now), $limit], [ParameterType::INTEGER, ParameterType::STRING, ParameterType::INTEGER]);
             foreach ($rows as $row) {
                 if ($row['state'] === 'retry_wait') {
                     $db->executeStatement("UPDATE commercial.renewal_collection_states SET state='collecting', updated_at=now() WHERE invoice_id=? AND state='retry_wait'", [$row['invoice_id']]);
@@ -50,12 +50,7 @@ SQL, [$this->timestamp($now), $limit], [ParameterType::STRING, ParameterType::IN
             if (isset($result['attempt_id'])) ++$report['started'];
             if ($result['state'] === 'no_payment_method') ++$report['payment_method_required'];
         }
-        $exhausted = $this->exhaustDue($now, $limit, $correlationId);
-        $report['exhausted'] = count($exhausted);
-        foreach ($exhausted as $row) {
-            try { $this->expiration->expire((string) $row['commercial_account_id'], (string) $row['subscription_id'], $now, $correlationId); }
-            catch (\DomainException) { /* A concurrent settlement/cancellation owns the final state. */ }
-        }
+        $report['exhausted'] = $this->exhaustDue($now, $limit, $correlationId);
         return $report;
     }
 
@@ -82,26 +77,46 @@ SQL, [$this->timestamp($now), $limit], [ParameterType::STRING, ParameterType::IN
         });
     }
 
-    /** @return list<array<string,mixed>> */
-    private function exhaustDue(\DateTimeImmutable $now, int $limit, string $correlationId): array
+    private function exhaustDue(\DateTimeImmutable $now, int $limit, string $correlationId): int
     {
-        return $this->connection->transactional(function (Connection $db) use ($now, $limit, $correlationId): array {
-            $rows = $db->fetchAllAssociative(<<<'SQL'
-SELECT r.invoice_id, r.subscription_id, r.commercial_account_id
+        $ids = $this->connection->fetchFirstColumn(<<<'SQL'
+SELECT r.invoice_id
 FROM commercial.renewal_collection_states r
 JOIN commercial.invoices i ON i.id=r.invoice_id
 JOIN commercial.subscriptions s ON s.id=r.subscription_id
 WHERE i.status='issued' AND s.status='active' AND r.state NOT IN ('succeeded','exhausted')
- AND ((r.state <> 'collecting' AND r.attempt_count >= ?) OR (s.billing_status='past_due' AND s.grace_until <= ?::timestamptz))
-ORDER BY s.grace_until NULLS LAST, r.invoice_id LIMIT ? FOR UPDATE OF r,s SKIP LOCKED
-SQL, [$this->policy->maximumAttempts(), $this->timestamp($now), $limit], [ParameterType::INTEGER, ParameterType::STRING, ParameterType::INTEGER]);
-            foreach ($rows as $row) {
-                $db->executeStatement("UPDATE commercial.renewal_collection_states SET state='exhausted', next_attempt_at=NULL, updated_at=now() WHERE invoice_id=?", [$row['invoice_id']]);
-                $db->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, 'renewal.dunning_exhausted', 'invoice', ?, ?, 'failure')", [$row['commercial_account_id'], $row['invoice_id'], $correlationId]);
-                $db->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('subscription.dunning_exhausted', 'subscription', ?, jsonb_build_object('subscription_id', ?::text, 'invoice_id', ?::text, 'commercial_account_id', ?::text))", [$row['subscription_id'], $row['subscription_id'], $row['invoice_id'], $row['commercial_account_id']]);
+ AND s.billing_status='past_due' AND s.grace_until <= ?::timestamptz
+ORDER BY s.grace_until, r.invoice_id LIMIT ?
+SQL, [$this->timestamp($now), $limit], [ParameterType::STRING, ParameterType::INTEGER]);
+        $count = 0;
+        foreach ($ids as $invoiceId) {
+            if (!is_string($invoiceId)) continue;
+            $subscriptionId = $this->connection->fetchOne('SELECT subscription_id FROM commercial.invoices WHERE id=?', [$invoiceId]);
+            if (!is_string($subscriptionId)) continue;
+            RenewalExecutionLock::acquire($this->connection, $subscriptionId);
+            try {
+                $count += $this->connection->transactional(function (Connection $db) use ($invoiceId, $now, $correlationId): int {
+                $identity = $db->fetchAssociative('SELECT subscription_id, commercial_account_id FROM commercial.invoices WHERE id=?', [$invoiceId]);
+                if ($identity === false) return 0;
+                // Subscription -> invoice -> payment -> collection is the same order as authoritative settlement.
+                $subscription = $db->fetchAssociative('SELECT status, billing_status, grace_until FROM commercial.subscriptions WHERE id=? FOR UPDATE', [$identity['subscription_id']]);
+                $invoice = $db->fetchAssociative('SELECT status FROM commercial.invoices WHERE id=? FOR UPDATE', [$invoiceId]);
+                $payment = $db->fetchAssociative('SELECT status FROM commercial.payments WHERE invoice_id=? FOR UPDATE', [$invoiceId]);
+                $state = $db->fetchAssociative('SELECT state FROM commercial.renewal_collection_states WHERE invoice_id=? FOR UPDATE', [$invoiceId]);
+                if ($subscription === false || $invoice === false || $state === false
+                    || $subscription['status'] !== 'active' || $subscription['billing_status'] !== 'past_due'
+                    || !is_string($subscription['grace_until']) || new \DateTimeImmutable($subscription['grace_until']) > $now
+                    || $invoice['status'] !== 'issued' || ($payment !== false && $payment['status'] === 'succeeded')
+                    || in_array($state['state'], ['succeeded', 'exhausted'], true)) return 0;
+                $expired = $this->expiration->expireInTransaction($db, (string) $identity['commercial_account_id'], (string) $identity['subscription_id'], $now, $correlationId);
+                if ($expired['status'] !== 'expired') return 0;
+                return 1;
+                });
+            } finally {
+                RenewalExecutionLock::release($this->connection, $subscriptionId);
             }
-            return $rows;
-        });
+        }
+        return $count;
     }
 
     private function timestamp(\DateTimeImmutable $value): string { return $value->format('Y-m-d H:i:s.uP'); }

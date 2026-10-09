@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ControlPlane\Subscription\Application;
 
+use ControlPlane\Billing\Application\RenewalExecutionLock;
 use ControlPlane\Account\Authorization\AccountAuthorization;
 use ControlPlane\Shared\Domain\IdentifierPolicy;
 use Doctrine\DBAL\Connection;
@@ -29,7 +30,9 @@ final readonly class CancelSubscription
             'subscription_id' => strtolower($subscriptionId),
         ], JSON_THROW_ON_ERROR));
 
-        return $this->connection->transactional(function (Connection $connection) use ($userId, $accountId, $subscriptionId, $idempotencyKey, $correlationId, $scope, $hash): array {
+        RenewalExecutionLock::acquire($this->connection, $subscriptionId);
+        try {
+            return $this->connection->transactional(function (Connection $connection) use ($userId, $accountId, $subscriptionId, $idempotencyKey, $correlationId, $scope, $hash): array {
             $this->authorization->requirePermission($userId, $accountId, 'billing.manage');
 
             $subscription = $connection->fetchAssociative('SELECT id, status FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$subscriptionId, $accountId]);
@@ -118,6 +121,9 @@ final readonly class CancelSubscription
             $connection->executeStatement("UPDATE commercial.idempotency_keys SET status = 'completed', result_reference = ? WHERE scope = ? AND idempotency_key = ?", [$subscriptionId, $scope, $idempotencyKey]);
 
             return ['id' => $subscriptionId, 'status' => 'cancelled'];
-        });
+            });
+        } finally {
+            RenewalExecutionLock::release($this->connection, $subscriptionId);
+        }
     }
 }

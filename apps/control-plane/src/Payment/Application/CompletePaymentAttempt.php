@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ControlPlane\Payment\Application;
 
+use ControlPlane\Billing\Application\RenewalExecutionLock;
 use ControlPlane\Fiscalization\Application\CreatePaymentReceiptObligation;
 use ControlPlane\Shared\Domain\IdentifierPolicy;
 use Doctrine\DBAL\Connection;
@@ -28,7 +29,12 @@ final readonly class CompletePaymentAttempt
             throw new \InvalidArgumentException('Failure code is only valid for a failed attempt.');
         }
 
-        return $this->connection->transactional(function (Connection $connection) use ($attemptId, $outcome, $failureCode, $settlementInstant, $correlationId): array {
+        $renewalSubscriptionId = $this->connection->fetchOne("SELECT i.subscription_id FROM commercial.payment_attempts a JOIN commercial.payments p ON p.id=a.payment_id JOIN commercial.invoices i ON i.id=p.invoice_id WHERE a.id=? AND i.billing_reason='subscription_renewal'", [$attemptId]);
+        if (is_string($renewalSubscriptionId)) {
+            RenewalExecutionLock::acquire($this->connection, $renewalSubscriptionId);
+        }
+        try {
+            return $this->connection->transactional(function (Connection $connection) use ($attemptId, $outcome, $failureCode, $settlementInstant, $correlationId): array {
             $identity = $connection->fetchAssociative('SELECT pa.payment_id, p.invoice_id, i.subscription_id FROM commercial.payment_attempts pa JOIN commercial.payments p ON p.id = pa.payment_id JOIN commercial.invoices i ON i.id = p.invoice_id WHERE pa.id = ?', [$attemptId]);
             if ($identity === false || !is_string($identity['subscription_id']) || !is_string($identity['invoice_id']) || !is_string($identity['payment_id'])) {
                 throw new \DomainException('Payment attempt was not found.');
@@ -63,6 +69,11 @@ final readonly class CompletePaymentAttempt
             $this->receipts->createInTransaction($connection, $attemptId);
 
             return ['attempt_id' => $attemptId, 'attempt_status' => 'succeeded', 'payment_id' => $payment['id'], 'payment_status' => 'succeeded'];
-        });
+            });
+        } finally {
+            if (is_string($renewalSubscriptionId)) {
+                RenewalExecutionLock::release($this->connection, $renewalSubscriptionId);
+            }
+        }
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ControlPlane\Billing\Application;
 
 use ControlPlane\Payment\Provider\ProviderPaymentFailure;
+use ControlPlane\Subscription\Application\ExpireSubscription;
 use Doctrine\DBAL\Connection;
 
 final readonly class RenewalCollectionLifecycle
@@ -23,9 +24,20 @@ SQL, [$this->timestamp($this->policy->uncertainRetryAt($now)), $code, $invoiceId
 
     public function terminal(string $invoiceId, ProviderPaymentFailure $failure, \DateTimeImmutable $now, string $correlationId, ?string $providerAccountId = null, ?string $providerMethodReference = null): void
     {
-        $this->connection->transactional(function (Connection $db) use ($invoiceId, $failure, $now, $correlationId, $providerAccountId, $providerMethodReference): void {
-            $row = $db->fetchAssociative('SELECT r.*, s.status AS subscription_status, s.grace_until FROM commercial.renewal_collection_states r JOIN commercial.subscriptions s ON s.id=r.subscription_id WHERE r.invoice_id=? FOR UPDATE OF r,s', [$invoiceId]);
-            if ($row === false || in_array($row['state'], ['succeeded','exhausted'], true)) return;
+        $subscriptionId = $this->connection->fetchOne('SELECT subscription_id FROM commercial.invoices WHERE id=?', [$invoiceId]);
+        if (!is_string($subscriptionId)) return;
+        RenewalExecutionLock::acquire($this->connection, $subscriptionId);
+        try {
+            $this->connection->transactional(function (Connection $db) use ($invoiceId, $failure, $now, $correlationId, $providerAccountId, $providerMethodReference): void {
+            $identity = $db->fetchAssociative('SELECT subscription_id FROM commercial.invoices WHERE id=?', [$invoiceId]);
+            if ($identity === false) return;
+            $subscription = $db->fetchAssociative('SELECT status, grace_until FROM commercial.subscriptions WHERE id=? FOR UPDATE', [$identity['subscription_id']]);
+            $invoice = $db->fetchAssociative('SELECT status FROM commercial.invoices WHERE id=? FOR UPDATE', [$invoiceId]);
+            $payment = $db->fetchAssociative('SELECT status FROM commercial.payments WHERE invoice_id=? FOR UPDATE', [$invoiceId]);
+            $row = $db->fetchAssociative('SELECT * FROM commercial.renewal_collection_states WHERE invoice_id=? FOR UPDATE', [$invoiceId]);
+            if ($row === false || $subscription === false || $invoice === false || $subscription['status'] !== 'active'
+                || $invoice['status'] !== 'issued' || ($payment !== false && $payment['status'] === 'succeeded')
+                || in_array($row['state'], ['succeeded','exhausted'], true)) return;
             if ($failure->paymentMethodInvalid && $providerAccountId !== null && $providerMethodReference !== null) {
                 $db->executeStatement("UPDATE commercial.saved_payment_methods SET status='provider_unusable', is_default=false, disabled_at=now(), updated_at=now() WHERE provider_account_id=? AND provider_method_reference=? AND status='active'", [$providerAccountId, $providerMethodReference]);
             }
@@ -35,12 +47,15 @@ SQL, [$this->timestamp($this->policy->uncertainRetryAt($now)), $code, $invoiceId
             }
             $attempts = (int) $row['attempt_count'] + 1;
             $retryAt = $this->policy->mayRetry($failure->class) ? $this->policy->retryAt($attempts, $now) : null;
-            $graceExpired = is_string($row['grace_until']) && $now >= new \DateTimeImmutable($row['grace_until']);
-            $state = $failure->paymentMethodInvalid ? 'payment_method_required' : (($retryAt === null || $graceExpired) ? 'exhausted' : 'retry_wait');
+            $graceExpired = is_string($subscription['grace_until']) && $now >= new \DateTimeImmutable($subscription['grace_until']);
+            $state = $graceExpired ? 'exhausted' : ($failure->paymentMethodInvalid ? 'payment_method_required' : 'retry_wait');
+            if ($state === 'exhausted') {
+                (new ExpireSubscription($db))->expireInTransaction($db, (string) $row['commercial_account_id'], (string) $row['subscription_id'], $now, $correlationId);
+                return;
+            }
             $db->executeStatement('UPDATE commercial.renewal_collection_states SET state=?, attempt_count=?, last_attempt_at=?::timestamptz, next_attempt_at=?::timestamptz, last_failure_class=?, last_failure_code=?, updated_at=now() WHERE invoice_id=?', [$state, $attempts, $this->timestamp($now), $retryAt === null ? null : $this->timestamp($retryAt), $failure->class, $failure->code, $invoiceId]);
-            $event = $state === 'exhausted' ? 'subscription.dunning_exhausted' : ($state === 'payment_method_required' ? 'subscription.payment_method_required' : 'subscription.renewal_collection_failed');
+            $event = $state === 'payment_method_required' ? 'subscription.payment_method_required' : 'subscription.renewal_collection_failed';
             $action = match ($state) {
-                'exhausted' => 'renewal.dunning_exhausted',
                 'payment_method_required' => 'renewal.payment_method_required',
                 default => 'renewal.collection.failed',
             };
@@ -49,7 +64,10 @@ SQL, [$this->timestamp($this->policy->uncertainRetryAt($now)), $code, $invoiceId
             if ($state === 'retry_wait' && $retryAt !== null) {
                 $db->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, 'renewal.retry_scheduled', 'invoice', ?, ?, 'success')", [$row['commercial_account_id'], $invoiceId, $correlationId]);
             }
-        });
+            });
+        } finally {
+            RenewalExecutionLock::release($this->connection, $subscriptionId);
+        }
     }
 
     /** Must be called inside the authoritative settlement transaction. */
@@ -57,9 +75,9 @@ SQL, [$this->timestamp($this->policy->uncertainRetryAt($now)), $code, $invoiceId
     public function succeededInTransaction(Connection $db, array $invoice, string $paymentId, string $correlationId): void
     {
         if (($invoice['billing_reason'] ?? null) !== 'subscription_renewal') return;
-        $state = $db->fetchAssociative('SELECT state FROM commercial.renewal_collection_states WHERE invoice_id=? FOR UPDATE', [$invoice['id']]);
         $subscription = $db->fetchAssociative('SELECT status, billing_status FROM commercial.subscriptions WHERE id=? FOR UPDATE', [$invoice['subscription_id']]);
         if ($subscription === false) throw new \LogicException('Renewal subscription is unavailable.');
+        $state = $db->fetchAssociative('SELECT state FROM commercial.renewal_collection_states WHERE invoice_id=? FOR UPDATE', [$invoice['id']]);
         if ($state !== false && !in_array($state['state'], ['succeeded','exhausted'], true)) {
             $db->executeStatement("UPDATE commercial.renewal_collection_states SET state='succeeded', next_attempt_at=NULL, last_failure_class=NULL, last_failure_code=NULL, updated_at=now() WHERE invoice_id=?", [$invoice['id']]);
         }

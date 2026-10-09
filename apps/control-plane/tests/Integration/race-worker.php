@@ -14,6 +14,7 @@ use ControlPlane\Billing\Application\IssueInvoice;
 use ControlPlane\Billing\Application\CollectRenewalInvoice;
 use ControlPlane\Billing\Application\RenewalCollectionLifecycle;
 use ControlPlane\Billing\Application\RenewalDunningPolicy;
+use ControlPlane\Billing\Application\ProcessRenewalDunning;
 use ControlPlane\Fiscalization\Application\ApplyAuthoritativeReceipt;
 use ControlPlane\Fiscalization\Application\CreatePaymentReceiptObligation;
 use ControlPlane\Fiscalization\Application\ReceiptSnapshot;
@@ -37,9 +38,12 @@ use ControlPlane\Payment\Application\CreatePayment;
 use ControlPlane\Payment\Application\ProcessAuthoritativeProviderPayment;
 use ControlPlane\Payment\Application\PaymentCreator as InternalPaymentCreator;
 use ControlPlane\Payment\Application\RecordSavedPaymentMethod;
+use ControlPlane\Payment\Application\ReceiveYooKassaWebhook;
+use ControlPlane\Payment\Application\ReconcileYooKassaPayments;
 use ControlPlane\Payment\Application\SettlePayment;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPayment;
+use ControlPlane\Payment\Provider\YooKassa\YooKassaProviderAccountLocator;
 use ControlPlane\Usage\Application\ApplyUsageDelta;
 use ControlPlane\Usage\Application\IngestDeploymentUsage;
 use ControlPlane\M2m\DeploymentIdentity;
@@ -57,11 +61,19 @@ if (getenv('APP_ENV') !== 'test' || getenv('CONTROL_TEST_ISOLATED') !== '1'
 }
 
 [$script, $mode, $value, $extra, $start] = $argv;
-while (microtime(true) < (float) $start) {
-    usleep(5_000);
-}
-
 $connection = DriverManager::getConnection((new DsnParser(['postgresql' => 'pdo_pgsql']))->parse($url));
+$connection->executeQuery('SELECT 1');
+if (str_starts_with($start, 'barrier|')) {
+    [, $barrier, $lane] = explode('|', $start, 3);
+    file_put_contents($barrier . '/ready-' . $lane, $mode);
+    $deadline = microtime(true) + 15;
+    while (!is_file($barrier . '/release-' . $lane) && !is_file($barrier . '/release-all')) {
+        if (microtime(true) > $deadline) { fwrite(STDERR, "Worker barrier timed out: $mode\n"); exit(3); }
+        usleep(5_000);
+    }
+} else {
+    while (microtime(true) < (float) $start) { usleep(5_000); }
+}
 try {
     switch ($mode) {
         case 'account':
@@ -142,7 +154,42 @@ try {
             break;
         case 'collect_renewal':
             [$correlationId, $instant] = explode('|', $extra, 2);
-            renewalCollector($connection)->collect($value, $correlationId, new DateTimeImmutable($instant));
+            $gateway = new FakePaymentProviderGateway();
+            renewalCollector($connection, $gateway)->collect($value, $correlationId, new DateTimeImmutable($instant));
+            fwrite(STDOUT, json_encode(['create_count' => count($gateway->createCalls)], JSON_THROW_ON_ERROR));
+            break;
+        case 'process_dunning':
+            [$correlationId, $instant] = explode('|', $extra, 2);
+            $policy = new RenewalDunningPolicy(3, '60,300', 3600, 30);
+            $gateway = new FakePaymentProviderGateway();
+            (new ProcessRenewalDunning($connection, $policy, renewalCollector($connection, $gateway),
+                new ExpireSubscription($connection, new AdvanceSubscriptionPeriod($connection))))->process(new DateTimeImmutable($instant), 10, $correlationId);
+            fwrite(STDOUT, json_encode(['create_count' => count($gateway->createCalls)], JSON_THROW_ON_ERROR));
+            break;
+        case 'webhook_renewal':
+        case 'reconcile_renewal':
+            [$correlationId, $capturedAt] = explode('|', $extra, 2);
+            $gateway = new FakePaymentProviderGateway();
+            $providerPayment = renewalProviderPayment($connection, $value, new DateTimeImmutable($capturedAt));
+            $gateway->payments[$providerPayment->id] = $providerPayment;
+            $lifecycle = new RenewalCollectionLifecycle($connection, new RenewalDunningPolicy(3, '60,300', 3600, 30));
+            $settlement = new SettlePayment(new ActivateSubscription($connection, new SubscriptionPeriodCalculator()), new AdvanceSubscriptionPeriod($connection), $lifecycle);
+            $processor = new ProcessAuthoritativeProviderPayment($connection, new BindPaymentAttemptProviderReference($connection),
+                new CompletePaymentAttempt($connection, $settlement, new CreatePaymentReceiptObligation()),
+                new SubmitYooKassaReceipt($connection, new ReceiptSnapshot(), new FakeFiscalReceiptProviderGateway(), new ApplyAuthoritativeReceipt($connection)),
+                new RecordSavedPaymentMethod($connection), $lifecycle);
+            if ($mode === 'webhook_renewal') {
+                $body = json_encode(['type' => 'notification', 'event' => 'payment.succeeded', 'object' => ['id' => $providerPayment->id]], JSON_THROW_ON_ERROR);
+                (new ReceiveYooKassaWebhook($connection, new YooKassaProviderAccountLocator($connection), $gateway, $processor))->receive($body, 'application/json', $correlationId);
+            } else {
+                (new ReconcileYooKassaPayments($connection, $gateway, $processor))->reconcile(100, $correlationId);
+            }
+            break;
+        case 'restore_renewal_method':
+            $source = $connection->fetchAssociative('SELECT commercial_account_id, provider_account_id, created_from_payment_attempt_id FROM commercial.saved_payment_methods WHERE id=?', [$value]);
+            if ($source === false) throw new LogicException('Saved method restoration fixture is unavailable.');
+            $connection->executeStatement("INSERT INTO commercial.saved_payment_methods (commercial_account_id, provider_account_id, provider_method_reference, method_type, status, is_default, created_from_payment_attempt_id) VALUES (?, ?, ?, 'bank_card', 'active', true, ?)",
+                [$source['commercial_account_id'], $source['provider_account_id'], 'restored-' . str_replace('-', '', $value), $source['created_from_payment_attempt_id']]);
             break;
         case 'begin_payment_attempt':
             [$providerAccountId, $methodType, $correlationId] = explode('|', $extra);
@@ -209,21 +256,33 @@ SQL, [$value]);
             exit(3);
     }
     exit(0);
-} catch (UniqueConstraintViolationException) {
+} catch (UniqueConstraintViolationException $exception) {
     if ($connection->isTransactionActive()) {
         $connection->rollBack();
     }
+    fwrite(STDERR, $mode . ': ' . $exception . "\n");
     exit(2);
-} catch (AuthFailure|DbalException|DomainException) {
+} catch (AuthFailure|DbalException|DomainException $exception) {
     if ($connection->isTransactionActive()) {
         $connection->rollBack();
     }
+    fwrite(STDERR, $mode . ': ' . $exception . "\n");
     exit(2);
-} catch (Throwable) {
+} catch (Throwable $exception) {
     if ($connection->isTransactionActive()) {
         $connection->rollBack();
     }
+    fwrite(STDERR, $mode . ': ' . $exception . "\n");
     exit(3);
+}
+
+function renewalProviderPayment(\Doctrine\DBAL\Connection $connection, string $attemptId, DateTimeImmutable $capturedAt): ProviderPayment
+{
+    $row = $connection->fetchAssociative('SELECT a.provider_payment_id,a.payment_id,p.invoice_id,p.amount_minor,p.currency FROM commercial.payment_attempts a JOIN commercial.payments p ON p.id=a.payment_id WHERE a.id=?', [$attemptId]);
+    if ($row === false) throw new LogicException('Renewal provider payment is unavailable.');
+    $providerId = is_string($row['provider_payment_id']) ? $row['provider_payment_id'] : 'yk-' . str_replace('-', '', $attemptId);
+    return new ProviderPayment($providerId, 'succeeded', true, (int) $row['amount_minor'], (string) $row['currency'],
+        ['payment_id' => $row['payment_id'], 'attempt_id' => $attemptId, 'invoice_id' => $row['invoice_id']], null, $capturedAt);
 }
 
 function authService(\Doctrine\DBAL\Connection $connection): AuthService
@@ -260,7 +319,7 @@ function paymentCreator(\Doctrine\DBAL\Connection $connection): CreatePayment
     return new CreatePayment($connection, new AccountAuthorization($connection), paymentSettlement($connection));
 }
 
-function renewalCollector(\Doctrine\DBAL\Connection $connection): CollectRenewalInvoice
+function renewalCollector(\Doctrine\DBAL\Connection $connection, ?FakePaymentProviderGateway $gateway = null): CollectRenewalInvoice
 {
     $policy = new RenewalDunningPolicy(3, '60,300', 3600, 30);
     $lifecycle = new RenewalCollectionLifecycle($connection, $policy);
@@ -285,7 +344,7 @@ function renewalCollector(\Doctrine\DBAL\Connection $connection): CollectRenewal
         new BindPaymentAttemptProviderReference($connection),
         $completer,
         $processor,
-        new FakePaymentProviderGateway(),
+        $gateway ?? new FakePaymentProviderGateway(),
         new InternalPaymentCreator($settlement),
         $lifecycle,
     );
