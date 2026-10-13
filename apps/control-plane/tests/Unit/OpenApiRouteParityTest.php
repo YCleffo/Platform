@@ -10,6 +10,37 @@ use Symfony\Component\Yaml\Yaml;
 
 final class OpenApiRouteParityTest extends TestCase
 {
+    public function testFinancialMutationContractsUseTypedBodiesAndResults(): void
+    {
+        $path = getenv('CONTROL_OPENAPI_FILE') ?: '/contracts/control-plane.yaml';
+        if (!is_file($path)) $path = dirname(__DIR__, 4) . '/contracts/openapi/control-plane.yaml';
+        $contract = Yaml::parseFile($path);
+        self::assertIsArray($contract);
+
+        $create = $contract['paths']['/api/control/accounts/{accountId}/subscriptions']['post'];
+        self::assertSame('#/components/requestBodies/CreateSubscription', $create['requestBody']['$ref']);
+        self::assertSame('#/components/responses/SubscriptionCreated', $create['responses'][201]['$ref']);
+        self::assertSame(['plan_price_id', 'quantity'], $contract['components']['requestBodies']['CreateSubscription']['content']['application/json']['schema']['required']);
+        self::assertSame(['id', 'status'], $contract['components']['schemas']['SubscriptionCreated']['required']);
+
+        $checkout = $contract['paths']['/api/control/accounts/{accountId}/payments/{paymentId}/checkout']['post'];
+        self::assertSame('#/components/responses/CheckoutResult', $checkout['responses'][200]['$ref']);
+        self::assertSame(['payment_id', 'attempt_id', 'provider', 'method', 'status', 'confirmation'], $contract['components']['schemas']['CheckoutResult']['required']);
+
+        $methods = $contract['paths']['/api/control/accounts/{accountId}/payment-methods']['get'];
+        self::assertSame('#/components/responses/SavedPaymentMethods', $methods['responses'][200]['$ref']);
+        $setDefault = $contract['paths']['/api/control/accounts/{accountId}/payment-methods/{methodId}/default']['post'];
+        self::assertSame('#/components/requestBodies/EmptyObject', $setDefault['requestBody']['$ref']);
+        self::assertSame('#/components/responses/SavedPaymentMethod', $setDefault['responses'][200]['$ref']);
+        $savedMethod = $contract['components']['schemas']['SavedPaymentMethod'];
+        self::assertContains('is_default', $savedMethod['required']);
+        self::assertArrayNotHasKey('provider_method_reference', $savedMethod['properties']);
+
+        $entitlements = $contract['paths']['/api/control/accounts/{accountId}/entitlements']['get'];
+        self::assertSame('#/components/responses/EffectiveEntitlements', $entitlements['responses'][200]['$ref']);
+        self::assertSame(['commercial_account_id', 'subscription', 'features'], $contract['components']['schemas']['EffectiveEntitlements']['required']);
+    }
+
     public function testSubscriptionSchemaIncludesBillingHealthContract(): void
     {
         $path = getenv('CONTROL_OPENAPI_FILE') ?: '/contracts/control-plane.yaml';

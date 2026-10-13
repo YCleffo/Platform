@@ -63,6 +63,7 @@ final class DeploymentEntitlementIssuerTest extends SubscriptionTestCase
         $signature = base64_decode($first['signatureBase64'], true);
         self::assertIsString($canonical);
         self::assertIsString($signature);
+        if ($signature === '') { self::fail('Issuer produced an empty signature.'); }
         self::assertTrue(sodium_crypto_sign_verify_detached($signature, $canonical, $public));
         $document = json_decode($canonical, true, 16, JSON_THROW_ON_ERROR);
         self::assertSame(['documentVersion', 'sequence', 'installationId', 'issuedAt', 'validFrom',
@@ -72,7 +73,9 @@ final class DeploymentEntitlementIssuerTest extends SubscriptionTestCase
         $this->connection->executeStatement("UPDATE commercial.subscriptions SET current_period_start=now()-interval '1 month', current_period_end=now()-interval '1 minute', billing_status='past_due', past_due_since=now()-interval '1 minute', grace_until=now()+interval '1 hour' WHERE id=?", [$subscription]);
         $grace = $issuer->ensureLatest($deployment);
         self::assertSame(2, $grace['sequence']);
-        $graceDocument = json_decode(base64_decode($grace['documentBase64'], true), true, 16, JSON_THROW_ON_ERROR);
+        $graceCanonical = base64_decode($grace['documentBase64'], true);
+        self::assertIsString($graceCanonical);
+        $graceDocument = json_decode($graceCanonical, true, 16, JSON_THROW_ON_ERROR);
         self::assertSame(['signed.module.crm' => true], $graceDocument['features']);
         self::assertGreaterThan(new \DateTimeImmutable('now'), new \DateTimeImmutable($graceDocument['validUntil']));
 
@@ -85,7 +88,9 @@ final class DeploymentEntitlementIssuerTest extends SubscriptionTestCase
         $this->connection->executeStatement("UPDATE commercial.deployments SET status = 'suspended' WHERE id = ?", [$deployment]);
         $suspended = $issuer->ensureLatest($deployment);
         self::assertSame(4, $suspended['sequence']);
-        $suspendedDocument = json_decode(base64_decode($suspended['documentBase64'], true), true, 16, JSON_THROW_ON_ERROR);
+        $suspendedCanonical = base64_decode($suspended['documentBase64'], true);
+        self::assertIsString($suspendedCanonical);
+        $suspendedDocument = json_decode($suspendedCanonical, true, 16, JSON_THROW_ON_ERROR);
         self::assertSame('suspended', $suspendedDocument['deploymentStatus']);
         self::assertSame([], $suspendedDocument['features']);
         self::assertSame(4, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events

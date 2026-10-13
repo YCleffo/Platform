@@ -55,10 +55,13 @@ final class M2mEntitlementTest extends DatabaseTestCase
         self::assertSame(403, $controller->latest($this->request($withoutScope))->getStatusCode());
         $response = $controller->latest($this->request($withScope, $first));
         self::assertSame(200, $response->getStatusCode());
-        self::assertSame(['documentBase64', 'signatureBase64', 'keyId'],
-            array_keys(json_decode($response->getContent(), true, 16, JSON_THROW_ON_ERROR)));
-        $document = json_decode(base64_decode(json_decode($response->getContent(), true)['documentBase64'], true),
-            true, 16, JSON_THROW_ON_ERROR);
+        $content = $response->getContent();
+        self::assertIsString($content);
+        $envelope = json_decode($content, true, 16, JSON_THROW_ON_ERROR);
+        self::assertSame(['documentBase64', 'signatureBase64', 'keyId'], array_keys($envelope));
+        $canonical = base64_decode($envelope['documentBase64'], true);
+        self::assertIsString($canonical);
+        $document = json_decode($canonical, true, 16, JSON_THROW_ON_ERROR);
         self::assertSame($secondInstallation, $document['installationId']);
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.deployment_entitlement_documents WHERE deployment_id = ?', [$first]));
     }

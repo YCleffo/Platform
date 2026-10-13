@@ -33,13 +33,15 @@ final class CrossPlaneBootstrapTest extends DatabaseTestCase
         if (getenv('PHASE47_CROSS_PLANE') !== '1') {
             self::fail('Required cross-plane test prerequisite is missing: PHASE47_CROSS_PLANE=1.');
         }
-        if (!is_file('/backend/vendor/autoload.php')) {
-            self::fail('Required cross-plane prerequisite is missing: /backend/vendor/autoload.php.');
+        $backendRoot = is_dir('/backend') ? '/backend' : dirname(__DIR__, 3) . '/backend';
+        $backendAutoload = $backendRoot . '/vendor/autoload.php';
+        if (!is_file($backendAutoload)) {
+            self::fail('Required cross-plane backend autoload prerequisite is missing.');
         }
-        require_once '/backend/vendor/autoload.php';
+        require_once $backendAutoload;
         \App\Environment::prepare();
         $container = (new \Yiisoft\Yii\Runner\Http\HttpApplicationRunner(
-            rootPath: '/backend', environment: 'test'))->getContainer();
+            rootPath: $backendRoot, environment: 'test'))->getContainer();
         $core = $container->get(\Yiisoft\Db\Connection\ConnectionInterface::class);
         $coreTransaction = $core->beginTransaction();
         try {
@@ -76,13 +78,18 @@ final class CrossPlaneBootstrapTest extends DatabaseTestCase
                     new EntitlementSigner($this->connection, $resolver)));
             $puller = new class($pullController) implements \App\PlatformRuntime\DeploymentEntitlementPuller {
                 public function __construct(private M2mEntitlementController $controller) {}
+                /** @return array<string, mixed> */
                 public function pull(string $url, string $authorization): array
                 {
                     if ($url !== 'https://control.example') { throw new \DomainException('Wrong Control Plane URL.'); }
                     $response = $this->controller->latest(Request::create('/api/m2m/entitlements/latest',
                         'GET', [], [], [], ['HTTP_AUTHORIZATION' => $authorization]));
                     if ($response->getStatusCode() !== 200) { throw new \DomainException('Entitlement pull failed.'); }
-                    return json_decode($response->getContent(), true, 8, JSON_THROW_ON_ERROR);
+                    $body = $response->getContent();
+                    if (!is_string($body)) { throw new \DomainException('Entitlement pull body is unavailable.'); }
+                    $decoded = json_decode($body, true, 8, JSON_THROW_ON_ERROR);
+                    if (!is_array($decoded)) { throw new \DomainException('Entitlement pull body is invalid.'); }
+                    return $decoded;
                 }
             };
             self::assertSame(401, $pullController->latest(Request::create('/api/m2m/entitlements/latest',
@@ -120,7 +127,9 @@ final class CrossPlaneBootstrapTest extends DatabaseTestCase
                         . $bootstrapCredential['credentialSecret']],
                 json_encode(['status' => 'ready', 'entitlementSequence' => $sequence], JSON_THROW_ON_ERROR)));
             self::assertSame(200, $repeat->getStatusCode());
-            self::assertSame('already_ready', json_decode($repeat->getContent(), true, 8, JSON_THROW_ON_ERROR)['status']);
+            $repeatBody = $repeat->getContent();
+            self::assertIsString($repeatBody);
+            self::assertSame('already_ready', json_decode($repeatBody, true, 8, JSON_THROW_ON_ERROR)['status']);
         } finally {
             putenv('CROSS_PLANE_CREDENTIAL');
             $coreTransaction->rollBack();

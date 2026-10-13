@@ -83,6 +83,11 @@ final class LocalProvisioningSecretStore implements ProvisioningSecretStore
         if (!in_array($this->environment, ['dev', 'test'], true)) {
             throw new ProvisioningFailure('infrastructure.provider_not_allowed');
         }
+        // The local provider shares POSIX-owned files with Linux containers.
+        // Refuse unsupported hosts before creating a secret directory.
+        if (PHP_OS_FAMILY !== 'Linux') {
+            throw new ProvisioningFailure('infrastructure.provider_not_allowed');
+        }
         if (preg_match('/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/iD', $deploymentId) !== 1) {
             throw new ProvisioningFailure('infrastructure.invalid_identifier');
         }

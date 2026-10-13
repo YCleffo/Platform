@@ -18,9 +18,11 @@ final class DeploymentCredentialLifetimeTest extends TestCase
 
     public function testMissingOrInvalidConfigurationFailsClosed(): void
     {
+        $rejections = 0;
         foreach (['', '0', '-1', '366', '30days'] as $value) {
             try { new DeploymentCredentialLifetime($value); self::fail('Invalid TTL accepted.'); }
-            catch (\DomainException) { self::assertTrue(true); }
+            catch (\DomainException) { ++$rejections; }
         }
+        self::assertSame(5, $rejections);
     }
 }

@@ -25,7 +25,9 @@ final readonly class EffectiveEntitlements
         return $this->forDeploymentAccount($accountId);
     }
 
-    /** Internal server-side composition. Callers must already hold a trusted deployment boundary. */
+    /** Internal server-side composition. Callers must already hold a trusted deployment boundary.
+     * @return array{commercial_account_id: string, subscription: array<string, mixed>|null, features: array<string, mixed>|\stdClass}
+     */
     public function forDeploymentAccount(string $accountId): array
     {
         if (!Uuid::isValid($accountId)) {

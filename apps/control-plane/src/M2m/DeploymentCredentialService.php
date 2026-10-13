@@ -92,6 +92,7 @@ final readonly class DeploymentCredentialService
     }
 
     /** Only a strict subset of the current permissions may replace active scopes. */
+    /** @param list<mixed> $reducedScopes */
     public function restrictScopes(string $deploymentId, string $credentialId, array $reducedScopes): void
     {
         $reducedScopes = $this->scopes->validate($reducedScopes);
@@ -175,6 +176,9 @@ final readonly class DeploymentCredentialService
                         created_at::text, expires_at::text, last_used_at::text,
                         rotated_at::text, revoked_at::text
                     SQL, [$credentialId]);
+                if ($row === false) {
+                    throw new \LogicException('Revoked credential state is unavailable.');
+                }
             }
             return self::present($row);
         });

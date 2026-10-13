@@ -189,6 +189,9 @@ reads sanitized fiscal state through
 `GET /api/control/accounts/{accountId}/payments/{paymentId}/receipt`, and
 starts hosted SBP checkout through
 `POST /api/control/accounts/{accountId}/payments/{paymentId}/checkout`.
+An identical checkout key reuses the original provider attempt after webhook
+settlement and returns its authoritative final state; a new key cannot start
+another checkout for a paid invoice.
 Refunds use item allocations through
 `POST /api/control/accounts/{accountId}/payments/{paymentId}/refunds`, with
 history at the matching `GET` endpoint and
@@ -272,6 +275,13 @@ automatic rollback, and production observability remain future phases. Hosted Yo
 SBP and bank-card checkout, authoritative account-scoped saved payment methods,
 Control Plane MFA/password reset/recent-auth, and
 deployment update foundations are implemented.
+
+The version-1 `ProrationCalculator` provides deterministic UTC microsecond
+time fractions and integer minor-unit amounts with half-up rounding on each
+credit and charge component. It does not persist a plan change or alter an
+active subscription. Payment-gated application, historical calculation
+snapshots, and period-boundary scheduling remain necessary before plan
+switching can be exposed as an API.
 
 ## Application deployment bootstrap (Phase 4.7)
 

@@ -24,12 +24,17 @@ final readonly class SecurityEmailProcessor implements EmailEventProcessor
         catch(\Throwable){$this->connection->executeStatement("UPDATE commercial.outbox_events SET status=CASE WHEN attempts>=5 THEN 'dead' ELSE 'failed' END,available_at=now()+interval '30 seconds',locked_at=NULL,lock_token=NULL,last_error='security_email_failure' WHERE id=? AND lock_token=?",[$row['id'],$row['lock_token']]);}
         return true;
     }
-    /** @param array<string,mixed> $row @return array{0:string,1:string,2:string,3:string,4:string} */
+    /**
+     * @param array<string,mixed> $row
+     * @return array{0:string,1:string,2:string,3:string,4:string}
+     */
     private function message(array $row): array
     {
         $payload=json_decode((string)$row['payload'],true); if(!is_array($payload)||!is_string($payload['user_id']??null)||!Uuid::isValid($payload['user_id']))throw new \DomainException('Invalid security email event.');
         $email=$this->connection->fetchOne('SELECT email FROM commercial.control_users WHERE id=? AND status=?',[$payload['user_id'],'active']); if(!is_string($email)||filter_var($email,FILTER_VALIDATE_EMAIL)===false)throw new \DomainException('No active recipient.');
-        $type=(string)$row['event_type']; $subject='Platform security notice'; $text='A security setting for your Platform account changed.';
+        $type=(string)$row['event_type'];
+        if (!in_array($type, self::EVENTS, true)) throw new \DomainException('Unsupported security email event.');
+        $subject='Platform security notice'; $text='A security setting for your Platform account changed.';
         if($type==='control_user.password_reset_requested'){if(!is_string($payload['reset_id']??null)||!Uuid::isValid($payload['reset_id']))throw new \DomainException('Invalid reset event.');$url=$this->passwordResetUrl.(str_contains($this->passwordResetUrl,'?')?'&':'?').'token='.rawurlencode($this->tokens->passwordResetToken($payload['reset_id']));$subject='Reset your Platform password';$text="Reset your Platform password: $url";}
         elseif($type==='control_user.password_changed'){$subject='Your Platform password changed';$text='Your Platform password was changed. If this was not you, contact support immediately.';}
         elseif($type==='control_user.mfa_enabled'){$subject='Two-factor authentication enabled';$text='Two-factor authentication was enabled for your Platform account.';}

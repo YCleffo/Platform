@@ -73,6 +73,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
         $provider = new class implements DeploymentInfrastructureProvider {
             public bool $running = true;
             public bool $exists = true;
+            /** @var list<string> */
             public array $events = [];
             public function provision(ProvisioningRequest $request): ProvisioningResult { throw new \LogicException(); }
             public function activate(ProvisioningRequest $request): void { throw new \LogicException(); }
@@ -80,7 +81,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
             public function replaceApplicationRuntime(ProvisioningRequest $request): void { throw new \LogicException(); }
             public function verifyUpdate(ProvisioningRequest $request, \DateTimeImmutable $startedAt): void { throw new \LogicException(); }
             public function status(string $deploymentId): array
-            { return ['runtime' => $this->exists, 'database' => $this->exists, 'network' => $this->exists]; }
+            { return ['runtime' => $this->exists, 'database' => $this->exists, 'redis' => $this->exists, 'scheduler' => $this->exists, 'emailWorker' => $this->exists, 'network' => $this->exists]; }
             public function quiesce(string $deploymentId): void
             { $this->running = false; $this->events[] = 'quiesce'; }
             public function decommission(string $deploymentId): void
@@ -89,6 +90,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
         };
         $secrets = new class implements ProvisioningSecretStore {
             public bool $clean = false;
+            /** @var list<string> */
             public array $events = [];
             public function prepare(string $deploymentId, string $credential): array { throw new \LogicException(); }
             public function existing(string $deploymentId): array { throw new \LogicException(); }
@@ -109,6 +111,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
         self::assertFalse($secrets->clean);
         $row = $this->connection->fetchAssociative('SELECT status, current_step, last_error_code
             FROM commercial.deployment_operations WHERE id = ?', [$operation]);
+        self::assertIsArray($row);
         self::assertSame('retry', $row['status']);
         self::assertSame('final_backup', $row['current_step']);
         self::assertSame('infrastructure.awaiting_final_backup', $row['last_error_code']);
@@ -120,6 +123,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
         self::assertSame(['quiesce', 'quiesce', 'destroy'], $provider->events);
         $deployment = $this->connection->fetchAssociative('SELECT status, provisioning_state,
             archived_at, core_db_secret_ref, installation_id FROM commercial.deployments WHERE id = ?', [$id]);
+        self::assertIsArray($deployment);
         self::assertSame('decommissioned', $deployment['status']);
         self::assertSame('not_applicable', $deployment['provisioning_state']);
         self::assertNotNull($deployment['archived_at']);
@@ -147,7 +151,7 @@ final class DeploymentDecommissionTest extends DatabaseTestCase
             public function replaceApplicationRuntime(ProvisioningRequest $request): void { throw new \LogicException(); }
             public function verifyUpdate(ProvisioningRequest $request, \DateTimeImmutable $startedAt): void { throw new \LogicException(); }
             public function status(string $deploymentId): array
-            { return ['runtime' => $this->runtime, 'database' => $this->database, 'network' => $this->network]; }
+            { return ['runtime' => $this->runtime, 'database' => $this->database, 'redis' => $this->runtime, 'scheduler' => $this->runtime, 'emailWorker' => $this->runtime, 'network' => $this->network]; }
             public function quiesce(string $deploymentId): void {}
             public function decommission(string $deploymentId): void
             {

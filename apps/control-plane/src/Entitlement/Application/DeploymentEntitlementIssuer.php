@@ -90,9 +90,16 @@ SQL, [$deploymentId, $id, $deployment['installation_id'], $digest]);
         });
     }
 
-    /** @param array<string,mixed> $row */
+    /** @param array<string,mixed> $row
+     * @return array{id:string,sequence:int,documentBase64:string,signatureBase64:string,keyId:string}
+     */
     private static function present(array $row): array
     {
+        foreach (['id', 'document_hex', 'signature_hex', 'signing_key_id'] as $field) {
+            if (!is_string($row[$field] ?? null)) {
+                throw new \LogicException('Issued entitlement document is incomplete.');
+            }
+        }
         $document = hex2bin($row['document_hex']);
         $signature = hex2bin($row['signature_hex']);
         if ($document === false || $signature === false) { throw new \DomainException('Issued entitlement bytes are invalid.'); }
@@ -106,6 +113,7 @@ SQL, [$deploymentId, $id, $deployment['installation_id'], $digest]);
         return $value->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
     }
 
+    /** @param array<array-key, mixed> $value */
     private static function json(array $value): string
     {
         return json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES

@@ -44,7 +44,7 @@ final class Totp
         $bits = '';
         foreach (str_split($bytes) as $byte) { $bits .= str_pad(decbin(ord($byte)), 8, '0', STR_PAD_LEFT); }
         $result = '';
-        foreach (str_split($bits, 5) as $part) { $result .= self::ALPHABET[bindec(str_pad($part, 5, '0'))]; }
+        foreach (str_split($bits, 5) as $part) { $result .= self::ALPHABET[self::binaryValue(str_pad($part, 5, '0'))]; }
         return $result;
     }
 
@@ -53,9 +53,22 @@ final class Totp
         $value = strtoupper(str_replace([' ', '-'], '', $value));
         if ($value === '' || preg_match('/\A[A-Z2-7]+\z/D', $value) !== 1) { return null; }
         $bits = '';
-        foreach (str_split($value) as $char) { $bits .= str_pad(decbin(strpos(self::ALPHABET, $char)), 5, '0', STR_PAD_LEFT); }
+        foreach (str_split($value) as $char) {
+            $position = strpos(self::ALPHABET, $char);
+            if ($position === false) { return null; }
+            $bits .= str_pad(decbin($position), 5, '0', STR_PAD_LEFT);
+        }
         $result = '';
-        foreach (str_split(substr($bits, 0, intdiv(strlen($bits), 8) * 8), 8) as $part) { $result .= chr(bindec($part)); }
+        foreach (str_split(substr($bits, 0, intdiv(strlen($bits), 8) * 8), 8) as $part) { $result .= chr(self::binaryValue($part)); }
         return $result;
+    }
+
+    private static function binaryValue(string $bits): int
+    {
+        $value = 0;
+        foreach (str_split($bits) as $bit) {
+            $value = ($value << 1) | ($bit === '1' ? 1 : 0);
+        }
+        return $value;
     }
 }

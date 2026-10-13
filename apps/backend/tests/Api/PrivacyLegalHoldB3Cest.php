@@ -31,7 +31,8 @@ final readonly class PrivacyLegalHoldB3Cest
         $I->seeResponseCodeIs(HttpCode::UNAUTHORIZED);
         $db = ApiTester::getDb();
         $subject = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('B3', 'Hold') RETURNING id::text")->queryScalar();
-        $account = (string) $db->createCommand("INSERT INTO core.accounts (account_type, status) VALUES ('service', 'active') RETURNING id::text")->queryScalar();
+        $unprivilegedPerson = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('Unprivileged', 'Hold') RETURNING id::text")->queryScalar();
+        $account = (string) $db->createCommand("INSERT INTO core.accounts (person_id, account_type, status) VALUES (CAST(:person AS uuid), 'human', 'active') RETURNING id::text", [':person' => $unprivilegedPerson])->queryScalar();
         $I->amAuthenticatedAccount($account);
         $I->sendGET($path);
         $I->seeResponseCodeIs(HttpCode::FORBIDDEN);

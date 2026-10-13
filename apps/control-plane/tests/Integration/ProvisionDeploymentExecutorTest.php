@@ -20,6 +20,7 @@ use ControlPlane\Provisioning\ProvisioningResult;
 
 final class ProvisionDeploymentExecutorTest extends DatabaseTestCase
 {
+    /** @var list<string> */
     private array $secretIds = [];
     private string $secretDir;
 
@@ -91,7 +92,7 @@ final class ProvisionDeploymentExecutorTest extends DatabaseTestCase
             public function provision(ProvisioningRequest $request): ProvisioningResult
             { return new ProvisioningResult('runtime', 'database', 'network', false); }
             public function status(string $deploymentId): array
-            { return ['runtime' => true, 'database' => true, 'network' => true]; }
+            { return ['runtime' => true, 'database' => true, 'redis' => true, 'scheduler' => true, 'emailWorker' => true, 'network' => true]; }
             public function activate(ProvisioningRequest $request): void
             { throw new ProvisioningFailure('infrastructure.activation_failed', true); }
             public function applyTargetMigrations(ProvisioningRequest $request): void { throw new \LogicException('Unexpected update'); }
@@ -146,6 +147,7 @@ final class ProvisionDeploymentExecutorTest extends DatabaseTestCase
             'test', 5, 30);
     }
 
+    /** @return DeploymentInfrastructureProvider&object{calls: int} */
     private function failingProvider(string $code = 'infrastructure.database_failed'): DeploymentInfrastructureProvider
     {
         return new class($code) implements DeploymentInfrastructureProvider {
@@ -154,7 +156,7 @@ final class ProvisionDeploymentExecutorTest extends DatabaseTestCase
             public function provision(ProvisioningRequest $request): ProvisioningResult
             { ++$this->calls; throw new ProvisioningFailure($this->code, true); }
             public function status(string $deploymentId): array
-            { return ['runtime' => false, 'database' => false, 'network' => false]; }
+            { return ['runtime' => false, 'database' => false, 'redis' => false, 'scheduler' => false, 'emailWorker' => false, 'network' => false]; }
             public function activate(ProvisioningRequest $request): void { throw new \LogicException('Unexpected activation'); }
             public function applyTargetMigrations(ProvisioningRequest $request): void { throw new \LogicException('Unexpected update'); }
             public function replaceApplicationRuntime(ProvisioningRequest $request): void { throw new \LogicException('Unexpected update'); }
@@ -165,10 +167,13 @@ final class ProvisionDeploymentExecutorTest extends DatabaseTestCase
         };
     }
 
+    /** @return array<string, mixed> */
     private function operation(string $deployment): array
     {
-        return $this->connection->fetchAssociative("SELECT status, attempt_count, last_error_code
+        $operation = $this->connection->fetchAssociative("SELECT status, attempt_count, last_error_code
             FROM commercial.deployment_operations WHERE deployment_id = ? AND operation_type = 'provision'",
             [$deployment]);
+        self::assertIsArray($operation);
+        return $operation;
     }
 }

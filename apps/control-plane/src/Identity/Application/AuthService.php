@@ -276,7 +276,9 @@ SQL, [$this->tokens->hash($accessToken)]);
         return $this->issueSession($userId, $emailNormalized, $ip, $userAgent, $correlationId, $method);
     }
 
-    /** Internal application boundary: credentials were already checked and MFA was transactionally decided. */
+    /** Internal application boundary: credentials were already checked and MFA was transactionally decided.
+     * @return array{access_token: string, refresh_token: string, access_expires_in: int, session_expires_in: int}
+     */
     public function issuePasswordSessionForAuthenticatedUser(string $userId, string $emailNormalized, string $ip, string $userAgent, string $correlationId): array
     {
         return $this->issueSession($userId, $emailNormalized, $ip, $userAgent, $correlationId);
@@ -287,6 +289,7 @@ SQL, [$this->tokens->hash($accessToken)]);
         $this->auditLoginFailure($emailNormalized, $correlationId);
     }
 
+    /** @return array{access_token: string, refresh_token: string, access_expires_in: int, session_expires_in: int} */
     private function issueSession(string $userId, string $emailNormalized, string $ip, string $userAgent, string $correlationId, string $method = 'password'): array
     {
         $accessToken = $this->tokens->randomToken();

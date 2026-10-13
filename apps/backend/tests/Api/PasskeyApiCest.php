@@ -320,8 +320,12 @@ final readonly class PasskeyApiCest
         // Account with passkey only (no password, no external identity)
         $db = ApiTester::getDb();
 
+        $personId = (string) $db->createCommand(
+            "INSERT INTO core.persons (given_name, family_name) VALUES ('Only Passkey', 'Fixture') RETURNING id::text",
+        )->queryScalar();
         $accountId = (string) $db->createCommand(
-            "INSERT INTO core.accounts (account_type, status, label) VALUES ('service', 'active', 'Only Passkey Account') RETURNING id::text",
+            "INSERT INTO core.accounts (person_id, account_type, status, label) VALUES (CAST(:person AS uuid), 'human', 'active', 'Only Passkey Account') RETURNING id::text",
+            [':person' => $personId],
         )->queryScalar();
 
         $I->amAuthenticatedAccount($accountId);

@@ -11,6 +11,28 @@ use ControlPlane\Tests\Support\FakePaymentProviderGateway;
 
 final class YooKassaWebhookTest extends PaymentTestCase
 {
+    public function testOutOfOrderCanceledNoticeUsesAuthoritativeSucceededStateOnce(): void
+    {
+        [$owner, $account, , , , $subscription, $invoice] = $this->issuedRubInvoiceContext('yk-webhook-reordered');
+        $payment = $this->paymentCreator()->create($owner, $account, $invoice['id'], 'yk-reordered-create', $this->uuid());
+        $provider = $this->yooKassaProviderAccount();
+        $attempt = $this->attemptBeginner()->begin($payment['id'], $provider, 'sbp', $this->uuid());
+        $providerId = 'yk-reordered-provider-payment';
+        $this->attemptBinder()->bind($attempt['attempt_id'], $providerId);
+        $gateway = new FakePaymentProviderGateway();
+        $gateway->payments[$providerId] = $this->providerPayment($providerId, 'succeeded', $payment['id'], $attempt['attempt_id'], $invoice['id'], 1000);
+        $webhook = $this->yooKassaWebhook($gateway);
+
+        self::assertSame(['status' => 'processed'], $webhook->receive($this->webhookBody('payment.canceled', $providerId), 'application/json', $this->uuid()));
+        self::assertSame(['status' => 'processed'], $webhook->receive($this->webhookBody('payment.succeeded', $providerId), 'application/json', $this->uuid()));
+
+        self::assertSame('succeeded', $this->connection->fetchOne('SELECT status FROM commercial.payments WHERE id = ?', [$payment['id']]));
+        self::assertSame('paid', $this->connection->fetchOne('SELECT status FROM commercial.invoices WHERE id = ?', [$invoice['id']]));
+        self::assertSame('active', $this->connection->fetchOne('SELECT status FROM commercial.subscriptions WHERE id = ?', [$subscription]));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action = 'payment.succeeded' AND resource_id = ?", [$payment['id']]));
+        self::assertSame(2, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.payment_provider_events WHERE provider_account_id = ?', [$provider]));
+    }
+
     public function testAuthoritativeSuccessSettlesOnceAndDeduplicatesWebhook(): void
     {
         [$owner, $account, , , , $subscription, $invoice] = $this->issuedRubInvoiceContext('yk-webhook-success');

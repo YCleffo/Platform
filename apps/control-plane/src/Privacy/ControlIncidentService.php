@@ -10,7 +10,9 @@ final readonly class ControlIncidentService
 {
     public function __construct(private Connection $connection, private ControlPrivacyOperator $operators) {}
 
-    /** @param list<string> $categories */
+    /** @param list<mixed> $categories
+     * @return array{id:string, initialNotificationDueAt:string, investigationNotificationDueAt:string}
+     */
     public function detect(string $operatorId, string $detectedAt, array $categories, ?int $estimatedSubjects): array
     {
         $this->operators->assertAuthorized($operatorId);

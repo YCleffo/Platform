@@ -63,10 +63,26 @@ final class ProvisionerBoundaryTest extends TestCase
     {
         $dir = sys_get_temp_dir() . '/provisioner-test-' . bin2hex(random_bytes(6));
         $store = new LocalProvisioningSecretStore($dir, $dir, 'test');
+        if (PHP_OS_FAMILY !== 'Linux') {
+            try {
+                $store->prepare(self::ID, 'credential-one');
+                self::fail('The POSIX local secret store accepted a non-Linux host.');
+            } catch (ProvisioningFailure $e) {
+                self::assertSame('infrastructure.provider_not_allowed', $e->machineCode);
+            }
+            self::assertDirectoryDoesNotExist($dir);
+
+            return;
+        }
         try {
             $first = $store->prepare(self::ID, 'credential-one');
             $password = file_get_contents($dir . '/' . self::ID . '/db_password');
+            self::assertIsString($password);
             self::assertMatchesRegularExpression('/\A[a-f0-9]{64}\z/D', $password);
+            self::assertSame(33, filegroup($dir . '/' . self::ID));
+            self::assertSame(0750, fileperms($dir . '/' . self::ID) & 0777);
+            self::assertSame(33, filegroup($dir . '/' . self::ID . '/db_password'));
+            self::assertSame(0640, fileperms($dir . '/' . self::ID . '/db_password') & 0777);
             self::assertSame('localdev://' . self::ID . '/db', $first['reference']);
             $store->prepare(self::ID, 'credential-two');
             self::assertSame($password, file_get_contents($dir . '/' . self::ID . '/db_password'));
@@ -86,6 +102,7 @@ final class ProvisionerBoundaryTest extends TestCase
     public function testForeignResourceIsNeverRemovedAndProductionProviderFailsClosed(): void
     {
         $docker = new class extends DockerCommand {
+            /** @var list<array<mixed>> */
             public array $calls = [];
             public function inspect(string $kind, string $name): ?array
             {
@@ -116,6 +133,7 @@ final class ProvisionerBoundaryTest extends TestCase
     {
         foreach (['-redis', '-scheduler', '-email-worker'] as $suffix) {
             $docker = new class($suffix) extends DockerCommand {
+                /** @var list<array<mixed>> */
                 public array $calls = [];
                 public function __construct(private string $suffix) {}
                 public function inspect(string $kind, string $name): ?array
@@ -137,8 +155,9 @@ final class ProvisionerBoundaryTest extends TestCase
     public function testCleanupRemovesOnlyMatchingOwnedResourcesAndTheirAnonymousVolumes(): void
     {
         $docker = new class extends DockerCommand {
+            /** @var list<array<mixed>> */
             public array $calls = [];
-            public function inspect(string $kind, string $name): ?array
+            public function inspect(string $kind, string $name): array
             {
                 return $kind === 'network'
                     ? ['Labels' => ['platform.deployment.id' => ProvisionerBoundaryTest::ID]]
@@ -163,8 +182,9 @@ final class ProvisionerBoundaryTest extends TestCase
     public function testQuiesceStopsOnlyOwnedRuntimeAndKeepsDatabase(): void
     {
         $docker = new class extends DockerCommand {
+            /** @var list<array<mixed>> */
             public array $calls = [];
-            public function inspect(string $kind, string $name): ?array
+            public function inspect(string $kind, string $name): array
             {
                 if ($kind === 'network') { return ['Labels' => ['platform.deployment.id' => ProvisionerBoundaryTest::ID]]; }
                 return ['Config' => ['Labels' => [
@@ -188,6 +208,7 @@ final class ProvisionerBoundaryTest extends TestCase
     public function testDecommissionOfAlreadyAbsentResourcesIsIdempotent(): void
     {
         $docker = new class extends DockerCommand {
+            /** @var list<array<mixed>> */
             public array $calls = [];
             public function inspect(string $kind, string $name): ?array { return null; }
             public function run(array $arguments, string $code = 'infrastructure.docker_failed'): string
@@ -201,6 +222,7 @@ final class ProvisionerBoundaryTest extends TestCase
     public function testTargetMigrationValidationAlwaysPrecedesApplication(): void
     {
         $docker = new class extends DockerCommand {
+            /** @var list<array<mixed>> */
             public array $calls = [];
             public function inspect(string $kind, string $name): ?array
             { return $kind === 'image' ? ['Id' => 'sha256:' . str_repeat('a', 64)] : null; }
@@ -227,8 +249,11 @@ final class ProvisionerBoundaryTest extends TestCase
         ];
         foreach ($scenarios as $state) {
             $docker = new class($state) extends DockerCommand {
+                /** @var list<array<mixed>> */
                 public array $calls = [];
+                /** @var array<string, bool> */
                 private array $created = [];
+                /** @param array<string, string> $state */
                 public function __construct(private readonly array $state) {}
                 public function inspect(string $kind, string $name): ?array
                 {
@@ -266,6 +291,7 @@ final class ProvisionerBoundaryTest extends TestCase
     public function testRuntimeReplacementRejectsForeignPartialStateBeforeMutation(): void
     {
         $docker = new class extends DockerCommand {
+            /** @var list<array<mixed>> */
             public array $calls = [];
             public function inspect(string $kind, string $name): ?array
             {

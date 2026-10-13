@@ -121,11 +121,15 @@ final readonly class PostgresRoleRepository implements RoleRepository
                     SELECT COUNT(*)
                     FROM core.account_roles ar
                     INNER JOIN core.accounts a ON a.id = ar.account_id
+                    INNER JOIN core.persons p ON p.id = a.person_id
                     WHERE ar.role_id = CAST(:role_id AS uuid)
                       AND (ar.expires_at IS NULL OR ar.expires_at > now())
+                      AND a.account_type = 'human'
                       AND a.status = 'active'
                       AND a.disabled_at IS NULL
                       AND a.archived_at IS NULL
+                      AND p.status = 'active'
+                      AND p.archived_at IS NULL
                     SQL,
                     [':role_id' => $roleId],
                 )->queryScalar();

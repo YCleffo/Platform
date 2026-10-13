@@ -71,8 +71,8 @@ SQL, $batchSize), [$this->timestamp($effectiveInstant), $this->graceSeconds, $th
                     $count += $this->connection->transactional(function (Connection $connection) use ($row, $effectiveInstant, $correlationId): int {
                         $subscription = $connection->fetchAssociative('SELECT id, commercial_account_id, status, billing_status, current_period_end, grace_until FROM commercial.subscriptions WHERE id=? AND commercial_account_id=? AND status=? FOR UPDATE SKIP LOCKED', [$row['id'], $row['commercial_account_id'], 'active']);
                         if ($subscription === false) return 0;
-                        $this->expireLocked($connection, $subscription, $effectiveInstant, $correlationId);
-                        return 1;
+                        $result = $this->expireLocked($connection, $subscription, $effectiveInstant, $correlationId);
+                        return $result['status'] === 'expired' ? 1 : 0;
                     });
                 } catch (\DomainException) {
                     // A settlement or cancellation changed eligibility after selection.

@@ -14,9 +14,9 @@ final class AuthSecurityLifecycleTest extends DatabaseTestCase
         $pending=$security->login('mfa@example.test','correct horse battery staple','192.0.2.2','test',$correlation);
         self::assertSame('mfa_required',$pending['status']); self::assertArrayNotHasKey('access_token',$pending);
         $session=$security->verifyMfaLogin((string)$pending['challenge_token'],$this->totp($secret,time()),null,'192.0.2.2','test',$correlation);
-        $row=$this->connection->fetchAssociative("SELECT id,authentication_method,primary_authenticated_at,mfa_authenticated_at FROM commercial.control_sessions WHERE access_token_hash=decode(?,'hex')",[hash('sha256',$session['access_token'])]); self::assertSame('password_totp',$row['authentication_method']);
+        $row=$this->connection->fetchAssociative("SELECT id,authentication_method,primary_authenticated_at,mfa_authenticated_at FROM commercial.control_sessions WHERE access_token_hash=decode(?,'hex')",[hash('sha256',$session['access_token'])]); self::assertIsArray($row); self::assertSame('password_totp',$row['authentication_method']);
         $before=[$row['id'],$row['authentication_method'],$row['primary_authenticated_at'],$row['mfa_authenticated_at']]; $rotated=$auth->refresh($session['refresh_token'],'192.0.2.2','other',$correlation);
-        $after=$this->connection->fetchAssociative('SELECT id,authentication_method,primary_authenticated_at,mfa_authenticated_at FROM commercial.control_sessions WHERE id=?',[$row['id']]); self::assertSame($before,[$after['id'],$after['authentication_method'],$after['primary_authenticated_at'],$after['mfa_authenticated_at']]);
+        $after=$this->connection->fetchAssociative('SELECT id,authentication_method,primary_authenticated_at,mfa_authenticated_at FROM commercial.control_sessions WHERE id=?',[$row['id']]); self::assertIsArray($after); self::assertSame($before,[$after['id'],$after['authentication_method'],$after['primary_authenticated_at'],$after['mfa_authenticated_at']]);
         try{$security->verifyMfaLogin((string)$pending['challenge_token'],$this->totp($secret,time()),null,'192.0.2.2','test',$correlation);self::fail('Consumed challenge reused.');}catch(AuthFailure $e){self::assertSame('mfa_challenge_invalid',$e->errorCode);}
         self::assertNotSame($session['refresh_token'],$rotated['refresh_token']);
     }
@@ -27,7 +27,7 @@ final class AuthSecurityLifecycleTest extends DatabaseTestCase
         $factor=$this->uuid();$cipher=new \ControlPlane\Identity\Security\TotpSecretCipher('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');$this->connection->executeStatement("INSERT INTO commercial.control_user_totp_factors (id,control_user_id,secret_ciphertext,key_version,status,confirmed_at) VALUES (?, ?, decode(?,'hex'),'v1','active',now())",[$factor,$registered['user_id'],bin2hex($cipher->encrypt('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'))]);
         $pending=$security->login($email,'correct horse battery staple','192.0.2.5','test',$correlation);
         for($i=1;$i<=8;++$i){try{$security->verifyMfaLogin((string)$pending['challenge_token'],'000000',null,'192.0.2.5','test',$correlation);self::fail('Invalid code accepted.');}catch(AuthFailure $e){self::assertSame('mfa_code_invalid',$e->errorCode);}}
-        $row=$this->connection->fetchAssociative('SELECT attempts,invalidated_at FROM commercial.control_auth_challenges WHERE token_hash=decode(?,\'hex\')',[hash('sha256',$pending['challenge_token'])]);self::assertSame(8,(int)$row['attempts']);self::assertNotNull($row['invalidated_at']);self::assertSame(8,(int)$this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='control_mfa.login_denied' AND outcome='denied'"));
+        $row=$this->connection->fetchAssociative('SELECT attempts,invalidated_at FROM commercial.control_auth_challenges WHERE token_hash=decode(?,\'hex\')',[hash('sha256',$pending['challenge_token'])]);self::assertIsArray($row);self::assertSame(8,(int)$row['attempts']);self::assertNotNull($row['invalidated_at']);self::assertSame(8,(int)$this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='control_mfa.login_denied' AND outcome='denied'"));
     }
     public function testPasswordResetUsesHashOnlyArtifactsAndRevokesSessions(): void
     {
@@ -67,6 +67,6 @@ final class AuthSecurityLifecycleTest extends DatabaseTestCase
 
     private function totp(string $secret, int $timestamp): string
     {
-        $alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';$bits='';foreach(str_split($secret) as $char){$bits.=str_pad(decbin((int)strpos($alphabet,$char)),5,'0',STR_PAD_LEFT);}$key='';foreach(str_split(substr($bits,0,intdiv(strlen($bits),8)*8),8) as $part){$key.=chr(bindec($part));}$counter=intdiv($timestamp,30);$mac=hash_hmac('sha1',pack('N2',intdiv($counter,4294967296),$counter%4294967296),$key,true);$offset=ord($mac[19])&15;$value=((ord($mac[$offset])&127)<<24)|(ord($mac[$offset+1])<<16)|(ord($mac[$offset+2])<<8)|ord($mac[$offset+3]);return str_pad((string)($value%1000000),6,'0',STR_PAD_LEFT);
+        $alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';$bits='';foreach(str_split($secret) as $char){$bits.=str_pad(decbin((int)strpos($alphabet,$char)),5,'0',STR_PAD_LEFT);}$key='';foreach(str_split(substr($bits,0,intdiv(strlen($bits),8)*8),8) as $part){$key.=chr(intval($part,2));}$counter=intdiv($timestamp,30);$mac=hash_hmac('sha1',pack('N2',intdiv($counter,4294967296),$counter%4294967296),$key,true);$offset=ord($mac[19])&15;$value=((ord($mac[$offset])&127)<<24)|(ord($mac[$offset+1])<<16)|(ord($mac[$offset+2])<<8)|ord($mac[$offset+3]);return str_pad((string)($value%1000000),6,'0',STR_PAD_LEFT);
     }
 }

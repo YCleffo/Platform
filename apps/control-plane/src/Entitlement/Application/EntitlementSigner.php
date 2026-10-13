@@ -22,7 +22,7 @@ final readonly class EntitlementSigner
         return $this->loadKey()['keyId'];
     }
 
-    /** @return array{keyId:string,secret:string} */
+    /** @return array{keyId:string,secret:non-empty-string} */
     private function loadKey(): array
     {
         $key = $this->connection->fetchAssociative(<<<'SQL'
@@ -34,7 +34,7 @@ ORDER BY valid_from DESC, key_id DESC LIMIT 1
 SQL);
         if ($key === false) { throw new \DomainException('An active entitlement signing key is unavailable.'); }
         $secret = $this->resolver->resolve($key['private_key_secret_ref']);
-        if ($secret === null || strlen($secret) !== SODIUM_CRYPTO_SIGN_SECRETKEYBYTES
+        if ($secret === null || $secret === '' || strlen($secret) !== SODIUM_CRYPTO_SIGN_SECRETKEYBYTES
             || !hash_equals($key['public_key_hex'], bin2hex(sodium_crypto_sign_publickey_from_secretkey($secret)))) {
             throw new \DomainException('Entitlement signing key could not be resolved.');
         }

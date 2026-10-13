@@ -26,14 +26,18 @@ final class M2mUsageHttpTest extends TestCase
             'CONTENT_TYPE' => 'application/json', 'HTTP_IDEMPOTENCY_KEY' => 'http-missing',
         ], $body));
         self::assertSame(401, $missing->getStatusCode());
-        self::assertSame('authentication_required', json_decode($missing->getContent(), true)['error']['code']);
+        $missingContent = $missing->getContent();
+        self::assertIsString($missingContent);
+        self::assertSame('authentication_required', json_decode($missingContent, true)['error']['code']);
 
         $bearer = $kernel->handle(Request::create('/api/m2m/usage', 'POST', [], [], [], [
             'CONTENT_TYPE' => 'application/json', 'HTTP_IDEMPOTENCY_KEY' => 'http-bearer',
             'HTTP_AUTHORIZATION' => 'Bearer an-existing-human-session-token',
         ], $body));
         self::assertSame(401, $bearer->getStatusCode());
-        self::assertSame('authentication_required', json_decode($bearer->getContent(), true)['error']['code']);
+        $bearerContent = $bearer->getContent();
+        self::assertIsString($bearerContent);
+        self::assertSame('authentication_required', json_decode($bearerContent, true)['error']['code']);
         $kernel->shutdown();
     }
 }

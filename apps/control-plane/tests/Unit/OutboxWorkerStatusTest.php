@@ -58,6 +58,6 @@ final class OutboxWorkerStatusTest extends TestCase
         self::assertSame(1, $tester->execute([]));
         self::assertSame(['control_outbox_worker', 'outbox_batch_failed'], $writes[1][1]);
         self::assertStringNotContainsString('private recipient', $tester->getDisplay());
-        self::assertStringNotContainsString('private recipient', json_encode($writes));
+        self::assertStringNotContainsString('private recipient', json_encode($writes, JSON_THROW_ON_ERROR));
     }
 }

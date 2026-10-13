@@ -73,6 +73,9 @@ SELECT count(*)::integer AS pending_count,
        EXTRACT(EPOCH FROM (clock_timestamp() - min(created_at)))::integer AS oldest_age
 FROM commercial.outbox_events WHERE status IN ('pending','failed')
 SQL);
+        if ($row === false || !array_key_exists('pending_count', $row) || !array_key_exists('oldest_age', $row)) {
+            throw new \RuntimeException('Outbox backlog status is unavailable.');
+        }
         return ['pendingOutboxCount' => (int) $row['pending_count'],
             'oldestPendingAgeSeconds' => $row['oldest_age'] === null ? null : (int) $row['oldest_age']];
     }

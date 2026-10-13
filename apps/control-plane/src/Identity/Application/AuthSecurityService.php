@@ -34,8 +34,11 @@ final readonly class AuthSecurityService
             $user = $db->fetchAssociative('SELECT id, email_normalized, password_hash, status FROM commercial.control_users WHERE email_normalized = ? FOR UPDATE', [$email]);
             $valid = $user !== false && is_string($user['id']) && is_string($user['password_hash'])
                 && $this->passwordHasher->isPasswordValid(new ControlUserPrincipal($user['id'], $email, $user['password_hash']), $password);
-            if (!$valid) { $this->passwordHasher->hashPassword(new ControlUserPrincipal(Uuid::v7()->toRfc4122(), $email, ''), $password); }
-            if (!$valid || $user === false || $user['status'] !== 'active' || !is_string($user['id']) || !is_string($user['email_normalized'])) return ['failure' => 'invalid_credentials'];
+            if (!$valid) {
+                $this->passwordHasher->hashPassword(new ControlUserPrincipal(Uuid::v7()->toRfc4122(), $email, ''), $password);
+                return ['failure' => 'invalid_credentials'];
+            }
+            if ($user['status'] !== 'active' || !is_string($user['email_normalized'])) return ['failure' => 'invalid_credentials'];
             $factor = $db->fetchAssociative("SELECT id FROM commercial.control_user_totp_factors WHERE control_user_id = ? AND status = 'active' FOR UPDATE", [$user['id']]);
             if ($factor === false) { return $this->sessions->issuePasswordSessionForAuthenticatedUser($user['id'], $user['email_normalized'], $ip, $agent, $correlation); }
             $challengeId = Uuid::v7()->toRfc4122(); $token = $this->tokens->mfaChallengeToken($challengeId);

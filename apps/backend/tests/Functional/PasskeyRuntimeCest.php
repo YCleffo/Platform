@@ -57,6 +57,9 @@ final readonly class PasskeyRuntimeCest
         $db->createCommand(
             "DELETE FROM core.accounts WHERE label LIKE 'Passkey Test Account%' OR label = 'Only Passkey Account'",
         )->execute();
+        $db->createCommand(
+            "DELETE FROM core.persons WHERE given_name = 'Passkey Runtime' AND family_name = 'Fixture' AND NOT EXISTS (SELECT 1 FROM core.accounts WHERE person_id = core.persons.id)",
+        )->execute();
     }
 
     private function createContainer(): array
@@ -85,8 +88,12 @@ final readonly class PasskeyRuntimeCest
 
     private function createAccount(ConnectionInterface $db, bool $withPassword = true): array
     {
+        $personId = (string) $db->createCommand(
+            "INSERT INTO core.persons (given_name, family_name) VALUES ('Passkey Runtime', 'Fixture') RETURNING id::text",
+        )->queryScalar();
         $accountId = (string) $db->createCommand(
-            "INSERT INTO core.accounts (account_type, status, label) VALUES ('service', 'active', 'Passkey Test Account') RETURNING id::text",
+            "INSERT INTO core.accounts (person_id, account_type, status, label) VALUES (CAST(:person AS uuid), 'human', 'active', 'Passkey Test Account') RETURNING id::text",
+            [':person' => $personId],
         )->queryScalar();
 
         $email = 'passkey-' . bin2hex(random_bytes(6)) . '@example.test';

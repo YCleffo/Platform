@@ -9,6 +9,7 @@ use App\Core\Rbac\Application\RoleRepository;
 use App\Core\Shared\Application\ConflictException;
 use App\Environment;
 use App\Tests\Support\FunctionalTester;
+use PHPUnit\Framework\Assert;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Yii\Runner\Http\HttpApplicationRunner;
 
@@ -40,11 +41,18 @@ final readonly class AuthorizationLifecycleCest
                 'INSERT INTO core.account_roles (account_id, role_id) VALUES (CAST(:account AS uuid), CAST(:role AS uuid))',
                 [':account' => $first, ':role' => $role],
             )->execute();
+            $service = (string) $db->createCommand(
+                "INSERT INTO core.accounts (account_type, status, label) VALUES ('service', 'active', 'service superadmin fixture') RETURNING id::text",
+            )->queryScalar();
+            $db->createCommand(
+                'INSERT INTO core.account_roles (account_id, role_id) VALUES (CAST(:account AS uuid), CAST(:role AS uuid))',
+                [':account' => $service, ':role' => $role],
+            )->execute();
 
             $roles = $container->get(RoleRepository::class);
             try {
                 $roles->revoke($first, $role);
-                $tester->fail('The last active superadmin role must not be revoked.');
+                Assert::fail('The last active superadmin role must not be revoked.');
             } catch (ConflictException) {
                 // Required invariant.
             }
@@ -55,7 +63,7 @@ final readonly class AuthorizationLifecycleCest
             $lifecycle = $container->get(AccountLifecycleRepository::class);
             try {
                 $lifecycle->disable($second);
-                $tester->fail('The last active superadmin account must not be disabled.');
+                Assert::fail('The last active superadmin account must not be disabled.');
             } catch (ConflictException) {
                 // Required invariant.
             }
@@ -73,9 +81,12 @@ final readonly class AuthorizationLifecycleCest
 
     private function account(ConnectionInterface $db, string $label): string
     {
+        $personId = (string) $db->createCommand(
+            "INSERT INTO core.persons (given_name, family_name) VALUES ('Authorization', 'Fixture') RETURNING id::text",
+        )->queryScalar();
         $id = $db->createCommand(
-            "INSERT INTO core.accounts (account_type, status, label) VALUES ('service', 'active', :label) RETURNING id::text",
-            [':label' => $label],
+            "INSERT INTO core.accounts (person_id, account_type, status, label) VALUES (CAST(:person AS uuid), 'human', 'active', :label) RETURNING id::text",
+            [':person' => $personId, ':label' => $label],
         )->queryScalar();
         if (!is_string($id)) {
             throw new \RuntimeException('Test account could not be created.');

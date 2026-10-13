@@ -47,7 +47,7 @@ final readonly class PrivacyRetentionB3Cest
     {
         $container = (new HttpApplicationRunner(rootPath: dirname(__DIR__, 2), environment: Environment::appEnv()))->getContainer();
         assertTrue($container->get(ProcessingTerminationService::class) instanceof ProcessingTerminationService);
-        assertFalse($container->get(PrivacyRequestExecutionCapabilityRegistry::class)->available('processing_termination'));
+        assertTrue($container->get(PrivacyRequestExecutionCapabilityRegistry::class)->available('processing_termination'));
         $db = $container->get(ConnectionInterface::class);
         $transaction = $db->beginTransaction();
         try {

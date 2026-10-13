@@ -8,6 +8,6 @@ interface PersonalDataContributor
 {
     public function code(): string;
 
-    /** @return list<array<string, mixed>> */
+    /** @return list<array<string, mixed>>|array{sessions:list<array<string,mixed>>,mfa:list<array<string,mixed>>} */
     public function export(string $controlUserId): array;
 }

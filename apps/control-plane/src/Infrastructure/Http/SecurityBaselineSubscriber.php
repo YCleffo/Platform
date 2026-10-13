@@ -14,6 +14,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
 final class SecurityBaselineSubscriber implements EventSubscriberInterface
 {
     private const MAX_BODY_BYTES = 65_536;
+    private const SENSITIVE_API_PATH = '~^/api/(?:control/(?:auth|accounts|privacy)(?:/|$)|m2m(?:/|$))~';
 
     public function onRequest(RequestEvent $event): void
     {
@@ -38,8 +39,7 @@ final class SecurityBaselineSubscriber implements EventSubscriberInterface
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('Referrer-Policy', 'no-referrer');
         $response->headers->set('Content-Security-Policy', "frame-ancestors 'none'");
-        if (str_starts_with($event->getRequest()->getPathInfo(), '/api/control/auth')
-            || str_starts_with($event->getRequest()->getPathInfo(), '/api/m2m/')) {
+        if (preg_match(self::SENSITIVE_API_PATH, $event->getRequest()->getPathInfo()) === 1) {
             $response->headers->set('Cache-Control', 'no-store');
             $response->headers->set('Pragma', 'no-cache');
         }

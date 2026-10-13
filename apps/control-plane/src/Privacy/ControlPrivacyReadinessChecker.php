@@ -10,6 +10,7 @@ final readonly class ControlPrivacyReadinessChecker
      * @param array<string, mixed> $residency
      * @param array<string, mixed> $providerDecisions
      * @param array<string, mixed> $securityReferences
+     * @param array<string, mixed> $operatorNotification
      */
     public function __construct(private ControlPrivacyRetentionPolicy $retention,
         private ControlProcessingRoleRegistry $roles,

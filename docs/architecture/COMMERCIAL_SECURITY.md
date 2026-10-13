@@ -15,7 +15,8 @@ removed by `control:security:cleanup`, not by arbitrary HTTP requests.
 Registration, login, verification resend, refresh and account creation use
 expiring database rate-limit counters with HMAC-pseudonymized keys. API bodies
 are limited to 64 KiB. API errors never include SQL, stack traces, filesystem
-paths or secrets. Auth responses are `no-store`; all responses receive
+paths or secrets. Auth, account (including billing and payment), privacy, and
+M2M responses are `no-store, private`; all responses receive
 `nosniff`, deny framing, `frame-ancestors 'none'` and `no-referrer`. CORS is
 closed by default. Authentication uses Authorization bearer tokens, not
 cookies, so this API boundary does not rely on cookie CSRF protection.

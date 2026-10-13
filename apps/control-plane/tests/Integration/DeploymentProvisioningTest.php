@@ -75,17 +75,24 @@ final class DeploymentProvisioningTest extends SubscriptionTestCase
             new EffectiveEntitlements($this->connection, new AccountAuthorization($this->connection)),
             new EntitlementSigner($this->connection, $resolver));
         $issued = $issuer->ensureLatest($deployment);
+        $signature = base64_decode($issued['signatureBase64'], true);
+        $canonical = base64_decode($issued['documentBase64'], true);
+        self::assertIsString($signature);
+        if ($signature === '') { self::fail('Issuer produced an empty signature.'); }
+        self::assertIsString($canonical);
         self::assertTrue(sodium_crypto_sign_verify_detached(
-            base64_decode($issued['signatureBase64'], true),
-            base64_decode($issued['documentBase64'], true),
+            $signature,
+            $canonical,
             sodium_crypto_sign_publickey($pair)));
-        $document = json_decode(base64_decode($issued['documentBase64'], true), true, 16, JSON_THROW_ON_ERROR);
+        $document = json_decode($canonical, true, 16, JSON_THROW_ON_ERROR);
         self::assertSame('active', $document['deploymentStatus']);
         self::assertSame(['provisioning.module.crm' => true], $document['features']);
         $ready = $controller->report($this->request($header,
             ['status' => 'ready', 'entitlementSequence' => $issued['sequence']], $this->uuid()));
         self::assertSame(200, $ready->getStatusCode());
-        self::assertSame('ready', json_decode($ready->getContent(), true)['status']);
+        $readyContent = $ready->getContent();
+        self::assertIsString($readyContent);
+        self::assertSame('ready', json_decode($readyContent, true)['status']);
         self::assertSame('active', $this->field($deployment, 'status'));
         self::assertSame('ready', $this->field($deployment, 'provisioning_state'));
         self::assertSame($this->field($deployment, 'desired_release_id'), $this->field($deployment, 'current_release_id'));
@@ -98,7 +105,9 @@ final class DeploymentProvisioningTest extends SubscriptionTestCase
         $repeat = $controller->report($this->request($header,
             ['status' => 'ready', 'entitlementSequence' => $issued['sequence']]));
         self::assertSame(200, $repeat->getStatusCode());
-        self::assertSame('already_ready', json_decode($repeat->getContent(), true)['status']);
+        $repeatContent = $repeat->getContent();
+        self::assertIsString($repeatContent);
+        self::assertSame('already_ready', json_decode($repeatContent, true)['status']);
         self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events
             WHERE action = 'deployment.provisioned' AND resource_id = ?", [$deployment]));
         self::assertSame(422, $controller->report($this->request($header,
@@ -149,6 +158,7 @@ final class DeploymentProvisioningTest extends SubscriptionTestCase
                 new TokenCodec('test-only-control-token-secret-at-least-32-chars')));
     }
 
+    /** @param array<string, int|string> $body */
     private function request(string $authorization, array $body, ?string $attemptedDeployment = null): Request
     {
         $query = $attemptedDeployment === null ? [] : ['deploymentId' => $attemptedDeployment];

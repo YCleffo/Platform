@@ -24,12 +24,14 @@ final class RequestDeploymentUpdateTest extends DatabaseTestCase
     {
         [$deployment, $a] = $this->active('2.0.0', 'stable');
         $requests = new RequestDeploymentUpdate($this->connection, 'test');
+        $rejections = 0;
         foreach ([$a, $this->release('1.9.0','stable','published','c'),
             $this->release('2.1.0','beta','published','d'), $this->release('2.1.1','stable','draft','e')]
             as $target) {
             try { $requests->request($deployment, $target, 'reject-' . $target); self::fail('Ineligible update accepted.'); }
-            catch (\DomainException) { self::assertTrue(true); }
+            catch (\DomainException) { ++$rejections; }
         }
+        self::assertSame(4, $rejections);
     }
 
     public function testRejectsConcurrentLifecycleOperation(): void

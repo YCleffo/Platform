@@ -174,8 +174,8 @@ paths:
     post:
       operationId: createSubscription
       parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
-      requestBody: {$ref: '#/components/requestBodies/Object'}
-      responses: {'201': {$ref: '#/components/responses/Subscription'}, '409': {$ref: '#/components/responses/Error'}}
+      requestBody: {$ref: '#/components/requestBodies/CreateSubscription'}
+      responses: {'201': {$ref: '#/components/responses/SubscriptionCreated'}, '409': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/subscriptions/{subscriptionId}:
     parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/SubscriptionId'}]
     get:
@@ -214,25 +214,26 @@ paths:
     parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/PaymentId'}]
     post:
       operationId: startCheckout
+      description: An identical Idempotency-Key and request replay the original attempt, including after authoritative settlement. A new checkout is rejected once the payment is settled.
       parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
       requestBody: {$ref: '#/components/requestBodies/Checkout'}
-      responses: {'200': {$ref: '#/components/responses/Object'}, '503': {$ref: '#/components/responses/Error'}}
+      responses: {'200': {$ref: '#/components/responses/CheckoutResult'}, '503': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/payment-methods:
     parameters: [{$ref: '#/components/parameters/AccountId'}]
     get:
       operationId: listSavedPaymentMethods
-      responses: {'200': {$ref: '#/components/responses/Object'}}
+      responses: {'200': {$ref: '#/components/responses/SavedPaymentMethods'}}
   /api/control/accounts/{accountId}/payment-methods/{methodId}/default:
     parameters: [{$ref: '#/components/parameters/AccountId'}, {name: methodId, in: path, required: true, schema: {type: string, format: uuid}}]
     post:
       operationId: setDefaultSavedPaymentMethod
-      requestBody: {$ref: '#/components/requestBodies/Object'}
-      responses: {'200': {$ref: '#/components/responses/Object'}, '404': {$ref: '#/components/responses/Error'}}
+      requestBody: {$ref: '#/components/requestBodies/EmptyObject'}
+      responses: {'200': {$ref: '#/components/responses/SavedPaymentMethod'}, '404': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/payment-methods/{methodId}:
     parameters: [{$ref: '#/components/parameters/AccountId'}, {name: methodId, in: path, required: true, schema: {type: string, format: uuid}}]
     delete:
       operationId: disableSavedPaymentMethod
-      requestBody: {$ref: '#/components/requestBodies/Object'}
+      requestBody: {$ref: '#/components/requestBodies/EmptyObject'}
       responses: {'204': {description: Saved payment method disabled}, '404': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/payments/{paymentId}/receipt:
     parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/PaymentId'}]
@@ -262,7 +263,7 @@ paths:
       responses: {'200': {$ref: '#/components/responses/Refund'}, '404': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/entitlements:
     parameters: [{$ref: '#/components/parameters/AccountId'}]
-    get: {operationId: getEntitlements, responses: {'200': {$ref: '#/components/responses/Object'}}}
+    get: {operationId: getEntitlements, responses: {'200': {$ref: '#/components/responses/EffectiveEntitlements'}}}
   /api/control/accounts/{accountId}/usage:
     parameters: [{$ref: '#/components/parameters/AccountId'}]
     get: {operationId: getUsage, responses: {'200': {$ref: '#/components/responses/Object'}}}
@@ -341,6 +342,8 @@ components:
     PrivacyIncidentId: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
   requestBodies:
     Object: {required: true, content: {application/json: {schema: {type: object}}}}
+    EmptyObject: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, maxProperties: 0}}}}
+    CreateSubscription: {required: true, content: {application/json: {schema: {type: object, required: [plan_price_id, quantity], properties: {plan_price_id: {type: string, format: uuid}, quantity: {type: integer, minimum: 1}}}}}}
     Email: {required: true, content: {application/json: {schema: {type: object, required: [email], properties: {email: {type: string, format: email}}}}}}
     EmailPassword: {required: true, content: {application/json: {schema: {type: object, required: [email, password], properties: {email: {type: string, format: email}, password: {type: string, format: password}}}}}}
     Token: {required: true, content: {application/json: {schema: {type: object, required: [token], properties: {token: {type: string}}}}}}
@@ -373,18 +376,52 @@ components:
     UsageIngest: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [featureCode, delta], properties: {featureCode: {type: string}, delta: {type: integer, not: {const: 0}}}}}}}
   responses:
     Object: {description: Success, content: {application/json: {schema: {type: object}}}}
+    SavedPaymentMethods: {description: Saved payment methods without provider secrets, content: {application/json: {schema: {type: object, additionalProperties: false, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/SavedPaymentMethod'}}}}}}}
+    SavedPaymentMethod: {description: Updated saved payment method without provider secrets, content: {application/json: {schema: {$ref: '#/components/schemas/SavedPaymentMethod'}}}}
+    EffectiveEntitlements: {description: Current commercial access for the account, content: {application/json: {schema: {$ref: '#/components/schemas/EffectiveEntitlements'}}}}
     Tokens: {description: Session tokens, content: {application/json: {schema: {type: object, required: [access_token, refresh_token], properties: {access_token: {type: string}, refresh_token: {type: string}}}}}}
     LoginResult: {description: Tokens or an MFA challenge, content: {application/json: {schema: {oneOf: [{$ref: '#/components/schemas/Tokens'}, {$ref: '#/components/schemas/MfaChallenge'}]}}}}
     MfaStatus: {description: MFA state, content: {application/json: {schema: {$ref: '#/components/schemas/MfaStatus'}}}}
     Sessions: {description: Owned sessions only, content: {application/json: {schema: {type: object, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/Session'}}}}}}}
     Subscription: {description: Subscription, content: {application/json: {schema: {$ref: '#/components/schemas/Subscription'}}}}
+    SubscriptionCreated: {description: Created draft subscription, content: {application/json: {schema: {$ref: '#/components/schemas/SubscriptionCreated'}}}}
     Invoice: {description: Invoice, content: {application/json: {schema: {$ref: '#/components/schemas/Invoice'}}}}
     Payment: {description: Payment, content: {application/json: {schema: {$ref: '#/components/schemas/Payment'}}}}
+    CheckoutResult: {description: Provider checkout initiation, content: {application/json: {schema: {$ref: '#/components/schemas/CheckoutResult'}}}}
     Refund: {description: Refund, content: {application/json: {schema: {$ref: '#/components/schemas/Refund'}}}}
     Receipt: {description: Sanitized fiscal receipt, content: {application/json: {schema: {$ref: '#/components/schemas/Receipt'}}}}
     Entitlement: {description: Signed entitlement package for the authenticated deployment, content: {application/json: {schema: {type: object, required: [documentBase64, signatureBase64, keyId], properties: {documentBase64: {type: string}, signatureBase64: {type: string}, keyId: {type: string}}}}}}
     Error: {description: Sanitized error, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
   schemas:
+    EffectiveEntitlements:
+      type: object
+      additionalProperties: false
+      required: [commercial_account_id, subscription, features]
+      properties:
+        commercial_account_id: {type: string, format: uuid}
+        subscription:
+          oneOf:
+            - {type: 'null'}
+            - {type: object, additionalProperties: false, required: [id, current_period_start, current_period_end, billing_status, past_due_since, grace_until], properties: {id: {type: string, format: uuid}, current_period_start: {type: string, format: date-time}, current_period_end: {type: string, format: date-time}, billing_status: {type: string, enum: [current, past_due]}, past_due_since: {type: [string, 'null'], format: date-time}, grace_until: {type: [string, 'null'], format: date-time}}}
+        features: {type: object, additionalProperties: true, description: Published plan feature codes mapped to their JSON values. Empty when access has expired.}
+    SavedPaymentMethod:
+      type: object
+      additionalProperties: false
+      required: [id, method_type, status, title, card_brand, last4, expiry_month, expiry_year, is_default, created_at, last_used_at, disabled_at]
+      properties:
+        id: {type: string, format: uuid}
+        method_type: {type: string}
+        status: {type: string, enum: [active, disabled, provider_unusable]}
+        title: {type: [string, 'null']}
+        card_brand: {type: [string, 'null']}
+        last4: {type: [string, 'null'], pattern: '^[0-9]{4}$'}
+        expiry_month: {type: [integer, 'null'], minimum: 1, maximum: 12}
+        expiry_year: {type: [integer, 'null'], minimum: 2000, maximum: 9999}
+        is_default: {type: boolean}
+        created_at: {type: string, format: date-time}
+        last_used_at: {type: [string, 'null'], format: date-time}
+        disabled_at: {type: [string, 'null'], format: date-time}
+    SubscriptionCreated: {type: object, additionalProperties: false, required: [id, status], properties: {id: {type: string, format: uuid}, status: {const: draft}}}
     Health: {type: object, additionalProperties: false, required: [status], properties: {status: {type: string, enum: [ok, not_ready]}}}
     Error: {type: object, required: [error], properties: {error: {type: object, required: [code, message], properties: {code: {type: string}, message: {type: string}}}}}
     Tokens: {type: object, required: [access_token, refresh_token], properties: {access_token: {type: string}, refresh_token: {type: string}, access_expires_in: {type: integer}, session_expires_in: {type: integer}}}
@@ -431,11 +468,25 @@ components:
       properties:
         id: {type: string, format: uuid}
         invoice_id: {type: string, format: uuid}
-        status: {type: string, enum: [pending, succeeded, cancelled]}
+        status: {type: string, enum: [pending, waiting_for_capture, succeeded, cancelled]}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         amount_minor: {type: integer, minimum: 0}
         refunded_minor: {type: integer, minimum: 0}
         refundable_minor: {type: integer, minimum: 0}
+    CheckoutResult:
+      type: object
+      additionalProperties: false
+      required: [payment_id, attempt_id, provider, method, status, confirmation]
+      properties:
+        payment_id: {type: string, format: uuid}
+        attempt_id: {type: string, format: uuid}
+        provider: {const: yookassa}
+        method: {type: string, enum: [sbp, bank_card]}
+        status: {type: string, enum: [pending, succeeded, cancelled]}
+        confirmation:
+          oneOf:
+            - {type: 'null'}
+            - {type: object, additionalProperties: false, required: [type, url], properties: {type: {const: redirect}, url: {type: string, format: uri}}}
     CreateRefund:
       type: object
       additionalProperties: false

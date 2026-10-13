@@ -23,6 +23,7 @@ final class PrivacyFinancialTest extends InvoiceTestCase
         self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.invoices WHERE id = ?', [$invoice]));
         self::assertSame('disabled', $this->connection->fetchOne('SELECT status FROM commercial.control_users WHERE id = ?', [$owner]));
         $user = $this->connection->fetchAssociative('SELECT email, email_normalized, password_hash FROM commercial.control_users WHERE id = ?', [$owner]);
+        self::assertIsArray($user);
         self::assertSame('erased-' . $owner . '@privacy.invalid', $user['email']);
         self::assertSame($user['email'], $user['email_normalized']);
         self::assertNotSame($originalEmail, $user['email']);

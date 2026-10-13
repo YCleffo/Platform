@@ -56,8 +56,9 @@ final class DeploymentCredentialsTest extends DatabaseTestCase
         $newId = $rotated['credential']['credentialId'];
         $newHeader = 'Service ' . $newId . '.' . $rotated['secret'];
         self::assertNotNull($service->authenticate($newHeader, 'client-a'));
-        self::assertSame('revoked', $service->revoke($deployment, $newId)['status']);
-        self::assertSame('revoked', $service->revoke($deployment, $newId)['status']);
+        $firstRevocation = $service->revoke($deployment, $newId);
+        self::assertSame('revoked', $firstRevocation['status']);
+        self::assertSame($firstRevocation, $service->revoke($deployment, $newId));
         self::assertNull($service->authenticate($newHeader, 'client-a'));
 
         $this->connection->executeStatement("UPDATE commercial.service_credentials SET created_at = now() - interval '4 days', revoked_at = now() - interval '3 days' WHERE credential_id = ?", [$newId]);

@@ -31,7 +31,7 @@ final readonly class DataSubjectRequestsCest
         $serviceAccount = (string) $db->createCommand("INSERT INTO core.accounts (account_type, status) VALUES ('service', 'active') RETURNING id::text")->queryScalar();
         $I->amAuthenticatedAccount($serviceAccount);
         $I->sendPOST($path, ['requestType' => 'access']);
-        $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
+        $I->seeResponseCodeIs(HttpCode::UNAUTHORIZED);
         $person = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('Request', 'Owner') RETURNING id::text")->queryScalar();
         $other = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('Request', 'Other') RETURNING id::text")->queryScalar();
         $account = (string) $db->createCommand(

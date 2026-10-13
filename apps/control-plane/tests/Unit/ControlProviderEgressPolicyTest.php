@@ -16,7 +16,7 @@ final class ControlProviderEgressPolicyTest extends TestCase
             $unknown->assertAllowed('smtp', 'control_email_verification', ['contact_email']);
             self::fail('Unknown provider must be blocked.');
         } catch (\DomainException) {
-            self::assertTrue(true);
+            // Expected: unregistered providers are rejected.
         }
         $policy = new ControlProviderEgressPolicy(['smtp' => [
             'status' => 'allowed', 'country' => 'US',
@@ -31,6 +31,7 @@ final class ControlProviderEgressPolicyTest extends TestCase
 
     public function testApprovedProviderMatchesExactPurposeAndCategories(): void
     {
+        self::expectNotToPerformAssertions();
         $policy = new ControlProviderEgressPolicy(['smtp' => [
             'status' => 'allowed', 'country' => 'RU',
             'purposes' => ['control_email_verification'],
@@ -39,7 +40,6 @@ final class ControlProviderEgressPolicyTest extends TestCase
             'notification_status' => 'not_required',
         ]]);
         $policy->assertAllowed('smtp', 'control_email_verification', ['contact_email']);
-        self::assertTrue(true);
     }
 
     public function testForeignReviewAndRestrictionBlock(): void
@@ -50,12 +50,14 @@ final class ControlProviderEgressPolicyTest extends TestCase
             'notification_submitted_at' => '2026-09-01T00:00:00+00:00',
             'notification_evidence_reference' => 'rkn.1', 'regulator_review_until' => '2099-01-01T00:00:00+00:00',
             'regulator_decision' => 'pending'];
+        $rejections = 0;
         foreach ([$base, array_replace($base, ['adequacy_status' => 'adequate', 'regulator_decision' => 'restricted']),
             array_replace($base, ['adequacy_status' => 'adequate', 'regulator_decision' => 'prohibited'])] as $decision) {
             try {
                 (new ControlProviderEgressPolicy(['smtp' => $decision]))->assertAllowed('smtp', 'control_email_verification', ['contact_email']);
                 self::fail('Restricted transfer must be blocked.');
-            } catch (\DomainException) { self::assertTrue(true); }
+            } catch (\DomainException) { ++$rejections; }
         }
+        self::assertSame(3, $rejections);
     }
 }

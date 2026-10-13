@@ -13,7 +13,7 @@ final readonly class ControlPersonalDataExporter
     {
     }
 
-    /** @return array{schema_version:int, subject_id:string, data:array<string, list<array<string, mixed>>>} */
+    /** @return array{schema_version:int, subject_id:string, data:array<string, list<array<string, mixed>>|array{sessions:list<array<string,mixed>>,mfa:list<array<string,mixed>>}>} */
     public function exportSelf(string $actorId, string $subjectId): array
     {
         if ($actorId !== $subjectId) {

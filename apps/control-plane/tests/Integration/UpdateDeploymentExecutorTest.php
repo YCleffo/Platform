@@ -41,9 +41,10 @@ final class UpdateDeploymentExecutorTest extends DatabaseTestCase
             $stored=$secrets->prepare($deployment,'credential.test');
             $this->connection->executeStatement('UPDATE commercial.deployments SET core_db_secret_ref=? WHERE id=?',[$stored['reference'],$deployment]);
             $provider=new class implements DeploymentInfrastructureProvider {
+                /** @var list<string> */
                 public array $events=[];
                 public function provision(ProvisioningRequest $request): ProvisioningResult { throw new \LogicException(); }
-                public function status(string $deploymentId): array { return []; }
+                public function status(string $deploymentId): array { return ['runtime'=>true,'database'=>true,'redis'=>true,'scheduler'=>true,'emailWorker'=>true,'network'=>true]; }
                 public function activate(ProvisioningRequest $request): void { throw new \LogicException(); }
                 public function applyTargetMigrations(ProvisioningRequest $request): void { $this->events[]='migrate'; }
                 public function replaceApplicationRuntime(ProvisioningRequest $request): void { $this->events[]='replace'; }
@@ -78,6 +79,7 @@ final class UpdateDeploymentExecutorTest extends DatabaseTestCase
         $stored=$secrets->prepare($deployment,'credential.test');
         $this->connection->executeStatement('UPDATE commercial.deployments SET core_db_secret_ref=? WHERE id=?',[$stored['reference'],$deployment]);
         $provider=new class implements DeploymentInfrastructureProvider {
+            /** @var list<string> */
             public array $events=[];
             public function provision(ProvisioningRequest $request): ProvisioningResult { throw new \LogicException(); }
             public function status(string $deploymentId): array { return ['runtime'=>true,'database'=>true,'redis'=>true,'scheduler'=>true,'emailWorker'=>true,'network'=>true]; }

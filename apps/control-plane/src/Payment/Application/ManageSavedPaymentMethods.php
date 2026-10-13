@@ -66,7 +66,10 @@ final readonly class ManageSavedPaymentMethods
         return $this->publicMethod($method);
     }
 
-    /** @param array<string, mixed> $method @return array<string, mixed> */
+    /**
+     * @param array<string, mixed> $method
+     * @return array<string, mixed>
+     */
     private function publicMethod(array $method): array
     {
         return [

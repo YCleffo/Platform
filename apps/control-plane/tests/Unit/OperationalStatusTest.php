@@ -93,4 +93,18 @@ final class OperationalStatusTest extends TestCase
         self::assertStringNotContainsString('recipient@example.test', $text);
         self::assertStringNotContainsString('payload', $text);
     }
+
+    public function testMissingBacklogRowFailsClosedWithoutDatabaseDetails(): void
+    {
+        $db = $this->createMock(Connection::class);
+        $db->method('fetchAllAssociative')->willReturn([]);
+        $db->method('fetchAssociative')->willReturn(false);
+        $tester = new \Symfony\Component\Console\Tester\CommandTester(
+            new OpsStatusCommand(new OperationalStatus($db)),
+        );
+
+        self::assertSame(1, $tester->execute([]));
+        self::assertStringContainsString('Operational status unavailable.', $tester->getDisplay());
+        self::assertStringNotContainsString('SQL', $tester->getDisplay());
+    }
 }

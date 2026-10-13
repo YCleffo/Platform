@@ -38,7 +38,7 @@ final readonly class ControlProviderEgressPolicy
             return false;
         }
         try {
-            $submitted = new \DateTimeImmutable((string) ($decision['notification_submitted_at'] ?? ''));
+            $submitted = new \DateTimeImmutable($decision['notification_submitted_at']);
             $now = new \DateTimeImmutable();
             if ($submitted > $now) {
                 return false;
@@ -48,7 +48,7 @@ final readonly class ControlProviderEgressPolicy
                     || trim($decision['regulator_review_until']) === '') {
                     return false;
                 }
-                $until = new \DateTimeImmutable((string) ($decision['regulator_review_until'] ?? ''));
+                $until = new \DateTimeImmutable($decision['regulator_review_until']);
                 return $now >= $until && $until >= $submitted;
             }
             return true;

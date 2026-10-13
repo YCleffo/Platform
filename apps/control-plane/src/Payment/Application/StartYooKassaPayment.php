@@ -69,6 +69,9 @@ final readonly class StartYooKassaPayment
         if (is_string($attempt['provider_payment_id'])) {
             $providerPayment = $this->gateway->getPayment($account, $attempt['provider_payment_id']);
         } else {
+            if ($attempt['status'] !== 'pending') {
+                throw new \DomainException('A terminal checkout attempt has no provider reference.');
+            }
             $createdAt = new \DateTimeImmutable((string) $attempt['created_at']);
             if ($createdAt->getTimestamp() < time() - self::IDEMPOTENCY_WINDOW_SECONDS) {
                 throw new \DomainException('Payment attempt requires reconciliation.');
@@ -111,9 +114,6 @@ final readonly class StartYooKassaPayment
             if ($payment === false) {
                 throw new \DomainException('Payment was not found.');
             }
-            if ($payment['status'] !== 'pending') {
-                throw new \DomainException('YooKassa checkout requires a pending payment.');
-            }
             if (Money::nonNegativeBigInt($payment['amount_minor']) <= 0) {
                 throw new \DomainException('YooKassa checkout requires a positive payment amount.');
             }
@@ -137,7 +137,11 @@ final readonly class StartYooKassaPayment
             if ($record === false || !is_string($record['request_hash']) || !hash_equals($record['request_hash'], $hash)) {
                 throw new \DomainException('Idempotency key was reused with a different request.');
             }
-            if ($record['status'] === 'completed' && is_string($record['result_reference'])) {
+            $replay = $record['status'] === 'completed' && is_string($record['result_reference']);
+            if (!$replay && $payment['status'] !== 'pending') {
+                throw new \DomainException('YooKassa checkout requires a pending payment.');
+            }
+            if ($replay) {
                 $attemptId = $record['result_reference'];
             } else {
                 $begun = $this->attempts->beginOrReuse($paymentId, $providerAccount->id, $method, $correlationId);
@@ -146,8 +150,8 @@ final readonly class StartYooKassaPayment
             }
             $attempt = $connection->fetchAssociative('SELECT id, payment_id, provider_account_id, method_type, provider_request_key, provider_payment_id, status, created_at FROM commercial.payment_attempts WHERE id = ?', [$attemptId]);
             if ($attempt === false || $attempt['payment_id'] !== $paymentId || $attempt['provider_account_id'] !== $providerAccount->id
-                || $attempt['method_type'] !== $method || $attempt['status'] !== 'pending') {
-                throw new \DomainException('Idempotent checkout result is no longer pending.');
+                || $attempt['method_type'] !== $method || (!$replay && $attempt['status'] !== 'pending')) {
+                throw new \DomainException('Idempotent checkout result is unavailable.');
             }
 
             return [$providerAccount, $payment, $attempt];

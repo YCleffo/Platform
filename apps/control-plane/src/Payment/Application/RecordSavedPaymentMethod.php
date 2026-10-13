@@ -10,7 +10,7 @@ final readonly class RecordSavedPaymentMethod
  public function record(ProviderAccount $account, ProviderPayment $payment, string $attemptId): void
  {
   $method=$payment->paymentMethod; if($method===null||!$method->saved||$method->type!=='bank_card')return;
-  $this->connection->transactional(function(Connection $db)use($account,$payment,$attemptId,$method):void{
+  $this->connection->transactional(function(Connection $db)use($account,$attemptId,$method):void{
    $db->executeQuery('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [$account->id]);
    $row=$db->fetchAssociative('SELECT p.commercial_account_id FROM commercial.payment_attempts a JOIN commercial.payments p ON p.id=a.payment_id WHERE a.id=? AND a.provider_account_id=? FOR UPDATE',[$attemptId,$account->id]); if($row===false)throw new \DomainException('Payment attempt was not found.');
    $db->executeQuery('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [$row['commercial_account_id']]);

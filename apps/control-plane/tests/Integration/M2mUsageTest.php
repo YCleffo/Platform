@@ -70,8 +70,10 @@ final class M2mUsageTest extends SubscriptionTestCase
         $body = ['featureCode' => 'm2m.counter', 'delta' => 1];
         $result = $this->post($controller, $this->header($first), 'same-key', $body);
         self::assertSame(Response::HTTP_OK, $result->getStatusCode());
+        $content = $result->getContent();
+        self::assertIsString($content);
         self::assertSame(['featureCode' => 'm2m.counter', 'mode' => 'counter', 'used' => 1,
-            'limit' => 10, 'remaining' => 9, 'exhausted' => false], json_decode($result->getContent(), true));
+            'limit' => 10, 'remaining' => 9, 'exhausted' => false], json_decode($content, true));
         self::assertSame($result->getContent(), $this->post($controller, $this->header($first), 'same-key', $body)->getContent());
         self::assertSame(409, $this->post($controller, $this->header($first), 'same-key', ['featureCode' => 'm2m.counter', 'delta' => 2])->getStatusCode());
         self::assertSame(200, $this->post($controller, $this->header($second), 'same-key', $body)->getStatusCode());

@@ -12,6 +12,9 @@ Core отвечает за идентичность пользователей �
 
 ## Основные принципы
 
+Для изменений Core и Commercial Control Plane обязателен контекст
+[CORE_INVARIANTS.md](docs/architecture/CORE_INVARIANTS.md).
+
 - `Person != Account`
 - Core не зависит от предметных модулей
 - PostgreSQL — основной transactional source of truth

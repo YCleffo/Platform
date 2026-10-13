@@ -74,6 +74,7 @@ final class ProvisionerRunCommand extends Command
         return array_intersect_key($value, $defaults);
     }
 
+    /** @param array<string, mixed> $status */
     private function writeStatus(array $status): void
     {
         $file = '/run/provisioning-secrets/status.json';

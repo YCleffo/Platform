@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Environment;
 use App\Core\Auth\Application\RecoveryCodeService;
+use App\Core\Auth\Application\AuthenticationPayloadCipher;
 use App\Core\Auth\Application\TotpSecretCipher;
 use Predis\Client as RedisClient;
 use Psr\Container\ContainerInterface;
@@ -381,6 +382,7 @@ class ApiTester extends \Codeception\Actor
             FROM core.outbox_events
             WHERE producer_module = 'core.auth'
               AND payload #>> '{recipient,address}' = :email
+              AND payload #>> '{variables,actionUrlCiphertext}' IS NOT NULL
             ORDER BY id DESC
             LIMIT 1
             SQL,
@@ -390,10 +392,13 @@ class ApiTester extends \Codeception\Actor
             throw new \RuntimeException('Authentication email event was not queued.');
         }
         $decoded = json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
-        $url = $decoded['variables']['actionUrl'] ?? null;
-        if (!is_string($url)) {
+        $ciphertext = $decoded['variables']['actionUrlCiphertext'] ?? null;
+        $keyVersion = $decoded['variables']['actionUrlKeyVersion'] ?? null;
+        if (!is_string($ciphertext) || !is_int($keyVersion)
+            || array_key_exists('actionUrl', $decoded['variables'] ?? [])) {
             throw new \RuntimeException('Authentication action URL is missing.');
         }
+        $url = self::getTestContainer()->get(AuthenticationPayloadCipher::class)->decrypt($ciphertext, $keyVersion);
         parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
         $token = $query['token'] ?? null;
         if (!is_string($token)) {

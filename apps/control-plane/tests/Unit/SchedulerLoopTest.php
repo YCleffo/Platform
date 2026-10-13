@@ -67,6 +67,6 @@ final class SchedulerLoopTest extends TestCase
         self::assertSame(['broken', 'job_failed'], $writes[4][1]);
         self::assertSame(['expected_skip', 'skipped'], $writes[6][1]);
         self::assertSame(['disabled_job', 'disabled'], $writes[7][1]);
-        self::assertStringNotContainsString('private detail', json_encode($writes));
+        self::assertStringNotContainsString('private detail', json_encode($writes, JSON_THROW_ON_ERROR));
     }
 }

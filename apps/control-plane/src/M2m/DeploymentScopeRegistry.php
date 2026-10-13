@@ -13,18 +13,20 @@ final readonly class DeploymentScopeRegistry
     /** @var list<string> */
     private array $allowed;
 
-    /** @param list<string> $additionalScopes */
+    /** @param list<mixed> $additionalScopes */
     public function __construct(array $additionalScopes = [])
     {
+        $validated = [];
         foreach ($additionalScopes as $scope) {
             if (!is_string($scope) || preg_match('/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/D', $scope) !== 1) {
                 throw new InvalidArgumentException('Invalid deployment scope registration.');
             }
+            $validated[] = $scope;
         }
-        $this->allowed = array_values(array_unique([...self::FOUNDATION, ...$additionalScopes]));
+        $this->allowed = array_values(array_unique([...self::FOUNDATION, ...$validated]));
     }
 
-    /** @param list<string> $scopes
+    /** @param list<mixed> $scopes
      * @return list<string>
      */
     public function validate(array $scopes): array
@@ -32,11 +34,13 @@ final readonly class DeploymentScopeRegistry
         if ($scopes === [] || count($scopes) > 32) {
             throw new InvalidArgumentException('Invalid deployment scopes.');
         }
+        $validated = [];
         foreach ($scopes as $scope) {
             if (!is_string($scope) || !in_array($scope, $this->allowed, true)) {
                 throw new InvalidArgumentException('Unknown deployment scope.');
             }
+            $validated[] = $scope;
         }
-        return array_values(array_unique($scopes));
+        return array_values(array_unique($validated));
     }
 }

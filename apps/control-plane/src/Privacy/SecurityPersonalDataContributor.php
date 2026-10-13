@@ -17,6 +17,7 @@ final readonly class SecurityPersonalDataContributor implements PersonalDataCont
         return 'control_security';
     }
 
+    /** @return array{sessions:list<array<string,mixed>>,mfa:list<array<string,mixed>>} */
     public function export(string $controlUserId): array
     {
         return ['sessions' => $this->connection->fetchAllAssociative(<<<'SQL'

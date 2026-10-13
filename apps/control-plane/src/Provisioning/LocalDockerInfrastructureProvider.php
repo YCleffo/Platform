@@ -353,6 +353,7 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
         }
     }
 
+    /** @param array<string, mixed> $details */
     private function isolatedCore(array $details, string $network): bool
     {
         $networks = array_keys($details['NetworkSettings']['Networks'] ?? []);
@@ -380,6 +381,7 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
         return 'type=bind,source=' . $path . ',target=/run/provisioning-secrets/' . $name . ',readonly';
     }
 
+    /** @param array<string, mixed> $details */
     private function hasSecretMount(array $details, string $path, string $name): bool
     {
         $expected = strtolower(str_replace('\\', '/', $path));

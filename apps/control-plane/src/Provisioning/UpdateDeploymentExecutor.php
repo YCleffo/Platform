@@ -69,6 +69,7 @@ final readonly class UpdateDeploymentExecutor
         catch (\Throwable) { $this->failure($operationId,new ProvisioningFailure('infrastructure.unavailable',true)); }
     }
     private function step(string $id,string $step): void { $this->db->executeStatement("UPDATE commercial.deployment_operations SET current_step=? WHERE id=? AND status='running'",[$step,$id]); }
+    /** @param array<string, mixed> $row */
     private function finalize(string $op,array $row): void { $this->db->transactional(function(Connection $db) use($op,$row):void {
         $state=$db->fetchAssociative("SELECT o.operation_type,o.status AS operation_status,o.current_step,d.status AS deployment_status,
             d.provisioning_state,d.current_release_id,d.desired_release_id,d.archived_at FROM commercial.deployment_operations o

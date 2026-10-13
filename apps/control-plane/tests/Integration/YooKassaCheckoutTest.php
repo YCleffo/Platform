@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ControlPlane\Tests\Integration;
 
 use ControlPlane\Payment\Provider\PaymentProviderException;
+use ControlPlane\Payment\Provider\ProviderPayment;
 use ControlPlane\Tests\Support\FakePaymentProviderGateway;
 
 final class YooKassaCheckoutTest extends PaymentTestCase
@@ -49,6 +50,42 @@ final class YooKassaCheckoutTest extends PaymentTestCase
         self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.payment_attempts WHERE payment_id = ?', [$payment['id']]));
         self::assertCount(1, $gateway->createCalls);
         self::assertCount(2, $gateway->getCalls);
+    }
+
+    public function testSameCheckoutKeyReplaysAfterWebhookSettlementWithoutAnotherCharge(): void
+    {
+        [$owner, $account, , , , $subscription, $invoice] = $this->issuedRubInvoiceContext('yk-settled-replay');
+        $payment = $this->paymentCreator()->create($owner, $account, $invoice['id'], 'settled-replay-create', $this->uuid());
+        $this->yooKassaProviderAccount();
+        $gateway = new FakePaymentProviderGateway();
+        $checkout = $this->yooKassaCheckout($gateway);
+        $first = $checkout->start($owner, $account, $payment['id'], 'yookassa', 'sbp', false, 'settled-replay-key', $this->uuid());
+        $request = $gateway->createCalls[0][1];
+        $providerId = 'yk-' . str_replace('-', '', $first['attempt_id']);
+        $gateway->payments[$providerId] = new ProviderPayment(
+            $providerId, 'succeeded', true, $request->amountMinor, $request->currency,
+            ['payment_id' => $payment['id'], 'attempt_id' => $first['attempt_id'], 'invoice_id' => $invoice['id']],
+            null, new \DateTimeImmutable('2026-09-26T12:00:00Z'),
+        );
+        $this->yooKassaWebhook($gateway)->receive(
+            json_encode(['type' => 'notification', 'event' => 'payment.succeeded', 'object' => ['id' => $providerId]], JSON_THROW_ON_ERROR),
+            'application/json', $this->uuid(),
+        );
+
+        $replay = $checkout->start($owner, $account, $payment['id'], 'yookassa', 'sbp', false, 'settled-replay-key', $this->uuid());
+        self::assertSame($first['attempt_id'], $replay['attempt_id']);
+        self::assertSame('succeeded', $replay['status']);
+        self::assertCount(1, $gateway->createCalls);
+        self::assertSame('paid', $this->connection->fetchOne('SELECT status FROM commercial.invoices WHERE id = ?', [$invoice['id']]));
+        self::assertSame('active', $this->connection->fetchOne('SELECT status FROM commercial.subscriptions WHERE id = ?', [$subscription]));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action = 'payment.succeeded' AND resource_id = ?", [$payment['id']]));
+
+        try {
+            $checkout->start($owner, $account, $payment['id'], 'yookassa', 'sbp', false, 'new-key-after-settlement', $this->uuid());
+            self::fail('A new checkout after settlement was accepted.');
+        } catch (\DomainException) {
+            self::assertCount(1, $gateway->createCalls);
+        }
     }
 
     public function testUncertainCreateRemainsPendingAndRetryUsesSameRequest(): void

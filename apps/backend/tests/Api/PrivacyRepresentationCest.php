@@ -31,7 +31,8 @@ final readonly class PrivacyRepresentationCest
         $db = ApiTester::getDb();
         $subject = $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('Subject', 'Fixture') RETURNING id::text")->queryScalar();
         $representative = $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('Representative', 'Fixture') RETURNING id::text")->queryScalar();
-        $account = $db->createCommand("INSERT INTO core.accounts (account_type, status) VALUES ('service', 'active') RETURNING id::text")->queryScalar();
+        $unprivilegedPerson = $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('Unprivileged', 'Fixture') RETURNING id::text")->queryScalar();
+        $account = $db->createCommand("INSERT INTO core.accounts (person_id, account_type, status) VALUES (CAST(:person AS uuid), 'human', 'active') RETURNING id::text", [':person' => $unprivilegedPerson])->queryScalar();
         $I->amAuthenticatedAccount((string) $account);
         $body = [
             'subjectPersonId' => $subject,
