@@ -37,6 +37,8 @@ services:
     ControlPlane\Infrastructure\Http\PrivacyController:
         tags: ['controller.service_arguments']
 
+    ControlPlane\Billing\Domain\ProrationCalculator: ~
+
     ControlPlane\Identity\Security\TokenCodec:
         arguments:
             $secret: '%env(CONTROL_TOKEN_SECRET)%'

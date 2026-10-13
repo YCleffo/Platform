@@ -178,6 +178,11 @@ Public endpoints:
 Authenticated endpoints create/read commercial accounts, manage memberships,
 save the billing profile, advance onboarding, create/read subscriptions,
 cancel them through `POST /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/cancel`,
+request a replacement through
+`POST /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/plan-changes`,
+read its immutable terms and payment state through
+`GET /api/control/accounts/{accountId}/plan-changes/{changeId}`, and cancel an
+unsettled replacement through the corresponding `/cancel` endpoint,
 issue the initial invoice through
 `POST /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/invoice`,
 read its immutable snapshot through
@@ -268,8 +273,7 @@ lifecycle; it does not create infrastructure. Control current-user/session APIs 
 commercial read models belong to Phase 4.1. M2M service credentials and usage
 ingestion and signed entitlement delivery are implemented.
 
-Plan switching, additional payment providers and methods,
-subscription upgrade/downgrade, usage/overage billing,
+Additional payment providers and methods, usage/overage billing,
 DNS/TLS, custom domains, On-Prem activation, production infrastructure provisioning,
 automatic rollback, and production observability remain future phases. Hosted YooKassa
 SBP and bank-card checkout, authoritative account-scoped saved payment methods,
@@ -278,10 +282,33 @@ deployment update foundations are implemented.
 
 The version-1 `ProrationCalculator` provides deterministic UTC microsecond
 time fractions and integer minor-unit amounts with half-up rounding on each
-credit and charge component. It does not persist a plan change or alter an
-active subscription. Payment-gated application, historical calculation
-snapshots, and period-boundary scheduling remain necessary before plan
-switching can be exposed as an API.
+credit and charge component. `subscription_plan_changes` stores that exact
+calculation, request hash, source and replacement subscription IDs, original
+period boundary, invoice, and state. The active source item and every issued
+invoice remain immutable. A more expensive same-currency, same-period plan
+creates a prorated invoice and replaces the subscription only in the trusted
+payment settlement transaction. A cheaper plan retains existing access until
+the original period boundary. The scheduler then issues the new plan's full
+period invoice; a free replacement applies at the boundary, and a paid
+replacement applies only after trusted settlement. Requests with the same key
+and payload replay the same change. Cancelling a scheduled or unpaid change
+voids its invoice and payment where safe. Concurrent requests serialize on
+the source subscription. A paid upgrade that can no longer be applied enters
+`paid_unapplied` and emits `subscription.plan_change_refund_required`. For a
+YooKassa payment with complete fiscal configuration, it also reserves a full
+refund in the same transaction; the existing refund reconciliation worker
+submits it with a stable provider request key. After authoritative full refund,
+`FinalizeRefundedPlanChanges` marks the operation `refunded`, allowing a new
+plan-change request while retaining the full audit trail. Other providers or incomplete
+fiscal configuration require operator recovery, and definitive refund failure
+still requires an operator decision. Equal
+price changes and changes across currencies or billing periods remain outside
+this policy until product rules are approved.
+
+For an initial purchase, `payments.succeeded_at` and `invoices.paid_at` retain
+the verified settlement instant. Subscription service starts at that instant
+unless it is ahead of Control Plane database time; future-dated provider or
+local timestamps are capped at database time so access is immediately usable.
 
 ## Application deployment bootstrap (Phase 4.7)
 

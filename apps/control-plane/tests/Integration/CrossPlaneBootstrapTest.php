@@ -19,11 +19,15 @@ use ControlPlane\Infrastructure\Http\M2mEntitlementController;
 use ControlPlane\M2m\DeploymentCredentialService;
 use ControlPlane\M2m\DeploymentScopePolicy;
 use ControlPlane\M2m\DeploymentScopeRegistry;
+use ControlPlane\Billing\Domain\ProrationCalculator;
+use ControlPlane\Subscription\Application\ApplySubscriptionPlanChange;
+use ControlPlane\Subscription\Application\RequestSubscriptionPlanChange;
+use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 use Symfony\Component\HttpFoundation\Request;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('cross-plane')]
-final class CrossPlaneBootstrapTest extends DatabaseTestCase
+final class CrossPlaneBootstrapTest extends PaymentTestCase
 {
     public function testStartInitSyncReadyAcrossIsolatedDatabases(): void
     {
@@ -45,7 +49,7 @@ final class CrossPlaneBootstrapTest extends DatabaseTestCase
         $core = $container->get(\Yiisoft\Db\Connection\ConnectionInterface::class);
         $coreTransaction = $core->beginTransaction();
         try {
-            $account = $this->account('cross-plane-bootstrap');
+            [$owner, $account, $billingProfile] = $this->readyAccount('cross-plane-bootstrap');
             $deployment = (new ReserveDeployment($this->connection, 'platform.example'))
                 ->reserveCloud($account, 'shared', 'cross-plane-bootstrap', 'cross-plane-bootstrap-operation');
             $credentials = new DeploymentCredentialService($this->connection, new DeploymentScopeRegistry(),
@@ -130,6 +134,33 @@ final class CrossPlaneBootstrapTest extends DatabaseTestCase
             $repeatBody = $repeat->getContent();
             self::assertIsString($repeatBody);
             self::assertSame('already_ready', json_decode($repeatBody, true, 8, JSON_THROW_ON_ERROR)['status']);
+            $oldFeature = $this->feature('cross-plane.plan.old', 'boolean');
+            $newFeature = $this->feature('cross-plane.plan.new', 'boolean');
+            [, $oldPrice] = $this->planPrice('cross-plane-plan-old', featureValues: [$oldFeature => true]);
+            [$newPlan, $newPrice] = $this->planPrice('cross-plane-plan-new', status: 'draft', featureValues: [$newFeature => true]);
+            $this->connection->executeStatement('UPDATE commercial.plan_prices SET amount_minor = 2000 WHERE id = ?', [$newPrice]);
+            $this->connection->executeStatement("UPDATE commercial.plans SET status = 'published', published_at = now() WHERE id = ?", [$newPlan]);
+            $source = $this->draftSubscription($account, $billingProfile, [$oldPrice]);
+            $this->activatePaid($account, $source, $this->activationInstant(), $this->uuid());
+            self::assertSame(2, $sync->sync());
+            $runtimeFeatures = new \App\PlatformRuntime\PostgresEffectiveRuntimeEntitlements($installations,
+                new \App\PlatformRuntime\PostgresEntitlementDocumentRepository($core), $verifier);
+            self::assertSame(['cross-plane.plan.old' => true], $runtimeFeatures->forInstallation($installationId));
+            $change = (new RequestSubscriptionPlanChange($this->connection,
+                new AccountAuthorization($this->connection), new ProrationCalculator(),
+                new ApplySubscriptionPlanChange(new SubscriptionPeriodCalculator())))
+                ->request($owner, $account, $source, $newPrice, 1, 'cross-plane-upgrade', $this->uuid());
+            self::assertSame('payment_required', $change['status']);
+            self::assertSame(2, $sync->sync());
+            self::assertSame(['cross-plane.plan.old' => true], $runtimeFeatures->forInstallation($installationId));
+            $invoiceId = $change['invoice_id'];
+            self::assertIsString($invoiceId);
+            $payment = $this->paymentCreator()->create($owner, $account, $invoiceId, 'cross-plane-upgrade-payment', $this->uuid());
+            $attempt = $this->attemptBeginner()->begin($payment['id'], $this->providerAccount('cross-plane-upgrade'), 'bank_transfer', $this->uuid());
+            $this->attemptBinder()->bind($attempt['attempt_id'], 'cross-plane-upgrade-provider');
+            $this->attemptCompleter()->complete($attempt['attempt_id'], 'succeeded', null, new \DateTimeImmutable('now'), $this->uuid());
+            self::assertSame(3, $sync->sync());
+            self::assertSame(['cross-plane.plan.new' => true], $runtimeFeatures->forInstallation($installationId));
         } finally {
             putenv('CROSS_PLANE_CREDENTIAL');
             $coreTransaction->rollBack();

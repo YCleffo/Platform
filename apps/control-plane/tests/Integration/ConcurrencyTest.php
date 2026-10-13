@@ -115,9 +115,11 @@ final class ConcurrencyTest extends TestCase
     {
         $auth = $this->authService();
         $correlation = Uuid::v7()->toRfc4122();
-        $registered = $auth->register('tokens-' . bin2hex(random_bytes(5)) . '@example.test', 'correct horse battery staple', '198.51.100.20', $correlation);
+        $ipPart = bin2hex(random_bytes(4));
+        $clientIp = '2001:db8::' . substr($ipPart, 0, 4) . ':' . substr($ipPart, 4, 4);
+        $registered = $auth->register('tokens-' . bin2hex(random_bytes(5)) . '@example.test', 'correct horse battery staple', $clientIp, $correlation);
         self::assertSame([0, 2], $this->race('verify', $registered['verification_token'], $correlation, $registered['verification_token'], $correlation));
-        $session = $auth->login('tokens-' . $this->emailSuffix($registered['user_id']), 'correct horse battery staple', '198.51.100.21', 'PHPUnit', $correlation);
+        $session = $auth->login('tokens-' . $this->emailSuffix($registered['user_id']), 'correct horse battery staple', $clientIp, 'PHPUnit', $correlation);
         self::assertSame([0, 2], $this->race('refresh', $session['refresh_token'], $correlation, $session['refresh_token'], $correlation));
         self::assertNotNull($this->connection->fetchOne('SELECT revoked_at FROM commercial.control_sessions WHERE control_user_id = ?', [$registered['user_id']]));
     }

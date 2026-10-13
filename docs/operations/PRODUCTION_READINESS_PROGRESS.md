@@ -4,6 +4,22 @@
 приёмки production. Источники истины: миграции, код, OpenAPI и выполненные
 проверки. Непроверенный пункт не отмечается как завершённый.
 
+## Матрица фактического состояния ядра (новое ТЗ, 2026-10-13)
+
+| Функция | Где реализована | Что работает | Что отсутствует | Риск | Тест | Статус |
+|---|---|---|---|---|---|---|
+| Каталог и первая покупка | `PlanCatalog`, `CreateSubscription`, `IssueInvoice`, `SettlePayment` | Версионированный published plan, draft → paid → active; бесплатная первая покупка и переход на платный тариф | Остальная матрица тарифных переходов и бизнес-политика равной цены | Средний | `SubscriptionCreationTest`, `PaymentSettlementTest`, `SubscriptionPlanChangeTest` | PARTIAL |
+| Upgrade/downgrade | `ProrationCalculator`, `RequestSubscriptionPlanChange`, `ApplySubscriptionPlanChange`, `ProcessScheduledPlanChanges`, `subscription_plan_changes` | Immutable расчёт и история, API, доплата, платный/бесплатный scheduled downgrade, отмена, settlement и права; полный YooKassa refund для late payment и освобождение после его подтверждения | Recovery для других провайдеров и окончательного отказа возврата, конкурентный settlement и полная fault/E2E матрица | Критический | `SubscriptionPlanChangeTest` 9/9 с процессной гонкой; Control Plane 332/332 | PARTIAL |
+| Продление и expiry | `IssueRenewalInvoice`, `AdvanceSubscriptionPeriod`, `ExpireSubscription`, `ProcessRenewalDunning` | Оплаченное продление и grace, конкурентные проверки | Проверки всех fault/restart случаев и смены тарифа | Высокий | `Renewal*Test`, `SubscriptionExpirationTest` | PARTIAL |
+| Платежи/webhook/возвраты | `Payment/*`, `Refund/*`, `Fiscalization/*` | Локальный settlement, inbox, provider GET, reconciliation, refund ledger | Полная fault матрица и производственный sandbox | Высокий | `YooKassa*Test`, `Refund*Test` | PARTIAL |
+| Entitlements и межбазовая связь | `EffectiveEntitlements`, `DeploymentEntitlementIssuer`, Core runtime verifier | Подписанный snapshot, monotonic sequence, смена прав после оплаченного upgrade | Полное DR и recovery при рассинхронизации | Критический | `CrossPlaneBootstrapTest` 1/1 с переходом прав, `SubscriptionPlanChangeTest`, `EffectiveEntitlementsTest` | PARTIAL |
+| Identity/RBAC/изоляция | Control auth, Core Account/Person, `PostgresRoleRepository` | Отдельные identity и проверка последнего human superadmin | Полная security/IDOR матрица | Высокий | Control auth и backend Codeception | PARTIAL |
+| Provisioning | `ProvisionDeploymentExecutor`, `LocalDockerInfrastructureProvider` | Локальный Docker provider, retry и защищённые секреты Linux | Production provider и полная restart/fault матрица | Высокий | `ProvisionerBoundaryTest`, `CrossPlaneBootstrapTest` | PARTIAL |
+| API/CI/эксплуатация | OpenAPI, `.github/workflows/ci.yml`, Compose | Часть route parity, PHPStan и локальные regression suites | Общий error contract, удалённый CI, HA/PITR/observability/load | Высокий | `OpenApiRouteParityTest`; CI не запускался удалённо | PARTIAL |
+
+Матрица отражает код и предыдущие локальные проверки. Их результаты ниже —
+исторические до повторного прогона после новых изменений.
+
 ## Выполнено в текущей рабочей копии
 
 - [x] P0-A / CORE-01/02, COMM-01/02, PAY-03, ENT-01/03: инварианты собраны в
@@ -145,3 +161,68 @@
    upgrade, scheduled downgrade, money rounding и cross-plane sync. Затем
    расширить provider fault/race, DR и load gates. До этих gate система не
    production-ready.
+
+## 2026-10-13: plan-change implementation and local evidence
+
+Affected requirements: CORE-12/13, SUB-02..07, BILL-03..05, PAY-03..08,
+ENT-01..03. This section supersedes the older plan-change next-step list
+above; the historical entries remain for traceability.
+
+- Added additive `Version20261013000100` with guarded, immutable
+  `subscription_plan_changes` terms, unique request key and open source index.
+  Applied once to isolated `platform_commercial_test` using Doctrine migrations;
+  the migration's protective down refuses to erase populated history.
+- Added additive `Version20261013000200` with guarded `refunded` terminal state;
+  applied to the same isolated test DB. Refund finalization verifies an
+  authoritative succeeded full refund before freeing the source for another
+  change. The target draft is cancelled on late settlement.
+- Added request/read/cancel API and OpenAPI operations; request requires
+  `billing.manage` and recent MFA, compares request hashes, serializes on the
+  source subscription, and snapshots the prorated calculation. Existing source
+  items and invoices stay immutable. Upgrade settlement switches rights in the
+  paid invoice transaction. Scheduled downgrade runs before renewal billing;
+  a priced replacement awaits payment. Cancellation voids an unpaid invoice.
+- Replayed local focused integration tests: `SubscriptionPlanChangeTest` 9/9,
+  including two-process same-key request race: one plan change and one invoice.
+  Replayed full ordinary Control Plane suite after the free-to-paid and clock
+  fixes and race coverage: 332/332, 3533 assertions. The first full run of a database-time
+  activation experiment failed 9 renewal tests; this behavior change was
+  revised to preserve historical settlement timestamps, and both the focused
+  renewal tests (37/37) and final full suite passed. PHPStan on the final
+  `platform-control-plane-test` image with staged backend autoload: 0 errors.
+  Symfony `debug:router` lists
+  all three new routes. The full suite includes `OpenApiRouteParityTest`.
+  Extended and replayed cross-plane bootstrap E2E with unpaid upgrade retaining
+  old signed rights and paid upgrade delivering a new monotonic signed snapshot
+  into Tenant Plane: 1/1, 28 assertions. Both new
+  migrations reached latest on the isolated commercial test DB, with zero
+  unavailable/new versions. After copying the final OpenAPI file into the
+  isolated contract volume, route/contract parity passed 3/3, 39 assertions.
+  `git diff --check` passed.
+- A later full run initially hit two persistent-test-fixture collisions:
+  `ConcurrencyTest` reused a fixed IP after many local runs, and the new race
+  cleanup reused a global idempotency key. Test fixtures now use unique values;
+  focused rerun passed 2/2 and the final full run passed 332/332. No production
+  data was modified or removed.
+- Windows provisioner check: `LocalProvisioningSecretStore::guard()` rejects
+  non-Linux hosts before creating a secret directory or calling POSIX `chgrp`;
+  `ProvisionerBoundaryTest` explicitly verifies that branch. Linux Docker
+  tests still assert group 33 and exact 0750/0640 permissions. This is a
+  deliberate platform split, not a disabled security assertion. A native
+  Windows PHPUnit run was not performed in this session.
+- Remaining P0: YooKassa `paid_unapplied` now reserves a full refund in the
+  payment transaction; the existing refund reconciler retries an uncertain
+  provider result with the same key and finalizer frees the source on full
+  refund. Other provider/fiscal configurations and
+  definitive refund failures still require operator recovery. Add genuine
+  concurrent request/settlement, provider replay/out-of-order, and cross-plane
+  entitlement propagation tests for the new transitions. Confirm downgrade
+  interaction with expiry/dunning and explicit user cancellation semantics.
+- Remaining P1/P2: broader E01-E20 E2E/fault matrix, production-like load,
+  restore rehearsal and operational metrics/alerts; see the older requirement
+  inventory above. No hosting or production secrets have been provided.
+
+Verdict: `CORE_NOT_READY`. Local checks do not establish production readiness.
+Next step: add concurrent settlement against cancellation/expiry, then complete
+E01-E20 fault matrix and restore
+rehearsal. Production-like load and remote CI remain separate gates.

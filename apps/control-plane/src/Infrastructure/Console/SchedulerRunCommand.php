@@ -19,6 +19,8 @@ use ControlPlane\Privacy\ControlPrivacyRetentionPolicy;
 use ControlPlane\Refund\Application\ReconcileYooKassaRefunds;
 use ControlPlane\Subscription\Application\AdvanceSubscriptionPeriod;
 use ControlPlane\Subscription\Application\ExpireSubscription;
+use ControlPlane\Subscription\Application\FinalizeRefundedPlanChanges;
+use ControlPlane\Subscription\Application\ProcessScheduledPlanChanges;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -31,6 +33,8 @@ final class SchedulerRunCommand extends Command
 {
     public function __construct(private readonly Connection $db, private readonly IssueRenewalInvoice $renewals, private readonly CollectRenewalInvoice $collections,
         private readonly ProcessRenewalDunning $dunning, private readonly AdvanceSubscriptionPeriod $advance, private readonly ExpireSubscription $expire,
+        private readonly ProcessScheduledPlanChanges $planChanges,
+        private readonly FinalizeRefundedPlanChanges $refundedPlanChanges,
         private readonly ReconcileYooKassaPayments $payments, private readonly ReconcileYooKassaRefunds $refunds,
         private readonly ReconcileYooKassaReceipts $receipts, private readonly ControlPrivacyCleanup $cleanup,
         private readonly ControlPrivacyRetentionPolicy $cleanupPolicy,
@@ -47,6 +51,10 @@ final class SchedulerRunCommand extends Command
             $categories = ControlPrivacyRetentionPolicy::categories();
             $categoryIndex = 0;
             $jobs = [
+                new ScheduledJob('process_plan_changes', Config::integer('CONTROL_PLAN_CHANGES_INTERVAL_SECONDS', 60, 1, 86400),
+                    $enabled && Config::enabled('CONTROL_PLAN_CHANGES_ENABLED', true), $subscriptionLimit,
+                    fn(int $limit): int => $this->planChanges->runBatch(new \DateTimeImmutable('now'), $limit,
+                        Uuid::v7()->toRfc4122())),
                 new ScheduledJob('prepare_renewals', Config::integer('CONTROL_RENEWALS_INTERVAL_SECONDS', 300, 1, 86400),
                     $enabled && Config::enabled('CONTROL_RENEWALS_ENABLED', true), $subscriptionLimit,
                     fn(int $limit): int => $this->renewals->prepareDue(new \DateTimeImmutable('now'), $this->leadDays,
@@ -75,6 +83,10 @@ final class SchedulerRunCommand extends Command
                     $enabled && Config::enabled('CONTROL_REFUND_RECONCILIATION_ENABLED', true), $reconcileLimit,
                     fn(int $limit): int => self::reconciled(
                         $this->refunds->reconcile($limit, Uuid::v7()->toRfc4122()))),
+                new ScheduledJob('finalize_refunded_plan_changes', Config::integer('CONTROL_PLAN_CHANGE_REFUND_FINALIZATION_INTERVAL_SECONDS', 120, 1, 86400),
+                    $enabled && Config::enabled('CONTROL_PLAN_CHANGE_REFUND_FINALIZATION_ENABLED', true), $subscriptionLimit,
+                    fn(int $limit): int => $this->refundedPlanChanges->runBatch($limit,
+                        Uuid::v7()->toRfc4122())),
                 new ScheduledJob('reconcile_yookassa_receipts', Config::integer('CONTROL_RECEIPT_RECONCILIATION_INTERVAL_SECONDS', 120, 1, 86400),
                     $enabled && Config::enabled('CONTROL_RECEIPT_RECONCILIATION_ENABLED', true), $reconcileLimit,
                     fn(int $limit): int => self::reconciled(

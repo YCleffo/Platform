@@ -187,6 +187,26 @@ paths:
       operationId: cancelSubscription
       parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
       responses: {'200': {$ref: '#/components/responses/Subscription'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/plan-changes:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/SubscriptionId'}]
+    post:
+      operationId: requestSubscriptionPlanChange
+      description: Requires billing.manage and recent MFA. Upgrade takes effect only after trusted payment settlement; downgrade is scheduled for the current period end.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {$ref: '#/components/requestBodies/PlanChange'}
+      responses: {'201': {$ref: '#/components/responses/PlanChangeRequested'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/plan-changes/{changeId}:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/PlanChangeId'}]
+    get:
+      operationId: getSubscriptionPlanChange
+      responses: {'200': {$ref: '#/components/responses/PlanChange'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/plan-changes/{changeId}/cancel:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/PlanChangeId'}]
+    post:
+      operationId: cancelSubscriptionPlanChange
+      description: Requires billing.manage and recent MFA. Cancellation is allowed before settlement when no payment attempt is pending.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      responses: {'200': {$ref: '#/components/responses/PlanChangeCancelled'}, '409': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/invoice:
     parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/SubscriptionId'}]
     post:
@@ -334,6 +354,7 @@ components:
     AccountId: {name: accountId, in: path, required: true, schema: {type: string, format: uuid}}
     MembershipId: {name: membershipId, in: path, required: true, schema: {type: string, format: uuid}}
     SubscriptionId: {name: subscriptionId, in: path, required: true, schema: {type: string, format: uuid}}
+    PlanChangeId: {name: changeId, in: path, required: true, schema: {type: string, format: uuid}}
     InvoiceId: {name: invoiceId, in: path, required: true, schema: {type: string, format: uuid}}
     PaymentId: {name: paymentId, in: path, required: true, schema: {type: string, format: uuid}}
     RefundId: {name: refundId, in: path, required: true, schema: {type: string, format: uuid}}
@@ -344,6 +365,7 @@ components:
     Object: {required: true, content: {application/json: {schema: {type: object}}}}
     EmptyObject: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, maxProperties: 0}}}}
     CreateSubscription: {required: true, content: {application/json: {schema: {type: object, required: [plan_price_id, quantity], properties: {plan_price_id: {type: string, format: uuid}, quantity: {type: integer, minimum: 1}}}}}}
+    PlanChange: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [plan_price_id, quantity], properties: {plan_price_id: {type: string, format: uuid}, quantity: {type: integer, minimum: 1}}}}}}
     Email: {required: true, content: {application/json: {schema: {type: object, required: [email], properties: {email: {type: string, format: email}}}}}}
     EmailPassword: {required: true, content: {application/json: {schema: {type: object, required: [email, password], properties: {email: {type: string, format: email}, password: {type: string, format: password}}}}}}
     Token: {required: true, content: {application/json: {schema: {type: object, required: [token], properties: {token: {type: string}}}}}}
@@ -385,6 +407,9 @@ components:
     Sessions: {description: Owned sessions only, content: {application/json: {schema: {type: object, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/Session'}}}}}}}
     Subscription: {description: Subscription, content: {application/json: {schema: {$ref: '#/components/schemas/Subscription'}}}}
     SubscriptionCreated: {description: Created draft subscription, content: {application/json: {schema: {$ref: '#/components/schemas/SubscriptionCreated'}}}}
+    PlanChangeRequested: {description: Requested plan change, content: {application/json: {schema: {$ref: '#/components/schemas/PlanChangeRequested'}}}}
+    PlanChange: {description: Plan change with immutable calculation and current payment state, content: {application/json: {schema: {$ref: '#/components/schemas/PlanChange'}}}}
+    PlanChangeCancelled: {description: Cancelled plan change, content: {application/json: {schema: {$ref: '#/components/schemas/PlanChangeCancelled'}}}}
     Invoice: {description: Invoice, content: {application/json: {schema: {$ref: '#/components/schemas/Invoice'}}}}
     Payment: {description: Payment, content: {application/json: {schema: {$ref: '#/components/schemas/Payment'}}}}
     CheckoutResult: {description: Provider checkout initiation, content: {application/json: {schema: {$ref: '#/components/schemas/CheckoutResult'}}}}
@@ -422,6 +447,44 @@ components:
         last_used_at: {type: [string, 'null'], format: date-time}
         disabled_at: {type: [string, 'null'], format: date-time}
     SubscriptionCreated: {type: object, additionalProperties: false, required: [id, status], properties: {id: {type: string, format: uuid}, status: {const: draft}}}
+    PlanChangeRequested:
+      type: object
+      additionalProperties: false
+      required: [id, status, change_kind, source_subscription_id, target_subscription_id, invoice_id, amount_due_minor, currency]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string, enum: [scheduled, payment_required, applied]}
+        change_kind: {type: string, enum: [upgrade, downgrade]}
+        source_subscription_id: {type: string, format: uuid}
+        target_subscription_id: {type: string, format: uuid}
+        invoice_id: {type: [string, 'null'], format: uuid}
+        amount_due_minor: {type: integer, minimum: 0, format: int64}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+    PlanChange:
+      type: object
+      required: [id, source_subscription_id, target_subscription_id, old_plan_price_id, new_plan_price_id, old_quantity, new_quantity, change_kind, status, calculation, currency, proration_net_minor, amount_due_minor, period_start, period_end, invoice_id, applied_at, invoice_status, payment_id, payment_status]
+      properties:
+        id: {type: string, format: uuid}
+        source_subscription_id: {type: string, format: uuid}
+        target_subscription_id: {type: string, format: uuid}
+        old_plan_price_id: {type: string, format: uuid}
+        new_plan_price_id: {type: string, format: uuid}
+        old_quantity: {type: integer, minimum: 1}
+        new_quantity: {type: integer, minimum: 1}
+        change_kind: {type: string, enum: [upgrade, downgrade]}
+        status: {type: string, enum: [scheduled, payment_required, applied, cancelled, paid_unapplied, refunded]}
+        calculation: {type: object}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        proration_net_minor: {type: integer, format: int64}
+        amount_due_minor: {type: integer, minimum: 0, format: int64}
+        period_start: {type: string, format: date-time}
+        period_end: {type: string, format: date-time}
+        invoice_id: {type: [string, 'null'], format: uuid}
+        applied_at: {type: [string, 'null'], format: date-time}
+        invoice_status: {type: [string, 'null']}
+        payment_id: {type: [string, 'null'], format: uuid}
+        payment_status: {type: [string, 'null']}
+    PlanChangeCancelled: {type: object, additionalProperties: false, required: [id, status], properties: {id: {type: string, format: uuid}, status: {const: cancelled}}}
     Health: {type: object, additionalProperties: false, required: [status], properties: {status: {type: string, enum: [ok, not_ready]}}}
     Error: {type: object, required: [error], properties: {error: {type: object, required: [code, message], properties: {code: {type: string}, message: {type: string}}}}}
     Tokens: {type: object, required: [access_token, refresh_token], properties: {access_token: {type: string}, refresh_token: {type: string}, access_expires_in: {type: integer}, session_expires_in: {type: integer}}}

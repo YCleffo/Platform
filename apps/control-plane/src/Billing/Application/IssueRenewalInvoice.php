@@ -46,6 +46,10 @@ SELECT s.*
 FROM commercial.subscriptions s
 WHERE s.status = 'active' AND s.current_period_end <= ?::timestamptz
   AND NOT EXISTS (
+    SELECT 1 FROM commercial.subscription_plan_changes c
+    WHERE c.source_subscription_id = s.id AND c.status IN ('scheduled','payment_required','paid_unapplied')
+  )
+  AND NOT EXISTS (
     SELECT 1 FROM commercial.invoices i
     WHERE i.subscription_id = s.id AND i.billing_reason = 'subscription_renewal'
       AND i.service_period_start = s.current_period_end AND i.status IN ('issued','paid')
@@ -74,6 +78,9 @@ SQL, [$cutoff, $limit], [ParameterType::STRING, ParameterType::INTEGER]);
         }
         if ($subscription['status'] !== 'active') {
             throw new \DomainException('Renewal invoice requires an active subscription.');
+        }
+        if ($connection->fetchOne("SELECT 1 FROM commercial.subscription_plan_changes WHERE source_subscription_id = ? AND status IN ('scheduled','payment_required','paid_unapplied')", [$subscription['id']]) !== false) {
+            throw new \DomainException('A plan change fixes the next subscription terms.');
         }
         $items = $connection->fetchAllAssociative(<<<'SQL'
 SELECT si.id AS subscription_item_id, si.plan_price_id, si.quantity,

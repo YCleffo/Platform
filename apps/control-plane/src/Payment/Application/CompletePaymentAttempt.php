@@ -30,14 +30,20 @@ final readonly class CompletePaymentAttempt
         }
 
         $renewalSubscriptionId = $this->connection->fetchOne("SELECT i.subscription_id FROM commercial.payment_attempts a JOIN commercial.payments p ON p.id=a.payment_id JOIN commercial.invoices i ON i.id=p.invoice_id WHERE a.id=? AND i.billing_reason='subscription_renewal'", [$attemptId]);
-        if (is_string($renewalSubscriptionId)) {
-            RenewalExecutionLock::acquire($this->connection, $renewalSubscriptionId);
+        $planSourceId = $this->connection->fetchOne('SELECT c.source_subscription_id FROM commercial.payment_attempts a JOIN commercial.payments p ON p.id = a.payment_id JOIN commercial.subscription_plan_changes c ON c.invoice_id = p.invoice_id WHERE a.id = ?', [$attemptId]);
+        $serializedSubscriptionId = is_string($renewalSubscriptionId) ? $renewalSubscriptionId : $planSourceId;
+        if (is_string($serializedSubscriptionId)) {
+            RenewalExecutionLock::acquire($this->connection, $serializedSubscriptionId);
         }
         try {
             return $this->connection->transactional(function (Connection $connection) use ($attemptId, $outcome, $failureCode, $settlementInstant, $correlationId): array {
             $identity = $connection->fetchAssociative('SELECT pa.payment_id, p.invoice_id, i.subscription_id FROM commercial.payment_attempts pa JOIN commercial.payments p ON p.id = pa.payment_id JOIN commercial.invoices i ON i.id = p.invoice_id WHERE pa.id = ?', [$attemptId]);
             if ($identity === false || !is_string($identity['subscription_id']) || !is_string($identity['invoice_id']) || !is_string($identity['payment_id'])) {
                 throw new \DomainException('Payment attempt was not found.');
+            }
+            $source = $connection->fetchOne('SELECT source_subscription_id FROM commercial.subscription_plan_changes WHERE invoice_id = ?', [$identity['invoice_id']]);
+            if (is_string($source)) {
+                $connection->executeQuery('SELECT id FROM commercial.subscriptions WHERE id = ? FOR UPDATE', [$source]);
             }
             $connection->executeQuery('SELECT id FROM commercial.subscriptions WHERE id = ? FOR UPDATE', [$identity['subscription_id']]);
             $invoice = $connection->fetchAssociative('SELECT id, subscription_id, commercial_account_id, billing_reason, service_period_start, service_period_end, status, currency, total_minor FROM commercial.invoices WHERE id = ? FOR UPDATE', [$identity['invoice_id']]);
@@ -71,8 +77,8 @@ final readonly class CompletePaymentAttempt
             return ['attempt_id' => $attemptId, 'attempt_status' => 'succeeded', 'payment_id' => $payment['id'], 'payment_status' => 'succeeded'];
             });
         } finally {
-            if (is_string($renewalSubscriptionId)) {
-                RenewalExecutionLock::release($this->connection, $renewalSubscriptionId);
+            if (is_string($serializedSubscriptionId)) {
+                RenewalExecutionLock::release($this->connection, $serializedSubscriptionId);
             }
         }
     }

@@ -39,6 +39,9 @@ final readonly class CancelSubscription
             if ($subscription === false) {
                 throw new \DomainException('Subscription was not found.');
             }
+            if ($connection->fetchOne("SELECT 1 FROM commercial.subscription_plan_changes WHERE (source_subscription_id = ? OR target_subscription_id = ?) AND status IN ('scheduled','payment_required','paid_unapplied')", [$subscriptionId, $subscriptionId]) !== false) {
+                throw new \DomainException('Cancel the open plan change before cancelling its subscription.');
+            }
 
             // Serialize the same opaque key even when callers attempt to reuse it for another resource.
             $connection->executeQuery('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [$idempotencyKey]);

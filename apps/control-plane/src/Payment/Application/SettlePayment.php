@@ -8,11 +8,13 @@ use ControlPlane\Billing\Domain\Money;
 use ControlPlane\Billing\Application\RenewalCollectionLifecycle;
 use ControlPlane\Subscription\Application\ActivateSubscription;
 use ControlPlane\Subscription\Application\AdvanceSubscriptionPeriod;
+use ControlPlane\Subscription\Application\ApplySubscriptionPlanChange;
+use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 use Doctrine\DBAL\Connection;
 
 final readonly class SettlePayment
 {
-    public function __construct(private ActivateSubscription $activation, private ?AdvanceSubscriptionPeriod $advancement = null, private ?RenewalCollectionLifecycle $renewalLifecycle = null)
+    public function __construct(private ActivateSubscription $activation, private ?AdvanceSubscriptionPeriod $advancement = null, private ?RenewalCollectionLifecycle $renewalLifecycle = null, private ?ApplySubscriptionPlanChange $planChanges = null)
     {
     }
 
@@ -57,7 +59,18 @@ final readonly class SettlePayment
         $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('payment.succeeded', 'payment', ?, jsonb_build_object('payment_id', ?::text, 'invoice_id', ?::text, 'commercial_account_id', ?::text, 'amount_minor', ?::bigint, 'currency', ?::text))", [$payment['id'], $payment['id'], $invoice['id'], $payment['commercial_account_id'], $payment['amount_minor'], $payment['currency']]);
         $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('invoice.paid', 'invoice', ?, jsonb_build_object('invoice_id', ?::text, 'payment_id', ?::text, 'subscription_id', ?::text, 'commercial_account_id', ?::text))", [$invoice['id'], $invoice['id'], $payment['id'], $invoice['subscription_id'], $payment['commercial_account_id']]);
         if ($invoice['billing_reason'] === 'subscription_create') {
-            $this->activation->activateInTransaction($connection, $payment['commercial_account_id'], $invoice['subscription_id'], $settlementInstant, $correlationId);
+            $planChangeId = $connection->fetchOne('SELECT id FROM commercial.subscription_plan_changes WHERE invoice_id = ?', [$invoice['id']]);
+            if (is_string($planChangeId)) {
+                ($this->planChanges ?? new ApplySubscriptionPlanChange(new SubscriptionPeriodCalculator()))
+                    ->applyInTransaction($connection, $planChangeId, $settlementInstant, $correlationId);
+            } else {
+                $databaseNow = $connection->fetchOne('SELECT now()::text');
+                if (!is_string($databaseNow)) {
+                    throw new \LogicException('Database time is unavailable for subscription activation.');
+                }
+                $this->activation->activateInTransaction($connection, $payment['commercial_account_id'],
+                    $invoice['subscription_id'], min($settlementInstant, new \DateTimeImmutable($databaseNow)), $correlationId);
+            }
         } elseif ($invoice['billing_reason'] === 'subscription_renewal') {
             $this->renewalLifecycle?->succeededInTransaction($connection, $invoice, $payment['id'], $correlationId);
             $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('subscription.renewal_paid', 'subscription', ?, jsonb_build_object('subscription_id', ?::text, 'invoice_id', ?::text, 'payment_id', ?::text, 'commercial_account_id', ?::text))", [$invoice['subscription_id'], $invoice['subscription_id'], $invoice['id'], $payment['id'], $payment['commercial_account_id']]);

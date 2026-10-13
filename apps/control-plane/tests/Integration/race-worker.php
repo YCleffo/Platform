@@ -11,6 +11,7 @@ use Doctrine\DBAL\Tools\DsnParser;
 use ControlPlane\Account\Application\MembershipService;
 use ControlPlane\Account\Authorization\AccountAuthorization;
 use ControlPlane\Billing\Application\IssueInvoice;
+use ControlPlane\Billing\Domain\ProrationCalculator;
 use ControlPlane\Billing\Application\CollectRenewalInvoice;
 use ControlPlane\Billing\Application\RenewalCollectionLifecycle;
 use ControlPlane\Billing\Application\RenewalDunningPolicy;
@@ -31,6 +32,8 @@ use ControlPlane\Subscription\Application\AdvanceSubscriptionPeriod;
 use ControlPlane\Subscription\Application\CancelSubscription;
 use ControlPlane\Subscription\Application\ExpireSubscription;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
+use ControlPlane\Subscription\Application\ApplySubscriptionPlanChange;
+use ControlPlane\Subscription\Application\RequestSubscriptionPlanChange;
 use ControlPlane\Payment\Application\BeginPaymentAttempt;
 use ControlPlane\Payment\Application\BindPaymentAttemptProviderReference;
 use ControlPlane\Payment\Application\CompletePaymentAttempt;
@@ -76,6 +79,14 @@ if (str_starts_with($start, 'barrier|')) {
 }
 try {
     switch ($mode) {
+        case 'plan_change_request':
+            [$userId, $accountId, $priceId, $key, $correlationId] = explode('|', $extra, 5);
+            $change = (new RequestSubscriptionPlanChange($connection,
+                new AccountAuthorization($connection), new ProrationCalculator(),
+                new ApplySubscriptionPlanChange(new SubscriptionPeriodCalculator())))
+                ->request($userId, $accountId, $value, $priceId, 1, $key, $correlationId);
+            fwrite(STDOUT, $change['id']);
+            break;
         case 'account':
             $connection->beginTransaction();
             $email = $value . '-' . bin2hex(random_bytes(4)) . '@example.test';
