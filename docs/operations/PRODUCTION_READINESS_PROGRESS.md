@@ -418,20 +418,47 @@ No row below is production evidence.
 | W04 | PARTIAL: payment settlement versus plan-change cancellation passes; provider webhook variant remains. |
 | W05-W06 | PARTIAL: generic checkout/reconciliation tests and processor overlap exist; complete plan-change webhook/restart variants remain. |
 | W07-W08 | PASS for plan-change duplicate refund notification before the reconciler; simultaneous delivery remains NOT_RUN. |
-| W09-W10 | PARTIAL: refund SIGKILL/restart converges without another provider refund; charge-side restart remains. |
+| W09-W10 | PASS in isolated mock fault tests: both charge and refund SIGKILL/restart converge with one provider object and one local effect. Provider sandbox restart remains NOT_RUN. |
 | X01 | PASS: initial paid subscription reaches Tenant runtime. |
-| X02 | NOT_RUN: failed first purchase in Tenant runtime. |
+| X02 | PASS: failed first purchase leaves Tenant runtime rights empty; successful retry grants them. |
 | X03-X05 | PASS: unpaid/failed upgrade retains old runtime rights, paid upgrade switches them. |
-| X06-X10 | NOT_RUN in Tenant runtime; commercial-only downgrade tests pass. |
+| X06-X10 | PARTIAL: X06 scheduled free downgrade retains paid Tenant rights before the period boundary; X10 cancellation retains them. X07-X09 and the boundary itself remain NOT_RUN in Tenant runtime. |
 | X11 | PASS: expiry removes runtime rights. |
 | X12-X15 | NOT_RUN in Tenant runtime. |
 | X16 | PASS: stale signed document cannot restore old rights. |
 | X17-X18 | NOT_RUN in Tenant runtime. |
 | E01-E20 | NOT_RUN as the specified full API + DB + ledger + audit + inbox/outbox + Tenant matrix. Narrower component tests above do not satisfy it. |
 
-Next concrete independent P0 step: complete charge-side W09/W10 and the
-missing Tenant runtime cases. The manual
+Next concrete independent P0 step: complete the missing Tenant runtime cases,
+then simultaneous webhook/reconciler delivery and the full provider sandbox
+matrix. The manual
 `recovery_required` resolution must wait for an approved rule defining what
 proof and which operator authority may attest an external refund; it remains
 fail-closed. After P0, run the full E01-E20 matrix, worker replay on a
 restored clone, metrics/alerts, concurrency load, and remote CI.
+
+### 2026-10-14 continuation after commit `9e1750c`
+
+- Added charge-side W09/W10 fault injection in `payment-restart-worker.php`.
+  The first PHP process commits the checkout attempt and its stable provider
+  request key, persists a successful mock provider payment, and dies from
+  SIGKILL before binding the provider reference locally. A fresh PHP process
+  uses the same checkout key and same provider request key; it sees the same
+  external payment and commits one settlement and one plan switch. The test
+  checks pending state before restart, one attempt, one paid invoice, one
+  payment audit, one activation outbox effect, old/new entitlements, and no
+  pending fixture receipt or active fixture provider afterward.
+- Address test: 1/1, 30 assertions. Two consecutive full Control Plane runs
+  after the addition: 353/353, 4203 assertions each. PHPStan: 0 errors.
+  Tenant Plane results above still stand; no Tenant code changed.
+- Cross-plane X02 now asserts a failed initial invoice payment leaves Tenant
+  runtime rights empty and a later successful retry grants the old-plan rights.
+  X06 schedules a free downgrade and checks the paid rights before the period
+  boundary. X10 cancels that downgrade and checks the paid rights again.
+  The focused cross-plane group passes 1/1, 51 assertions. This does not
+  exercise the actual boundary transition or the remaining X cases.
+- Remaining P0: manual/external compensation rule and write path,
+  simultaneous webhook/reconciler variants, full X07-X09/X12-X15/X17-X18
+  Tenant runtime proof, and any P0 defects those tests expose. P1/P2:
+  E01-E20, restored worker replay, alerts, load, CI and production topology.
+  Verdict remains `CORE_NOT_READY`.

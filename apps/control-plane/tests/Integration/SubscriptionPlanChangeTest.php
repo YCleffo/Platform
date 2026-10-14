@@ -849,6 +849,75 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
         }
     }
 
+    public function testCheckoutConvergesAfterProviderChargeAndHardProcessKill(): void
+    {
+        $suffix = 'charge-restart-' . bin2hex(random_bytes(5));
+        [$owner, $account, $source, , $newPrice] = $this->context($suffix, 1000, 2000, 'RUB');
+        $change = $this->requests()->request($owner, $account, $source, $newPrice, 1,
+            'change-' . $suffix, $this->uuid());
+        $invoiceId = $change['invoice_id'];
+        self::assertIsString($invoiceId);
+        $payment = $this->paymentCreator()->create($owner, $account, $invoiceId,
+            'payment-' . $suffix, $this->uuid());
+        $providerAccountId = $this->yooKassaProviderAccount($suffix);
+        $checkoutKey = 'checkout-' . $suffix;
+        $statePath = sys_get_temp_dir() . '/charge-restart-' . bin2hex(random_bytes(8)) . '.json';
+        file_put_contents($statePath, '{"calls":[]}');
+        try {
+            $this->connection->commit();
+            $killed = $this->runPaymentRestartWorker($owner, $account, $payment['id'],
+                $checkoutKey, $statePath, 'kill_after_success');
+            self::assertTrue($killed['signaled'], $killed['stderr']);
+            self::assertSame(9, $killed['termsig']);
+            $attempt = $this->connection->fetchAssociative('SELECT id, provider_request_key, provider_payment_id, status FROM commercial.payment_attempts WHERE payment_id=?', [$payment['id']]);
+            self::assertIsArray($attempt);
+            self::assertSame('pending', $attempt['status']);
+            self::assertNull($attempt['provider_payment_id']);
+            self::assertSame('pending', $this->connection->fetchOne('SELECT status FROM commercial.payments WHERE id=?', [$payment['id']]));
+            self::assertSame('payment_required', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$change['id']]));
+            self::assertSame(['plan-change-' . $suffix . '.old' => true], $this->features($owner, $account));
+            $recovered = $this->runPaymentRestartWorker($owner, $account, $payment['id'],
+                $checkoutKey, $statePath, 'recover');
+            self::assertSame(0, $recovered['exit'], $recovered['stderr']);
+            $state = json_decode((string) file_get_contents($statePath), true, 8, JSON_THROW_ON_ERROR);
+            self::assertIsArray($state);
+            self::assertSame([$attempt['provider_request_key'], $attempt['provider_request_key']], $state['calls']);
+            self::assertSame($state['provider_payment_id'], $this->connection->fetchOne('SELECT provider_payment_id FROM commercial.payment_attempts WHERE id=?', [$attempt['id']]));
+            self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.payment_attempts WHERE payment_id=?', [$payment['id']]));
+            self::assertSame('succeeded', $this->connection->fetchOne('SELECT status FROM commercial.payments WHERE id=?', [$payment['id']]));
+            self::assertSame('paid', $this->connection->fetchOne('SELECT status FROM commercial.invoices WHERE id=?', [$invoiceId]));
+            self::assertSame('applied', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$change['id']]));
+            self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='payment.succeeded' AND resource_id=?", [$payment['id']]));
+            self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events WHERE event_type='subscription.activated' AND aggregate_id=?", [$change['target_subscription_id']]));
+            self::assertSame(['plan-change-' . $suffix . '.new' => true], $this->features($owner, $account));
+            $this->completeFixtureReceipts($payment['id']);
+            $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET status='disabled', updated_at=now() WHERE id=?", [$providerAccountId]);
+            $this->connection->beginTransaction();
+        } finally {
+            unlink($statePath);
+        }
+    }
+
+    /** @return array{exit:int,stderr:string,signaled:bool,termsig:int} */
+    private function runPaymentRestartWorker(string $userId, string $accountId, string $paymentId,
+        string $checkoutKey, string $statePath, string $mode): array
+    {
+        $pipes = [];
+        $process = proc_open([PHP_BINARY, __DIR__ . '/payment-restart-worker.php', $userId,
+            $accountId, $paymentId, $checkoutKey, $statePath, $this->uuid(), $mode],
+            [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+        if (!is_resource($process)) {
+            throw new \RuntimeException('Could not launch payment restart worker.');
+        }
+        stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $status = proc_get_status($process);
+        return ['exit' => proc_close($process), 'stderr' => $stderr,
+            'signaled' => (bool) $status['signaled'], 'termsig' => (int) $status['termsig']];
+    }
+
     public function testRefundWebhookBeforeReconcilerAppliesOnePlanChangeCompensation(): void
     {
         $suffix = 'refund-webhook-' . bin2hex(random_bytes(5));

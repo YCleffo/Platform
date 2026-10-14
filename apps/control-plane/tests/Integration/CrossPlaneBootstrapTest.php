@@ -21,6 +21,7 @@ use ControlPlane\M2m\DeploymentScopePolicy;
 use ControlPlane\M2m\DeploymentScopeRegistry;
 use ControlPlane\Billing\Domain\ProrationCalculator;
 use ControlPlane\Subscription\Application\ApplySubscriptionPlanChange;
+use ControlPlane\Subscription\Application\CancelSubscriptionPlanChange;
 use ControlPlane\Subscription\Application\RequestSubscriptionPlanChange;
 use ControlPlane\Subscription\Application\ExpireSubscription;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
@@ -142,10 +143,26 @@ final class CrossPlaneBootstrapTest extends PaymentTestCase
             $this->connection->executeStatement('UPDATE commercial.plan_prices SET amount_minor = 2000 WHERE id = ?', [$newPrice]);
             $this->connection->executeStatement("UPDATE commercial.plans SET status = 'published', published_at = now() WHERE id = ?", [$newPlan]);
             $source = $this->draftSubscription($account, $billingProfile, [$oldPrice]);
-            $this->activatePaid($account, $source, $this->activationInstant(), $this->uuid());
-            self::assertSame(2, $sync->sync());
             $runtimeFeatures = new \App\PlatformRuntime\PostgresEffectiveRuntimeEntitlements($installations,
                 new \App\PlatformRuntime\PostgresEntitlementDocumentRepository($core), $verifier);
+            $initialInvoice = $this->issuer()->issue($owner, $account, $source, 'cross-plane-initial-invoice', $this->uuid());
+            $initialPayment = $this->paymentCreator()->create($owner, $account, $initialInvoice['id'],
+                'cross-plane-initial-payment', $this->uuid());
+            $initialProvider = $this->providerAccount('cross-plane-initial');
+            $initialFailed = $this->attemptBeginner()->begin($initialPayment['id'], $initialProvider,
+                'bank_transfer', $this->uuid());
+            $this->attemptCompleter()->complete($initialFailed['attempt_id'], 'failed', 'declined',
+                new \DateTimeImmutable('now'), $this->uuid());
+            self::assertSame('issued', $this->connection->fetchOne('SELECT status FROM commercial.invoices WHERE id=?', [$initialInvoice['id']]));
+            self::assertSame('pending', $this->connection->fetchOne('SELECT status FROM commercial.payments WHERE id=?', [$initialPayment['id']]));
+            self::assertSame(1, $sync->sync());
+            self::assertSame([], $runtimeFeatures->forInstallation($installationId));
+            $initialSucceeded = $this->attemptBeginner()->begin($initialPayment['id'], $initialProvider,
+                'bank_transfer', $this->uuid());
+            $this->attemptBinder()->bind($initialSucceeded['attempt_id'], 'cross-plane-initial-provider');
+            $this->attemptCompleter()->complete($initialSucceeded['attempt_id'], 'succeeded', null,
+                new \DateTimeImmutable('now'), $this->uuid());
+            self::assertSame(2, $sync->sync());
             self::assertSame(['cross-plane.plan.old' => true], $runtimeFeatures->forInstallation($installationId));
             $change = (new RequestSubscriptionPlanChange($this->connection,
                 new AccountAuthorization($this->connection), new ProrationCalculator(),
@@ -169,6 +186,23 @@ final class CrossPlaneBootstrapTest extends PaymentTestCase
             self::assertSame(['cross-plane.plan.new' => true], $runtimeFeatures->forInstallation($installationId));
             $oldEnvelope = $puller->pull('https://control.example', 'Service ' . $bootstrapCredential['credentialId'] . '.' . $bootstrapCredential['credentialSecret']);
             $target = $change['target_subscription_id'];
+            $freeFeature = $this->feature('cross-plane.plan.free', 'boolean');
+            [$freePlan, $freePrice] = $this->planPrice('cross-plane-plan-free', status: 'draft',
+                featureValues: [$freeFeature => true]);
+            $this->connection->executeStatement('UPDATE commercial.plan_prices SET amount_minor = 0 WHERE id = ?', [$freePrice]);
+            $this->connection->executeStatement("UPDATE commercial.plans SET status = 'published', published_at = now() WHERE id = ?", [$freePlan]);
+            $freeChange = (new RequestSubscriptionPlanChange($this->connection,
+                new AccountAuthorization($this->connection), new ProrationCalculator(),
+                new ApplySubscriptionPlanChange(new SubscriptionPeriodCalculator())))
+                ->request($owner, $account, $target, $freePrice, 1, 'cross-plane-free-downgrade', $this->uuid());
+            self::assertSame('scheduled', $freeChange['status']);
+            self::assertSame(3, $sync->sync());
+            self::assertSame(['cross-plane.plan.new' => true], $runtimeFeatures->forInstallation($installationId));
+            self::assertSame('cancelled', (new CancelSubscriptionPlanChange($this->connection,
+                new AccountAuthorization($this->connection)))->cancel($owner, $account, $freeChange['id'],
+                'cross-plane-free-downgrade-cancel', $this->uuid())['status']);
+            self::assertSame(3, $sync->sync());
+            self::assertSame(['cross-plane.plan.new' => true], $runtimeFeatures->forInstallation($installationId));
             $targetEnd = new \DateTimeImmutable((string) $this->connection->fetchOne('SELECT current_period_end FROM commercial.subscriptions WHERE id=?', [$target]));
             self::assertSame('expired', (new ExpireSubscription($this->connection))->expire($account, $target, $targetEnd, $this->uuid())['status']);
             self::assertSame(4, $sync->sync());
