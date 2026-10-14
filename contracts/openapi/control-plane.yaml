@@ -185,6 +185,7 @@ paths:
     parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/SubscriptionId'}]
     post:
       operationId: cancelSubscription
+      description: An open scheduled, payment-required, or paid-unapplied plan change must be resolved before the source subscription can be cancelled.
       parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
       responses: {'200': {$ref: '#/components/responses/Subscription'}, '409': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/plan-changes:
@@ -462,7 +463,7 @@ components:
         currency: {type: string, pattern: '^[A-Z]{3}$'}
     PlanChange:
       type: object
-      required: [id, source_subscription_id, target_subscription_id, old_plan_price_id, new_plan_price_id, old_quantity, new_quantity, change_kind, status, calculation, currency, proration_net_minor, amount_due_minor, period_start, period_end, invoice_id, applied_at, invoice_status, payment_id, payment_status]
+      required: [id, source_subscription_id, target_subscription_id, old_plan_price_id, new_plan_price_id, old_quantity, new_quantity, change_kind, status, compensation_status, compensation_reason, calculation, currency, proration_net_minor, amount_due_minor, period_start, period_end, invoice_id, applied_at, invoice_status, payment_id, payment_status]
       properties:
         id: {type: string, format: uuid}
         source_subscription_id: {type: string, format: uuid}
@@ -473,6 +474,8 @@ components:
         new_quantity: {type: integer, minimum: 1}
         change_kind: {type: string, enum: [upgrade, downgrade]}
         status: {type: string, enum: [scheduled, payment_required, applied, cancelled, paid_unapplied, refunded]}
+        compensation_status: {type: [string, 'null'], enum: [pending, recovery_required, succeeded, null]}
+        compensation_reason: {type: [string, 'null'], description: Machine-readable reason when operator recovery is required.}
         calculation: {type: object}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         proration_net_minor: {type: integer, format: int64}

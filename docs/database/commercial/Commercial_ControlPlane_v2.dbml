@@ -165,6 +165,35 @@ Table commercial.subscription_items {
   Note: 'Phase 3.2. Historical selection points to an immutable published plan price; items are database-frozen once the parent leaves draft.'
 }
 
+Table commercial.subscription_plan_changes {
+  id uuid [pk, default: `uuidv7()`]
+  commercial_account_id uuid [not null, ref: > commercial.commercial_accounts.id]
+  source_subscription_id uuid [not null, ref: > commercial.subscriptions.id]
+  target_subscription_id uuid [not null, unique, ref: > commercial.subscriptions.id]
+  old_plan_price_id uuid [not null, ref: > commercial.plan_prices.id]
+  new_plan_price_id uuid [not null, ref: > commercial.plan_prices.id]
+  old_quantity integer [not null]
+  new_quantity integer [not null]
+  change_kind varchar(16) [not null]
+  status varchar(24) [not null, note: 'scheduled/payment_required/applied/cancelled/paid_unapplied/refunded']
+  idempotency_key varchar(200) [not null]
+  request_sha256 bytea [not null]
+  calculation jsonb [not null]
+  currency char(3) [not null]
+  proration_net_minor bigint [not null]
+  amount_due_minor bigint [not null]
+  period_start timestamptz [not null]
+  period_end timestamptz [not null]
+  invoice_id uuid [unique, ref: > commercial.invoices.id]
+  requested_at timestamptz [not null, default: `now()`]
+  applied_at timestamptz
+  updated_at timestamptz [not null, default: `now()`]
+  compensation_status varchar(24) [note: 'null/pending/recovery_required/succeeded']
+  compensation_reason varchar(40)
+  indexes { (commercial_account_id, idempotency_key) [unique] }
+  Note: 'Immutable plan terms and guarded transitions. One open change per source; compensation remains blocking until verified full refund.'
+}
+
 // Phase 1: deployments and durable operations. Core database secrets are references only.
 Table commercial.deployments {
   id uuid [pk, default: `uuidv7()`]

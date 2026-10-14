@@ -226,3 +226,212 @@ Verdict: `CORE_NOT_READY`. Local checks do not establish production readiness.
 Next step: add concurrent settlement against cancellation/expiry, then complete
 E01-E20 fault matrix and restore
 rehearsal. Production-like load and remote CI remain separate gates.
+
+## 2026-10-14: financial contention and compensation checkpoint
+
+Affected requirements: CORE-12/13, SUB-01/06/07, BILL-01/02/04,
+PAY-01/03/04/05/06/07/08, REF-02/03/04, ENT-01/02/03. This section
+supersedes the 2026-10-13 next-step text above.
+
+- Fixed scheduled downgrade's source/change lock inversion. It now takes the
+  source renewal session lock and source row before the plan change row, in
+  the same order as settlement and cancellation.
+- Added actual two-process plan-change races. The test parent holds the
+  source row, releases both worker barriers, and requires both PostgreSQL
+  backend sessions to report `wait_event_type='Lock'` before it releases the
+  row. Each case runs twice. Observed passing: R01 settlement/cancel change,
+  R02 settlement/cancel source, R03 settlement/expiry, R04 free downgrade/expiry,
+  R05 paid downgrade settlement/expiry, R06 downgrade/renewal issuance,
+  R08 duplicate settlement, R09 different-key requests, R10 same-key replay.
+  R07 scheduled downgrade/dunning and provider reconciliation overlap remain
+  separate NOT_RUN cases. Assertions cover state, selected money/audit/outbox
+  effects, usage and effective rights; a reusable full invariant checker does
+  not yet exist.
+- Applied additive migration `Version20261014000100` to the isolated
+  `platform_commercial_test` database. Late unapplied payments now persist
+  `compensation_status` and reason. Unsupported provider/fiscal cases become
+  `recovery_required`; supported YooKassa becomes `pending`; confirmed full
+  refund becomes `succeeded`. A scheduler job moves canceled provider refunds
+  to `recovery_required` once, retaining the financial block. Operator CLI
+  `control:plan-changes:recovery-cases` and `control:ops:status` expose cases
+  and counts without provider secrets. No ordinary customer route can attest
+  an external refund. A privileged, evidence-backed external/manual recovery
+  path is still missing, so this P0 is PARTIAL.
+- Applied additive migration `Version20261014000200` to the isolated test DB.
+  New plan-change requests share `commercial.idempotency_keys` with other
+  financial mutations; an insert guard also blocks reuse of historical
+  plan-change keys by another operation. Same-key, changed-payload,
+  cross-operation and two-process replay tests pass. A global uniqueness
+  constraint/backfill of legacy general keys is still NOT VERIFIED.
+- Added plan-change-specific authoritative provider ordering test: pending,
+  success, duplicate success, stale pending and stale canceled observations
+  preserve one paid invoice and one entitlement switch. Broader W01-W10
+  webhook/reconciler/crash matrix remains PARTIAL.
+- Made the existing late paid-downgrade policy explicit: the invoice remains
+  payable and a verified late settlement starts the full replacement period
+  at settlement time. An integration test covers expiry followed by payment.
+  Cancellation, receipt and cross-plane breadth remain open.
+- Updated OpenAPI read shape, commercial architecture and DBML for the
+  compensation fields. The previous 2026-10-13 evidence still covers only
+  one cross-plane upgrade E2E, not X01-X18.
+
+Latest completed local commands on the isolated Docker services:
+
+```text
+docker compose --profile control-test build control-plane-test --quiet
+docker compose --profile control-test run --rm --no-deps -v platform_plan_test_backend:/backend -v platform_plan_test_contracts:/contracts control-plane-test php bin/console doctrine:migrations:migrate --no-interaction
+docker compose --profile control-test run --rm --no-deps -v platform_plan_test_backend:/backend -v platform_plan_test_contracts:/contracts control-plane-test php vendor/bin/phpunit --filter SubscriptionPlanChangeTest --do-not-cache-result
+docker compose --profile control-test run --rm --no-deps -v platform_plan_test_backend:/backend -v platform_plan_test_backend_vendor:/backend/vendor -v platform_plan_test_contracts:/contracts control-plane-test php vendor/bin/phpstan analyse --no-progress
+docker compose --profile control-test run --rm --no-deps -v platform_plan_test_backend:/backend -v platform_plan_test_contracts:/contracts control-plane-test php vendor/bin/phpunit --filter OpenApiRouteParityTest --do-not-cache-result
+docker compose --profile control-test run --rm --no-deps -e CROSS_PLANE_REQUIRED=1 -v platform_plan_test_backend:/backend -v platform_plan_test_backend_vendor:/backend/vendor -v platform_plan_test_contracts:/contracts control-plane-test php vendor/bin/phpunit --group cross-plane --do-not-cache-result
+```
+
+Observed: migrations 00100 and 00200 applied once; focused plan-change suite
+21/21, 656 assertions; last full Control Plane run before the final same-key
+barrier test 343/343, 3993 assertions; PHPStan 0 errors; OpenAPI parity
+3/3, 39 assertions; cross-plane upgrade 1/1, 28 assertions. The final full
+suite after the same-key barrier test remains to be rerun. No real charges.
+
+Remaining P0, in order: finish R07 and provider-reconciler overlap with full
+ledger assertions; implement an authorized, evidence-backed path out of
+`recovery_required` after unsupported/definitive refund failure without
+claiming money returned early; finish W01-W10 and F01-F10; validate all
+cancellation states and X01-X18 in Tenant Plane. Then E01-E20, restart/fault,
+local restore, observability and invariant stress/load gates. No hosting,
+production SLO/RPO/RTO, remote CI or production runtime evidence exists.
+
+Verdict: `CORE_NOT_READY`.
+
+## 2026-10-14: global key contention and isolated restore rehearsal
+
+Affected requirements: CORE-12/13, PAY-03/04/05/06, SUB-06/07, REF-03,
+ENT-01/02/03. This checkpoint supersedes the test counts and next step above.
+
+- Migration `Version20261014000300` extends the existing idempotency insert
+  guard. Every new key insert obtains a PostgreSQL transaction advisory lock
+  and rejects another scope, including writers from older application builds.
+  A two-process test holds that lock until both DB sessions are observably
+  waiting; after release one insert succeeds and the other is rejected. This
+  protects new writes. The isolated test DB has zero pre-existing cross-scope
+  duplicate keys, but production data has not been audited. A global unique
+  index and evidence-preserving resolution of any historic duplicates remain
+  open. No existing financial key record was deleted.
+- R07 is prevented by the current commercial rule: a scheduled plan change
+  excludes a renewal invoice on the source, while an already issued renewal
+  invoice excludes a new plan change. Dunning requires that invoice. An
+  integration test checks the scheduled-change side and the existing R06
+  two-process test checks issuance contention. No separate source dunning
+  settlement race can be constructed without violating the guarded contract.
+- A two-process upgrade test now overlaps the authoritative payment path with
+  YooKassa reconciliation under an observed source-row lock. Both workers
+  complete, and one paid invoice, one subscription switch and one copy of
+  each audited/payment/outbox effect remain. This is provider reconciliation
+  overlap evidence; webhook inbox deduplication and ordering still need their
+  own full W01-W10 matrix.
+- The first complete run after adding that test exposed fixture leakage: its
+  committed YooKassa account was still active and its receipt remained pending,
+  affecting unrelated webhook and fiscal tests. The fixture now disables its
+  provider and fiscal mode before independent workers start. Only the named
+  `platform_commercial_test` database was restored from the already verified
+  pre-fixture custom dump; no working or production database was touched.
+  Two consecutive full runs on that restored and then reused isolated DB pass.
+- The privacy retention integration test used to assume its target audit row
+  was inside the first 1000 eligible records. Reused isolated test data broke
+  that assumption. It now checks the protected rows directly and drains
+  bounded batches after releasing the hold. No privacy cleanup behavior was
+  weakened.
+- Local restore rehearsal used only `control-postgres-test`: a custom-format
+  `pg_dump` of `platform_commercial_test` was restored into a new
+  `platform_restore_rehearsal_test` database. Migration counts and the counts
+  of accounts, plan changes, invoices, payments, refunds, idempotency records,
+  audit and outbox rows matched exactly immediately after restore. Doctrine
+  reported 38/38 applied migrations and 0 pending on the clone; the restored
+  Control Plane `control:ops:status` command ran successfully. This proves a
+  local logical restore and read-only boot, not PITR, worker replay or a
+  production RPO/RTO. The restore clone remains isolated for inspection.
+- Two consecutive full Control Plane runs before the refund restart test:
+  350/350, 4119 assertions each. The provider overlap address test: 1/1,
+  24 assertions. Earlier focused plan-change suite: 26/26, 736 assertions.
+  PHPStan: 0 errors. OpenAPI route parity: 3/3, 39 assertions. Cross-plane
+  group: 1/1, 37 assertions. `git diff --check` passes.
+- Tenant Plane ran from the pre-staged backend source/vendor named volumes
+  because Docker Desktop could not mount `C:\Platform\apps\backend` into a
+  fresh container. Unit: 344/344, 12513 assertions; Console: 2/2, 9;
+  Functional: 92/92, 845. A temporary test HTTP container gave API:
+  70/70, 719 assertions and was removed afterward. An initial API run in a
+  one-shot CLI container had no HTTP listener and produced only connection
+  errors; the server-backed rerun passed. Remote CI remains unrun.
+- Review tightened the new financial backlog query from a prefix match to the
+  exact canonical compensation refund key. The final Control Plane gate after
+  this correction passed 350/350, 4119 assertions and PHPStan 0 errors.
+- Added a file-backed mock refund provider and two independent PHP worker
+  processes for F04/F05. After refund reservation commits, the first process
+  records an external success and is then killed with SIGKILL before any
+  local success write; the local refund stays pending. A fresh process retries
+  with the identical provider request key,
+  sees the same external refund, commits one local success, and the finalizer
+  reaches `refunded` exactly once. This is deterministic fault injection with
+  a real local process kill and a file-backed mock, not a provider sandbox
+  transaction. The fixture completes its
+  own fake fiscal receipts and disables its provider account before leaving
+  the shared isolated DB. The focused case passes 1/1, 32 assertions; two
+  consecutive full Control Plane runs pass 351/351, 4151 assertions each;
+  PHPStan 0 errors and `git diff --check` pass after it.
+- W08 now has a plan-change-specific test: `refund.succeeded` notification
+  arrives before refund reconciliation, duplicate notification reads the same
+  inbox result without another provider GET, reconciliation selects zero
+  pending refunds, and the finalizer marks the change refunded once. The
+  address test passes 1/1, 22 assertions. The full suite after switching
+  the restart fault to SIGKILL passed 352/352, 4173 assertions. PHPStan found
+  a test-worker `getmypid()` type warning; it was fixed and the focused kill
+  test plus PHPStan passed again. The final full suite after that type guard
+  also passed 352/352, 4173 assertions.
+
+Remaining P0: evidence-backed external compensation policy and authorized
+write path for `recovery_required`; broader F01-F10 and W01-W10 failure and
+provider ordering matrix, X01-X18 cross-plane
+matrix and worker crash replay. P1/P2: full E01-E20, restore with workers,
+alert delivery, load and remote CI. No hosting, production SLO/RPO/RTO or
+production runtime evidence exists. Verdict: `CORE_NOT_READY`.
+
+### Exact continuation checklist
+
+`PASS` means the named invariant was asserted in an isolated local test;
+`PARTIAL` means the narrower listed case passed but the full case did not.
+No row below is production evidence.
+
+| Matrix | Local status and evidence gap |
+| --- | --- |
+| R01-R05 | PASS, two observed DB-lock repetitions each. |
+| R06 | PASS, two observed DB-lock repetitions. |
+| R07 | PASS for the exclusion policy: source renewal invoice cannot coexist with scheduled downgrade; no applicable source dunning state. |
+| R08 | PARTIAL: two duplicate-settlement repetitions and one authoritative processor/reconciler overlap pass; actual webhook inbox versus reconciler contention remains. |
+| R09 | PASS, two different requests choose one replacement. |
+| R10 | PASS, same-key replay and two-process lock contention. |
+| F01-F03 | PASS for automatic full refund, stable key after uncertain create, and durable recovery after definitive failure. |
+| F04-F05 | PASS for a new PHP process after reservation and a SIGKILL after the mock provider persisted success. |
+| F06 | PARTIAL: plan-change duplicate refund webhook and later reconciler pass; simultaneous webhook/reconciler overlap remains. |
+| F07-F08 | PASS, unsupported provider/fiscal mode creates durable recovery case. |
+| F09 | PARTIAL: automatic finalizer replay is idempotent; external/manual recovery write path does not exist. |
+| F10 | PASS after verified automatic full refund; manual path still absent. |
+| W01-W03 | PARTIAL: plan-change authoritative pending/success/duplicate/stale sequence passes; complete webhook ordering cases remain. |
+| W04 | PARTIAL: payment settlement versus plan-change cancellation passes; provider webhook variant remains. |
+| W05-W06 | PARTIAL: generic checkout/reconciliation tests and processor overlap exist; complete plan-change webhook/restart variants remain. |
+| W07-W08 | PASS for plan-change duplicate refund notification before the reconciler; simultaneous delivery remains NOT_RUN. |
+| W09-W10 | PARTIAL: refund SIGKILL/restart converges without another provider refund; charge-side restart remains. |
+| X01 | PASS: initial paid subscription reaches Tenant runtime. |
+| X02 | NOT_RUN: failed first purchase in Tenant runtime. |
+| X03-X05 | PASS: unpaid/failed upgrade retains old runtime rights, paid upgrade switches them. |
+| X06-X10 | NOT_RUN in Tenant runtime; commercial-only downgrade tests pass. |
+| X11 | PASS: expiry removes runtime rights. |
+| X12-X15 | NOT_RUN in Tenant runtime. |
+| X16 | PASS: stale signed document cannot restore old rights. |
+| X17-X18 | NOT_RUN in Tenant runtime. |
+| E01-E20 | NOT_RUN as the specified full API + DB + ledger + audit + inbox/outbox + Tenant matrix. Narrower component tests above do not satisfy it. |
+
+Next concrete independent P0 step: complete charge-side W09/W10 and the
+missing Tenant runtime cases. The manual
+`recovery_required` resolution must wait for an approved rule defining what
+proof and which operator authority may attest an external refund; it remains
+fail-closed. After P0, run the full E01-E20 matrix, worker replay on a
+restored clone, metrics/alerts, concurrency load, and remote CI.

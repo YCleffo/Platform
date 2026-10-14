@@ -82,7 +82,12 @@ final class OperationalStatusTest extends TestCase
                 'last_duration_ms' => 12, 'last_processed_count' => 1,
                 'last_result' => 'failed', 'heartbeat_age_seconds' => 5],
         ]);
-        $db->method('fetchAssociative')->willReturn(['pending_count' => 3, 'oldest_age' => 40]);
+        $db->method('fetchAssociative')->willReturnCallback(static function (string $sql): array {
+            return str_contains($sql, 'subscription_plan_changes')
+                ? ['paid_unapplied_count' => 4, 'recovery_required_count' => 2,
+                    'pending_refund_count' => 1, 'oldest_pending_age' => 600]
+                : ['pending_count' => 3, 'oldest_age' => 40];
+        });
         $tester = new \Symfony\Component\Console\Tester\CommandTester(
             new OpsStatusCommand(new OperationalStatus($db)));
         self::assertSame(0, $tester->execute([]));
@@ -90,6 +95,7 @@ final class OperationalStatusTest extends TestCase
         self::assertStringContainsString('stale', $text);
         self::assertStringContainsString('failed', $text);
         self::assertStringContainsString('"pendingOutboxCount":3', $text);
+        self::assertStringContainsString('"recoveryRequiredCount":2', $text);
         self::assertStringNotContainsString('recipient@example.test', $text);
         self::assertStringNotContainsString('payload', $text);
     }

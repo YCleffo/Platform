@@ -79,4 +79,29 @@ SQL);
         return ['pendingOutboxCount' => (int) $row['pending_count'],
             'oldestPendingAgeSeconds' => $row['oldest_age'] === null ? null : (int) $row['oldest_age']];
     }
+
+    /** @return array{paidUnappliedCount:int,recoveryRequiredCount:int,pendingCompensationRefundCount:int,oldestPendingCompensationAgeSeconds:?int} */
+    public function financialBacklog(): array
+    {
+        $row = $this->db->fetchAssociative(<<<'SQL'
+SELECT
+ (SELECT count(*) FROM commercial.subscription_plan_changes WHERE status='paid_unapplied')::integer AS paid_unapplied_count,
+ (SELECT count(*) FROM commercial.subscription_plan_changes WHERE compensation_status='recovery_required')::integer AS recovery_required_count,
+ (SELECT count(*) FROM commercial.subscription_plan_changes c JOIN commercial.payments p ON p.invoice_id=c.invoice_id
+  JOIN commercial.refunds r ON r.payment_id=p.id AND r.client_request_key='plan-change-unapplied-' || c.id::text
+  WHERE c.status='paid_unapplied' AND c.compensation_status='pending' AND r.status='pending')::integer AS pending_refund_count,
+ (SELECT EXTRACT(EPOCH FROM (clock_timestamp() - min(r.created_at)))::integer
+  FROM commercial.subscription_plan_changes c JOIN commercial.payments p ON p.invoice_id=c.invoice_id
+  JOIN commercial.refunds r ON r.payment_id=p.id AND r.client_request_key='plan-change-unapplied-' || c.id::text
+  WHERE c.status='paid_unapplied' AND c.compensation_status='pending' AND r.status='pending') AS oldest_pending_age
+SQL);
+        if ($row === false || !isset($row['paid_unapplied_count'], $row['recovery_required_count'], $row['pending_refund_count'])
+            || !array_key_exists('oldest_pending_age', $row)) {
+            throw new \RuntimeException('Financial backlog status is unavailable.');
+        }
+        return ['paidUnappliedCount' => (int) $row['paid_unapplied_count'],
+            'recoveryRequiredCount' => (int) $row['recovery_required_count'],
+            'pendingCompensationRefundCount' => (int) $row['pending_refund_count'],
+            'oldestPendingCompensationAgeSeconds' => $row['oldest_pending_age'] === null ? null : (int) $row['oldest_pending_age']];
+    }
 }

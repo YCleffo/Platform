@@ -97,10 +97,15 @@ SQL, [$user]);
         $hold = $this->connection->fetchOne("INSERT INTO commercial.privacy_holds (control_user_id, reason_code) VALUES (?, 'legal_hold') RETURNING id", [$user]);
         self::assertSame(0, $cleanup->run('audit', 10, false)['deleted']);
         self::assertSame(0, $cleanup->run('outbox', 10, false)['deleted']);
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.audit_events WHERE id = ?', [$auditId]));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.outbox_events WHERE id = ?', [$outboxId]));
         $this->connection->executeStatement('UPDATE commercial.privacy_holds SET released_at = now() WHERE id = ?', [$hold]);
-        self::assertGreaterThanOrEqual(1, $cleanup->run('audit', 1000)['selected']);
-        self::assertGreaterThanOrEqual(1, $cleanup->run('outbox', 1000, false)['deleted']);
-        self::assertGreaterThanOrEqual(1, $cleanup->run('audit', 1000, false)['deleted']);
+        for ($batch = 0; $batch < 100 && $this->connection->fetchOne('SELECT 1 FROM commercial.outbox_events WHERE id = ?', [$outboxId]) !== false; $batch++) {
+            self::assertGreaterThanOrEqual(1, $cleanup->run('outbox', 1000, false)['deleted']);
+        }
+        for ($batch = 0; $batch < 100 && $this->connection->fetchOne('SELECT 1 FROM commercial.audit_events WHERE id = ?', [$auditId]) !== false; $batch++) {
+            self::assertGreaterThanOrEqual(1, $cleanup->run('audit', 1000, false)['deleted']);
+        }
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.audit_events WHERE id = ?', [$auditId]));
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.outbox_events WHERE id = ?', [$outboxId]));
     }

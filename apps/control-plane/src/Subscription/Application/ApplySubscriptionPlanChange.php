@@ -108,10 +108,25 @@ final readonly class ApplySubscriptionPlanChange
             throw new \DomainException('Unpaid plan change cannot be applied.');
         }
         $db->executeStatement("UPDATE commercial.subscriptions SET status = 'cancelled', updated_at = now() WHERE id = ? AND status = 'draft'", [$change['target_subscription_id']]);
-        $db->executeStatement("UPDATE commercial.subscription_plan_changes SET status = 'paid_unapplied', updated_at = now() WHERE id = ?", [$change['id']]);
         $refundId = ($this->refunds ?? new ReserveUnappliedPlanChangeRefund())->reserveInTransaction($db,
             $change['id'], $change['invoice_id'], $change['commercial_account_id'], $correlationId);
+        $reason = null;
+        if ($refundId === null) {
+            $provider = $db->fetchOne(<<<'SQL'
+SELECT ppa.provider_code FROM commercial.payments p
+JOIN commercial.payment_attempts a ON a.payment_id=p.id AND a.status='succeeded'
+JOIN commercial.payment_provider_accounts ppa ON ppa.id=a.provider_account_id
+WHERE p.invoice_id=?
+SQL, [$change['invoice_id']]);
+            $reason = $provider === 'yookassa' ? 'unsupported_fiscal_configuration' : 'unsupported_provider';
+        }
+        $db->executeStatement("UPDATE commercial.subscription_plan_changes SET status = 'paid_unapplied', compensation_status = ?, compensation_reason = ?, updated_at = now() WHERE id = ?",
+            [$refundId === null ? 'recovery_required' : 'pending', $reason, $change['id']]);
         $db->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, 'subscription.plan_change_refund_required', 'subscription_plan_change', ?, ?, 'failure')", [$change['commercial_account_id'], $change['id'], $correlationId]);
+        if ($reason !== null) {
+            $db->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, 'subscription.plan_change_recovery_required', 'subscription_plan_change', ?, ?, 'failure')",
+                [$change['commercial_account_id'], $change['id'], $correlationId]);
+        }
         $db->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('subscription.plan_change_refund_required', 'subscription_plan_change', ?, jsonb_build_object('change_id', ?::text, 'invoice_id', ?::text, 'commercial_account_id', ?::text, 'refund_id', ?::text))", [$change['id'], $change['id'], $change['invoice_id'], $change['commercial_account_id'], $refundId]);
 
         return 'paid_unapplied';

@@ -22,6 +22,7 @@ use ControlPlane\M2m\DeploymentScopeRegistry;
 use ControlPlane\Billing\Domain\ProrationCalculator;
 use ControlPlane\Subscription\Application\ApplySubscriptionPlanChange;
 use ControlPlane\Subscription\Application\RequestSubscriptionPlanChange;
+use ControlPlane\Subscription\Application\ExpireSubscription;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 use Symfony\Component\HttpFoundation\Request;
 use PHPUnit\Framework\Attributes\Group;
@@ -156,11 +157,34 @@ final class CrossPlaneBootstrapTest extends PaymentTestCase
             $invoiceId = $change['invoice_id'];
             self::assertIsString($invoiceId);
             $payment = $this->paymentCreator()->create($owner, $account, $invoiceId, 'cross-plane-upgrade-payment', $this->uuid());
-            $attempt = $this->attemptBeginner()->begin($payment['id'], $this->providerAccount('cross-plane-upgrade'), 'bank_transfer', $this->uuid());
+            $providerAccount = $this->providerAccount('cross-plane-upgrade');
+            $failed = $this->attemptBeginner()->begin($payment['id'], $providerAccount, 'bank_transfer', $this->uuid());
+            $this->attemptCompleter()->complete($failed['attempt_id'], 'failed', 'declined', new \DateTimeImmutable('now'), $this->uuid());
+            self::assertSame(2, $sync->sync());
+            self::assertSame(['cross-plane.plan.old' => true], $runtimeFeatures->forInstallation($installationId));
+            $attempt = $this->attemptBeginner()->begin($payment['id'], $providerAccount, 'bank_transfer', $this->uuid());
             $this->attemptBinder()->bind($attempt['attempt_id'], 'cross-plane-upgrade-provider');
             $this->attemptCompleter()->complete($attempt['attempt_id'], 'succeeded', null, new \DateTimeImmutable('now'), $this->uuid());
             self::assertSame(3, $sync->sync());
             self::assertSame(['cross-plane.plan.new' => true], $runtimeFeatures->forInstallation($installationId));
+            $oldEnvelope = $puller->pull('https://control.example', 'Service ' . $bootstrapCredential['credentialId'] . '.' . $bootstrapCredential['credentialSecret']);
+            $target = $change['target_subscription_id'];
+            $targetEnd = new \DateTimeImmutable((string) $this->connection->fetchOne('SELECT current_period_end FROM commercial.subscriptions WHERE id=?', [$target]));
+            self::assertSame('expired', (new ExpireSubscription($this->connection))->expire($account, $target, $targetEnd, $this->uuid())['status']);
+            self::assertSame(4, $sync->sync());
+            self::assertSame([], $runtimeFeatures->forInstallation($installationId));
+            $canonical = base64_decode((string) $oldEnvelope['documentBase64'], true);
+            $signature = base64_decode((string) $oldEnvelope['signatureBase64'], true);
+            self::assertIsString($canonical);
+            self::assertIsString($signature);
+            try {
+                (new \App\PlatformRuntime\PostgresEntitlementApplier($core, $verifier))
+                    ->apply($installationId, $canonical, $signature, (string) $oldEnvelope['keyId']);
+                self::fail('Older paid entitlement document was accepted after expiry.');
+            } catch (\DomainException) {
+                self::addToAssertionCount(1);
+            }
+            self::assertSame([], $runtimeFeatures->forInstallation($installationId));
         } finally {
             putenv('CROSS_PLANE_CREDENTIAL');
             $coreTransaction->rollBack();

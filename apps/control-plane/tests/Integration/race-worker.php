@@ -11,6 +11,7 @@ use Doctrine\DBAL\Tools\DsnParser;
 use ControlPlane\Account\Application\MembershipService;
 use ControlPlane\Account\Authorization\AccountAuthorization;
 use ControlPlane\Billing\Application\IssueInvoice;
+use ControlPlane\Billing\Application\IssueRenewalInvoice;
 use ControlPlane\Billing\Domain\ProrationCalculator;
 use ControlPlane\Billing\Application\CollectRenewalInvoice;
 use ControlPlane\Billing\Application\RenewalCollectionLifecycle;
@@ -33,6 +34,9 @@ use ControlPlane\Subscription\Application\CancelSubscription;
 use ControlPlane\Subscription\Application\ExpireSubscription;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 use ControlPlane\Subscription\Application\ApplySubscriptionPlanChange;
+use ControlPlane\Subscription\Application\CancelSubscriptionPlanChange;
+use ControlPlane\Subscription\Application\ProcessScheduledPlanChanges;
+use ControlPlane\Billing\Application\PlanChangeInvoiceIssuer;
 use ControlPlane\Subscription\Application\RequestSubscriptionPlanChange;
 use ControlPlane\Payment\Application\BeginPaymentAttempt;
 use ControlPlane\Payment\Application\BindPaymentAttemptProviderReference;
@@ -68,7 +72,8 @@ $connection = DriverManager::getConnection((new DsnParser(['postgresql' => 'pdo_
 $connection->executeQuery('SELECT 1');
 if (str_starts_with($start, 'barrier|')) {
     [, $barrier, $lane] = explode('|', $start, 3);
-    file_put_contents($barrier . '/ready-' . $lane, $mode);
+    file_put_contents($barrier . '/ready-' . $lane . '.tmp', (string) $connection->fetchOne('SELECT pg_backend_pid()'));
+    rename($barrier . '/ready-' . $lane . '.tmp', $barrier . '/ready-' . $lane);
     $deadline = microtime(true) + 15;
     while (!is_file($barrier . '/release-' . $lane) && !is_file($barrier . '/release-all')) {
         if (microtime(true) > $deadline) { fwrite(STDERR, "Worker barrier timed out: $mode\n"); exit(3); }
@@ -79,6 +84,9 @@ if (str_starts_with($start, 'barrier|')) {
 }
 try {
     switch ($mode) {
+        case 'idempotency_scoped':
+            $connection->executeStatement("INSERT INTO commercial.idempotency_keys (scope, idempotency_key, request_sha256, status) VALUES (?, ?, decode(repeat('01',32),'hex'), 'completed')", [$extra, $value]);
+            break;
         case 'plan_change_request':
             [$userId, $accountId, $priceId, $key, $correlationId] = explode('|', $extra, 5);
             $change = (new RequestSubscriptionPlanChange($connection,
@@ -86,6 +94,18 @@ try {
                 new ApplySubscriptionPlanChange(new SubscriptionPeriodCalculator())))
                 ->request($userId, $accountId, $value, $priceId, 1, $key, $correlationId);
             fwrite(STDOUT, $change['id']);
+            break;
+        case 'plan_change_cancel':
+            [$userId, $accountId, $key, $correlationId] = explode('|', $extra, 4);
+            (new CancelSubscriptionPlanChange($connection, new AccountAuthorization($connection)))
+                ->cancel($userId, $accountId, $value, $key, $correlationId);
+            break;
+        case 'process_scheduled_plan_changes':
+            [$instant, $correlationId] = explode('|', $extra, 2);
+            (new ProcessScheduledPlanChanges($connection, new PlanChangeInvoiceIssuer(),
+                new InternalPaymentCreator(paymentSettlement($connection)),
+                new ApplySubscriptionPlanChange(new SubscriptionPeriodCalculator())))
+                ->runBatch(new DateTimeImmutable($instant), 100, $correlationId);
             break;
         case 'account':
             $connection->beginTransaction();
@@ -159,6 +179,10 @@ try {
             [$userId, $accountId, $idempotencyKey, $correlationId] = explode('|', $extra);
             (new IssueInvoice($connection, new AccountAuthorization($connection)))->issue($userId, $accountId, $value, $idempotencyKey, $correlationId);
             break;
+        case 'issue_renewal_invoice':
+            [$accountId, $correlationId] = explode('|', $extra, 2);
+            (new IssueRenewalInvoice($connection, new SubscriptionPeriodCalculator()))->issue($accountId, $value, $correlationId);
+            break;
         case 'create_payment':
             [$userId, $accountId, $idempotencyKey, $correlationId] = explode('|', $extra);
             paymentCreator($connection)->create($userId, $accountId, $value, $idempotencyKey, $correlationId);
@@ -195,6 +219,27 @@ try {
             } else {
                 (new ReconcileYooKassaPayments($connection, $gateway, $processor))->reconcile(100, $correlationId);
             }
+            break;
+        case 'authoritative_plan':
+            [$correlationId, $capturedAt] = explode('|', $extra, 2);
+            $providerPayment = renewalProviderPayment($connection, $value, new DateTimeImmutable($capturedAt));
+            $accountRow = $connection->fetchAssociative(<<<'SQL'
+SELECT ppa.id, ppa.provider_code, ppa.external_account_id, ppa.secret_ref,
+ ppa.receipt_mode, ppa.receipt_vat_code, ppa.receipt_payment_subject, ppa.receipt_payment_mode
+FROM commercial.payment_attempts a
+JOIN commercial.payment_provider_accounts ppa ON ppa.id=a.provider_account_id
+WHERE a.id=?
+SQL, [$value]);
+            if ($accountRow === false) throw new LogicException('Plan payment provider is unavailable.');
+            $lifecycle = new RenewalCollectionLifecycle($connection, new RenewalDunningPolicy(3, '60,300', 3600, 30));
+            $processor = new ProcessAuthoritativeProviderPayment($connection, new BindPaymentAttemptProviderReference($connection),
+                new CompletePaymentAttempt($connection,
+                    new SettlePayment(new ActivateSubscription($connection, new SubscriptionPeriodCalculator()),
+                        new AdvanceSubscriptionPeriod($connection), $lifecycle),
+                    new CreatePaymentReceiptObligation()),
+                new SubmitYooKassaReceipt($connection, new ReceiptSnapshot(), new FakeFiscalReceiptProviderGateway(), new ApplyAuthoritativeReceipt($connection)),
+                new RecordSavedPaymentMethod($connection), $lifecycle);
+            $processor->process(YooKassaProviderAccountLocator::fromRow($accountRow), $providerPayment, $correlationId);
             break;
         case 'restore_renewal_method':
             $source = $connection->fetchAssociative('SELECT commercial_account_id, provider_account_id, created_from_payment_attempt_id FROM commercial.saved_payment_methods WHERE id=?', [$value]);

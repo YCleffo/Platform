@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ControlPlane\Subscription\Application;
 
 use ControlPlane\Billing\Application\PlanChangeInvoiceIssuer;
+use ControlPlane\Billing\Application\RenewalExecutionLock;
 use ControlPlane\Billing\Domain\Money;
 use ControlPlane\Payment\Application\PaymentCreator;
 use Doctrine\DBAL\Connection;
@@ -33,7 +34,16 @@ SQL, [$instant->format('Y-m-d H:i:s.uP'), $limit], [ParameterType::STRING, Param
             if (!is_string($id)) {
                 continue;
             }
-            $processed += $this->connection->transactional(function (Connection $db) use ($id, $instant, $correlationId): int {
+            // The source relation is immutable. Resolve it before taking any row lock so
+            // settlement, expiry, renewal and this worker share source -> change order.
+            $sourceId = $this->connection->fetchOne('SELECT source_subscription_id FROM commercial.subscription_plan_changes WHERE id = ?', [$id]);
+            if (!is_string($sourceId)) {
+                continue;
+            }
+            RenewalExecutionLock::acquire($this->connection, $sourceId);
+            try {
+                $processed += $this->connection->transactional(function (Connection $db) use ($id, $sourceId, $instant, $correlationId): int {
+                $db->executeQuery('SELECT id FROM commercial.subscriptions WHERE id = ? FOR UPDATE', [$sourceId]);
                 $change = $db->fetchAssociative('SELECT * FROM commercial.subscription_plan_changes WHERE id = ? FOR UPDATE', [$id]);
                 if ($change === false || $change['status'] !== 'scheduled' || $change['change_kind'] !== 'downgrade'
                     || !is_string($change['source_subscription_id']) || !is_string($change['target_subscription_id'])
@@ -74,7 +84,10 @@ SQL, [$instant->format('Y-m-d H:i:s.uP'), $limit], [ParameterType::STRING, Param
                 }
                 $this->payments->createInTransaction($db, $invoice, $correlationId, 'system');
                 return 1;
-            });
+                });
+            } finally {
+                RenewalExecutionLock::release($this->connection, $sourceId);
+            }
         }
         return $processed;
     }

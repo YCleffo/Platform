@@ -291,8 +291,21 @@ payment settlement transaction. A cheaper plan retains existing access until
 the original period boundary. The scheduler then issues the new plan's full
 period invoice; a free replacement applies at the boundary, and a paid
 replacement applies only after trusted settlement. Requests with the same key
-and payload replay the same change. Cancelling a scheduled or unpaid change
-voids its invoice and payment where safe. Concurrent requests serialize on
+and payload replay the same change. New plan-change requests also record the
+same key and result atomically in `commercial.idempotency_keys`, with the
+shared cross-operation rejection policy. Historic plan changes created before
+this ledger integration retain their per-account key records. A database
+insert guard prevents their keys from being used by a new financial operation.
+The general idempotency insert guard takes a transaction advisory lock on the
+opaque key and rejects a different scope. This serializes even older writers
+that do not acquire the lock in application code. Existing cross-scope
+duplicates, if any, still require a preflight audit and evidence-preserving
+resolution before a global unique index can be added. Cancelling a scheduled or unpaid change
+voids its invoice and payment where safe. Source cancellation is rejected while
+a scheduled, payment-required, or paid-unapplied change is open. Plan-change
+cancellation is rejected while a provider attempt is pending or after
+settlement; a terminal failed attempt may be retained while its unpaid
+invoice and payment are voided. Concurrent requests serialize on
 the source subscription. A paid upgrade that can no longer be applied enters
 `paid_unapplied` and emits `subscription.plan_change_refund_required`. For a
 YooKassa payment with complete fiscal configuration, it also reserves a full
@@ -304,6 +317,37 @@ fiscal configuration require operator recovery, and definitive refund failure
 still requires an operator decision. Equal
 price changes and changes across currencies or billing periods remain outside
 this policy until product rules are approved.
+
+A materialized paid downgrade invoice remains payable after the old period
+ends. This is an intentional late-payment policy: authoritative settlement
+starts the replacement's full service period at the verified settlement
+instant, even if the source has expired. The invoice's immutable amount is
+unchanged; no rights are granted before settlement. A late settlement does
+not reopen the expired source or create a second invoice. Cancellation of an
+unpaid plan change still voids the invoice when no provider attempt is pending.
+
+The plan-change worker now takes the source subscription's renewal session
+lock, then row locks the source before the change. Payment settlement,
+expiry, renewal and cancellation use the same source-first order. This
+prevents a source/change lock inversion when scheduled downgrade and payment
+settlement overlap. The local two-process race suite exercises these paths.
+
+`compensation_status` is null before compensation, `pending` while the
+reserved YooKassa refund is outstanding, `recovery_required` when automatic
+reservation is unsupported or an authoritative provider refund is canceled,
+and `succeeded` only when the full refund is confirmed and the change becomes
+`refunded`. `compensation_reason` retains a machine-readable reason for
+operator cases. The scheduler marks canceled refunds as recovery cases;
+`control:plan-changes:recovery-cases` lists open cases without payment secrets.
+`control:ops:status` exposes counts of paid-but-unapplied changes, cases
+requiring an operator, pending compensation refunds and their oldest age.
+Any nonzero `recoveryRequiredCount` requires investigation; a pending refund
+older than the configured reconciliation interval plus provider response
+window requires investigation. These are local symptom conditions, not proof
+that a production alert receiver is configured.
+Operator recovery cannot mark a change refunded without verified compensation.
+No approved external-compensation attestation policy or operator write path
+exists yet, so these cases remain blocking and the core is not ready.
 
 For an initial purchase, `payments.succeeded_at` and `invoices.paid_at` retain
 the verified settlement instant. Subscription service starts at that instant

@@ -30,23 +30,41 @@ final readonly class RequestSubscriptionPlanChange
             throw new \InvalidArgumentException('Invalid plan change request.');
         }
         $idempotencyKey = IdentifierPolicy::opaqueKey($idempotencyKey);
+        $scope = 'subscription.plan_change.request.' . str_replace('-', '', strtolower($accountId));
         $requestHash = hash('sha256', json_encode([
             strtolower($accountId), strtolower($sourceSubscriptionId), strtolower($targetPriceId), $quantity,
         ], JSON_THROW_ON_ERROR));
 
         return $this->connection->transactional(function (Connection $db) use ($userId, $accountId, $sourceSubscriptionId,
-            $targetPriceId, $quantity, $idempotencyKey, $correlationId, $requestHash): array {
+            $targetPriceId, $quantity, $idempotencyKey, $correlationId, $requestHash, $scope): array {
             $this->authorization->requirePermission($userId, $accountId, 'billing.manage');
             $source = $db->fetchAssociative('SELECT id, status, billing_status, billing_profile_id, current_period_start, current_period_end FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$sourceSubscriptionId, $accountId]);
             if ($source === false) {
                 throw new \DomainException('Source subscription was not found.');
+            }
+            $db->executeQuery('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [$idempotencyKey]);
+            if ($db->fetchOne('SELECT scope FROM commercial.idempotency_keys WHERE idempotency_key=? AND scope<>? LIMIT 1', [$idempotencyKey, $scope]) !== false
+                || $db->fetchOne('SELECT id FROM commercial.subscription_plan_changes WHERE idempotency_key=? AND commercial_account_id<>? LIMIT 1', [$idempotencyKey, $accountId]) !== false) {
+                throw new \DomainException('Idempotency key was reused for another operation.');
+            }
+            $db->executeStatement("INSERT INTO commercial.idempotency_keys (scope, idempotency_key, request_sha256, status, expires_at) VALUES (?, ?, decode(?, 'hex'), 'pending', now() + interval '24 hours') ON CONFLICT (scope, idempotency_key) DO NOTHING", [$scope, $idempotencyKey, $requestHash]);
+            $key = $db->fetchAssociative("SELECT encode(request_sha256, 'hex') AS request_hash, status, result_reference FROM commercial.idempotency_keys WHERE scope=? AND idempotency_key=? FOR UPDATE", [$scope, $idempotencyKey]);
+            if ($key === false || !is_string($key['request_hash']) || !hash_equals($key['request_hash'], $requestHash)) {
+                throw new \DomainException('Idempotency key was reused with a different plan change.');
             }
             $prior = $db->fetchAssociative("SELECT id, status, change_kind, source_subscription_id, target_subscription_id, invoice_id, amount_due_minor, currency, encode(request_sha256, 'hex') AS request_hash FROM commercial.subscription_plan_changes WHERE commercial_account_id = ? AND idempotency_key = ? FOR UPDATE", [$accountId, $idempotencyKey]);
             if ($prior !== false) {
                 if (!is_string($prior['request_hash']) || !hash_equals($prior['request_hash'], $requestHash)) {
                     throw new \DomainException('Idempotency key was reused with a different plan change.');
                 }
+                if ($key['status'] === 'completed' && $key['result_reference'] !== $prior['id']) {
+                    throw new \LogicException('Idempotent plan change result is invalid.');
+                }
+                $db->executeStatement("UPDATE commercial.idempotency_keys SET status='completed', result_reference=? WHERE scope=? AND idempotency_key=?", [$prior['id'], $scope, $idempotencyKey]);
                 return $this->result($prior);
+            }
+            if ($key['status'] === 'completed') {
+                throw new \LogicException('Idempotent plan change record is unavailable.');
             }
             if ($source['status'] !== 'active' || $source['billing_status'] !== 'current'
                 || !is_string($source['current_period_start']) || !is_string($source['current_period_end'])
@@ -139,6 +157,7 @@ SQL, [$accountId, $sourceSubscriptionId, $targetSubscriptionId, $old['plan_price
                 $this->application->applyInTransaction($db, $changeId, $now, $correlationId);
                 $status = 'applied';
             }
+            $db->executeStatement("UPDATE commercial.idempotency_keys SET status='completed', result_reference=? WHERE scope=? AND idempotency_key=?", [$changeId, $scope, $idempotencyKey]);
 
             return ['id' => $changeId, 'status' => $status, 'change_kind' => $kind,
                 'source_subscription_id' => $sourceSubscriptionId, 'target_subscription_id' => $targetSubscriptionId,

@@ -52,7 +52,7 @@ SQL, [$change['invoice_id'], 'plan-change-unapplied-' . $id]);
                     return 0;
                 }
                 $db->executeStatement("UPDATE commercial.subscriptions SET status = 'cancelled', updated_at = now() WHERE id = ? AND status = 'draft'", [$change['target_subscription_id']]);
-                $db->executeStatement("UPDATE commercial.subscription_plan_changes SET status = 'refunded', updated_at = now() WHERE id = ?", [$id]);
+                $db->executeStatement("UPDATE commercial.subscription_plan_changes SET status = 'refunded', compensation_status = 'succeeded', compensation_reason = NULL, updated_at = now() WHERE id = ?", [$id]);
                 $db->executeStatement("INSERT INTO commercial.audit_events (actor_type, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('system', ?, 'subscription.plan_change_refunded', 'subscription_plan_change', ?, ?, 'success')", [$change['commercial_account_id'], $id, $correlationId]);
                 return 1;
             });

@@ -23,6 +23,7 @@ final readonly class GetSubscriptionPlanChange
         $row = $this->connection->fetchAssociative(<<<'SQL'
 SELECT c.id, c.source_subscription_id, c.target_subscription_id, c.old_plan_price_id,
        c.new_plan_price_id, c.old_quantity, c.new_quantity, c.change_kind, c.status,
+       c.compensation_status, c.compensation_reason,
        c.calculation::text AS calculation, c.currency, c.proration_net_minor,
        c.amount_due_minor, c.period_start, c.period_end, c.invoice_id, c.applied_at,
        i.status AS invoice_status, p.id AS payment_id, p.status AS payment_status

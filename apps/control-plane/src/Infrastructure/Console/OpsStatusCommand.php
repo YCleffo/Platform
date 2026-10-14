@@ -56,6 +56,7 @@ final class OpsStatusCommand extends Command
             }
             $table->render();
             $output->writeln(json_encode(['outboxBacklog' => $this->status->outboxBacklog()], JSON_THROW_ON_ERROR));
+            $output->writeln(json_encode(['financialBacklog' => $this->status->financialBacklog()], JSON_THROW_ON_ERROR));
             return Command::SUCCESS;
         } catch (\Throwable) {
             $output->writeln('Operational status unavailable.');

@@ -20,6 +20,7 @@ use ControlPlane\Refund\Application\ReconcileYooKassaRefunds;
 use ControlPlane\Subscription\Application\AdvanceSubscriptionPeriod;
 use ControlPlane\Subscription\Application\ExpireSubscription;
 use ControlPlane\Subscription\Application\FinalizeRefundedPlanChanges;
+use ControlPlane\Subscription\Application\MarkFailedPlanChangeCompensations;
 use ControlPlane\Subscription\Application\ProcessScheduledPlanChanges;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -35,6 +36,7 @@ final class SchedulerRunCommand extends Command
         private readonly ProcessRenewalDunning $dunning, private readonly AdvanceSubscriptionPeriod $advance, private readonly ExpireSubscription $expire,
         private readonly ProcessScheduledPlanChanges $planChanges,
         private readonly FinalizeRefundedPlanChanges $refundedPlanChanges,
+        private readonly MarkFailedPlanChangeCompensations $failedPlanChangeCompensations,
         private readonly ReconcileYooKassaPayments $payments, private readonly ReconcileYooKassaRefunds $refunds,
         private readonly ReconcileYooKassaReceipts $receipts, private readonly ControlPrivacyCleanup $cleanup,
         private readonly ControlPrivacyRetentionPolicy $cleanupPolicy,
@@ -86,6 +88,10 @@ final class SchedulerRunCommand extends Command
                 new ScheduledJob('finalize_refunded_plan_changes', Config::integer('CONTROL_PLAN_CHANGE_REFUND_FINALIZATION_INTERVAL_SECONDS', 120, 1, 86400),
                     $enabled && Config::enabled('CONTROL_PLAN_CHANGE_REFUND_FINALIZATION_ENABLED', true), $subscriptionLimit,
                     fn(int $limit): int => $this->refundedPlanChanges->runBatch($limit,
+                        Uuid::v7()->toRfc4122())),
+                new ScheduledJob('mark_failed_plan_change_compensations', Config::integer('CONTROL_PLAN_CHANGE_RECOVERY_INTERVAL_SECONDS', 120, 1, 86400),
+                    $enabled && Config::enabled('CONTROL_PLAN_CHANGE_RECOVERY_ENABLED', true), $subscriptionLimit,
+                    fn(int $limit): int => $this->failedPlanChangeCompensations->runBatch($limit,
                         Uuid::v7()->toRfc4122())),
                 new ScheduledJob('reconcile_yookassa_receipts', Config::integer('CONTROL_RECEIPT_RECONCILIATION_INTERVAL_SECONDS', 120, 1, 86400),
                     $enabled && Config::enabled('CONTROL_RECEIPT_RECONCILIATION_ENABLED', true), $reconcileLimit,
