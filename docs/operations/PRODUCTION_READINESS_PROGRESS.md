@@ -416,7 +416,7 @@ No row below is production evidence.
 | F10 | PASS locally: automatic or independently attested external full refund releases the change; an unreviewed proposal never does. |
 | W01-W03 | PASS locally: plan-change webhook pending claim is retried after authoritative success; duplicate and stale notice leave one settlement and plan switch. Provider sandbox remains NOT_RUN. |
 | W04 | PASS locally: authoritative payment webhook versus plan-change cancellation races on independent processes twice; pending attempt prevents cancellation and one settlement and entitlement switch result. Provider sandbox remains NOT_RUN. |
-| W05-W06 | PARTIAL: generic checkout/reconciliation tests and processor overlap exist; complete plan-change webhook/restart variants remain. |
+| W05-W06 | PASS locally: plan-change checkout survives lost CREATE response plus SIGKILL/restart with one provider object and one settlement; repeated plan-change reconciliation selects once and leaves one settlement, audit, outbox event, and target feature set. Provider sandbox remains NOT_RUN. |
 | W07-W08 | PASS locally for duplicate refund notification and simultaneous webhook/reconciler delivery; provider sandbox remains NOT_RUN. |
 | W09-W10 | PASS in isolated mock fault tests: both charge and refund SIGKILL/restart converge with one provider object and one local effect. Provider sandbox restart remains NOT_RUN. |
 | X01 | PASS: initial paid subscription reaches Tenant runtime. |
@@ -576,3 +576,30 @@ restored clone, metrics/alerts, concurrency load, and remote CI.
   applied. On the clean schema, the full Control Plane suite passes 360/360,
   4423 assertions, PHPStan reports zero errors, and no active fake YooKassa
   accounts remain. `git diff --check` passes. This is local test evidence.
+
+### 2026-10-15: repeated plan-change payment reconciliation
+
+- W05 is covered by the existing `testCheckoutConvergesAfterProviderChargeAndHardProcessKill`:
+  provider CREATE succeeds before SIGKILL, the response is lost, and a new
+  process reuses the provider request key. W06 now also runs a plan-change
+  reconciliation twice. The first pass settles the payment; the second selects
+  no pending attempt. Invoice, change, payment, audit, outbox, and effective
+  features agree. Focused W06 test: 1/1, 21 assertions. Both use local fake
+  providers; sandbox proof remains open. Final post-change full Control Plane
+  suite: 361/361, 4444 assertions; PHPStan: zero errors; `git diff --check`:
+  clean.
+
+### 2026-10-15: logical restore with migration 39
+
+- Created a PostgreSQL custom-format dump from the isolated
+  `control-postgres-test/platform_commercial_test` database, verified its
+  `pg_restore --list`, and restored it with `--exit-on-error` into a newly
+  created `platform_restore_rehearsal_39_test` database. Source and clone
+  counts match: 39 migrations, 116 accounts, 50 plan changes, 172 invoices,
+  162 payments, 4 refunds, 2 external attestations, 280 idempotency rows,
+  835 audit events, and 740 outbox events. Doctrine on the clone reports
+  39 executed migrations and zero new migrations. The read-only
+  `control:ops:status` command booted against the clone. Its scheduler and
+  outbox worker heartbeats are `unknown`, and fixture backlogs remain; this
+  does not demonstrate worker recovery or operational health. The dump and
+  clone remain inside the isolated test container for inspection.

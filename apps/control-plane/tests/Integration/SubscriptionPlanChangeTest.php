@@ -495,6 +495,40 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
         }
     }
 
+    public function testRepeatedPlanChangeReconciliationSettlesOnce(): void
+    {
+        $suffix = 'plan-reconcile-replay-' . bin2hex(random_bytes(5));
+        [$owner, $account, $source, , $newPrice] = $this->context($suffix, 1000, 2000, 'RUB');
+        $change = $this->requests()->request($owner, $account, $source, $newPrice, 1,
+            'change-' . $suffix, $this->uuid());
+        $invoiceId = $change['invoice_id'];
+        self::assertIsString($invoiceId);
+        $payment = $this->paymentCreator()->create($owner, $account, $invoiceId,
+            'payment-' . $suffix, $this->uuid());
+        $providerAccountId = $this->yooKassaProviderAccount($suffix);
+        $attempt = $this->attemptBeginner()->begin($payment['id'], $providerAccountId, 'sbp', $this->uuid());
+        $providerPaymentId = 'provider-' . $suffix;
+        $this->attemptBinder()->bind($attempt['attempt_id'], $providerPaymentId);
+        $gateway = new FakePaymentProviderGateway();
+        $gateway->payments[$providerPaymentId] = new ProviderPayment($providerPaymentId,
+            'succeeded', true, $change['amount_due_minor'], 'RUB',
+            ['payment_id' => $payment['id'], 'attempt_id' => $attempt['attempt_id'],
+                'invoice_id' => $invoiceId], null, new \DateTimeImmutable('now'));
+        $reconciler = $this->yooKassaReconciliation($gateway);
+        self::assertSame(['selected' => 1, 'completed' => 1, 'pending' => 0, 'failed' => 0],
+            $reconciler->reconcile(100, $this->uuid()));
+        self::assertSame(['selected' => 0, 'completed' => 0, 'pending' => 0, 'failed' => 0],
+            $reconciler->reconcile(100, $this->uuid()));
+        self::assertCount(1, $gateway->getCalls);
+        self::assertSame('succeeded', $this->connection->fetchOne('SELECT status FROM commercial.payments WHERE id=?', [$payment['id']]));
+        self::assertSame('paid', $this->connection->fetchOne('SELECT status FROM commercial.invoices WHERE id=?', [$invoiceId]));
+        self::assertSame('applied', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$change['id']]));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='payment.succeeded' AND resource_id=?", [$payment['id']]));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='subscription.plan_changed' AND resource_id=?", [$change['id']]));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events WHERE event_type='subscription.activated' AND aggregate_id=?", [$change['target_subscription_id']]));
+        self::assertSame(['plan-change-' . $suffix . '.new' => true], $this->features($owner, $account));
+    }
+
     public function testReorderedAuthoritativeProviderStatesCannotRegressPaidUpgrade(): void
     {
         $suffix = 'provider-order-' . bin2hex(random_bytes(5));
