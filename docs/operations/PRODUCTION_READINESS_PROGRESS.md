@@ -623,3 +623,12 @@ restored clone, metrics/alerts, concurrency load, and remote CI.
   the test still checks that no secret directory is created. Linux behavior
   remains covered by the Docker suite. This validates the documented platform
   split, not a Windows production provisioner.
+
+### 2026-10-15: migration rollback preserves financial history
+
+- On the restored clone only, `doctrine:migrations:migrate prev --no-interaction`
+  attempted to reverse migration 39. It failed as designed with PostgreSQL
+  `23514 external compensation history must be retained`. A read-back still
+  shows 39 migration records, 2 immutable compensation attestations, 6
+  financial operator authorizations, and the attestation table present.
+  No source database or live deployment was rolled back.
