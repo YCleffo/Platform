@@ -209,7 +209,8 @@ above; the historical entries remain for traceability.
   `ProvisionerBoundaryTest` explicitly verifies that branch. Linux Docker
   tests still assert group 33 and exact 0750/0640 permissions. This is a
   deliberate platform split, not a disabled security assertion. A native
-  Windows PHPUnit run was not performed in this session.
+  A later native Windows PHP 8.3.30 run of `ProvisionerBoundaryTest` passed
+  11/11 tests, 142 assertions, including the fail-closed secret-store branch.
 - Remaining P0: YooKassa `paid_unapplied` now reserves a full refund in the
   payment transaction; the existing refund reconciler retries an uncertain
   provider result with the same key and finalizer frees the source on full
@@ -613,3 +614,12 @@ restored clone, metrics/alerts, concurrency load, and remote CI.
   Control Plane rerun: 361/361, 4444 assertions; PHPStan: zero errors;
   `git diff --check`: clean. This does not resolve the remaining runtime
   fault/worker evidence gaps above.
+
+### 2026-10-15: native Windows provisioner boundary
+
+- Ran `php vendor/bin/phpunit --filter ProvisionerBoundaryTest --do-not-cache-result`
+  with native Windows PHP 8.3.30. All 11 tests and 142 assertions passed. The
+  local Linux Docker provider rejects Windows before `mkdir` or POSIX `chgrp`;
+  the test still checks that no secret directory is created. Linux behavior
+  remains covered by the Docker suite. This validates the documented platform
+  split, not a Windows production provisioner.
