@@ -65,6 +65,9 @@ SQL, [$paymentId, $accountId]);
 
                 return self::normalize($existing);
             }
+            if ($connection->fetchOne("SELECT 1 FROM commercial.external_compensation_attestations WHERE payment_id=? AND status IN ('proposed','approved') LIMIT 1", [$paymentId]) !== false) {
+                throw new \DomainException('External compensation already claims this payment.');
+            }
             if ($payment['receipt_mode'] !== 'yookassa' || $payment['receipt_vat_code'] === null || !is_string($payment['receipt_payment_subject']) || !is_string($payment['receipt_payment_mode'])) {
                 throw new \DomainException('Refund fiscal configuration is incomplete.');
             }

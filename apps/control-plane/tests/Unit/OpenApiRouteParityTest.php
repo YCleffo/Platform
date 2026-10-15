@@ -39,6 +39,17 @@ final class OpenApiRouteParityTest extends TestCase
         $entitlements = $contract['paths']['/api/control/accounts/{accountId}/entitlements']['get'];
         self::assertSame('#/components/responses/EffectiveEntitlements', $entitlements['responses'][200]['$ref']);
         self::assertSame(['commercial_account_id', 'subscription', 'features'], $contract['components']['schemas']['EffectiveEntitlements']['required']);
+
+        $external = $contract['paths']['/api/control/finance/plan-change-compensations/{changeId}']['post'];
+        self::assertSame('#/components/requestBodies/ExternalCompensationEvidence', $external['requestBody']['$ref']);
+        self::assertSame('#/components/responses/ExternalCompensation', $external['responses'][201]['$ref']);
+        self::assertSame(['externalTransactionReference', 'documentReference', 'documentSha256'],
+            $contract['components']['requestBodies']['ExternalCompensationEvidence']['content']['application/json']['schema']['required']);
+        $approve = $contract['paths']['/api/control/finance/plan-change-compensations/attestations/{attestationId}/approve']['post'];
+        self::assertSame('#/components/requestBodies/ExternalCompensationEvidence', $approve['requestBody']['$ref']);
+        self::assertSame('#/components/responses/ExternalCompensation', $approve['responses'][200]['$ref']);
+        self::assertContains('document_sha256', $contract['components']['schemas']['ExternalCompensation']['required']);
+        self::assertContains('compensation_origin', $contract['components']['schemas']['PlanChange']['required']);
     }
 
     public function testSubscriptionSchemaIncludesBillingHealthContract(): void

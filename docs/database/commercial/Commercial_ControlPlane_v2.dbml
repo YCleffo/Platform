@@ -194,6 +194,32 @@ Table commercial.subscription_plan_changes {
   Note: 'Immutable plan terms and guarded transitions. One open change per source; compensation remains blocking until verified full refund.'
 }
 
+Table commercial.financial_operators {
+  control_user_id uuid [pk, ref: > commercial.control_users.id]
+  authorization_reference varchar(500) [not null, note: 'Reviewed authorization ticket URN']
+  authorized_at timestamptz [not null, default: `now()`]
+  revoked_at timestamptz
+  Note: 'Separate Platform financial role; client account ownership does not grant it.'
+}
+
+Table commercial.external_compensation_attestations {
+  id uuid [pk, default: `uuidv7()`]
+  plan_change_id uuid [not null, ref: > commercial.subscription_plan_changes.id]
+  payment_id uuid [not null, ref: > commercial.payments.id]
+  amount_minor bigint [not null]
+  currency char(3) [not null]
+  external_transaction_reference varchar(200) [not null]
+  document_reference varchar(500) [not null]
+  document_sha256 char(64) [not null]
+  proposed_by uuid [not null, ref: > commercial.control_users.id]
+  proposed_at timestamptz [not null, default: `now()`]
+  status varchar(16) [not null, note: 'proposed/approved/rejected']
+  reviewed_by uuid [ref: > commercial.control_users.id]
+  reviewed_at timestamptz
+  rejection_reason varchar(500)
+  Note: 'One open or approved attestation per change. A distinct second operator must review matching immutable evidence. Rejected proposals remain historical.'
+}
+
 // Phase 1: deployments and durable operations. Core database secrets are references only.
 Table commercial.deployments {
   id uuid [pk, default: `uuidv7()`]

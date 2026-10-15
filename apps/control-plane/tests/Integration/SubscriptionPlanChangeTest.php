@@ -30,6 +30,7 @@ use ControlPlane\Subscription\Application\RequestSubscriptionPlanChange;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 use ControlPlane\Subscription\Application\CancelSubscription;
 use ControlPlane\Subscription\Application\ExpireSubscription;
+use ControlPlane\Subscription\Application\ExternalPlanChangeCompensation;
 use ControlPlane\Tests\Support\FakeRefundProviderGateway;
 use ControlPlane\Tests\Support\FakePaymentProviderGateway;
 
@@ -417,6 +418,45 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
         $this->connection->beginTransaction();
     }
 
+    public function testWebhookAndReconcilerOverlapWithoutDuplicateUpgrade(): void
+    {
+        $suffix = 'webhook-reconcile-race-' . bin2hex(random_bytes(5));
+        [$owner, $account, $source, , $newPrice] = $this->context($suffix, 1000, 2000, 'RUB');
+        $change = $this->requests()->request($owner, $account, $source, $newPrice, 1,
+            'change-' . $suffix, $this->uuid());
+        $invoiceId = $change['invoice_id'];
+        self::assertIsString($invoiceId);
+        $payment = $this->paymentCreator()->create($owner, $account, $invoiceId,
+            'payment-' . $suffix, $this->uuid());
+        $providerAccountId = $this->yooKassaProviderAccount($suffix);
+        $attempt = $this->attemptBeginner()->begin($payment['id'], $providerAccountId, 'sbp', $this->uuid());
+        $providerPaymentId = 'provider-' . $suffix;
+        $this->attemptBinder()->bind($attempt['attempt_id'], $providerPaymentId);
+        $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET receipt_mode='disabled', receipt_vat_code=NULL, receipt_payment_subject=NULL, receipt_payment_mode=NULL, updated_at=now() WHERE id=?", [$providerAccountId]);
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.payment_provider_accounts WHERE provider_code='yookassa' AND status='active'"));
+        $instant = (new \DateTimeImmutable())->format('Y-m-d H:i:s.uP');
+        $this->connection->commit();
+        try {
+            $results = $this->planRace('webhook_renewal', $attempt['attempt_id'],
+                implode('|', [$this->uuid(), $instant]),
+                'reconcile_renewal', $attempt['attempt_id'],
+                implode('|', [$this->uuid(), $instant]), $source);
+            self::assertSame([0, 0], array_column($results, 'exit'), implode("\n", array_column($results, 'stderr')));
+            self::assertSame('processed', $this->connection->fetchOne("SELECT status FROM commercial.payment_provider_events WHERE provider_account_id=? AND event_type='payment.succeeded' AND provider_object_id=?", [$providerAccountId, $providerPaymentId]));
+            self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.payment_provider_events WHERE provider_account_id=? AND event_type='payment.succeeded' AND provider_object_id=?", [$providerAccountId, $providerPaymentId]));
+            self::assertSame('applied', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$change['id']]));
+            self::assertSame('succeeded', $this->connection->fetchOne('SELECT status FROM commercial.payments WHERE id=?', [$payment['id']]));
+            self::assertSame('paid', $this->connection->fetchOne('SELECT status FROM commercial.invoices WHERE id=?', [$invoiceId]));
+            self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='payment.succeeded' AND resource_id=?", [$payment['id']]));
+            self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='subscription.plan_changed' AND resource_id=?", [$change['id']]));
+            self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events WHERE event_type='subscription.activated' AND aggregate_id=?", [$change['target_subscription_id']]));
+            self::assertSame(['plan-change-' . $suffix . '.new' => true], $this->features($owner, $account));
+        } finally {
+            $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET status='disabled', updated_at=now() WHERE id=?", [$providerAccountId]);
+            $this->connection->beginTransaction();
+        }
+    }
+
     public function testReorderedAuthoritativeProviderStatesCannotRegressPaidUpgrade(): void
     {
         $suffix = 'provider-order-' . bin2hex(random_bytes(5));
@@ -456,7 +496,7 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
     /** @return list<array{exit: int, stderr: string, stdout: string}> */
     private function planRace(string $firstMode, string $firstValue, string $firstExtra,
         string $secondMode, string $secondValue, string $secondExtra, string $sourceId,
-        ?string $idempotencyKey = null): array
+        ?string $idempotencyKey = null, string $lockResource = 'subscription'): array
     {
         $barrier = sys_get_temp_dir() . '/plan-race-' . bin2hex(random_bytes(8));
         if (!mkdir($barrier, 0700)) {
@@ -468,7 +508,12 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
             $this->connection->beginTransaction();
             $holdingSource = true;
             if ($idempotencyKey === null) {
-                $this->connection->executeQuery('SELECT id FROM commercial.subscriptions WHERE id=? FOR UPDATE', [$sourceId]);
+                $lockQuery = match ($lockResource) {
+                    'subscription' => 'SELECT id FROM commercial.subscriptions WHERE id=? FOR UPDATE',
+                    'refund' => 'SELECT id FROM commercial.refunds WHERE id=? FOR UPDATE',
+                    default => throw new \InvalidArgumentException('Unsupported race lock resource.'),
+                };
+                $this->connection->executeQuery($lockQuery, [$sourceId]);
             } else {
                 $this->connection->executeQuery('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [$idempotencyKey]);
             }
@@ -757,6 +802,8 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
         self::assertSame(0, $finalizer->runBatch(100, $this->uuid()));
         self::assertSame('refunded', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id = ?', [$change['id']]));
         self::assertSame('succeeded', $this->connection->fetchOne('SELECT compensation_status FROM commercial.subscription_plan_changes WHERE id = ?', [$change['id']]));
+        self::assertSame('provider', (new GetSubscriptionPlanChange($this->connection,
+            new AccountAuthorization($this->connection)))->get($owner, $account, $change['id'])['compensation_origin']);
         $replacement = $this->requests()->request($owner, $account, $source, $newPrice, 1, 'retry-after-refund', $this->uuid());
         self::assertNotSame($change['id'], $replacement['id']);
     }
@@ -960,6 +1007,57 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
         self::assertSame(['plan-change-' . $suffix . '.old' => true], $this->features($owner, $account));
     }
 
+    public function testRefundWebhookAndReconcilerOverlapWithoutDuplicateCompensation(): void
+    {
+        $suffix = 'refund-race-' . bin2hex(random_bytes(5));
+        [$owner, $account, $source, , $newPrice] = $this->context($suffix, 1000, 2000, 'RUB');
+        $change = $this->requests()->request($owner, $account, $source, $newPrice, 1,
+            'change-' . $suffix, $this->uuid());
+        $invoiceId = $change['invoice_id'];
+        self::assertIsString($invoiceId);
+        $payment = $this->paymentCreator()->create($owner, $account, $invoiceId,
+            'payment-' . $suffix, $this->uuid());
+        $providerAccountId = $this->yooKassaProviderAccount($suffix);
+        $attempt = $this->attemptBeginner()->begin($payment['id'], $providerAccountId, 'sbp', $this->uuid());
+        $this->attemptBinder()->bind($attempt['attempt_id'], 'provider-' . $suffix);
+        $boundary = new \DateTimeImmutable((string) $this->connection->fetchOne(
+            'SELECT period_end FROM commercial.subscription_plan_changes WHERE id=?', [$change['id']]));
+        $this->attemptCompleter()->complete($attempt['attempt_id'], 'succeeded', null, $boundary, $this->uuid());
+        $refund = $this->connection->fetchAssociative('SELECT id, amount_minor FROM commercial.refunds WHERE payment_id=?', [$payment['id']]);
+        self::assertIsArray($refund);
+        self::assertIsString($refund['id']);
+        $pendingGateway = new FakeRefundProviderGateway();
+        self::assertFalse($this->refundSubmission($pendingGateway)->submit($refund['id'], $this->uuid()));
+        self::assertCount(1, $pendingGateway->createCalls);
+        $providerRefundId = $this->connection->fetchOne('SELECT provider_refund_id FROM commercial.refunds WHERE id=?', [$refund['id']]);
+        self::assertIsString($providerRefundId);
+        $this->completeFixtureReceipts($payment['id']);
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.payment_provider_accounts WHERE provider_code='yookassa' AND status='active'"));
+        $instant = (new \DateTimeImmutable())->format('Y-m-d H:i:s.uP');
+        $this->connection->commit();
+        try {
+            $results = $this->planRace('webhook_refund', $refund['id'],
+                implode('|', [$this->uuid(), $instant]),
+                'reconcile_refund', $refund['id'],
+                implode('|', [$this->uuid(), $instant]), $refund['id'], null, 'refund');
+            self::assertSame([0, 0], array_column($results, 'exit'), implode("\n", array_column($results, 'stderr')));
+            self::assertSame('processed', $this->connection->fetchOne("SELECT status FROM commercial.payment_provider_events WHERE provider_account_id=? AND event_type='refund.succeeded' AND provider_object_id=?", [$providerAccountId, $providerRefundId]));
+            self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.payment_provider_events WHERE provider_account_id=? AND event_type='refund.succeeded' AND provider_object_id=?", [$providerAccountId, $providerRefundId]));
+            self::assertSame('succeeded', $this->connection->fetchOne('SELECT status FROM commercial.refunds WHERE id=?', [$refund['id']]));
+            self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='refund.succeeded' AND resource_id=?", [$refund['id']]));
+            self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events WHERE event_type='refund.succeeded' AND aggregate_id=?", [$refund['id']]));
+            self::assertSame(1, (new FinalizeRefundedPlanChanges($this->connection))->runBatch(100, $this->uuid()));
+            self::assertSame(0, (new FinalizeRefundedPlanChanges($this->connection))->runBatch(100, $this->uuid()));
+            self::assertSame('refunded', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$change['id']]));
+            self::assertSame(['plan-change-' . $suffix . '.old' => true], $this->features($owner, $account));
+            $this->completeFixtureReceipts($payment['id']);
+            self::assertSame(0, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.receipts WHERE payment_id=? AND status='pending'", [$payment['id']]));
+        } finally {
+            $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET status='disabled', receipt_mode='disabled', receipt_vat_code=NULL, receipt_payment_subject=NULL, receipt_payment_mode=NULL, updated_at=now() WHERE id=?", [$providerAccountId]);
+            $this->connection->beginTransaction();
+        }
+    }
+
     public function testUnsupportedFiscalConfigurationCreatesDurableRecoveryCase(): void
     {
         [$owner, $account, $source, , $newPrice] = $this->context('unsupported-fiscal-' . bin2hex(random_bytes(4)), 1000, 2000, 'RUB');
@@ -981,6 +1079,167 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
         self::assertSame('unsupported_fiscal_configuration', $read['compensation_reason']);
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.refunds WHERE payment_id=?', [$payment['id']]));
         self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='subscription.plan_change_recovery_required' AND resource_id=?", [$change['id']]));
+    }
+
+    public function testExternalRecoveryRequiresTwoAuthorizedOperatorsAndExactDocument(): void
+    {
+        [$owner, $account, $source, $changeId, $paymentId] = $this->externalRecoveryFixture('external-two-person');
+        $first = $this->user();
+        $second = $this->user();
+        $unauthorized = $this->user();
+        foreach ([$first, $second] as $id) {
+            $this->connection->executeStatement("INSERT INTO commercial.financial_operators(control_user_id, authorization_reference) VALUES (?, 'urn:change-ticket:finance-test')", [$id]);
+        }
+        $service = new ExternalPlanChangeCompensation($this->connection);
+        $hash = hash('sha256', 'test external transfer document');
+        try {
+            $service->propose($unauthorized, $changeId, 'bank-transfer-001', 'urn:secure-doc:refund-001', $hash, $this->uuid());
+            self::fail('Unprivileged account proposed an external compensation.');
+        } catch (\Symfony\Component\Security\Core\Exception\AccessDeniedException) {
+            self::addToAssertionCount(1);
+        }
+        $proposal = $service->propose($first, $changeId, 'bank-transfer-001', 'urn:secure-doc:refund-001', $hash, $this->uuid());
+        self::assertSame('proposed', $proposal['status']);
+        $invoiceLineId = $this->connection->fetchOne('SELECT id FROM commercial.invoice_lines WHERE invoice_id=(SELECT invoice_id FROM commercial.payments WHERE id=?) AND unit_amount_minor>0 LIMIT 1', [$paymentId]);
+        self::assertIsString($invoiceLineId);
+        $assertProviderRefundBlocked = function () use ($owner, $account, $paymentId, $invoiceLineId): void {
+            try {
+                $this->refundCreator()->create($owner, $account, $paymentId,
+                    [['invoice_line_id' => $invoiceLineId, 'quantity' => 1, 'unit_amount_minor' => 1]],
+                    'refund-after-external-' . $this->uuid(), $this->uuid());
+                self::fail('A provider refund duplicated an external compensation.');
+            } catch (\DomainException $exception) {
+                self::assertSame('External compensation already claims this payment.', $exception->getMessage());
+            }
+        };
+        $assertProviderRefundBlocked();
+        self::assertSame($proposal, $service->current($second, $changeId));
+        self::assertSame($proposal, $service->propose($first, $changeId, 'bank-transfer-001', 'urn:secure-doc:refund-001', $hash, $this->uuid()));
+        self::assertSame('paid_unapplied', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$changeId]));
+        self::assertSame(['plan-change-external-two-person.old' => true], $this->features($owner, $account));
+        foreach ([[$first, $hash], [$second, str_repeat('0', 64)]] as [$reviewer, $reviewHash]) {
+            try {
+                $service->review($reviewer, $proposal['id'], 'bank-transfer-001', 'urn:secure-doc:refund-001', $reviewHash, true, null, $this->uuid());
+                self::fail('Invalid external compensation review was accepted.');
+            } catch (\DomainException|\Symfony\Component\Security\Core\Exception\AccessDeniedException) {
+                self::addToAssertionCount(1);
+            }
+        }
+        self::assertSame('paid_unapplied', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$changeId]));
+        $this->connection->executeStatement('UPDATE commercial.financial_operators SET revoked_at=now() WHERE control_user_id=?', [$second]);
+        try {
+            $service->review($second, $proposal['id'], 'bank-transfer-001', 'urn:secure-doc:refund-001', $hash, true, null, $this->uuid());
+            self::fail('Revoked financial operator approved an external refund.');
+        } catch (\Symfony\Component\Security\Core\Exception\AccessDeniedException) {
+            self::addToAssertionCount(1);
+        }
+        $this->connection->executeStatement('UPDATE commercial.financial_operators SET revoked_at=NULL WHERE control_user_id=?', [$second]);
+        $approved = $service->review($second, $proposal['id'], 'bank-transfer-001', 'urn:secure-doc:refund-001', $hash, true, null, $this->uuid());
+        self::assertSame('approved', $approved['status']);
+        $assertProviderRefundBlocked();
+        self::assertSame($approved, $service->propose($first, $changeId, 'bank-transfer-001', 'urn:secure-doc:refund-001', $hash, $this->uuid()));
+        self::assertSame($approved, $service->review($second, $proposal['id'], 'bank-transfer-001', 'urn:secure-doc:refund-001', $hash, true, null, $this->uuid()));
+        self::assertSame('refunded', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$changeId]));
+        self::assertSame('succeeded', $this->connection->fetchOne('SELECT compensation_status FROM commercial.subscription_plan_changes WHERE id=?', [$changeId]));
+        self::assertSame('external', (new GetSubscriptionPlanChange($this->connection,
+            new AccountAuthorization($this->connection)))->get($owner, $account, $changeId)['compensation_origin']);
+        self::assertSame(['plan-change-external-two-person.old' => true], $this->features($owner, $account));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.refunds WHERE payment_id=?', [$paymentId]));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='subscription.external_compensation_approved' AND resource_id=?", [$proposal['id']]));
+        try {
+            $this->connection->executeStatement("UPDATE commercial.external_compensation_attestations SET document_sha256=? WHERE id=?", [str_repeat('0', 64), $proposal['id']]);
+            self::fail('Approved financial document was rewritten.');
+        } catch (\Doctrine\DBAL\Exception) {
+            self::addToAssertionCount(1);
+        }
+    }
+
+    public function testExternalRecoveryRejectsPendingProviderRefundAndPermitsCorrectedProposal(): void
+    {
+        [, , , $changeId] = $this->externalRecoveryFixture('external-reject');
+        $first = $this->user();
+        $second = $this->user();
+        foreach ([$first, $second] as $id) {
+            $this->connection->executeStatement("INSERT INTO commercial.financial_operators(control_user_id, authorization_reference) VALUES (?, 'urn:change-ticket:finance-test')", [$id]);
+        }
+        $service = new ExternalPlanChangeCompensation($this->connection);
+        $hash = hash('sha256', 'wrong document');
+        $proposal = $service->propose($first, $changeId, 'bank-transfer-002', 'urn:secure-doc:wrong', $hash, $this->uuid());
+        self::assertSame('rejected', $service->review($second, $proposal['id'], 'bank-transfer-002', 'urn:secure-doc:wrong',
+            $hash, false, 'Document did not prove the transfer', $this->uuid())['status']);
+        self::assertSame('paid_unapplied', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$changeId]));
+        $correct = $service->propose($first, $changeId, 'bank-transfer-003', 'urn:secure-doc:correct',
+            hash('sha256', 'correct document'), $this->uuid());
+        self::assertNotSame($proposal['id'], $correct['id']);
+        $this->connection->executeStatement("INSERT INTO commercial.refunds(commercial_account_id,payment_id,provider_account_id,client_request_key,request_sha256,provider_request_key,amount_minor,currency,status) SELECT p.commercial_account_id,p.id,a.provider_account_id,?,decode(repeat('0',64),'hex'),?,p.amount_minor,p.currency,'pending' FROM commercial.payments p JOIN commercial.payment_attempts a ON a.payment_id=p.id WHERE p.invoice_id=(SELECT invoice_id FROM commercial.subscription_plan_changes WHERE id=?) AND a.status='succeeded'", ['test-pending-external-' . $changeId, 'test-provider-pending-' . $changeId, $changeId]);
+        try {
+            $service->review($second, $correct['id'], 'bank-transfer-003', 'urn:secure-doc:correct',
+                hash('sha256', 'correct document'), true, null, $this->uuid());
+            self::fail('External compensation was approved with a pending provider refund.');
+        } catch (\DomainException) {
+            self::addToAssertionCount(1);
+        }
+        self::assertSame('proposed', $this->connection->fetchOne('SELECT status FROM commercial.external_compensation_attestations WHERE id=?', [$correct['id']]));
+        self::assertSame('paid_unapplied', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$changeId]));
+    }
+
+    public function testTwoIndependentExternalApprovalsSerializeToOneFinancialEffect(): void
+    {
+        $suffix = 'external-approval-race-' . bin2hex(random_bytes(4));
+        [$owner, $account, $source, $changeId, $paymentId] = $this->externalRecoveryFixture($suffix);
+        $first = $this->user();
+        $second = $this->user();
+        $third = $this->user();
+        foreach ([$first, $second, $third] as $id) {
+            $this->connection->executeStatement("INSERT INTO commercial.financial_operators(control_user_id, authorization_reference) VALUES (?, 'urn:change-ticket:finance-test')", [$id]);
+        }
+        $transaction = 'bank-transfer-race-' . str_replace('-', '', $changeId);
+        $document = 'urn:secure-doc:race-' . $changeId;
+        $hash = hash('sha256', $document);
+        $proposal = (new ExternalPlanChangeCompensation($this->connection))->propose($first, $changeId,
+            $transaction, $document, $hash, $this->uuid());
+        $providerId = $this->connection->fetchOne("SELECT provider_account_id FROM commercial.payment_attempts WHERE payment_id=? AND status='succeeded'", [$paymentId]);
+        self::assertIsString($providerId);
+        $this->connection->commit();
+        try {
+            $results = $this->planRace('approve_external_compensation', $proposal['id'],
+                implode('|', [$second, $transaction, $document, $hash, $this->uuid()]),
+                'approve_external_compensation', $proposal['id'],
+                implode('|', [$third, $transaction, $document, $hash, $this->uuid()]), $source);
+            self::assertSame([0, 0], array_column($results, 'exit'), implode("\n", array_column($results, 'stderr')));
+            $outcomes = array_column($results, 'stdout');
+            sort($outcomes);
+            self::assertSame(['approved', 'conflict'], $outcomes);
+            self::assertSame('refunded', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$changeId]));
+            self::assertSame('approved', $this->connection->fetchOne('SELECT status FROM commercial.external_compensation_attestations WHERE id=?', [$proposal['id']]));
+            self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='subscription.external_compensation_approved' AND resource_id=?", [$proposal['id']]));
+            self::assertSame(0, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.refunds WHERE payment_id=?', [$paymentId]));
+            self::assertSame(['plan-change-' . $suffix . '.old' => true], $this->features($owner, $account));
+        } finally {
+            $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET status='disabled', updated_at=now() WHERE id=?", [$providerId]);
+            $this->connection->beginTransaction();
+        }
+    }
+
+    /** @return array{string, string, string, string, string} */
+    private function externalRecoveryFixture(string $suffix): array
+    {
+        [$owner, $account, $source, , $newPrice] = $this->context($suffix, 1000, 2000, 'RUB');
+        $change = $this->requests()->request($owner, $account, $source, $newPrice, 1,
+            'change-' . $suffix, $this->uuid());
+        $invoiceId = $change['invoice_id'];
+        self::assertIsString($invoiceId);
+        $payment = $this->paymentCreator()->create($owner, $account, $invoiceId,
+            'payment-' . $suffix, $this->uuid());
+        $provider = $this->yooKassaProviderAccount($suffix);
+        $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET receipt_mode='disabled', receipt_vat_code=NULL, receipt_payment_subject=NULL, receipt_payment_mode=NULL WHERE id=?", [$provider]);
+        $attempt = $this->attemptBeginner()->begin($payment['id'], $provider, 'sbp', $this->uuid());
+        $this->attemptBinder()->bind($attempt['attempt_id'], 'provider-' . $suffix);
+        $boundary = new \DateTimeImmutable((string) $this->connection->fetchOne(
+            'SELECT period_end FROM commercial.subscription_plan_changes WHERE id=?', [$change['id']]));
+        $this->attemptCompleter()->complete($attempt['attempt_id'], 'succeeded', null, $boundary, $this->uuid());
+        self::assertSame('recovery_required', $this->connection->fetchOne('SELECT compensation_status FROM commercial.subscription_plan_changes WHERE id=?', [$change['id']]));
+        return [$owner, $account, $source, $change['id'], $payment['id']];
     }
 
     public function testDefinitiveRefundFailureBecomesOneRecoveryCaseWithoutReleasingPlan(): void

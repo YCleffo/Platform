@@ -405,19 +405,19 @@ No row below is production evidence.
 | R01-R05 | PASS, two observed DB-lock repetitions each. |
 | R06 | PASS, two observed DB-lock repetitions. |
 | R07 | PASS for the exclusion policy: source renewal invoice cannot coexist with scheduled downgrade; no applicable source dunning state. |
-| R08 | PARTIAL: two duplicate-settlement repetitions and one authoritative processor/reconciler overlap pass; actual webhook inbox versus reconciler contention remains. |
+| R08 | PASS locally: two duplicate-settlement repetitions, authoritative processor/reconciler overlap, and payment webhook inbox/reconciler contention with one settlement and plan switch. |
 | R09 | PASS, two different requests choose one replacement. |
 | R10 | PASS, same-key replay and two-process lock contention. |
 | F01-F03 | PASS for automatic full refund, stable key after uncertain create, and durable recovery after definitive failure. |
 | F04-F05 | PASS for a new PHP process after reservation and a SIGKILL after the mock provider persisted success. |
-| F06 | PARTIAL: plan-change duplicate refund webhook and later reconciler pass; simultaneous webhook/reconciler overlap remains. |
+| F06 | PASS locally: duplicate refund webhook, later reconciler, and simultaneous webhook/reconciler contention with one refund and one finalization. |
 | F07-F08 | PASS, unsupported provider/fiscal mode creates durable recovery case. |
-| F09 | PARTIAL: automatic finalizer replay is idempotent; external/manual recovery write path does not exist. |
-| F10 | PASS after verified automatic full refund; manual path still absent. |
+| F09 | PASS locally: automatic finalizer replay and two-operator external full-refund attestation are idempotent; hosted document verification remains an operational gate. |
+| F10 | PASS locally: automatic or independently attested external full refund releases the change; an unreviewed proposal never does. |
 | W01-W03 | PARTIAL: plan-change authoritative pending/success/duplicate/stale sequence passes; complete webhook ordering cases remain. |
 | W04 | PARTIAL: payment settlement versus plan-change cancellation passes; provider webhook variant remains. |
 | W05-W06 | PARTIAL: generic checkout/reconciliation tests and processor overlap exist; complete plan-change webhook/restart variants remain. |
-| W07-W08 | PASS for plan-change duplicate refund notification before the reconciler; simultaneous delivery remains NOT_RUN. |
+| W07-W08 | PASS locally for duplicate refund notification and simultaneous webhook/reconciler delivery; provider sandbox remains NOT_RUN. |
 | W09-W10 | PASS in isolated mock fault tests: both charge and refund SIGKILL/restart converge with one provider object and one local effect. Provider sandbox restart remains NOT_RUN. |
 | X01 | PASS: initial paid subscription reaches Tenant runtime. |
 | X02 | PASS: failed first purchase leaves Tenant runtime rights empty; successful retry grants them. |
@@ -429,12 +429,11 @@ No row below is production evidence.
 | X17-X18 | NOT_RUN in Tenant runtime. |
 | E01-E20 | NOT_RUN as the specified full API + DB + ledger + audit + inbox/outbox + Tenant matrix. Narrower component tests above do not satisfy it. |
 
-Next concrete independent P0 step: complete the missing Tenant runtime cases,
-then simultaneous webhook/reconciler delivery and the full provider sandbox
-matrix. The manual
-`recovery_required` resolution must wait for an approved rule defining what
-proof and which operator authority may attest an external refund; it remains
-fail-closed. After P0, run the full E01-E20 matrix, worker replay on a
+Next concrete independent P0 step: complete the missing Tenant runtime cases
+and the full provider sandbox matrix. External recovery now has an approved
+two-operator rule and a local write path, but hosted evidence storage and
+independent transfer review are still operational gates. After P0, run the
+full E01-E20 matrix, worker replay on a
 restored clone, metrics/alerts, concurrency load, and remote CI.
 
 ### 2026-10-14 continuation after commit `9e1750c`
@@ -457,8 +456,69 @@ restored clone, metrics/alerts, concurrency load, and remote CI.
   boundary. X10 cancels that downgrade and checks the paid rights again.
   The focused cross-plane group passes 1/1, 51 assertions. This does not
   exercise the actual boundary transition or the remaining X cases.
-- Remaining P0: manual/external compensation rule and write path,
-  simultaneous webhook/reconciler variants, full X07-X09/X12-X15/X17-X18
+- Payment R08 and refund F06/W07-W08 now run two independent PHP workers
+  through the real webhook inbox and reconciler while the parent holds the
+  affected PostgreSQL row. Both workers must visibly wait on DB locks before
+  release. The tests assert one inbox event, one payment or refund effect,
+  one plan switch or finalization, matching entitlements, and cleaned-up
+  fixture provider/receipts. Focused address tests pass 1/1 with 27 and 33
+  assertions respectively. Full suite and static analysis after these two
+  additions remain to be rerun.
+- Remaining P0: broader provider ordering variants, full
+  X07-X09/X12-X15/X17-X18
   Tenant runtime proof, and any P0 defects those tests expose. P1/P2:
   E01-E20, restored worker replay, alerts, load, CI and production topology.
   Verdict remains `CORE_NOT_READY`.
+
+### 2026-10-15: two-operator external compensation and real inbox races
+
+- User-approved policy: two separate Platform financial operators must attest
+  the same restricted document reference, document SHA-256 and external
+  transaction reference. The new `financial_operators` registry is separate
+  from customer account roles. HTTP writes require recent MFA. An immutable
+  attestation snapshots the settled amount/currency. The second reviewer
+  either approves or rejects; rejection leaves the financial block and its
+  evidence in history. Approval checks that no local provider refund is
+  pending or succeeded, records one reviewed attestation and sets the plan
+  change to `refunded` atomically. It does not create a synthetic YooKassa
+  refund or initiate a real transfer. `EXTERNAL_COMPENSATION.md` records the
+  operator procedure and the hosted document storage gate.
+- The migration was applied only to the isolated `platform_commercial_test`
+  database. Focused policy tests check unprivileged/revoked/self review,
+  mismatched evidence, rejection and correction, pending provider refund,
+  idempotent replay, immutable evidence and old entitlements. A two-process
+  approval test holds the source row until both DB sessions wait on locks;
+  exactly one reviewer succeeds and one gets a conflict.
+- Review found that the ordinary refund API could still issue a provider
+  refund after an external attestation. `CreateRefund` now blocks new refund
+  reservations while an external proposal or approval claims the payment,
+  while preserving the result of an existing identical refund key. The policy
+  test asserts denial both before and after approval. This closes the local
+  double-compensation path; bank/provider reconciliation remains a hosted
+  operational responsibility.
+- The customer plan-change read model now exposes `compensation_origin` as
+  `provider`, `external`, or null. It does not expose the restricted document.
+  Provider and external cases are asserted through the same API reader and
+  documented in OpenAPI.
+- Payment webhook versus reconciler and refund webhook versus reconciler now
+  run through the actual inbox using two independent PHP workers under
+  observed PostgreSQL lock contention. The payment race has one settled
+  payment and plan switch; the refund race has one successful refund and one
+  plan-change finalization. Fixture providers are disabled and receipts
+  completed after the races. Both address tests passed (27 and 33 assertions).
+- Control Plane after the payment/refund race tests: 355/355, 4263 assertions;
+  PHPStan 0. After external compensation implementation and before the final
+  new race test: 357/357, 4317 assertions; OpenAPI parity and focused policy
+  tests 5/5, 87 assertions; PHPStan 0. Final full suite after the last policy
+  and concurrency changes: 358/358, 4344 assertions; PHPStan 0. Cross-plane
+  group: 1/1, 51 assertions. Final rerun after the ordinary refund guard and
+  OpenAPI contract assertions: 358/358, 4353 assertions; PHPStan 0;
+  cross-plane 1/1, 51 assertions. Doctrine reports 39/39 migrations applied
+  and zero pending in the isolated test DB. Final rerun after the
+  `compensation_origin` API addition: 358/358, 4356 assertions; PHPStan 0;
+  cross-plane 1/1, 51 assertions. The migration has only been applied to the
+  isolated local commercial test DB; remote CI and hosted runtime are unrun.
+- Remaining P0: hosted evidence authorization/retention review, provider
+  sandbox matrix, missing Tenant runtime X07-X09/X12-X15/X17-X18 scenarios,
+  and unresolved P0 defects found by those checks. P1/P2 and production
+  topology gates above remain. Verdict: `CORE_NOT_READY`.

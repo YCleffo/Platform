@@ -19,6 +19,7 @@ use ControlPlane\Billing\Application\RenewalDunningPolicy;
 use ControlPlane\Billing\Application\ProcessRenewalDunning;
 use ControlPlane\Fiscalization\Application\ApplyAuthoritativeReceipt;
 use ControlPlane\Fiscalization\Application\CreatePaymentReceiptObligation;
+use ControlPlane\Fiscalization\Application\CreateRefundReceiptObligation;
 use ControlPlane\Fiscalization\Application\ReceiptSnapshot;
 use ControlPlane\Fiscalization\Application\SubmitYooKassaReceipt;
 use ControlPlane\Identity\Application\AuthFailure;
@@ -32,6 +33,7 @@ use ControlPlane\Subscription\Application\ActivateSubscription;
 use ControlPlane\Subscription\Application\AdvanceSubscriptionPeriod;
 use ControlPlane\Subscription\Application\CancelSubscription;
 use ControlPlane\Subscription\Application\ExpireSubscription;
+use ControlPlane\Subscription\Application\ExternalPlanChangeCompensation;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 use ControlPlane\Subscription\Application\ApplySubscriptionPlanChange;
 use ControlPlane\Subscription\Application\CancelSubscriptionPlanChange;
@@ -50,12 +52,18 @@ use ControlPlane\Payment\Application\ReconcileYooKassaPayments;
 use ControlPlane\Payment\Application\SettlePayment;
 use ControlPlane\Payment\Provider\ProviderAccount;
 use ControlPlane\Payment\Provider\ProviderPayment;
+use ControlPlane\Payment\Provider\ProviderRefund;
 use ControlPlane\Payment\Provider\YooKassa\YooKassaProviderAccountLocator;
+use ControlPlane\Refund\Application\ApplyAuthoritativeRefund;
+use ControlPlane\Refund\Application\ReconcileYooKassaRefunds;
+use ControlPlane\Refund\Application\RefundSnapshot;
+use ControlPlane\Refund\Application\SubmitYooKassaRefund;
 use ControlPlane\Usage\Application\ApplyUsageDelta;
 use ControlPlane\Usage\Application\IngestDeploymentUsage;
 use ControlPlane\M2m\DeploymentIdentity;
 use ControlPlane\Tests\Support\FakeFiscalReceiptProviderGateway;
 use ControlPlane\Tests\Support\FakePaymentProviderGateway;
+use ControlPlane\Tests\Support\FakeRefundProviderGateway;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasher;
 
@@ -218,6 +226,55 @@ try {
                 (new ReceiveYooKassaWebhook($connection, new YooKassaProviderAccountLocator($connection), $gateway, $processor))->receive($body, 'application/json', $correlationId);
             } else {
                 (new ReconcileYooKassaPayments($connection, $gateway, $processor))->reconcile(100, $correlationId);
+            }
+            break;
+        case 'webhook_refund':
+        case 'reconcile_refund':
+            [$correlationId, $succeededAt] = explode('|', $extra, 2);
+            $row = $connection->fetchAssociative(<<<'SQL'
+SELECT r.id, r.provider_refund_id, r.amount_minor, r.currency, pa.provider_payment_id
+FROM commercial.refunds r
+JOIN commercial.payments p ON p.id=r.payment_id
+JOIN commercial.payment_attempts pa ON pa.payment_id=p.id AND pa.status='succeeded'
+WHERE r.id=?
+SQL, [$value]);
+            if ($row === false || !is_string($row['provider_refund_id']) || !is_string($row['provider_payment_id'])) {
+                throw new LogicException('Refund race fixture is incomplete.');
+            }
+            $gateway = new FakeRefundProviderGateway();
+            $gateway->refunds[$row['provider_refund_id']] = new ProviderRefund($row['provider_refund_id'],
+                $row['provider_payment_id'], 'succeeded', (int) $row['amount_minor'], (string) $row['currency'],
+                new DateTimeImmutable($succeededAt), $value);
+            $receiptSubmission = new SubmitYooKassaReceipt($connection, new ReceiptSnapshot(),
+                new FakeFiscalReceiptProviderGateway(), new ApplyAuthoritativeReceipt($connection));
+            $submission = new SubmitYooKassaRefund($connection, new RefundSnapshot(), $gateway,
+                new ApplyAuthoritativeRefund($connection, new CreateRefundReceiptObligation()), $receiptSubmission);
+            if ($mode === 'webhook_refund') {
+                $lifecycle = new RenewalCollectionLifecycle($connection, new RenewalDunningPolicy(3, '60,300', 3600, 30));
+                $processor = new ProcessAuthoritativeProviderPayment($connection,
+                    new BindPaymentAttemptProviderReference($connection),
+                    new CompletePaymentAttempt($connection,
+                        new SettlePayment(new ActivateSubscription($connection, new SubscriptionPeriodCalculator()),
+                            new AdvanceSubscriptionPeriod($connection), $lifecycle),
+                        new CreatePaymentReceiptObligation()), $receiptSubmission,
+                    new RecordSavedPaymentMethod($connection), $lifecycle);
+                $body = json_encode(['type' => 'notification', 'event' => 'refund.succeeded',
+                    'object' => ['id' => $row['provider_refund_id']]], JSON_THROW_ON_ERROR);
+                (new ReceiveYooKassaWebhook($connection, new YooKassaProviderAccountLocator($connection),
+                    new FakePaymentProviderGateway(), $processor, $gateway, $submission))
+                    ->receive($body, 'application/json', $correlationId);
+            } else {
+                (new ReconcileYooKassaRefunds($connection, $submission))->reconcile(100, $correlationId);
+            }
+            break;
+        case 'approve_external_compensation':
+            [$actorId, $transactionReference, $documentReference, $documentSha256, $correlationId] = explode('|', $extra, 5);
+            try {
+                (new ExternalPlanChangeCompensation($connection))->review($actorId, $value,
+                    $transactionReference, $documentReference, $documentSha256, true, null, $correlationId);
+                fwrite(STDOUT, 'approved');
+            } catch (DomainException $exception) {
+                fwrite(STDOUT, 'conflict');
             }
             break;
         case 'authoritative_plan':

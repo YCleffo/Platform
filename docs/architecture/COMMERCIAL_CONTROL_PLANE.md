@@ -345,9 +345,28 @@ Any nonzero `recoveryRequiredCount` requires investigation; a pending refund
 older than the configured reconciliation interval plus provider response
 window requires investigation. These are local symptom conditions, not proof
 that a production alert receiver is configured.
-Operator recovery cannot mark a change refunded without verified compensation.
-No approved external-compensation attestation policy or operator write path
-exists yet, so these cases remain blocking and the core is not ready.
+For an external full refund, two different active Platform financial operators
+must attest the same restricted document reference, its SHA-256 digest, and
+the external transfer reference. These operators are separately enrolled in
+`commercial.financial_operators` under a reviewed authorization ticket;
+commercial account ownership alone gives no access. The HTTP propose and
+review paths require recent MFA for each actor. The proposal snapshots the
+exact settled payment amount and currency. Approval fails while any local
+provider refund is pending or succeeded, and a different document or a
+self-review is rejected. Rejection retains the evidence and leaves the case
+blocked; a corrected proposal may then be filed. Approval atomically records
+the second attestation and sets the plan change to `refunded`, preserving the
+external attestation as the financial record. It does not manufacture a
+YooKassa refund or send money. Reviewers must independently verify the stored
+document and transfer evidence; the application checks identity, digest
+agreement, amount, state and uniqueness, but cannot verify an external bank
+transfer by itself. Document storage, operator enrollment and audit review
+are operational prerequisites before using this path outside tests. The
+ordinary provider-refund API rejects a payment with an open or approved
+external attestation, preventing a second refund request for the same money.
+The customer plan-change read model reports `compensation_origin` as
+`provider`, `external`, or null; restricted document details stay in the
+financial-operator endpoint.
 
 For an initial purchase, `payments.succeeded_at` and `invoices.paid_at` retain
 the verified settlement instant. Subscription service starts at that instant

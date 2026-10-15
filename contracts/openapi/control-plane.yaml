@@ -208,6 +208,31 @@ paths:
       description: Requires billing.manage and recent MFA. Cancellation is allowed before settlement when no payment attempt is pending.
       parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
       responses: {'200': {$ref: '#/components/responses/PlanChangeCancelled'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/finance/plan-change-compensations/{changeId}:
+    parameters: [{$ref: '#/components/parameters/PlanChangeId'}]
+    get:
+      operationId: getExternalPlanChangeCompensation
+      description: Restricted to active Platform financial operators. Returns the immutable evidence reference for independent review.
+      responses: {'200': {$ref: '#/components/responses/ExternalCompensation'}, '404': {$ref: '#/components/responses/Error'}}
+    post:
+      operationId: proposeExternalPlanChangeCompensation
+      description: Requires a financial operator and recent MFA. Records an attestation of an already executed full external refund; does not send money.
+      requestBody: {$ref: '#/components/requestBodies/ExternalCompensationEvidence'}
+      responses: {'201': {$ref: '#/components/responses/ExternalCompensation'}, '403': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/finance/plan-change-compensations/attestations/{attestationId}/approve:
+    parameters: [{$ref: '#/components/parameters/AttestationId'}]
+    post:
+      operationId: approveExternalPlanChangeCompensation
+      description: A distinct active financial operator with recent MFA must confirm the same transfer and document. Only then is paid_unapplied released.
+      requestBody: {$ref: '#/components/requestBodies/ExternalCompensationEvidence'}
+      responses: {'200': {$ref: '#/components/responses/ExternalCompensation'}, '403': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/finance/plan-change-compensations/attestations/{attestationId}/reject:
+    parameters: [{$ref: '#/components/parameters/AttestationId'}]
+    post:
+      operationId: rejectExternalPlanChangeCompensation
+      description: A distinct active financial operator with recent MFA rejects the proposal with a reason. The financial block remains.
+      requestBody: {$ref: '#/components/requestBodies/ExternalCompensationRejection'}
+      responses: {'200': {$ref: '#/components/responses/ExternalCompensation'}, '403': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/invoice:
     parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/SubscriptionId'}]
     post:
@@ -356,6 +381,7 @@ components:
     MembershipId: {name: membershipId, in: path, required: true, schema: {type: string, format: uuid}}
     SubscriptionId: {name: subscriptionId, in: path, required: true, schema: {type: string, format: uuid}}
     PlanChangeId: {name: changeId, in: path, required: true, schema: {type: string, format: uuid}}
+    AttestationId: {name: attestationId, in: path, required: true, schema: {type: string, format: uuid}}
     InvoiceId: {name: invoiceId, in: path, required: true, schema: {type: string, format: uuid}}
     PaymentId: {name: paymentId, in: path, required: true, schema: {type: string, format: uuid}}
     RefundId: {name: refundId, in: path, required: true, schema: {type: string, format: uuid}}
@@ -367,6 +393,8 @@ components:
     EmptyObject: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, maxProperties: 0}}}}
     CreateSubscription: {required: true, content: {application/json: {schema: {type: object, required: [plan_price_id, quantity], properties: {plan_price_id: {type: string, format: uuid}, quantity: {type: integer, minimum: 1}}}}}}
     PlanChange: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [plan_price_id, quantity], properties: {plan_price_id: {type: string, format: uuid}, quantity: {type: integer, minimum: 1}}}}}}
+    ExternalCompensationEvidence: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [externalTransactionReference, documentReference, documentSha256], properties: {externalTransactionReference: {type: string, minLength: 1, maxLength: 200}, documentReference: {type: string, pattern: '^urn:'}, documentSha256: {type: string, pattern: '^[0-9a-f]{64}$'}}}}}}
+    ExternalCompensationRejection: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [externalTransactionReference, documentReference, documentSha256, rejectionReason], properties: {externalTransactionReference: {type: string, minLength: 1, maxLength: 200}, documentReference: {type: string, pattern: '^urn:'}, documentSha256: {type: string, pattern: '^[0-9a-f]{64}$'}, rejectionReason: {type: string, minLength: 1, maxLength: 500}}}}}}
     Email: {required: true, content: {application/json: {schema: {type: object, required: [email], properties: {email: {type: string, format: email}}}}}}
     EmailPassword: {required: true, content: {application/json: {schema: {type: object, required: [email, password], properties: {email: {type: string, format: email}, password: {type: string, format: password}}}}}}
     Token: {required: true, content: {application/json: {schema: {type: object, required: [token], properties: {token: {type: string}}}}}}
@@ -411,6 +439,7 @@ components:
     PlanChangeRequested: {description: Requested plan change, content: {application/json: {schema: {$ref: '#/components/schemas/PlanChangeRequested'}}}}
     PlanChange: {description: Plan change with immutable calculation and current payment state, content: {application/json: {schema: {$ref: '#/components/schemas/PlanChange'}}}}
     PlanChangeCancelled: {description: Cancelled plan change, content: {application/json: {schema: {$ref: '#/components/schemas/PlanChangeCancelled'}}}}
+    ExternalCompensation: {description: External full-refund attestation with two-person review state, content: {application/json: {schema: {$ref: '#/components/schemas/ExternalCompensation'}}}}
     Invoice: {description: Invoice, content: {application/json: {schema: {$ref: '#/components/schemas/Invoice'}}}}
     Payment: {description: Payment, content: {application/json: {schema: {$ref: '#/components/schemas/Payment'}}}}
     CheckoutResult: {description: Provider checkout initiation, content: {application/json: {schema: {$ref: '#/components/schemas/CheckoutResult'}}}}
@@ -419,6 +448,23 @@ components:
     Entitlement: {description: Signed entitlement package for the authenticated deployment, content: {application/json: {schema: {type: object, required: [documentBase64, signatureBase64, keyId], properties: {documentBase64: {type: string}, signatureBase64: {type: string}, keyId: {type: string}}}}}}
     Error: {description: Sanitized error, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
   schemas:
+    ExternalCompensation:
+      type: object
+      additionalProperties: false
+      required: [id, plan_change_id, payment_id, amount_minor, currency, external_transaction_reference, document_reference, document_sha256, proposed_by, status, reviewed_by, rejection_reason]
+      properties:
+        id: {type: string, format: uuid}
+        plan_change_id: {type: string, format: uuid}
+        payment_id: {type: string, format: uuid}
+        amount_minor: {type: integer, minimum: 1}
+        currency: {type: string, minLength: 3, maxLength: 3}
+        external_transaction_reference: {type: string}
+        document_reference: {type: string}
+        document_sha256: {type: string}
+        proposed_by: {type: string, format: uuid}
+        status: {type: string, enum: [proposed, approved, rejected]}
+        reviewed_by: {type: [string, 'null'], format: uuid}
+        rejection_reason: {type: [string, 'null']}
     EffectiveEntitlements:
       type: object
       additionalProperties: false
@@ -463,7 +509,7 @@ components:
         currency: {type: string, pattern: '^[A-Z]{3}$'}
     PlanChange:
       type: object
-      required: [id, source_subscription_id, target_subscription_id, old_plan_price_id, new_plan_price_id, old_quantity, new_quantity, change_kind, status, compensation_status, compensation_reason, calculation, currency, proration_net_minor, amount_due_minor, period_start, period_end, invoice_id, applied_at, invoice_status, payment_id, payment_status]
+      required: [id, source_subscription_id, target_subscription_id, old_plan_price_id, new_plan_price_id, old_quantity, new_quantity, change_kind, status, compensation_status, compensation_reason, compensation_origin, calculation, currency, proration_net_minor, amount_due_minor, period_start, period_end, invoice_id, applied_at, invoice_status, payment_id, payment_status]
       properties:
         id: {type: string, format: uuid}
         source_subscription_id: {type: string, format: uuid}
@@ -476,6 +522,7 @@ components:
         status: {type: string, enum: [scheduled, payment_required, applied, cancelled, paid_unapplied, refunded]}
         compensation_status: {type: [string, 'null'], enum: [pending, recovery_required, succeeded, null]}
         compensation_reason: {type: [string, 'null'], description: Machine-readable reason when operator recovery is required.}
+        compensation_origin: {type: [string, 'null'], enum: [provider, external, null], description: Confirmed compensation source; null before confirmation or for legacy records without source evidence.}
         calculation: {type: object}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         proration_net_minor: {type: integer, format: int64}

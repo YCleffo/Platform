@@ -26,7 +26,15 @@ SELECT c.id, c.source_subscription_id, c.target_subscription_id, c.old_plan_pric
        c.compensation_status, c.compensation_reason,
        c.calculation::text AS calculation, c.currency, c.proration_net_minor,
        c.amount_due_minor, c.period_start, c.period_end, c.invoice_id, c.applied_at,
-       i.status AS invoice_status, p.id AS payment_id, p.status AS payment_status
+       i.status AS invoice_status, p.id AS payment_id, p.status AS payment_status,
+       CASE WHEN c.status='refunded' AND EXISTS (
+         SELECT 1 FROM commercial.external_compensation_attestations e
+         WHERE e.plan_change_id=c.id AND e.status='approved'
+       ) THEN 'external'
+       WHEN c.status='refunded' AND EXISTS (
+         SELECT 1 FROM commercial.refunds r WHERE r.payment_id=p.id AND r.status='succeeded'
+           AND r.client_request_key='plan-change-unapplied-' || c.id::text
+       ) THEN 'provider' ELSE NULL END AS compensation_origin
 FROM commercial.subscription_plan_changes c
 LEFT JOIN commercial.invoices i ON i.id = c.invoice_id
 LEFT JOIN commercial.payments p ON p.invoice_id = i.id
