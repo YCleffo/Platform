@@ -187,6 +187,44 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
         }
     }
 
+    public function testAuthoritativeWebhookRacesPlanChangeCancellationAcrossProcesses(): void
+    {
+        for ($iteration = 0; $iteration < 2; ++$iteration) {
+            $suffix = 'webhook-cancel-' . bin2hex(random_bytes(5));
+            [$owner, $account, $source, , $newPrice] = $this->context($suffix, 1000, 2000, 'RUB');
+            $change = $this->requests()->request($owner, $account, $source, $newPrice, 1,
+                'change-' . $suffix, $this->uuid());
+            $invoiceId = $change['invoice_id'];
+            self::assertIsString($invoiceId);
+            $payment = $this->paymentCreator()->create($owner, $account, $invoiceId,
+                'payment-' . $suffix, $this->uuid());
+            $providerAccountId = $this->yooKassaProviderAccount($suffix);
+            $attempt = $this->attemptBeginner()->begin($payment['id'], $providerAccountId, 'sbp', $this->uuid());
+            $providerPaymentId = 'provider-' . $suffix;
+            $this->attemptBinder()->bind($attempt['attempt_id'], $providerPaymentId);
+            $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET receipt_mode='disabled', receipt_vat_code=NULL, receipt_payment_subject=NULL, receipt_payment_mode=NULL, updated_at=now() WHERE id=?", [$providerAccountId]);
+            $this->connection->commit();
+            try {
+                $results = $this->planRace('webhook_renewal', $attempt['attempt_id'],
+                    implode('|', [$this->uuid(), (new \DateTimeImmutable())->format(DATE_ATOM)]),
+                    'plan_change_cancel', $change['id'],
+                    implode('|', [$owner, $account, 'cancel-' . $suffix, $this->uuid()]), $source);
+                self::assertSame(0, $results[0]['exit'], $results[0]['stderr']);
+                self::assertSame(2, $results[1]['exit'], $results[1]['stderr']);
+                self::assertSame('processed', $this->connection->fetchOne("SELECT status FROM commercial.payment_provider_events WHERE provider_account_id=? AND event_type='payment.succeeded' AND provider_object_id=?", [$providerAccountId, $providerPaymentId]));
+                self::assertSame('succeeded', $this->connection->fetchOne('SELECT status FROM commercial.payments WHERE id=?', [$payment['id']]));
+                self::assertSame('paid', $this->connection->fetchOne('SELECT status FROM commercial.invoices WHERE id=?', [$invoiceId]));
+                self::assertSame('applied', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$change['id']]));
+                self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='payment.succeeded' AND resource_id=?", [$payment['id']]));
+                self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events WHERE event_type='subscription.activated' AND aggregate_id=?", [$change['target_subscription_id']]));
+                self::assertSame(['plan-change-' . $suffix . '.new' => true], $this->features($owner, $account));
+            } finally {
+                $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET status='disabled', updated_at=now() WHERE id=?", [$providerAccountId]);
+                $this->connection->beginTransaction();
+            }
+        }
+    }
+
     public function testScheduledFreeDowngradeRacesExpiryAcrossProcesses(): void
     {
         for ($iteration = 0; $iteration < 2; ++$iteration) {

@@ -415,7 +415,7 @@ No row below is production evidence.
 | F09 | PASS locally: automatic finalizer replay and two-operator external full-refund attestation are idempotent; hosted document verification remains an operational gate. |
 | F10 | PASS locally: automatic or independently attested external full refund releases the change; an unreviewed proposal never does. |
 | W01-W03 | PASS locally: plan-change webhook pending claim is retried after authoritative success; duplicate and stale notice leave one settlement and plan switch. Provider sandbox remains NOT_RUN. |
-| W04 | PARTIAL: payment settlement versus plan-change cancellation passes; provider webhook variant remains. |
+| W04 | PASS locally: authoritative payment webhook versus plan-change cancellation races on independent processes twice; pending attempt prevents cancellation and one settlement and entitlement switch result. Provider sandbox remains NOT_RUN. |
 | W05-W06 | PARTIAL: generic checkout/reconciliation tests and processor overlap exist; complete plan-change webhook/restart variants remain. |
 | W07-W08 | PASS locally for duplicate refund notification and simultaneous webhook/reconciler delivery; provider sandbox remains NOT_RUN. |
 | W09-W10 | PASS in isolated mock fault tests: both charge and refund SIGKILL/restart converge with one provider object and one local effect. Provider sandbox restart remains NOT_RUN. |
@@ -558,3 +558,21 @@ restored clone, metrics/alerts, concurrency load, and remote CI.
   renewal X12, worker restart/outbox replay X15, repeated event X18,
   full sandbox ordering and E01-E20. Operational gates above remain.
   Verdict: `CORE_NOT_READY`.
+
+### 2026-10-15: webhook versus cancellation process race
+
+- W04 now runs an authoritative YooKassa-shaped payment webhook against
+  plan-change cancellation in two independently connected processes, with a
+  barrier and two iterations. Cancellation is rejected while a provider attempt
+  is pending; the webhook inbox is processed, and only one payment settlement,
+  plan switch, and target activation event are recorded. The focused test
+  passes 1/1, 50 assertions. This is local fake-provider evidence; sandbox
+  delivery, process crash, and remote runtime are separate gates.
+- The first post-change full suite failed after two SIGKILL tests left committed
+  fixture provider accounts active in the reused isolated test database;
+  later tests then saw an ambiguous YooKassa account. The guarded
+  `control:test:reset` command was run against
+  `control-postgres-test/platform_commercial_test`, then all 39 migrations
+  applied. On the clean schema, the full Control Plane suite passes 360/360,
+  4423 assertions, PHPStan reports zero errors, and no active fake YooKassa
+  accounts remain. `git diff --check` passes. This is local test evidence.
