@@ -982,6 +982,9 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
             self::assertSame(['plan-change-' . $suffix . '.old' => true], $this->features($owner, $account));
             $this->connection->beginTransaction();
         } finally {
+            // This fixture commits before killing a worker. A failed assertion
+            // must not leave an active fake merchant for later tests.
+            $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET status='disabled', updated_at=now() WHERE id=? AND status='active'", [$providerAccountId]);
             unlink($statePath);
         }
     }
@@ -1064,6 +1067,7 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
             $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET status='disabled', updated_at=now() WHERE id=?", [$providerAccountId]);
             $this->connection->beginTransaction();
         } finally {
+            $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET status='disabled', updated_at=now() WHERE id=? AND status='active'", [$providerAccountId]);
             unlink($statePath);
         }
     }

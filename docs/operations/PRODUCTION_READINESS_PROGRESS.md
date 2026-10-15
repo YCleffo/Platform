@@ -603,3 +603,13 @@ restored clone, metrics/alerts, concurrency load, and remote CI.
   outbox worker heartbeats are `unknown`, and fixture backlogs remain; this
   does not demonstrate worker recovery or operational health. The dump and
   clone remain inside the isolated test container for inspection.
+
+### 2026-10-15: crash-test fixture isolation
+
+- The two payment/refund SIGKILL tests now disable their committed fake
+  YooKassa account in `finally` even if a fault assertion fails. This keeps
+  a failed fault-injection check visible without contaminating subsequent
+  provider-location tests. Focused crash tests: 2/2, 62 assertions. Final full
+  Control Plane rerun: 361/361, 4444 assertions; PHPStan: zero errors;
+  `git diff --check`: clean. This does not resolve the remaining runtime
+  fault/worker evidence gaps above.
