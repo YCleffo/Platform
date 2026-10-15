@@ -493,6 +493,57 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
         self::assertSame(['plan-change-' . $suffix . '.new' => true], $this->features($owner, $account));
     }
 
+    public function testPlanChangeWebhookRetriesPendingClaimAndDeduplicatesConfirmedSettlement(): void
+    {
+        $suffix = 'plan-webhook-order-' . bin2hex(random_bytes(5));
+        [$owner, $account, $source, , $newPrice] = $this->context($suffix, 1000, 2000, 'RUB');
+        $change = $this->requests()->request($owner, $account, $source, $newPrice, 1,
+            'change-' . $suffix, $this->uuid());
+        $invoiceId = $change['invoice_id'];
+        self::assertIsString($invoiceId);
+        $payment = $this->paymentCreator()->create($owner, $account, $invoiceId,
+            'payment-' . $suffix, $this->uuid());
+        $providerAccount = $this->yooKassaProviderAccount($suffix);
+        $attempt = $this->attemptBeginner()->begin($payment['id'], $providerAccount, 'sbp', $this->uuid());
+        $providerPaymentId = 'provider-' . $suffix;
+        $metadata = ['payment_id' => $payment['id'], 'attempt_id' => $attempt['attempt_id'],
+            'invoice_id' => $invoiceId];
+        $amount = $change['amount_due_minor'];
+        $gateway = new FakePaymentProviderGateway();
+        $gateway->payments[$providerPaymentId] = new ProviderPayment($providerPaymentId,
+            'pending', false, $amount, 'RUB', $metadata, null, null);
+        $receiver = new ReceiveYooKassaWebhook($this->connection,
+            new YooKassaProviderAccountLocator($this->connection), $gateway, $this->authoritativeProcessor());
+        $successNotice = json_encode(['type' => 'notification', 'event' => 'payment.succeeded',
+            'object' => ['id' => $providerPaymentId]], JSON_THROW_ON_ERROR);
+        try {
+            $receiver->receive($successNotice, 'application/json', $this->uuid());
+            self::fail('Pending authoritative state was treated as a successful payment.');
+        } catch (PaymentProviderException $exception) {
+            self::assertSame('provider_state_not_final', $exception->errorCode);
+        }
+        self::assertNull($this->connection->fetchOne('SELECT provider_payment_id FROM commercial.payment_attempts WHERE id=?', [$attempt['attempt_id']]));
+        self::assertSame('failed', $this->connection->fetchOne("SELECT status FROM commercial.payment_provider_events WHERE provider_account_id=? AND event_type='payment.succeeded' AND provider_object_id=?", [$providerAccount, $providerPaymentId]));
+        self::assertSame('issued', $this->connection->fetchOne('SELECT status FROM commercial.invoices WHERE id=?', [$invoiceId]));
+        self::assertSame(['plan-change-' . $suffix . '.old' => true], $this->features($owner, $account));
+        $gateway->payments[$providerPaymentId] = new ProviderPayment($providerPaymentId,
+            'succeeded', true, $amount, 'RUB', $metadata, null, new \DateTimeImmutable('now'));
+        self::assertSame('processed', $receiver->receive($successNotice, 'application/json', $this->uuid())['status']);
+        $receiver->receive($successNotice, 'application/json', $this->uuid());
+        self::assertSame($providerPaymentId, $this->connection->fetchOne('SELECT provider_payment_id FROM commercial.payment_attempts WHERE id=?', [$attempt['attempt_id']]));
+        self::assertSame('applied', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$change['id']]));
+        self::assertSame('paid', $this->connection->fetchOne('SELECT status FROM commercial.invoices WHERE id=?', [$invoiceId]));
+        self::assertSame(['plan-change-' . $suffix . '.new' => true], $this->features($owner, $account));
+        $staleNotice = json_encode(['type' => 'notification', 'event' => 'payment.canceled',
+            'object' => ['id' => $providerPaymentId]], JSON_THROW_ON_ERROR);
+        self::assertSame('processed', $receiver->receive($staleNotice, 'application/json', $this->uuid())['status']);
+        self::assertSame(3, count($gateway->getCalls));
+        self::assertSame(2, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.payment_provider_events WHERE provider_account_id=? AND provider_object_id=?', [$providerAccount, $providerPaymentId]));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='payment.succeeded' AND resource_id=?", [$payment['id']]));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='subscription.plan_changed' AND resource_id=?", [$change['id']]));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events WHERE event_type='subscription.activated' AND aggregate_id=?", [$change['target_subscription_id']]));
+    }
+
     /** @return list<array{exit: int, stderr: string, stdout: string}> */
     private function planRace(string $firstMode, string $firstValue, string $firstExtra,
         string $secondMode, string $secondValue, string $secondExtra, string $sourceId,

@@ -414,7 +414,7 @@ No row below is production evidence.
 | F07-F08 | PASS, unsupported provider/fiscal mode creates durable recovery case. |
 | F09 | PASS locally: automatic finalizer replay and two-operator external full-refund attestation are idempotent; hosted document verification remains an operational gate. |
 | F10 | PASS locally: automatic or independently attested external full refund releases the change; an unreviewed proposal never does. |
-| W01-W03 | PARTIAL: plan-change authoritative pending/success/duplicate/stale sequence passes; complete webhook ordering cases remain. |
+| W01-W03 | PASS locally: plan-change webhook pending claim is retried after authoritative success; duplicate and stale notice leave one settlement and plan switch. Provider sandbox remains NOT_RUN. |
 | W04 | PARTIAL: payment settlement versus plan-change cancellation passes; provider webhook variant remains. |
 | W05-W06 | PARTIAL: generic checkout/reconciliation tests and processor overlap exist; complete plan-change webhook/restart variants remain. |
 | W07-W08 | PASS locally for duplicate refund notification and simultaneous webhook/reconciler delivery; provider sandbox remains NOT_RUN. |
@@ -426,7 +426,8 @@ No row below is production evidence.
 | X11 | PASS: expiry removes runtime rights. |
 | X12-X15 | NOT_RUN in Tenant runtime. |
 | X16 | PASS: stale signed document cannot restore old rights. |
-| X17-X18 | NOT_RUN in Tenant runtime. |
+| X17 | PASS locally: second tenant credential pulls its own signed feature set; its document is rejected by the first Tenant installation, which keeps its own rights. |
+| X18 | NOT_RUN for repeated activation/cancellation event delivery to Tenant runtime. |
 | E01-E20 | NOT_RUN as the specified full API + DB + ledger + audit + inbox/outbox + Tenant matrix. Narrower component tests above do not satisfy it. |
 
 Next concrete independent P0 step: complete the missing Tenant runtime cases
@@ -519,6 +520,30 @@ restored clone, metrics/alerts, concurrency load, and remote CI.
   cross-plane 1/1, 51 assertions. The migration has only been applied to the
   isolated local commercial test DB; remote CI and hosted runtime are unrun.
 - Remaining P0: hosted evidence authorization/retention review, provider
-  sandbox matrix, missing Tenant runtime X07-X09/X12-X15/X17-X18 scenarios,
+  sandbox matrix, missing Tenant runtime X07-X09/X12-X15/X18 scenarios,
   and unresolved P0 defects found by those checks. P1/P2 and production
   topology gates above remain. Verdict: `CORE_NOT_READY`.
+
+### 2026-10-15: provider ordering and tenant isolation continuation
+
+- W01-W03 now use the actual plan-change webhook inbox. A success notification
+  while provider GET is still pending is recorded as retryable failure and
+  does not bind or settle. Repeating the same notification after authoritative
+  success binds, pays and switches once. A duplicate avoids another provider
+  GET; a stale cancellation notification fetches current success and does not
+  regress payment, subscription, audit, outbox or rights. Address test: 1/1,
+  27 assertions.
+- X17 now creates a second commercial account, credential and paid plan in
+  the cross-plane test. Its M2M pull yields only that tenant's feature and a
+  different installation ID. Applying those exact signed bytes to the first
+  Tenant installation is rejected, and the first tenant keeps its rights.
+  Cross-plane group: 1/1, 64 assertions. This uses one live Core test
+  installation; two separate hosted tenant runtimes remain untested.
+- Final full Control Plane rerun: 359/359, 4383 assertions; PHPStan 0;
+  cross-plane 1/1, 64 assertions. A PHPStan warning about a redundant
+  constant-status assertion in the webhook test was fixed before this final
+  rerun. `git diff --check` passes.
+- Remaining P0: actual downgrade boundary X07, paid downgrade X08-X09,
+  renewal/late-payment/refund/worker-replay X12-X15, repeated event X18,
+  full sandbox ordering and E01-E20. Operational gates above remain.
+  Verdict: `CORE_NOT_READY`.

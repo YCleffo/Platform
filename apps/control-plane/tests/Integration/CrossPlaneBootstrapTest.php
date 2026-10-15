@@ -185,6 +185,40 @@ final class CrossPlaneBootstrapTest extends PaymentTestCase
             self::assertSame(3, $sync->sync());
             self::assertSame(['cross-plane.plan.new' => true], $runtimeFeatures->forInstallation($installationId));
             $oldEnvelope = $puller->pull('https://control.example', 'Service ' . $bootstrapCredential['credentialId'] . '.' . $bootstrapCredential['credentialSecret']);
+            [$otherOwner, $otherAccount, $otherBillingProfile] = $this->readyAccount('cross-plane-isolated');
+            $otherDeployment = (new ReserveDeployment($this->connection, 'platform.example'))
+                ->reserveCloud($otherAccount, 'shared', 'cross-plane-isolated', 'cross-plane-isolated-operation');
+            $otherCredential = (new StartDeploymentProvisioning($this->connection, $credentials,
+                new \ControlPlane\M2m\DeploymentCredentialLifetime('30')))->start($otherDeployment);
+            $otherFeature = $this->feature('cross-plane.tenant.other', 'boolean');
+            [, $otherPrice] = $this->planPrice('cross-plane-tenant-other', featureValues: [$otherFeature => true]);
+            $otherSubscription = $this->draftSubscription($otherAccount, $otherBillingProfile, [$otherPrice]);
+            $otherInvoice = $this->issuer()->issue($otherOwner, $otherAccount, $otherSubscription,
+                'cross-plane-isolated-invoice', $this->uuid());
+            $otherPayment = $this->paymentCreator()->create($otherOwner, $otherAccount, $otherInvoice['id'],
+                'cross-plane-isolated-payment', $this->uuid());
+            $otherAttempt = $this->attemptBeginner()->begin($otherPayment['id'],
+                $this->providerAccount('cross-plane-isolated'), 'bank_transfer', $this->uuid());
+            $this->attemptBinder()->bind($otherAttempt['attempt_id'], 'cross-plane-isolated-provider');
+            $this->attemptCompleter()->complete($otherAttempt['attempt_id'], 'succeeded', null,
+                new \DateTimeImmutable('now'), $this->uuid());
+            $otherEnvelope = $puller->pull('https://control.example', 'Service ' . $otherCredential['credentialId']
+                . '.' . $otherCredential['credentialSecret']);
+            $otherDocument = base64_decode((string) $otherEnvelope['documentBase64'], true);
+            $otherSignature = base64_decode((string) $otherEnvelope['signatureBase64'], true);
+            self::assertIsString($otherDocument);
+            self::assertIsString($otherSignature);
+            $parsedOther = \App\PlatformRuntime\EntitlementDocumentV1::parse($otherDocument);
+            self::assertSame($otherCredential['installationId'], $parsedOther->installationId);
+            self::assertSame(['cross-plane.tenant.other' => true], get_object_vars($parsedOther->features));
+            try {
+                (new \App\PlatformRuntime\PostgresEntitlementApplier($core, $verifier))
+                    ->apply($installationId, $otherDocument, $otherSignature, (string) $otherEnvelope['keyId']);
+                self::fail('Another tenant entitlement document was accepted by this installation.');
+            } catch (\DomainException) {
+                self::addToAssertionCount(1);
+            }
+            self::assertSame(['cross-plane.plan.new' => true], $runtimeFeatures->forInstallation($installationId));
             $target = $change['target_subscription_id'];
             $freeFeature = $this->feature('cross-plane.plan.free', 'boolean');
             [$freePlan, $freePrice] = $this->planPrice('cross-plane-plan-free', status: 'draft',
