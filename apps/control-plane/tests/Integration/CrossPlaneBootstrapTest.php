@@ -24,12 +24,15 @@ use ControlPlane\Subscription\Application\ApplySubscriptionPlanChange;
 use ControlPlane\Subscription\Application\CancelSubscriptionPlanChange;
 use ControlPlane\Subscription\Application\RequestSubscriptionPlanChange;
 use ControlPlane\Subscription\Application\ExpireSubscription;
+use ControlPlane\Subscription\Application\FinalizeRefundedPlanChanges;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
+use ControlPlane\Payment\Provider\ProviderRefund;
+use ControlPlane\Tests\Support\FakeRefundProviderGateway;
 use Symfony\Component\HttpFoundation\Request;
 use PHPUnit\Framework\Attributes\Group;
 
 #[Group('cross-plane')]
-final class CrossPlaneBootstrapTest extends PaymentTestCase
+final class CrossPlaneBootstrapTest extends RefundTestCase
 {
     public function testStartInitSyncReadyAcrossIsolatedDatabases(): void
     {
@@ -52,6 +55,8 @@ final class CrossPlaneBootstrapTest extends PaymentTestCase
         $coreTransaction = $core->beginTransaction();
         try {
             [$owner, $account, $billingProfile] = $this->readyAccount('cross-plane-bootstrap');
+            $this->connection->executeStatement('UPDATE commercial.billing_profiles SET contact_name=?, contact_email=? WHERE id=?',
+                ['Cross Plane Billing', 'cross-plane-billing@example.test', $billingProfile]);
             $deployment = (new ReserveDeployment($this->connection, 'platform.example'))
                 ->reserveCloud($account, 'shared', 'cross-plane-bootstrap', 'cross-plane-bootstrap-operation');
             $credentials = new DeploymentCredentialService($this->connection, new DeploymentScopeRegistry(),
@@ -138,8 +143,8 @@ final class CrossPlaneBootstrapTest extends PaymentTestCase
             self::assertSame('already_ready', json_decode($repeatBody, true, 8, JSON_THROW_ON_ERROR)['status']);
             $oldFeature = $this->feature('cross-plane.plan.old', 'boolean');
             $newFeature = $this->feature('cross-plane.plan.new', 'boolean');
-            [, $oldPrice] = $this->planPrice('cross-plane-plan-old', featureValues: [$oldFeature => true]);
-            [$newPlan, $newPrice] = $this->planPrice('cross-plane-plan-new', status: 'draft', featureValues: [$newFeature => true]);
+            [, $oldPrice] = $this->planPrice('cross-plane-plan-old', currency: 'RUB', featureValues: [$oldFeature => true]);
+            [$newPlan, $newPrice] = $this->planPrice('cross-plane-plan-new', currency: 'RUB', status: 'draft', featureValues: [$newFeature => true]);
             $this->connection->executeStatement('UPDATE commercial.plan_prices SET amount_minor = 2000 WHERE id = ?', [$newPrice]);
             $this->connection->executeStatement("UPDATE commercial.plans SET status = 'published', published_at = now() WHERE id = ?", [$newPlan]);
             $source = $this->draftSubscription($account, $billingProfile, [$oldPrice]);
@@ -221,7 +226,7 @@ final class CrossPlaneBootstrapTest extends PaymentTestCase
             self::assertSame(['cross-plane.plan.new' => true], $runtimeFeatures->forInstallation($installationId));
             $target = $change['target_subscription_id'];
             $freeFeature = $this->feature('cross-plane.plan.free', 'boolean');
-            [$freePlan, $freePrice] = $this->planPrice('cross-plane-plan-free', status: 'draft',
+            [$freePlan, $freePrice] = $this->planPrice('cross-plane-plan-free', currency: 'RUB', status: 'draft',
                 featureValues: [$freeFeature => true]);
             $this->connection->executeStatement('UPDATE commercial.plan_prices SET amount_minor = 0 WHERE id = ?', [$freePrice]);
             $this->connection->executeStatement("UPDATE commercial.plans SET status = 'published', published_at = now() WHERE id = ?", [$freePlan]);
@@ -238,7 +243,51 @@ final class CrossPlaneBootstrapTest extends PaymentTestCase
             self::assertSame(3, $sync->sync());
             self::assertSame(['cross-plane.plan.new' => true], $runtimeFeatures->forInstallation($installationId));
             $targetEnd = new \DateTimeImmutable((string) $this->connection->fetchOne('SELECT current_period_end FROM commercial.subscriptions WHERE id=?', [$target]));
+            $lateFeature = $this->feature('cross-plane.plan.late', 'boolean');
+            [$latePlan, $latePrice] = $this->planPrice('cross-plane-plan-late', currency: 'RUB', status: 'draft',
+                featureValues: [$lateFeature => true]);
+            $this->connection->executeStatement('UPDATE commercial.plan_prices SET amount_minor=3000 WHERE id=?', [$latePrice]);
+            $this->connection->executeStatement("UPDATE commercial.plans SET status='published', published_at=now() WHERE id=?", [$latePlan]);
+            $lateChange = (new RequestSubscriptionPlanChange($this->connection,
+                new AccountAuthorization($this->connection), new ProrationCalculator(),
+                new ApplySubscriptionPlanChange(new SubscriptionPeriodCalculator())))
+                ->request($owner, $account, $target, $latePrice, 1, 'cross-plane-late-upgrade', $this->uuid());
+            $lateInvoiceId = $lateChange['invoice_id'];
+            self::assertIsString($lateInvoiceId);
+            $latePayment = $this->paymentCreator()->create($owner, $account, $lateInvoiceId,
+                'cross-plane-late-payment', $this->uuid());
+            $lateAttempt = $this->attemptBeginner()->begin($latePayment['id'],
+                $this->yooKassaProviderAccount('cross-plane-late'), 'sbp', $this->uuid());
+            $this->attemptBinder()->bind($lateAttempt['attempt_id'], 'cross-plane-late-provider');
+            $this->attemptCompleter()->complete($lateAttempt['attempt_id'], 'succeeded', null, $targetEnd, $this->uuid());
+            self::assertSame('paid_unapplied', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$lateChange['id']]));
+            self::assertSame('cancelled', $this->connection->fetchOne('SELECT status FROM commercial.subscriptions WHERE id=?', [$lateChange['target_subscription_id']]));
+            self::assertSame(3, $sync->sync());
+            self::assertSame(['cross-plane.plan.new' => true], $runtimeFeatures->forInstallation($installationId));
+            $lateRefund = $this->connection->fetchAssociative('SELECT id, amount_minor FROM commercial.refunds WHERE payment_id=?', [$latePayment['id']]);
+            self::assertIsArray($lateRefund);
+            self::assertIsString($lateRefund['id']);
+            $refundGateway = new FakeRefundProviderGateway();
+            $refundSubmission = $this->refundSubmission($refundGateway);
+            self::assertFalse($refundSubmission->submit($lateRefund['id'], $this->uuid()));
+            $providerRefundId = $this->connection->fetchOne('SELECT provider_refund_id FROM commercial.refunds WHERE id=?', [$lateRefund['id']]);
+            self::assertIsString($providerRefundId);
+            $pendingRefund = $refundGateway->refunds[$providerRefundId];
+            self::assertInstanceOf(ProviderRefund::class, $pendingRefund);
+            $refundGateway->refunds[$providerRefundId] = new ProviderRefund($pendingRefund->id,
+                $pendingRefund->providerPaymentId, 'succeeded', $pendingRefund->amountMinor,
+                $pendingRefund->currency, new \DateTimeImmutable('now'), $pendingRefund->localRefundId);
+            self::assertTrue($refundSubmission->submit($lateRefund['id'], $this->uuid()));
+            self::assertSame(1, (new FinalizeRefundedPlanChanges($this->connection))->runBatch(100, $this->uuid()));
+            self::assertSame(0, (new FinalizeRefundedPlanChanges($this->connection))->runBatch(100, $this->uuid()));
+            self::assertSame('refunded', $this->connection->fetchOne('SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$lateChange['id']]));
+            self::assertSame(3, $sync->sync());
+            self::assertSame(['cross-plane.plan.new' => true], $runtimeFeatures->forInstallation($installationId));
+            self::assertSame(3, $sync->sync());
+            self::assertSame(['cross-plane.plan.new' => true], $runtimeFeatures->forInstallation($installationId));
             self::assertSame('expired', (new ExpireSubscription($this->connection))->expire($account, $target, $targetEnd, $this->uuid())['status']);
+            self::assertSame(4, $sync->sync());
+            self::assertSame([], $runtimeFeatures->forInstallation($installationId));
             self::assertSame(4, $sync->sync());
             self::assertSame([], $runtimeFeatures->forInstallation($installationId));
             $canonical = base64_decode((string) $oldEnvelope['documentBase64'], true);

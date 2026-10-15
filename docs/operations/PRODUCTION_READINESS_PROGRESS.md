@@ -424,10 +424,12 @@ No row below is production evidence.
 | X03-X05 | PASS: unpaid/failed upgrade retains old runtime rights, paid upgrade switches them. |
 | X06-X10 | PARTIAL: X06 scheduled free downgrade retains paid Tenant rights before the period boundary; X10 cancellation retains them. X07-X09 and the boundary itself remain NOT_RUN in Tenant runtime. |
 | X11 | PASS: expiry removes runtime rights. |
-| X12-X15 | NOT_RUN in Tenant runtime. |
+| X12 | NOT_RUN in Tenant runtime: paid renewal versus expiry at a real boundary. |
+| X13-X14 | PASS locally: late paid upgrade remains unapplied with no target Tenant rights; verified full fake-provider refund releases the change without granting them. |
+| X15 | PARTIAL: refund finalizer and Tenant entitlement pull replay are idempotent in one process; worker restart/outbox replay is NOT_RUN. |
 | X16 | PASS: stale signed document cannot restore old rights. |
 | X17 | PASS locally: second tenant credential pulls its own signed feature set; its document is rejected by the first Tenant installation, which keeps its own rights. |
-| X18 | NOT_RUN for repeated activation/cancellation event delivery to Tenant runtime. |
+| X18 | PARTIAL: repeated Tenant pulls after refund and expiry preserve the same sequence and rights; repeated activation/cancellation event delivery is NOT_RUN. |
 | E01-E20 | NOT_RUN as the specified full API + DB + ledger + audit + inbox/outbox + Tenant matrix. Narrower component tests above do not satisfy it. |
 
 Next concrete independent P0 step: complete the missing Tenant runtime cases
@@ -537,13 +539,22 @@ restored clone, metrics/alerts, concurrency load, and remote CI.
   the cross-plane test. Its M2M pull yields only that tenant's feature and a
   different installation ID. Applying those exact signed bytes to the first
   Tenant installation is rejected, and the first tenant keeps its rights.
-  Cross-plane group: 1/1, 64 assertions. This uses one live Core test
+  Cross-plane group before the late-payment extension: 1/1, 64 assertions. This uses one live Core test
   installation; two separate hosted tenant runtimes remain untested.
+- X13-X14 now drive a late paid upgrade from the same account through a RUB
+  invoice and YooKassa-shaped fake provider. `paid_unapplied` leaves the
+  target subscription cancelled and Tenant on the old feature set. A pending
+  fake refund does not change rights; authoritative full success plus the
+  finalizer changes the plan-change history to `refunded` while Tenant still
+  has no target feature. Replaying the finalizer and Tenant pulls has no new
+  effect; replay after expiry keeps Tenant rights empty. The focused
+  cross-plane group passes 1/1, 88 assertions. This is local fake-provider
+  evidence, not a sandbox transaction or a worker process restart.
 - Final full Control Plane rerun: 359/359, 4383 assertions; PHPStan 0;
-  cross-plane 1/1, 64 assertions. A PHPStan warning about a redundant
+  focused cross-plane 1/1, 88 assertions. A PHPStan warning about a redundant
   constant-status assertion in the webhook test was fixed before this final
   rerun. `git diff --check` passes.
 - Remaining P0: actual downgrade boundary X07, paid downgrade X08-X09,
-  renewal/late-payment/refund/worker-replay X12-X15, repeated event X18,
+  renewal X12, worker restart/outbox replay X15, repeated event X18,
   full sandbox ordering and E01-E20. Operational gates above remain.
   Verdict: `CORE_NOT_READY`.
