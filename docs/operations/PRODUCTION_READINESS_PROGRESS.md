@@ -423,7 +423,7 @@ No row below is production evidence.
 | X01 | PASS: initial paid subscription reaches Tenant runtime. |
 | X02 | PASS: failed first purchase leaves Tenant runtime rights empty; successful retry grants them. |
 | X03-X05 | PASS: unpaid/failed upgrade retains old runtime rights, paid upgrade switches them. |
-| X06-X10 | PARTIAL: X06 scheduled free downgrade retains paid Tenant rights before the period boundary; X10 cancellation retains them. X07-X09 and the boundary itself remain NOT_RUN in Tenant runtime. |
+| X06-X10 | PASS locally: X06 and X10 retain rights before the boundary or after cancellation. X07-X09 now cross a real short subscription boundary, apply signed documents in Tenant Plane, and verify free rights after materialization, no paid target rights before settlement, and paid target rights after settlement. The new boundary cases call the issuer and Tenant applier directly; HTTP M2M delivery and live scheduler operation are separate gates. |
 | X11 | PASS: expiry removes runtime rights. |
 | X12 | NOT_RUN in Tenant runtime: paid renewal versus expiry at a real boundary. |
 | X13-X14 | PASS locally: late paid upgrade remains unapplied with no target Tenant rights; verified full fake-provider refund releases the change without granting them. |
@@ -433,7 +433,7 @@ No row below is production evidence.
 | X18 | PARTIAL: repeated Tenant pulls after refund and expiry preserve the same sequence and rights; repeated activation/cancellation event delivery is NOT_RUN. |
 | E01-E20 | NOT_RUN as the specified full API + DB + ledger + audit + inbox/outbox + Tenant matrix. Narrower component tests above do not satisfy it. |
 
-Next concrete independent P0 step: complete the missing Tenant runtime cases
+Next concrete independent P0 step: complete the remaining Tenant runtime cases
 and the full provider sandbox matrix. External recovery now has an approved
 two-operator rule and a local write path, but hosted evidence storage and
 independent transfer review are still operational gates. After P0, run the
@@ -632,3 +632,27 @@ restored clone, metrics/alerts, concurrency load, and remote CI.
   shows 39 migration records, 2 immutable compensation attestations, 6
   financial operator authorizations, and the attestation table present.
   No source database or live deployment was rolled back.
+
+### 2026-10-16: real-boundary Tenant downgrade coverage
+
+- Added `CrossPlaneDowngradeBoundaryTest` for X07-X09. Two isolated scenarios
+  create a source period with about five seconds remaining, cross its actual
+  boundary, and open a new Commercial transaction. A paid downgrade issues an
+  invoice and leaves Tenant rights empty before settlement; settlement then
+  applies the lower paid feature. A free downgrade applies its feature at the
+  boundary. Both verify signed document application in the separate Tenant
+  database and the source subscription state. This uses local fake payment
+  completion, not a real provider or M2M HTTP transport.
+- Focused cases: 2/2, 59 assertions. Full cross-plane group: 3/3, 147
+  assertions. PHPStan: zero errors. Full non-cross-plane Control Plane suite:
+  361/361, 4444 assertions. `git diff --check`: clean. An initial failed
+  iteration committed one temporary Tenant installation; after verifying its
+  `release_id=boundary-test` and that it was the only installation/document in
+  the isolated test database, those two rows were removed. The final tests
+  roll back Tenant fixtures. Commercial fixtures crossed a commit and remain
+  only in the isolated test database; random identifiers make repeated runs
+  independent.
+- Remaining local P0 includes X12 paid renewal and X15/X18 worker or event
+  replay in Tenant runtime, plus the complete provider sandbox and E01-E20
+  matrices. Scheduler, remote CI, and production evidence remain unverified.
+  Verdict: `CORE_NOT_READY`.
