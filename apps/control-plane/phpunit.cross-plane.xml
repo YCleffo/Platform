@@ -11,6 +11,9 @@
         <env name="CONTROL_YOOKASSA_RETURN_URL" value="https://platform.example/payments/return"/>
     </php>
     <testsuites>
-        <testsuite name="CrossPlane"><file>tests/Integration/CrossPlaneBootstrapTest.php</file></testsuite>
+        <testsuite name="CrossPlane"><directory>tests</directory></testsuite>
     </testsuites>
+    <groups>
+        <include><group>cross-plane</group></include>
+    </groups>
 </phpunit>

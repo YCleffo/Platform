@@ -13,6 +13,7 @@ use App\PlatformRuntime\SodiumEntitlementSignatureVerifier;
 use App\PlatformRuntime\TrustedEntitlementKeyRegistry;
 use ControlPlane\Account\Authorization\AccountAuthorization;
 use ControlPlane\Billing\Application\PlanChangeInvoiceIssuer;
+use ControlPlane\Billing\Application\IssueRenewalInvoice;
 use ControlPlane\Billing\Domain\ProrationCalculator;
 use ControlPlane\Deployment\Application\ReserveDeployment;
 use ControlPlane\Deployment\Application\StartDeploymentProvisioning;
@@ -29,20 +30,27 @@ use ControlPlane\Subscription\Application\ApplySubscriptionPlanChange;
 use ControlPlane\Subscription\Application\ProcessScheduledPlanChanges;
 use ControlPlane\Subscription\Application\RequestSubscriptionPlanChange;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
+use ControlPlane\Subscription\Application\ExpireSubscription;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 #[Group('cross-plane')]
 final class CrossPlaneDowngradeBoundaryTest extends RefundTestCase
 {
-    /** @return array<string, array{bool}> */
+    /** @return array<string, array{string}> */
     public static function downgradeCases(): array
     {
-        return ['paid' => [true], 'free' => [false]];
+        return [
+            'paid-downgrade' => ['paid-downgrade'],
+            'free-downgrade' => ['free-downgrade'],
+            'paid-renewal' => ['paid-renewal'],
+            'unsettled-renewal' => ['unsettled-renewal'],
+            'renewal-restart' => ['renewal-restart'],
+        ];
     }
 
     #[DataProvider('downgradeCases')]
-    public function testDowngradeAtRealPeriodBoundary(bool $paidDowngrade): void
+    public function testLifecycleAtRealPeriodBoundary(string $case): void
     {
         if (getenv('CROSS_PLANE_REQUIRED') !== '1' || getenv('PHASE47_CROSS_PLANE') !== '1') {
             self::fail('Required cross-plane prerequisites are missing.');
@@ -112,16 +120,124 @@ final class CrossPlaneDowngradeBoundaryTest extends RefundTestCase
             }
             $source = $this->draftSubscription($account, $profile, [$oldPrice]);
             // A genuine short remaining term avoids mutating immutable usage history.
-            $activation = $this->activationInstant()->modify('-1 month')->modify('+5 seconds');
+            $activation = $this->activationInstant()->modify('-1 month')
+                ->modify($case === 'renewal-restart' ? '+8 seconds' : '+5 seconds');
             $this->activatePaid($account, $source, $activation, $this->uuid());
             $this->applyDocument($issuer, $deployment, $installationId, $applier);
             self::assertSame(['boundary.' . $suffix . '.old' => true], $runtime->forInstallation($installationId));
+
+            if (str_ends_with($case, 'renewal')) {
+                $renewal = (new IssueRenewalInvoice($this->connection,
+                    new SubscriptionPeriodCalculator()))->issue($account, $source, $this->uuid());
+                self::assertSame('issued', $renewal['status']);
+                $payment = $this->paymentCreator()->create($owner, $account, $renewal['id'],
+                    'boundary-renewal-' . $suffix, $this->uuid());
+                $attempt = null;
+                if ($case === 'paid-renewal' || $case === 'renewal-restart') {
+                    $attempt = $this->attemptBeginner()->begin($payment['id'],
+                        $this->providerAccount('boundary-renewal-' . $suffix), 'bank_transfer', $this->uuid());
+                    $this->attemptBinder()->bind($attempt['attempt_id'], 'boundary-renewal-provider-' . $suffix);
+                }
+                $oldEnd = new \DateTimeImmutable((string) $this->connection->fetchOne(
+                    'SELECT current_period_end FROM commercial.subscriptions WHERE id=?', [$source]));
+                if ($case === 'renewal-restart') {
+                    self::assertIsArray($attempt);
+                    $this->attemptCompleter()->complete($attempt['attempt_id'], 'succeeded', null,
+                        new \DateTimeImmutable('now'), $this->uuid());
+                    self::assertSame($oldEnd->format('Y-m-d H:i:s.uP'),
+                        (new \DateTimeImmutable((string) $this->connection->fetchOne(
+                            'SELECT current_period_end FROM commercial.subscriptions WHERE id=?', [$source])))
+                            ->format('Y-m-d H:i:s.uP'));
+                    $this->installAdvancePause($suffix, $source);
+                }
+                $this->crossBoundary($source);
+                if ($case === 'renewal-restart') {
+                    $this->assertSchedulerRestart($suffix, $source, $oldEnd);
+                    self::assertSame(1, (int) $this->connection->fetchOne(
+                        "SELECT count(*) FROM commercial.outbox_events WHERE event_type='subscription.renewed' AND aggregate_id=?", [$source]));
+                    self::assertSame(1, (int) $this->connection->fetchOne(
+                        "SELECT count(*) FROM commercial.audit_events WHERE action='subscription.renewed' AND resource_id=?", [$source]));
+                    self::assertSame(2, (int) $this->connection->fetchOne(
+                        'SELECT count(*) FROM commercial.usage_periods WHERE subscription_id=?', [$source]));
+                    self::assertSame('paid', $this->connection->fetchOne(
+                        'SELECT status FROM commercial.invoices WHERE id=?', [$renewal['id']]));
+                    $sequence = $this->applyDocument($issuer, $deployment,
+                        $installationId, $applier);
+                    self::assertGreaterThan(1, $sequence);
+                    self::assertSame($sequence, $this->applyDocument($issuer, $deployment,
+                        $installationId, $applier));
+                    self::assertSame(2, (int) $this->connection->fetchOne(
+                        "SELECT count(*) FROM commercial.outbox_events WHERE event_type='entitlement.issued' AND aggregate_id=?", [$deployment]));
+                    self::assertSame(['boundary.' . $suffix . '.old' => true],
+                        $runtime->forInstallation($installationId));
+                    return;
+                }
+                $expirer = new ExpireSubscription($this->connection, null, 900);
+                if ($case === 'paid-renewal') {
+                    self::assertIsArray($attempt);
+                    $this->attemptCompleter()->complete($attempt['attempt_id'], 'succeeded', null,
+                        new \DateTimeImmutable('now'), $this->uuid());
+                    try {
+                        $expirer->expire($account, $source, new \DateTimeImmutable('now'), $this->uuid());
+                        self::fail('Renewed subscription expired at its old boundary.');
+                    } catch (\DomainException) {
+                        self::addToAssertionCount(1);
+                    }
+                    self::assertSame('active', $this->connection->fetchOne(
+                        'SELECT status FROM commercial.subscriptions WHERE id=?', [$source]));
+                    self::assertSame('paid', $this->connection->fetchOne(
+                        'SELECT status FROM commercial.invoices WHERE id=?', [$renewal['id']]));
+                    self::assertSame('succeeded', $this->connection->fetchOne(
+                        'SELECT status FROM commercial.payments WHERE id=?', [$payment['id']]));
+                    self::assertSame(2, (int) $this->connection->fetchOne(
+                        'SELECT count(*) FROM commercial.usage_periods WHERE subscription_id=?', [$source]));
+                    self::assertSame(1, (int) $this->connection->fetchOne(
+                        "SELECT count(*) FROM commercial.outbox_events WHERE event_type='subscription.renewed' AND aggregate_id=?", [$source]));
+                    self::assertSame(1, (int) $this->connection->fetchOne(
+                        "SELECT count(*) FROM commercial.audit_events WHERE action='subscription.renewed' AND resource_id=?", [$source]));
+                    self::assertSame(1, (int) $this->connection->fetchOne(
+                        'SELECT count(*) FROM commercial.payments WHERE invoice_id=?', [$renewal['id']]));
+                    $this->connection->commit();
+                    $this->connection->beginTransaction();
+                    self::assertSame(['boundary.' . $suffix . '.old' => true],
+                        (new EffectiveEntitlements($this->connection,
+                            new AccountAuthorization($this->connection)))->forDeploymentAccount($account)['features']);
+                    self::assertGreaterThan(1, $this->applyDocument($issuer, $deployment,
+                        $installationId, $applier));
+                    self::assertSame(['boundary.' . $suffix . '.old' => true], $runtime->forInstallation($installationId));
+                } else {
+                    self::assertSame('pending', $this->connection->fetchOne(
+                        'SELECT status FROM commercial.payments WHERE id=?', [$payment['id']]));
+                    self::assertSame('issued', $this->connection->fetchOne(
+                        'SELECT status FROM commercial.invoices WHERE id=?', [$renewal['id']]));
+                    try {
+                        $expirer->expire($account, $source, new \DateTimeImmutable('now'), $this->uuid());
+                        self::fail('Renewal settlement grace was ignored.');
+                    } catch (\DomainException) {
+                        self::addToAssertionCount(1);
+                    }
+                    $emptySequence = $this->applyDocument($issuer, $deployment,
+                        $installationId, $applier);
+                    self::assertGreaterThan(1, $emptySequence);
+                    self::assertSame([], $runtime->forInstallation($installationId));
+                    self::assertSame('expired', $expirer->expire($account, $source,
+                        $oldEnd->modify('+901 seconds'), $this->uuid())['status']);
+                    self::assertSame(1, (int) $this->connection->fetchOne(
+                        "SELECT count(*) FROM commercial.audit_events WHERE action='subscription.expired' AND resource_id=?", [$source]));
+                    self::assertSame(1, (int) $this->connection->fetchOne(
+                        "SELECT count(*) FROM commercial.outbox_events WHERE event_type='subscription.expired' AND aggregate_id=?", [$source]));
+                    self::assertSame($emptySequence, $this->applyDocument($issuer, $deployment,
+                        $installationId, $applier));
+                    self::assertSame([], $runtime->forInstallation($installationId));
+                }
+                return;
+            }
 
             $requests = new RequestSubscriptionPlanChange($this->connection,
                 new AccountAuthorization($this->connection), new ProrationCalculator(),
                 new ApplySubscriptionPlanChange(new SubscriptionPeriodCalculator()));
             $change = $requests->request($owner, $account, $source,
-                $paidDowngrade ? $paidPrice : $freePrice, 1,
+                $case === 'paid-downgrade' ? $paidPrice : $freePrice, 1,
                 'boundary-change-' . $suffix, $this->uuid());
             self::assertSame('scheduled', $change['status']);
             $this->applyDocument($issuer, $deployment, $installationId, $applier);
@@ -130,7 +246,7 @@ final class CrossPlaneDowngradeBoundaryTest extends RefundTestCase
             $worker = new ProcessScheduledPlanChanges($this->connection, new PlanChangeInvoiceIssuer(),
                 new PaymentCreator($this->settlement()), new ApplySubscriptionPlanChange(new SubscriptionPeriodCalculator()));
             self::assertGreaterThanOrEqual(1, $worker->runBatch(new \DateTimeImmutable('now'), 100, $this->uuid()));
-            if ($paidDowngrade) {
+            if ($case === 'paid-downgrade') {
                 self::assertSame('payment_required', $this->connection->fetchOne(
                     'SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$change['id']]));
                 $this->applyDocument($issuer, $deployment, $installationId, $applier);
@@ -152,7 +268,7 @@ final class CrossPlaneDowngradeBoundaryTest extends RefundTestCase
                 'SELECT status FROM commercial.subscription_plan_changes WHERE id=?', [$change['id']]));
             self::assertSame('cancelled', $this->connection->fetchOne(
                 'SELECT status FROM commercial.subscriptions WHERE id=?', [$source]));
-            $feature = $paidDowngrade ? 'paid' : 'free';
+            $feature = $case === 'paid-downgrade' ? 'paid' : 'free';
             self::assertSame(['boundary.' . $suffix . '.' . $feature => true],
                 (new EffectiveEntitlements($this->connection,
                     new AccountAuthorization($this->connection)))->forDeploymentAccount($account)['features']);
@@ -180,8 +296,123 @@ final class CrossPlaneDowngradeBoundaryTest extends RefundTestCase
         $this->connection->beginTransaction();
     }
 
+    private function installAdvancePause(string $suffix, string $subscriptionId): void
+    {
+        $name = 'x15_pause_' . $suffix;
+        $this->connection->executeStatement("CREATE FUNCTION commercial.{$name}() RETURNS trigger
+            LANGUAGE plpgsql AS \$pause\$ BEGIN
+              IF NEW.id = '{$subscriptionId}'::uuid
+                 AND NEW.current_period_start IS DISTINCT FROM OLD.current_period_start THEN
+                PERFORM pg_sleep(30);
+              END IF;
+              RETURN NEW;
+            END \$pause\$");
+        $this->connection->executeStatement("CREATE TRIGGER {$name} BEFORE UPDATE
+            ON commercial.subscriptions FOR EACH ROW EXECUTE FUNCTION commercial.{$name}()");
+    }
+
+    private function assertSchedulerRestart(string $suffix, string $subscriptionId,
+        \DateTimeImmutable $oldEnd): void
+    {
+        $name = 'x15_pause_' . $suffix;
+        [$first, $firstPipes] = $this->startAdvanceScheduler();
+        try {
+            $deadline = microtime(true) + 10;
+            $sleeping = 0;
+            do {
+                $sleeping = (int) $this->connection->fetchOne(<<<'SQL'
+SELECT count(*) FROM pg_stat_activity
+WHERE datname=current_database() AND wait_event='PgSleep'
+  AND query LIKE 'UPDATE commercial.subscriptions SET current_period_start%'
+SQL);
+                if ($sleeping > 0) break;
+                usleep(20_000);
+            } while (microtime(true) < $deadline);
+            self::assertGreaterThan(0, $sleeping, 'Scheduler did not reach the pre-commit pause.');
+            proc_terminate($first, 9);
+            $signalDeadline = microtime(true) + 3;
+            do {
+                $status = proc_get_status($first);
+                if (!$status['running']) break;
+                usleep(10_000);
+            } while (microtime(true) < $signalDeadline);
+            self::assertFalse($status['running'], 'Scheduler did not terminate.');
+            self::assertTrue($status['signaled'], 'Scheduler exit was not a signal.');
+            self::assertSame(9, $status['termsig']);
+            $this->closeScheduler($first, $firstPipes);
+            $first = null;
+            self::assertSame($oldEnd->format('Y-m-d H:i:s.uP'),
+                (new \DateTimeImmutable((string) $this->connection->fetchOne(
+                    'SELECT current_period_end FROM commercial.subscriptions WHERE id=?', [$subscriptionId])))
+                    ->format('Y-m-d H:i:s.uP'));
+            self::assertSame(0, (int) $this->connection->fetchOne(
+                "SELECT count(*) FROM commercial.outbox_events WHERE event_type='subscription.renewed' AND aggregate_id=?", [$subscriptionId]));
+        } finally {
+            if (is_resource($first)) {
+                proc_terminate($first, 9);
+                $this->closeScheduler($first, $firstPipes);
+            }
+            $this->connection->executeStatement("DROP TRIGGER IF EXISTS {$name} ON commercial.subscriptions");
+            $this->connection->executeStatement("DROP FUNCTION IF EXISTS commercial.{$name}()");
+            $this->connection->commit();
+            $this->connection->beginTransaction();
+        }
+
+        [$second, $secondPipes] = $this->startAdvanceScheduler();
+        try {
+            $deadline = microtime(true) + 10;
+            $advanced = false;
+            do {
+                $advanced = (bool) $this->connection->fetchOne(
+                    'SELECT current_period_end > ?::timestamptz FROM commercial.subscriptions WHERE id=?',
+                    [$oldEnd->format('Y-m-d H:i:s.uP'), $subscriptionId]);
+                if ($advanced) break;
+                usleep(20_000);
+            } while (microtime(true) < $deadline);
+            self::assertTrue($advanced, 'Fresh scheduler did not advance the durable paid renewal.');
+        } finally {
+            proc_terminate($second, 9);
+            $this->closeScheduler($second, $secondPipes);
+        }
+    }
+
+    /** @return array{resource, array<int, resource>} */
+    private function startAdvanceScheduler(): array
+    {
+        $environment = getenv();
+        foreach (['CONTROL_PLAN_CHANGES', 'CONTROL_RENEWALS', 'CONTROL_RENEWAL_COLLECTION',
+            'CONTROL_DUNNING', 'CONTROL_EXPIRATION', 'CONTROL_PAYMENT_RECONCILIATION',
+            'CONTROL_REFUND_RECONCILIATION', 'CONTROL_PLAN_CHANGE_REFUND_FINALIZATION',
+            'CONTROL_PLAN_CHANGE_RECOVERY', 'CONTROL_RECEIPT_RECONCILIATION',
+            'CONTROL_PRIVACY_CLEANUP'] as $job) {
+            $environment[$job . '_ENABLED'] = '0';
+        }
+        $environment['CONTROL_SCHEDULER_ENABLED'] = '1';
+        $environment['CONTROL_SUBSCRIPTIONS_ENABLED'] = '1';
+        $environment['CONTROL_SUBSCRIPTIONS_INTERVAL_SECONDS'] = '1';
+        $pipes = [];
+        $process = proc_open([PHP_BINARY, 'bin/console', 'control:scheduler:run'],
+            [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, dirname(__DIR__, 2), $environment);
+        if (!is_resource($process)) {
+            throw new \RuntimeException('Could not start the Control scheduler entrypoint.');
+        }
+        return [$process, $pipes];
+    }
+
+    /** @param resource $process
+     *  @param array<int, resource> $pipes
+     */
+    private function closeScheduler($process, array $pipes): void
+    {
+        foreach ($pipes as $pipe) {
+            stream_get_contents($pipe);
+            fclose($pipe);
+        }
+        proc_close($process);
+    }
+
     private function applyDocument(DeploymentEntitlementIssuer $issuer, string $deploymentId,
-        string $installationId, PostgresEntitlementApplier $applier): void
+        string $installationId, PostgresEntitlementApplier $applier): int
     {
         $envelope = $issuer->ensureLatest($deploymentId);
         $document = base64_decode($envelope['documentBase64'], true);
@@ -189,5 +420,6 @@ final class CrossPlaneDowngradeBoundaryTest extends RefundTestCase
         self::assertIsString($document);
         self::assertIsString($signature);
         $applier->apply($installationId, $document, $signature, $envelope['keyId']);
+        return $envelope['sequence'];
     }
 }

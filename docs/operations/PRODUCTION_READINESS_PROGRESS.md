@@ -656,3 +656,95 @@ restored clone, metrics/alerts, concurrency load, and remote CI.
   replay in Tenant runtime, plus the complete provider sandbox and E01-E20
   matrices. Scheduler, remote CI, and production evidence remain unverified.
   Verdict: `CORE_NOT_READY`.
+
+## Current Core closure snapshot: 2026-10-16
+
+This section supersedes earlier continuation checklists as the current status.
+Historical results above retain their original scope and dates. The affected
+invariants are SUB-01/06/07, PAY-01/03/04/05/06, CORE-12/13, and ENT-01/02/03.
+No production application code, migration, or wire contract changed in this
+closure; the changes are test discovery, test coverage, and the gate script.
+
+| Gate | Status | Current evidence or exact remaining boundary |
+| --- | --- | --- |
+| Cross-plane discovery | PASS | `phpunit.cross-plane.xml` scans `tests` and includes the `cross-plane` group. Both original classes and `CrossPlaneHttpRuntimeTest` appear in `--list-tests`; ordinary PHPUnit excludes the group. GitHub Actions calls `scripts/cross-plane-test-run.sh`. |
+| X12 paid renewal versus expiry | PASS | A genuine period boundary is crossed in `CrossPlaneDowngradeBoundaryTest`. Settled renewal advances once, keeps paid Tenant rights, and leaves one audit/outbox effect; unsettled renewal respects grace then expires and removes rights. |
+| X15 real process death | PASS | `control:scheduler:run` is SIGKILLed while PostgreSQL pauses the renewal update before commit. A fresh scheduler advances durable paid state once; signed Tenant entitlement applies once and replay stays stable. This is scheduler recovery, not a claim that every outbox consumer was fault injected. |
+| X18 duplicate activation/cancellation delivery | SPEC_GAP | `subscription.activated`/`subscription.cancelled` are internal outbox rows with no versioned integration schema or Tenant consumer. `EVENT_CONTRACTS.md` explicitly defers other cross-process publishers/consumers. The established path is authenticated pull of the signed document; repeated pull and exact replay are tested. An event-delivery assertion needs an authoritative contract first. |
+| Real HTTP/runtime boundary | PASS | `CrossPlaneHttpRuntimeTest` starts a separate Symfony HTTP process, checks invalid and valid M2M credentials, calls the actual Yii `runtime:entitlements:sync` command for sequences 1 and 2, and rejects stale and wrong-installation signed documents. The renewal crash test runs the actual scheduler command. |
+| YooKassa sandbox | BLOCKED_EXTERNAL | No sandbox credential or shop ID is available to this environment. No real charge was made. |
+| Clean official cross-plane image rebuild | BLOCKED_EXTERNAL | After the final test-only DB guard edit, Docker Composer downloads failed with curl 56/OpenSSL bad record MAC from `codeload.github.com`. The current code passed with the rebuilt `control-plane-test` image and mounted locked backend dependencies. |
+| Remote CI for current working tree | NOT_RUN | The changed working tree is not a pushed revision, so no GitHub Actions run can attest to these bytes. |
+| Core code verdict | FAIL | `CORE_CODE_READY_LOCAL` is withheld while the complete E01-E20 acceptance matrix is unrun and backend Psalm fails on the current locked dependencies. |
+| Release candidate | FAIL | Core code readiness has not been met; provider sandbox and green remote CI for the exact revision are also missing. |
+| Production readiness | NOT_RUN | Requires separate deployment and operational evidence, including secrets, recovery, monitoring, load, and rehearsal. |
+
+Local closure regression observed on 2026-10-16:
+
+| Check | Status | Fresh result |
+| --- | --- | --- |
+| Cross-plane `--list-tests` | PASS | Three grouped classes, seven selected cases with the final source configuration. |
+| Cross-plane PHPUnit | PASS | 7 tests, 281 assertions on freshly migrated Core and Commercial test DBs; identical second run without reset. After the final guard edit, the current source passed 7/281 in the rebuilt `control-plane-test` image with mounted backend dependencies. The clean official `cross-plane-test` image rebuild is separately blocked above. |
+| Ordinary Control Plane PHPUnit | PASS | 361 tests, 4444 assertions after isolated Commercial reset/migration. |
+| Backend Codeception full seeded suite | PASS | 508 tests, 14050 assertions with seed `2120741368`. |
+| Backend Psalm | FAIL | `vendor/bin/psalm --no-cache` reports 259 errors in untouched backend sources; JSON rerun reports the same count. Dominant types: 98 `MixedArgument`, 20 `MixedPropertyFetch`, 19 `PossiblyNullArgument`. No suppression or backend source edit was made in this closure. |
+| Control Plane PHPStan | PASS | No errors in `cross-plane-test` image. |
+| OpenAPI/route parity | PASS | 3 tests, 47 assertions; included in ordinary PHPUnit. |
+| Commercial migrations | PASS | Fresh 39-migration apply, then latest 38→39→38→39 cycle in isolated DB. |
+| Core migrations | PASS | Fresh `platform_test` DB through migration 032; required Core and runtime objects reported OK. |
+| Runtime HTTP and restart gates | PASS | Included in the seven cross-plane cases on fresh DBs. |
+| Fixture hygiene | PASS | After the repeat run, zero Core installations/documents and zero X15 pause triggers remain. |
+| `git diff --check` | PASS | No whitespace errors. |
+
+### E01-E20 complete acceptance status
+
+The current task context names these scenarios and requires API, Commercial DB,
+financial history, audit, inbox/outbox, Tenant state, and replay checks as
+applicable. Existing narrower component or cross-plane tests do not satisfy
+that combined acceptance contract. `NOT_RUN` means the complete scenario has
+not been executed; it does not discard the narrower passing evidence above.
+
+| Case | Supplied scenario | Status |
+| --- | --- | --- |
+| E01 | First successful purchase | NOT_RUN |
+| E02 | Failed payment | NOT_RUN |
+| E03 | Duplicate payment request | NOT_RUN |
+| E04 | Duplicate webhook | NOT_RUN |
+| E05 | Reordered webhook | NOT_RUN |
+| E06 | Paid upgrade | NOT_RUN |
+| E07 | Failed upgrade | NOT_RUN |
+| E08 | Scheduled downgrade | NOT_RUN |
+| E09 | Cancelled downgrade | NOT_RUN |
+| E10 | Renewal before expiry | NOT_RUN |
+| E11 | Renewal versus expiry race | NOT_RUN |
+| E12 | Cancel auto-renew | NOT_RUN |
+| E13 | Refund | NOT_RUN |
+| E14 | Duplicate asynchronous event | SPEC_GAP |
+| E15 | Worker crash and restart | NOT_RUN |
+| E16 | Partial cross-plane failure | SPEC_GAP |
+| E17 | Two simultaneous plan changes | NOT_RUN |
+| E18 | Tenant isolation | NOT_RUN |
+| E19 | Repeated provisioning | NOT_RUN |
+| E20 | Docker restart | SPEC_GAP |
+
+E14 has no named event or delivery contract. E16 has no defined fault point
+or convergence criterion. E20 does not identify which Docker service restarts
+or the expected durable state. These require acceptance definitions before a
+complete result can be asserted; no transport or failure policy is inferred.
+
+### Finite readiness boundary
+
+- `CORE_CODE_READY_LOCAL`: all locally controllable R/F/W/X and defined E
+  cases, real HTTP and restart gates, full regressions, static analysis,
+  contracts, and fresh isolated DB reproduction pass, with no open P0 defect.
+- `CORE_RELEASE_CANDIDATE`: `CORE_CODE_READY_LOCAL` plus required YooKassa
+  sandbox, exact-revision remote CI, and release/security artifacts.
+- `PRODUCTION_READY`: separately requires operational deployment, secrets,
+  failover/PITR restore, alerts, capacity/load, and rehearsal evidence.
+
+Core code blockers are the unrun complete E matrix and the current backend
+Psalm failure. External release
+blockers are YooKassa sandbox prerequisites and exact-revision remote CI.
+The clean official image rebuild is also pending external Composer availability.
+Production operational work is separate from Core code closure. Do not reopen
+Core for new features after all locally controllable gates pass.
