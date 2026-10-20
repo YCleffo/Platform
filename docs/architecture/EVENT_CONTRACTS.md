@@ -22,3 +22,10 @@ bytes, signature or private key material enter the outbox. Repeated fetches of
 an unchanged source do not create another event. The runtime applies the
 document through its authenticated M2M endpoint; the outbox event is not a
 substitute for fetching and verifying the document.
+
+`subscription.activated` and `subscription.cancelled` remain internal
+Commercial outbox events. They have no versioned cross-process payload
+contract and no Tenant consumer. Tenant rights converge through authenticated
+pull of the latest signed entitlement document, including after repeated or
+delayed sync. Duplicate delivery of those internal events to Tenant is not a
+Core acceptance path; do not add a consumer or transport to simulate it.

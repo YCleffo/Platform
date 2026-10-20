@@ -136,7 +136,7 @@ final readonly class ErasureExecutor
                 SQL, [':case' => $caseId])->queryAll();
             $plannedKeys = [];
             foreach ($plannedResources as $plannedResource) {
-                $plannedKeys[$plannedResource['resource_type'] . ':' . $plannedResource['resource_id']] = true;
+                $plannedKeys[(string) $plannedResource['resource_type'] . ':' . (string) $plannedResource['resource_id']] = true;
             }
             foreach ($all as $candidate) {
                 if (!isset($plannedKeys[$candidate->resourceType . ':' . $candidate->resourceId])) {
@@ -152,6 +152,7 @@ final readonly class ErasureExecutor
             }
             $evaluated = $this->decisions->evaluateResource($group, $actor,
                 $case['source_request_id'] === null ? null : (string) $case['source_request_id']);
+            /** @var array{aggregate: string, decisions: list<\App\Core\Privacy\Domain\RetentionDecision>} $evaluated */
             $action = ErasureCaseService::actionFor($evaluated['aggregate']);
             if ($action === null) {
                 $this->block($actor, $itemId, self::retentionReason($evaluated['decisions']),
@@ -328,6 +329,7 @@ final readonly class ErasureExecutor
                 ? 'pending' : (string) $row['status'];
             $counts[$key] += (int) $row['total'];
         }
+        /** @var array{completed:int,blocked:int,failed:int,pending:int} $counts */
         return $counts;
     }
 

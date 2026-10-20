@@ -10,6 +10,7 @@ use DomainException;
 
 final readonly class RetentionDependencyContributorRegistry
 {
+    /** @var array<string, RetentionDependencyContributor> */
     private array $contributors;
 
     /** @param iterable<RetentionDependencyContributor> $contributors */

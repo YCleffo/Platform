@@ -46,6 +46,9 @@ final readonly class ManagePrivacyIncidentAction
                     || (isset($body['estimatedSubjects']) && (!is_int($body['estimatedSubjects']) || $body['estimatedSubjects'] < 0))) {
                     return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
                 }
+                /** @var array{incidentType: string, reasonCode: string, categoryCodes: list<string>, estimatedSubjects?: int, subjectPersonIds?: list<string>} $body */
+                $categories = $body['categoryCodes'];
+                $subjects = $body['subjectPersonIds'] ?? [];
                 $newId = $incidents->detect($actor, $body['incidentType'], $body['reasonCode'],
                     $categories, $body['estimatedSubjects'] ?? null, $subjects);
                 return $responses->success(['id' => $newId])->withStatus(Status::CREATED);
@@ -56,6 +59,7 @@ final readonly class ManagePrivacyIncidentAction
                     || !PrivacyRequestInput::code($body['reasonCode'] ?? null)) {
                     return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
                 }
+                /** @var array{status: string, reasonCode: string} $body */
                 $incidents->transition($actor, $id, $body['status'], $body['reasonCode']);
             } elseif ($operation === 'notification') {
                 if (!PrivacyRequestInput::keys($body, ['kind','referenceCode'])
@@ -63,6 +67,7 @@ final readonly class ManagePrivacyIncidentAction
                     || !PrivacyRequestInput::code($body['referenceCode'] ?? null)) {
                     return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
                 }
+                /** @var array{kind: string, referenceCode: string} $body */
                 $incidents->recordExternalNotification($actor, $id, $body['kind'], $body['referenceCode']);
             } else {
                 return $responses->notFound();

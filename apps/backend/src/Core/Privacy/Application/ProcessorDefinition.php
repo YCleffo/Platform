@@ -10,7 +10,10 @@ use InvalidArgumentException;
 
 readonly class ProcessorDefinition
 {
-    /** @param list<string> $purposes @param list<string> $dataCategories */
+    /**
+     * @param list<string> $purposes
+     * @param list<string> $dataCategories
+     */
     public function __construct(public string $code, public string $nameReference,
         public string $role, public array $purposes, public array $dataCategories,
         public string $country, public string $contractReference,

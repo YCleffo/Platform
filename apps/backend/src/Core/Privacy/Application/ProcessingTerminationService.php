@@ -35,6 +35,7 @@ final readonly class ProcessingTerminationService
         }
     }
 
+    /** @return array{status:string,executionId:string} */
     private function executeLocked(AuthenticatedIdentity $actor, string $requestId): array
     {
         $request = $this->db->createCommand(<<<'SQL'
@@ -50,7 +51,7 @@ final readonly class ProcessingTerminationService
                 AND status = 'completed' ORDER BY completed_at DESC LIMIT 1
             SQL, [':id' => $requestId])->queryScalar();
         if (is_string($existing) && in_array($request['status'], ['completed', 'partially_completed'], true)) {
-            return ['status' => (string) $request['status'], 'executionId' => $existing];
+            return ['status' => $request['status'], 'executionId' => $existing];
         }
         if ($request['status'] !== 'in_progress') {
             throw new DomainException('Processing termination is not in progress.');

@@ -33,6 +33,7 @@ final readonly class ManageLegalHoldsAction
                 || (isset($query['subjectPersonId']) && !PrivacyRequestInput::uuid($query['subjectPersonId']))) {
                 return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
             }
+            /** @var array{subjectPersonId?: string} $query */
             return $responses->success($holds->list($query['subjectPersonId'] ?? null));
         }
         $input = $request->getParsedBody();
@@ -41,6 +42,7 @@ final readonly class ManageLegalHoldsAction
                 || !PrivacyRequestInput::code($input['reasonCode'] ?? null)) {
                 return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
             }
+            /** @var array{reasonCode: string} $input */
             try {
                 $changed = $holds->release($actor, $id, $input['reasonCode']);
                 return $responses->success(['id' => $id, 'released' => true, 'changed' => $changed]);
@@ -71,6 +73,7 @@ final readonly class ManageLegalHoldsAction
             || preg_match('/^[a-zA-Z0-9._:\/-]+$/D', $input['sourceReference']) !== 1)) {
             return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
         }
+        /** @var array{scopeType: string, reasonCode: string, subjectPersonId?: string, purposeCode?: string, resourceType?: string, resourceId?: string, sourceType?: string, sourceReference?: string, expiresAt?: string} $input */
         try {
             $createdId = $holds->create($actor, $input['subjectPersonId'] ?? null, $input['scopeType'],
                 $input['purposeCode'] ?? null, $input['resourceType'] ?? null, $input['resourceId'] ?? null,

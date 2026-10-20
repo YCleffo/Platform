@@ -9,7 +9,10 @@ use InvalidArgumentException;
 
 final readonly class ProcessingRoleDefinition
 {
-    /** @param list<string> $dataCategories @param list<string> $permittedOperations */
+    /**
+     * @param list<string> $dataCategories
+     * @param list<string> $permittedOperations
+     */
     public function __construct(public string $purposeCode, public string $platformRole,
         public string $operatorReference, public ?string $instructionReference,
         public array $dataCategories, public array $permittedOperations,

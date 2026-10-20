@@ -25,18 +25,20 @@ final class OrganizationInput
             $result->addError(ApiMessage::VALIDATION_STRING, valuePath: ['name']);
         }
         self::check($result);
-        return ['code' => $code, 'name' => trim($name)];
+        return ['code' => (string) $code, 'name' => trim((string) $name)];
     }
 
     public static function member(mixed $body): string
     {
         $data = self::body($body, ['personId']);
         $result = new Result();
-        if (!is_string($data['personId'] ?? null) || !Uuid::isValid($data['personId'])) {
+        $personId = $data['personId'] ?? null;
+        if (!is_string($personId) || !Uuid::isValid($personId)) {
             $result->addError(ApiMessage::VALIDATION_STRING, valuePath: ['personId']);
         }
         self::check($result);
-        return $data['personId'];
+        /** @var string $personId */
+        return $personId;
     }
 
     /** @param list<string> $allowed
@@ -55,6 +57,7 @@ final class OrganizationInput
             }
         }
         self::check($result);
+        /** @var array<string, mixed> $body */
         return $body;
     }
 

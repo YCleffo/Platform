@@ -16,8 +16,8 @@ final readonly class DataResidencyEvidence
     {
         foreach (['primaryDbCountry', 'backupCountry', 'objectStorageCountry',
             'logStorageCountry', 'cacheCountry'] as $key) {
-            if (!is_string($this->configuration[$key] ?? null)
-                || preg_match('/^[A-Z]{2}$/D', $this->configuration[$key]) !== 1) {
+            $country = $this->configuration[$key] ?? null;
+            if (!is_string($country) || preg_match('/^[A-Z]{2}$/D', $country) !== 1) {
                 return false;
             }
         }

@@ -57,6 +57,7 @@ final readonly class ManageErasureAction
                     || !is_string($body['signatureReference'] ?? null)) {
                     return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
                 }
+                /** @var array{evidenceId: string, signedDocumentReference: string, signatureReference: string} $body */
                 $legalPackages->attest($id, $body['evidenceId'],
                     AuthenticatedIdentity::fromRequest($request)->accountId,
                     $body['signedDocumentReference'], $body['signatureReference']);
@@ -83,6 +84,7 @@ final readonly class ManageErasureAction
                     ['calendar_days', 'working_days', 'hours'], true))) {
                 return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
             }
+            /** @var array{subjectPersonId: string, reasonCode: string, sourceRequestId?: string, deadlineAt?: string, deadlineCalendarType?: string} $body */
             $caseId = $cases->create(AuthenticatedIdentity::fromRequest($request), $body['subjectPersonId'],
                 $body['reasonCode'], $body['sourceRequestId'] ?? null,
                 isset($body['deadlineAt']) ? new DateTimeImmutable($body['deadlineAt']) : null,

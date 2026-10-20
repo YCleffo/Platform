@@ -8,7 +8,10 @@ use DateTimeImmutable;
 
 final readonly class DataRecipientDefinition extends ProcessorDefinition
 {
-    /** @param list<string> $purposes @param list<string> $dataCategories */
+    /**
+     * @param list<string> $purposes
+     * @param list<string> $dataCategories
+     */
     public function __construct(string $code, string $nameReference,
         array $purposes, array $dataCategories, string $country, string $contractReference,
         bool $securityRequirementsConfirmed, bool $localizationCompatible,

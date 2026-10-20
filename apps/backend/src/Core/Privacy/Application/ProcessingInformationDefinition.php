@@ -9,8 +9,11 @@ use InvalidArgumentException;
 
 final readonly class ProcessingInformationDefinition
 {
-    /** @param list<string> $methodCodes @param list<string> $sourceCodes
-     *  @param list<string> $complianceMethodCodes */
+    /**
+     * @param list<string> $methodCodes
+     * @param list<string> $sourceCodes
+     * @param list<string> $complianceMethodCodes
+     */
     public function __construct(public string $purposeCode, public array $methodCodes,
         public array $sourceCodes, public string $rightsProcedureReference,
         public array $complianceMethodCodes,

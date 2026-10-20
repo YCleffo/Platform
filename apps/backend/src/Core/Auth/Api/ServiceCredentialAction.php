@@ -26,7 +26,7 @@ final readonly class ServiceCredentialAction
         ResponseFactory $responses,
     ): ResponseInterface {
         $accountId = (string) $route->getArgument('accountId');
-        $credentialId = (string) ($route->getArgument('credentialId') ?? '');
+        $credentialId = $route->getArgument('credentialId') ?? '';
         $operation = (string) $route->getArgument('operation');
         if (!Uuid::isValid($accountId) || ($credentialId !== '' && !Uuid::isValid($credentialId))) {
             return $responses->error(ApiMessage::VALIDATION_FAILED);
@@ -92,6 +92,8 @@ final readonly class ServiceCredentialAction
         if (!$result->isValid()) {
             throw new InputValidationException($result);
         }
+        $expiresAt = is_string($expiresAt) ? $expiresAt : null;
+        /** @var list<string> $scopes */
         return [$scopes, $expiresAt];
     }
 }

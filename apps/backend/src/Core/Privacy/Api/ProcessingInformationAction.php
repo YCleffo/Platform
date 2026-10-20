@@ -27,8 +27,10 @@ final readonly class ProcessingInformationAction
             return $responses->notFound();
         }
         try {
+            /** @var mixed $operator */
+            $operator = $route->getArgument('operator');
             $json = $service->issue(AuthenticatedIdentity::fromRequest($request),
-                $id, $representationId, $route->getArgument('operator') === true);
+                $id, $representationId, $operator === true);
             return $psrResponses->createResponse(200)
                 ->withHeader('Content-Type', 'application/json; charset=utf-8')
                 ->withHeader('Cache-Control', 'no-store')

@@ -30,7 +30,9 @@ final readonly class PersonalDataExportAction
         }
         try {
             $actor = AuthenticatedIdentity::fromRequest($request);
-            $result = $route->getArgument('operator') === true
+            /** @var mixed $operator */
+            $operator = $route->getArgument('operator');
+            $result = $operator === true
                 ? $service->exportOperator($actor, $id)
                 : ($representationId === null
                 ? $service->exportSelf($actor, $id)

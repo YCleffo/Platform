@@ -124,8 +124,18 @@ final class CrossPlaneHttpRuntimeTest extends RefundTestCase
             $newDocument = base64_decode($new['documentBase64'], true);
             self::assertIsString($newDocument);
             self::assertSame(2, json_decode($newDocument, true, 8, JSON_THROW_ON_ERROR)['sequence']);
+            $committedState = $this->commercialEffectSnapshot($subscription, $deployment);
+            $unavailableEnvironment = $runtimeEnvironment;
+            $unavailableEnvironment['DB_HOST'] = '127.0.0.1';
+            $unavailableEnvironment['DB_PORT'] = '1';
+            $this->assertSyncUnavailable($backendRoot, $unavailableEnvironment);
+            self::assertSame($committedState, $this->commercialEffectSnapshot($subscription, $deployment));
+            self::assertSame(1, (int) $core->createCommand(
+                'SELECT current_entitlement_sequence FROM platform_runtime.installations WHERE id = CAST(:id AS uuid)',
+                [':id' => $installationId])->queryScalar());
             $this->syncThroughCli($backendRoot, $runtimeEnvironment, 2);
             $this->syncThroughCli($backendRoot, $runtimeEnvironment, 2);
+            self::assertSame($committedState, $this->commercialEffectSnapshot($subscription, $deployment));
             $installations = new PostgresInstallationRepository($core);
             $verifier = new SodiumEntitlementSignatureVerifier(new TrustedEntitlementKeyRegistry([
                 $keyId => ['publicKeyBase64' => base64_encode($public), 'status' => 'trusted'],
@@ -220,5 +230,37 @@ final class CrossPlaneHttpRuntimeTest extends RefundTestCase
         self::assertSame(0, proc_close($process), (string) $errors . (string) $output);
         self::assertIsString($output);
         self::assertStringContainsString('"entitlementSequence":' . $expected, $output);
+    }
+
+    /** @return array<string,mixed> */
+    private function commercialEffectSnapshot(string $subscription, string $deployment): array
+    {
+        $row = $this->connection->fetchAssociative(<<<'SQL'
+SELECT s.status, s.current_period_start, s.current_period_end,
+  (SELECT count(*) FROM commercial.invoices WHERE subscription_id=s.id AND status='paid') AS paid_invoices,
+  (SELECT count(*) FROM commercial.payments p JOIN commercial.invoices i ON i.id=p.invoice_id
+    WHERE i.subscription_id=s.id AND p.status='succeeded') AS succeeded_payments,
+  (SELECT count(*) FROM commercial.audit_events WHERE resource_id=s.id::text) AS audit_events,
+  (SELECT count(*) FROM commercial.outbox_events WHERE aggregate_id=s.id) AS subscription_outbox,
+  (SELECT count(*) FROM commercial.deployment_entitlement_documents WHERE deployment_id=?) AS signed_documents,
+  (SELECT count(*) FROM commercial.outbox_events WHERE aggregate_id=? AND event_type='entitlement.issued') AS entitlement_outbox
+FROM commercial.subscriptions s WHERE s.id=?
+SQL, [$deployment, $deployment, $subscription]);
+        self::assertIsArray($row);
+        return $row;
+    }
+
+    /** @param array<string,string> $environment */
+    private function assertSyncUnavailable(string $backendRoot, array $environment): void
+    {
+        $pipes = [];
+        $process = proc_open([PHP_BINARY, 'yii', 'runtime:entitlements:sync'],
+            [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $backendRoot, $environment);
+        self::assertIsResource($process);
+        stream_get_contents($pipes[1]);
+        stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        self::assertNotSame(0, proc_close($process), 'Tenant sync unexpectedly succeeded while unavailable.');
     }
 }

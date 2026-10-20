@@ -19,22 +19,26 @@ final readonly class LegalDestructionPackageService
     public function available(): bool
     {
         foreach (['name', 'address'] as $key) {
-            if (!is_string($this->operator[$key] ?? null) || trim($this->operator[$key]) === '') {
+            $value = $this->operator[$key] ?? null;
+            if (!is_string($value) || trim($value) === '') {
                 return false;
             }
         }
         foreach (['informationSystemName', 'informationSystemCode', 'destructionMethod'] as $key) {
-            if (!is_string($this->configuration[$key] ?? null) || trim($this->configuration[$key]) === '') {
+            $value = $this->configuration[$key] ?? null;
+            if (!is_string($value) || trim($value) === '') {
                 return false;
             }
         }
         try {
-            MachineCode::assert($this->configuration['informationSystemCode']);
+            /** @var string $systemCode */
+            $systemCode = $this->configuration['informationSystemCode'];
+            MachineCode::assert($systemCode);
         } catch (\Throwable) { return false; }
-        $hasProcessorName = is_string($this->configuration['processorName'] ?? null)
-            && trim($this->configuration['processorName']) !== '';
-        $hasProcessorAddress = is_string($this->configuration['processorAddress'] ?? null)
-            && trim($this->configuration['processorAddress']) !== '';
+        $processorName = $this->configuration['processorName'] ?? null;
+        $processorAddress = $this->configuration['processorAddress'] ?? null;
+        $hasProcessorName = is_string($processorName) && trim($processorName) !== '';
+        $hasProcessorAddress = is_string($processorAddress) && trim($processorAddress) !== '';
         return $hasProcessorName === $hasProcessorAddress;
     }
 

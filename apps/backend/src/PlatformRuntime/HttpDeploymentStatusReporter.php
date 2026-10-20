@@ -16,7 +16,7 @@ final readonly class HttpDeploymentStatusReporter implements DeploymentStatusRep
         if (!in_array($response['status'] ?? null, ['ready', 'already_ready'], true)) {
             throw new \DomainException('Deployment status response is invalid.');
         }
-        return $response['status'];
+        return (string) $response['status'];
     }
 
     public function failed(string $machineErrorCode): void
@@ -52,7 +52,7 @@ final readonly class HttpDeploymentStatusReporter implements DeploymentStatusRep
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT => 15,
-            CURLOPT_WRITEFUNCTION => static function ($curl, string $chunk) use (&$response): int {
+            CURLOPT_WRITEFUNCTION => static function (\CurlHandle $curl, string $chunk) use (&$response): int {
                 if (strlen($response) + strlen($chunk) > 4096) { return 0; }
                 $response .= $chunk;
                 return strlen($chunk);
@@ -64,6 +64,7 @@ final readonly class HttpDeploymentStatusReporter implements DeploymentStatusRep
             }
             $decoded = json_decode($response, true, 8, JSON_THROW_ON_ERROR);
             if (!is_array($decoded)) { throw new \DomainException('Deployment status response is invalid.'); }
+            /** @var array<string, mixed> $decoded */
             return $decoded;
         } catch (\JsonException) {
             throw new \DomainException('Deployment status response is invalid.');

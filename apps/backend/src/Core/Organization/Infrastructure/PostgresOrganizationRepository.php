@@ -31,6 +31,7 @@ final readonly class PostgresOrganizationRepository implements OrganizationRepos
                 )
             ) ORDER BY o.code LIMIT 1000
             SQL, [':person' => $personId])->queryAll();
+        /** @var list<array<string, mixed>> $rows */
         $organizations = array_map(self::organization(...), $rows);
         return $personId === null ? $organizations : array_values(array_filter($organizations,
             fn(Organization $organization): bool => $this->activeMember($personId, $organization->id)));
@@ -93,6 +94,7 @@ final readonly class PostgresOrganizationRepository implements OrganizationRepos
             FROM core.organization_memberships WHERE organization_id = CAST(:organization AS uuid)
             ORDER BY joined_at, id LIMIT 1000
             SQL, [':organization' => $organizationId])->queryAll();
+        /** @var list<array<string, mixed>> $rows */
         return array_values(array_filter(array_map(self::membership(...), $rows),
             fn(OrganizationMembership $membership): bool => $this->privacy->allowed(
                 $membership->personId, 'core.organization_membership', $membership->id, 'identity')));

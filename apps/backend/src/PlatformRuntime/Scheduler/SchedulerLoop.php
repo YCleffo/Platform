@@ -73,7 +73,7 @@ final class SchedulerLoop
         }
     }
 
-    public function run(): never
+    public function run(): void
     {
         while (true) {
             $this->tick();

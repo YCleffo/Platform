@@ -85,6 +85,7 @@ final class SchedulerRunCommand extends Command
             ];
             (new SchedulerLoop($this->db, $jobs, static fn(string $line) => $output->writeln($line),
                 recorder: $this->status))->run();
+            return Command::SUCCESS;
         } catch (\Throwable) {
             $output->writeln('Scheduler startup failed.');
             return Command::FAILURE;

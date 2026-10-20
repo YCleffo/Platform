@@ -18,6 +18,7 @@ final readonly class PostgresEffectiveRuntimeEntitlements implements EffectiveRu
         $installation = $this->installations->find($installationId);
         if ($installation === null || $installation['status'] !== 'active') { return []; }
         $row = $this->documents->latestForInstallation($installationId);
+        /** @var array{sequence: int, canonicalDocument: string, signature: string, keyId: string}|null $row */
         if ($row === null || $row['sequence'] !== (int) $installation['current_entitlement_sequence']
             || !$this->verifier->verify($row['canonicalDocument'], $row['signature'], $row['keyId'])) {
             return [];

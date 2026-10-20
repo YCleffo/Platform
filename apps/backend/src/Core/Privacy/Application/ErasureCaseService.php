@@ -80,6 +80,7 @@ final readonly class ErasureCaseService
                 if (!is_array($request) || $request['status'] !== 'in_progress' || $deadlineAt <= $now) {
                     throw new DomainException('Erasure request or approved deadline is invalid.');
                 }
+                /** @var DateTimeImmutable $deadlineAt */
                 $this->db->createCommand(<<<'SQL'
                     INSERT INTO core.data_subject_request_deadlines
                         (request_id, deadline_code, triggered_at, calendar_type, due_at, extension_allowed)
@@ -103,6 +104,7 @@ final readonly class ErasureCaseService
             $planned = 0;
             foreach ($groups as $group) {
                 $evaluation = $this->decisions->evaluateResource($group, $actor, $sourceRequestId);
+                /** @var array{aggregate: string, decisions: list<\App\Core\Privacy\Domain\RetentionDecision>} $evaluation */
                 $aggregate = $evaluation['aggregate'];
                 $action = self::actionFor($aggregate);
                 $handler = $action === null ? null : $this->handlers->forAction($group[0]->resourceType, $action);
@@ -187,6 +189,7 @@ final readonly class ErasureCaseService
     public static function policyFor(array $candidates, array $decisions, string $aggregate): string
     {
         foreach ($decisions as $decision) {
+            /** @var \App\Core\Privacy\Domain\RetentionDecision $decision */
             if ($decision->code === $aggregate) {
                 return $decision->candidate->retentionPolicyCode;
             }

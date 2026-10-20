@@ -37,8 +37,9 @@ final readonly class ManageDistributionConsentAction
                 return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
             }
             foreach (['categoryCodes','fieldCodes','conditionCodes','restrictionCodes'] as $key) {
-                if (!is_array($body[$key] ?? null) || !array_is_list($body[$key])
-                    || count(array_filter($body[$key], static fn($value) => PrivacyRequestInput::code($value))) !== count($body[$key])) {
+                $codes = $body[$key] ?? null;
+                if (!is_array($codes) || !array_is_list($codes)
+                    || count(array_filter($codes, static fn($value) => PrivacyRequestInput::code($value))) !== count($codes)) {
                     return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
                 }
             }
@@ -47,6 +48,7 @@ final readonly class ManageDistributionConsentAction
                 || (isset($body['representationId']) && !PrivacyRequestInput::uuid($body['representationId']))) {
                 return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
             }
+            /** @var array{subjectPersonId: string, purposeCode: string, categoryCodes: list<string>, fieldCodes: list<string>, conditionCodes: list<string>, restrictionCodes: list<string>, representationId?: string} $body */
             $id = $consents->grant($actor, $body['subjectPersonId'], $body['purposeCode'],
                 $body['categoryCodes'], $body['fieldCodes'], $body['conditionCodes'],
                 $body['restrictionCodes'],

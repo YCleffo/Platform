@@ -9,8 +9,12 @@ use InvalidArgumentException;
 
 final readonly class DistributionConsentDefinition
 {
-    /** @param list<string> $allowedCategories @param list<string> $allowedFields
-     * @param list<string> $allowedConditions @param list<string> $allowedRestrictions */
+    /**
+     * @param list<string> $allowedCategories
+     * @param list<string> $allowedFields
+     * @param list<string> $allowedConditions
+     * @param list<string> $allowedRestrictions
+     */
     public function __construct(public string $purposeCode, public string $documentVersion,
         public string $documentSha256, public array $allowedCategories, public array $allowedFields,
         public array $allowedConditions = [], public array $allowedRestrictions = [])

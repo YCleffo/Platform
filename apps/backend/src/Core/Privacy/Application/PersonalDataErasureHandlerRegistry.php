@@ -9,6 +9,7 @@ use DomainException;
 
 final readonly class PersonalDataErasureHandlerRegistry
 {
+    /** @var array<string, PersonalDataErasureHandler> */
     private array $handlers;
 
     /** @param iterable<PersonalDataErasureHandler> $handlers */

@@ -28,6 +28,7 @@ final readonly class OrganizationMembershipPersonalDataContributor implements Pe
             WHERE m.person_id = CAST(:subject AS uuid)
             ORDER BY m.joined_at, m.id LIMIT 1001
             SQL, [':subject' => $context->subjectPersonId])->queryAll();
+        /** @var list<array<string, mixed>> $rows */
         return new PersonalDataSection($this->code(), $this->categories(), $rows);
     }
 }

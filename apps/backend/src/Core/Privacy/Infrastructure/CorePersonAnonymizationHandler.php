@@ -35,7 +35,7 @@ final readonly class CorePersonAnonymizationHandler implements PersonalDataErasu
             WHERE i.id = CAST(:item AS uuid) AND i.resource_type = 'core.person'
                 AND c.subject_person_id = p.id
             SQL, [':item' => $itemId])->queryOne();
-        return is_array($row) && self::tombstoned($row) && $this->dependenciesClear($row['id'] ?? null)
+        return is_array($row) && self::tombstoned($row) && $this->dependenciesClear(isset($row['id']) ? (string) $row['id'] : null)
             ? 'anonymized' : null;
     }
 

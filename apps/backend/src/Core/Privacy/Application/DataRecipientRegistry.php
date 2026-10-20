@@ -25,5 +25,6 @@ final readonly class DataRecipientRegistry
     }
 
     public function get(string $code): ?DataRecipientDefinition { return $this->definitions[$code] ?? null; }
+    /** @return list<DataRecipientDefinition> */
     public function all(): array { return array_values($this->definitions); }
 }

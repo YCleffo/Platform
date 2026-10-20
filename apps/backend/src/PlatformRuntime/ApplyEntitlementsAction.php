@@ -19,7 +19,7 @@ final readonly class ApplyEntitlementsAction
         ServiceScopePolicy $scopes, PostgresInstallationRepository $installations,
         EntitlementApplier $applier, ResponseFactory $responses): ResponseInterface
     {
-        $identity = $credentials->authenticate((string) $request->getHeaderLine('Authorization'),
+        $identity = $credentials->authenticate($request->getHeaderLine('Authorization'),
             (string) ($request->getServerParams()['REMOTE_ADDR'] ?? 'unknown'));
         if ($identity === null) {
             return $responses->error(ApiMessage::AUTH_REQUIRED, httpCode: Status::UNAUTHORIZED);

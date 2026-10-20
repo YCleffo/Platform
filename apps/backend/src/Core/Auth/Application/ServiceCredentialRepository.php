@@ -6,7 +6,7 @@ namespace App\Core\Auth\Application;
 
 interface ServiceCredentialRepository
 {
-    /** @return array<string, mixed>|null */
+    /** @param list<string> $scopes @return array<string, mixed>|null */
     public function create(string $accountId, string $hashHex, array $scopes, ?string $expiresAt, ?string $actorAccountId): ?array;
     /** @return list<array<string, mixed>> */
     public function listFor(string $accountId): array;

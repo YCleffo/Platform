@@ -18,8 +18,12 @@ final readonly class DistributionConsentService
         private ProcessingPurposeRegistry $purposes, private DataCategoryRegistry $categories,
         private DistributionConsentDefinitionRegistry $definitions) {}
 
-    /** @param list<string> $categories @param list<string> $fields
-     *  @param list<string> $conditions @param list<string> $restrictions */
+    /**
+     * @param list<string> $categories
+     * @param list<string> $fields
+     * @param list<string> $conditions
+     * @param list<string> $restrictions
+     */
     public function grant(AuthenticatedIdentity $actor, string $subjectPersonId, string $purposeCode,
         array $categories, array $fields, array $conditions, array $restrictions,
         ?string $representationId = null): string
@@ -40,7 +44,9 @@ final readonly class DistributionConsentService
                 throw new DomainException('Unknown distribution data category.');
             }
         }
-        foreach ([$categories, $fields, $conditions, $restrictions] as $codes) {
+        /** @var list<list<string>> $codeGroups */
+        $codeGroups = [$categories, $fields, $conditions, $restrictions];
+        foreach ($codeGroups as $codes) {
             foreach ($codes as $code) {
                 MachineCode::assert($code);
             }
@@ -136,6 +142,7 @@ final readonly class DistributionConsentService
                 ':version' => $definition->documentVersion,
                 ':sha' => $definition->documentSha256])->queryAll();
         foreach ($rows as $row) {
+            /** @var array{condition_codes: string|list<string>, restriction_codes: string|list<string>} $row */
             $conditions = self::parsePgArray($row['condition_codes']);
             $restrictions = self::parsePgArray($row['restriction_codes']);
             if (!in_array($channelCode, $restrictions, true)
@@ -156,6 +163,7 @@ final readonly class DistributionConsentService
     private static function parsePgArray(string|array $value): array
     {
         if (is_array($value)) {
+            /** @var list<string> $value */
             return $value;
         }
         return $value === '{}' ? [] : explode(',', trim($value, '{}'));

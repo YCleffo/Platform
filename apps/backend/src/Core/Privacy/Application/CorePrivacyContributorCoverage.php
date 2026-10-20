@@ -35,6 +35,7 @@ final readonly class CorePrivacyContributorCoverage
         $resourceCovered = [];
         foreach ($this->purposes->codes() as $purposeCode) {
             $purpose = $this->purposes->get($purposeCode);
+            /** @var \App\Core\Privacy\Domain\ProcessingPurposeDefinition $purpose */
             $policy = $this->policies->get($purpose->retentionPolicyCode);
             if ($policy?->action === 'anonymize'
                 && in_array('identity', $purpose->dataCategories, true)) { $rootPurpose = true; }
@@ -110,7 +111,7 @@ final readonly class CorePrivacyContributorCoverage
         $missing = [];
         foreach ($rows as $row) {
             $type = (string) $row['resource_type'];
-            $key = $type . ':' . $row['resource_id'];
+            $key = $type . ':' . (string) $row['resource_id'];
             $group = $byResource[$key] ?? [];
             if ($group === []) { $missing[] = $type . ':retention'; continue; }
             $action = in_array($type, ['core.person', 'core.human_account'], true)
@@ -137,6 +138,7 @@ final readonly class CorePrivacyContributorCoverage
                 $candidate->purposeCode, $group);
             foreach ($this->purposes->codes() as $purposeCode) {
                 $purpose = $this->purposes->get($purposeCode);
+                /** @var \App\Core\Privacy\Domain\ProcessingPurposeDefinition $purpose */
                 $policy = $this->policies->get($purpose->retentionPolicyCode);
                 $root = $action === 'anonymize';
                 if (in_array(self::RESOURCE_CATEGORIES[$type], $purpose->dataCategories, true)

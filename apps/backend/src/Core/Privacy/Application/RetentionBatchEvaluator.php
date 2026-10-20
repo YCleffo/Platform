@@ -22,7 +22,9 @@ final readonly class RetentionBatchEvaluator
         }
         $counts = [];
         foreach ($groups as $group) {
-            foreach ($this->decisions->evaluateResource($group)['decisions'] as $decision) {
+            $evaluation = $this->decisions->evaluateResource($group);
+            /** @var array{decisions: list<\App\Core\Privacy\Domain\RetentionDecision>, aggregate: string} $evaluation */
+            foreach ($evaluation['decisions'] as $decision) {
                 $counts[$decision->code] = ($counts[$decision->code] ?? 0) + 1;
             }
         }

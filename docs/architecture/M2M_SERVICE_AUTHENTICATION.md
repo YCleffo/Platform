@@ -56,6 +56,17 @@ never stored in Core PostgreSQL. Both status reporting and `runtime:entitlements
 Plane pull endpoint directly and invokes the existing local
 `EntitlementApplier`. It prints only the applied sequence.
 
+Commercial commits and financial history do not roll back when Tenant is
+temporarily unavailable. During that interval Tenant retains its last valid
+local document subject to its validity period. When Tenant returns, the next
+authenticated pull applies the latest signed sequence; exact replay has no
+second effect and a stale sequence cannot restore old rights. The Core
+application/runtime container is stateless for this acceptance boundary:
+restarting it while PostgreSQL remains available must preserve durable state
+and allow its scheduler or entitlement sync entrypoint to resume. PostgreSQL
+restart, restore/PITR and disaster recovery are separate production reliability
+gates.
+
 The runtime then sends `POST /api/m2m/deployment/status` using its deployment
 credential and `deployment.status.write`. A ready body has exactly `status`
 (`ready`) and `entitlementSequence` (positive integer); a failed body has

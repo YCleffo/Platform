@@ -57,12 +57,14 @@ SQL, [':code' => $code])->queryScalar();
     /** @return list<array<string,mixed>> */
     public function rows(): array
     {
-        return $this->db->createCommand(<<<'SQL'
+        /** @var list<array<string, mixed>> $rows */
+        $rows = $this->db->createCommand(<<<'SQL'
 SELECT job_code, last_succeeded_at::text AS last_success, last_failed_at::text AS last_failure,
        consecutive_failures, last_duration_ms, last_processed_count, last_result,
        EXTRACT(EPOCH FROM (clock_timestamp() - heartbeat_at))::integer AS heartbeat_age_seconds
 FROM platform_runtime.background_job_status ORDER BY job_code
 SQL)->queryAll();
+        return $rows;
     }
 
     /** @return array{pendingEmailCount:int,oldestPendingAgeSeconds:?int} */
@@ -75,6 +77,7 @@ FROM core.outbox_events WHERE status IN ('pending','failed')
   AND event_type IN ('communication.email.requested','auth.password.reset.requested',
       'auth.email.verification.requested','auth.account.created')
 SQL)->queryOne();
+        /** @var array{pending_email_count: int|string, oldest_age: int|string|null} $row */
         return ['pendingEmailCount' => (int) $row['pending_email_count'],
             'oldestPendingAgeSeconds' => $row['oldest_age'] === null ? null : (int) $row['oldest_age']];
     }
@@ -90,8 +93,12 @@ LEFT JOIN platform_runtime.entitlement_documents d
   ON d.installation_id = i.id AND d.sequence = i.current_entitlement_sequence
 LIMIT 1
 SQL)->queryOne();
-        return ['installationStatus' => !is_array($row) ? null : $row['status'],
-            'entitlementSequence' => !is_array($row) ? null : (int) $row['sequence'],
-            'validUntil' => !is_array($row) ? null : $row['valid_until']];
+        if (!is_array($row)) {
+            return ['installationStatus' => null, 'entitlementSequence' => null, 'validUntil' => null];
+        }
+        /** @var array{status: string|null, sequence: int|string|null, valid_until: string|null} $row */
+        return ['installationStatus' => $row['status'],
+            'entitlementSequence' => (int) $row['sequence'],
+            'validUntil' => $row['valid_until']];
     }
 }

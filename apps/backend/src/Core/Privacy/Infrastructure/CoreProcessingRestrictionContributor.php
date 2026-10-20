@@ -16,9 +16,10 @@ final readonly class CoreProcessingRestrictionContributor implements ProcessingR
 
     public function supports(string $scopeType, ?string $purposeCode, ?string $resourceType): bool
     {
+        $purpose = $purposeCode === null ? null : $this->purposes->get($purposeCode);
         return $scopeType === 'purpose' && $purposeCode !== null
-            && $this->purposes->get($purposeCode) !== null
-            && array_intersect($this->purposes->get($purposeCode)->dataCategories,
+            && $purpose !== null
+            && array_intersect($purpose->dataCategories,
                 ['identity', 'preferences']) !== [];
     }
 

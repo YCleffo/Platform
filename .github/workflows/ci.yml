@@ -82,6 +82,9 @@ jobs:
         run: |
           docker compose --profile test exec -T backend-test vendor/bin/codecept run --seed 2120741368
 
+      - name: Verify stateless Core application restart with durable PostgreSQL
+        run: bash ./scripts/core-app-restart-test.sh
+
       - name: Stop Test Infrastructure
         if: always()
         run: |

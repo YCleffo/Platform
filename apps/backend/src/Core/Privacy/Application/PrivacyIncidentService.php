@@ -82,7 +82,7 @@ final readonly class PrivacyIncidentService
                 SQL, [':id' => $incidentId])->queryOne();
             $allowed = ['detected' => 'investigating', 'investigating' => 'contained',
                 'contained' => 'resolved'];
-            if (!is_array($row) || ($allowed[$row['status']] ?? null) !== $to) {
+            if (!is_array($row) || ($allowed[(string) $row['status']] ?? null) !== $to) {
                 throw new DomainException('Invalid incident transition.');
             }
             $this->db->createCommand(<<<'SQL'

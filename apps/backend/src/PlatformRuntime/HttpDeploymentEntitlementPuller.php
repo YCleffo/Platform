@@ -25,7 +25,7 @@ final readonly class HttpDeploymentEntitlementPuller implements DeploymentEntitl
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT => 15,
-            CURLOPT_WRITEFUNCTION => static function ($curl, string $chunk) use (&$response): int {
+            CURLOPT_WRITEFUNCTION => static function (\CurlHandle $curl, string $chunk) use (&$response): int {
                 if (strlen($response) + strlen($chunk) > 1500000) { return 0; }
                 $response .= $chunk;
                 return strlen($chunk);
@@ -37,6 +37,7 @@ final readonly class HttpDeploymentEntitlementPuller implements DeploymentEntitl
             }
             $decoded = json_decode($response, true, 8, JSON_THROW_ON_ERROR);
             if (!is_array($decoded)) { throw new DomainException('Invalid entitlement response.'); }
+            /** @var array<string, mixed> $decoded */
             return $decoded;
         } catch (\JsonException) {
             throw new DomainException('Invalid entitlement response.');

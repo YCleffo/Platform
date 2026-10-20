@@ -20,6 +20,7 @@ final readonly class PrivacyCleanupService
     public function __construct(private ConnectionInterface $db, private ClockInterface $clock,
         private PrivacyCleanupPolicy $policy) {}
 
+    /** @return list<string> */
     public static function categories(): array { return self::CATEGORIES; }
 
     /** @return array{category:string,selected:int,deleted:int,dryRun:bool} */

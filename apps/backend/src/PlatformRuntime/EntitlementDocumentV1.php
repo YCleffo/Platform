@@ -81,7 +81,9 @@ final readonly class EntitlementDocumentV1
             }
             $values[$key] = self::canonicalValue($item);
         }
-        return (object) $values;
+        /** @var stdClass $canonical */
+        $canonical = (object) $values;
+        return $canonical;
     }
 
     private static function canonicalValue(mixed $value): mixed

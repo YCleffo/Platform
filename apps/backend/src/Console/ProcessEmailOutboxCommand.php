@@ -64,6 +64,7 @@ final class ProcessEmailOutboxCommand extends Command
                 sleep(5);
                 continue;
             }
+            if (!isset($report)) { continue; }
             if (!$input->getOption('loop')) {
                 return $report->stateConflicts === 0 ? Command::SUCCESS : Command::FAILURE;
             }

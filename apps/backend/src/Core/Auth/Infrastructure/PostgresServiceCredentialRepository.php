@@ -19,6 +19,7 @@ final readonly class PostgresServiceCredentialRepository implements ServiceCrede
 
     public function __construct(private ConnectionInterface $db) {}
 
+    /** @param list<string> $scopes */
     public function create(string $accountId, string $hashHex, array $scopes, ?string $expiresAt, ?string $actorAccountId): ?array
     {
         $allowed = $this->db->createCommand(<<<'SQL'
@@ -44,6 +45,7 @@ final readonly class PostgresServiceCredentialRepository implements ServiceCrede
         $rows = $this->db->createCommand('SELECT ' . self::COLUMNS
             . ' FROM core.service_credentials WHERE account_id = CAST(:account AS uuid) ORDER BY created_at DESC, id DESC LIMIT 1000',
             [':account' => $accountId])->queryAll();
+        /** @var list<array<string, mixed>> $rows */
         return array_map(self::map(...), $rows);
     }
 
@@ -91,6 +93,7 @@ final readonly class PostgresServiceCredentialRepository implements ServiceCrede
                 . 'WHERE credential_id = CAST(:id AS uuid) RETURNING ' . self::COLUMNS,
                 [':id' => $credentialId])->queryOne();
         }
+        /** @var array<string, mixed> $row */
         return [...self::map($row), 'changed' => $changed];
     }
 

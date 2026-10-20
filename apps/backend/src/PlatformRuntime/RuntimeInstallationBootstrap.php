@@ -47,7 +47,7 @@ SQL)->queryOne();
                 || $row['release_channel'] !== $identity['releaseChannel']) {
                 throw new DomainException('Installation identity conflicts with existing runtime.');
             }
-            return $row['id'];
+            return (string) $row['id'];
         });
     }
 }

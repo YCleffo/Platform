@@ -16,7 +16,7 @@ final readonly class ServiceCredentialScopeRegistry
     /** @var list<string> */
     private array $allowed;
 
-    /** @param list<string> $additionalScopes */
+    /** @param list<mixed> $additionalScopes */
     public function __construct(array $additionalScopes = [])
     {
         foreach ($additionalScopes as $scope) {
@@ -24,10 +24,11 @@ final readonly class ServiceCredentialScopeRegistry
                 throw new InvalidArgumentException('Invalid service credential scope registration.');
             }
         }
+        /** @var list<string> $additionalScopes */
         $this->allowed = array_values(array_unique([...self::FOUNDATION, ...$additionalScopes]));
     }
 
-    /** @param list<string> $scopes
+    /** @param list<mixed> $scopes
      * @return list<string>
      */
     public function validate(array $scopes): array
@@ -40,6 +41,7 @@ final readonly class ServiceCredentialScopeRegistry
                 throw new InvalidArgumentException('Unknown service credential scope.');
             }
         }
+        /** @var list<string> $scopes */
         return array_values(array_unique($scopes));
     }
 }

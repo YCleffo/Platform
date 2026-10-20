@@ -37,7 +37,8 @@ final readonly class CoreResourceRetentionCandidateContributor implements Retent
     public function supportsPurpose(string $purposeCode): bool
     {
         $purpose = $this->purposes->get($purposeCode);
-        $policy = $purpose === null ? null : $this->policies->get($purpose->retentionPolicyCode);
+        if ($purpose === null) { return false; }
+        $policy = $this->policies->get($purpose->retentionPolicyCode);
         $root = in_array($this->resourceType, ['core.person', 'core.human_account'], true);
         return $policy !== null && ($root ? $policy->action === 'anonymize'
             : $policy->action !== 'anonymize')
@@ -93,6 +94,7 @@ final readonly class CoreResourceRetentionCandidateContributor implements Retent
             foreach ($this->purposes->codes() as $purposeCode) {
                 if (!$this->supportsPurpose($purposeCode)) { continue; }
                 $purpose = $this->purposes->get($purposeCode);
+                /** @var \App\Core\Privacy\Domain\ProcessingPurposeDefinition $purpose */
                 $policy = $this->policies->get($purpose->retentionPolicyCode);
                 if ($policy === null) { continue; }
                 $triggeredAt = null;

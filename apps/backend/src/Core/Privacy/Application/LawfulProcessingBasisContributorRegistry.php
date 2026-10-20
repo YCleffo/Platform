@@ -9,6 +9,7 @@ use DomainException;
 
 final readonly class LawfulProcessingBasisContributorRegistry
 {
+    /** @var array<string, LawfulProcessingBasisContributor> */
     private array $contributors;
 
     /** @param iterable<LawfulProcessingBasisContributor> $contributors */

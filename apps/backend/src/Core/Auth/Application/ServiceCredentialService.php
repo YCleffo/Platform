@@ -36,6 +36,7 @@ final readonly class ServiceCredentialService
             if ($record === null) {
                 return null;
             }
+            /** @var array{credentialId:string,accountId:string,scopes:list<string>,id:string,status:string,createdAt:string,expiresAt:?string,lastUsedAt:?string,rotatedAt:?string,revokedAt:?string} $record */
             $this->record('service_credential.created', $record, $actorAccountId);
             return ['credential' => $record, 'secret' => $secret->raw];
         });
@@ -53,6 +54,7 @@ final readonly class ServiceCredentialService
             if ($record === null) {
                 return null;
             }
+            /** @var array{credentialId:string,accountId:string,scopes:list<string>,id:string,status:string,createdAt:string,expiresAt:?string,lastUsedAt:?string,rotatedAt:?string,revokedAt:?string} $record */
             $this->record('service_credential.rotated', $record, $actorAccountId);
             return ['credential' => $record, 'secret' => $secret->raw];
         });
@@ -68,6 +70,7 @@ final readonly class ServiceCredentialService
             }
             $changed = $record['changed'];
             unset($record['changed']);
+            /** @var array{credentialId:string,accountId:string,scopes:list<string>,id:string,status:string,createdAt:string,expiresAt:?string,lastUsedAt:?string,rotatedAt:?string,revokedAt:?string} $record */
             if ($changed) {
                 $this->record('service_credential.revoked', $record, $actorAccountId);
             }
@@ -91,8 +94,9 @@ final readonly class ServiceCredentialService
             return null;
         }
         $record = $this->credentials->findForAuthentication($credentialId);
+        /** @var array{hashHex: string, status: string, revokedAt: string|null, expiresAt: string|null, accountType: string, accountStatus: string, disabledAt: string|null, archivedAt: string|null, accountId: string, credentialId: string, scopes: list<string>}|null $record */
         $actualHash = $this->tokens->hashHex($matches[2]);
-        if (!hash_equals((string) ($record['hashHex'] ?? str_repeat('0', 64)), $actualHash)
+        if (!hash_equals($record['hashHex'] ?? str_repeat('0', 64), $actualHash)
             || $record === null || $record['status'] !== 'active' || $record['revokedAt'] !== null
             || ($record['expiresAt'] !== null && new DateTimeImmutable($record['expiresAt']) <= new DateTimeImmutable())
             || !in_array($record['accountType'], ['service', 'system'], true)
@@ -108,7 +112,7 @@ final readonly class ServiceCredentialService
         return new ServiceIdentity($record['accountId'], $record['credentialId'], $record['accountType'], $record['scopes']);
     }
 
-    /** @param array<string, mixed> $record */
+    /** @param array{credentialId:string,accountId:string,scopes:list<string>,id:string,status:string,createdAt:string,expiresAt:?string,lastUsedAt:?string,rotatedAt:?string,revokedAt:?string} $record */
     private function record(string $action, array $record, string $actorAccountId): void
     {
         $this->audit->write(new WriteAuditEventCommand(

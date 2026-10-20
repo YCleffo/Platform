@@ -24,7 +24,7 @@ final readonly class CoreResourceBasisContributor implements LawfulProcessingBas
             default => null,
         };
         $purpose = $this->purposes->get($purposeCode);
-        return $category !== null && $purpose?->requiresConsent === true
+        return $category !== null && $purpose !== null && $purpose->requiresConsent === true
             && in_array($category, $purpose->dataCategories, true);
     }
 

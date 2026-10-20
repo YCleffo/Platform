@@ -40,15 +40,14 @@ final readonly class DestructionEvidencePolicy
 
     public function code(): string
     {
-        $this->assertConfigured();
-        return $this->configuration['code'];
+        return $this->configured()['code'];
     }
 
     public function retainUntil(DateTimeImmutable $executedAt): DateTimeImmutable
     {
-        $this->assertConfigured();
-        $due = $this->calendar->dueAt($this->configuration['unit'],
-            $this->configuration['duration'], $executedAt);
+        $configuration = $this->configured();
+        $due = $this->calendar->dueAt($configuration['unit'],
+            $configuration['duration'], $executedAt);
         if ($due < $executedAt->modify('+3 years')) {
             throw new DomainException('Destruction evidence retention is shorter than three years.');
         }
@@ -57,8 +56,17 @@ final readonly class DestructionEvidencePolicy
 
     public function referenceHash(string $resourceType, string $resourceId): string
     {
+        $configuration = $this->configured();
+        return hash_hmac('sha256', $resourceType . ':' . $resourceId, $configuration['hmacKey']);
+    }
+
+    /** @return array{code:string, duration:int, unit:string, hmacKey:string} */
+    private function configured(): array
+    {
         $this->assertConfigured();
-        return hash_hmac('sha256', $resourceType . ':' . $resourceId, $this->configuration['hmacKey']);
+        /** @var array{code:string, duration:int, unit:string, hmacKey:string} $configuration */
+        $configuration = $this->configuration;
+        return $configuration;
     }
 
     private function assertConfigured(): void

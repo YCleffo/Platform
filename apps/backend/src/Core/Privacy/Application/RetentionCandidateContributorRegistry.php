@@ -10,6 +10,7 @@ use DomainException;
 
 final readonly class RetentionCandidateContributorRegistry
 {
+    /** @var array<string, RetentionCandidateContributor> */
     private array $contributors;
 
     /** @param iterable<RetentionCandidateContributor> $contributors */
@@ -35,6 +36,7 @@ final readonly class RetentionCandidateContributorRegistry
         $result = [];
         foreach ($this->contributors as $contributor) {
             foreach ($contributor->candidates($limit - count($result), $subjectPersonId) as $candidate) {
+                /** @var mixed $candidate */
                 if (!$candidate instanceof RetentionCandidate || $candidate->contributorCode !== $contributor->code()
                     || !$contributor->supportsPurpose($candidate->purposeCode)
                     || ($subjectPersonId !== null && $candidate->subjectPersonId !== $subjectPersonId)) {

@@ -65,6 +65,7 @@ final readonly class ComplianceReadinessChecker
             $missing[] = 'incident_deadlines';
         }
         if ($productionRequired) {
+            $registeredPurposes = $this->operatorNotification['registeredPurposes'] ?? null;
             if (!$this->calendar instanceof ConfiguredBusinessCalendar
                 || !$this->calendar->coversCurrentPeriod(new \DateTimeImmutable())) {
                 $missing[] = 'business_calendar_coverage';
@@ -78,8 +79,8 @@ final readonly class ComplianceReadinessChecker
                     || trim((string) ($this->operatorNotification['number'] ?? '')) === ''
                     || trim((string) ($this->operatorNotification['date'] ?? '')) === ''
                     || trim((string) ($this->operatorNotification['evidenceReference'] ?? '')) === ''
-                    || ($this->operatorNotification['registeredPurposes'] ?? []) === []
-                    || array_diff($this->purposes->codes(), $this->operatorNotification['registeredPurposes'] ?? []) !== []
+                    || $registeredPurposes === []
+                    || array_diff($this->purposes->codes(), is_array($registeredPurposes) ? $registeredPurposes : []) !== []
                     || trim((string) ($this->operatorNotification['databaseLocationReference'] ?? '')) === '')) {
                 $missing[] = 'rkn_notification_evidence';
             }
@@ -100,8 +101,8 @@ final readonly class ComplianceReadinessChecker
                 'backupRecoveryReference', 'vulnerabilityUpdateReference',
                 'adminAccessReviewReference', 'secretsManagementReference',
                 'processorContractsReference'] as $key) {
-                if (!is_string($this->securityReferences[$key] ?? null)
-                    || trim($this->securityReferences[$key]) === '') {
+                $reference = $this->securityReferences[$key] ?? null;
+                if (!is_string($reference) || trim($reference) === '') {
                     $missing[] = 'security_matrix_references';
                     break;
                 }

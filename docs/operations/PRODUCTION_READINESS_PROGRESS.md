@@ -670,8 +670,10 @@ closure; the changes are test discovery, test coverage, and the gate script.
 | Cross-plane discovery | PASS | `phpunit.cross-plane.xml` scans `tests` and includes the `cross-plane` group. Both original classes and `CrossPlaneHttpRuntimeTest` appear in `--list-tests`; ordinary PHPUnit excludes the group. GitHub Actions calls `scripts/cross-plane-test-run.sh`. |
 | X12 paid renewal versus expiry | PASS | A genuine period boundary is crossed in `CrossPlaneDowngradeBoundaryTest`. Settled renewal advances once, keeps paid Tenant rights, and leaves one audit/outbox effect; unsettled renewal respects grace then expires and removes rights. |
 | X15 real process death | PASS | `control:scheduler:run` is SIGKILLed while PostgreSQL pauses the renewal update before commit. A fresh scheduler advances durable paid state once; signed Tenant entitlement applies once and replay stays stable. This is scheduler recovery, not a claim that every outbox consumer was fault injected. |
-| X18 duplicate activation/cancellation delivery | SPEC_GAP | `subscription.activated`/`subscription.cancelled` are internal outbox rows with no versioned integration schema or Tenant consumer. `EVENT_CONTRACTS.md` explicitly defers other cross-process publishers/consumers. The established path is authenticated pull of the signed document; repeated pull and exact replay are tested. An event-delivery assertion needs an authoritative contract first. |
+| X18 signed entitlement replay | PASS | `subscription.activated`/`subscription.cancelled` are internal Commercial outbox rows, not Tenant delivery contracts. The authoritative Tenant path is authenticated signed-document pull. Repeated pull, exact replay and monotonic sequence are tested; duplicate delivery of those internal events is `NOT_APPLICABLE_BY_ARCHITECTURE`. |
 | Real HTTP/runtime boundary | PASS | `CrossPlaneHttpRuntimeTest` starts a separate Symfony HTTP process, checks invalid and valid M2M credentials, calls the actual Yii `runtime:entitlements:sync` command for sequences 1 and 2, and rejects stale and wrong-installation signed documents. The renewal crash test runs the actual scheduler command. |
+| E16 focused recovery path | PASS | After Commercial commit, a Tenant CLI sync with unreachable DB fails. Financial/audit/outbox state is unchanged, Tenant stays at sequence 1, and a later successful sync reaches sequence 2 without duplicate effects. Full E16 acceptance still needs its API surface. |
+| E20 stateless container restart | PASS | `core-app-restart-test.sh` restarts only `backend-test` with `postgres-test` continuously running, checks a durable runtime row, then confirms a real `scheduler:run` auth cleanup job succeeds after restart. CI runs the same script. |
 | YooKassa sandbox | BLOCKED_EXTERNAL | No sandbox credential or shop ID is available to this environment. No real charge was made. |
 | Clean official cross-plane image rebuild | BLOCKED_EXTERNAL | After the final test-only DB guard edit, Docker Composer downloads failed with curl 56/OpenSSL bad record MAC from `codeload.github.com`. The current code passed with the rebuilt `control-plane-test` image and mounted locked backend dependencies. |
 | Remote CI for current working tree | NOT_RUN | The changed working tree is not a pushed revision, so no GitHub Actions run can attest to these bytes. |
@@ -684,7 +686,7 @@ Local closure regression observed on 2026-10-16:
 | Check | Status | Fresh result |
 | --- | --- | --- |
 | Cross-plane `--list-tests` | PASS | Three grouped classes, seven selected cases with the final source configuration. |
-| Cross-plane PHPUnit | PASS | 7 tests, 281 assertions on freshly migrated Core and Commercial test DBs; identical second run without reset. After the final guard edit, the current source passed 7/281 in the rebuilt `control-plane-test` image with mounted backend dependencies. The clean official `cross-plane-test` image rebuild is separately blocked above. |
+| Cross-plane PHPUnit | PASS | 7 tests, 289 assertions after the E16 fault assertion was added. Earlier fresh-DB and repeated runs passed 7/281; the current source runs in rebuilt `control-plane-test` with mounted backend dependencies. The clean official `cross-plane-test` image rebuild is separately blocked above. |
 | Ordinary Control Plane PHPUnit | PASS | 361 tests, 4444 assertions after isolated Commercial reset/migration. |
 | Backend Codeception full seeded suite | PASS | 508 tests, 14050 assertions with seed `2120741368`. |
 | Backend Psalm | FAIL | `vendor/bin/psalm --no-cache` reports 259 errors in untouched backend sources; JSON rerun reports the same count. Dominant types: 98 `MixedArgument`, 20 `MixedPropertyFetch`, 19 `PossiblyNullArgument`. No suppression or backend source edit was made in this closure. |
@@ -693,6 +695,7 @@ Local closure regression observed on 2026-10-16:
 | Commercial migrations | PASS | Fresh 39-migration apply, then latest 38→39→38→39 cycle in isolated DB. |
 | Core migrations | PASS | Fresh `platform_test` DB through migration 032; required Core and runtime objects reported OK. |
 | Runtime HTTP and restart gates | PASS | Included in the seven cross-plane cases on fresh DBs. |
+| E20 Docker restart gate | PASS | `bash ./scripts/core-app-restart-test.sh` passed locally twice; PostgreSQL process stayed up and the post-restart job succeeded. |
 | Fixture hygiene | PASS | After the repeat run, zero Core installations/documents and zero X15 pause triggers remain. |
 | `git diff --check` | PASS | No whitespace errors. |
 
@@ -719,18 +722,20 @@ not been executed; it does not discard the narrower passing evidence above.
 | E11 | Renewal versus expiry race | NOT_RUN |
 | E12 | Cancel auto-renew | NOT_RUN |
 | E13 | Refund | NOT_RUN |
-| E14 | Duplicate asynchronous event | SPEC_GAP |
+| E14 | Duplicate internal subscription event delivery to Tenant | NOT_APPLICABLE_BY_ARCHITECTURE |
 | E15 | Worker crash and restart | NOT_RUN |
-| E16 | Partial cross-plane failure | SPEC_GAP |
+| E16 | Commercial commit, Tenant unavailable, recovery sync | NOT_RUN |
 | E17 | Two simultaneous plan changes | NOT_RUN |
 | E18 | Tenant isolation | NOT_RUN |
 | E19 | Repeated provisioning | NOT_RUN |
-| E20 | Docker restart | SPEC_GAP |
+| E20 | Stateless Core app container restart with live PostgreSQL | PASS |
 
-E14 has no named event or delivery contract. E16 has no defined fault point
-or convergence criterion. E20 does not identify which Docker service restarts
-or the expected durable state. These require acceptance definitions before a
-complete result can be asserted; no transport or failure policy is inferred.
+E14's duplicate delivery case does not apply because the named internal
+subscription events have no Tenant consumer. E16 now has an explicit fault
+point and convergence criterion; the focused runtime fault check passes, but
+its full API-level acceptance remains `NOT_RUN`. E20 covers only the stateless
+Core application container with PostgreSQL alive. PostgreSQL restart and
+restore/PITR remain production reliability work.
 
 ### Finite readiness boundary
 

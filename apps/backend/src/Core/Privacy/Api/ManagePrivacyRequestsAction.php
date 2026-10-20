@@ -62,6 +62,7 @@ final readonly class ManagePrivacyRequestsAction
                 || !is_string($body['sourceChannel'] ?? null)) {
                 return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
             }
+            /** @var array{subjectPersonId: string, requestType: string, receivedAt: string, identityVerificationCode: string, identityEvidenceReference: string, representativeVerificationReference?: string, sourceChannel: string} $body */
             try {
                 $receivedAt = new DateTimeImmutable($body['receivedAt']);
             } catch (\Exception) {
