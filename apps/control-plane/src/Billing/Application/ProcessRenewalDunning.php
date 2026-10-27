@@ -28,7 +28,7 @@ SELECT r.invoice_id, r.state
 FROM commercial.renewal_collection_states r
 JOIN commercial.invoices i ON i.id=r.invoice_id
 JOIN commercial.subscriptions s ON s.id=r.subscription_id
-WHERE i.status='issued' AND s.status='active' AND (
+WHERE i.status='issued' AND s.status='active' AND s.auto_renew_enabled AND (
  (r.state='retry_wait' AND r.attempt_count < ? AND r.next_attempt_at <= ?::timestamptz) OR
  (r.state='payment_method_required' AND EXISTS (
    SELECT 1 FROM commercial.saved_payment_methods m JOIN commercial.payment_provider_accounts pa ON pa.id=m.provider_account_id
@@ -62,7 +62,7 @@ SELECT s.id, s.commercial_account_id, s.current_period_end, i.id AS invoice_id
 FROM commercial.subscriptions s
 JOIN commercial.invoices i ON i.subscription_id=s.id AND i.commercial_account_id=s.commercial_account_id
  AND i.billing_reason='subscription_renewal' AND i.service_period_start=s.current_period_end AND i.status='issued'
-WHERE s.status='active' AND s.billing_status='current' AND s.current_period_end <= ?::timestamptz
+WHERE s.status='active' AND s.auto_renew_enabled AND s.billing_status='current' AND s.current_period_end <= ?::timestamptz
 ORDER BY s.current_period_end, s.id LIMIT ? FOR UPDATE OF s,i SKIP LOCKED
 SQL, [$this->timestamp($now), $limit], [ParameterType::STRING, ParameterType::INTEGER]);
             foreach ($rows as $row) {
@@ -84,7 +84,7 @@ SELECT r.invoice_id
 FROM commercial.renewal_collection_states r
 JOIN commercial.invoices i ON i.id=r.invoice_id
 JOIN commercial.subscriptions s ON s.id=r.subscription_id
-WHERE i.status='issued' AND s.status='active' AND r.state NOT IN ('succeeded','exhausted')
+WHERE i.status='issued' AND s.status='active' AND s.auto_renew_enabled AND r.state NOT IN ('succeeded','exhausted')
  AND s.billing_status='past_due' AND s.grace_until <= ?::timestamptz
 ORDER BY s.grace_until, r.invoice_id LIMIT ?
 SQL, [$this->timestamp($now), $limit], [ParameterType::STRING, ParameterType::INTEGER]);

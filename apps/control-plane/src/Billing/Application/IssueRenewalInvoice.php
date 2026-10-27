@@ -44,7 +44,7 @@ final readonly class IssueRenewalInvoice
             $rows = $connection->fetchAllAssociative(<<<'SQL'
 SELECT s.*
 FROM commercial.subscriptions s
-WHERE s.status = 'active' AND s.current_period_end <= ?::timestamptz
+WHERE s.status = 'active' AND s.auto_renew_enabled AND s.current_period_end <= ?::timestamptz
   AND NOT EXISTS (
     SELECT 1 FROM commercial.subscription_plan_changes c
     WHERE c.source_subscription_id = s.id AND c.status IN ('scheduled','payment_required','paid_unapplied')
@@ -78,6 +78,9 @@ SQL, [$cutoff, $limit], [ParameterType::STRING, ParameterType::INTEGER]);
         }
         if ($subscription['status'] !== 'active') {
             throw new \DomainException('Renewal invoice requires an active subscription.');
+        }
+        if (!in_array($subscription['auto_renew_enabled'], [true, 't', '1', 1], true)) {
+            throw new \DomainException('Auto-renewal is disabled for this subscription.');
         }
         if ($connection->fetchOne("SELECT 1 FROM commercial.subscription_plan_changes WHERE source_subscription_id = ? AND status IN ('scheduled','payment_required','paid_unapplied')", [$subscription['id']]) !== false) {
             throw new \DomainException('A plan change fixes the next subscription terms.');

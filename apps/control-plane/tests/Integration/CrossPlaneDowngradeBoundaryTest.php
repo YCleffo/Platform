@@ -31,6 +31,7 @@ use ControlPlane\Subscription\Application\ProcessScheduledPlanChanges;
 use ControlPlane\Subscription\Application\RequestSubscriptionPlanChange;
 use ControlPlane\Subscription\Application\SubscriptionPeriodCalculator;
 use ControlPlane\Subscription\Application\ExpireSubscription;
+use ControlPlane\Subscription\Application\DisableSubscriptionAutoRenewal;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -46,6 +47,7 @@ final class CrossPlaneDowngradeBoundaryTest extends RefundTestCase
             'paid-renewal' => ['paid-renewal'],
             'unsettled-renewal' => ['unsettled-renewal'],
             'renewal-restart' => ['renewal-restart'],
+            'auto-renew-disabled' => ['auto-renew-disabled'],
         ];
     }
 
@@ -125,6 +127,30 @@ final class CrossPlaneDowngradeBoundaryTest extends RefundTestCase
             $this->activatePaid($account, $source, $activation, $this->uuid());
             $this->applyDocument($issuer, $deployment, $installationId, $applier);
             self::assertSame(['boundary.' . $suffix . '.old' => true], $runtime->forInstallation($installationId));
+
+            if ($case === 'auto-renew-disabled') {
+                $result = (new DisableSubscriptionAutoRenewal($this->connection,
+                    new AccountAuthorization($this->connection)))->disable($owner, $account,
+                    $source, 'boundary-auto-renew-' . $suffix, $this->uuid());
+                self::assertSame($source, $result['id']);
+                self::assertFalse(in_array($this->connection->fetchOne(
+                    'SELECT auto_renew_enabled FROM commercial.subscriptions WHERE id=?', [$source]),
+                    [true, 't', '1', 1], true));
+                self::assertSame(1, $this->applyDocument($issuer, $deployment, $installationId, $applier));
+                self::assertSame(['boundary.' . $suffix . '.old' => true],
+                    $runtime->forInstallation($installationId));
+                $this->crossBoundary($source);
+                self::assertGreaterThanOrEqual(1, (new ExpireSubscription($this->connection, null, 900))
+                    ->expireDue(new \DateTimeImmutable('now'), 100, $this->uuid()));
+                self::assertSame('expired', $this->connection->fetchOne(
+                    'SELECT status FROM commercial.subscriptions WHERE id=?', [$source]));
+                self::assertSame(0, (int) $this->connection->fetchOne(
+                    "SELECT count(*) FROM commercial.invoices WHERE subscription_id=? AND billing_reason='subscription_renewal'", [$source]));
+                self::assertGreaterThan(1, $this->applyDocument($issuer, $deployment,
+                    $installationId, $applier));
+                self::assertSame([], $runtime->forInstallation($installationId));
+                return;
+            }
 
             if (str_ends_with($case, 'renewal')) {
                 $renewal = (new IssueRenewalInvoice($this->connection,

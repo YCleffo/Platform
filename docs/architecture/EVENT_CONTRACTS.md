@@ -23,7 +23,8 @@ an unchanged source do not create another event. The runtime applies the
 document through its authenticated M2M endpoint; the outbox event is not a
 substitute for fetching and verifying the document.
 
-`subscription.activated` and `subscription.cancelled` remain internal
+`subscription.activated`, `subscription.cancelled` and
+`subscription.auto_renew_disabled` remain internal
 Commercial outbox events. They have no versioned cross-process payload
 contract and no Tenant consumer. Tenant rights converge through authenticated
 pull of the latest signed entitlement document, including after repeated or

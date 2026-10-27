@@ -63,6 +63,10 @@ final class OpenApiRouteParityTest extends TestCase
         self::assertSame(['current', 'past_due'], $schema['properties']['billing_status']['enum']);
         self::assertSame(['string', 'null'], $schema['properties']['past_due_since']['type']);
         self::assertSame(['string', 'null'], $schema['properties']['grace_until']['type']);
+        self::assertContains('auto_renew_enabled', $schema['required']);
+        self::assertSame('boolean', $schema['properties']['auto_renew_enabled']['type']);
+        $cancel = $contract['paths']['/api/control/accounts/{accountId}/subscriptions/{subscriptionId}/auto-renew/cancel']['post'];
+        self::assertSame('#/components/responses/AutoRenewalDisabled', $cancel['responses'][200]['$ref']);
     }
 
     public function testEveryApplicationHttpRouteAndContractOperationRemainInParity(): void

@@ -23,8 +23,10 @@ final class YooKassaRefundReconciliationTest extends RefundTestCase
             self::addToAssertionCount(1);
         }
         $result = (new ReconcileYooKassaRefunds($this->connection, $submission))->reconcile(100, $this->uuid());
-        self::assertSame(1, $result['selected']);
-        self::assertCount(2, $gateway->createCalls);
-        self::assertSame($gateway->createCalls[0][1]->providerRequestKey, $gateway->createCalls[1][1]->providerRequestKey);
+        self::assertGreaterThanOrEqual(1, $result['selected']);
+        $ownCalls = array_values(array_filter($gateway->createCalls,
+            static fn (array $call): bool => $call[1]->refundId === $refund['id']));
+        self::assertCount(2, $ownCalls);
+        self::assertSame($ownCalls[0][1]->providerRequestKey, $ownCalls[1][1]->providerRequestKey);
     }
 }

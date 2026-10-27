@@ -38,7 +38,7 @@ final readonly class ExpireSubscription
      */
     public function expireInTransaction(Connection $connection, string $accountId, string $subscriptionId, \DateTimeImmutable $effectiveInstant, string $correlationId): array
     {
-        $subscription = $connection->fetchAssociative('SELECT id, commercial_account_id, status, billing_status, current_period_end, grace_until FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$subscriptionId, $accountId]);
+        $subscription = $connection->fetchAssociative('SELECT id, commercial_account_id, status, billing_status, auto_renew_enabled, current_period_end, grace_until FROM commercial.subscriptions WHERE id = ? AND commercial_account_id = ? FOR UPDATE', [$subscriptionId, $accountId]);
         if ($subscription === false) {
             throw new \DomainException('Subscription was not found.');
         }
@@ -56,12 +56,13 @@ final readonly class ExpireSubscription
 SELECT id, commercial_account_id
 FROM commercial.subscriptions
 WHERE status = 'active' AND (
+ (NOT auto_renew_enabled AND current_period_end <= ?::timestamptz) OR
  (billing_status='past_due' AND grace_until <= ?::timestamptz) OR
  (billing_status='current' AND current_period_end + (? * interval '1 second') <= ?::timestamptz
   AND NOT EXISTS (SELECT 1 FROM commercial.invoices i WHERE i.subscription_id=subscriptions.id AND i.billing_reason='subscription_renewal' AND i.status='issued')))
 ORDER BY current_period_end, id
 LIMIT %d
-SQL, $batchSize), [$this->timestamp($effectiveInstant), $this->graceSeconds, $this->timestamp($effectiveInstant)]);
+SQL, $batchSize), [$this->timestamp($effectiveInstant), $this->timestamp($effectiveInstant), $this->graceSeconds, $this->timestamp($effectiveInstant)]);
         $count = 0;
         foreach ($rows as $row) {
             if (!is_string($row['id']) || !is_string($row['commercial_account_id'])) continue;
@@ -69,7 +70,7 @@ SQL, $batchSize), [$this->timestamp($effectiveInstant), $this->graceSeconds, $th
             try {
                 try {
                     $count += $this->connection->transactional(function (Connection $connection) use ($row, $effectiveInstant, $correlationId): int {
-                        $subscription = $connection->fetchAssociative('SELECT id, commercial_account_id, status, billing_status, current_period_end, grace_until FROM commercial.subscriptions WHERE id=? AND commercial_account_id=? AND status=? FOR UPDATE SKIP LOCKED', [$row['id'], $row['commercial_account_id'], 'active']);
+                        $subscription = $connection->fetchAssociative('SELECT id, commercial_account_id, status, billing_status, auto_renew_enabled, current_period_end, grace_until FROM commercial.subscriptions WHERE id=? AND commercial_account_id=? AND status=? FOR UPDATE SKIP LOCKED', [$row['id'], $row['commercial_account_id'], 'active']);
                         if ($subscription === false) return 0;
                         $result = $this->expireLocked($connection, $subscription, $effectiveInstant, $correlationId);
                         return $result['status'] === 'expired' ? 1 : 0;
@@ -103,9 +104,9 @@ SQL, $batchSize), [$this->timestamp($effectiveInstant), $this->graceSeconds, $th
             throw new \LogicException('Active subscription period is invalid.');
         }
         $periodEnd = new \DateTimeImmutable($subscription['current_period_end']);
-        $expirationBoundary = $subscription['billing_status'] === 'past_due' && is_string($subscription['grace_until'] ?? null)
+        $expirationBoundary = !in_array($subscription['auto_renew_enabled'], [true, 't', '1', 1], true) ? $periodEnd : ($subscription['billing_status'] === 'past_due' && is_string($subscription['grace_until'] ?? null)
             ? new \DateTimeImmutable($subscription['grace_until'])
-            : $periodEnd->modify(sprintf('+%d seconds', $this->graceSeconds));
+            : $periodEnd->modify(sprintf('+%d seconds', $this->graceSeconds)));
         if ($expirationBoundary > $effectiveInstant) {
             throw new \DomainException('Subscription has not reached its current period end.');
         }

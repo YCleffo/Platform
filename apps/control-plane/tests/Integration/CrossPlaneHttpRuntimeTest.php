@@ -133,15 +133,17 @@ final class CrossPlaneHttpRuntimeTest extends RefundTestCase
             self::assertSame(1, (int) $core->createCommand(
                 'SELECT current_entitlement_sequence FROM platform_runtime.installations WHERE id = CAST(:id AS uuid)',
                 [':id' => $installationId])->queryScalar());
-            $this->syncThroughCli($backendRoot, $runtimeEnvironment, 2);
-            $this->syncThroughCli($backendRoot, $runtimeEnvironment, 2);
-            self::assertSame($committedState, $this->commercialEffectSnapshot($subscription, $deployment));
             $installations = new PostgresInstallationRepository($core);
             $verifier = new SodiumEntitlementSignatureVerifier(new TrustedEntitlementKeyRegistry([
                 $keyId => ['publicKeyBase64' => base64_encode($public), 'status' => 'trusted'],
             ]));
             $rights = new PostgresEffectiveRuntimeEntitlements($installations,
                 new PostgresEntitlementDocumentRepository($core), $verifier);
+            self::assertSame([], $rights->forInstallation($installationId),
+                'A failed Tenant sync must not grant the newly paid feature.');
+            $this->syncThroughCli($backendRoot, $runtimeEnvironment, 2);
+            $this->syncThroughCli($backendRoot, $runtimeEnvironment, 2);
+            self::assertSame($committedState, $this->commercialEffectSnapshot($subscription, $deployment));
             self::assertSame([$featureCode => true], $rights->forInstallation($installationId));
             $applier = new PostgresEntitlementApplier($core, $verifier);
             $oldDocument = base64_decode($first['documentBase64'], true);

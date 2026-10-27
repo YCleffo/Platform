@@ -1125,8 +1125,10 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
         $receiver->receive($body, 'application/json', $this->uuid());
         self::assertCount(1, $gateway->getCalls);
         self::assertSame('succeeded', $this->connection->fetchOne('SELECT status FROM commercial.refunds WHERE id=?', [$refund['id']]));
-        self::assertSame(0, (new ReconcileYooKassaRefunds($this->connection,
-            $this->refundSubmission($gateway)))->reconcile(100, $this->uuid())['selected']);
+        (new ReconcileYooKassaRefunds($this->connection,
+            $this->refundSubmission($gateway)))->reconcile(100, $this->uuid());
+        self::assertCount(1, array_filter($gateway->getCalls,
+            static fn (array $call): bool => $call[1] === $providerRefundId));
         self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events WHERE action='refund.succeeded' AND resource_id=?", [$refund['id']]));
         self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events WHERE event_type='refund.succeeded' AND aggregate_id=?", [$refund['id']]));
         self::assertSame(1, (new FinalizeRefundedPlanChanges($this->connection))->runBatch(100, $this->uuid()));

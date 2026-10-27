@@ -1,5 +1,86 @@
 # Production readiness: состояние работ
 
+## Authoritative Core closure status — 2026-10-26
+
+**Verdict: `CORE_NOT_READY`.** Source base:
+`32bd483664b3762f2fc3014ef737750fd3a3e413`, plus the uncommitted
+working-tree diff. Source manifest SHA-256 (the sorted `path` plus Git blob ID
+for all 18 changed code, contract and architecture files, excluding this
+readiness log):
+`75f6bfa59263b0908f252f07f3427445ce786d73521f6c37c24f38043786b3bd`.
+Remote CI cannot attest to that diff. The E16 test assertion
+covers CORE-13 and ENT-01/02/03. The new E12 behavior and its migration,
+OpenAPI and tests cover SUB-01/06/07, BILL-01/02/04, PAY-03/04/05/06 and
+CORE-13/ENT-01/02/03. Earlier checkpoints below are historical and do not
+override this verdict.
+
+Current local quality evidence on the working tree:
+
+| Gate | Result |
+| --- | --- |
+| Backend Psalm, locked dependencies | PASS: 0 errors (`--no-cache --no-progress --output-format=json`) on 2026-10-26. Historical 259 errors were fixed before this revision; this task started at 0 and added no suppressions. |
+| Backend Codeception, seed `2120741368` | PASS: 508 tests, 14,050 assertions on 2026-10-26 in a no-bind container from the locked cross-plane image, with the same Backend source, isolated Core DB, test environment and copied contract files. The official `backend-test` compose container cannot start because Docker Desktop rejects host bind mounts. An earlier full run on 2026-10-23 passed in the official container with the same Backend source. |
+| Control Plane PHPUnit | PASS: 366 tests, 4,514 assertions on the final code, after a fresh isolated Commercial reset. The no-bind image run was necessary after Docker Desktop refused host bind mounts. |
+| Control Plane PHPStan | PASS: 0 errors on the E12 code and final tests. |
+| Control Plane service wiring | PASS: `php bin/console lint:container` with the isolated test environment. |
+| Cross-plane PHPUnit | PASS: 8 tests, 319 assertions on the final image, including actual HTTP M2M/Yii CLI and the E12 real boundary. It used both isolated test networks and copied the OpenAPI contract into a no-bind container. CI discovers all eight through `phpunit.cross-plane.xml` and `.github/workflows/ci.yml`. |
+| HTTP/M2M runtime, X12, X15, X18 | PASS in the cross-plane group: actual HTTP M2M pull and Yii CLI sync, real renewal boundary, scheduler SIGKILL/restart, signed document replay. X18 tests duplicate signed pull; internal subscription outbox rows have no Tenant event consumer. |
+| E20 Docker restart | PASS: `core-app-restart-test.sh` restarted `backend-test` while `postgres-test` stayed up, retained a durable row and ran `scheduler:run` successfully. |
+| OpenAPI/route parity | PASS in the final Control Plane suite and focused 10-test run; the new route and response schema are covered. |
+| Migrations | PASS: Core fresh test schema applied 32/32 migrations and required runtime objects; Commercial guard reset then applied 40/40 migrations on `platform_commercial_test`. Docker Desktop bind failure required copying the unchanged Core SQL runner into the isolated PostgreSQL test container. |
+| Test DB isolation | PASS: `control:test:reset` refused `APP_ENV=dev`; the successful reset required its isolated test host/database guard. Core reset touched only the named test volumes. |
+| Compose and diff | PASS: `docker compose config --quiet`; `git diff --check`. |
+
+E01–E20 acceptance is evaluated against the scenario names supplied for this
+closure. `PARTIAL` means a passing component/integration or cross-plane test
+exists, but the listed complete scenario boundary has not been executed. A
+passing narrower test is not promoted to full acceptance. Provider behavior in
+these tests uses local fakes, not YooKassa sandbox charges.
+
+| ID | Status | Existing evidence and exact remaining acceptance boundary |
+| --- | --- | --- |
+| E01 Initial purchase | PARTIAL | `PaymentSettlementTest`, `CrossPlaneBootstrapTest`: paid DB, audit/outbox and signed Tenant rights; public purchase HTTP response is not joined to that flow. |
+| E02 Failed payment | PARTIAL | `YooKassaCheckoutTest`, `CrossPlaneBootstrapTest`: failed attempt keeps Tenant rights empty; no full failed public checkout HTTP to Tenant trace. |
+| E03 Repeated payment request | PARTIAL | `PaymentCreationTest`, `YooKassaCheckoutTest`: one payment/attempt and stable keys; no repeated public HTTP request with ledger and Tenant readback in one trace. |
+| E04 Duplicate webhook | PARTIAL | `YooKassaWebhookTest`: deduplicated inbox and one settlement; no repeated webhook HTTP through signed Tenant readback. |
+| E05 Out-of-order webhook | PARTIAL | `YooKassaWebhookTest`: authoritative success resists stale cancellation; no reordered webhook HTTP through signed Tenant readback. |
+| E06 Paid upgrade | PARTIAL | `SubscriptionPlanChangeTest`, `CrossPlaneBootstrapTest`: one paid switch and signed Tenant change; public plan-change/payment HTTP response is not joined to that trace. |
+| E07 Failed upgrade | PARTIAL | Same tests: failed attempt keeps old Tenant feature; no failed public upgrade checkout HTTP trace. |
+| E08 Scheduled downgrade | PARTIAL | `CrossPlaneDowngradeBoundaryTest`: paid/free real boundary and signed Tenant state; public scheduling HTTP response is not joined to the boundary trace. |
+| E09 Cancelled downgrade | PARTIAL | `SubscriptionPlanChangeTest`, `CrossPlaneBootstrapTest`: cancellation retains old rights; public cancellation HTTP response is not joined to Tenant readback. |
+| E10 Renewal before expiry | PASS | `CrossPlaneDowngradeBoundaryTest` `renewal-restart`: settlement before the real boundary, one advance, immutable money/history, one audit/outbox effect and stable signed Tenant rights. |
+| E11 Renewal/expiry race | PARTIAL | `RenewalConcurrencyTest` uses independent processes and checks financial outcomes; no signed Tenant state in the same race. |
+| E12 Auto-renew cancellation | PARTIAL | The customer rule is now explicit: keep access to the end of the paid period and stop future charges. `SubscriptionAutoRenewCancellationTest` covers idempotency, issued unpaid invoice voiding, pending provider attempt rejection/reconciliation, paid renewal and expiry; `CrossPlaneDowngradeBoundaryTest` checks signed Tenant rights across a real unpaid boundary. The public cancellation HTTP response has not been joined to that signed Tenant trace, and an already-paid next period has not crossed its later boundary in real time. |
+| E13 Refund | PARTIAL | `RefundLifecycleTest`, `YooKassaRefundWebhookTest`, `CrossPlaneBootstrapTest`: immutable refund effects and late-upgrade Tenant rights; no complete public refund HTTP to Tenant trace for the named generic case. |
+| E14 Duplicate asynchronous event | NOT_APPLICABLE_BY_ARCHITECTURE | `subscription.activated`/`cancelled` outbox rows are internal Commercial records with no Tenant consumer. Tenant retrieves authenticated signed documents; X18 repeats the actual transport and rejects stale sequence. |
+| E15 Worker restart | PASS | `CrossPlaneDowngradeBoundaryTest` `renewal-restart`: scheduler killed before commit, fresh process advances once, signed Tenant replay remains stable. |
+| E16 Partial cross-plane failure | PASS | `CrossPlaneHttpRuntimeTest`: Commercial commit, HTTP M2M document, failed Tenant CLI sync against unavailable Tenant DB, unchanged Commercial effects and no new Tenant right, restored sync to latest sequence, duplicate sync unchanged. |
+| E17 Concurrent plan changes | PARTIAL | `SubscriptionPlanChangeTest`: independent process races produce one change/invoice and preserve old rights; no signed Tenant readback in the same race. |
+| E18 Tenant isolation | PARTIAL | `CrossPlaneBootstrapTest` proves distinct account documents and rejects the second account's signed bytes for the first installation; two simultaneously active Tenant runtimes have not been checked. |
+| E19 Repeated provisioning | PARTIAL | `DeploymentProvisioningTest` rejects repeated start and replays ready without duplicate audit; repeated real runtime provisioning and Tenant state are not covered. |
+| E20 Docker/runtime restart | PASS on 2026-10-23; final rerun blocked by environment | `core-app-restart-test.sh` restarted the application container with live durable PostgreSQL and a post-restart job on the unchanged Backend source. Docker Desktop host bind failure prevents a 2026-10-26 repeat. |
+
+**Local Core blockers:** complete the `PARTIAL` acceptance boundaries with the
+smallest existing-harness extensions, including E12 public HTTP and final paid
+boundary. These prevent `CORE_CODE_READY_LOCAL`. Docker Desktop currently
+rejects host bind mounts with `mkdir /run/desktop/mnt/host/c: file exists`, so
+the official compose Backend and Control test containers and E20 restart cannot
+be rerun. The no-bind image runs above verify the source-level tests but do not
+replace those exact compose/runtime gates. No confirmed P0/P1 code or security
+defect was found in the finite review of authorization, financial replay/locking,
+signed entitlement rejection, worker recovery, secret handling and database
+ownership.
+
+**External release prerequisites:** YooKassa sandbox credentials/testing and
+remote CI for the exact committed revision. The clean cross-plane test image
+was rebuilt locally with locked dependencies in this run.
+
+**Production operational backlog:** hosting, DNS/TLS, production secrets,
+backup/PITR and restore, failover, alerts, deployment rehearsal and load tests.
+These are separate from local Core code acceptance.
+
+## Historical execution log
+
 Срез: 2026-10-13. Это рабочий журнал выполнения приложенного ТЗ, а не акт
 приёмки production. Источники истины: миграции, код, OpenAPI и выполненные
 проверки. Непроверенный пункт не отмечается как завершённый.
@@ -657,7 +738,7 @@ restored clone, metrics/alerts, concurrency load, and remote CI.
   matrices. Scheduler, remote CI, and production evidence remain unverified.
   Verdict: `CORE_NOT_READY`.
 
-## Current Core closure snapshot: 2026-10-16
+## Historical Core closure snapshot: 2026-10-16
 
 This section supersedes earlier continuation checklists as the current status.
 Historical results above retain their original scope and dates. The affected

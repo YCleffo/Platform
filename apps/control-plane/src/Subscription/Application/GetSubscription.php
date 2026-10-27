@@ -22,7 +22,7 @@ final readonly class GetSubscription
         }
         $this->authorization->requirePermission($userId, $accountId, 'account.read');
         $subscription = $this->connection->fetchAssociative(<<<'SQL'
-SELECT id, status, billing_status, past_due_since, grace_until, commercial_account_id, billing_profile_id, current_period_start, current_period_end, created_at, updated_at
+SELECT id, status, billing_status, past_due_since, grace_until, auto_renew_enabled, commercial_account_id, billing_profile_id, current_period_start, current_period_end, created_at, updated_at
 FROM commercial.subscriptions
 WHERE id = ? AND commercial_account_id = ?
 SQL, [$subscriptionId, $accountId]);
@@ -67,7 +67,8 @@ WHERE i.subscription_id = ? AND i.billing_reason = 'subscription_renewal'
   AND i.status IN ('issued','paid') AND i.service_period_start = ?::timestamptz
 ORDER BY i.created_at DESC LIMIT 1
 SQL, [$subscriptionId, $subscription['current_period_end']]);
-        $subscription['renewal_required'] = $subscription['status'] === 'active' && $renewal === false;
+        $subscription['auto_renew_enabled'] = in_array($subscription['auto_renew_enabled'], [true, 't', '1', 1], true);
+        $subscription['renewal_required'] = $subscription['status'] === 'active' && $subscription['auto_renew_enabled'] && $renewal === false;
         $subscription['renewal'] = $renewal === false ? null : [
             'invoice_id' => $renewal['invoice_id'],
             'invoice_status' => $renewal['invoice_status'],

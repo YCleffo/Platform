@@ -8,6 +8,7 @@ use ControlPlane\Identity\Security\ControlUserPrincipal;
 use ControlPlane\Identity\Application\AuthSecurityService;
 use ControlPlane\Subscription\Application\CancelSubscription;
 use ControlPlane\Subscription\Application\CreateSubscription;
+use ControlPlane\Subscription\Application\DisableSubscriptionAutoRenewal;
 use ControlPlane\Subscription\Application\GetSubscription;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -18,7 +19,7 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/control/accounts/{accountId}/subscriptions', name: 'control_subscriptions_')]
 final class SubscriptionController extends AbstractController
 {
-    public function __construct(private readonly CreateSubscription $creator, private readonly GetSubscription $reader, private readonly CancelSubscription $canceller, private readonly AuthSecurityService $authSecurity)
+    public function __construct(private readonly CreateSubscription $creator, private readonly GetSubscription $reader, private readonly CancelSubscription $canceller, private readonly DisableSubscriptionAutoRenewal $autoRenewalDisabler, private readonly AuthSecurityService $authSecurity)
     {
     }
 
@@ -64,6 +65,18 @@ final class SubscriptionController extends AbstractController
             $subscriptionId,
             $key,
             ApiRequest::correlationId($request),
+        ));
+    }
+
+    #[Route('/{subscriptionId}/auto-renew/cancel', name: 'cancel_auto_renew', methods: ['POST'])]
+    public function cancelAutoRenew(string $accountId, string $subscriptionId, Request $request): JsonResponse
+    {
+        $this->authSecurity->requireSensitiveMfa($this->user());
+        $key = $request->headers->get('Idempotency-Key');
+        if (!is_string($key)) throw new \InvalidArgumentException('Idempotency-Key is required.');
+
+        return new JsonResponse($this->autoRenewalDisabler->disable(
+            $this->user()->id(), $accountId, $subscriptionId, $key, ApiRequest::correlationId($request),
         ));
     }
 

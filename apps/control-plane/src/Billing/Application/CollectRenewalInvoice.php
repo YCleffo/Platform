@@ -100,7 +100,7 @@ FROM commercial.invoices i
 JOIN commercial.subscriptions s ON s.id = i.subscription_id AND s.commercial_account_id = i.commercial_account_id
 LEFT JOIN commercial.renewal_collection_states r ON r.invoice_id = i.id
 WHERE i.billing_reason = 'subscription_renewal' AND i.status = 'issued' AND i.total_minor > 0
-  AND i.service_period_start <= ?::timestamptz AND s.status = 'active'
+  AND i.service_period_start <= ?::timestamptz AND s.status = 'active' AND s.auto_renew_enabled
   AND (r.id IS NULL OR r.state = 'ready'
        OR (r.state = 'collecting' AND r.next_attempt_at <= ?::timestamptz))
 ORDER BY i.service_period_start, i.id
@@ -117,13 +117,13 @@ SQL, [$until, $until, $limit], [ParameterType::STRING, ParameterType::STRING, Pa
         return $this->connection->transactional(function (Connection $db) use ($invoiceId, $correlationId): array {
             $identity = $db->fetchAssociative('SELECT subscription_id FROM commercial.invoices WHERE id=?', [$invoiceId]);
             if ($identity === false) return ['state' => 'ineligible', 'invoice_id' => $invoiceId];
-            $subscription = $db->fetchAssociative('SELECT status FROM commercial.subscriptions WHERE id=? FOR UPDATE', [$identity['subscription_id']]);
+            $subscription = $db->fetchAssociative('SELECT status, auto_renew_enabled FROM commercial.subscriptions WHERE id=? FOR UPDATE', [$identity['subscription_id']]);
             $invoice = $db->fetchAssociative('SELECT id, commercial_account_id, subscription_id, status, billing_reason, total_minor, currency, bill_to_contact_email FROM commercial.invoices WHERE id=? FOR UPDATE', [$invoiceId]);
             if ($subscription === false || $invoice === false) return ['state' => 'ineligible', 'invoice_id' => $invoiceId];
             $invoice['subscription_status'] = $subscription['status'];
             $invoice['collection_state'] = $db->fetchOne('SELECT state FROM commercial.renewal_collection_states WHERE invoice_id=?', [$invoiceId]);
             if ($invoice['billing_reason'] !== 'subscription_renewal' || $invoice['status'] === 'paid') return ['state' => 'ineligible', 'invoice_id' => $invoiceId];
-            if ($invoice['status'] !== 'issued' || $invoice['subscription_status'] !== 'active') return ['state' => 'ineligible', 'invoice_id' => $invoiceId];
+            if ($invoice['status'] !== 'issued' || $invoice['subscription_status'] !== 'active' || !in_array($subscription['auto_renew_enabled'], [true, 't', '1', 1], true)) return ['state' => 'ineligible', 'invoice_id' => $invoiceId];
             if (in_array($invoice['collection_state'], ['succeeded','exhausted'], true)) return ['state' => 'ineligible', 'invoice_id' => $invoiceId];
             $amount = Money::nonNegativeBigInt($invoice['total_minor']);
             if ($amount <= 0 || $invoice['currency'] !== 'RUB' || !is_string($invoice['commercial_account_id']) || !is_string($invoice['subscription_id'])) return ['state' => 'ineligible', 'invoice_id' => $invoiceId];
@@ -168,12 +168,12 @@ SQL, [$invoice['commercial_account_id']]);
         return $this->connection->transactional(function (Connection $db) use ($invoiceId, $paymentId, $attemptId, $methodId, $methodReference, $providerAccountId): array|false {
             $identity = $db->fetchAssociative('SELECT subscription_id, commercial_account_id FROM commercial.invoices WHERE id=?', [$invoiceId]);
             if ($identity === false) return false;
-            $subscription = $db->fetchAssociative('SELECT status FROM commercial.subscriptions WHERE id=? FOR UPDATE', [$identity['subscription_id']]);
+            $subscription = $db->fetchAssociative('SELECT status, auto_renew_enabled FROM commercial.subscriptions WHERE id=? FOR UPDATE', [$identity['subscription_id']]);
             $invoice = $db->fetchAssociative('SELECT status FROM commercial.invoices WHERE id=? FOR UPDATE', [$invoiceId]);
             $payment = $db->fetchAssociative('SELECT status FROM commercial.payments WHERE id=? AND invoice_id=? FOR UPDATE', [$paymentId, $invoiceId]);
             $collection = $db->fetchAssociative('SELECT state FROM commercial.renewal_collection_states WHERE invoice_id=? FOR UPDATE', [$invoiceId]);
             $attempt = $db->fetchAssociative('SELECT status, provider_payment_id, provider_account_id FROM commercial.payment_attempts WHERE id=? AND payment_id=? FOR UPDATE', [$attemptId, $paymentId]);
-            if ($subscription === false || $subscription['status'] !== 'active' || $invoice === false || $invoice['status'] !== 'issued'
+            if ($subscription === false || $subscription['status'] !== 'active' || !in_array($subscription['auto_renew_enabled'], [true, 't', '1', 1], true) || $invoice === false || $invoice['status'] !== 'issued'
                 || $payment === false || $payment['status'] !== 'pending' || $collection === false || $collection['state'] !== 'collecting'
                 || $attempt === false || $attempt['status'] !== 'pending' || $attempt['provider_account_id'] !== $providerAccountId) return false;
             // A known provider payment is reconciled with GET; saved-card validity gates only a new CREATE.

@@ -188,6 +188,13 @@ paths:
       description: An open scheduled, payment-required, or paid-unapplied plan change must be resolved before the source subscription can be cancelled.
       parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
       responses: {'200': {$ref: '#/components/responses/Subscription'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/auto-renew/cancel:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/SubscriptionId'}]
+    post:
+      operationId: cancelSubscriptionAutoRenewal
+      description: Requires billing.manage and recent MFA. Keeps the active paid period and stops later renewal invoices and saved-card charges. An unpaid issued renewal invoice is voided if no provider attempt is pending. A paid renewal remains effective. A pending attempt or open plan change must first be reconciled or resolved.
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      responses: {'200': {$ref: '#/components/responses/AutoRenewalDisabled'}, '409': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/plan-changes:
     parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/SubscriptionId'}]
     post:
@@ -436,6 +443,7 @@ components:
     Sessions: {description: Owned sessions only, content: {application/json: {schema: {type: object, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/Session'}}}}}}}
     Subscription: {description: Subscription, content: {application/json: {schema: {$ref: '#/components/schemas/Subscription'}}}}
     SubscriptionCreated: {description: Created draft subscription, content: {application/json: {schema: {$ref: '#/components/schemas/SubscriptionCreated'}}}}
+    AutoRenewalDisabled: {description: Auto-renewal disabled, active paid period retained, content: {application/json: {schema: {$ref: '#/components/schemas/AutoRenewalDisabled'}}}}
     PlanChangeRequested: {description: Requested plan change, content: {application/json: {schema: {$ref: '#/components/schemas/PlanChangeRequested'}}}}
     PlanChange: {description: Plan change with immutable calculation and current payment state, content: {application/json: {schema: {$ref: '#/components/schemas/PlanChange'}}}}
     PlanChangeCancelled: {description: Cancelled plan change, content: {application/json: {schema: {$ref: '#/components/schemas/PlanChangeCancelled'}}}}
@@ -494,6 +502,7 @@ components:
         last_used_at: {type: [string, 'null'], format: date-time}
         disabled_at: {type: [string, 'null'], format: date-time}
     SubscriptionCreated: {type: object, additionalProperties: false, required: [id, status], properties: {id: {type: string, format: uuid}, status: {const: draft}}}
+    AutoRenewalDisabled: {type: object, additionalProperties: false, required: [id, auto_renew_enabled], properties: {id: {type: string, format: uuid}, auto_renew_enabled: {const: false}}}
     PlanChangeRequested:
       type: object
       additionalProperties: false
@@ -543,13 +552,14 @@ components:
     Session: {type: object, required: [id, authentication_method, primary_authenticated_at, current], properties: {id: {type: string, format: uuid}, issued_at: {type: string, format: date-time}, last_used_at: {type: string, format: date-time}, expires_at: {type: string, format: date-time}, revoked_at: {type: [string, 'null'], format: date-time}, revoke_reason: {type: [string, 'null']}, user_agent: {type: string}, authentication_method: {type: string, enum: [password, password_totp, password_recovery]}, primary_authenticated_at: {type: string, format: date-time}, mfa_authenticated_at: {type: [string, 'null'], format: date-time}, current: {type: boolean}}}
     Subscription:
       type: object
-      required: [id, status, billing_status, past_due_since, grace_until, renewal_required]
+      required: [id, status, billing_status, past_due_since, grace_until, auto_renew_enabled, renewal_required]
       properties:
         id: {type: string, format: uuid}
         status: {type: string, enum: [draft, active, cancelled, expired]}
         billing_status: {type: string, enum: [current, past_due]}
         past_due_since: {type: [string, 'null'], format: date-time}
         grace_until: {type: [string, 'null'], format: date-time}
+        auto_renew_enabled: {type: boolean}
         current_period_start: {type: [string, 'null'], format: date-time}
         current_period_end: {type: [string, 'null'], format: date-time}
         renewal_required: {type: boolean}

@@ -120,6 +120,18 @@ payment funds the next period without changing the active period; rollover
 atomically closes the old usage period and opens a zeroed one. Expiration waits
 for the configurable settlement grace and serializes on the subscription row.
 
+An authorized billing owner with recent MFA may disable auto-renewal on an
+active subscription through an idempotent endpoint. This leaves the paid
+period and its entitlements intact, while preventing later renewal invoices,
+saved-card collections and dunning. An already issued unpaid renewal invoice
+and pending local payment are voided/cancelled with audit and internal outbox
+records when no provider attempt is pending. A pending provider attempt must
+be authoritatively reconciled first; an already paid renewal still extends
+access through its purchased service period. The subscription expires at the
+end of the last paid period without renewal grace. An open plan change must be
+resolved first. Immediate subscription cancellation remains a separate action.
+The choice is stored on the subscription and survives worker restarts.
+
 Automatic renewal hardening adds the separate bounded
 `control:billing:process-dunning` job and a provider-neutral policy. A transport-
 uncertain CREATE keeps the same pending PaymentAttempt and provider request key;
