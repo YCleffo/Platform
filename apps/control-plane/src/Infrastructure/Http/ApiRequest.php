@@ -27,6 +27,24 @@ final class ApiRequest
         }
     }
 
+    /** Preserve the JSON object/array distinction for an optional nested object.
+     * @return array<string, mixed>
+     */
+    public static function optionalObject(Request $request, string $key): array
+    {
+        $body = json_decode($request->getContent(), false, 64, JSON_THROW_ON_ERROR);
+        if (!$body instanceof \stdClass) {
+            throw new \InvalidArgumentException('A JSON object is required.');
+        }
+        if (!property_exists($body, $key)) {
+            return [];
+        }
+        if (!$body->{$key} instanceof \stdClass) {
+            throw new \InvalidArgumentException('An object field is required.');
+        }
+        return get_object_vars($body->{$key});
+    }
+
     /** @param array<string, mixed> $data */
     public static function string(array $data, string $key): string
     {

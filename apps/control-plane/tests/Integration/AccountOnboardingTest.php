@@ -13,6 +13,15 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 final class AccountOnboardingTest extends DatabaseTestCase
 {
+    public function testEmptyBillingAddressIsStoredAsAnObject(): void
+    {
+        $owner = $this->user();
+        $account = (new CreateCommercialAccount($this->connection))->create($owner, 'empty-address', 'Empty address', null, 'empty-address-key', $this->uuid());
+        $service = new BillingProfileService($this->connection, new AccountAuthorization($this->connection));
+        $profile = $service->save($owner, $account, 'Fixture', 'RU', null, null, null, [], $this->uuid());
+        self::assertSame('object', $this->connection->fetchOne('SELECT jsonb_typeof(address) FROM commercial.billing_profiles WHERE id=?', [$profile]));
+        self::assertSame('{}', $this->connection->fetchOne('SELECT address::text FROM commercial.billing_profiles WHERE id=?', [$profile]));
+    }
     public function testOwnerBillingOnboardingAndPublishedCatalog(): void
     {
         $owner = $this->user('owner@example.test');

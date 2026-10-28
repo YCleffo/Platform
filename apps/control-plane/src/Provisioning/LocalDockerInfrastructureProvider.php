@@ -338,7 +338,15 @@ final readonly class LocalDockerInfrastructureProvider implements DeploymentInfr
         $builder = $this->runtimeEnvironment ?? new DeploymentRuntimeEnvironment();
         $args = array_merge($args, $builder->arguments($request, $database, $redis, $this->controlUrl,
             $role, $this->readyTimeout, $this->environment));
-        if ($role !== 'runtime') { $args = array_merge($args, ['--entrypoint', 'php']); }
+        if ($role !== 'runtime') {
+            // PROV-03: CLI workers do not run Caddy's admin HTTP endpoint.
+            // Override the inherited image probe with the actual worker heartbeat.
+            $healthRole = $role === 'scheduler' ? 'backend-scheduler' : 'backend-email-worker';
+            $args = array_merge($args, ['--entrypoint', 'php',
+                '--health-cmd', 'php /app/yii ops:health ' . $healthRole,
+                '--health-interval', '15s', '--health-timeout', '10s',
+                '--health-start-period', '60s', '--health-retries', '3']);
+        }
         $args[] = $request->imageDigest;
         if ($role === 'scheduler') { $args = array_merge($args, ['/app/yii', 'scheduler:run']); }
         if ($role === 'emailWorker') { $args = array_merge($args, ['/app/yii', 'communication:process-email', '--loop']); }

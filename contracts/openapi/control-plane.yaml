@@ -79,7 +79,7 @@ paths:
   /api/control/auth/reauthenticate:
     post:
       operationId: reauthenticate
-      description: MFA-enabled users must provide exactly one of code or recovery_code; non-MFA users provide neither.
+      description: 'MFA-enabled users must provide exactly one of code or recovery_code; non-MFA users provide neither. A successful MFA step-up updates the current authentication method and recent MFA evidence atomically.'
       requestBody: {$ref: '#/components/requestBodies/Reauthenticate'}
       responses: {'200': {$ref: '#/components/responses/Object'}, '400': {$ref: '#/components/responses/Error'}}
   /api/control/auth/mfa/status:
@@ -162,13 +162,13 @@ paths:
     parameters: [{$ref: '#/components/parameters/AccountId'}]
     put:
       operationId: saveBillingProfile
-      requestBody: {$ref: '#/components/requestBodies/Object'}
+      requestBody: {$ref: '#/components/requestBodies/BillingProfile'}
       responses: {'200': {$ref: '#/components/responses/Object'}, '422': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/onboarding/catalog-reviewed:
     parameters: [{$ref: '#/components/parameters/AccountId'}]
     post:
       operationId: markCatalogReviewed
-      responses: {'204': {description: Updated}, '409': {$ref: '#/components/responses/Error'}}
+      responses: {'200': {description: 'Onboarding state updated', content: {application/json: {schema: {type: object, required: [onboarding_state], properties: {onboarding_state: {const: ready_for_subscription}}}}}}, '409': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/subscriptions:
     parameters: [{$ref: '#/components/parameters/AccountId'}]
     post:
@@ -398,6 +398,20 @@ components:
   requestBodies:
     Object: {required: true, content: {application/json: {schema: {type: object}}}}
     EmptyObject: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, maxProperties: 0}}}}
+    BillingProfile:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [legal_name, country_code]
+            properties:
+              legal_name: {type: string, minLength: 1, maxLength: 240}
+              country_code: {type: string, pattern: '^[A-Za-z]{2}$'}
+              contact_name: {type: [string, 'null'], maxLength: 200}
+              contact_email: {type: [string, 'null'], format: email}
+              tax_identifier: {type: [string, 'null'], maxLength: 80}
+              address: {type: object, default: {}, description: 'Optional address object; omitted and empty object are stored as an empty JSON object. Arrays and null are rejected.'}
     CreateSubscription: {required: true, content: {application/json: {schema: {type: object, required: [plan_price_id, quantity], properties: {plan_price_id: {type: string, format: uuid}, quantity: {type: integer, minimum: 1}}}}}}
     PlanChange: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [plan_price_id, quantity], properties: {plan_price_id: {type: string, format: uuid}, quantity: {type: integer, minimum: 1}}}}}}
     ExternalCompensationEvidence: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [externalTransactionReference, documentReference, documentSha256], properties: {externalTransactionReference: {type: string, minLength: 1, maxLength: 200}, documentReference: {type: string, pattern: '^urn:'}, documentSha256: {type: string, pattern: '^[0-9a-f]{64}$'}}}}}}

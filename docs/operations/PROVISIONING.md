@@ -70,3 +70,12 @@ update operation. The provisioner quiesces application writers, requires a fresh
 backup, runs migrations from the pinned target image, and replaces only runtime, scheduler,
 and email-worker. It advances `current_release_id` only after runtime verification succeeds.
 Failed updates preserve deployment data and do not perform automatic rollback.
+
+## Проверка health probe после изменения конфигурации
+
+Dedicated CLI workers должны иметь собственный Docker healthcheck через
+`ops:health`, а не HTTP probe образа FrankenPHP. В аудите 2026-10-28 старые
+development workers имели Docker unhealthy из-за проверки Caddy port 2019,
+хотя обе реальные CLI health-команды завершились с кодом 0. Создание новых
+workers исправлено; существующие контейнеры требуют управляемого пересоздания.
+Это отличается от отсутствия heartbeat или падения самого worker.

@@ -1,0 +1,17 @@
+flowchart TD
+  Request[POST control auth register] --> Validate[Нормализация email и password policy]
+  Validate --> Limit{Rate limit и уникальность}
+  Limit -->|Отказ| Error[Контролируемая ошибка]
+  Limit -->|Допуск| Tx[Одна транзакция]
+  Tx --> User[Control User: pending_verification]
+  Tx --> Verification[Хеш одноразового verification token]
+  Tx --> Outbox[Outbox: ID пользователя и артефакта]
+  Tx --> Audit[Аудит регистрации]
+  Outbox --> Worker[Email worker строит ссылку]
+  Worker --> Mail[SMTP и письмо]
+  Mail --> Confirm[POST control auth verify]
+  Verification --> Confirm
+  Confirm --> Check{Не истёк и не использован?}
+  Check -->|Да| Active[User active и артефакт consumed]
+  Check -->|Нет| Denied[Отказ без новой активации]
+  Active --> Login[Password login и отдельная сессия]

@@ -5,6 +5,38 @@ use ControlPlane\Identity\Application\AuthFailure;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
 final class AuthSecurityLifecycleTest extends DatabaseTestCase
 {
+    public function testPasswordSessionCanAcquireRecentMfaWithoutViolatingItsDatabaseContract(): void
+    {
+        $auth = $this->authService();
+        $security = $this->authSecurityService();
+        $correlation = $this->uuid();
+        $password = 'correct horse battery staple';
+        $email = 'reauth-' . bin2hex(random_bytes(5)) . '@example.test';
+        $registered = $auth->register($email, $password, '192.0.2.90', $correlation);
+        $auth->verifyEmail($registered['verification_token'], $correlation);
+        $session = $auth->login($email, $password, '192.0.2.90', 'reauth test', $correlation);
+        $principal = $auth->authenticateAccessToken($session['access_token']);
+        $setup = $security->beginTotpSetup($principal, $correlation);
+        $codes = $security->confirmTotpSetup($principal, $setup['factor_id'], $this->totp($setup['secret'], time()), $correlation);
+
+        $security->reauthenticate($principal, $password, null, $codes[0], $correlation);
+        $row = $this->connection->fetchAssociative('SELECT authentication_method,mfa_authenticated_at FROM commercial.control_sessions WHERE id=?', [$principal->sessionId()]);
+        self::assertIsArray($row);
+        self::assertSame('password_recovery', $row['authentication_method']);
+        self::assertNotNull($row['mfa_authenticated_at']);
+        $security->requireSensitiveMfa($auth->authenticateAccessToken($session['access_token']));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.control_user_recovery_codes WHERE control_user_id=? AND consumed_at IS NOT NULL', [$registered['user_id']]));
+        try {
+            $security->reauthenticate($principal, $password, null, $codes[0], $correlation);
+            self::fail('Consumed recovery code accepted for step-up.');
+        } catch (AuthFailure $failure) {
+            self::assertSame('mfa_code_invalid', $failure->errorCode);
+        }
+        $security->reauthenticate($principal, $password, $this->totp($setup['secret'], time() + 30), null, $correlation);
+        self::assertSame('password_totp', $this->connection->fetchOne('SELECT authentication_method FROM commercial.control_sessions WHERE id=?', [$principal->sessionId()]));
+        $security->requireSensitiveMfa($auth->authenticateAccessToken($session['access_token']));
+    }
+
     public function testMfaChallengeIsSingleUseAndRefreshPreservesEvidence(): void
     {
         $auth=$this->authService(); $security=$this->authSecurityService(); $correlation=$this->uuid();

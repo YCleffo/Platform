@@ -1,0 +1,17 @@
+flowchart TD
+  Account[Commercial Account и owner membership] --> Billing[Billing profile и onboarding]
+  Billing --> Draft[Draft subscription и published plan price]
+  Draft --> Invoice[Issued invoice и неизменяемые строки]
+  Invoice --> Payment[CreatePayment с idempotency key]
+  Payment --> Free{Сумма равна нулю?}
+  Free -->|Да| Settle[Локальный settlement]
+  Free -->|Нет| Attempt[PaymentAttempt и постоянный provider request key]
+  Attempt --> Network[Внешний вызов вне DB-транзакции]
+  Network --> Outcome{Достоверный результат?}
+  Outcome -->|Timeout| Pending[Uncertain: lookup и reconciliation]
+  Pending --> Network
+  Outcome -->|Отказ| Failed[Нет активации и нет новых прав]
+  Outcome -->|Успех| Authoritative[Authoritative provider state и проверка суммы]
+  Authoritative --> Settle
+  Settle --> Atomic[Одна транзакция: paid invoice, payment, subscription, audit и outbox]
+  Atomic --> Rights[Derived entitlements и подписанный Tenant document]

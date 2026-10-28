@@ -26,3 +26,11 @@ Renewal preparation, initial collection, dunning, advancement, and expiration ru
 Each local dedicated deployment runs its own Core scheduler and email worker from the exact HTTP runtime image digest. Both use that deployment's PostgreSQL and Redis; the email worker uses local Mailpit through the control network. Scheduler writes `__scheduler__` and the email worker writes `backend_email_worker` into the existing `platform_runtime.background_job_status` table. Runtime activation waits for both fresh heartbeats and Redis PING before reporting ready. Destructive privacy jobs stay disabled until deployment-specific policy is explicitly configured. Before final decommission backup, the provider stops all three Core processes so no background writer remains.
 
 The Core `runtime_entitlement_sync` job resolves `CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF` through `RuntimeSecretResolver`, exactly as `runtime:deployment:activate` does. A temporary Control Plane or authentication failure is logged as a failed job and leaves the last applied local entitlement untouched. A rotated deployment credential must be placed in the external secret source and loaded by restarting or recreating the runtime process before this scheduled sync can use it.
+
+## Docker health у CLI workers
+
+Scheduler и email worker не запускают Caddy. При создании dedicated workers
+LocalDockerInfrastructureProvider явно задаёт `php /app/yii ops:health
+backend-scheduler` или `backend-email-worker`, вместо унаследованной Caddy admin
+probe. Новая конфигурация не меняет автоматически уже созданные контейнеры.
+Действующая CLI health проверяет heartbeat, а не наличие HTTP-процесса.

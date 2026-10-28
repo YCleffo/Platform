@@ -1,0 +1,16 @@
+flowchart TD
+  Request[HTTP запрос] --> Context[Client context и тип credential]
+  Context --> Kind{Human или service?}
+  Kind -->|Human| Session[Проверка human session и статуса Person/Account]
+  Kind -->|Service| Service[Хеш service credential, expiry и разрешённые scopes]
+  Session --> Permission[RBAC permission]
+  Permission --> Organization{Нужен organization scope?}
+  Organization -->|Да| Membership[Активное membership и допустимая организация]
+  Organization -->|Нет| Allowed
+  Membership --> Allowed[Бизнес-операция]
+  Service --> Scope[Проверка service scope]
+  Scope --> Allowed
+  Session --> Guard[Защита последнего usable human superadmin]
+  Guard --> RoleChange[Изменение критической роли или identity lifecycle]
+  Permission -->|Нет права| Forbidden[403 без изменения данных]
+  Scope -->|Нет scope| Forbidden

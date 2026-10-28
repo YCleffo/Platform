@@ -22,6 +22,12 @@ final class OpenApiRouteParityTest extends TestCase
         self::assertSame('#/components/responses/SubscriptionCreated', $create['responses'][201]['$ref']);
         self::assertSame(['plan_price_id', 'quantity'], $contract['components']['requestBodies']['CreateSubscription']['content']['application/json']['schema']['required']);
         self::assertSame(['id', 'status'], $contract['components']['schemas']['SubscriptionCreated']['required']);
+        $billing = $contract['paths']['/api/control/accounts/{accountId}/billing-profile']['put'];
+        self::assertSame('#/components/requestBodies/BillingProfile', $billing['requestBody']['$ref']);
+        $billingSchema = $contract['components']['requestBodies']['BillingProfile']['content']['application/json']['schema'];
+        self::assertSame(['legal_name', 'country_code'], $billingSchema['required']);
+        self::assertSame('object', $billingSchema['properties']['address']['type']);
+        self::assertArrayHasKey(200, $contract['paths']['/api/control/accounts/{accountId}/onboarding/catalog-reviewed']['post']['responses']);
 
         $checkout = $contract['paths']['/api/control/accounts/{accountId}/payments/{paymentId}/checkout']['post'];
         self::assertSame('#/components/responses/CheckoutResult', $checkout['responses'][200]['$ref']);

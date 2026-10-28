@@ -45,3 +45,11 @@ directories writable. CI reports High vulnerabilities and fails on any
 Critical vulnerability.
 
 The Commercial Control Plane is a separate authentication boundary from Core. It implements encrypted TOTP secrets, pending-to-active enrollment, replay protection, bounded single-use MFA login challenges, one-time recovery codes with concurrency protection, password reset with hash-only/expiring single-use artifacts, and session/security-artifact revocation after reset. Recent primary authentication plus recent MFA protects sensitive Control Plane mutations including billing, refunds, subscriptions, and saved payment methods.
+
+## Recent authentication и повышение уровня текущей сессии
+
+После проверки fresh TOTP или одноразового recovery code текущая password-сессия
+атомарно получает метод `password_totp` или `password_recovery` вместе с новым
+`mfa_authenticated_at`. Это сохраняет SQL-инвариант метода и MFA evidence.
+Повтор recovery code отклоняется. Refresh сохраняет evidence, но не создаёт
+новую MFA-проверку. Проверки: `AuthSecurityLifecycleTest` и реальный HTTP smoke.

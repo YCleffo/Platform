@@ -1,0 +1,13 @@
+flowchart TD
+  Business[Регистрация, reset или invitation] --> Tx[Business transaction и outbox]
+  Tx --> Claim[Worker атомарно получает lease]
+  Claim --> Render[Разрешить recipient и артефакт, выбрать locale и template]
+  Render --> SMTP[Отправить письмо со стабильным Message-ID]
+  SMTP --> Outcome{Результат доставки SMTP}
+  Outcome -->|Принято| Published[Published и минимизация payload]
+  Outcome -->|Временная ошибка| Retry[Backoff и bounded attempts]
+  Retry --> Claim
+  Outcome -->|Лимит попыток| Dead[Dead letter и операторское восстановление]
+  Claim -->|Процесс умер| Lease[Просроченный lease доступен новому worker]
+  Lease --> Claim
+  Published --> Note[SMTP acceptance не доказывает прочтение письма человеком]

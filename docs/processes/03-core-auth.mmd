@@ -1,0 +1,20 @@
+flowchart TD
+  Start[Создание Person и отдельного human Account] --> Invite[Приглашение или активация credentials]
+  Invite --> Login[Вход по проверенному identifier]
+  External[Проверенная external identity или passkey] --> Policy
+  Login --> Rate{Rate limit, пароль и статус}
+  Rate -->|Отказ| Denied[Общая ошибка credentials и аудит]
+  Rate -->|Допуск| Policy{Нужен MFA или смена пароля?}
+  Policy -->|Да| Challenge[Одноразовый challenge]
+  Challenge --> MFA{TOTP, recovery code или required action}
+  MFA -->|Неуспех| Denied
+  MFA -->|Успех| Session
+  Policy -->|Нет| Session[Access и refresh; в БД только хеши]
+  Session --> Access[Проверка срока, статуса и security stamp]
+  Access --> Permission[Отдельная проверка permissions и scope]
+  Session --> Refresh[Ротация refresh]
+  Refresh --> Replay{Повтор старого токена?}
+  Replay -->|Да| Reject[Отказ по политике соответствующей сессии]
+  Replay -->|Нет| Session
+  Session --> Logout[Logout, revoke или смена security stamp]
+  Logout --> Inactive[Сессия больше не допускает запросы]

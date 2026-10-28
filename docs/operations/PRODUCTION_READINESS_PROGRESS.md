@@ -1,6 +1,34 @@
 # Production readiness: состояние работ
 
-## Authoritative Core closure status — 2026-10-26
+## Authoritative project audit — 2026-10-28
+
+**Verdict: `CORE_NOT_READY`.** [Полный аудит](../audit/2026-10-28/REPORT.md),
+[checks](../audit/2026-10-28/evidence/checks.json),
+[source manifest](../audit/2026-10-28/evidence/source-manifest.json).
+Base `e242a43258069b310d1f8abb2cc47f9dd22e147b` plus the uncommitted working-tree diff;
+source manifest SHA-256 `989db17a36cef8e3c59696bae5fab00806449991f81c8967afc5a6e5e9ac4ba2`. Remote CI does not attest to this diff.
+
+Final local functional evidence: Core 508/14050, Commercial 377/4581,
+strict cross-plane 8/319; Psalm/PHPStan 0 errors, container wiring PASS.
+The real HTTP/SMTP/Mailpit customer smoke passed 75 checks. MFA session step-up,
+empty billing address handling and new-worker Docker health probes were fixed;
+regression and contract checks passed. Fresh cross-plane image rebuild passed on
+retry after one GitHub codeload TLS EOF failure.
+
+The final local 10,000 VU read workload reached all 10,000 VUs and FAILED:
+82.75% HTTP errors, p95 10.52s. A separate 100 VU
+run passed with zero errors; post-overload 10 VU recovery also passed. Shared host,
+4-CPU/12-GiB generator and short synthetic workload do not establish production capacity.
+
+Full paid public HTTP/provider/Tenant E acceptance, real provider/fiscal sandbox,
+exact-revision remote CI, production restore/PITR, HA/failover, alerts and deployment
+rehearsal remain open. Existing development CLI containers still require managed
+recreation for the corrected Docker probe; actual CLI health passes. Backup artifact
+tests passed, but the existing backup worker has stale success health. Older
+checkpoints below are historical and do not override this verdict.
+
+
+## Historical Core closure status — 2026-10-26
 
 **Verdict: `CORE_NOT_READY`.** Source base:
 `32bd483664b3762f2fc3014ef737750fd3a3e413`, plus the uncommitted

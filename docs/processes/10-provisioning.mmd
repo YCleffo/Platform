@@ -1,0 +1,16 @@
+flowchart TD
+  Reserve[Reserve deployment с operation identity] --> Credential[Выдать installation ID и scoped M2M credential]
+  Credential --> Operation[Durable provisioning operation]
+  Operation --> Infrastructure[Создать инфраструктуру и secrets через provider boundary]
+  Infrastructure --> Migrate[Применить Core migrations]
+  Migrate --> Activate[Запустить runtime, scheduler и email worker]
+  Activate --> Ready{DB, Redis и свежие heartbeats?}
+  Ready -->|Нет| Retry[Retry или terminal failure без ложного active]
+  Retry --> Operation
+  Ready -->|Да| Active[Deployment active]
+  Active --> Issue[Commercial выдаёт immutable signed document]
+  Issue --> Pull[Core выполняет M2M HTTP pull]
+  Pull --> Verify{Подпись, trust, installation, expiry и sequence}
+  Verify -->|Допуск| Apply[Однократное применение verified snapshot]
+  Verify -->|Отказ| Keep[Нет новых прав; старый документ действует только в своих пределах]
+  Pull -->|Связь недоступна| Keep

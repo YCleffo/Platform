@@ -93,10 +93,7 @@ final class AccountController extends AbstractController
     {
         $this->authSecurity->requireSensitiveMfa($this->user());
         $data = ApiRequest::json($request);
-        $address = $data['address'] ?? [];
-        if (!is_array($address) || array_is_list($address)) {
-            throw new \InvalidArgumentException('Address must be a JSON object.');
-        }
+        $address = ApiRequest::optionalObject($request, 'address');
         $id = $this->billing->save($this->user()->id(), $accountId, ApiRequest::string($data, 'legal_name'), ApiRequest::string($data, 'country_code'), ApiRequest::nullableString($data, 'contact_name'), ApiRequest::nullableString($data, 'contact_email'), ApiRequest::nullableString($data, 'tax_identifier'), $address, ApiRequest::correlationId($request));
 
         return new JsonResponse(['id' => $id]);

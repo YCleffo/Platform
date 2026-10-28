@@ -1,0 +1,26 @@
+{
+  "platform-load-core-1": {
+    "cpu_percent": 748.56,
+    "memory_mib": 456.0
+  },
+  "platform-load-control-1": {
+    "cpu_percent": 300.41,
+    "memory_mib": 1379.328
+  },
+  "platform-load-core-db-1": {
+    "cpu_percent": 277.89,
+    "memory_mib": 147.1
+  },
+  "platform-load-commercial-db-1": {
+    "cpu_percent": 332.74,
+    "memory_mib": 216.8
+  },
+  "platform-load-redis-1": {
+    "cpu_percent": 1.35,
+    "memory_mib": 6.223
+  },
+  "platform-load-generator": {
+    "cpu_percent": 416.47,
+    "memory_mib": 3522.56
+  }
+}

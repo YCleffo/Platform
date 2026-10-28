@@ -1,93 +1,52 @@
-# Архитектура базы данных — Core v2 и Commercial Phase 4.0
+# Архитектура баз данных
 
-## Phase 4.6 signed deployment documents
+Требования: CORE-01/02, COMM-01/02, CAT-01/02, BILL-01/02/04,
+PAY-03/04/05/06 и ENT-01/02/03. Границы закреплены в
+[CORE_INVARIANTS.md](CORE_INVARIANTS.md).
 
-Commercial migration 024 adds immutable `commercial.deployment_entitlement_documents`.
-It stores exact canonical v1 bytes (`bytea`), SHA-256 digest, Ed25519 signature,
-signing key ID, source fingerprint, installation ID, validity window and a
-unique `(deployment_id, sequence)`. The issuer locks the deployment row and
-inserts the document and `entitlement.issued` v1 outbox event atomically.
-Core retains its existing `platform_runtime.entitlement_documents` schema:
-verified exact bytes are encoded in `payload.canonicalDocumentBase64`, and
-its trigger advances `installations.current_entitlement_sequence` on apply.
-No private signing key is stored in Core.
+Yii Core владеет PostgreSQL DB со схемами `core` и `platform_runtime`.
+Symfony Commercial Control Plane владеет отдельной DB со схемой `commercial`.
+У каждой установки Core своя installation identity. Development, штатные tests
+и нагрузочный стенд используют разные volumes и credentials.
 
-Yii runtime использует одну базу данных PostgreSQL. Модули владеют отдельными схемами PostgreSQL:
+Процессы не получают credentials чужой БД, не делают cross-database joins
+и не создают общую распределённую транзакцию. Согласованность достигается
+versioned API, durable operations, idempotency, reconciliation и подписанными
+документами. [График границ](../processes/svg/01-boundaries.svg).
 
-```text
-platform database
-├── public.*       technical migration history only
-├── core.*         universal Core — inventory is defined by current SQL migrations
-├── platform_runtime.*  installation identity and signed entitlement snapshots — 2 tables
-├── education.*    later
-├── games.*        later
-├── chat.*         later
-├── storage.*      later
-├── search.*       later
-└── ...
-```
+## Миграции и структура
 
-## Зафиксированная версия Core v2
+| Контракт | Источник | Техническая история |
+| --- | --- | --- |
+| Core / Runtime | `apps/backend/migrations/sql/*.sql` | `public.platform_migrations` |
+| Commercial | `apps/control-plane/migrations/Version*.php` | `public.doctrine_migration_versions` |
 
-Current schema inventory is defined by SQL migrations and verified by migration/schema tests. Миграция 017 добавляет
-`core.account_settings`, миграция 018 — историю authenticated согласий, а миграции 019–020
-развивают её в `core.privacy_consents` и добавляют `core.legal_representations`.
-Исторический артефакт `Core_v1_FINAL.dbml` не меняется;
-актуальная модель — `docs/database/core/Core_v2.dbml`. Runtime/CI проверяют наличие
-обязательных объектов и применённых миграций, а не фиксированное число таблиц.
-Добавление Games, Education,
-Search или брендинга **не означает**, что в Core нужно добавлять таблицы конкретного продукта.
-Для общих настроек установки используется `core.system_settings`.
-Идентичность установки и локальные подписанные коммерческие разрешения находятся в
-`platform_runtime.*`, описанной отдельно в `docs/database/runtime/Platform_Runtime_v1.dbml`.
-Symfony Commercial DB — отдельная база `platform_commercial` со схемой `commercial`.
-Phase 1 создаёт 21 таблицу identity/customer, catalog, deployment, licensing,
-release и reliability. Phase 2 добавляет 4 таблицы verification/session/rate
-limit/session-history и расширяет identity/onboarding. Phase 3 добавляет
-subscription lifecycle, effective entitlements, Usage Core, immutable invoice
-snapshots, provider-neutral Payment Core, YooKassa webhook inbox и Fiscalization
-Core; current Commercial schema inventory is defined by migrations and schema tests. Реализованы
-payment provider metadata, payments, payment attempts, hash-only provider events,
-immutable payment/refund receipt obligations, renewal periods, refund item
-snapshots and account-scoped saved payment methods. Automatic recurring charge
-execution uses bounded `collect_renewals` and `process_dunning` jobs. The implemented
-billing foundation includes guarded renewal collection states, provider-uncertainty
-recovery, terminal retry scheduling, `payment_method_required`, subscription
-`past_due`/billing grace, entitlement grace, authoritative recovery, and exhaustion.
-Plan switching and usage/overage billing remain deferred. Подробности:
-`docs/architecture/COMMERCIAL_CONTROL_PLANE.md`.
-Её планы, платежи, подписки и реестр
-лицензий сюда не входят.
+Core runner применяет SQL-файл и запись истории в одной транзакции. Doctrine
+управляет Commercial migrations. Expand/migrate/contract выполняется отдельными
+релизами. DBML не является migration runner. Технические таблицы `public` не
+относятся к бизнес-модели.
 
-`commercial.control_users` — отдельная центральная identity. Это не
-`core.accounts`; Commercial Account также не является Diary Organization.
-Auth, session и membership Control Plane не переиспользуют Diary Auth/RBAC.
+На срезе 2026-10-28 применены 32 Core и 40 Commercial миграций.
+[DBML, каталоги и справочник](../database/README.md) генерируются из PostgreSQL.
+Будущие продуктовые schemas в текущий инвентарь не добавляются.
 
-## Подпись entitlement documents
+## Деньги и права
 
-Deployment entitlement documents are currently signed with Ed25519. Commercial
-Control Plane stores key metadata and a secret reference;
-приватный ключ должен находиться во внешнем Vault/KMS/HSM. Он не попадает в Yii/Core,
-On-Prem Docker image или Git. Локальный runtime получает только доверенные публичные
-ключи для проверки. PostgreSQL обеспечивает порядок применения через монотонный
-`current_entitlement_sequence`; проверка подписи и доверия к ключу должна выполняться
-до перевода документа в `applied`.
+Catalog publication замораживает terms; invoice и subscription snapshots
+сохраняют старые условия. Upgrade/downgrade и proration реализованы. Usage
+counters существуют; наличие counter не доказывает автоматическое денежное
+начисление overage.
 
-## Крупные таблицы в будущем
+`platform_runtime.installations` хранит identity и sequence,
+`entitlement_documents` — проверенные документы, `background_job_status` —
+heartbeats. Commercial хранит exact canonical bytes и подпись выданного документа.
+Core проверяет trust, подпись, installation, validity и sequence до применения.
+Приватного signing key в Core нет.
 
-Таблицы посещаемости, снимков участников занятий, сообщений чата, событий аналитики,
-аудита/событий и аналогичные со временем могут стать крупными. PostgreSQL рассчитан на такую нагрузку.
-Начинаем с обычных таблиц и корректных индексов; партиционирование добавим, когда его оправдают реальные объёмы и планы запросов.
+Redis не является durable финансовой БД. Audit и outbox не хранят credentials
+или произвольные полные HTTP payload. Метрики CPU/latency относятся к observability.
 
-## Техническая телеметрия
-
-Prometheus/OpenTelemetry/Grafana — независимая инфраструктура. Данные о CPU, задержках,
-трассировках и метриках запросов не записываются в `core.audit_events`.
-
-## Резервное копирование и восстановление
-
-`scripts/backup-db.ps1` создаёт бинарный PostgreSQL custom-format dump с расширением `.dump`
-через `pg_dump -Fc`. Это не plain SQL: его нельзя восстанавливать командой `psql < file.sql`.
-Для проверки содержимого используется `pg_restore --list backup.dump`, для восстановления —
-`pg_restore --clean --if-exists --no-owner --dbname=<database> backup.dump` с заранее проверенными
-параметрами подключения и целевой базой.
+[Аудит](../audit/2026-10-28/REPORT.md) отделяет local runtime/load evidence от
+production readiness. [Нагрузочный стенд](../../scripts/load/README.md) использует
+отдельный Compose project. [Backup и restore](../operations/BACKUP_RESTORE.md)
+требуют реального восстановления. HA и PITR — отдельные операционные проверки.

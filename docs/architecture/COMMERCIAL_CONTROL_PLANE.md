@@ -1,4 +1,8 @@
-# Commercial Control Plane — Phase 4.0 Integration Foundation
+# Commercial Control Plane — текущая реализация
+
+Актуальная карта: [бизнес-процессы](../processes/README.md),
+[физическая БД](../database/README.md), [проверки 2026-10-28](../audit/2026-10-28/REPORT.md).
+Номера Phase ниже объясняют историю появления механизмов, а не текущую готовность.
 
 `apps/control-plane` is a separate Symfony 7.4/PHP 8.3 application with its
 own `platform_commercial` PostgreSQL database and `commercial` schema. It does
@@ -12,8 +16,9 @@ These boundaries are contractual:
 - Control Plane Auth != Diary Auth.
 
 A central Control User is created before any tenant Diary exists. The Control
-Plane now owns the commercial subscription and payment contracts, but still
-does not create a tenant database.
+Plane owns the commercial subscription and payment contracts. The local
+dedicated provisioner creates isolated Tenant infrastructure through its
+infrastructure provider; production hosting and provider readiness remain separate gates.
 
 ## Implemented schema
 
@@ -281,7 +286,9 @@ schema foundations. Phase 4.6 uses the separate immutable
 `deployment_entitlement_documents` table for signed deployment snapshots.
 `ReserveDeployment` creates a durable reservation. Phase 4.7 adds an operator
 start and authenticated runtime readiness report for the application bootstrap
-lifecycle; it does not create infrastructure. Control current-user/session APIs and paginated
+lifecycle. The local dedicated infrastructure provider is now implemented;
+its persisted operation steps cover creation, migrations, activation, update and decommission.
+Control current-user/session APIs and paginated
 commercial read models belong to Phase 4.1. M2M service credentials and usage
 ingestion and signed entitlement delivery are implemented.
 

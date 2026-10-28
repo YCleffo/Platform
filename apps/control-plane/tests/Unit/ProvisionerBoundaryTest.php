@@ -280,6 +280,14 @@ final class ProvisionerBoundaryTest extends TestCase
             (new LocalDockerInfrastructureProvider($docker, 'test', 'test-net',
                 'http://control-plane-test:8000', 'migrator'))->replaceApplicationRuntime($this->request());
             $commands = implode("\n", array_map(static fn(array $call): string => implode(' ', $call), $docker->calls));
+            foreach ($docker->calls as $call) {
+                if (($call[0] ?? null) !== 'run' || !in_array('--entrypoint', $call, true)) {
+                    continue;
+                }
+                $health = array_search('--health-cmd', $call, true);
+                self::assertIsInt($health, 'A CLI worker must not inherit the Caddy health probe.');
+                self::assertContains($call[$health + 1], ['php /app/yii ops:health backend-scheduler', 'php /app/yii ops:health backend-email-worker']);
+            }
             foreach ($state as $role => $version) {
                 $name = 'platform-deployment-' . str_replace('-', '', self::ID) . '-' . $role;
                 self::assertSame($version === 'a', str_contains($commands, 'rm -f -v ' . $name), $role);

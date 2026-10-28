@@ -1,0 +1,15 @@
+flowchart TD
+  Supervisor[Запуск scheduler или email worker] --> Tick[Определить due jobs и batch limits]
+  Tick --> Lock{Получен PostgreSQL advisory lock?}
+  Lock -->|Нет| Skip[Другой процесс уже выполняет job]
+  Lock -->|Да| Run[Один bounded вызов]
+  Run --> Outcome{Завершение}
+  Outcome -->|Успех| Status[Heartbeat и счётчики без секретов]
+  Outcome -->|Ошибка| Failed[Error code, retry policy и продолжение других jobs]
+  Outcome -->|SIGKILL| Durable[Незавершённая durable operation остаётся в БД]
+  Durable --> Restart[Новый процесс читает persisted state]
+  Restart --> Resume[Повтор с прежней identity операции]
+  Resume --> Run
+  Status --> Unlock[Освободить lock]
+  Failed --> Unlock
+  Unlock --> Tick

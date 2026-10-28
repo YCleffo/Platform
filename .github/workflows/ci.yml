@@ -241,3 +241,26 @@ jobs:
       - name: Stop isolated cross-plane resources
         if: always()
         run: bash ./scripts/cross-plane-test-stop.sh
+
+  documentation-qa:
+    name: Database diagrams and documentation consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify migration-bound metadata and generated references
+        run: |
+          python scripts/database/export_schema.py --plane core --from-snapshot --check
+          python scripts/database/export_schema.py --plane commercial --from-snapshot --check
+          python scripts/documentation/build-reference.py --check
+          python scripts/documentation/build-coverage.py --check
+          python scripts/documentation/check-links.py
+      - name: Parse DBML and verify physical tables, fields and relations
+        run: |
+          npm ci --prefix scripts/documentation --ignore-scripts
+          npm run check:dbml --prefix scripts/documentation

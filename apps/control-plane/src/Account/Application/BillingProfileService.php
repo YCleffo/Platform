@@ -27,7 +27,7 @@ final readonly class BillingProfileService
         $contactName = $contactName === null ? null : TextPolicy::label($contactName, 200);
         $contactEmail = $contactEmail === null ? null : EmailPolicy::normalize($contactEmail)['normalized'];
         $taxIdentifier = $taxIdentifier === null ? null : TextPolicy::label($taxIdentifier, 80);
-        $addressJson = json_encode($address, JSON_THROW_ON_ERROR);
+        $addressJson = $address === [] ? '{}' : json_encode($address, JSON_THROW_ON_ERROR);
 
         return $this->connection->transactional(function (Connection $connection) use ($userId, $accountId, $legalName, $countryCode, $contactName, $contactEmail, $taxIdentifier, $addressJson, $correlationId): string {
             $profileId = $connection->fetchOne('SELECT id FROM commercial.billing_profiles WHERE commercial_account_id = ? AND archived_at IS NULL ORDER BY created_at LIMIT 1 FOR UPDATE', [$accountId]);

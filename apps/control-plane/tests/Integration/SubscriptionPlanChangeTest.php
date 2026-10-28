@@ -957,7 +957,7 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
         try {
             $this->connection->commit();
             $lost = $this->runRefundRestartWorker($refund['id'], $statePath, 'kill_after_success');
-            self::assertTrue($lost['signaled'], $lost['stderr']);
+            self::assertTrue($lost['signaled'], sprintf('Worker exit=%d signal=%d; %s', $lost['exit'], $lost['termsig'], $lost['stderr']));
             self::assertSame(9, $lost['termsig']);
             self::assertSame('pending', $this->connection->fetchOne('SELECT status FROM commercial.refunds WHERE id=?', [$refund['id']]));
             self::assertNull($this->connection->fetchOne('SELECT provider_refund_id FROM commercial.refunds WHERE id=?', [$refund['id']]));
@@ -1002,7 +1002,7 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
         $stderr = stream_get_contents($pipes[2]);
         fclose($pipes[1]);
         fclose($pipes[2]);
-        $status = proc_get_status($process);
+        $status = $this->waitForRestartWorkerExit($process);
         return ['exit' => proc_close($process), 'stderr' => $stderr,
             'signaled' => (bool) $status['signaled'], 'termsig' => (int) $status['termsig']];
     }
@@ -1040,7 +1040,7 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
             $this->connection->commit();
             $killed = $this->runPaymentRestartWorker($owner, $account, $payment['id'],
                 $checkoutKey, $statePath, 'kill_after_success');
-            self::assertTrue($killed['signaled'], $killed['stderr']);
+            self::assertTrue($killed['signaled'], sprintf('Worker exit=%d signal=%d; %s', $killed['exit'], $killed['termsig'], $killed['stderr']));
             self::assertSame(9, $killed['termsig']);
             $attempt = $this->connection->fetchAssociative('SELECT id, provider_request_key, provider_payment_id, status FROM commercial.payment_attempts WHERE payment_id=?', [$payment['id']]);
             self::assertIsArray($attempt);
@@ -1087,9 +1087,30 @@ final class SubscriptionPlanChangeTest extends RefundTestCase
         $stderr = stream_get_contents($pipes[2]);
         fclose($pipes[1]);
         fclose($pipes[2]);
-        $status = proc_get_status($process);
+        $status = $this->waitForRestartWorkerExit($process);
         return ['exit' => proc_close($process), 'stderr' => $stderr,
             'signaled' => (bool) $status['signaled'], 'termsig' => (int) $status['termsig']];
+    }
+
+    /** @param resource $process
+     *  @return array{command:string,pid:int,running:bool,signaled:bool,stopped:bool,exitcode:int,termsig:int,stopsig:int}
+     */
+    private function waitForRestartWorkerExit($process): array
+    {
+        // PAY-03/04/05/06: EOF can precede waitpid observing SIGKILL. Keep the
+        // first terminal status; do not weaken the signal or recovery assertions.
+        $deadline = microtime(true) + 5.0;
+        do {
+            $status = proc_get_status($process);
+            if (!$status['running']) {
+                return $status;
+            }
+            usleep(1000);
+        } while (microtime(true) < $deadline);
+
+        proc_terminate($process, 9);
+        proc_close($process);
+        throw new \RuntimeException('Restart worker did not exit after closing its streams.');
     }
 
     public function testRefundWebhookBeforeReconcilerAppliesOnePlanChangeCompensation(): void

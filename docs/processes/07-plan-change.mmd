@@ -1,0 +1,17 @@
+flowchart TD
+  Request[Запрос смены с idempotency key] --> Lock[Блокировки текущей subscription и операции]
+  Lock --> Direction{Upgrade или scheduled downgrade?}
+  Direction -->|Upgrade| Prorate[Точный расчёт доплаты и новый invoice]
+  Prorate --> Paid{Оплата подтверждена в допустимый срок?}
+  Paid -->|Да| Apply[Однократное применение новой subscription]
+  Paid -->|Не оплачено| Keep[Старые права сохраняются по своему сроку]
+  Paid -->|Поздний успешный upgrade| Recovery[paid_unapplied и компенсация]
+  Direction -->|Downgrade| Scheduled[Планирование на текущую period boundary]
+  Scheduled --> Cancel{Отменено до применения?}
+  Cancel -->|Да| Keep
+  Cancel -->|Нет| Boundary[Scheduler на реальной границе периода]
+  Boundary --> Due{Free или требуемая оплата подтверждена?}
+  Due -->|Да| Apply
+  Due -->|Нет| Resolve[Ожидание или истечение по правилам lifecycle]
+  Apply --> History[Старые финансовые snapshots не меняются]
+  Recovery --> Refund[Возврат либо подтверждённая внешняя компенсация]

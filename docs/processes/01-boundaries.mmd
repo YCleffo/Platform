@@ -1,0 +1,13 @@
+flowchart LR
+  Human[Человек] --> Control[Symfony Commercial API]
+  Human --> Core[Yii Core API]
+  Control --> CDB[(Отдельная commercial DB)]
+  Core --> KDB[(Core DB: core и platform_runtime)]
+  Core --> Redis[(Временный Redis)]
+  Control --> Provider[Платёжный провайдер]
+  Provider --> Verify[Webhook и authoritative fetch]
+  Verify --> Control
+  Control --> Signed[Подписанный документ прав]
+  Signed --> Pull[M2M pull и проверка подписи]
+  Pull --> Core
+  CDB -. Нет общих credentials и SQL joins .- KDB

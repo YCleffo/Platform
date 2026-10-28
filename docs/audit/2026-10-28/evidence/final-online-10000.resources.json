@@ -1,0 +1,2803 @@
+{
+  "started_utc": "2026-10-28T14:48:02.977003+00:00",
+  "finished_utc": "2026-10-28T14:51:32.184592+00:00",
+  "vus_requested": 10000,
+  "hold_seconds": 60,
+  "pace_seconds": 5.0,
+  "exit_code": 99,
+  "summary_produced": true,
+  "generator_limits": {
+    "memory": "12 GiB",
+    "cpus": 4
+  },
+  "resource_samples": [
+    {
+      "at_utc": "2026-10-28T14:48:05.092351+00:00",
+      "containers": []
+    },
+    {
+      "at_utc": "2026-10-28T14:48:10.160460+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "7.93%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.60%",
+          "MemUsage": "191.3MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "134MB / 189MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 1.92MB",
+          "CPUPerc": "2.49%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.23%",
+          "MemUsage": "72.93MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "55.3kB / 65kB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "22.1MB / 302MB",
+          "CPUPerc": "2.21%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.22%",
+          "MemUsage": "69.27MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "173MB / 121MB",
+          "PIDs": "9"
+        },
+        {
+          "BlockIO": "0B / 1.16GB",
+          "CPUPerc": "7.56%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.47%",
+          "MemUsage": "152MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "483MB / 274MB",
+          "PIDs": "10"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.09%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.973MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "1.37%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "11.70%",
+          "MemUsage": "1.404GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "29.6kB / 13.2kB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:48:15.265257+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "16.91%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.60%",
+          "MemUsage": "190.8MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "134MB / 189MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 1.92MB",
+          "CPUPerc": "7.16%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.23%",
+          "MemUsage": "73.39MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "176kB / 210kB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "22.1MB / 303MB",
+          "CPUPerc": "11.06%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.23%",
+          "MemUsage": "72.81MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "174MB / 121MB",
+          "PIDs": "10"
+        },
+        {
+          "BlockIO": "0B / 1.16GB",
+          "CPUPerc": "7.08%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.47%",
+          "MemUsage": "150.1MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "484MB / 274MB",
+          "PIDs": "9"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.13%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.973MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "2.44%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "11.73%",
+          "MemUsage": "1.407GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "91.3kB / 38.9kB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:48:20.345319+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "18.00%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.60%",
+          "MemUsage": "191MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "134MB / 190MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 1.92MB",
+          "CPUPerc": "10.11%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.24%",
+          "MemUsage": "75.78MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "327kB / 391kB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "22.1MB / 303MB",
+          "CPUPerc": "12.49%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.22%",
+          "MemUsage": "72.06MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "174MB / 121MB",
+          "PIDs": "10"
+        },
+        {
+          "BlockIO": "0B / 1.16GB",
+          "CPUPerc": "18.59%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.47%",
+          "MemUsage": "149.7MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "484MB / 274MB",
+          "PIDs": "9"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.13%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "3.40%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "11.73%",
+          "MemUsage": "1.408GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "184kB / 76.9kB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:48:25.450661+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "11.57%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.60%",
+          "MemUsage": "191.1MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "135MB / 190MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 1.92MB",
+          "CPUPerc": "12.87%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.28%",
+          "MemUsage": "89.64MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "521kB / 626kB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "22.1MB / 303MB",
+          "CPUPerc": "5.02%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.22%",
+          "MemUsage": "69.83MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "174MB / 122MB",
+          "PIDs": "9"
+        },
+        {
+          "BlockIO": "0B / 1.16GB",
+          "CPUPerc": "14.63%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.47%",
+          "MemUsage": "149.8MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "484MB / 275MB",
+          "PIDs": "9"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.11%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "3.42%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "11.74%",
+          "MemUsage": "1.409GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "261kB / 106kB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:48:30.532205+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "21.19%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.61%",
+          "MemUsage": "196.7MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "135MB / 190MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 1.92MB",
+          "CPUPerc": "9.94%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.29%",
+          "MemUsage": "91.91MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "759kB / 914kB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "22.1MB / 304MB",
+          "CPUPerc": "12.24%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.23%",
+          "MemUsage": "73MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "175MB / 122MB",
+          "PIDs": "10"
+        },
+        {
+          "BlockIO": "0B / 1.16GB",
+          "CPUPerc": "15.42%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.47%",
+          "MemUsage": "149.6MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "484MB / 275MB",
+          "PIDs": "9"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.11%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "3.26%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "11.76%",
+          "MemUsage": "1.411GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "355kB / 142kB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:48:35.641694+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "30.88%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.60%",
+          "MemUsage": "193.9MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "135MB / 191MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 1.92MB",
+          "CPUPerc": "9.26%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.28%",
+          "MemUsage": "91.07MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "907kB / 1.09MB",
+          "PIDs": "53"
+        },
+        {
+          "BlockIO": "22.1MB / 304MB",
+          "CPUPerc": "14.07%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.22%",
+          "MemUsage": "69.69MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "175MB / 122MB",
+          "PIDs": "9"
+        },
+        {
+          "BlockIO": "0B / 1.16GB",
+          "CPUPerc": "10.69%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.47%",
+          "MemUsage": "150MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "484MB / 275MB",
+          "PIDs": "9"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.11%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.473MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "3.09%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "11.77%",
+          "MemUsage": "1.412GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "468kB / 183kB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:48:40.748497+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "70.71%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.61%",
+          "MemUsage": "197.1MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "136MB / 192MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 1.92MB",
+          "CPUPerc": "37.14%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.31%",
+          "MemUsage": "98.31MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "1.56MB / 1.87MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 305MB",
+          "CPUPerc": "28.48%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.22%",
+          "MemUsage": "69.65MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "177MB / 123MB",
+          "PIDs": "9"
+        },
+        {
+          "BlockIO": "0B / 1.16GB",
+          "CPUPerc": "45.45%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.48%",
+          "MemUsage": "154.3MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "485MB / 275MB",
+          "PIDs": "11"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.14%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.973MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "9.98%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "11.83%",
+          "MemUsage": "1.42GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "721kB / 290kB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:48:45.926878+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "220.61%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.63%",
+          "MemUsage": "202.7MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "138MB / 195MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 1.92MB",
+          "CPUPerc": "99.62%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.33%",
+          "MemUsage": "104.9MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "2.62MB / 3.16MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 306MB",
+          "CPUPerc": "91.23%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.22%",
+          "MemUsage": "70.24MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "179MB / 125MB",
+          "PIDs": "9"
+        },
+        {
+          "BlockIO": "0B / 1.17GB",
+          "CPUPerc": "111.96%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.49%",
+          "MemUsage": "156.5MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "486MB / 276MB",
+          "PIDs": "12"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.16%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "6.223MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "20.79%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "11.96%",
+          "MemUsage": "1.435GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "1.21MB / 491kB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:48:51.016164+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "238.23%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.63%",
+          "MemUsage": "202.6MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "140MB / 197MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 1.92MB",
+          "CPUPerc": "108.45%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.38%",
+          "MemUsage": "120.2MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "3.83MB / 4.61MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 308MB",
+          "CPUPerc": "79.03%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.22%",
+          "MemUsage": "71.68MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "182MB / 127MB",
+          "PIDs": "10"
+        },
+        {
+          "BlockIO": "0B / 1.17GB",
+          "CPUPerc": "110.23%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.48%",
+          "MemUsage": "155MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "487MB / 278MB",
+          "PIDs": "12"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.15%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.973MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "19.24%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "12.18%",
+          "MemUsage": "1.462GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "2.09MB / 843kB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:48:56.199544+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "99.70%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.66%",
+          "MemUsage": "210.1MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "143MB / 202MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "8.31%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.41%",
+          "MemUsage": "132.7MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "5.76MB / 6.89MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 309MB",
+          "CPUPerc": "104.91%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.31%",
+          "MemUsage": "99.53MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "185MB / 130MB",
+          "PIDs": "21"
+        },
+        {
+          "BlockIO": "0B / 1.17GB",
+          "CPUPerc": "12.19%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.67%",
+          "MemUsage": "215.4MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "488MB / 279MB",
+          "PIDs": "41"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.12%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "10.53%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "12.39%",
+          "MemUsage": "1.486GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "2.88MB / 1.2MB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:49:01.370165+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "384.04%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.68%",
+          "MemUsage": "217.6MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "147MB / 207MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "158.97%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.44%",
+          "MemUsage": "142.2MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "8.12MB / 9.76MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 310MB",
+          "CPUPerc": "200.90%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.25%",
+          "MemUsage": "81.34MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "189MB / 133MB",
+          "PIDs": "14"
+        },
+        {
+          "BlockIO": "0B / 1.17GB",
+          "CPUPerc": "180.73%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.49%",
+          "MemUsage": "156.6MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "490MB / 281MB",
+          "PIDs": "13"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.29%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "25.25%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "12.63%",
+          "MemUsage": "1.515GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "4.06MB / 1.58MB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:49:06.606036+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "375.03%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.68%",
+          "MemUsage": "218.9MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "149MB / 210MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "123.06%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.44%",
+          "MemUsage": "141.7MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "10MB / 12.1MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 311MB",
+          "CPUPerc": "111.54%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.24%",
+          "MemUsage": "75.52MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "194MB / 136MB",
+          "PIDs": "11"
+        },
+        {
+          "BlockIO": "0B / 1.18GB",
+          "CPUPerc": "140.81%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.50%",
+          "MemUsage": "158.9MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "492MB / 283MB",
+          "PIDs": "13"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.15%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.473MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "19.94%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "13.03%",
+          "MemUsage": "1.563GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "5.04MB / 1.94MB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:49:11.705167+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "281.59%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.70%",
+          "MemUsage": "225.5MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "153MB / 216MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "126.99%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.46%",
+          "MemUsage": "148.7MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "11.6MB / 14MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 312MB",
+          "CPUPerc": "110.88%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.23%",
+          "MemUsage": "73.93MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "198MB / 139MB",
+          "PIDs": "11"
+        },
+        {
+          "BlockIO": "0B / 1.18GB",
+          "CPUPerc": "133.70%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.48%",
+          "MemUsage": "153MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "494MB / 285MB",
+          "PIDs": "11"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.12%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.973MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "18.94%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "13.42%",
+          "MemUsage": "1.61GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "5.98MB / 2.27MB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:49:16.992075+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "620.68%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.73%",
+          "MemUsage": "234.9MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "157MB / 221MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "271.30%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.47%",
+          "MemUsage": "150.2MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "14.1MB / 17MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 314MB",
+          "CPUPerc": "204.68%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.30%",
+          "MemUsage": "97.07MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "203MB / 143MB",
+          "PIDs": "21"
+        },
+        {
+          "BlockIO": "0B / 1.18GB",
+          "CPUPerc": "309.54%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.62%",
+          "MemUsage": "198.9MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "496MB / 287MB",
+          "PIDs": "36"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.22%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "29.17%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "13.78%",
+          "MemUsage": "1.654GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "6.75MB / 2.56MB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:49:22.151360+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "581.99%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.75%",
+          "MemUsage": "239.8MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "162MB / 227MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "241.22%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.53%",
+          "MemUsage": "170.2MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "17.1MB / 20.4MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 316MB",
+          "CPUPerc": "222.24%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.30%",
+          "MemUsage": "97.11MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "209MB / 147MB",
+          "PIDs": "25"
+        },
+        {
+          "BlockIO": "0B / 1.19GB",
+          "CPUPerc": "266.92%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.63%",
+          "MemUsage": "201.4MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "498MB / 289MB",
+          "PIDs": "41"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.19%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "59.17%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "15.53%",
+          "MemUsage": "1.863GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "8.58MB / 3.6MB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:49:27.300603+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "603.49%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.81%",
+          "MemUsage": "259.1MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "165MB / 232MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "262.49%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.68%",
+          "MemUsage": "218.1MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "19.3MB / 22.6MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 317MB",
+          "CPUPerc": "214.83%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.31%",
+          "MemUsage": "98.95MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "213MB / 150MB",
+          "PIDs": "23"
+        },
+        {
+          "BlockIO": "0B / 1.19GB",
+          "CPUPerc": "293.47%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.63%",
+          "MemUsage": "200.5MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "499MB / 291MB",
+          "PIDs": "39"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.22%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "60.66%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "16.61%",
+          "MemUsage": "1.994GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "9.72MB / 4.63MB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:49:32.446694+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "583.19%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.90%",
+          "MemUsage": "287.1MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "169MB / 237MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "300.41%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "0.82%",
+          "MemUsage": "263.6MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "22.1MB / 25.7MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 319MB",
+          "CPUPerc": "213.17%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.29%",
+          "MemUsage": "93.16MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "218MB / 154MB",
+          "PIDs": "22"
+        },
+        {
+          "BlockIO": "0B / 1.19GB",
+          "CPUPerc": "332.74%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.61%",
+          "MemUsage": "194.3MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "502MB / 293MB",
+          "PIDs": "41"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.23%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "46.31%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "16.68%",
+          "MemUsage": "2.002GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "10.7MB / 5.31MB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:49:37.408177+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "603.47%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "0.96%",
+          "MemUsage": "308.2MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "174MB / 244MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "216.58%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "1.00%",
+          "MemUsage": "319.3MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "25.4MB / 29.1MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 322MB",
+          "CPUPerc": "222.98%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.30%",
+          "MemUsage": "94.78MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "224MB / 159MB",
+          "PIDs": "25"
+        },
+        {
+          "BlockIO": "0B / 1.19GB",
+          "CPUPerc": "242.88%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.51%",
+          "MemUsage": "164.2MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "504MB / 295MB",
+          "PIDs": "24"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.39%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "65.11%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "16.74%",
+          "MemUsage": "2.008GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "12.9MB / 6.96MB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:49:42.516767+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "533.36%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.01%",
+          "MemUsage": "323.7MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "178MB / 249MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "260.60%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "1.19%",
+          "MemUsage": "380.6MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "28.3MB / 32MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 325MB",
+          "CPUPerc": "193.67%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.27%",
+          "MemUsage": "87.85MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "229MB / 162MB",
+          "PIDs": "20"
+        },
+        {
+          "BlockIO": "0B / 1.2GB",
+          "CPUPerc": "290.54%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.59%",
+          "MemUsage": "187.9MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "506MB / 297MB",
+          "PIDs": "42"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.24%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "61.03%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "17.58%",
+          "MemUsage": "2.11GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "14.1MB / 8.14MB",
+          "PIDs": "22"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:49:47.659347+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "508.25%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.10%",
+          "MemUsage": "353.2MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "183MB / 255MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "234.21%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "1.51%",
+          "MemUsage": "482.7MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "31.6MB / 35.1MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 328MB",
+          "CPUPerc": "205.58%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.34%",
+          "MemUsage": "107.6MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "234MB / 166MB",
+          "PIDs": "35"
+        },
+        {
+          "BlockIO": "0B / 1.2GB",
+          "CPUPerc": "271.42%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.63%",
+          "MemUsage": "200.5MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "507MB / 299MB",
+          "PIDs": "47"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.23%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "254.12%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "20.42%",
+          "MemUsage": "2.451GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "16.3MB / 10.6MB",
+          "PIDs": "28"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:49:52.806277+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "565.27%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.19%",
+          "MemUsage": "381MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "188MB / 261MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "250.04%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "1.72%",
+          "MemUsage": "552.9MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "35.1MB / 38.5MB",
+          "PIDs": "55"
+        },
+        {
+          "BlockIO": "22.1MB / 333MB",
+          "CPUPerc": "207.61%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.29%",
+          "MemUsage": "93.18MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "240MB / 170MB",
+          "PIDs": "26"
+        },
+        {
+          "BlockIO": "0B / 1.2GB",
+          "CPUPerc": "295.26%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.61%",
+          "MemUsage": "194.8MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "510MB / 301MB",
+          "PIDs": "40"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.14%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "101.51%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "20.50%",
+          "MemUsage": "2.46GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "17.9MB / 12.2MB",
+          "PIDs": "28"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:49:57.794970+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "510.91%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.26%",
+          "MemUsage": "404.4MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "192MB / 266MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "210.53%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "2.08%",
+          "MemUsage": "667.1MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "38.7MB / 42MB",
+          "PIDs": "64"
+        },
+        {
+          "BlockIO": "22.1MB / 337MB",
+          "CPUPerc": "199.61%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.32%",
+          "MemUsage": "102.1MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "244MB / 173MB",
+          "PIDs": "27"
+        },
+        {
+          "BlockIO": "0B / 1.2GB",
+          "CPUPerc": "230.40%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.65%",
+          "MemUsage": "207.5MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "511MB / 303MB",
+          "PIDs": "44"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.15%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "95.87%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "21.10%",
+          "MemUsage": "2.532GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "20.4MB / 15MB",
+          "PIDs": "28"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:50:02.953265+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "261.48%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.26%",
+          "MemUsage": "404.5MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "196MB / 271MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "101.14%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "2.39%",
+          "MemUsage": "764.8MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "41.7MB / 44.6MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 340MB",
+          "CPUPerc": "94.32%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.45%",
+          "MemUsage": "145.5MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "249MB / 177MB",
+          "PIDs": "41"
+        },
+        {
+          "BlockIO": "0B / 1.21GB",
+          "CPUPerc": "93.78%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.67%",
+          "MemUsage": "214.9MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "513MB / 305MB",
+          "PIDs": "41"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.19%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.973MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "235.70%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "22.65%",
+          "MemUsage": "2.718GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "21.9MB / 16.6MB",
+          "PIDs": "49"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:50:07.909203+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "486.38%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.26%",
+          "MemUsage": "402.4MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "199MB / 276MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "177.94%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "2.51%",
+          "MemUsage": "806.1MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "44.3MB / 47.3MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 344MB",
+          "CPUPerc": "200.91%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.34%",
+          "MemUsage": "109.5MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "253MB / 179MB",
+          "PIDs": "31"
+        },
+        {
+          "BlockIO": "0B / 1.21GB",
+          "CPUPerc": "238.61%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.66%",
+          "MemUsage": "212.6MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "515MB / 306MB",
+          "PIDs": "44"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.24%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "381.09%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "24.67%",
+          "MemUsage": "2.961GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "24MB / 18.7MB",
+          "PIDs": "59"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:50:13.069267+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "442.00%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.25%",
+          "MemUsage": "401MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "202MB / 280MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "211.87%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "2.68%",
+          "MemUsage": "859.8MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "47.4MB / 50.4MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 347MB",
+          "CPUPerc": "210.55%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.34%",
+          "MemUsage": "109.3MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "257MB / 183MB",
+          "PIDs": "27"
+        },
+        {
+          "BlockIO": "0B / 1.21GB",
+          "CPUPerc": "239.47%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.62%",
+          "MemUsage": "199MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "516MB / 308MB",
+          "PIDs": "47"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.15%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "274.95%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "25.50%",
+          "MemUsage": "3.059GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "25.9MB / 20.4MB",
+          "PIDs": "70"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:50:17.559787+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "430.71%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.25%",
+          "MemUsage": "400.2MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "205MB / 284MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "208.54%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "2.81%",
+          "MemUsage": "899.7MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "49.6MB / 52.5MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 349MB",
+          "CPUPerc": "164.39%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.33%",
+          "MemUsage": "107.2MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "260MB / 184MB",
+          "PIDs": "28"
+        },
+        {
+          "BlockIO": "0B / 1.21GB",
+          "CPUPerc": "231.75%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.58%",
+          "MemUsage": "186.3MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "517MB / 309MB",
+          "PIDs": "30"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "1.35%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "306.86%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "25.69%",
+          "MemUsage": "3.083GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "27.3MB / 22MB",
+          "PIDs": "70"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:50:22.771845+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "480.27%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.25%",
+          "MemUsage": "401.4MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "209MB / 290MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "163.87%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "3.04%",
+          "MemUsage": "975.9MiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "52.8MB / 55.5MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 352MB",
+          "CPUPerc": "181.26%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.35%",
+          "MemUsage": "113.1MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "265MB / 188MB",
+          "PIDs": "29"
+        },
+        {
+          "BlockIO": "0B / 1.21GB",
+          "CPUPerc": "177.16%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.61%",
+          "MemUsage": "196.2MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "519MB / 311MB",
+          "PIDs": "37"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.16%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "293.16%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "25.75%",
+          "MemUsage": "3.09GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "28.8MB / 23.7MB",
+          "PIDs": "70"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:50:27.171833+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "189.72%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.35%",
+          "MemUsage": "431.5MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "212MB / 293MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "76.03%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "3.38%",
+          "MemUsage": "1.058GiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "55.5MB / 57.6MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 353MB",
+          "CPUPerc": "62.17%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.46%",
+          "MemUsage": "147.1MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "268MB / 190MB",
+          "PIDs": "41"
+        },
+        {
+          "BlockIO": "0B / 1.21GB",
+          "CPUPerc": "53.36%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.67%",
+          "MemUsage": "215.3MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "520MB / 312MB",
+          "PIDs": "41"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.15%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "416.47%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "26.05%",
+          "MemUsage": "3.126GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "31.1MB / 26.7MB",
+          "PIDs": "70"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:50:32.342733+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "498.64%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.38%",
+          "MemUsage": "441.8MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "215MB / 297MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "189.59%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "3.63%",
+          "MemUsage": "1.135GiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "58.7MB / 60.6MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 356MB",
+          "CPUPerc": "190.99%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.26%",
+          "MemUsage": "82.97MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "272MB / 194MB",
+          "PIDs": "16"
+        },
+        {
+          "BlockIO": "0B / 1.22GB",
+          "CPUPerc": "207.99%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.56%",
+          "MemUsage": "180.1MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "521MB / 314MB",
+          "PIDs": "34"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.15%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "251.93%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "26.29%",
+          "MemUsage": "3.155GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "33.1MB / 28.8MB",
+          "PIDs": "70"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:50:37.334457+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "442.68%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.41%",
+          "MemUsage": "452.1MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "220MB / 304MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "243.71%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "3.74%",
+          "MemUsage": "1.172GiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "62MB / 64.2MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 358MB",
+          "CPUPerc": "162.88%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.32%",
+          "MemUsage": "103.4MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "277MB / 197MB",
+          "PIDs": "27"
+        },
+        {
+          "BlockIO": "0B / 1.22GB",
+          "CPUPerc": "274.94%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.60%",
+          "MemUsage": "191.5MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "523MB / 316MB",
+          "PIDs": "40"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.17%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "355.22%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "27.59%",
+          "MemUsage": "3.31GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "35.2MB / 30.3MB",
+          "PIDs": "70"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:50:42.464247+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "267.90%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.40%",
+          "MemUsage": "448.9MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "223MB / 308MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "85.40%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "3.78%",
+          "MemUsage": "1.184GiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "64.5MB / 66.9MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 360MB",
+          "CPUPerc": "174.19%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.32%",
+          "MemUsage": "101.6MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "281MB / 200MB",
+          "PIDs": "26"
+        },
+        {
+          "BlockIO": "0B / 1.22GB",
+          "CPUPerc": "91.49%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.67%",
+          "MemUsage": "216.4MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "525MB / 317MB",
+          "PIDs": "41"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.13%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "391.23%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "27.86%",
+          "MemUsage": "3.344GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "37MB / 31.7MB",
+          "PIDs": "95"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:50:47.398365+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "510.29%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.40%",
+          "MemUsage": "448.3MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "226MB / 313MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "213.67%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "3.82%",
+          "MemUsage": "1.195GiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "67MB / 69.8MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 366MB",
+          "CPUPerc": "210.93%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.30%",
+          "MemUsage": "97.24MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "285MB / 203MB",
+          "PIDs": "25"
+        },
+        {
+          "BlockIO": "0B / 1.22GB",
+          "CPUPerc": "312.47%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.59%",
+          "MemUsage": "189.7MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "526MB / 319MB",
+          "PIDs": "33"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.24%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.473MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "389.14%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "27.86%",
+          "MemUsage": "3.343GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "38.6MB / 32.8MB",
+          "PIDs": "95"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:50:52.562587+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "480.52%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.40%",
+          "MemUsage": "449.2MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "230MB / 317MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "262.72%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "3.86%",
+          "MemUsage": "1.207GiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "69.6MB / 72.8MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 369MB",
+          "CPUPerc": "204.34%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.30%",
+          "MemUsage": "97.7MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "290MB / 206MB",
+          "PIDs": "22"
+        },
+        {
+          "BlockIO": "0B / 1.22GB",
+          "CPUPerc": "329.41%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.60%",
+          "MemUsage": "193.9MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "528MB / 321MB",
+          "PIDs": "46"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.28%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.473MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "218.20%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "27.84%",
+          "MemUsage": "3.341GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "39.9MB / 33.7MB",
+          "PIDs": "96"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:50:57.514136+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "454.00%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.40%",
+          "MemUsage": "448.5MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "233MB / 322MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "217.78%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "3.89%",
+          "MemUsage": "1.217GiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "72MB / 75.4MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 373MB",
+          "CPUPerc": "178.15%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.33%",
+          "MemUsage": "105.4MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "294MB / 209MB",
+          "PIDs": "29"
+        },
+        {
+          "BlockIO": "0B / 1.23GB",
+          "CPUPerc": "255.85%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.54%",
+          "MemUsage": "174.3MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "530MB / 322MB",
+          "PIDs": "24"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.16%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.473MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "352.12%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "27.86%",
+          "MemUsage": "3.344GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "41.8MB / 35MB",
+          "PIDs": "122"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:51:02.701720+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "475.78%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.41%",
+          "MemUsage": "450.8MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "238MB / 328MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "210.78%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "4.04%",
+          "MemUsage": "1.263GiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "75.9MB / 79MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 376MB",
+          "CPUPerc": "165.71%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.30%",
+          "MemUsage": "96.18MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "299MB / 213MB",
+          "PIDs": "25"
+        },
+        {
+          "BlockIO": "0B / 1.23GB",
+          "CPUPerc": "229.76%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.56%",
+          "MemUsage": "180.4MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "532MB / 324MB",
+          "PIDs": "32"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.18%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "334.75%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "27.92%",
+          "MemUsage": "3.35GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "43.3MB / 36.4MB",
+          "PIDs": "122"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:51:07.020335+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "594.02%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.42%",
+          "MemUsage": "455.8MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "241MB / 332MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "272.19%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "4.23%",
+          "MemUsage": "1.324GiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "78.8MB / 81.3MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 379MB",
+          "CPUPerc": "221.67%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.28%",
+          "MemUsage": "89.34MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "303MB / 216MB",
+          "PIDs": "18"
+        },
+        {
+          "BlockIO": "0B / 1.23GB",
+          "CPUPerc": "314.90%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.58%",
+          "MemUsage": "184.5MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "533MB / 326MB",
+          "PIDs": "40"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.18%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "20.56%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "28.09%",
+          "MemUsage": "3.371GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "45MB / 39MB",
+          "PIDs": "122"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:51:12.188817+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "608.51%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.42%",
+          "MemUsage": "456MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "245MB / 337MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "229.92%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "4.28%",
+          "MemUsage": "1.34GiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "82.6MB / 84.7MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 381MB",
+          "CPUPerc": "218.75%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.29%",
+          "MemUsage": "94.27MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "309MB / 221MB",
+          "PIDs": "23"
+        },
+        {
+          "BlockIO": "0B / 1.24GB",
+          "CPUPerc": "263.58%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.65%",
+          "MemUsage": "208.3MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "536MB / 329MB",
+          "PIDs": "41"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.16%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.973MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "70.53%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "28.26%",
+          "MemUsage": "3.391GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "46.5MB / 40.4MB",
+          "PIDs": "122"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:51:17.081869+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "748.56%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.41%",
+          "MemUsage": "451.9MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "250MB / 345MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "180.86%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "4.30%",
+          "MemUsage": "1.345GiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "84.7MB / 86.7MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 384MB",
+          "CPUPerc": "277.89%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.35%",
+          "MemUsage": "111.9MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "315MB / 225MB",
+          "PIDs": "30"
+        },
+        {
+          "BlockIO": "0B / 1.24GB",
+          "CPUPerc": "239.67%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.68%",
+          "MemUsage": "216.8MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "537MB / 330MB",
+          "PIDs": "41"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.15%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "20.61%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "28.44%",
+          "MemUsage": "3.412GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "47.6MB / 41.3MB",
+          "PIDs": "122"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:51:22.235992+00:00",
+      "containers": [
+        {
+          "BlockIO": "0B / 32.8kB",
+          "CPUPerc": "720.06%",
+          "Container": "platform-load-core-1",
+          "ID": "309510877d49",
+          "MemPerc": "1.41%",
+          "MemUsage": "452.7MiB / 31.3GiB",
+          "Name": "platform-load-core-1",
+          "NetIO": "253MB / 349MB",
+          "PIDs": "59"
+        },
+        {
+          "BlockIO": "0B / 3.29MB",
+          "CPUPerc": "149.61%",
+          "Container": "platform-load-control-1",
+          "ID": "4794c7c19d5a",
+          "MemPerc": "4.30%",
+          "MemUsage": "1.347GiB / 31.3GiB",
+          "Name": "platform-load-control-1",
+          "NetIO": "86.9MB / 88.8MB",
+          "PIDs": "58"
+        },
+        {
+          "BlockIO": "22.1MB / 385MB",
+          "CPUPerc": "184.45%",
+          "Container": "platform-load-core-db-1",
+          "ID": "7fabb9a54547",
+          "MemPerc": "0.22%",
+          "MemUsage": "71.72MiB / 31.3GiB",
+          "Name": "platform-load-core-db-1",
+          "NetIO": "320MB / 228MB",
+          "PIDs": "9"
+        },
+        {
+          "BlockIO": "0B / 1.24GB",
+          "CPUPerc": "176.14%",
+          "Container": "platform-load-commercial-db-1",
+          "ID": "5fdd83db1049",
+          "MemPerc": "0.63%",
+          "MemUsage": "201.4MiB / 31.3GiB",
+          "Name": "platform-load-commercial-db-1",
+          "NetIO": "539MB / 332MB",
+          "PIDs": "41"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.18%",
+          "Container": "platform-load-redis-1",
+          "ID": "f5dbab2adb53",
+          "MemPerc": "0.02%",
+          "MemUsage": "5.723MiB / 31.3GiB",
+          "Name": "platform-load-redis-1",
+          "NetIO": "3.02kB / 126B",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "24.44%",
+          "Container": "platform-load-generator",
+          "ID": "75f4fbadfb7f",
+          "MemPerc": "28.66%",
+          "MemUsage": "3.44GiB / 12GiB",
+          "Name": "platform-load-generator",
+          "NetIO": "48.5MB / 41.9MB",
+          "PIDs": "122"
+        }
+      ]
+    },
+    {
+      "at_utc": "2026-10-28T14:51:29.183634+00:00",
+      "containers": []
+    }
+  ],
+  "source_sha256": {
+    "compose.load.yaml": "59a77a94588863365c30312c9471e9fa82d18cf736988a35a1d15919c7929c0b",
+    "scripts/load/online.js": "114557ba794e98cdf34c47348cb945732a1d91ecd6463ac04d04715b07a03721",
+    "scripts/load/run.py": "7c4aaa8114ff5cc574f5512b1c312c846079fd5d35154888f476cd2d8a35bcf0"
+  },
+  "images": {
+    "platform-load-core-1": "sha256:315c6ffb9db6802ac137b3501ff8185077b3c6e5f236c5c9609328c3fe0904bf",
+    "platform-load-control-1": "sha256:bac5f2c5e191a1576629d6e30603cfa4613749a34c96bd1f11521759ae8db12b",
+    "platform-load-core-db-1": "sha256:86c951e05bf56c93d95d397747fb8820ac76cc3bedb78f43abd83eedbe3666ae",
+    "platform-load-commercial-db-1": "sha256:86c951e05bf56c93d95d397747fb8820ac76cc3bedb78f43abd83eedbe3666ae"
+  }
+}
