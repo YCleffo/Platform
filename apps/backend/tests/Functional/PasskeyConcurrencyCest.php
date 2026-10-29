@@ -157,34 +157,17 @@ final readonly class PasskeyConcurrencyCest
     public function testConcurrentRegistrationChallengeOneWins(FunctionalTester $I): void
     {
         [$c1, $db1, $service1, , $policy1, $challenges1, , , $ctx1] = $this->createRuntime();
-        [, , $service2] = $this->createRuntime();
         [$accountId, $sessionId] = $this->createAccount($db1);
 
         $start = $service1->startRegistration($accountId, $sessionId, $ctx1);
         $authenticator = new WebAuthnTestAuthenticator();
         $responseJson = $authenticator->makeRegistrationResponse($start['challenge']);
 
-        $successCount = 0;
-        $rejectionCount = 0;
-
-        // Thread 1
-        try {
-            $service1->completeRegistration($accountId, $sessionId, $responseJson, 'Key 1', $ctx1);
-            ++$successCount;
-        } catch (InvalidArgumentException) {
-            ++$rejectionCount;
-        }
-
-        // Thread 2 (concurrent attempt with same challenge)
-        try {
-            $service2->completeRegistration($accountId, $sessionId, $responseJson, 'Key 2', $ctx1);
-            ++$successCount;
-        } catch (InvalidArgumentException) {
-            ++$rejectionCount;
-        }
-
-        assertSame(1, $successCount, 'Exactly one registration completion must succeed.');
-        assertSame(1, $rejectionCount, 'The duplicate registration request must be rejected.');
+        $this->race($db1, 'register', $start['challenge'], $responseJson, $accountId, $sessionId, $ctx1);
+        assertSame(1, (int) $db1->createCommand(
+            "SELECT count(*) FROM core.audit_events WHERE action='auth.passkey_registration.completed' AND actor_account_id=CAST(:id AS uuid)",
+            [':id' => $accountId],
+        )->queryScalar(), 'Only one registration audit effect may be committed.');
 
         // Verify in DB that only 1 passkey was created
         $count = (int) $db1->createCommand(
@@ -202,7 +185,6 @@ final readonly class PasskeyConcurrencyCest
     public function testConcurrentAuthenticationChallengeOneWins(FunctionalTester $I): void
     {
         [$c1, $db1, $service1, , $policy1, , , , $ctx1] = $this->createRuntime();
-        [, , $service2] = $this->createRuntime();
         [$accountId, $sessionId] = $this->createAccount($db1);
 
         // Register passkey
@@ -216,35 +198,17 @@ final readonly class PasskeyConcurrencyCest
         $userHandle = $policy1->makeUserHandle($accountId);
         $authJson = $authenticator->makeAuthenticationResponse($startAuth['challenge'], $userHandle, signCount: 1);
 
-        $successCount = 0;
-        $rejectionCount = 0;
-
-        // Concurrent completions
-        try {
-            $service1->completeAuthentication($authJson, $ctx1);
-            ++$successCount;
-        } catch (InvalidCredentialsException) {
-            ++$rejectionCount;
-        }
-
-        try {
-            $service2->completeAuthentication($authJson, $ctx1);
-            ++$successCount;
-        } catch (InvalidCredentialsException) {
-            ++$rejectionCount;
-        }
-
-        assertSame(1, $successCount, 'Exactly one authentication completion must succeed.');
-        assertSame(1, $rejectionCount, 'The duplicate authentication request must be rejected.');
+        $this->race($db1, 'authenticate', $startAuth['challenge'], $authJson, $accountId, $sessionId, $ctx1);
+        assertSame(2, (int) $db1->createCommand(
+            'SELECT count(*) FROM core.auth_sessions WHERE account_id=CAST(:id AS uuid)',
+            [':id' => $accountId],
+        )->queryScalar(), 'The original session plus exactly one passkey session must exist.');
     }
 
     /**
-     * Item 4: Last-method invariant race safety with CredentialMutationGuard.
-     * Account has exactly 2 methods: 1 Passkey + 1 External Identity (no password).
-     * If revoke and unlink run concurrently, at most one can succeed.
-     * The account is NEVER left with zero authentication methods.
+     * Sequential last-method regression: removing a passkey must leave the final identity protected.
      */
-    public function testConcurrentPasskeyRevokeAndIdentityUnlink(FunctionalTester $I): void
+    public function testRevokeThenUnlinkPreservesLastAuthenticationMethod(FunctionalTester $I): void
     {
         [$c1, $db1, $service1, $extService1, , , $passkeys1, $guard1, $ctx1] = $this->createRuntime();
         [$c2, $db2, $service2, $extService2] = $this->createRuntime();
@@ -360,4 +324,70 @@ final readonly class PasskeyConcurrencyCest
         assertNotNull($stored);
         assertSame(11, $stored->signCount);
     }
+
+    /** Two PHP processes, separate DB sessions and an observed lock wait before release. */
+    private function race(ConnectionInterface $db, string $operation, string $challenge, string $response,
+        string $account, string $session, \App\Core\Client\Domain\ClientContext $context): void
+    {
+        \App\Core\Shared\Infrastructure\TestRuntimeGuard::assertDestructiveOperationsAllowed($db);
+        $workers = [];
+        $transaction = $db->beginTransaction();
+        try {
+            $id = $db->createCommand(
+                "SELECT id FROM core.auth_challenges WHERE secret_hash=decode(:hash,'hex') FOR UPDATE",
+                [':hash' => hash('sha256', $challenge)],
+            )->queryScalar();
+            assertTrue(is_string($id), 'The contested challenge must exist.');
+            $pids = [];
+            for ($i = 0; $i < 2; ++$i) {
+                $process = proc_open([PHP_BINARY, dirname(__DIR__) . '/Support/passkey-race-worker.php'],
+                    [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes);
+                assertTrue(is_resource($process));
+                $workers[] = [$process, $pipes];
+                stream_set_timeout($pipes[1], 20);
+                fwrite($pipes[0], json_encode(['operation' => $operation, 'account' => $account,
+                    'session' => $session, 'response' => $response, 'ip' => $context->ipAddress,
+                    'userAgent' => $context->userAgent], JSON_THROW_ON_ERROR) . "\n");
+                fflush($pipes[0]);
+                $ready = trim((string) fgets($pipes[1]));
+                assertSame(1, preg_match('/^READY:([0-9]+)$/', $ready, $matches), $ready);
+                $pids[] = (int) $matches[1];
+            }
+            assertTrue($pids[0] !== $pids[1], 'Workers must use independent database connections.');
+            foreach ($workers as [, $pipes]) { fwrite($pipes[0], "GO\n"); fflush($pipes[0]); }
+            $deadline = microtime(true) + 10;
+            $waiting = 0;
+            do {
+                $db->createCommand('SELECT pg_stat_clear_snapshot()')->queryScalar();
+                $waiting = (int) $db->createCommand(
+                    "SELECT count(*) FROM pg_stat_activity WHERE pid IN (CAST(:a AS integer),CAST(:b AS integer)) AND wait_event_type='Lock'",
+                    [':a' => $pids[0], ':b' => $pids[1]],
+                )->queryScalar();
+                if ($waiting === 2) { break; }
+                usleep(20_000);
+            } while (microtime(true) < $deadline);
+            assertSame(2, $waiting, 'Both requests must reach database lock contention before release.');
+            $transaction->commit();
+            $results = [];
+            foreach ($workers as [$process, $pipes]) {
+                fclose($pipes[0]);
+                $result = json_decode((string) fgets($pipes[1]), true, flags: JSON_THROW_ON_ERROR);
+                $stderr = stream_get_contents($pipes[2]);
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+                assertSame(0, proc_close($process), (string) $stderr);
+                $results[] = $result['result'];
+            }
+            sort($results);
+            assertSame(['rejected', 'won'], $results);
+        } finally {
+            if ($transaction->isActive()) { $transaction->rollBack(); }
+            foreach ($workers as [$process, $pipes]) {
+                if (is_resource($process)) { proc_terminate($process, 9); }
+                foreach ($pipes as $pipe) { if (is_resource($pipe)) { fclose($pipe); } }
+                if (is_resource($process)) { proc_close($process); }
+            }
+        }
+    }
+
 }

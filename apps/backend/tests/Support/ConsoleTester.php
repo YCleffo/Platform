@@ -30,7 +30,8 @@ class ConsoleTester extends \Codeception\Actor
     public function runApp(?string $parameters = null): void
     {
         $this->runShellCommand(
-            dirname(__DIR__, 2) . '/yii' . ($parameters === null ? '' : (' ' . $parameters)),
+            escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(dirname(__DIR__, 2) . '/yii')
+                . ($parameters === null ? '' : (' ' . $parameters)),
         );
     }
 }
