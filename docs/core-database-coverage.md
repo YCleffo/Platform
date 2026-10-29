@@ -7,7 +7,7 @@ Application tests могут вызывать repository без SQL-строки
 
 Слои проверяются отдельно: unit — локальная логика, functional — приложение с PostgreSQL,
 API — HTTP, cross-plane — отдельные Commercial/Core процессы и подписанные documents.
-Фактические числа и ограничения перечислены в [аудите](audit/2026-10-28/REPORT.md).
+Структура и ограничения описаны в [справочнике БД](database/SCHEMA_REFERENCE.md).
 
 | Физическая таблица | Прямые source references (до 3) | Прямые test references (до 3) |
 | --- | --- | --- |

@@ -7,9 +7,6 @@ param(
     [Parameter(Mandatory)][string]$AppService,
     [Parameter(Mandatory)][string[]]$CheckCommand,
     [string[]]$AdditionalAppServices = @(),
-    [string]$LinkedDbService = '',
-    [string]$LinkedVolume = '',
-    [string]$LinkedAppService = '',
     [switch]$NoRestart
 )
 
@@ -46,6 +43,9 @@ function Get-LocalSetting([string]$key) {
 
 $db = Get-LocalSetting $DbKey
 $role = Get-LocalSetting $UserKey
+if ($PasswordKey -eq 'POSTGRES_PASSWORD' -and (Get-LocalSetting 'DB_PASSWORD') -cne (Get-LocalSetting 'POSTGRES_PASSWORD')) {
+    throw 'DB_PASSWORD and POSTGRES_PASSWORD must agree before Core password rotation.'
+}
 if ($role -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
     throw "Unsafe PostgreSQL role name in $UserKey."
 }
@@ -56,24 +56,19 @@ try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
 $newPassword = [BitConverter]::ToString($bytes).Replace('-', '').ToLowerInvariant()
 $encoding = New-Object System.Text.UTF8Encoding($false)
 $original = [IO.File]::ReadAllText($envPath, $encoding)
-$backup = "$envPath.backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')-$([guid]::NewGuid().ToString('N').Substring(0,8))"
 $temp = "$envPath.tmp-$([guid]::NewGuid().ToString('N'))"
 $oldHash = $null
 $changed = $false
-$linkedOldHash = $null
-$linkedChanged = $false
-$linkedPresent = $false
-$linkedAppPresent = $false
 $envUpdated = $false
 
 Push-Location $root
 try {
     # An initialized volume can have a password different from .env. Local
     # socket superuser access repairs that state without knowing the old one.
-    docker compose up -d $DbService | Out-Null
+    docker compose --profile control up -d $DbService | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Cannot start $DbService." }
 
-    $oldHash = (& docker compose exec -T -u postgres $DbService `
+    $oldHash = (& docker compose --profile control exec -T -u postgres $DbService `
         psql -X -At -v ON_ERROR_STOP=1 -U $role -d postgres `
         -c "SELECT rolpassword FROM pg_authid WHERE rolname = '$role';") -join ''
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($oldHash)) {
@@ -82,45 +77,15 @@ try {
 
     # Send the password through stdin, not a psql command-line argument.
     "ALTER ROLE `"$role`" WITH PASSWORD '$newPassword';" |
-        docker compose exec -T -u postgres $DbService `
+        docker compose --profile control exec -T -u postgres $DbService `
             psql -X -q -v ON_ERROR_STOP=1 -U $role -d postgres *> $null
     if ($LASTEXITCODE -ne 0) { throw 'ALTER ROLE failed; .env was not changed.' }
     $changed = $true
 
-    docker compose exec -T -e "PGPASSWORD=$newPassword" $DbService `
+    docker compose --profile control exec -T -e "PGPASSWORD=$newPassword" $DbService `
         psql -X -h 127.0.0.1 -U $role -d $db -At `
         -v ON_ERROR_STOP=1 -c 'SELECT 1' *> $null
     if ($LASTEXITCODE -ne 0) { throw 'New PostgreSQL password did not authenticate.' }
-
-    # The isolated Yii test database uses POSTGRES_PASSWORD too. If its
-    # persisted volume exists, rotate that role before changing the shared env.
-    if ($LinkedDbService -ne '' -and $LinkedVolume -ne '') {
-        docker volume inspect $LinkedVolume *> $null
-        $linkedPresent = $LASTEXITCODE -eq 0
-    }
-    if ($linkedPresent) {
-        if ($LinkedAppService -ne '') {
-            $linkedAppId = (& docker compose --profile test ps -a -q $LinkedAppService) -join ''
-            $linkedAppPresent = -not [string]::IsNullOrWhiteSpace($linkedAppId)
-        }
-        docker compose --profile test up -d $LinkedDbService | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "Cannot start $LinkedDbService." }
-        $linkedOldHash = (& docker compose --profile test exec -T -u postgres $LinkedDbService `
-            psql -X -At -v ON_ERROR_STOP=1 -U $role -d postgres `
-            -c "SELECT rolpassword FROM pg_authid WHERE rolname = '$role';") -join ''
-        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($linkedOldHash)) {
-            throw "Cannot read existing role verifier in $LinkedDbService."
-        }
-        "ALTER ROLE `"$role`" WITH PASSWORD '$newPassword';" |
-            docker compose --profile test exec -T -u postgres $LinkedDbService `
-                psql -X -q -v ON_ERROR_STOP=1 -U $role -d postgres *> $null
-        if ($LASTEXITCODE -ne 0) { throw "ALTER ROLE failed in $LinkedDbService." }
-        $linkedChanged = $true
-        docker compose --profile test exec -T -e "PGPASSWORD=$newPassword" $LinkedDbService `
-            psql -X -h 127.0.0.1 -U $role -d postgres -At `
-            -v ON_ERROR_STOP=1 -c 'SELECT 1' *> $null
-        if ($LASTEXITCODE -ne 0) { throw "New password did not authenticate in $LinkedDbService." }
-    }
 
     $lines = @($original -split "`r?`n")
     if ($lines.Count -gt 0 -and $lines[$lines.Count - 1] -eq '') {
@@ -134,45 +99,38 @@ try {
             $replacements++
         } else { $updated.Add($line) }
     }
+    if ($PasswordKey -eq 'POSTGRES_PASSWORD') {
+        for ($i = 0; $i -lt $updated.Count; $i++) {
+            if ($updated[$i] -match '^DB_PASSWORD=') { $updated[$i] = "DB_PASSWORD=$newPassword" }
+        }
+    }
     if ($replacements -ne 1) { throw "Expected exactly one $PasswordKey entry in .env." }
     [IO.File]::WriteAllText($temp, ($updated -join "`n") + "`n", $encoding)
-    [IO.File]::WriteAllText($backup, $original, $encoding)
-    Move-Item -LiteralPath $temp -Destination $envPath -Force
+    $account = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+    & icacls $temp /inheritance:r /grant:r "${account}:F" '*S-1-5-18:F' | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot restrict replacement environment permissions.' }
+    [IO.File]::Replace($temp, $envPath, $null)
     $envUpdated = $true
     [Environment]::SetEnvironmentVariable($PasswordKey, $newPassword, 'Process')
+    if ($PasswordKey -eq 'POSTGRES_PASSWORD') { [Environment]::SetEnvironmentVariable('DB_PASSWORD', $newPassword, 'Process') }
 
     if (-not $NoRestart) {
         $services = @($AppService) + $AdditionalAppServices
-        docker compose up -d --no-deps --force-recreate @services | Out-Null
+        docker compose --profile control up -d --no-deps --force-recreate @services | Out-Null
         if ($LASTEXITCODE -ne 0) {
             throw "Dependent applications could not restart. Database and .env are synchronized; retry the service start."
         }
-        & docker compose exec -T $AppService @CheckCommand
+        & docker compose --profile control exec -T $AppService @CheckCommand
         if ($LASTEXITCODE -ne 0) {
             throw "$AppService database check failed. Database and .env are synchronized."
         }
-        if ($linkedAppPresent) {
-            docker compose --profile test up -d --no-deps --force-recreate $LinkedAppService | Out-Null
-            if ($LASTEXITCODE -ne 0) {
-                throw "$LinkedAppService could not restart. Database and .env are synchronized."
-            }
-        }
     }
     Write-Host "$DbService`: password rotated in PostgreSQL and .env; TCP authentication verified."
-    Write-Host "Previous .env backup: $backup"
 }
 catch {
-    if (-not $envUpdated -and $linkedChanged -and $linkedOldHash) {
-        "ALTER ROLE `"$role`" WITH PASSWORD '$linkedOldHash';" |
-            docker compose --profile test exec -T -u postgres $LinkedDbService `
-                psql -X -q -v ON_ERROR_STOP=1 -U $role -d postgres *> $null
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning 'Automatic linked PostgreSQL password rollback failed; manual recovery is required.'
-        }
-    }
     if (-not $envUpdated -and $changed -and $oldHash) {
         "ALTER ROLE `"$role`" WITH PASSWORD '$oldHash';" |
-            docker compose exec -T -u postgres $DbService `
+            docker compose --profile control exec -T -u postgres $DbService `
                 psql -X -q -v ON_ERROR_STOP=1 -U $role -d postgres *> $null
         if ($LASTEXITCODE -ne 0) {
             Write-Warning 'Automatic PostgreSQL password rollback failed; manual recovery is required.'
@@ -183,7 +141,6 @@ catch {
 finally {
     if (Test-Path -LiteralPath $temp) { Remove-Item -LiteralPath $temp -Force }
     $oldHash = $null
-    $linkedOldHash = $null
     $newPassword = $null
     Pop-Location
 }

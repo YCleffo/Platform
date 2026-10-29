@@ -126,11 +126,11 @@ def main():
     if args.from_snapshot:
         catalog = json.loads(snapshot.read_text(encoding="utf-8"))
     else:
-        database = args.database or ("platform_test" if plane == "core" else "platform_commercial_test")
-        user = args.user or ("platform_app" if plane == "core" else "platform_control_test")
+        database = args.database or ("platform" if plane == "core" else "platform_commercial")
+        user = args.user or ("platform_app" if plane == "core" else "platform_control")
         command = ([args.psql, "-h", args.host, "-p", str(args.port)] if args.psql else
-                   ["docker", "compose", "--profile", "test" if plane == "core" else "control-test", "exec", "-T",
-                    "postgres-test" if plane == "core" else "control-postgres-test", "psql"])
+                   ["docker", "compose", "--profile", "control", "exec", "-T",
+                    "postgres" if plane == "core" else "control-postgres", "psql"])
         command += ["-X", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-U", user, "-d", database]
         result = subprocess.run(command, input=(Path(__file__).with_name("schema_catalog.sql")).read_text(encoding="utf-8"),
                                 text=True, encoding="utf-8", capture_output=True, timeout=60, check=True)
@@ -141,7 +141,7 @@ def main():
         catalog["applied_migrations"] = json.loads(history.stdout)
         catalog["migration_sources"] = migration_manifest(plane)
     if catalog.get("migration_sources") != migration_manifest(plane):
-        raise SystemExit("Migration source drift: capture a fresh catalog from a fully migrated isolated database.")
+        raise SystemExit("Migration source drift: capture a fresh catalog from a fully migrated database.")
     applied = sorted(v.rsplit("\\", 1)[-1] for v in catalog.get("applied_migrations", []))
     expected = sorted(Path(m["path"]).stem if plane == "commercial" else Path(m["path"]).name for m in migration_manifest(plane))
     if applied != expected:
@@ -150,10 +150,6 @@ def main():
     for target in (["core", "runtime"] if plane == "core" else ["commercial"]):
         schema, relative = TARGETS[target]
         outputs[ROOT / relative] = render(catalog, schema)
-    if plane == "core":
-        outputs[ROOT / "docs/database/core/Core_v1_FINAL.dbml"] = (
-            "// Compatibility filename. The current Core schema is identical to Core_v2.dbml.\n"
-            + render(catalog, "core"))
     changed = []
     for path, content in outputs.items():
         if not path.exists() or path.read_text(encoding="utf-8") != content:

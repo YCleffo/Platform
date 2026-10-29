@@ -83,12 +83,12 @@ return [
     'yiisoft/db-pgsql' => [
         'dsn' => new Dsn(
             'pgsql',
-            getenv('DB_HOST') ?: '127.0.0.1',
-            $env('DB_NAME', 'POSTGRES_DB'),
-            $env('DB_PORT', 'POSTGRES_PORT'),
+            $env('DB_HOST'),
+            $env('DB_NAME'),
+            $env('DB_PORT'),
         ),
 
-        'username' => $env('DB_USER', 'POSTGRES_USER'),
+        'username' => $env('DB_USER'),
         'password' => ($databasePasswordFile = getenv('DB_PASSWORD_FILE')) !== false && $databasePasswordFile !== ''
             ? (static function () use ($databasePasswordFile): string {
                 if ($databasePasswordFile !== '/run/provisioning-secrets/db_password'
@@ -99,7 +99,7 @@ return [
                 if ($value === '') { throw new \RuntimeException('Database password file is empty.'); }
                 return $value;
             })()
-            : $env('DB_PASSWORD', 'POSTGRES_PASSWORD'),
+            : $env('DB_PASSWORD'),
     ],
 
     'internationalization' => [

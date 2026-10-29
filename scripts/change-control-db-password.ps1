@@ -11,5 +11,5 @@ $ErrorActionPreference = 'Stop'
     -PasswordKey CONTROL_POSTGRES_PASSWORD `
     -AppService control-plane `
     -CheckCommand @('php', 'bin/console', 'doctrine:migrations:status', '--no-interaction') `
-    -AdditionalAppServices @('control-outbox-worker') `
+    -AdditionalAppServices @('control-outbox-worker', 'control-scheduler') `
     -NoRestart:$NoRestart

@@ -1,4 +1,4 @@
-# Data subject requests and processing blocks (Phase 4.1 B1)
+# Data subject requests and processing blocks
 
 Migration 022 adds four Core tables: `data_subject_requests`, `data_subject_request_deadlines`, `data_subject_request_events`, and `privacy_processing_blocks`. A request stores the subject Person separately from the submitting Person and Account. A self request derives both IDs from the authenticated human Account. A representative request requires a verified, currently valid `legal_representations` record with the request type's specific submission scope. The server checks the Account to Person link. Representative read access additionally requires the active `privacy.request.view` scope; revocation removes that access to old requests. Management uses `core.privacy.requests.read` and `core.privacy.requests.manage`.
 

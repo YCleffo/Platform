@@ -1,0 +1,479 @@
+services:
+  db-migrate:
+    image: postgres:18
+    restart: "no"
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+      PGHOST: postgres
+      PGPORT: 5432
+
+    volumes:
+      - ./apps/backend/migrations/sql:/migrations:ro
+      - ./infra/postgres/migrate.sh:/migrate.sh:ro
+
+    entrypoint:
+      - bash
+      - /migrate.sh
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - backend_net
+
+  # ----------------------------------------------------------------
+  # Yii3 API backend
+  # FrankenPHP + Yii3.
+  # ----------------------------------------------------------------
+  postgres-test:
+    profiles: ["test"]
+    image: postgres:18
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_TEST_DB:-platform_test}
+      POSTGRES_USER: ${POSTGRES_USER:-platform_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ:-UTC}
+
+    ports:
+      - "127.0.0.1:${POSTGRES_TEST_PORT:-5433}:5432"
+
+    volumes:
+      - postgres_test_data:/var/lib/postgresql
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-platform_app} -d ${POSTGRES_TEST_DB:-platform_test}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 3s
+
+    networks:
+      - test_net
+  redis-test:
+    profiles: ["test"]
+    image: redis:8-alpine
+    restart: unless-stopped
+
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+
+    ports:
+      - "127.0.0.1:${REDIS_TEST_PORT:-6380}:6379"
+
+    volumes:
+      - redis_test_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+    networks:
+      - test_net
+  db-migrate-test:
+    profiles: ["test"]
+    image: postgres:18
+    restart: "no"
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_TEST_DB:-platform_test}
+      POSTGRES_USER: ${POSTGRES_USER:-platform_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+      PGHOST: postgres-test
+      PGPORT: 5432
+
+    volumes:
+      - ./apps/backend/migrations/sql:/migrations:ro
+      - ./infra/postgres/migrate.sh:/migrate.sh:ro
+
+    entrypoint:
+      - bash
+      - /migrate.sh
+
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+
+    networks:
+      - test_net
+  backend-test:
+    profiles: ["test"]
+    build:
+      context: ./apps/backend
+      dockerfile: docker/Dockerfile
+      target: dev
+
+    restart: unless-stopped
+
+    environment:
+      APP_ENV: test
+      APP_DEBUG: "false"
+      PLATFORM_INSTALLATION_ID: ${PLATFORM_INSTALLATION_ID:-}
+      PLATFORM_DEPLOYMENT_MODE: ${PLATFORM_DEPLOYMENT_MODE:-}
+      APPLICATION_VERSION: ${APPLICATION_VERSION:-}
+      PLATFORM_RELEASE_ID: ${PLATFORM_RELEASE_ID:-}
+      PLATFORM_RELEASE_CHANNEL: ${PLATFORM_RELEASE_CHANNEL:-}
+      CONTROL_PLANE_URL: ${CONTROL_PLANE_URL:-}
+      CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF: ${CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF:-}
+      CONTROL_PLANE_DEPLOYMENT_CREDENTIAL: ${CONTROL_PLANE_DEPLOYMENT_CREDENTIAL:-}
+      RUNTIME_ENTITLEMENT_TRUSTED_KEYS: '${RUNTIME_ENTITLEMENT_TRUSTED_KEYS:-{}}'
+      TEST_ISOLATED_RUNTIME: "1"
+      XDEBUG_MODE: "off"
+
+      DB_HOST: postgres-test
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_TEST_DB:-platform_test}
+      DB_USER: ${POSTGRES_USER:-platform_app}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_ENCRYPTION: ${SMTP_ENCRYPTION:-none}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@platform.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Platform}
+      APP_DEFAULT_LOCALE: ${APP_DEFAULT_LOCALE:-ru-RU}
+      APP_DEFAULT_TIMEZONE: ${APP_DEFAULT_TIMEZONE:-UTC}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      DEVICE_FINGERPRINT_KEY: ${DEVICE_FINGERPRINT_KEY:?}
+      SESSION_TOUCH_INTERVAL_SECONDS: ${SESSION_TOUCH_INTERVAL_SECONDS:-300}
+      ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-2592000}
+      AUTH_ACTIVATION_TTL_SECONDS: ${AUTH_ACTIVATION_TTL_SECONDS:-86400}
+      AUTH_PASSWORD_RESET_TTL_SECONDS: ${AUTH_PASSWORD_RESET_TTL_SECONDS:-1800}
+      AUTH_MFA_CHALLENGE_TTL_SECONDS: ${AUTH_MFA_CHALLENGE_TTL_SECONDS:-300}
+      AUTH_MFA_RECOVERY_TTL_SECONDS: ${AUTH_MFA_RECOVERY_TTL_SECONDS:-1800}
+      AUTH_TOTP_SETUP_TTL_SECONDS: ${AUTH_TOTP_SETUP_TTL_SECONDS:-600}
+      AUTH_TOTP_ISSUER: ${AUTH_TOTP_ISSUER:-Platform}
+      AUTH_CHALLENGE_RETENTION_DAYS: ${AUTH_CHALLENGE_RETENTION_DAYS:-30}
+      AUTH_RECOVERY_CODE_RETENTION_DAYS: ${AUTH_RECOVERY_CODE_RETENTION_DAYS:-30}
+      AUTH_CLEANUP_BATCH_SIZE: ${AUTH_CLEANUP_BATCH_SIZE:-500}
+      AUTH_RECENT_AUTH_SECONDS: ${AUTH_RECENT_AUTH_SECONDS:-600}
+      AUTH_TOTP_ENCRYPTION_KEY: ${AUTH_TOTP_ENCRYPTION_KEY:?}
+      AUTH_GOOGLE_CLIENT_ID: ${AUTH_GOOGLE_CLIENT_ID:-google-test-client-id}
+      AUTH_GOOGLE_CLIENT_SECRET: ${AUTH_GOOGLE_CLIENT_SECRET:-google-test-client-secret}
+      AUTH_GOOGLE_REDIRECT_URI: ${AUTH_GOOGLE_REDIRECT_URI:-http://localhost:5173/auth/callback/google}
+      AUTH_TELEGRAM_CLIENT_ID: ${AUTH_TELEGRAM_CLIENT_ID:-telegram-test-client-id}
+      AUTH_TELEGRAM_CLIENT_SECRET: ${AUTH_TELEGRAM_CLIENT_SECRET:-telegram-test-client-secret}
+      AUTH_TELEGRAM_REDIRECT_URI: ${AUTH_TELEGRAM_REDIRECT_URI:-http://localhost:5173/auth/callback/telegram}
+      AUTH_IDENTIFIER_HMAC_KEY: ${AUTH_IDENTIFIER_HMAC_KEY:?}
+      AUTH_PUBLIC_BASE_URL: ${AUTH_PUBLIC_BASE_URL:-http://localhost:5173}
+      REDIS_HOST: redis-test
+      PROVISIONER_ENABLED: "false"
+      PROVISIONER_MAX_ATTEMPTS: "5"
+      PROVISIONER_RETRY_BASE_SECONDS: "30"
+      PROVISIONER_CONTROL_NETWORK: platform_control_test_net
+      PROVISIONER_CONTROL_PLANE_URL: http://control-plane-test:8000
+      PROVISIONER_MIGRATOR_IMAGE: platform-provisioner-migrator:local
+      PROVISIONER_SECRET_HOST_DIR: /tmp/provisioning-secrets
+      REDIS_PORT: "6379"
+      REDIS_DATABASE: "0"
+      REDIS_RATE_LIMIT_PREFIX: platform:auth:test
+      AUTH_LOGIN_IP_LIMIT: ${AUTH_LOGIN_IP_LIMIT:-30}
+      AUTH_LOGIN_IDENTIFIER_LIMIT: ${AUTH_LOGIN_IDENTIFIER_LIMIT:-10}
+      AUTH_LOGIN_COMBINED_LIMIT: ${AUTH_LOGIN_COMBINED_LIMIT:-5}
+      AUTH_LOGIN_WINDOW_SECONDS: ${AUTH_LOGIN_WINDOW_SECONDS:-300}
+      AUTH_PASSWORD_RESET_LIMIT: ${AUTH_PASSWORD_RESET_LIMIT:-5}
+      AUTH_PASSWORD_RESET_WINDOW_SECONDS: ${AUTH_PASSWORD_RESET_WINDOW_SECONDS:-3600}
+      AUTH_ACTIVATION_RESEND_LIMIT: ${AUTH_ACTIVATION_RESEND_LIMIT:-3}
+      AUTH_ACTIVATION_RESEND_WINDOW_SECONDS: ${AUTH_ACTIVATION_RESEND_WINDOW_SECONDS:-3600}
+      AUTH_EXTERNAL_START_IP_LIMIT: ${AUTH_EXTERNAL_START_IP_LIMIT:-20}
+      AUTH_EXTERNAL_CALLBACK_LIMIT: ${AUTH_EXTERNAL_CALLBACK_LIMIT:-10}
+      AUTH_MFA_VERIFY_CHALLENGE_LIMIT: ${AUTH_MFA_VERIFY_CHALLENGE_LIMIT:-5}
+      AUTH_MFA_VERIFY_IP_LIMIT: ${AUTH_MFA_VERIFY_IP_LIMIT:-20}
+      AUTH_TOTP_SETUP_CONFIRM_LIMIT: ${AUTH_TOTP_SETUP_CONFIRM_LIMIT:-5}
+      AUTH_MFA_RECOVERY_IDENTIFIER_LIMIT: ${AUTH_MFA_RECOVERY_IDENTIFIER_LIMIT:-5}
+      AUTH_MFA_RECOVERY_IP_LIMIT: ${AUTH_MFA_RECOVERY_IP_LIMIT:-10}
+      AUTH_MFA_RECOVERY_CONFIRM_LIMIT: ${AUTH_MFA_RECOVERY_CONFIRM_LIMIT:-5}
+      AUTH_MFA_RECOVERY_EXTERNAL_START_IP_LIMIT: ${AUTH_MFA_RECOVERY_EXTERNAL_START_IP_LIMIT:-10}
+      AUTH_MFA_RECOVERY_EXTERNAL_TRANSACTION_LIMIT: ${AUTH_MFA_RECOVERY_EXTERNAL_TRANSACTION_LIMIT:-3}
+      AUTH_MFA_RECOVERY_EXTERNAL_CALLBACK_LIMIT: ${AUTH_MFA_RECOVERY_EXTERNAL_CALLBACK_LIMIT:-5}
+      AUTH_PROVIDER_LINK_LIMIT: ${AUTH_PROVIDER_LINK_LIMIT:-10}
+      AUTH_RECOVERY_CODE_LIMIT: ${AUTH_RECOVERY_CODE_LIMIT:-5}
+      AUTH_SECURITY_WINDOW_SECONDS: ${AUTH_SECURITY_WINDOW_SECONDS:-900}
+      GEOIP_DATABASE_PATH: ${GEOIP_DATABASE_PATH:-}
+      SECURITY_AUDIT_RETENTION_DAYS: ${SECURITY_AUDIT_RETENTION_DAYS:-365}
+      MAIL_MESSAGE_ID_DOMAIN: ${MAIL_MESSAGE_ID_DOMAIN:-platform.local}
+      MAIL_OUTBOX_LEASE_SECONDS: ${MAIL_OUTBOX_LEASE_SECONDS:-60}
+      MAIL_OUTBOX_MAX_ATTEMPTS: ${MAIL_OUTBOX_MAX_ATTEMPTS:-5}
+      MAIL_OUTBOX_RETRY_BASE_SECONDS: ${MAIL_OUTBOX_RETRY_BASE_SECONDS:-30}
+      MAIL_OUTBOX_RETRY_MAX_SECONDS: ${MAIL_OUTBOX_RETRY_MAX_SECONDS:-3600}
+
+    depends_on:
+      redis-test:
+        condition: service_healthy
+      postgres-test:
+        condition: service_healthy
+
+    ports:
+      - "127.0.0.1:${BACKEND_TEST_PORT:-8081}:80"
+
+    volumes:
+      - ./apps/backend:/app
+      - ./contracts:/contracts:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "php",
+          "-r",
+          "exit(@file_get_contents('http://127.0.0.1/health') === false ? 1 : 0);",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+    networks:
+      - test_net
+
+  # Commercial and Core retain separate database credentials and networks.
+  control-migrate:
+    profiles: ["control"]
+    build:
+      context: ./apps/control-plane
+      dockerfile: docker/Dockerfile
+      target: app
+    restart: "no"
+    environment:
+      APP_ENV: ${CONTROL_APP_ENV:-prod}
+      CONTROL_APP_SECRET: ${CONTROL_APP_SECRET:?}
+      CONTROL_TOKEN_SECRET: ${CONTROL_TOKEN_SECRET:?}
+      CONTROL_TOTP_ENCRYPTION_KEY: ${CONTROL_TOTP_ENCRYPTION_KEY:?}
+      CONTROL_VERIFICATION_TTL_SECONDS: ${CONTROL_VERIFICATION_TTL_SECONDS:-86400}
+      CONTROL_ACCESS_TOKEN_TTL_SECONDS: ${CONTROL_ACCESS_TOKEN_TTL_SECONDS:-900}
+      CONTROL_SESSION_TTL_SECONDS: ${CONTROL_SESSION_TTL_SECONDS:-2592000}
+      CONTROL_PASSWORD_RESET_TTL_SECONDS: ${CONTROL_PASSWORD_RESET_TTL_SECONDS:-3600}
+      CONTROL_MFA_CHALLENGE_TTL_SECONDS: ${CONTROL_MFA_CHALLENGE_TTL_SECONDS:-300}
+      CONTROL_TOTP_SETUP_TTL_SECONDS: ${CONTROL_TOTP_SETUP_TTL_SECONDS:-600}
+      CONTROL_RECENT_AUTH_TTL_SECONDS: ${CONTROL_RECENT_AUTH_TTL_SECONDS:-900}
+      CONTROL_YOOKASSA_RETURN_URL: ${CONTROL_YOOKASSA_RETURN_URL:-}
+      CONTROL_RENEWAL_LEAD_DAYS: ${CONTROL_RENEWAL_LEAD_DAYS:-7}
+      CONTROL_RENEWAL_SETTLEMENT_GRACE_SECONDS: ${CONTROL_RENEWAL_SETTLEMENT_GRACE_SECONDS:-900}
+      CONTROL_DUNNING_MAX_ATTEMPTS: ${CONTROL_DUNNING_MAX_ATTEMPTS:-5}
+      CONTROL_DUNNING_RETRY_DELAYS_SECONDS: ${CONTROL_DUNNING_RETRY_DELAYS_SECONDS:-3600,21600,86400,259200}
+      CONTROL_DUNNING_GRACE_SECONDS: ${CONTROL_DUNNING_GRACE_SECONDS:-604800}
+      CONTROL_DUNNING_UNCERTAIN_RETRY_SECONDS: ${CONTROL_DUNNING_UNCERTAIN_RETRY_SECONDS:-300}
+      CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS: ${CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS:-}
+      CONTROL_DATABASE_URL: postgresql://${CONTROL_POSTGRES_USER:-platform_control}:${CONTROL_POSTGRES_PASSWORD:?}@control-postgres:5432/${CONTROL_POSTGRES_DB:-platform_commercial}?serverVersion=18&charset=utf8
+    command: ["php", "bin/console", "doctrine:migrations:migrate", "--no-interaction"]
+    depends_on:
+      control-postgres:
+        condition: service_healthy
+    networks: [control_net]
+  backup-worker:
+    profiles: ["backup"]
+    build:
+      context: ./infra/backup
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      BACKUP_ROOT: /backups
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-false}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_MIN_SUCCESSFUL_SETS: ${BACKUP_MIN_SUCCESSFUL_SETS:-3}
+      BACKUP_HEALTH_TIMEOUT_SECONDS: ${BACKUP_HEALTH_TIMEOUT_SECONDS:-172800}
+      DEPLOYMENT_BACKUP_ENABLED: ${DEPLOYMENT_BACKUP_ENABLED:-false}
+      DEPLOYMENT_BACKUP_INTERVAL_SECONDS: ${DEPLOYMENT_BACKUP_INTERVAL_SECONDS:-86400}
+      DEPLOYMENT_BACKUP_BATCH_SIZE: ${DEPLOYMENT_BACKUP_BATCH_SIZE:-2}
+      DEPLOYMENT_BACKUP_RETENTION_DAYS: ${DEPLOYMENT_BACKUP_RETENTION_DAYS:-30}
+      DEPLOYMENT_BACKUP_MIN_SUCCESSFUL_SETS: ${DEPLOYMENT_BACKUP_MIN_SUCCESSFUL_SETS:-3}
+      DEPLOYMENT_BACKUP_HEALTH_TIMEOUT_SECONDS: ${DEPLOYMENT_BACKUP_HEALTH_TIMEOUT_SECONDS:-172800}
+      DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS: ${DECOMMISSIONED_DEPLOYMENT_BACKUP_RETENTION_DAYS:-}
+      APPLICATION_VERSION: ${APPLICATION_VERSION:-}
+      PLATFORM_RELEASE_ID: ${PLATFORM_RELEASE_ID:-}
+      CORE_DB_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      CONTROL_DB_HOST: control-postgres
+      CONTROL_POSTGRES_DB: ${CONTROL_POSTGRES_DB:-platform_commercial}
+      CONTROL_POSTGRES_USER: ${CONTROL_POSTGRES_USER:-platform_control}
+      CONTROL_POSTGRES_PASSWORD: ${CONTROL_POSTGRES_PASSWORD:?}
+    volumes:
+      - ./backups:/backups
+      - ./runtime/provisioning-secrets:/run/provisioning-secrets:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      control-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "/opt/backup/backup.sh", "health"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10m
+    networks: [backend_net, control_net, backup_net]
+  control-postgres-test:
+    profiles: ["control-test"]
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CONTROL_TEST_DB:-platform_commercial_test}
+      POSTGRES_USER: ${CONTROL_TEST_USER:-platform_control_test}
+      POSTGRES_PASSWORD: ${CONTROL_TEST_PASSWORD:?}
+    volumes:
+      - control_postgres_test_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CONTROL_TEST_USER:-platform_control_test} -d ${CONTROL_TEST_DB:-platform_commercial_test}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [control_test_net]
+  control-plane-test:
+    profiles: ["control-test"]
+    build:
+      context: ./apps/control-plane
+      dockerfile: docker/Dockerfile
+      target: test
+    restart: "no"
+    environment:
+      APP_ENV: test
+      APP_DEBUG: "0"
+      CONTROL_TEST_ISOLATED: "1"
+      CONTROL_APP_SECRET: ${CONTROL_APP_SECRET:?}
+      CONTROL_TOKEN_SECRET: ${CONTROL_TOKEN_SECRET:?}
+      CONTROL_TOTP_ENCRYPTION_KEY: ${CONTROL_TOTP_ENCRYPTION_KEY:?}
+      CONTROL_MAILER_DSN: smtp://mailpit:1025
+      CONTROL_MAIL_FROM: no-reply@platform.local
+      CONTROL_VERIFICATION_URL: http://localhost:5173/verify-email
+      CONTROL_PASSWORD_RESET_URL: http://localhost:5173/reset-password
+      CONTROL_MESSAGE_ID_DOMAIN: platform.local
+      CONTROL_VERIFICATION_TTL_SECONDS: 86400
+      CONTROL_ACCESS_TOKEN_TTL_SECONDS: 900
+      CONTROL_SESSION_TTL_SECONDS: 2592000
+      CONTROL_PASSWORD_RESET_TTL_SECONDS: 3600
+      CONTROL_MFA_CHALLENGE_TTL_SECONDS: 300
+      CONTROL_TOTP_SETUP_TTL_SECONDS: 600
+      CONTROL_RECENT_AUTH_TTL_SECONDS: 900
+      CONTROL_YOOKASSA_RETURN_URL: https://platform.example/payments/return
+      CONTROL_RENEWAL_LEAD_DAYS: 7
+      CONTROL_RENEWAL_SETTLEMENT_GRACE_SECONDS: 900
+      CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS: 30
+      YOOKASSA_SECRET_KEY: ${YOOKASSA_SECRET_KEY:?}
+      CONTROL_DATABASE_URL: postgresql://${CONTROL_TEST_USER:-platform_control_test}:${CONTROL_TEST_PASSWORD:?}@control-postgres-test:5432/${CONTROL_TEST_DB:-platform_commercial_test}?serverVersion=18&charset=utf8
+      PLATFORM_BASE_DOMAIN: platform.example
+      PHASE47_CROSS_PLANE: "1"
+      CROSS_PLANE_REQUIRED: ${CROSS_PLANE_REQUIRED:-0}
+      TEST_ISOLATED_RUNTIME: "1"
+      DB_HOST: postgres-test
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_TEST_DB:-platform_test}
+      DB_USER: ${POSTGRES_USER:-platform_app}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis-test
+    volumes:
+      - ./apps/backend:/backend:ro
+      - cross_plane_backend_vendor:/backend/vendor
+      - ./contracts/openapi:/contracts:ro
+    depends_on:
+      control-postgres-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/health') === false ? 1 : 0);"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    networks: [control_test_net, test_net]
+  cross-plane-test:
+    profiles: ["control-test"]
+    extends:
+      service: control-plane-test
+    build:
+      context: .
+      dockerfile: infra/cross-plane/Dockerfile
+    volumes: []
+  provisioner-migrator:
+    profiles: ["provisioner-build"]
+    image: platform-provisioner-migrator:local
+    build:
+      context: .
+      dockerfile: infra/provisioner/Dockerfile.migrator
+    entrypoint: ["true"]
+    restart: "no"
+  provisioner-worker:
+    profiles: ["provisioner"]
+    image: platform-provisioner-worker:local
+    build:
+      context: .
+      dockerfile: infra/provisioner/Dockerfile.worker
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${CONTROL_APP_ENV:-prod}
+      APP_DEBUG: "0"
+      CONTROL_APP_SECRET: ${CONTROL_APP_SECRET:?}
+      CONTROL_TOKEN_SECRET: ${CONTROL_TOKEN_SECRET:?}
+      CONTROL_YOOKASSA_RETURN_URL: ${CONTROL_YOOKASSA_RETURN_URL:-}
+      CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS: ${CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS:-30}
+      CONTROL_DATABASE_URL: postgresql://${CONTROL_POSTGRES_USER:-platform_control}:${CONTROL_POSTGRES_PASSWORD:?}@control-postgres:5432/${CONTROL_POSTGRES_DB:-platform_commercial}?serverVersion=18&charset=utf8
+      PLATFORM_BASE_DOMAIN: ${PLATFORM_BASE_DOMAIN:-platform.example}
+      PROVISIONER_ENABLED: ${PROVISIONER_ENABLED:-false}
+      PROVISIONER_PROVIDER: ${PROVISIONER_PROVIDER:-local-docker}
+      PROVISIONER_BATCH_SIZE: ${PROVISIONER_BATCH_SIZE:-2}
+      PROVISIONER_POLL_INTERVAL_SECONDS: ${PROVISIONER_POLL_INTERVAL_SECONDS:-30}
+      PROVISIONER_MAX_ATTEMPTS: ${PROVISIONER_MAX_ATTEMPTS:-5}
+      PROVISIONER_RETRY_BASE_SECONDS: ${PROVISIONER_RETRY_BASE_SECONDS:-30}
+      PROVISIONER_HEALTH_TIMEOUT_SECONDS: ${PROVISIONER_HEALTH_TIMEOUT_SECONDS:-120}
+      PROVISIONER_CONTROL_NETWORK: ${PROVISIONER_CONTROL_NETWORK:-platform_control_net}
+      PROVISIONER_BACKUP_NETWORK: ${PROVISIONER_BACKUP_NETWORK:-platform_backup_net}
+      DECOMMISSION_BACKUP_CHECK_INTERVAL_SECONDS: ${DECOMMISSION_BACKUP_CHECK_INTERVAL_SECONDS:-30}
+      UPDATE_BACKUP_CHECK_INTERVAL_SECONDS: ${UPDATE_BACKUP_CHECK_INTERVAL_SECONDS:-30}
+      PROVISIONER_CONTROL_PLANE_URL: ${PROVISIONER_CONTROL_PLANE_URL:-http://control-plane:8000}
+      PROVISIONER_MIGRATOR_IMAGE: ${PROVISIONER_MIGRATOR_IMAGE:-platform-provisioner-migrator:local}
+      PROVISIONER_RUNTIME_REDIS_IMAGE: ${PROVISIONER_RUNTIME_REDIS_IMAGE:-redis:8-alpine}
+      RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS: ${RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS:-60}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./runtime/provisioning-secrets:/run/provisioning-secrets
+      - ./backups:/backups:ro
+    depends_on:
+      control-postgres:
+        condition: service_healthy
+      control-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "bash", "/opt/provisioner/health.sh"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 2m
+    networks: [control_net]
+
+volumes:
+  postgres_test_data:
+    name: platform_postgres_test_data
+  redis_test_data:
+    name: platform_redis_test_data
+  control_postgres_test_data:
+    name: platform_control_postgres_test_data
+  cross_plane_backend_vendor:
+    name: platform_cross_plane_backend_vendor
+
+networks:
+  backup_net:
+    name: platform_backup_net
+    internal: true
+  test_net:
+    name: platform_test_net
+    internal: false
+  control_test_net:
+    name: platform_control_test_net
+    internal: false

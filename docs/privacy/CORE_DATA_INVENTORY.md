@@ -1,4 +1,4 @@
-# Core personal data inventory (Phase 4.1 review)
+# Core personal data inventory
 
 This inventory started from the 25-table baseline through migration 018 and includes migrations 019-027. It is a technical classification, not a deployment's legal basis or retention schedule. Deployment policy must assign the actual purposes, lawful bases, retention periods, export rules, and processors before production use. `Policy` below means no duration is currently established in Core.
 

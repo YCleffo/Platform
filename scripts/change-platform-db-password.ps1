@@ -11,7 +11,5 @@ $ErrorActionPreference = 'Stop'
     -PasswordKey POSTGRES_PASSWORD `
     -AppService backend `
     -CheckCommand @('php', 'yii', 'db:check') `
-    -LinkedDbService postgres-test `
-    -LinkedVolume platform_postgres_test_data `
-    -LinkedAppService backend-test `
+    -AdditionalAppServices @('backend-email-worker', 'backend-scheduler') `
     -NoRestart:$NoRestart

@@ -1,297 +1,61 @@
 [CmdletBinding()]
 param()
-
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-
-# ------------------------------------------------------------
-# Resolve project root
-# ------------------------------------------------------------
-
 $Root = Split-Path $PSScriptRoot -Parent
-
-$ExamplePath = Join-Path $Root '.env.example'
-$EnvPath = Join-Path $Root '.env'
-
-if (-not (Test-Path -LiteralPath $ExamplePath -PathType Leaf)) {
-    throw ".env.example not found: $ExamplePath"
-}
-
-Write-Host ''
-Write-Host '============================================================' -ForegroundColor Cyan
-Write-Host ' PLATFORM ENV INITIALIZER' -ForegroundColor Cyan
-Write-Host '============================================================' -ForegroundColor Cyan
-Write-Host ''
-
-# ------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------
-
-function New-RandomBytes {
-    param(
-        [Parameter(Mandatory)]
-        [int]$Count
-    )
-
-    $bytes = New-Object byte[] $Count
-    $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
-
-    try {
-        $rng.GetBytes($bytes)
-    }
-    finally {
-        $rng.Dispose()
-    }
-
-    return $bytes
-}
-
-function New-HexSecret {
-    param(
-        [int]$Bytes = 32
-    )
-
-    $data = New-RandomBytes -Count $Bytes
-
-    return -join (
-        $data | ForEach-Object {
-            $_.ToString('x2')
-        }
-    )
-}
-
-function New-Base64Secret {
-    param(
-        [int]$Bytes = 32
-    )
-
-    $data = New-RandomBytes -Count $Bytes
-    return [Convert]::ToBase64String($data)
-}
-
-function Read-EnvValues {
-    param(
-        [Parameter(Mandatory)]
-        [string]$Path
-    )
-
-    $result = @{}
-
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        return $result
-    }
-
-    foreach ($line in Get-Content -LiteralPath $Path) {
-        if ($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
-            $key = $matches[1]
-            $value = $matches[2]
-
-            if (-not $result.ContainsKey($key) -or -not [string]::IsNullOrWhiteSpace($value)) {
-                $result[$key] = $value
-            }
-        }
-    }
-
-    return $result
-}
-
-function Write-Utf8NoBom {
-    param(
-        [Parameter(Mandatory)]
-        [string]$Path,
-
-        [AllowEmptyString()]
-        [AllowEmptyCollection()]
-        [string[]]$Lines
-    )
-
-    $encoding = New-Object System.Text.UTF8Encoding($false)
-    $tempPath = "$Path.tmp-$([guid]::NewGuid().ToString('N'))"
-    try {
-        [IO.File]::WriteAllLines($tempPath, $Lines, $encoding)
-        Move-Item -LiteralPath $tempPath -Destination $Path -Force
-    }
-    finally {
-        if (Test-Path -LiteralPath $tempPath) {
-            Remove-Item -LiteralPath $tempPath -Force
-        }
+$Template = Join-Path $Root '.env.example'
+$Target = Join-Path $Root '.env'
+$Values = @{}
+if (Test-Path -LiteralPath $Target) {
+    foreach ($Line in [IO.File]::ReadAllLines($Target)) {
+        if ($Line -match '^([A-Z0-9_]+)=(.*)$') { $Values[$Matches[1]] = $Matches[2] }
     }
 }
-
-# ------------------------------------------------------------
-# Backup current .env
-# ------------------------------------------------------------
-
-if (Test-Path -LiteralPath $EnvPath -PathType Leaf) {
-    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $backupPath = "$EnvPath.backup-$timestamp-$([guid]::NewGuid().ToString('N').Substring(0,8))"
-
-    Copy-Item `
-        -LiteralPath $EnvPath `
-        -Destination $backupPath
-
-    Write-Host "[OK] Backup created: $backupPath" -ForegroundColor DarkGray
+function New-Secret([switch]$Base64) {
+    $Bytes = New-Object byte[] 32
+    $Rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+    try { $Rng.GetBytes($Bytes) } finally { $Rng.Dispose() }
+    if ($Base64) { return [Convert]::ToBase64String($Bytes) }
+    return -join ($Bytes | ForEach-Object { $_.ToString('x2') })
 }
-
-# ------------------------------------------------------------
-# Read current environment
-# ------------------------------------------------------------
-
-$currentValues = Read-EnvValues -Path $EnvPath
-
-# ------------------------------------------------------------
-# Values which may safely be generated locally
-# ------------------------------------------------------------
-
-$generatedValues = @{
-    'POSTGRES_PASSWORD'            = New-HexSecret -Bytes 24
-    'CONTROL_POSTGRES_PASSWORD'    = New-HexSecret -Bytes 24
-    'CONTROL_TEST_PASSWORD'        = New-HexSecret -Bytes 24
-
-    'CONTROL_APP_SECRET'           = New-HexSecret -Bytes 32
-    'CONTROL_TOKEN_SECRET'         = New-HexSecret -Bytes 32
-
-    'DEVICE_FINGERPRINT_KEY'       = New-HexSecret -Bytes 32
-    'AUTH_IDENTIFIER_HMAC_KEY'     = New-HexSecret -Bytes 32
-
-    # Project expects a Base64-encoded 32-byte key.
-    'AUTH_TOTP_ENCRYPTION_KEY'     = New-Base64Secret -Bytes 32
-}
-
-# ------------------------------------------------------------
-# Build new .env using .env.example as source of truth
-# ------------------------------------------------------------
-
-$exampleLines = Get-Content -LiteralPath $ExamplePath
-
-$output = New-Object System.Collections.Generic.List[string]
-$exampleKeys = @{}
-
-$added = New-Object System.Collections.Generic.List[string]
-$generated = New-Object System.Collections.Generic.List[string]
-$preserved = New-Object System.Collections.Generic.List[string]
-
-foreach ($line in $exampleLines) {
-
-    if ($line -notmatch '^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
-        $output.Add($line)
-        continue
-    }
-
-    $key = $matches[1]
-    $exampleValue = $matches[2]
-
-    $exampleKeys[$key] = $true
-
-    $existingValue = $null
-    $hasExisting = $currentValues.ContainsKey($key)
-
-    if ($hasExisting) {
-        $existingValue = [string]$currentValues[$key]
-    }
-
-    # --------------------------------------------------------
-    # Existing non-empty value wins by default
-    # --------------------------------------------------------
-
-    if (
-        $hasExisting -and
-        -not [string]::IsNullOrWhiteSpace($existingValue)
-    ) {
-        $value = $existingValue
-        $preserved.Add($key)
-    }
-
-    # --------------------------------------------------------
-    # Missing/empty locally-generated secret
-    # --------------------------------------------------------
-
-    elseif ($generatedValues.ContainsKey($key)) {
-        $value = $generatedValues[$key]
-        $generated.Add($key)
-    }
-
-    # --------------------------------------------------------
-    # Otherwise use default from .env.example
-    # --------------------------------------------------------
-
-    else {
-        $value = $exampleValue
-
-        if (-not $hasExisting) {
-            $added.Add($key)
-        }
-    }
-
-    $output.Add("$key=$value")
-}
-
-# ------------------------------------------------------------
-# Preserve custom variables that exist in old .env but are not
-# present in current .env.example.
-# ------------------------------------------------------------
-
-$extraKeys = @(
-    $currentValues.Keys |
-        Where-Object {
-            -not $exampleKeys.ContainsKey($_)
-        } |
-        Sort-Object
-)
-
-if ($extraKeys.Count -gt 0) {
-    $output.Add('')
-    $output.Add('# ================================================================')
-    $output.Add('# Preserved legacy/custom variables from previous .env')
-    $output.Add('# ================================================================')
-
-    foreach ($key in $extraKeys) {
-        $output.Add("$key=$($currentValues[$key])")
+$Changed = New-Object 'System.Collections.Generic.List[string]'
+foreach ($Key in @('POSTGRES_PASSWORD','CONTROL_POSTGRES_PASSWORD','CONTROL_APP_SECRET','CONTROL_TOKEN_SECRET','DEVICE_FINGERPRINT_KEY','AUTH_IDENTIFIER_HMAC_KEY')) {
+    if (-not $Values.ContainsKey($Key) -or [string]::IsNullOrWhiteSpace($Values[$Key])) {
+        $Values[$Key] = New-Secret
+        $Changed.Add($Key)
     }
 }
-
-# ------------------------------------------------------------
-# Write .env
-# ------------------------------------------------------------
-
-Write-Utf8NoBom `
-    -Path $EnvPath `
-    -Lines ([string[]]$output.ToArray())
-
-Write-Host ''
-Write-Host '[OK] .env synchronized with .env.example' -ForegroundColor Green
-Write-Host "     $EnvPath"
-Write-Host ''
-
-# ------------------------------------------------------------
-# Important warning
-# ------------------------------------------------------------
-
-Write-Host 'Generated local values:' -ForegroundColor Cyan
-
-foreach ($key in ($generated | Sort-Object -Unique)) {
-    Write-Host "  + $key" -ForegroundColor Green
+foreach ($Key in @('AUTH_TOTP_ENCRYPTION_KEY','CONTROL_TOTP_ENCRYPTION_KEY')) {
+    if (-not $Values.ContainsKey($Key) -or [string]::IsNullOrWhiteSpace($Values[$Key])) {
+        $Values[$Key] = New-Secret -Base64
+        $Changed.Add($Key)
+    }
 }
-
-Write-Host ''
-
-Write-Host 'IMPORTANT:' -ForegroundColor Yellow
-Write-Host 'Database passwords written into .env do NOT automatically change'
-Write-Host 'passwords inside an already initialized PostgreSQL volume.'
-Write-Host ''
-Write-Host 'Run afterwards:'
-Write-Host ''
-Write-Host '  .\scripts\change-platform-db-password.ps1'
-Write-Host '  .\scripts\change-control-db-password.ps1'
-Write-Host ''
-
-Write-Host 'External credentials intentionally remain manual:' -ForegroundColor Yellow
-Write-Host '  YOOKASSA_SECRET_KEY'
-Write-Host '  AUTH_GOOGLE_CLIENT_ID'
-Write-Host '  AUTH_GOOGLE_CLIENT_SECRET'
-Write-Host '  AUTH_TELEGRAM_CLIENT_ID'
-Write-Host '  AUTH_TELEGRAM_CLIENT_SECRET'
-Write-Host '  SMTP credentials if external SMTP is used'
-Write-Host ''
-
-Write-Host 'Done.' -ForegroundColor Green
+$Derived = @{
+    DB_HOST = 'postgres'; DB_PORT = '5432'
+    DB_NAME = $(if ($Values.ContainsKey('POSTGRES_DB')) { $Values['POSTGRES_DB'] } else { 'platform' })
+    DB_USER = $(if ($Values.ContainsKey('POSTGRES_USER')) { $Values['POSTGRES_USER'] } else { 'platform_app' })
+    DB_PASSWORD = $Values['POSTGRES_PASSWORD']
+}
+foreach ($Key in $Derived.Keys) {
+    if (-not $Values.ContainsKey($Key) -or [string]::IsNullOrWhiteSpace($Values[$Key])) { $Values[$Key] = $Derived[$Key] }
+}
+# Local backup and disposable test services are not part of the runtime.
+$Values['BACKUP_ENABLED'] = 'false'
+$Output = New-Object 'System.Collections.Generic.List[string]'
+$Seen = @{}
+foreach ($Line in [IO.File]::ReadAllLines($Template)) {
+    if ($Line -match '^([A-Z0-9_]+)=(.*)$') {
+        $Key = $Matches[1]; $Default = $Matches[2]; $Seen[$Key] = $true
+        $Value = if ($Values.ContainsKey($Key) -and -not [string]::IsNullOrWhiteSpace($Values[$Key])) { $Values[$Key] } else { $Default }
+        $Output.Add("$Key=$Value")
+    } else { $Output.Add($Line) }
+}
+foreach ($Key in ($Values.Keys | Sort-Object)) {
+    if (-not $Seen.ContainsKey($Key) -and $Key -notmatch '^(CONTROL_TEST_|POSTGRES_TEST_)') { $Output.Add("$Key=$($Values[$Key])") }
+}
+[IO.File]::WriteAllLines($Target, $Output, (New-Object Text.UTF8Encoding($false)))
+$Account = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+& icacls $Target /inheritance:r /grant:r "${Account}:F" '*S-1-5-18:F' | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'Failed to restrict .env permissions.' }
+Write-Host ('Environment updated; generated secret fields: ' + ($Changed -join ', '))

@@ -25,7 +25,7 @@ Identity domains не объединяются: Yii Core Account != Control User
 Account; service identity != human account. `account_type=service/system` не
 означает разрешение использовать human password login для M2M. Следующий
 security boundary — hashed service credentials, scopes, expiry, rotation,
-revocation и `last_used_at` (Phase 4.2).
+revocation и `last_used_at`.
 
 Authentication runtime включает password, Google OIDC, Telegram OIDC и WebAuthn Passkeys (Level 3) как first-factor adapters,
 но ни один adapter не создаёт сессию самостоятельно. `AuthenticationFlowService` применяет account/MFA
@@ -104,22 +104,8 @@ php yii auth/cleanup
 Удаление выполняется порциями с использованием конструкций `WITH candidates AS (SELECT id FROM ... FOR UPDATE SKIP LOCKED LIMIT :batch_size) DELETE FROM ... USING candidates WHERE target.id = candidates.id AND target.<predicate>`. Условие удаления перепроверяется непосредственно в DELETE-выражении целевой таблицы, что исключает удаление строк, ставших активными/подтверждёнными между выборкой и удалением.
 
 ### Планирование запуска:
-Phase 5.0 включает отдельный `backend-scheduler`: команда `php yii scheduler:run` запускает ограниченные фоновые задачи, включая `auth_cleanup`. Состояние scheduler и email worker проверяется через `/health/ready` и `php yii ops:status`.
+Рабочее окружение включает отдельный `backend-scheduler`: команда `php yii scheduler:run` запускает ограниченные фоновые задачи, включая `auth_cleanup`. Состояние scheduler и email worker проверяется через `/health/ready` и `php yii ops:status`.
 
-## Политика резервного копирования (Backup Policy)
+## Резервирование
 
-Резервные копии Core и Control Plane создаёт отдельный `backup-worker`; ручной интерфейс — `scripts/backup-db.ps1 -Target Core|Control|All`. Проверка и изолированное восстановление описаны в `docs/operations/BACKUP_RESTORE.md`.
-
-### Формат и восстановление:
-- Резервная копия создаётся утилитой `pg_dump` в **CUSTOM binary format** (`-Fc`) с расширением `.dump`.
-- Формат `.dump` проверяется `pg_restore --list`, SHA-256 и manifest. Для проверки восстановления используется `scripts/restore-drill.ps1`. Live restore требует явных `-Target`, `-DumpPath`, `-Force`, `-AllowLiveRestore` и для production `-ConfirmProductionRestore`:
-  ```powershell
-  .\scripts\backup-db.ps1 -Target All
-  .\scripts\verify-backup.ps1
-  .\scripts\restore-drill.ps1
-  ```
-
-### Безопасность и защита данных:
-- **Чувствительность артефакта**: файл `.dump` содержит полную копию базы данных, включая учетные записи, хэши паролей (Argon2id), зашифрованные секреты TOTP, хэши резервных кодов, хэши токенов сессий и журнал аудита безопасности. Несмотря на хэширование и шифрование секретов, dump считается критически чувствительным артефактом (`sensitive artifact`) и не подлежит публичной передаче.
-- **Git & ZIP exclusion**: директория `backups/` и файлы `*.dump` зафиксированы в `.gitignore` и **никогда не включаются в архивы проекта** (`scripts/create-project-zip.ps1`), а также не коммитятся в систему контроля версий.
-- **Production**: хранилище резервных копий должно обеспечивать утверждённое шифрование данных на носителе и контроль доступа. После live restore обязательна сверка privacy erasure до обслуживания пользователей.
+Локальное автоматическое резервирование отключено. Формат дампов, эксплуатационные условия и явная процедура восстановления описаны в [резервировании и восстановлении](../operations/BACKUP_RESTORE.md). Рабочие дампы содержат чувствительные данные и не включаются в Git или проектный ZIP.

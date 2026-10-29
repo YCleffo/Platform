@@ -5,7 +5,6 @@ const {Parser} = require('@dbml/core');
 const root = path.resolve(__dirname, '../..');
 const cases = [
   ['core','core/schema.catalog.json','core/Core_v2.dbml'],
-  ['core','core/schema.catalog.json','core/Core_v1_FINAL.dbml'],
   ['platform_runtime','core/schema.catalog.json','runtime/Platform_Runtime_v1.dbml'],
   ['commercial','commercial/schema.catalog.json','commercial/Commercial_ControlPlane_v2.dbml'],
 ];

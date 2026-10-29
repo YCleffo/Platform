@@ -49,5 +49,5 @@ commercial signing private key. Entitlement document связывает installa
 permissions, каталог, покупку, plan changes, renewal, refund, provisioning,
 privacy и workers. Стрелка процесса означает действие, FK означает связь строк.
 
-Результаты — в [аудите](audit/2026-10-28/REPORT.md), release verdict — в
+Критерии промышленного выпуска описаны в
 [журнале готовности](operations/PRODUCTION_READINESS_PROGRESS.md).

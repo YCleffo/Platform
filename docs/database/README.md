@@ -1,62 +1,26 @@
-# База данных: что действительно существует
+# Схема базы данных
 
-Срез Commercial от 2026-10-28 и Core от 2026-10-29 получен чтением каталогов
-PostgreSQL после применения всех миграций: Core 33/33, Commercial 40/40. В срезе 50 таблиц `core`, 3
-`platform_runtime`, 60 `commercial`. Это инвентарь конкретной ревизии.
+DBML получен из каталога PostgreSQL после применения миграций. JSON сохраняет точные типы, значения по умолчанию, ограничения, индексы, триггеры и функции. Имена полей не используются для выдумывания связей.
 
-Это полностью мигрированная схема, а не утверждение о состоянии всех локальных
-установок. [Репетиция реальных снимков](../audit/2026-10-29/database-upgrade/REPORT.md)
-выявила drift старой Core `015`; новая `033` устраняет его без изменения данных.
-Обычные оригиналы не обновлялись и остаются на 31/25 миграциях.
+| Область | Диаграмма | Полный каталог |
+| --- | --- | --- |
+| Core | [Core_v2.dbml](core/Core_v2.dbml) | [schema.catalog.json](core/schema.catalog.json) |
+| Runtime | [Platform_Runtime_v1.dbml](runtime/Platform_Runtime_v1.dbml) | Общий с Core |
+| Commercial | [Commercial_ControlPlane_v2.dbml](commercial/Commercial_ControlPlane_v2.dbml) | [schema.catalog.json](commercial/schema.catalog.json) |
 
-| Файл | Назначение |
-| --- | --- |
-| [Core_v2.dbml](core/Core_v2.dbml) | Актуальная физическая модель Core |
-| [Core_v1_FINAL.dbml](core/Core_v1_FINAL.dbml) | Совместимый старый путь к той же актуальной модели |
-| [Runtime DBML](runtime/Platform_Runtime_v1.dbml) | Installation, entitlement documents и background job status |
-| [Commercial DBML](commercial/Commercial_ControlPlane_v2.dbml) | Только фактически созданные таблицы |
-| [Core catalog](core/schema.catalog.json) | Столбцы, enums, defaults, constraints, indexes, triggers, functions и migration hashes |
-| [Commercial catalog](commercial/schema.catalog.json) | Metadata отдельной Commercial DB |
-| [Справочник всех полей](SCHEMA_REFERENCE.md) | Все таблицы, столбцы и физические связи |
-| [Процессы](../processes/README.md) | Как данные изменяются в бизнес-сценариях |
+[Справочник таблиц и полей](SCHEMA_REFERENCE.md) · [Модель данных](../core-data-model.md) · [Бизнес-процессы](../processes/README.md)
 
-`.dbdiagram` рядом с DBML хранит настройки представления редактора. Миграции
-остаются источником истины. Генератор читает уже созданные PostgreSQL objects,
-не разбирает SQL регулярными выражениями. Запланированных таблиц и выдуманных
-cross-database FK в актуальных DBML нет.
-
-DBML передаёт поля, enum, nullable, defaults, PK, обычные indexes и реальные FK
-с delete/update actions. Частичные/вычисляемые indexes, INCLUDE, deferred checks,
-constraint triggers и функции требуют PostgreSQL-семантики; точный SQL хранится
-в table notes и JSON. DBML нельзя использовать как production migration.
-
-## Обновление и проверка
-
-Вначале примените миграции к изолированным test DB. Из корня проекта:
+Для обновления по существующим рабочим PostgreSQL-контейнерам:
 
 ```powershell
 python scripts/database/export_schema.py --plane core
 python scripts/database/export_schema.py --plane commercial
 python scripts/documentation/build-reference.py
-
-# Проверка против PostgreSQL:
-python scripts/database/export_schema.py --plane core --check
-python scripts/database/export_schema.py --plane commercial --check
-
-# Проверка сохранённого среза без Docker:
-python scripts/database/export_schema.py --plane core --from-snapshot --check
-python scripts/database/export_schema.py --plane commercial --from-snapshot --check
-python scripts/documentation/build-reference.py --check
-
-npm ci --prefix scripts/documentation --ignore-scripts
+python scripts/documentation/build-coverage.py
 npm run check:dbml --prefix scripts/documentation
+python scripts/documentation/check-links.py
 ```
 
-Генератор сверяет applied migration names с текущими файлами, записывает
-SHA-256 исходников и отказывается публиковать неполный набор. `check:dbml`
-использует настоящий parser DBML и сверяет поля, nullable, таблицы и FK.
-Полное совпадение текста проверяет `export_schema.py --check`.
+Экспорт читает метаданные и историю миграций, не меняя данные БД. `--check` проверяет совпадение без записи; `--from-snapshot --check` сверяет сохранённые DBML без подключения к PostgreSQL. Состав миграций и их SHA-256 входят в каталог.
 
-Для другого локального PostgreSQL предусмотрены `--psql`, `--host`, `--port`,
-`--database`, `--user`; пароль передаётся средствами libpq. Старые версии модели
-доступны через Git. Назначение доменов описано в [модели Core](../core-data-model.md).
+Поля `person_id`, `account_id` и `deployment_id` в разных базах не означают один и тот же объект. На диаграммах показаны только реальные SQL FK. CHECK, partial indexes и отложенные ограничения доступны в заметках DBML и полном JSON.

@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  COMPOSE_FILE: compose.yaml:compose.ci.yaml
+
 jobs:
   backend-qa:
     name: Yii Backend Quality Assurance & Test Isolation
@@ -14,11 +17,27 @@ jobs:
       POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
       POSTGRES_USER: platform_app
-      POSTGRES_PASSWORD: platform_ci_test_password
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Generate isolated CI secrets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, os, secrets
+          values = {k: secrets.token_hex(32) for k in (
+              'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
+              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY')}
+          values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
+              'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for key, value in values.items():
+                  print('::add-mask::' + value)
+                  output.write(key + '=' + value + '\n')
+          PY
+      - name: Validate Compose profiles
+        run: docker compose --profile control --profile test --profile control-test --profile backup --profile provisioner config --quiet
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -50,7 +69,7 @@ jobs:
 
       - name: Start Isolated Test Infrastructure
         run: |
-          bash ./scripts/test-start.sh
+          bash ./scripts/ci/test-start.sh
 
       - name: Verify Core migration and required schema objects
         run: |
@@ -83,33 +102,45 @@ jobs:
           docker compose --profile test exec -T backend-test vendor/bin/codecept run --seed 2120741368
 
       - name: Verify stateless Core application restart with durable PostgreSQL
-        run: bash ./scripts/core-app-restart-test.sh
+        run: bash ./scripts/ci/core-app-restart-test.sh
 
       - name: Stop Test Infrastructure
         if: always()
         run: |
-          bash ./scripts/test-stop.sh
+          bash ./scripts/ci/test-stop.sh
 
   control-plane-qa:
     name: Symfony Commercial Control Plane Quality Assurance
     runs-on: ubuntu-latest
     env:
-      # The root Compose file also interpolates Diary variables even when only
-      # the Commercial test profile is selected. These are CI-only dummy values.
+      # Compose resolves both planes; credentials are generated per job.
       POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
       POSTGRES_USER: platform_app
-      POSTGRES_PASSWORD: platform_ci_test_password
       CONTROL_TEST_DB: platform_commercial_test
       CONTROL_TEST_USER: platform_control_test
-      CONTROL_TEST_PASSWORD: platform_control_ci_only
-      CONTROL_APP_SECRET: test-only-not-a-production-secret
-      CONTROL_TOKEN_SECRET: test-only-control-token-secret-at-least-32-chars
       PLATFORM_BASE_DOMAIN: platform.example
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Generate isolated CI secrets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, os, secrets
+          values = {k: secrets.token_hex(32) for k in (
+              'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
+              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY')}
+          values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
+              'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for key, value in values.items():
+                  print('::add-mask::' + value)
+                  output.write(key + '=' + value + '\n')
+          PY
+      - name: Validate Compose profiles
+        run: docker compose --profile control --profile test --profile control-test --profile backup --profile provisioner config --quiet
 
       - name: Set up PHP 8.3
         uses: shivammathur/setup-php@v2
@@ -137,7 +168,7 @@ jobs:
           composer analyse
 
       - name: Start isolated Commercial test database and migrate from empty
-        run: bash ./scripts/control-test-start.sh
+        run: bash ./scripts/ci/control-test-start.sh
 
       - name: Run unit suite in Linux test image with provisioner secret permissions
         run: docker compose --profile control-test run --rm control-plane-test php vendor/bin/phpunit --testsuite Unit
@@ -152,7 +183,7 @@ jobs:
           test "$versions" = "$expected"
 
       - name: Database constraints and integration tests
-        run: bash ./scripts/control-test-run.sh
+        run: bash ./scripts/ci/control-test-run.sh
 
       - name: Verify latest Commercial migration upgrade and rollback cycle
         run: |
@@ -172,16 +203,16 @@ jobs:
           versions=$(docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -tA -c "SELECT count(*) FROM public.doctrine_migration_versions;")
           expected=$(find apps/control-plane/migrations -maxdepth 1 -name 'Version*.php' | wc -l)
           test "$versions" = "$expected"
-          bash ./scripts/control-test-run.sh
+          bash ./scripts/ci/control-test-run.sh
 
       - name: Reset guard and clean rerun
         run: |
-          if env APP_ENV=dev bash ./scripts/control-test-reset.sh; then
+          if env APP_ENV=dev bash ./scripts/ci/control-test-reset.sh; then
             echo 'ERROR: Commercial reset was allowed with APP_ENV=dev' >&2
             exit 1
           fi
-          env APP_ENV=test bash ./scripts/control-test-reset.sh
-          bash ./scripts/control-test-run.sh
+          env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+          bash ./scripts/ci/control-test-run.sh
 
       - name: Verify Control Plane readiness
         run: |
@@ -214,7 +245,7 @@ jobs:
 
       - name: Stop isolated Commercial test runtime
         if: always()
-        run: bash ./scripts/control-test-stop.sh
+        run: bash ./scripts/ci/control-test-stop.sh
 
   cross-plane-e2e:
     name: Strict Core to Control Plane Cross-Plane E2E
@@ -222,25 +253,38 @@ jobs:
     env:
       POSTGRES_TEST_DB: platform_test
       POSTGRES_USER: platform_app
-      POSTGRES_PASSWORD: platform_ci_test_password
       CONTROL_TEST_DB: platform_commercial_test
       CONTROL_TEST_USER: platform_control_test
-      CONTROL_TEST_PASSWORD: platform_control_ci_only
-      CONTROL_APP_SECRET: test-only-not-a-production-secret
-      CONTROL_TOKEN_SECRET: test-only-control-token-secret-at-least-32-chars
       PLATFORM_BASE_DOMAIN: platform.example
       CROSS_PLANE_REQUIRED: "1"
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Generate isolated CI secrets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, os, secrets
+          values = {k: secrets.token_hex(32) for k in (
+              'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
+              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY')}
+          values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
+              'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for key, value in values.items():
+                  print('::add-mask::' + value)
+                  output.write(key + '=' + value + '\n')
+          PY
+      - name: Validate Compose profiles
+        run: docker compose --profile control --profile test --profile control-test --profile backup --profile provisioner config --quiet
 
       - name: Run required cross-plane integration independently
-        run: bash ./scripts/cross-plane-test-run.sh
+        run: bash ./scripts/ci/cross-plane-test-run.sh
 
       - name: Stop isolated cross-plane resources
         if: always()
-        run: bash ./scripts/cross-plane-test-stop.sh
+        run: bash ./scripts/ci/cross-plane-test-stop.sh
 
   documentation-qa:
     name: Database diagrams and documentation consistency

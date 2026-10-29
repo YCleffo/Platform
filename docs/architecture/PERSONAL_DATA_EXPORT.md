@@ -1,4 +1,4 @@
-# Personal data export (Phase 4.1 B2)
+# Personal data export
 
 `GET /api/auth/me/privacy/requests/{id}/data` issues a subject's access or export response after the request reaches `in_progress`. The representative route is `GET /api/auth/me/privacy/representations/{representationId}/requests/{id}/data`. Both require a human Account linked to a Person. Self access requires the request subject to equal that Person. Representative access checks the request's representation ID, current verified validity, `privacy.request.view`, and `privacy.data.access` or `privacy.data.export` according to request type. Management read permission does not grant export.
 

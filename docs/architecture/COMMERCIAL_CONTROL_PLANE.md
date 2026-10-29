@@ -1,7 +1,7 @@
 # Commercial Control Plane — текущая реализация
 
 Актуальная карта: [бизнес-процессы](../processes/README.md),
-[физическая БД](../database/README.md), [проверки 2026-10-28](../audit/2026-10-28/REPORT.md).
+[физическая БД](../database/README.md).
 Номера Phase ниже объясняют историю появления механизмов, а не текущую готовность.
 
 `apps/control-plane` is a separate Symfony 7.4/PHP 8.3 application with its
@@ -253,10 +253,10 @@ from `event_id`, and the raw token and email body never enter the outbox/logs.
 Set a test-only `CONTROL_TEST_PASSWORD`, then run from the repository root:
 
 ```bash
-bash ./scripts/control-test-start.sh
-bash ./scripts/control-test-run.sh
-APP_ENV=test bash ./scripts/control-test-reset.sh
-bash ./scripts/control-test-stop.sh
+bash ./scripts/ci/control-test-start.sh
+bash ./scripts/ci/control-test-run.sh
+APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+bash ./scripts/ci/control-test-stop.sh
 ```
 
 PowerShell equivalents are in `scripts/`. The reset command refuses any target
@@ -392,7 +392,7 @@ the verified settlement instant. Subscription service starts at that instant
 unless it is ahead of Control Plane database time; future-dated provider or
 local timestamps are capped at database time so access is immediately usable.
 
-## Application deployment bootstrap (Phase 4.7)
+## Application deployment bootstrap
 
 Phase 5.4 adds a separate local Docker `provisioner-worker` for dedicated dev/test deployments. It consumes `deployment_operations`, checks a published digest-pinned release, creates isolated runtime infrastructure, then invokes the existing activation command. The HTTP Control Plane has no Docker socket. See `docs/operations/PROVISIONING.md` for the boundary and retry behavior.
 
@@ -435,7 +435,7 @@ the file contains base64 of a 64-byte Ed25519 secret key. An absent or invalid
 mapping fails issuance closed. The Core runtime receives only trusted public
 keys, never signing secrets.
 
-## Local dedicated decommission (Phase 5.6)
+## Local dedicated decommission
 
 Phase 5.7 local dedicated topology has deployment PostgreSQL and Redis plus HTTP runtime, scheduler, and email worker. All Core processes share the same immutable release image and isolated DB/Redis endpoints. Redis has only the deployment network; PostgreSQL also joins the backup network; Core processes also join the control network. `ready` requires fresh scheduler/email heartbeats and Redis access before Control Plane accepts activation. The local operator reconcile command repairs older active or suspended deployments without a new credential or release change. Decommission quiesces all three Core processes before final backup and removes all owned topology after backup verification.
 

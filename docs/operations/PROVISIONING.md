@@ -1,25 +1,14 @@
 # Local Docker deployment provisioning
 
-Phase 5.4 runs a dedicated `provisioner-worker` process. The Control Plane HTTP process owns deployment reservations, published releases, the durable `commercial.deployment_operations` queue, credentials, entitlements, and the authenticated ready transition. It has no Docker socket. The worker alone has that socket; **Docker socket access is a privileged infrastructure capability**.
+A dedicated `provisioner-worker` process. The Control Plane HTTP process owns deployment reservations, published releases, the durable `commercial.deployment_operations` queue, credentials, entitlements, and the authenticated ready transition. It has no Docker socket. The worker alone has that socket; **Docker socket access is a privileged infrastructure capability**.
 
 This provider is restricted to `APP_ENV=dev|test`, `PROVISIONER_PROVIDER=local-docker`, and `mode=dedicated`. Production, `shared`, and `on_prem` fail closed. It does not manage DNS, TLS, or cloud resources. Local dedicated deployments support the safe forward release-update workflow described below; automatic rollback and production/cloud updates remain unsupported.
 
-## Local setup
+## Состояние локального окружения
 
-Build the self-contained Backend production image and migration image, then build the worker after the Control Plane image:
+Provisioner отключён и не входит в основной Compose. Он создаёт отдельные ресурсы выделенных установок, поэтому его запуск в текущем локальном окружении не используется. CI сохраняет build definitions в `compose.ci.yaml` для проверки образов и инфраструктурных контрактов.
 
-```powershell
-docker build --target prod -t platform-runtime:local -f apps/backend/docker/Dockerfile apps/backend
-docker compose --profile provisioner-build build provisioner-migrator
-docker compose --profile control build control-plane
-docker compose --profile control --profile provisioner build provisioner-worker
-```
-
-Record the exact `docker image inspect platform-runtime:local --format '{{.Id}}'` digest in a **published** `commercial.releases` row as `image_digest`, with `oci_reference=platform-runtime:local`. The provider compares the local image ID to the release digest and starts the runtime by image ID. It rejects a missing, retired, draft, or incomplete release. Set `deployments.desired_release_id` to that published release before processing its pending provision operation. A deployment's published release metadata is immutable. Control Plane also needs an active entitlement signing key whose private key is available through its configured signing-key resolver; runtime receives only the corresponding trusted public keys.
-
-Set `CONTROL_APP_ENV=dev` only in a local installation, set `PROVISIONER_ENABLED=true`, and start `docker compose --profile control --profile provisioner up -d provisioner-worker`. Defaults are disabled. The worker polls a bounded batch of pending and due retry **provision operations**, never the raw outbox. It sleeps between polls. `runtime/provisioning-secrets/` is ignored by Git and excluded from the project ZIP; protect that local directory with host access controls.
-
-The worker writes `runtime/provisioning-secrets/status.json` with heartbeat, last attempt, last success, last failure, and consecutive failures. Its Docker healthcheck rejects a stale heartbeat when enabled. No exception text, credential, or database password is written there.
+Для отдельной установки этот провайдер требует опубликованный immutable release с точным image digest, настроенное подписание entitlements и проверенное резервирование. Эти зависимости являются условиями операции; их отсутствие не разрешает пропустить checkpoint или выдать ready.
 
 ## Resource and secret boundary
 
@@ -46,9 +35,9 @@ The backup worker uses `platform_backup_net` to reach each dedicated PostgreSQL 
 
 ## Failure handling
 
-The operation row stores the bounded attempt count, machine error code, step, and next retry time. Transient failures use bounded exponential backoff. A stale running attempt is recovered after ten minutes; any old bootstrap credential is revoked before retry. A permanent failure marks the deployment failed. Phase 5.4 cleanup removes only owned resources before successful activation; it does not automatically remove an active deployment.
+The operation row stores the bounded attempt count, machine error code, step, and next retry time. Transient failures use bounded exponential backoff. A stale running attempt is recovered after ten minutes; any old bootstrap credential is revoked before retry. A permanent failure marks the deployment failed. Provisioning cleanup removes only owned resources before successful activation; it does not automatically remove an active deployment.
 
-## Safe local decommission (Phase 5.6)
+## Safe local decommission
 
 For an active or suspended, unarchived dedicated deployment in dev/test, run:
 
@@ -71,11 +60,6 @@ backup, runs migrations from the pinned target image, and replaces only runtime,
 and email-worker. It advances `current_release_id` only after runtime verification succeeds.
 Failed updates preserve deployment data and do not perform automatic rollback.
 
-## Проверка health probe после изменения конфигурации
+## Проверка workers
 
-Dedicated CLI workers должны иметь собственный Docker healthcheck через
-`ops:health`, а не HTTP probe образа FrankenPHP. В аудите 2026-10-28 старые
-development workers имели Docker unhealthy из-за проверки Caddy port 2019,
-хотя обе реальные CLI health-команды завершились с кодом 0. Создание новых
-workers исправлено; существующие контейнеры требуют управляемого пересоздания.
-Это отличается от отсутствия heartbeat или падения самого worker.
+CLI workers имеют отдельный healthcheck `ops:health`. HTTP readiness проверяет актуальность heartbeat и состояние обязательных задач. Ошибка HTTP probe не заменяет проверку CLI-процесса; после изменения конфигурации постоянные контейнеры пересоздаются.

@@ -1,9 +1,5 @@
-# Core и совместимые пути DBML
+# Core
 
-[Core_v2.dbml](Core_v2.dbml) генерируется из фактического PostgreSQL catalog.
-[Core_v1_FINAL.dbml](Core_v1_FINAL.dbml) сохранён как совместимый путь к той же
-актуальной схеме. Отдельного устаревшего набора таблиц здесь больше нет.
+[Core_v2.dbml](Core_v2.dbml) описывает схему `core`; [schema.catalog.json](schema.catalog.json) содержит также `platform_runtime`. Это генерируемые представления фактической структуры PostgreSQL.
 
-Полный [справочник столбцов](../SCHEMA_REFERENCE.md) и
-[инструкция обновления](../README.md) относятся к обоим файлам.
-Исторические версии сохранены в Git. SQL-миграции — `apps/backend/migrations/sql`.
+[Полный справочник](../SCHEMA_REFERENCE.md) · [Runtime DBML](../runtime/Platform_Runtime_v1.dbml) · [Правила обновления](../README.md)

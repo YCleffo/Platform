@@ -1,63 +1,16 @@
 # Архитектура баз данных
 
-Требования: CORE-01/02, COMM-01/02, CAT-01/02, BILL-01/02/04,
-PAY-03/04/05/06 и ENT-01/02/03. Границы закреплены в
-[CORE_INVARIANTS.md](CORE_INVARIANTS.md).
+| Владелец | База | Схемы | Миграции |
+| --- | --- | --- | --- |
+| Yii Core | `platform` | `core`, `platform_runtime` | `apps/backend/migrations/sql` |
+| Symfony Commercial | `platform_commercial` | `commercial` | `apps/control-plane/migrations` |
 
-Yii Core владеет PostgreSQL DB со схемами `core` и `platform_runtime`.
-Symfony Commercial Control Plane владеет отдельной DB со схемой `commercial`.
-У каждой установки Core своя installation identity. Development, штатные tests
-и нагрузочный стенд используют разные volumes и credentials.
+Core хранит Person, Account, организации, права, сессии, коммуникации и персональные данные. `platform_runtime` хранит идентичность установки и проверенные документы прав. Commercial хранит собственные identities, коммерческие аккаунты, каталог, подписки, счета, платежи, возвраты и операции установки.
 
-Процессы не получают credentials чужой БД, не делают cross-database joins
-и не создают общую распределённую транзакцию. Согласованность достигается
-versioned API, durable operations, idempotency, reconciliation и подписанными
-документами. [График границ](../processes/svg/01-boundaries.svg).
+Базы не имеют общих транзакций, cross-database FK или прямых запросов друг к другу. Совпадение email и UUID не связывает identities. Межсервисные операции используют аутентифицированные API, версионированные события и подписанные документы.
 
-## Миграции и структура
+PostgreSQL определяет durable state. Redis хранит временные счётчики, блокировки и кэш. Потеря Redis не должна менять финансовую историю или подписанные права.
 
-| Контракт | Источник | Техническая история |
-| --- | --- | --- |
-| Core / Runtime | `apps/backend/migrations/sql/*.sql` | `public.platform_migrations` |
-| Commercial | `apps/control-plane/migrations/Version*.php` | `public.doctrine_migration_versions` |
+Уникальность, CHECK, deferred constraint triggers и append-only guards являются частью модели. Они сохраняются в JSON-каталогах; DBML отражает физические таблицы и FK, но не заменяет исполнение миграций.
 
-Core runner применяет SQL-файл и запись истории в одной транзакции. Doctrine
-управляет Commercial migrations. Expand/migrate/contract выполняется отдельными
-релизами. DBML не является migration runner. Технические таблицы `public` не
-относятся к бизнес-модели.
-
-На полностью мигрированном срезе 2026-10-29 применены 33 Core и 40 Commercial миграций.
-[DBML, каталоги и справочник](../database/README.md) генерируются из PostgreSQL.
-Будущие продуктовые schemas в текущий инвентарь не добавляются.
-
-Обычные локальные оригиналы остаются на 31/25: они не обновлялись автоматически.
-[Репетиция на восстановленных копиях](../audit/2026-10-29/database-upgrade/REPORT.md)
-проверила сохранность записей, выявила drift старой Core `015` и проверила новую
-forward migration `033`. Совпадение имён migration history без сравнения catalog
-не гарантирует совпадения фактических CHECK-ограничений.
-
-Runtime не должен владеть объектами или получать SUPERUSER. На копиях проверены
-отдельные NOLOGIN owner, migrator с явным SET ROLE и ограниченный runtime.
-[План перехода](../operations/SAFE_DATABASE_UPGRADE.md) описывает grants/default
-ACL и managed cutover; текущие повышенные роли оригиналов этим не изменены.
-
-## Деньги и права
-
-Catalog publication замораживает terms; invoice и subscription snapshots
-сохраняют старые условия. Upgrade/downgrade и proration реализованы. Usage
-counters существуют; наличие counter не доказывает автоматическое денежное
-начисление overage.
-
-`platform_runtime.installations` хранит identity и sequence,
-`entitlement_documents` — проверенные документы, `background_job_status` —
-heartbeats. Commercial хранит exact canonical bytes и подпись выданного документа.
-Core проверяет trust, подпись, installation, validity и sequence до применения.
-Приватного signing key в Core нет.
-
-Redis не является durable финансовой БД. Audit и outbox не хранят credentials
-или произвольные полные HTTP payload. Метрики CPU/latency относятся к observability.
-
-[Аудит](../audit/2026-10-28/REPORT.md) отделяет local runtime/load evidence от
-production readiness. [Нагрузочный стенд](../../scripts/load/README.md) использует
-отдельный Compose project. [Backup и restore](../operations/BACKUP_RESTORE.md)
-требуют реального восстановления. HA и PITR — отдельные операционные проверки.
+[DBML и каталоги](../database/README.md) · [Справочник столбцов](../database/SCHEMA_REFERENCE.md) · [Обновление](../operations/SAFE_DATABASE_UPGRADE.md) · [Инварианты](CORE_INVARIANTS.md)

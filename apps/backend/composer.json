@@ -48,7 +48,7 @@
         "psr/log": "^3.0.2",
         "symfony/console": "^7.4.6 || ^8.0.6",
         "symfony/mailer": "^7.4.6 || ^8.0.6",
-        "symfony/mime": "^7.4.6 || ^8.0.6",
+        "symfony/mime": "^7.4.22 || ^8.1.10",
         "web-auth/webauthn-lib": "^5.3",
         "yiisoft/aliases": "^3.1.1",
         "yiisoft/cache": "^3.2",

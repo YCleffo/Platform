@@ -1,4 +1,4 @@
-# Personal data correction (Phase 4.1 B2)
+# Personal data correction
 
 Management first moves a correction request to `in_progress`, then calls `POST /api/core/privacy/requests/{id}/correction-evidence` with an empty body to confirm the correction evidence. This idempotently starts the `confirmed_correction` deadline from the shared application clock. `POST /api/core/privacy/requests/{id}/corrections` requires `core.privacy.requests.manage` and accepts `contributorCode`, `resourceId`, and a bounded `changes` object. The payload exists only in request memory.
 
