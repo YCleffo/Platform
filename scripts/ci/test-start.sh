@@ -12,6 +12,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${ROOT_DIR}"
 
+# The checkout is bind-mounted: match its owner instead of making it world-writable.
+export CI_USER_ID="$(id -u)"
+export CI_GROUP_ID="$(id -g)"
+mkdir -p apps/backend/runtime apps/backend/tests/_output
+
 echo "=== Starting Isolated Test Infrastructure ==="
 docker compose --profile test up -d postgres-test redis-test
 

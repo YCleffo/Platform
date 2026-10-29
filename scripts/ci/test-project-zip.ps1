@@ -12,9 +12,10 @@ $unicodeName = -join ([char[]]@(0x0444, 0x0430, 0x0439, 0x043B))
 $oldZipPath = 'unicode dir/old ' + $unicodeName + '.txt'
 $newZipPath = 'unicode dir/new ' + $unicodeName + '.txt'
 $newFileName = 'new ' + $unicodeName + '.txt'
+$gitExecutable = (Get-Command git -CommandType Application | Select-Object -First 1).Source
 
 function Invoke-TestGit([string[]]$Arguments) {
-    & (Get-Command git -CommandType Application).Source -C $temp @Arguments
+    & $gitExecutable -C $temp @Arguments
     if ($LASTEXITCODE -ne 0) { throw "git $($Arguments -join ' ') failed" }
 }
 
@@ -64,6 +65,13 @@ try {
     foreach ($entry in $expected) { if ($entries -notcontains $entry) { throw "Archive is missing changed path: $entry" } }
     foreach ($entry in @('delete.txt', 'ignored.txt', '.gitignore')) { if ($entries -contains $entry) { throw "Archive contains non-current path: $entry" } }
     if ($entries.Count -ne $expected.Count) { throw "Archive contains unchanged files: $($entries -join ', ')" }
+    $zip = [IO.Compression.ZipFile]::OpenRead($archive)
+    try {
+        $reader = [IO.StreamReader]::new($zip.GetEntry('tracked.txt').Open())
+        try {
+            if ($reader.ReadToEnd() -ne 'worktree wins') { throw 'Archive used the staged version instead of the current file content.' }
+        } finally { $reader.Dispose() }
+    } finally { $zip.Dispose() }
     Write-Host 'Changed-only ZIP regression test passed.' -ForegroundColor Green
 }
 finally {

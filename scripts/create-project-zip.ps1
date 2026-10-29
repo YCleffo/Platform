@@ -134,7 +134,7 @@ function Invoke-GitCapture {
 
     $gitCommand = Get-Command git `
         -CommandType Application `
-        -ErrorAction SilentlyContinue
+        -ErrorAction SilentlyContinue | Select-Object -First 1
 
     if ($null -eq $gitCommand) {
         throw @"

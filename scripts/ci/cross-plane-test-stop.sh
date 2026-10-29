@@ -14,7 +14,6 @@ docker compose --profile test rm --stop --force db-migrate-test postgres-test re
 
 # Remove only explicit test resources; never the runtime volumes.
 if docker volume inspect platform_control_postgres_test_data >/dev/null 2>&1; then docker volume rm platform_control_postgres_test_data; fi
-if docker volume inspect platform_cross_plane_backend_vendor >/dev/null 2>&1; then docker volume rm platform_cross_plane_backend_vendor; fi
 if docker volume inspect platform_postgres_test_data >/dev/null 2>&1; then docker volume rm platform_postgres_test_data; fi
 if docker volume inspect platform_redis_test_data >/dev/null 2>&1; then docker volume rm platform_redis_test_data; fi
 if docker network inspect platform_control_test_net >/dev/null 2>&1; then docker network rm platform_control_test_net; fi

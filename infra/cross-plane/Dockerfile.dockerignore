@@ -1,0 +1,9 @@
+*
+!apps/
+!apps/backend/
+!apps/backend/**
+apps/backend/vendor/
+apps/backend/runtime/
+apps/backend/tests/_output/
+apps/backend/.env*
+apps/backend/.git/

@@ -9,12 +9,15 @@ on:
 env:
   COMPOSE_FILE: compose.yaml:compose.ci.yaml
 
+permissions:
+  contents: read
+
 jobs:
   windows-tools:
     name: PowerShell operator tools
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Check PowerShell syntax
         shell: pwsh
         run: |
@@ -26,11 +29,14 @@ jobs:
           }
       - name: Verify changed-file archive and ignored-file exclusion
         shell: pwsh
-        run: ./scripts/ci/test-project-zip.ps1
+        run: |
+          $env:PATH = "C:\Program Files\Git\bin;C:\Program Files\Git\cmd;" + $env:PATH
+          if (@(Get-Command git -All -CommandType Application).Count -lt 2) { throw 'Multiple Git paths were not exercised.' }
+          ./scripts/ci/test-project-zip.ps1
 
   backend-qa:
     name: Yii Backend Quality Assurance & Test Isolation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
@@ -38,7 +44,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Generate isolated CI secrets
         shell: bash
         run: |
@@ -122,6 +128,12 @@ jobs:
       - name: Verify stateless Core application restart with durable PostgreSQL
         run: bash ./scripts/ci/core-app-restart-test.sh
 
+      - name: Diagnose failed core runtime
+        if: failure()
+        run: |
+          docker compose --profile test ps -a
+          docker compose --profile test logs --no-color --tail 100 postgres-test redis-test backend-test
+
       - name: Stop Test Infrastructure
         if: always()
         run: |
@@ -129,7 +141,7 @@ jobs:
 
   control-plane-qa:
     name: Symfony Commercial Control Plane Quality Assurance
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       # Compose resolves both planes; credentials are generated per job.
       POSTGRES_DB: platform_test
@@ -141,7 +153,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Generate isolated CI secrets
         shell: bash
         run: |
@@ -232,10 +244,8 @@ jobs:
           env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
           bash ./scripts/ci/control-test-run.sh
 
-      - name: Verify Control Plane readiness
-        run: |
-          docker compose --profile control-test up -d --wait control-plane-test
-          docker compose --profile control-test exec -T control-plane-test curl -fsS http://127.0.0.1:8000/health | grep -Fx '{"status":"ok"}'
+      - name: Verify Control Plane readiness with actual workers
+        run: bash ./scripts/ci/control-readiness-test.sh
 
       - name: Build and inspect production Control Plane image
         run: |
@@ -261,14 +271,21 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
 
+      - name: Diagnose failed commercial runtime
+        if: failure()
+        run: |
+          docker compose --profile control-test ps -a
+          docker compose --profile control-test logs --no-color --tail 100 control-postgres-test control-plane-test
+
       - name: Stop isolated Commercial test runtime
         if: always()
         run: bash ./scripts/ci/control-test-stop.sh
 
   cross-plane-e2e:
     name: Strict Core to Control Plane Cross-Plane E2E
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
+      POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
       POSTGRES_USER: platform_app
       CONTROL_TEST_DB: platform_commercial_test
@@ -278,7 +295,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Generate isolated CI secrets
         shell: bash
         run: |
@@ -300,19 +317,25 @@ jobs:
       - name: Run required cross-plane integration independently
         run: bash ./scripts/ci/cross-plane-test-run.sh
 
+      - name: Diagnose failed cross-plane runtime
+        if: failure()
+        run: |
+          docker compose --profile test --profile control-test ps -a
+          docker compose --profile test --profile control-test logs --no-color --tail 100 postgres-test redis-test control-postgres-test control-plane-test
+
       - name: Stop isolated cross-plane resources
         if: always()
         run: bash ./scripts/ci/cross-plane-test-stop.sh
 
   documentation-qa:
     name: Database diagrams and documentation consistency
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '24'
       - name: Verify migration-bound metadata and generated references

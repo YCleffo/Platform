@@ -115,6 +115,9 @@ services:
       context: ./apps/backend
       dockerfile: docker/Dockerfile
       target: dev
+      args:
+        USER_ID: ${CI_USER_ID:-10001}
+        GROUP_ID: ${CI_GROUP_ID:-10001}
 
     restart: unless-stopped
 
@@ -380,14 +383,12 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: redis-test
     volumes:
-      - ./apps/backend:/backend:ro
-      - cross_plane_backend_vendor:/backend/vendor
       - ./contracts/openapi:/contracts:ro
     depends_on:
       control-postgres-test:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/health') === false ? 1 : 0);"]
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/health/live') === false ? 1 : 0);"]
       interval: 3s
       timeout: 3s
       retries: 20
@@ -464,8 +465,6 @@ volumes:
     name: platform_redis_test_data
   control_postgres_test_data:
     name: platform_control_postgres_test_data
-  cross_plane_backend_vendor:
-    name: platform_cross_plane_backend_vendor
 
 networks:
   backup_net:
