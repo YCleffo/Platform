@@ -4,6 +4,9 @@
 и [отчёта проверки](audit/2026-10-28/REPORT.md). Общий release verdict находится в
 [журнале готовности](operations/PRODUCTION_READINESS_PROGRESS.md).
 
+Новый отдельный этап: [репетиция обновления существующих баз](audit/2026-10-29/database-upgrade/REPORT.md)
+и [план безопасного обновления и SQL-ролей](operations/SAFE_DATABASE_UPGRADE.md).
+
 Phase и датированные записи описывают историю; они не заменяют текущие migrations,
 contracts и runtime evidence. Privacy/operations templates не означают, что production policy уже утверждена.
 
@@ -45,6 +48,8 @@ contracts и runtime evidence. Privacy/operations templates не означаю�
 | architecture | [User Settings / Privacy Core](architecture/USER_SETTINGS_PRIVACY.md) |
 | audit/2026-10-28 | [Проверка Platform — 2026-10-28](audit/2026-10-28/REPORT.md) |
 | audit/2026-10-28/evidence | [Evidence аудита 2026-10-28](audit/2026-10-28/evidence/README.md) |
+| audit/2026-10-29 | [Репетиция обновления существующих баз](audit/2026-10-29/database-upgrade/REPORT.md) |
+| audit/2026-10-29/evidence | [Evidence репетиции обновления](audit/2026-10-29/database-upgrade/evidence/README.md) |
 | audit | [Phase 4.1 Core privacy file audit](audit/PHASE_4_1_CORE_PRIVACY_FILE_AUDIT.md) |
 | . | [Модель данных Platform](core-data-model.md) |
 | . | [Покрытие таблиц Core и Runtime](core-database-coverage.md) |
@@ -55,6 +60,7 @@ contracts и runtime evidence. Privacy/operations templates не означаю�
 | operations | [Core and Control Plane backup and restore drill](operations/BACKUP_RESTORE.md) |
 | operations | [External plan-change compensation](operations/EXTERNAL_COMPENSATION.md) |
 | operations | [Production readiness: состояние работ](operations/PRODUCTION_READINESS_PROGRESS.md) |
+| operations | [Safe Database Upgrade & Security Boundary](operations/SAFE_DATABASE_UPGRADE.md) |
 | operations | [Local Docker deployment provisioning](operations/PROVISIONING.md) |
 | privacy | [Control Plane personal data boundary](privacy/CONTROL_PLANE_PRIVACY.md) |
 | privacy | [Core personal data inventory (Phase 4.1 review)](privacy/CORE_DATA_INVENTORY.md) |

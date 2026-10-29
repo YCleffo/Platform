@@ -22101,7 +22101,8 @@
     "029_core_service_credentials.sql",
     "030_core_privacy_operations.sql",
     "031_platform_runtime_operational_status.sql",
-    "032_external_identity_mini_app_foundation.sql"
+    "032_external_identity_mini_app_foundation.sql",
+    "033_reconcile_legacy_data_hygiene.sql"
   ],
   "migration_sources": [
     {
@@ -22231,6 +22232,10 @@
     {
       "path": "apps/backend/migrations/sql/032_external_identity_mini_app_foundation.sql",
       "sha256": "ef6b43c19e1c4517a3d41d51736ea6c262187a6e5df55f5e819223ab1d3dd820"
+    },
+    {
+      "path": "apps/backend/migrations/sql/033_reconcile_legacy_data_hygiene.sql",
+      "sha256": "a272ce6bee1b89d404b746dd05d57b6d0bb605c0593eec540cfca81643a29e14"
     }
   ]
 }

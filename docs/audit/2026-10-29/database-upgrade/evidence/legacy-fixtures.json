@@ -1,0 +1,460 @@
+{
+  "run_id": "20a50dc56a75",
+  "project": "platform-upgrade-20a50dc56a75",
+  "started_utc": "2026-10-29T13:40:45.562852+00:00",
+  "source_revision": "6e3f0524af607abcdb29632831c97890fe955713",
+  "original_write_operations": 0,
+  "dataset": "restored_snapshot_plus_synthetic_legacy_fixtures",
+  "planes": {
+    "core": {
+      "source_migrations": 31,
+      "source_tables": 53,
+      "dump_sha256": "2c5f1375427b9ae2a03fdda0fa6af261ff02c5fd6a3b3abc9c9be70c78449ec7",
+      "dump_bytes": 308436,
+      "source_privileged_roles": [
+        {
+          "role": "platform_app",
+          "superuser": true,
+          "createdb": true,
+          "createrole": true,
+          "bypassrls": true,
+          "login": true,
+          "inherit": true
+        }
+      ],
+      "restore_exact_snapshot_match": true,
+      "invalid_legacy_data_rejected_without_rewrite": true,
+      "synthetic_legacy_fixture_inserted_before_upgrade": true,
+      "exact_migration_set_matches_repository": true,
+      "catalog_matches_documented_dbml_source": true,
+      "substantive_schema_differences": 0,
+      "raw_catalog_text_equal": false,
+      "validated_constraints": 747,
+      "triggers": 20,
+      "legacy_timestamp_backfill_cases": 2,
+      "restored_sequence_states_preserved": 3,
+      "target_migrations": 33,
+      "target_tables": 53,
+      "preexisting_rows_and_fields_preserved": true,
+      "repeat_migrations_data_unchanged": true,
+      "runtime_role": {
+        "role": "core_runtime",
+        "rolsuper": false,
+        "rolcreatedb": false,
+        "rolcreaterole": false,
+        "rolbypassrls": false,
+        "rolreplication": false
+      },
+      "denied_operations": [
+        {
+          "operation": "schema_ddl",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "public_ddl",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "alter_owned_table",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "truncate",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "create_role",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "self_superuser",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "set_owner",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "grant_owner",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "migration_history_write",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "temporary_table",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "server_file_read",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        }
+      ],
+      "role_boundary": {
+        "runtime_memberships": 0,
+        "runtime_owned_relations": 0,
+        "runtime_owned_schemas": 0,
+        "owner_can_login": false,
+        "migrator_inherits": false,
+        "migrator_owner_membership": {
+          "inherit": false,
+          "set": true,
+          "admin": false
+        }
+      },
+      "new_object_default_acls": {
+        "table_insert": true,
+        "function_execute": true,
+        "public_function_execute": false
+      },
+      "http_before_restart": {
+        "status": "PASS",
+        "checks": [
+          {
+            "path": "/health/live",
+            "http_status": 200,
+            "status": "ok"
+          },
+          {
+            "path": "/health/ready",
+            "http_status": 200,
+            "status": "ok"
+          }
+        ]
+      },
+      "application_probe_before_restart": {
+        "status": "PASS",
+        "role": "core_runtime",
+        "checks": [
+          "Yii DI bootstrap",
+          "Person application create/read",
+          "human Account trigger/write",
+          "runtime attributes"
+        ],
+        "transaction": "rolled_back"
+      },
+      "http_after_restart": {
+        "status": "PASS",
+        "checks": [
+          {
+            "path": "/health/live",
+            "http_status": 200,
+            "status": "ok"
+          },
+          {
+            "path": "/health/ready",
+            "http_status": 200,
+            "status": "ok"
+          }
+        ]
+      },
+      "application_probe_after_restart": {
+        "status": "PASS",
+        "role": "core_runtime",
+        "checks": [
+          "Yii DI bootstrap",
+          "Person application create/read",
+          "human Account trigger/write",
+          "runtime attributes"
+        ],
+        "transaction": "rolled_back"
+      },
+      "application_probe_rolled_back_exactly": true,
+      "source_history_schema_roles_unchanged": true
+    },
+    "commercial": {
+      "source_migrations": 25,
+      "source_tables": 51,
+      "dump_sha256": "decca7f7cd0ea4d54017d66f79be84723e6a1a7fd4d5192ccb796d6c6870661f",
+      "dump_bytes": 256515,
+      "source_privileged_roles": [
+        {
+          "role": "platform_control",
+          "superuser": true,
+          "createdb": true,
+          "createrole": true,
+          "bypassrls": true,
+          "login": true,
+          "inherit": true
+        }
+      ],
+      "restore_exact_snapshot_match": true,
+      "synthetic_legacy_fixture_inserted_before_upgrade": true,
+      "exact_migration_set_matches_repository": true,
+      "catalog_matches_documented_dbml_source": true,
+      "substantive_schema_differences": 0,
+      "raw_catalog_text_equal": false,
+      "validated_constraints": 917,
+      "triggers": 53,
+      "synthetic_legacy_financial_history": {
+        "paid_invoice_minor": 10000,
+        "settled_payment_minor": 10000,
+        "succeeded_refund_minor": 5000,
+        "succeeded_receipts": 2
+      },
+      "restored_sequence_states_preserved": 2,
+      "target_migrations": 40,
+      "target_tables": 60,
+      "preexisting_rows_and_fields_preserved": true,
+      "repeat_migrations_data_unchanged": true,
+      "runtime_role": {
+        "role": "commercial_runtime",
+        "rolsuper": false,
+        "rolcreatedb": false,
+        "rolcreaterole": false,
+        "rolbypassrls": false,
+        "rolreplication": false
+      },
+      "denied_operations": [
+        {
+          "operation": "schema_ddl",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "public_ddl",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "alter_owned_table",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "truncate",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "create_role",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "self_superuser",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "set_owner",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "grant_owner",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "migration_history_write",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "temporary_table",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        },
+        {
+          "operation": "server_file_read",
+          "sqlstate": "42501",
+          "result": "DENIED"
+        }
+      ],
+      "role_boundary": {
+        "runtime_memberships": 0,
+        "runtime_owned_relations": 0,
+        "runtime_owned_schemas": 0,
+        "owner_can_login": false,
+        "migrator_inherits": false,
+        "migrator_owner_membership": {
+          "inherit": false,
+          "set": true,
+          "admin": false
+        }
+      },
+      "new_object_default_acls": {
+        "table_insert": true,
+        "function_execute": true,
+        "public_function_execute": false
+      },
+      "http_before_restart": {
+        "status": "PASS",
+        "checks": [
+          {
+            "path": "/health/live",
+            "http_status": 200,
+            "status": "ok"
+          },
+          {
+            "path": "/health/ready",
+            "http_status": 200,
+            "status": "ok"
+          }
+        ]
+      },
+      "application_probe_before_restart": {
+        "status": "PASS",
+        "role": "commercial_runtime",
+        "checks": [
+          "registration/verification/password auth and hash-only session",
+          "owner membership and billing onboarding",
+          "published plan, subscription, invoice, zero settlement and idempotent replay",
+          "SQL financial immutability guard remains active for runtime DML",
+          "derived Commercial entitlements"
+        ],
+        "provider_calls": 0,
+        "transaction": "rolled_back"
+      },
+      "http_after_restart": {
+        "status": "PASS",
+        "checks": [
+          {
+            "path": "/health/live",
+            "http_status": 200,
+            "status": "ok"
+          },
+          {
+            "path": "/health/ready",
+            "http_status": 200,
+            "status": "ok"
+          }
+        ]
+      },
+      "application_probe_after_restart": {
+        "status": "PASS",
+        "role": "commercial_runtime",
+        "checks": [
+          "registration/verification/password auth and hash-only session",
+          "owner membership and billing onboarding",
+          "published plan, subscription, invoice, zero settlement and idempotent replay",
+          "SQL financial immutability guard remains active for runtime DML",
+          "derived Commercial entitlements"
+        ],
+        "provider_calls": 0,
+        "transaction": "rolled_back"
+      },
+      "application_probe_rolled_back_exactly": true,
+      "source_history_schema_roles_unchanged": true
+    }
+  },
+  "status": "PASS",
+  "restart": {
+    "status": "PASS",
+    "before": {
+      "core": {
+        "started_at": "2026-10-29T13:41:41.518140173Z",
+        "image_id": "sha256:d3a769c9f42f30f0f6aa9fb81c8c314220fc715d8271fcbf4eaf0a8c8b720553",
+        "networks": [
+          "platform-upgrade-20a50dc56a75_core_only"
+        ],
+        "published_ports": {
+          "2019/tcp": null,
+          "443/tcp": null,
+          "443/udp": null,
+          "80/tcp": null
+        }
+      },
+      "control": {
+        "started_at": "2026-10-29T13:41:41.30671488Z",
+        "image_id": "sha256:cddd0676acaa25a48629daaf7fbaf256cc798c835a8bc250e25e8a16719c4436",
+        "networks": [
+          "platform-upgrade-20a50dc56a75_commercial_only"
+        ],
+        "published_ports": {
+          "2019/tcp": null,
+          "443/tcp": null,
+          "443/udp": null,
+          "80/tcp": null,
+          "8000/tcp": null
+        }
+      },
+      "core-db": {
+        "started_at": "2026-10-29T13:40:50.72180378Z",
+        "image_id": "sha256:86c951e05bf56c93d95d397747fb8820ac76cc3bedb78f43abd83eedbe3666ae",
+        "networks": [
+          "platform-upgrade-20a50dc56a75_core_only"
+        ],
+        "published_ports": {
+          "5432/tcp": null
+        }
+      },
+      "commercial-db": {
+        "started_at": "2026-10-29T13:40:50.459161642Z",
+        "image_id": "sha256:86c951e05bf56c93d95d397747fb8820ac76cc3bedb78f43abd83eedbe3666ae",
+        "networks": [
+          "platform-upgrade-20a50dc56a75_commercial_only"
+        ],
+        "published_ports": {
+          "5432/tcp": null
+        }
+      }
+    },
+    "after": {
+      "core": {
+        "started_at": "2026-10-29T13:41:47.661724112Z",
+        "image_id": "sha256:d3a769c9f42f30f0f6aa9fb81c8c314220fc715d8271fcbf4eaf0a8c8b720553",
+        "networks": [
+          "platform-upgrade-20a50dc56a75_core_only"
+        ],
+        "published_ports": {
+          "2019/tcp": null,
+          "443/tcp": null,
+          "443/udp": null,
+          "80/tcp": null
+        }
+      },
+      "control": {
+        "started_at": "2026-10-29T13:41:47.560776918Z",
+        "image_id": "sha256:cddd0676acaa25a48629daaf7fbaf256cc798c835a8bc250e25e8a16719c4436",
+        "networks": [
+          "platform-upgrade-20a50dc56a75_commercial_only"
+        ],
+        "published_ports": {
+          "2019/tcp": null,
+          "443/tcp": null,
+          "443/udp": null,
+          "80/tcp": null,
+          "8000/tcp": null
+        }
+      },
+      "core-db": {
+        "started_at": "2026-10-29T13:40:50.72180378Z",
+        "image_id": "sha256:86c951e05bf56c93d95d397747fb8820ac76cc3bedb78f43abd83eedbe3666ae",
+        "networks": [
+          "platform-upgrade-20a50dc56a75_core_only"
+        ],
+        "published_ports": {
+          "5432/tcp": null
+        }
+      },
+      "commercial-db": {
+        "started_at": "2026-10-29T13:40:50.459161642Z",
+        "image_id": "sha256:86c951e05bf56c93d95d397747fb8820ac76cc3bedb78f43abd83eedbe3666ae",
+        "networks": [
+          "platform-upgrade-20a50dc56a75_commercial_only"
+        ],
+        "published_ports": {
+          "5432/tcp": null
+        }
+      }
+    },
+    "postgresql_kept_running": true,
+    "separate_internal_networks": true,
+    "opposite_database_dns_unresolved": true
+  },
+  "finished_utc": "2026-10-29T13:41:52.389705+00:00"
+}

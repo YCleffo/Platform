@@ -1,0 +1,3594 @@
+[
+  {
+    "path": "apps/backend/.dockerignore",
+    "sha256": "cec85c7637475d43385ee342d64e5f1f2113c4a73feaa161d341c6d6605579bf"
+  },
+  {
+    "path": "apps/backend/.editorconfig",
+    "sha256": "cfff464418958d06dab6c92941ad587e8ca8d7d66961b3a2d74067a584adf088"
+  },
+  {
+    "path": "apps/backend/.env.example",
+    "sha256": "6b06b2a04c4012b3e0da9aafa8dc0c0ebabf66e628b629d08c8d98ca43ea6959"
+  },
+  {
+    "path": "apps/backend/.gitignore",
+    "sha256": "bc5f9100cd98639685ce81ca4e46fe6a24b6e75623b41d91a9e50edacc384cad"
+  },
+  {
+    "path": "apps/backend/.php-cs-fixer.php",
+    "sha256": "03b349873ad599fdc63bb583c940b5a5c34f80b92977a10dee789e5e695f094b"
+  },
+  {
+    "path": "apps/backend/codeception.yml",
+    "sha256": "be82bef7cfaeded832bcf3db751cf587ef5266a72ea39de5809d9c5eb77f30d5"
+  },
+  {
+    "path": "apps/backend/composer-dependency-analyser.php",
+    "sha256": "0214f6434f32a1243c22767be06bba7bf9ce467d14b6e66b822b5a680888e800"
+  },
+  {
+    "path": "apps/backend/composer.json",
+    "sha256": "46c6fb876d81f3caca5a13a04ffeaefa3918d721bec4053f99f54166f7356af9"
+  },
+  {
+    "path": "apps/backend/composer.lock",
+    "sha256": "42cf01600b65977bf4fac41d62be9a0c3f3fcbc402efd5188e878c6b4243b8ea"
+  },
+  {
+    "path": "apps/backend/config/.gitignore",
+    "sha256": "996c7ca6956e5ee17c63c5ffb18bfa28197a787115cd0d5d2127dd7745b3a7d8"
+  },
+  {
+    "path": "apps/backend/config/common/aliases.php",
+    "sha256": "c105d2588c88ca04e1b806e91da3d690334099f34f224a407f931af0afce2d79"
+  },
+  {
+    "path": "apps/backend/config/common/application.php",
+    "sha256": "7e0abbaac5489966bc61cbeabf558a9069427c399db3e52f83fee1f461384f00"
+  },
+  {
+    "path": "apps/backend/config/common/di/application.php",
+    "sha256": "0815be885db14c51946cf159e4f8bd502615158c72c9e753242b2161ed818563"
+  },
+  {
+    "path": "apps/backend/config/common/di/auth.php",
+    "sha256": "2533045caf81e2c978d902f0d565953b170d087864110efa540c3fc6bb7348e9"
+  },
+  {
+    "path": "apps/backend/config/common/di/client.php",
+    "sha256": "da3895b3fc62f707f85c0218972eaf4656fa327b783af0db640dbe421609a5b5"
+  },
+  {
+    "path": "apps/backend/config/common/di/communication.php",
+    "sha256": "979c7af882c269278c9e940d958525fe2ecaa0ddeee52b63af8df0a5b777587e"
+  },
+  {
+    "path": "apps/backend/config/common/di/core.php",
+    "sha256": "44bbba6595c4245216a4885569e010a2c868f4c463a8a3c012974f7bc77696d1"
+  },
+  {
+    "path": "apps/backend/config/common/di/db-pgsql.php",
+    "sha256": "86a729e7383d7aa73fd2398e6423450962b9cfd4e9d3f6e13c81180608a16cf4"
+  },
+  {
+    "path": "apps/backend/config/common/di/error-handler.php",
+    "sha256": "2f24196ed5bc9a63710d6d988c9b1b805fb66e58696706d813502131a02c861e"
+  },
+  {
+    "path": "apps/backend/config/common/di/geo.php",
+    "sha256": "c15d4e034ade61e7edae4ea3744b3fd9c6c0e7fb06c286e364916b3b783d67aa"
+  },
+  {
+    "path": "apps/backend/config/common/di/hydrator.php",
+    "sha256": "4a7e1c6cc10f7efba678b1020a6fb1605ddef640ecd0bf07c1f42e3ae7d82c9b"
+  },
+  {
+    "path": "apps/backend/config/common/di/internationalization.php",
+    "sha256": "6d7faa4a2bb258b80e64a783d193d3025ddd39210c85da9cd8d4faded947d53e"
+  },
+  {
+    "path": "apps/backend/config/common/di/logger.php",
+    "sha256": "2b928d7af9093f83d8d9819279c174c2f60ec3ad4879c82c41e9a9262f834200"
+  },
+  {
+    "path": "apps/backend/config/common/di/router.php",
+    "sha256": "604bba9d5189b7b6aba41f1f6619aa0b521414a48e255523f182290a90b8456f"
+  },
+  {
+    "path": "apps/backend/config/common/di/time.php",
+    "sha256": "4035472b1015feb942f4bcaa7f547f1ff189a765740648ca0610256ed36b5b5a"
+  },
+  {
+    "path": "apps/backend/config/common/params.php",
+    "sha256": "4c4bf84b49a27c0490946e9b7e66c4bce5152c8fd9c885527552732ff88ac9ce"
+  },
+  {
+    "path": "apps/backend/config/common/routes.php",
+    "sha256": "16fd402233584b5f8dd0a20d0febab69389735a8cbea1b120fb26ebc9686b779"
+  },
+  {
+    "path": "apps/backend/config/configuration.php",
+    "sha256": "ebfead1696e890727762e2ac27c50206de46c88d99075acffb4cac1bcf06f089"
+  },
+  {
+    "path": "apps/backend/config/console/commands.php",
+    "sha256": "dc018e6f9c9ad78b113e72d16540ef9d268f7a3b17f0e16de135688250d6a73c"
+  },
+  {
+    "path": "apps/backend/config/console/params.php",
+    "sha256": "0d87d4254def963b9a5828c29da52defaeccc3f7bf998ab8eb58060f04f3f417"
+  },
+  {
+    "path": "apps/backend/config/environments/dev/params.php",
+    "sha256": "03885768f881f2a20c15801df186c766ef1bf89b86ad9fe68fb9a0301200111a"
+  },
+  {
+    "path": "apps/backend/config/environments/prod/params.php",
+    "sha256": "7455d5551a8d2976f7c7caac908d77d9b7bf230e2c80dead18b2bfc170d9d075"
+  },
+  {
+    "path": "apps/backend/config/environments/test/params.php",
+    "sha256": "bb027c7e9be2f1adcc604bb00933e263130183061ce3757d7ec3862d8d0cebbf"
+  },
+  {
+    "path": "apps/backend/config/web/di/application.php",
+    "sha256": "c86fe674452afb8fda1ce7ac69d0182be41b84ccbb5dc91b632e65bc0971663e"
+  },
+  {
+    "path": "apps/backend/config/web/di/error-handler.php",
+    "sha256": "f91746a7be21cd4e77871ae8b9b9e7077904e375130f6ef5ab5a51366b11658d"
+  },
+  {
+    "path": "apps/backend/config/web/di/psr17.php",
+    "sha256": "672d811bde5bffe50addb98e3c1a263619c2f668b6f5eb1840ed64e7b790da3c"
+  },
+  {
+    "path": "apps/backend/config/web/params.php",
+    "sha256": "ffd252c6a082ef90d57baae54beb8b51cba43a3eae27f34798d9e8525b27435f"
+  },
+  {
+    "path": "apps/backend/docker/Caddyfile",
+    "sha256": "c20e57f1288fa97f2ec40e8b0642122294066a8f2476305010eef9bf1e01ce9b"
+  },
+  {
+    "path": "apps/backend/docker/Dockerfile",
+    "sha256": "0bd01b3eb726ef276f01d26b83aca172d319a267a5af777a0eb59549a68a7e0d"
+  },
+  {
+    "path": "apps/backend/docker/dev/Caddyfile",
+    "sha256": "9fecc012d5d9c4733fff2b0e7afc3c5e9da0334344ee1a2898f81ccae66f95e3"
+  },
+  {
+    "path": "apps/backend/docker/php/production.ini",
+    "sha256": "b613aeeb1d415e523313a71244697239247a40e7a4dc36b028e8813825306c86"
+  },
+  {
+    "path": "apps/backend/docker/php/security.ini",
+    "sha256": "720d841a6bcbbb7079f28dfde9e63ad373bf3f291174b6b5e49dc6b0c6c72c2a"
+  },
+  {
+    "path": "apps/backend/migrations/down/017_core_account_settings.sql",
+    "sha256": "243ad554fffd2e33a0cb1ff851da410350b3c816ceee29bd9e1f4c65f97df834"
+  },
+  {
+    "path": "apps/backend/migrations/down/018_core_consent_runtime.sql",
+    "sha256": "da283d53543e72bf4e3e9da2bfa8cbc993ac2181e9d7a0256071c17e6354e3b2"
+  },
+  {
+    "path": "apps/backend/migrations/down/019_core_privacy_foundation.sql",
+    "sha256": "5ad3a78c3ceb3da7779ba5f3b8b4fe4686ca35f2aaef17535c8188c20c98581f"
+  },
+  {
+    "path": "apps/backend/migrations/down/020_core_privacy_invariants.sql",
+    "sha256": "ee36849e71394b46968a6b4ad4bcd295599f27e4d47d0d4cec9d377f89f80398"
+  },
+  {
+    "path": "apps/backend/migrations/down/021_core_representation_scopes.sql",
+    "sha256": "9548f281bde97bf7aaba422cdb41f6d3a798c6496905c6d25aec90c6832aa1cd"
+  },
+  {
+    "path": "apps/backend/migrations/down/022_core_data_subject_requests.sql",
+    "sha256": "ecf0acb1782653b7ec418da4aa52d3ec4af90befb0d10f3e3740c6afb7535e3f"
+  },
+  {
+    "path": "apps/backend/migrations/down/023_core_privacy_request_execution.sql",
+    "sha256": "96d98e72a1a9ddbc8b0538879408ea755dbc37c03af5ef40d16953cdf80e887e"
+  },
+  {
+    "path": "apps/backend/migrations/down/024_core_privacy_retention.sql",
+    "sha256": "9dce7c6ef22ebb07c0ebf8f21c95008c4e629c4f98808624e71093473a6fd6b4"
+  },
+  {
+    "path": "apps/backend/migrations/down/025_core_privacy_erasure.sql",
+    "sha256": "4dc4cf90611681e6cdf7db919b42977ff9114fdfac76fdb5a9110210d56f5c31"
+  },
+  {
+    "path": "apps/backend/migrations/down/026_core_privacy_compliance.sql",
+    "sha256": "781c5575150e12df3fff07234e82e7ac2c0237ee7710f72146e7b8d97f275295"
+  },
+  {
+    "path": "apps/backend/migrations/down/027_core_privacy_lifecycle.sql",
+    "sha256": "51f6eef7575bf54ef1e9ccc91439e8efb58a52a30fe6fccaebf12133b31c6f76"
+  },
+  {
+    "path": "apps/backend/migrations/down/028_core_organizations.sql",
+    "sha256": "373d031f299724a2c21b50d378a39d89c99b4a578c64df0563697d0c2fe901dd"
+  },
+  {
+    "path": "apps/backend/migrations/down/029_core_service_credentials.sql",
+    "sha256": "74bd90402ab3b49a87426c3d7da622a12c61708baac8bfb8b2d6dd7dad256fa9"
+  },
+  {
+    "path": "apps/backend/migrations/down/030_core_privacy_operations.sql",
+    "sha256": "338f9feb28183998dd9ea92cf2b058c9e9b54f4b3d86b48a9552a2ee0bbbb20b"
+  },
+  {
+    "path": "apps/backend/migrations/down/031_platform_runtime_operational_status.sql",
+    "sha256": "94e8590e5c19ee8a6656bbfc857d8f730a0e9417e9456ba2ff1fa9ac7c010c9f"
+  },
+  {
+    "path": "apps/backend/migrations/down/032_external_identity_mini_app_foundation.sql",
+    "sha256": "8dd901df62bd73f8e9f673b43710c289a363d20040c9158084a39f62d442aa44"
+  },
+  {
+    "path": "apps/backend/migrations/sql/001_core_schema_and_types.sql",
+    "sha256": "e30dc9f4993b72854ce1473f69118eb711f6ea95458212a056284d767c1d3ce4"
+  },
+  {
+    "path": "apps/backend/migrations/sql/002_core_people.sql",
+    "sha256": "b0438bba25a58d3dadb8e1f22107c50f9dfefd26c7f215c1b76d83640395d90f"
+  },
+  {
+    "path": "apps/backend/migrations/sql/003_core_accounts_auth.sql",
+    "sha256": "63c42dcf150df4d233b3f5e9e7067e786306010341753c2db47af182e0811f04"
+  },
+  {
+    "path": "apps/backend/migrations/sql/004_core_rbac_modules.sql",
+    "sha256": "c125ee25cf9c3ee9522b16875409b3eca703edc76dc976a3cab10ec3123d8c07"
+  },
+  {
+    "path": "apps/backend/migrations/sql/005_core_settings.sql",
+    "sha256": "41890f75c8c1035a3c2efc669e9fa48509e3abd37a3bac94d89ea4161db26302"
+  },
+  {
+    "path": "apps/backend/migrations/sql/006_core_audit_events.sql",
+    "sha256": "b648b6e28067041bfbd2e0f7741b12123042d1eb7eb1f9fd91c3deb3395004f4"
+  },
+  {
+    "path": "apps/backend/migrations/sql/007_core_indexes.sql",
+    "sha256": "f0329990bc1140ac192d875f63257865ad8cddd89de4a320042a36f3bcbf86fb"
+  },
+  {
+    "path": "apps/backend/migrations/sql/008_core_comments.sql",
+    "sha256": "60c3da7b1f8ef1c8c8a8c4343f047123b819425cdc7c54960f6c09985ceebb9a"
+  },
+  {
+    "path": "apps/backend/migrations/sql/009_core_seed.sql",
+    "sha256": "fce4b2865a62c91c36a5df585fd41c4075669d9cf26a1bd0bb75a306fbec740b"
+  },
+  {
+    "path": "apps/backend/migrations/sql/010_core_international_security.sql",
+    "sha256": "625cc33481e98b4cab8e3a9a103750fdd410f47f0cf9a6b75a6fee690058f3cc"
+  },
+  {
+    "path": "apps/backend/migrations/sql/011_core_auth_runtime.sql",
+    "sha256": "0a193606997b37f20f2f67584002947e0154c09411454dd726d88aea59960e09"
+  },
+  {
+    "path": "apps/backend/migrations/sql/012_core_configuration_runtime.sql",
+    "sha256": "8ffa278e0279e4429f253f4724fa81c8735f46c01626b302652a5d9a1c8792b0"
+  },
+  {
+    "path": "apps/backend/migrations/sql/013_external_identity_mfa_runtime.sql",
+    "sha256": "bba96ff4df1b60592d84f42e6b26f77cb2f234b0244d4edcbbe53ce38ffd7b7e"
+  },
+  {
+    "path": "apps/backend/migrations/sql/014_passkey_runtime.sql",
+    "sha256": "2846667774d7de90f8e10b6998bf89ccea42a4f04f53835b937e25b4eda07322"
+  },
+  {
+    "path": "apps/backend/migrations/sql/015_core_data_hygiene.sql",
+    "sha256": "68e7cbf4e1a4ff394abc15ddab2a76495adaba3ec258d05f490ed646ba741d6f"
+  },
+  {
+    "path": "apps/backend/migrations/sql/016_platform_runtime.sql",
+    "sha256": "cdf944427e61acda6bac22146e0cdc8923ec13bdb6d804a46c22943fa7b34434"
+  },
+  {
+    "path": "apps/backend/migrations/sql/017_core_account_settings.sql",
+    "sha256": "78b9cdced7f0452b40c3b47896b3f59e8c74b894c3abc04f38518de88b2be63c"
+  },
+  {
+    "path": "apps/backend/migrations/sql/018_core_consent_runtime.sql",
+    "sha256": "19ecfe2417b6d2a0db41bd8d98c318f4878535c339ba69505112c321f1a69caa"
+  },
+  {
+    "path": "apps/backend/migrations/sql/019_core_privacy_foundation.sql",
+    "sha256": "2a32dcd290bda01bd21b25bbde40144eed992c5def2e4bd82f0ac9b6e5a74d40"
+  },
+  {
+    "path": "apps/backend/migrations/sql/020_core_privacy_invariants.sql",
+    "sha256": "2ef7044f94ad9aa248c072b35001f8ccbab5e3ce34e051c652b351307513f621"
+  },
+  {
+    "path": "apps/backend/migrations/sql/021_core_representation_scopes.sql",
+    "sha256": "25374e33069a51a89ca2042026ce2394fbca96f4cfc4cbe068e1dbf6218a6e62"
+  },
+  {
+    "path": "apps/backend/migrations/sql/022_core_data_subject_requests.sql",
+    "sha256": "fb81eaf0097c113edf94eab562f11621f83dfbc9675040ead94b7a999d3a28be"
+  },
+  {
+    "path": "apps/backend/migrations/sql/023_core_privacy_request_execution.sql",
+    "sha256": "bbb5a15c23c6932fd58363ae39719f3a9ffb0c9b239e6e9e05023eeead150a80"
+  },
+  {
+    "path": "apps/backend/migrations/sql/024_core_privacy_retention.sql",
+    "sha256": "92e4254082dedadf0f3ffb592e6696d8230d1d4d14939d95525ad76b35624337"
+  },
+  {
+    "path": "apps/backend/migrations/sql/025_core_privacy_erasure.sql",
+    "sha256": "8323821f58a2f14341799b094805010f693f7fe20dc01dc47f8e90258241b7f7"
+  },
+  {
+    "path": "apps/backend/migrations/sql/026_core_privacy_compliance.sql",
+    "sha256": "f57880fe9031f29fb602a7e8b751806c39152978ad5088c78f1840c4f817ce2c"
+  },
+  {
+    "path": "apps/backend/migrations/sql/027_core_privacy_lifecycle.sql",
+    "sha256": "df9532dd0e1d4acedaab907144ba6f61c88a334433fb0764512bf253394f6f28"
+  },
+  {
+    "path": "apps/backend/migrations/sql/028_core_organizations.sql",
+    "sha256": "f53120d4c1d20bf2445e0a0555ed9ca7ac6779f273d3539f13a0c2a05a5ea959"
+  },
+  {
+    "path": "apps/backend/migrations/sql/029_core_service_credentials.sql",
+    "sha256": "fd244f8d60f615fd6bbeb52f3c2fd50a11411604244edc0739f55edee4ffa8bd"
+  },
+  {
+    "path": "apps/backend/migrations/sql/030_core_privacy_operations.sql",
+    "sha256": "64dfdd1819c144761df8047f728dd29ae16293ea3d7727b856f60792deb963ad"
+  },
+  {
+    "path": "apps/backend/migrations/sql/031_platform_runtime_operational_status.sql",
+    "sha256": "9d9236e0345c3d2d370ae758d26ffddd24e225a0bfa41cbb8ccf0a81cd802473"
+  },
+  {
+    "path": "apps/backend/migrations/sql/032_external_identity_mini_app_foundation.sql",
+    "sha256": "ef6b43c19e1c4517a3d41d51736ea6c262187a6e5df55f5e819223ab1d3dd820"
+  },
+  {
+    "path": "apps/backend/migrations/sql/033_reconcile_legacy_data_hygiene.sql",
+    "sha256": "a272ce6bee1b89d404b746dd05d57b6d0bb605c0593eec540cfca81643a29e14"
+  },
+  {
+    "path": "apps/backend/psalm.xml",
+    "sha256": "40621d9e4d14ae6bedecdc1e454899f114e06f35cd0920af014bdf138c5d1c13"
+  },
+  {
+    "path": "apps/backend/public/favicon.ico",
+    "sha256": "7c1c6145af8a5da2392dba9ba67d6ff0739409a62d3f6ed0a4d33d4088bb5c29"
+  },
+  {
+    "path": "apps/backend/public/index.php",
+    "sha256": "90bd18fd5f36930834a2620a4a87f185467bf0a468f6390dde43dcca5fd5ef86"
+  },
+  {
+    "path": "apps/backend/public/robots.txt",
+    "sha256": "3a125e84a637dc3f5442bb6949fa200056f37db4627b4c2a3addc55bbb89b703"
+  },
+  {
+    "path": "apps/backend/rector.php",
+    "sha256": "7de255d4d27cb74f7f701971f83356d293c9447ecbde5a2a43a155fd1b4e399c"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.account.created.html",
+    "sha256": "dbdebd1e4396ea6d27712babdfea8de7f2e233849b9d80d223b9b45a218a8d91"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.account.created.subject.txt",
+    "sha256": "cb2d19fcb3870905e407c6f3f289174cdee88928ed94ad6b5fb3d68a831958e8"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.account.created.txt",
+    "sha256": "f9683af462315290db28331f3e907483ecfb6a601c013e3caaf411eb299cbf93"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.email.verification.html",
+    "sha256": "06feab10a1c8c48ad06948df0c03562297666d4a40832259fa06eac4e3477636"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.email.verification.subject.txt",
+    "sha256": "58f0bd4a765d19dec981d535f726575313177d2e571ed7c8fede6e0eff5482f0"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.email.verification.txt",
+    "sha256": "d4f4313972cd013139130b4877fe46b8f584176ca35418cb4da6786795370152"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.external_identity.linked.html",
+    "sha256": "f1493de76c4e40375ff7257420272d3a5a37685aef906fb6c55ade7ac35ae9a4"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.external_identity.linked.subject.txt",
+    "sha256": "8dedb5517110a1c1d64a117f02c5a705937a4824f3b4a76948570a577f1f4474"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.external_identity.linked.txt",
+    "sha256": "eb89d29a74b73593516a056e951760c1254a8bff054161d89dfb85e837a12677"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.external_identity.unlinked.html",
+    "sha256": "5e473d6a8bdddedb8e1255d16eedb2fb1583ddd82f2d9b69d1b31deeab7e3425"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.external_identity.unlinked.subject.txt",
+    "sha256": "70e3ccb660df4cc36e76c80cffae84dc157c5f2ee7da1ab2c21d03da0c3ad8ee"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.external_identity.unlinked.txt",
+    "sha256": "12b460656028c865297d2793157d4123b0a0db6220c41dbc51a2ab940186446f"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.mfa.recovery_completed.html",
+    "sha256": "57555750db1c5c50fba6e9a3e0a627853a163985401acd0489bafc0a609a961d"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.mfa.recovery_completed.subject.txt",
+    "sha256": "a62e524843b048f0d21ad306513091f90bf139890ff2baabf2640e775fa402ef"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.mfa.recovery_completed.txt",
+    "sha256": "193a8a244eb0dceb1f0be94cd9a357ff08525b750ad717e105c064cb4f74291a"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.mfa.recovery_requested.html",
+    "sha256": "1e180deb05eb34b64c4d1ad5b59394b989e9b0a3bb0235a519da779a7e0fa3f1"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.mfa.recovery_requested.subject.txt",
+    "sha256": "a14ec6458302bea2022d706c97d9e769ee433027abe6dc4fc98f3bf21af8c466"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.mfa.recovery_requested.txt",
+    "sha256": "1fa7db96e0f726813c39207bd0e94fecdfc9d8ede6a5d8bf8556678a1e0f4550"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.passkey.registered.html",
+    "sha256": "03cee3d28d543a45b511ae75d90f6d25e05586c0297aeed34271c21def3d6560"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.passkey.registered.subject.txt",
+    "sha256": "ba45423e90a8b2bb65136cb315b36f70e2a55e79f76ca60afa979f96fc651c76"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.passkey.registered.txt",
+    "sha256": "1bf5ade27f0f69bd79669efbc50b180d53651f3392aa803ca56d3a1e90616709"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.passkey.revoked.html",
+    "sha256": "38fe237493647cbf97a9b10c7693abae93151529cec35575a30ee862821669b9"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.passkey.revoked.subject.txt",
+    "sha256": "33304576cc8f7cb0cd9486733f48d23b7070bd89c5e1de5c466d83b605be52e3"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.passkey.revoked.txt",
+    "sha256": "558ae0c5bd26d31e05bfcb2e0cce7d02be7747797c7ce5759890b5e2e7136d0e"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.password.changed.html",
+    "sha256": "8d677ec9a2c2e23213519de2f769f5028fdc240bb2082b495df4e54252378f26"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.password.changed.subject.txt",
+    "sha256": "d3a518f9cd7f647b7a12b90830bb9da1ad86f9342a3638e958b750dee8acbb70"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.password.changed.txt",
+    "sha256": "dff19224ffd1852071db9d45fdea72e4fe039af0cef6321aae6094440d2a0d72"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.password.reset.html",
+    "sha256": "4677c0a07e64ca3772944b5a9c0c50222225ce5bd54173b405ce6cc812d05fd2"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.password.reset.subject.txt",
+    "sha256": "384558b4c27ddbbc4168265bc0f42cb6b8c36c5d35e1478c5e6539af51ccc9b3"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.password.reset.txt",
+    "sha256": "8b77816c62d700a2b86176365b2f1bfb947b88492c8ea1105680aaba61dc514c"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.recovery_codes.regenerated.html",
+    "sha256": "a6cc5c65f58caa6f30ff0cc27467852314d7492f4bb23314fad9c1f0cee7f9cc"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.recovery_codes.regenerated.subject.txt",
+    "sha256": "198ebf218c57f5cf45fceb26c4887fabbfe3825880ab7ae2228bc9180b88fb8a"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.recovery_codes.regenerated.txt",
+    "sha256": "d8ff3fe567894b8e12e88d85ab3e782b3c8c48214ae000302620b12e666ea793"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.security_change.html",
+    "sha256": "8b9adb5b5d6002c82da72a243e15da2776f1363fe25faba63d5233d7dee2cbcc"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.security_change.subject.txt",
+    "sha256": "af0f3088da25f42469c723ffeccadfbffe3e3696229c020fe52f4fe866ae3732"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.security_change.txt",
+    "sha256": "c188d989bde2ed8cd5c1621e3b59cc2861acf68f3d409be7435cc2c48562ef37"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.totp.disabled.html",
+    "sha256": "bcf00e7439d6d97ecae6462c84b40940d6bcf6116679a0cdfe6272eba75fac45"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.totp.disabled.subject.txt",
+    "sha256": "43d29344d1fbe62154571e60e2cbab3b428dd28692eb78baddc3083ae09f6f78"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.totp.disabled.txt",
+    "sha256": "5f3fbb5f3f81da7889203bb187db5f67215d5de8fb3efc25ce6ea9472835c74f"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.totp.enabled.html",
+    "sha256": "25dc35e5e45141ef2fc45aa0367a443a6a597208ea3a9b94dfa872b17435d174"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.totp.enabled.subject.txt",
+    "sha256": "1c2f108a46da4f5d1b45dbc80ef3ad36c40bd3a29b9ea55b67ae8823cd5f425b"
+  },
+  {
+    "path": "apps/backend/resources/email/en-US/auth.totp.enabled.txt",
+    "sha256": "6e4196be9ecea777ac116489280b9605c251a9cd56d591d7eb99015d7de1dc22"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.account.created.html",
+    "sha256": "af8859b5e483202131fb9a83f1a7cc7eac75ab208655c0a07c2f73f75be5bf6e"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.account.created.subject.txt",
+    "sha256": "02731d5ce161a28098447e114e2bd6df95028700ceb538729573d225dad5178b"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.account.created.txt",
+    "sha256": "7bd80fe0aed6017abfe8a9074f51fa3f6eb733623d2c4fba2b3a9d0f1db94ee1"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.email.verification.html",
+    "sha256": "b6760716bd06d9c765ae8c74bee1137a25a649d17003d114a039b060837cc7e5"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.email.verification.subject.txt",
+    "sha256": "74eed5ea94b8697a66c58bbcb2d3c70dda77c36099746aaf35f73a50da85e0fd"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.email.verification.txt",
+    "sha256": "bef1e371b1367b3dd86f9f0a62972cdf8368445c6fcc8f7d20e2d088ff1b30bc"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.external_identity.linked.html",
+    "sha256": "275f1fae094fd8422efe9222c332e76457b3813a676c6f1a85f60e89cc5fbf95"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.external_identity.linked.subject.txt",
+    "sha256": "bd74a40078ecf963516adee6b2f453d889b65ef13794a47968064a004d454633"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.external_identity.linked.txt",
+    "sha256": "13dd605fac1e5cfefafe182bae01248fda663e48dc060a075a9ea5c565bd6558"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.external_identity.unlinked.html",
+    "sha256": "ebe7ddc865b65b3651e1f1f623d6177bc0e79bc5997b538309fe370b4eda7950"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.external_identity.unlinked.subject.txt",
+    "sha256": "f5086377562023c9afdd94b00f82e3c38031740cef22d42a5176c7a22354e3a5"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.external_identity.unlinked.txt",
+    "sha256": "820482a5632b4fd55754336dfb585471526719504070494e3843ef8c8047782e"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.mfa.recovery_completed.html",
+    "sha256": "b6b779f15507a3e35008ea72b756264456325009ab076f19d23a18ecc8ce198e"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.mfa.recovery_completed.subject.txt",
+    "sha256": "4c9ca20bf72a42005ebc25623ecb743756ce02e0ff1ace4b8724fbce62bcb53b"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.mfa.recovery_completed.txt",
+    "sha256": "8599d203e5167a6d23cc3056a69fd79875855bd5aa4ca159e0fa435cdb351ebf"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.mfa.recovery_requested.html",
+    "sha256": "c369de13b0796f1b8538c91eb86bf92527cf4a67c4b2e879780b036d312c094a"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.mfa.recovery_requested.subject.txt",
+    "sha256": "d90b58e0d28da57f7af8a32427653c2dc37ec499d0e74712865d01b3e6291dc6"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.mfa.recovery_requested.txt",
+    "sha256": "9b90c8eacd378ad904e3e995c7ca20349d844ec9a5a694c6f25000b9533b74e2"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.passkey.registered.html",
+    "sha256": "f2bb1d573a39d3364f9f24d7b0a99dfcb4b822d5c67c84589cace730898aae7e"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.passkey.registered.subject.txt",
+    "sha256": "e996ae4cf7c32c0147f81a0162dcde808f818ec63be1641c350c032892e228c6"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.passkey.registered.txt",
+    "sha256": "a3c94e06a09a1d3f6d79a1659cc895eee572d7820bdd75a2345f991239f2d1b7"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.passkey.revoked.html",
+    "sha256": "8e39ee5b95afc34d8956600f921d8bea77f1477c74625c3500b4dd7b3bd9d23e"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.passkey.revoked.subject.txt",
+    "sha256": "7898295eca9a0288319d72f398a7c941380d17119bc6b7fb9fe4d6781349498c"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.passkey.revoked.txt",
+    "sha256": "00e7e6fb0e04ac489cba1b9f8bd9d76e6f60da83f992d964b60518eefff3546a"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.password.changed.html",
+    "sha256": "6f40cd3b9ac53c16171c493f8fad824281082940e902daa34356915bea2fc1d8"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.password.changed.subject.txt",
+    "sha256": "2359fa6c16367d9ac48b5460087a9db89c028c9525cec1c2b55382a51adac087"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.password.changed.txt",
+    "sha256": "2df2df5934b469a82350445c0286799dbc9fa0ca92ab70604373ffbe806198b9"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.password.reset.html",
+    "sha256": "d0a0edde1c700af9c64ed783881311cdc1961aa732cfec4527c9189059bed5ce"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.password.reset.subject.txt",
+    "sha256": "9bf7c138ea1d15c78327692d95fc6e13c17f5e64e0947849edbb44bca103121d"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.password.reset.txt",
+    "sha256": "43632ac7eca9ddd9ecaf7f72d380c67174684726cf84f4cedeefcf51c2de3c68"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.recovery_codes.regenerated.html",
+    "sha256": "b5264b22cd22528d9ea3923dbd207e733796c26519421678cf883fe3a48e2818"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.recovery_codes.regenerated.subject.txt",
+    "sha256": "f71363cba0f0aefcc6b18994ad0c4f3bcbe6b1710e7aa9f9cb4c93c99d39819c"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.recovery_codes.regenerated.txt",
+    "sha256": "3e0fb1ab27d26d122c3f9ada8a49d8948b0234258be034e3dbeeb8f6680d9e83"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.security_change.html",
+    "sha256": "c660ebb4af4500cb466bea42ec97a7592dddec80cf3432307a11d6b697a9019f"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.security_change.subject.txt",
+    "sha256": "c0518ba33e20c07d9122ce66f945cf14c6fe53d6d7003db344f4cd5a45ac7230"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.security_change.txt",
+    "sha256": "9925af195d91f18dca1a3a1c602974e3a1553036b3a9725466824b819423d241"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.totp.disabled.html",
+    "sha256": "9dd1c997a53bea03502726df7d92201b52983b35bfc20639f37b45009fca54a2"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.totp.disabled.subject.txt",
+    "sha256": "51039a3b21ecaa44ba43a08bc8f25beb0eadd9f6aedc93040ac17b21b625e2cc"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.totp.disabled.txt",
+    "sha256": "28d64c5060a832d3d449b28fe1f4e8eda826ba01edfe522b47b010c5ecb52ce7"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.totp.enabled.html",
+    "sha256": "a93bac3e07a5b33718679ce96b71df7775e5c7c012c122d335798ad87992c0e5"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.totp.enabled.subject.txt",
+    "sha256": "5e5dace5e5c3f71a9c7c3b559de9a194e1669b715b90801032daebf4083f5b5d"
+  },
+  {
+    "path": "apps/backend/resources/email/ru-RU/auth.totp.enabled.txt",
+    "sha256": "4669b47cda5a8aa2e9387c9b724be23ad220ceabbf0edd5adce98123f0cc31a4"
+  },
+  {
+    "path": "apps/backend/resources/messages/en-US/app.php",
+    "sha256": "48e07cf39eb690dd67cef4e7f27a1d3f0eb564491192b9fa48849e538672fe42"
+  },
+  {
+    "path": "apps/backend/resources/messages/ru-RU/app.php",
+    "sha256": "d45073af359fe8517e3d59c29c4c2628a0deb620760500249e175fdec8fb7b49"
+  },
+  {
+    "path": "apps/backend/src/Api/HealthAction.php",
+    "sha256": "124e7c78616f0c41c18b7fdbf05aefc29778cdb586af5377529c1db577cf22e2"
+  },
+  {
+    "path": "apps/backend/src/Api/IndexAction.php",
+    "sha256": "882733774e3fd039d81cc54eeed4fe716960d4e9143c701316b9ba70fad7e18b"
+  },
+  {
+    "path": "apps/backend/src/Api/LiveHealthAction.php",
+    "sha256": "1d8aac1de0cbee7948754dc6d77044295eea04409328728dabf73e6be1d2717f"
+  },
+  {
+    "path": "apps/backend/src/Api/ReadyHealthAction.php",
+    "sha256": "7a70276620fb9d1ce0ece67786bfdd6dd072fb89631be25b8d79ae482cdc67ec"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/ApiMessage.php",
+    "sha256": "dd5d8186e6def941dd390c8f86e8c3ad491bf987bcdd63297816ea311114bd08"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/ExceptionResponderFactory.php",
+    "sha256": "a59707fdb227bf275b289c21f42598ced91fc1f514f4673f60a1805a5e165bcc"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/LocalizedResponseMiddleware.php",
+    "sha256": "161b15b045e3c76f5152ba04f878cc9a0c7dff4608df9528f8eb76bd6653046b"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/NotFoundMiddleware.php",
+    "sha256": "d0260db974503d540494314651fae0830abd38de080c1a37b343ecd9182f9014"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/OffsetPagination.php",
+    "sha256": "4b3613cf8c99809a8d9f82e88b1cddaece4b1100659e20a93a1c61a3471074d5"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/Presenter/AsIsPresenter.php",
+    "sha256": "ded0fd2c48b8ad812c00b7ee6036aa57aaa0e6aea5b09cf386c7503da82e6158"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/Presenter/CollectionPresenter.php",
+    "sha256": "a47c2d338676dbc23fcc68a6940631199f91003e6fb50af551cc9c352a2987c6"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/Presenter/OffsetPaginatorPresenter.php",
+    "sha256": "be2bca65944c980d6fcc26a3dfd174ccdbf9df96986d2b862485e60ee350b606"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/Presenter/PresenterInterface.php",
+    "sha256": "629cbef0f74c5b10c86dd873111a0016927ddf575e715b57cee358f5b107db3f"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/Presenter/SuccessPresenter.php",
+    "sha256": "d155dc7a522c89044c62e4207781c6af15c958a123c13d24735321a2c4a4c0bd"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/RequestSizeLimitMiddleware.php",
+    "sha256": "d1856566cb2ccc3537be1f333b1ff948827a9f70646611276d6cad6a3c85e52c"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/ResponseFactory.php",
+    "sha256": "08386a49ad5f46b04ef0aae2daee1155097be301d00263faf56cb5d95d1402ba"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/SecurityHeadersMiddleware.php",
+    "sha256": "6b924103771f26107831885de3582fadb55950bcdba55e4611c236ec08ee4a35"
+  },
+  {
+    "path": "apps/backend/src/Api/Shared/Uuid.php",
+    "sha256": "c57298b55cd9e01a54ff70777ee7a10597f86c6875d2245e189df50e91ae09c1"
+  },
+  {
+    "path": "apps/backend/src/Console/AuthCleanupCommand.php",
+    "sha256": "095c4c1796e6317e17b7ae103ed1672badb1b06be00466eafb4e16842079b72d"
+  },
+  {
+    "path": "apps/backend/src/Console/BootstrapSuperadminCommand.php",
+    "sha256": "b93b32ca5f2fa5cad5ef6861125fde573f0695aea350e43592ebcd4671b1e84a"
+  },
+  {
+    "path": "apps/backend/src/Console/DbCheckCommand.php",
+    "sha256": "164abd07cda12ed5b23c9a6656d9d8330fc5347d484127f6943e7d6504b91b22"
+  },
+  {
+    "path": "apps/backend/src/Console/ErasureExecuteCommand.php",
+    "sha256": "a6b364896a6e8b47e85bf3d2e90add1b2474a84e2b40136a022b5db6f57fae43"
+  },
+  {
+    "path": "apps/backend/src/Console/OpsHealthCommand.php",
+    "sha256": "f17cf772a46c7d6b4d1edb715afed86f8018e2276cbe69a1a32e3e01863b49a9"
+  },
+  {
+    "path": "apps/backend/src/Console/OpsStatusCommand.php",
+    "sha256": "605689643a02b74b4d1fbfcd27ee445e12d184d1d5c9d77f360210d6a3e35ba4"
+  },
+  {
+    "path": "apps/backend/src/Console/PrivacyCleanupCommand.php",
+    "sha256": "e6907b165db321adac800c7d7a51c238c47cb18b127b0dbb526c834d046ab5ae"
+  },
+  {
+    "path": "apps/backend/src/Console/PrivacyComplianceCheckCommand.php",
+    "sha256": "dca82de1104d645d836a5700de9d0908b6af379ad84e51b866261bebb6d53611"
+  },
+  {
+    "path": "apps/backend/src/Console/ProcessEmailOutboxCommand.php",
+    "sha256": "d6cd9c03e7f04dacc90fbe72f8387d787b8f672b753c333f0ed9834396f0283f"
+  },
+  {
+    "path": "apps/backend/src/Console/RetentionEvaluateCommand.php",
+    "sha256": "e067bfd92612508ce914c6357584a828edcbeda6aa3a89edeb947d0f313ce8be"
+  },
+  {
+    "path": "apps/backend/src/Console/RuntimeDeploymentActivateCommand.php",
+    "sha256": "1a760d2b44e39cc5359b64963718cba58df32023f0d9dadb5300fc204fbae167"
+  },
+  {
+    "path": "apps/backend/src/Console/RuntimeEntitlementsSyncCommand.php",
+    "sha256": "85a71cb31ce62eafdd6208720a471b7659e5eb4d323750a502b97d850193251a"
+  },
+  {
+    "path": "apps/backend/src/Console/RuntimeInstallationInitCommand.php",
+    "sha256": "76efa1791e429c2173867be064ca4dc7c267bdfdea90ace655aaef03656c1816"
+  },
+  {
+    "path": "apps/backend/src/Console/RuntimeMigrationsApplyCommand.php",
+    "sha256": "6d29353932a46f5cc8088d557e216f9e904cdbccda52ef7c9d66eebd78bce650"
+  },
+  {
+    "path": "apps/backend/src/Console/RuntimeMigrationsValidateHistoryCommand.php",
+    "sha256": "2916fd4871bceccd5d2e782eb3839394caf772de23bb7af078e731f3568bddcf"
+  },
+  {
+    "path": "apps/backend/src/Console/RuntimeReleaseApplyCommand.php",
+    "sha256": "63a13de256cf12180fc52ce5ea91a6d848a3180c858abb2bd71208f5ecebefe8"
+  },
+  {
+    "path": "apps/backend/src/Console/RuntimeReleaseVerifyCommand.php",
+    "sha256": "36403d2e976d8894c0577c7c1fd5e7a6b9150a9ca453d62ba457a51bc3fcf8bf"
+  },
+  {
+    "path": "apps/backend/src/Console/SchedulerRunCommand.php",
+    "sha256": "ef53cb69e01505c9d190f3ef14f0be058bad7dfe50aa92acd869748c18095f7b"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Api/AccountInput.php",
+    "sha256": "8891c4f8376b3aa2d04cb8e4f83489bdaf6370b8ea82cc2cd855615af44966a4"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php",
+    "sha256": "fb7bec102aba921bc65c6a6ad4e310e9b5d229bb6eb8d110dd86aece07fb3769"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Api/CreateAccountAction.php",
+    "sha256": "21ceb9fadd901ae73d0344e48f3aceadf726e1a27cc0bfdb8f551c02288d05c2"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Api/GetAccountAction.php",
+    "sha256": "b8c233c6298efe99b8fe78797d12348d6863f4fa0154b552dd00ed36cef04224"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Api/ListAccountsAction.php",
+    "sha256": "3a6b3c3922826c7e6a1f9e60b05b0facfcbee228329fb33e738ebdb7c1d3d8f7"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/AccountInternationalPreferences.php",
+    "sha256": "4f4efd0e383f32fed2f0408ccbaa0d24fb25c14809c30bfb0bc5815a2824f366"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/AccountLifecycleChange.php",
+    "sha256": "836e7ae7a4f063c195cb92878e6683f26ec1d945a17986e56637ac2e7c92c921"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/AccountLifecycleRepository.php",
+    "sha256": "e6850bbbe342f648272c4130d86f312c92e43aecc20126a6121101718273a470"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/AccountPage.php",
+    "sha256": "d29d4e74bda960591bb9af243e8a79c3518282b44fb730a881c69ba66e362065"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/AccountPreferencesRepository.php",
+    "sha256": "22264963e2def5c9ddd6b2a9415b3b577887565f63249234a5c3805bd2f6753a"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/AccountRepository.php",
+    "sha256": "d131efebd1e53beb14b4759f2e540c68a2b4f726feb71cccddc159786bf49705"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/AccountSecurityRepository.php",
+    "sha256": "461dc62d0f45be39029dae3c2ea38a3363f449efee77dd5e5072ccec7511f00d"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/AccountSecurityState.php",
+    "sha256": "3033a3f723bcd559e1db7abd78ce671cfdfb52f924f16effb6444f2c6f79a027"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/AccountView.php",
+    "sha256": "c9b0b75eed9ed3618dea5f607f0d793197acc8a9f5ab36f669aff8e2639c61cb"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/CreateAccount.php",
+    "sha256": "148d28182b48bf96a64ee9154746ec79d83aa0ce5555059c62223b1a482a8153"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/CreateAccountCommand.php",
+    "sha256": "8bbbe41d8ed9f8f856212f278a724b259595bd1fdc6200575bf6297078133c83"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/GetAccount.php",
+    "sha256": "13695a3a280200db0d27c466e232dd25e9fd9029351497018beb12ad986d8380"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/ListAccounts.php",
+    "sha256": "26bbdb58aaad5d94fc562f230673c67c4731507677fa02a8ac5cc91994f5c19c"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/ManageAccountLifecycle.php",
+    "sha256": "1caa66113976ae6236e973409cc3142265334f08af14b53e9ebd89c9b80ecaf2"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Application/UpdateAccountPreferences.php",
+    "sha256": "c70e7b4c736ba049a665fd3154cc8a3409fc2a1890a2601449c1f68bc8492915"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Infrastructure/PostgresAccountLifecycleRepository.php",
+    "sha256": "61498505d4c00a1eeb4369351c8a37644862725a92821423f6c610e5e9c6f900"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Infrastructure/PostgresAccountPreferencesRepository.php",
+    "sha256": "d908f0c17a2a87af264ea32821b060d95f3a7df15a283964961da8c90de02093"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Infrastructure/PostgresAccountRepository.php",
+    "sha256": "5f450a1c421072b8fb58bc6acda4b90d6e90a537038d860514ef103cdfd258e2"
+  },
+  {
+    "path": "apps/backend/src/Core/Account/Infrastructure/PostgresAccountSecurityRepository.php",
+    "sha256": "9f1f9db27b67f09cd6f9e3af8a0683d1de8660a7b11fe45a85c6e35eed26855e"
+  },
+  {
+    "path": "apps/backend/src/Core/AccountSettings/Api/GetAccountSettingsAction.php",
+    "sha256": "8f1a75f74551b582a6ac4e6bba5573fc70965bbdaea59a179451cf93e254d7f9"
+  },
+  {
+    "path": "apps/backend/src/Core/AccountSettings/Api/PatchAccountSettingsAction.php",
+    "sha256": "b5bfcd71d3b1ca68c2e958f7b6841a4d0aa38dc69fe96d65a296d8e01609152f"
+  },
+  {
+    "path": "apps/backend/src/Core/AccountSettings/Application/AccountSettingDefinition.php",
+    "sha256": "6756225a2e4c0cae1a7ca418c64d0025220d1b73346aaffa70b1ce2a88d03141"
+  },
+  {
+    "path": "apps/backend/src/Core/AccountSettings/Application/AccountSettings.php",
+    "sha256": "13e223b5fee1d92fe017a311eb560763136e1c7216f34931555de48495ecd05c"
+  },
+  {
+    "path": "apps/backend/src/Core/AccountSettings/Application/AccountSettingsRepository.php",
+    "sha256": "8676b16dff2962ace7b88d4ff9f050d80b1839aa0ba5578c9492384d2cb371e5"
+  },
+  {
+    "path": "apps/backend/src/Core/AccountSettings/Application/AccountSettingsService.php",
+    "sha256": "ba8fd1794bcd16ffc206d6d05fc08765022b876297e16ebcb9fde84ff99ab246"
+  },
+  {
+    "path": "apps/backend/src/Core/AccountSettings/Application/SettingsSchemaRegistry.php",
+    "sha256": "bfe992ad8100a49b298b751e5f385d80d743ee1c474c4bdbaab9912e5b808b8e"
+  },
+  {
+    "path": "apps/backend/src/Core/AccountSettings/Application/SettingsValidationException.php",
+    "sha256": "e7f2f443ae609eb215de31bf61fe9ed83c5a5d7ea2aac77be0243fb8921eeba6"
+  },
+  {
+    "path": "apps/backend/src/Core/AccountSettings/Application/StoredAccountSettings.php",
+    "sha256": "b06f4a26b702f91a9ca57267f678287e60f48b64e98cf045fb76bfacea8a53c4"
+  },
+  {
+    "path": "apps/backend/src/Core/AccountSettings/Infrastructure/PostgresAccountSettingsRepository.php",
+    "sha256": "08d1dc46cdc2caca14e7b3b30561f9a8900300114294ad027cc90ad973a6807e"
+  },
+  {
+    "path": "apps/backend/src/Core/Audit/Application/AuditEventDefinition.php",
+    "sha256": "49b61d3df4d208db5471b45be632d88162f65a8165683554a775fe46311b65c9"
+  },
+  {
+    "path": "apps/backend/src/Core/Audit/Application/AuditEventDefinitionRegistry.php",
+    "sha256": "6c68489962ce8acc6c5669fd1045e656445df65aa274726822cfa427a86ab64e"
+  },
+  {
+    "path": "apps/backend/src/Core/Audit/Application/AuditEventReceipt.php",
+    "sha256": "92d2175b85bfe412490d35fd085ec4d4adc54eb8966c7523c5505561cd0b8bf3"
+  },
+  {
+    "path": "apps/backend/src/Core/Audit/Application/AuditPayloadPolicy.php",
+    "sha256": "1da9ac2188951902bc03f89c29180c73624e8cf1045d4c2ad2226d5d75e94852"
+  },
+  {
+    "path": "apps/backend/src/Core/Audit/Application/AuditService.php",
+    "sha256": "f87b7c269533cb30a00a367b94e70184e814629852d64326585626cde0608332"
+  },
+  {
+    "path": "apps/backend/src/Core/Audit/Application/AuditWriter.php",
+    "sha256": "2b8ae876d8c6db2abb324217d920a18ed36eb821f3c60716e3860598c83e60ae"
+  },
+  {
+    "path": "apps/backend/src/Core/Audit/Application/WriteAuditEventCommand.php",
+    "sha256": "cf742b2f2490e25a138205a7e8c4fc26564960f0c18c15b7af9b87b48959006f"
+  },
+  {
+    "path": "apps/backend/src/Core/Audit/Infrastructure/PostgresAuditWriter.php",
+    "sha256": "43c3b793eac6298953ede13328a58663564c0092d0cdbbe02fdbe033a5833edf"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/ActivationAction.php",
+    "sha256": "0abec1e76644bb04e5038ea7a7feb91299fc47af262797a895748fff93d13554"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/AuthInput.php",
+    "sha256": "768b3631d90bc4058c62c68181a00116e464eb44febc5dd57db299e3682e8c63"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/ChangeOwnPasswordAction.php",
+    "sha256": "3918cc2eb70d35ed5f54651b74196297fb876731eb969c97d35b1529c2cc9f3f"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/CompleteRequiredPasswordChangeAction.php",
+    "sha256": "40c9c9d1eb9ae4f4b66ef9ee570758b9d98efb24afef1d3ce659d103ba31088f"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/ConfirmPasswordResetAction.php",
+    "sha256": "cf9b01274fb384751f6895d816ac8301dc7a8b0b34e3f1fb31c68987edf8fc92"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/ExternalIdentitiesAction.php",
+    "sha256": "ad5997704d61197d3aba3df9881e5043b25296160f8af30fcd76a8260a8b6291"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/ExternalIdentityLinkCallbackAction.php",
+    "sha256": "81b3a24e9a03e7b8badc793c34966fa6585545d7c980405f0a74dff0a99638a2"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/ExternalIdentityLinkStartAction.php",
+    "sha256": "d71ef78c4f878b9aa67235b87079844bafa29064786e39518ffabbb1f657406b"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/ExternalIdentityUnlinkAction.php",
+    "sha256": "79b25d9caeda009076c5616ed4c753c2ef16b6efc895433767f30c9f6d10e6d9"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/ExternalLoginCallbackAction.php",
+    "sha256": "1bf2d28d0046c12e77df7165143468ae03080123dc24c2ea025c990a54120e1e"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/ExternalLoginStartAction.php",
+    "sha256": "7abdf12ae53ef7c0bfffae8d6b4b988bc03169fef6bfa3b72346d26203caa940"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/InviteAccountAction.php",
+    "sha256": "2a8e062a455ee10b6555ebcba507af3be602385df0ca1b0b3ae846fe26856287"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/ListSessionsAction.php",
+    "sha256": "739592837eefd8e17d09eb0c838493ac7e0dd7fc04fb61d454abaeec3c8205a4"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/LoginAction.php",
+    "sha256": "f877585cefdcc9705da5324a63783a6ddc84cee06795d92597e3a61bd62d9a14"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/LogoutAction.php",
+    "sha256": "798b329c13d44075a9c6a9d95d3644a23eb06c1433542d0326ed224aef775de6"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/MeAction.php",
+    "sha256": "dd4df7529e00d5de06d59057745cb7d76d4968e85d1f1bc4ad0be1b3d2b3aff7"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/MfaRecoveryConfirmAction.php",
+    "sha256": "9842062330b898ef88ee5407f72d7898584dd3e45d11461dfb99ce78b6f96128"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/MfaRecoveryExternalCallbackAction.php",
+    "sha256": "2a9c00124d6d54886496a3a3d48e6c105930cd7426da6bcd784945238123a403"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/MfaRecoveryExternalStartAction.php",
+    "sha256": "db31723dedab111218fad70cd838430c355b6fd2794e2b0c7a8e5c8d0ac8e9ce"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/MfaRecoveryRequestAction.php",
+    "sha256": "39c9377dbdf7ecd20987519f8697e5d21be4b76dd165942573fc83ab10912367"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/MfaStatusAction.php",
+    "sha256": "9275bb7ba1979039dbf33730799fddf2037b16d210cc7151fbf6bee019e49955"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/MfaVerifyAction.php",
+    "sha256": "23e76ee26793a9c0b65570693ecf024e7d59ce2f6a668ee4bb444955b168ad2a"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/PasskeyAuthenticationCompleteAction.php",
+    "sha256": "6733fe7fc0692df517737961476751e39e5fe78405ec61bab8be0e7b655c234f"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/PasskeyAuthenticationStartAction.php",
+    "sha256": "08d038ef98854788be328d826ccce9a9dc9f165c1b75356340c405b5fbc3d200"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/PasskeyListAction.php",
+    "sha256": "bf5cebee9cbe56297edf30d9a01867d83dd2231d9428d11aa6cdc03726f10c87"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/PasskeyRegistrationCompleteAction.php",
+    "sha256": "556a575a272b4abbc4066184f325a67eb41658c5042ac1cc246f133b0b023c23"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/PasskeyRegistrationStartAction.php",
+    "sha256": "0f432355181695c377367f6447f5bedb2c40b43d27af261a0e87761043ed6d5a"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/PasskeyRenameAction.php",
+    "sha256": "615c9c0cd368794a56ce0130e6765c7bea000c769631609b87da40c19f1de0a3"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/PasskeyRevokeAction.php",
+    "sha256": "6f43470b9142b923facfda06fda09d5600330ffaf240b1ccfb2268b2c8cc941c"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/ProvidersAction.php",
+    "sha256": "a3bb44ed6d1864a19e0f79c0979433c250b124872b036e86ea840e27292c45db"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/RecoveryCodesRegenerateAction.php",
+    "sha256": "8c576757efbeb4b504d3f6871516831971b19426ed6241b9a8fd6e534b5a33a0"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/RefreshAction.php",
+    "sha256": "abadfecd6fafe1efe9d570eec83cbd50030fbe41a8f89f6cb92abb542262217a"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/RequestPasswordResetAction.php",
+    "sha256": "19a58fa3758aa856d5b7c9ccd05ee4f2dc068070e7bb658d4bf0c1ceee861245"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/RevokeOtherSessionsAction.php",
+    "sha256": "301ede4be5a68c983d0a4203d720d9d6c1b4db22e59c967d7b2c9832151cad4f"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/RevokeSessionAction.php",
+    "sha256": "fdb0db34828209f9cd6f426db60211141c76496adb6c2fed843a39e547850e37"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/SESSIONS.md",
+    "sha256": "71d6733d44311a4761f6042434a1b86f3bce443b8658dfb1f2a837ebcafa06a1"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php",
+    "sha256": "a957d45cb026ee07e022c1c8e38a356bce4c558f9ffcebd61c02297d4ea354d3"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/TotpConfirmAction.php",
+    "sha256": "9b0a4abfaa76eefd7b742138e8ba01e8baaeeccaf468a8cf1e27d1c749693ccf"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/TotpDisableAction.php",
+    "sha256": "57804d76999abd3c8dd8be4a5603878374af97e23863c4095e6ec2af2f8a6c2b"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/TotpSetupAction.php",
+    "sha256": "24acb6fce6cd8b0145327bf1424d856e722812c58f5bdfbf3029d281ff766b89"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Api/UpdatePreferencesAction.php",
+    "sha256": "4b333347d7706db3cd4f04d852a5d924279e1efc3e8bc9b1716d60bea60af3ec"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AccountAuthenticationMethodsPolicy.php",
+    "sha256": "4ccc792a1c8aa303c1d22737b7f4aa981ebada8b52f6e5b42078fe2595c76486"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AccountSecurityNotifier.php",
+    "sha256": "fa81802aeda505bccb576b2e4e1c7e558acd0afabffd5920036bfc309037a117"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthChallenge.php",
+    "sha256": "3e374f90475c2b1ccf8cc35830dda3c79d83738e0cdbc20d21564d8905d194c2"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthChallengeRepository.php",
+    "sha256": "509d30ee3e802942b64b8c67abe7c54f6da2dcaeb4efb67bb1a2d8427ddbab5d"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthCleanupPolicy.php",
+    "sha256": "6a39871f8b0eeb86eae4a09db7f5e4f35117f9b07b3bb237105c5e093d3bd0b1"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthCleanupReport.php",
+    "sha256": "f6f913225f10b8fcc2468fc18a810120ad03ad051ad35bf7fa20ef2ac79ed6eb"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthCleanupRepository.php",
+    "sha256": "2a982ab0ac07be11524fcd6e69dbf5f037e195d06de555291c5e980c0186eb78"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthIdentifier.php",
+    "sha256": "fe7d40f524f46f34c6b8e18a7643c3e823f14a5a6c4881ce102498b1777981cd"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthIdentifierNormalizer.php",
+    "sha256": "80a03a63d60ae844eb69d16f84e734c2c2053e61cdadb411df95c40bd740d398"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthLinkBuilder.php",
+    "sha256": "f47ccdb627b362f949fdd18e028f160c1ea921b428e0221b1d9125cd10667cf6"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthProvider.php",
+    "sha256": "2ce34b151fbc11dd5ae582462319b465aa2d683f3352a2d4cc7f4dc3df7bae45"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthProviderRepository.php",
+    "sha256": "39f5d1a9705e53601cbb32b8680928f665e3466a076386549cedbe7559f64322"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthRateLimitPolicy.php",
+    "sha256": "ebe93cc0a57a402758efc5a2f5e5195edc3c76bbda50ca972b3ebb353e8ef6ec"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthRuntimePolicy.php",
+    "sha256": "605c06aa6638a3e7f3b05ba302071ec6e7d76c7c31304014e3bcc6fd5360205d"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthSession.php",
+    "sha256": "85e78c3128b7fab4d5d40b652037aa05c9a44ed5fe78c1f308de4605630d35b6"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthenticatedIdentity.php",
+    "sha256": "dfc2c660186875538c91638348a4a952688686790201a066ce8e5223c3d53ca2"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthenticationFlowResult.php",
+    "sha256": "efe3cdb250a40d088b593074011278f9b4c866545aba5d930b25ae982eaabe2d"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthenticationFlowService.php",
+    "sha256": "84423b98ae5cf5f718a46a249a845cbbb9d8f3a2f09f1af406690584ce6177be"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthenticationMethod.php",
+    "sha256": "b5a65d61e7eb0b05d2df4a9e4f8977da9e2bf1957e80ed823e3df1a19930ce2a"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthenticationPayloadCipher.php",
+    "sha256": "ba8cbd15dbc1590740188b7bc9cf9fa05b1cfec7178eedddc992e26dd610c79d"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthenticationResult.php",
+    "sha256": "c6163796481c8d48fb0ddb1fcdc797d43d3dacf50f81b333b5d95b0f315bd053"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/AuthenticationService.php",
+    "sha256": "90d2cabb3d1cf529c81c0838965f4e0e57e22f534540a4a0cf840865d48d49c4"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/Base32.php",
+    "sha256": "d533aca9c339781796d7483bb28ee7347bffeee516245dfc3328cf8607c522b9"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ChangePassword.php",
+    "sha256": "de25eede089e058c406d44275900212725c01b50b6eb65ac734dae3f4985c71f"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/CompleteAccountActivation.php",
+    "sha256": "102967174000de2dac2fc702e1c79943a40fe08dc55d52647b5fd1e274e0039d"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/CompletePasswordReset.php",
+    "sha256": "9e483a85edd49eb6d2b63089b03b3bf85ee469f08d935ad616452994e319fe7b"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/CreateAuthChallengeCommand.php",
+    "sha256": "5ed1e5759e1b464880c9906ee5af41f015a4afa7c07e76f712a0f8b6aefb0b8e"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/CreateSessionCommand.php",
+    "sha256": "d110f4bfb4d0d3e7e8552a52dfe3c9876d9b954049543030a16244f79e8c3a0f"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/CreateTotpFactorCommand.php",
+    "sha256": "91ec6ea37ae6bdd17c375af81f7abe057b33b17ff0abc47a82d6215090c8fe60"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/CredentialLifecycleRepository.php",
+    "sha256": "60f9ef3cc00d4d44a6aad0b6279f50347a082d80cd36cecf57149f20fda5f867"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/CredentialMutationGuard.php",
+    "sha256": "e465ba9abf420588cddde89f5bc5e2403e3ec8ca1b4a80d26d47ccd1eec67539"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/CredentialTarget.php",
+    "sha256": "2e246c44f13d5a647963169dfd0717dee03536bd95792abfc86d77daad45268b"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/EncryptedAuthenticationPayload.php",
+    "sha256": "0170f256f258a10b0c71c7eef6af3d9d284e53e3160b685d7080265fa209050b"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/EncryptedTotpSecret.php",
+    "sha256": "0ed779ce5d97a1063bbff1f0b27261036c101db23b8fa54adabd2da222399697"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ExternalAuthProvider.php",
+    "sha256": "e0c5404339cd38c5a5f9412e947f3ccf55ae8f23529cafd582662d5a7b55272d"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ExternalAuthService.php",
+    "sha256": "434f17284b9045ec419b35d0bfd124225f6c1a201417c69fadf77857aaceb430"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ExternalAuthVerificationInput.php",
+    "sha256": "b15b8e15e449cec181523503d65cb29f3e7b440bbdf6aae3f91245f98bc3591b"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ExternalAuthenticationException.php",
+    "sha256": "62e1fe1acfbb3e44105200e6b5a1e4b463240df70bbbb4d50d2b7d15279e976c"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ExternalAuthorizationStart.php",
+    "sha256": "c1ae6139b906b050646ae3860e5c48f1ebca4e514ef7428d8adad18f27ca489b"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ExternalIdentity.php",
+    "sha256": "92b8c89b5d3e72df1325bdb1ffe4ef73cec55f2a6bfe66995149f32f557c1ecd"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ExternalIdentityLastMethodException.php",
+    "sha256": "ed69f62700954c276eb7f7fbd993656f3db3d258fe4020dbaae6fa0bec8b19fa"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ExternalIdentityMutationPolicy.php",
+    "sha256": "da050dbac15a08eccc265a5a9a1ee9a8dd02bf98bf6a82b45b80303b06cd470e"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ExternalIdentityPersistenceException.php",
+    "sha256": "1460ce5c4b4e9ca23c370f04586f93c46b431494e3eddd7a10683157a0ce57a0"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ExternalIdentityProfile.php",
+    "sha256": "7777ffa9ff3e57f7a07944b39b7969d3d887a6d55b7633fd437bf5e932162507"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ExternalIdentityProviderCode.php",
+    "sha256": "4f3decf26ef96e1f77479ece39cfc1850d77066437b4da5598325acb8fe09adb"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ExternalIdentityRepository.php",
+    "sha256": "4109b9b7e71bebb7f3114c77b049fe90159019d5e25acd564af17b1e33b70980"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/IdentifierRepository.php",
+    "sha256": "62cd05dec55668af8f24ad4471ebacc1857968b7bec40d59bbdef489b3f894bd"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/InvalidCredentialsException.php",
+    "sha256": "022a09b4b8d630b306f61e3d1f779b15737d7556993a9bee2b3b78fa58e9c5a0"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/InviteAccount.php",
+    "sha256": "64a32236456f6298e0b1207d837a015b7b6526c3d4ae50a80a6851dcb4ee6011"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/IssuedTokenPair.php",
+    "sha256": "436368b298c3acee4a240baf33e981d3367dffe1ee2bbb77ed1dea30fb872184"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/LastAuthenticationMethodException.php",
+    "sha256": "aae5619c02b4e6bbed9688a1b0007b86f9c653eda007360bdfab6c39766b453a"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ListOwnSessions.php",
+    "sha256": "d466f6a9c7263c6203f91c3a5d6cc4cb917fab78658fc4a54aa1883efee60a3e"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/Login.php",
+    "sha256": "752bc21bd879c5d551b3d5056ec5cd1a79a8baec0432dfcbba2f19734e7e82fd"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/LoginCommand.php",
+    "sha256": "e93eff031d60d334f918e132dd6bfdac53fd4cfbb5e8075f083c39521611a998"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/LoginRateLimitedException.php",
+    "sha256": "1186ede83a4f2f3b14cd8eafa7215f312df71044f411744bb77f33d28177b0ca"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/Logout.php",
+    "sha256": "d0cad814425bbc05aec1c4a3b96ff5ee044bd771ecea3992da99a6116d609eae"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/MfaManagementException.php",
+    "sha256": "c4fcfe18b2d96fedb1ffedebca067020bdaa2443870e3972a0d6d841d427532a"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/MfaRecoveryConfirmationResult.php",
+    "sha256": "9e504d6ffaa3d59a5f11990b2afa6be4cc56a0b3bc0b8bbec933ce7666cf71c7"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/MfaRecoveryFinalizer.php",
+    "sha256": "724926f544de92b4638d15005505f9be4843fe22e84d829c0c8bae2419b98511"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/MfaRecoveryService.php",
+    "sha256": "7d41168af03a92de2cf44d725c8463fa06ab5901166cc4a1656bd853834695ea"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/MfaVerificationException.php",
+    "sha256": "449b623a21aac6a6e054849d1898dd4a9800da95e97fdf525e7443b60e598fcc"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/MfaVerificationService.php",
+    "sha256": "b97251d19f1f7f914c074ed296159ad8dc894dcbe8564181aed3d518cf056882"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/OidcClientInterface.php",
+    "sha256": "670b06e902d39e0518d15fd0fff9cdb8b11c7075cff515265e27cddc828da19c"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/OidcClientRegistry.php",
+    "sha256": "7f5d859e44202bb7d0c7aa6c5c728ca924287f2284d3c6ca1a063b5eec799348"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/OidcClientRegistryInterface.php",
+    "sha256": "3405edfab71d0b92f5242eb9ecadb4fb75566684e21b50522e7834425e4e08cd"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/OidcProviderConfiguration.php",
+    "sha256": "3b4c5ce9dffa75f98ca35c249aa63f0a203de5c2e2edb10ca9fc82e60825699e"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/OpaqueToken.php",
+    "sha256": "dcebd62a859c7f3b73b24a40e4e6a6dca561d70103f83b6775ccd4a2f6139bf7"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/OpaqueTokenService.php",
+    "sha256": "66d6e6078c0f6432168b63297f152d5e3e14e609d1572985fb17a9b02952f815"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/OwnSessionView.php",
+    "sha256": "14100c6f5922ff5a5ecff452780d74c077a0be7a00b59bbc70e608b38bdafe88"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/Passkey.php",
+    "sha256": "d2bdd29e6743201cfe32ee040d184f354b4610e8807c8dcc0cf9cb4cb46cbf89"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/PasskeyRateLimitedException.php",
+    "sha256": "c40a7e504292f478448a0248ee58a2f81e2d1302c3a561327f3cbc3a3f3e091b"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/PasskeyRepository.php",
+    "sha256": "3c13b6b373015395570c0b35661cbdfc09a46dea7e0cd24d6abaabd838f92f1a"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/PasskeyService.php",
+    "sha256": "3614c45d94a0c2e99540b06c65191d743dba07be0ecd7b61148014fcfaed09e7"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/PasswordChangeRejectedException.php",
+    "sha256": "e1abaadf2832276880c6271976b1bb7f043f31e85b8b0c7a278b146217ffd033"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/PasswordCredential.php",
+    "sha256": "55c715f1ef67b89998266829ec3c30b18fcd2ed517edd2c41c1d84b9d6e2055d"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/PasswordCredentialRepository.php",
+    "sha256": "446cf353735e7157bd71aa50e732e48db76043c7194ddf42cdf20bd6be327d47"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/PasswordHasherInterface.php",
+    "sha256": "34206af4cfa48ad373acde6e8a7434ca0aa110688dfebfa716b0baa240591b2b"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/RecentAuthenticationPolicy.php",
+    "sha256": "a9204e9ef827108fa53e2b5fba80c8628cfde5b47a6385ff2f6b7fa08d93a575"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/RecentAuthenticationRequiredException.php",
+    "sha256": "b63d306f584ee77726d342f2482b9d82aa3ef7db1e3cdffc724baaf1d2f7be08"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/RecoveryCode.php",
+    "sha256": "91dcd075cd59c28577c3edd370939844627ce94f04c33964d975bb8a572dbc39"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/RecoveryCodeRepository.php",
+    "sha256": "900a4b4c585ce9a48b8c251f11f9d35f92c9b5f6797fee9b7f6de218545c924f"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/RecoveryCodeService.php",
+    "sha256": "3b534b5aa63648f36c4dfcd721126ddeb3ae9b578977a0a990f5300160547a8a"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/RefreshSession.php",
+    "sha256": "93d43c0e3590854b11f87da77593e8b55ba008c0f1dee1f50a3bcfae8e331ee2"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/RequestPasswordReset.php",
+    "sha256": "12e058542d5972b01385e9520a3124a910ced9ae320af2dda1ae9055f3640a5e"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/RevokeOtherSessions.php",
+    "sha256": "c0432050af4bbb7f308f148563e6f8073707d50708a424febcdca8168f3d35d3"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/RevokeOwnSession.php",
+    "sha256": "d4636dcbce4defb018aa1a9c7fac61aaa95b974575cbdc0470c48ee55daaf1de"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/RotateSessionTokensCommand.php",
+    "sha256": "a1cc5fb9d80af5d296b4052ac3b01c146eb60c9e738220424153f9bf72a35aaa"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ServiceCredentialRepository.php",
+    "sha256": "55b2b28d0afcff90400865bf7f13543022f4d74a34e29488e1bed22d49b1fcfd"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ServiceCredentialScopeRegistry.php",
+    "sha256": "1259cedaafe79dfa3526ba0c41b8c0a46ca86ef979c46fc91f1f20494b12abb9"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ServiceCredentialService.php",
+    "sha256": "aa0df112117e3cb008d8ea90c0c03f96fd069a916bfcd90c8e7fb7e4b8b957b3"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ServiceIdentity.php",
+    "sha256": "c08f3e706e6d2bd4fdb326d1c340cccb0744cf3cef30cb643629ae471a68c907"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/ServiceScopePolicy.php",
+    "sha256": "92fe745c8f3abab430ec4be0cfab84ed06813dc1006ed73adfc2bd4bb1acd89a"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/SessionActivityResult.php",
+    "sha256": "674668e6145e25e3cb169f58aa91b75650a0159cbe56fdd51dc8edf30d41be05"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/SessionActivityService.php",
+    "sha256": "33f24d8fc6ae331689eb9b4b824c63ef356ac649bb36d5a5152ec9e5cae1ffb9"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/SessionIssuer.php",
+    "sha256": "be2e4b8e7d44427a33cca4f495ad6e9fcba3bbca21c225dcb706fc5b0a2fc1a7"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/SessionRepository.php",
+    "sha256": "7be6efab3a3ffa7d6d77b36086fea7d9cd0ce69d344ad320b5587d92a87283c8"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/TotpFactor.php",
+    "sha256": "5d9ed6dc8a3825d1c0a45dd261dce4d93531fa51e3c3dd82855d0eb40eb42e63"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/TotpFactorRepository.php",
+    "sha256": "6cea2032c0271ca7ed905ebc7f9453a1d858d3ea01f7aab07d4513f4a8101041"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/TotpManager.php",
+    "sha256": "36f7e25111a03cdd79979c3da2cddb967618130c557bef931d284258dfc11645"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/TotpProvisioningPolicy.php",
+    "sha256": "e37093dd293495bc19a09d755265d0fd362c607056de6cd464ea51b2e1612375"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/TotpSecretCipher.php",
+    "sha256": "c62bc09e4eb11b45980f259f4b0074db7c5bc88b2a1397039a7fd05cd621a7d1"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/TotpService.php",
+    "sha256": "9edbf1dee457fb814341ae355a90fa538543f3035b60d993e2e2bdd984ab8a49"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/TouchSessionCommand.php",
+    "sha256": "7779aa17333fe63869506cf743a9f7c31c304a1d660dcf4a38a729ffd23fd907"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/VerifiedExternalIdentity.php",
+    "sha256": "dc953493b97b5ceef9edec949edac884cfe8033d85f5c2436d449973608cfaf4"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/VerifiedExternalIdentityService.php",
+    "sha256": "07815fedfe4a57e01f5db7f05a3010b90c16f5fd2bf7e6748739b51d3fb462ce"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Application/WebAuthnPolicy.php",
+    "sha256": "5383c442c8b69367a678180713c8d9ce34fcc84df8f19e75b2a5d125bd3add0c"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Infrastructure/GoogleOidcClient.php",
+    "sha256": "dd63c286bb0c256e2bb3963a531596dca263722f5aeb9c393f9b671e21199dbc"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Infrastructure/NativePasswordHasher.php",
+    "sha256": "ec783d2086ffb85d514330dacdb7ae1858d8bd59e7b31d78155d13881c68eb4f"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Infrastructure/PostgresAuthCleanupRepository.php",
+    "sha256": "d5aa4db887d7aa57b6a62e45da6be532c089556bba585caddb6337d54bfdf6fa"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Infrastructure/PostgresAuthRepository.php",
+    "sha256": "d07fc3c3fa8833b3d85e2fa6bc1f18ba420b35d65144334a2a9f2e92954cc777"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Infrastructure/PostgresCredentialLifecycleRepository.php",
+    "sha256": "09ed7cdb6389f584b01b8d1e5b2955e91de4b127d7bf35e127af2afd873869e7"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Infrastructure/PostgresServiceCredentialRepository.php",
+    "sha256": "aaec4af660216331658ed0ccc42ba1926b376f724197e12f66d9dd8b3e615d1f"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Infrastructure/RequireAuthentication.php",
+    "sha256": "49f926dbdd4acbfd6087f977675a78b95292ca575e3491ec4f72260c3b6bc531"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Infrastructure/SecureOidcClient.php",
+    "sha256": "01decc1aadd96b46c149500db3d486c4e1c42b4391100527a522c0c6dbf13fce"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Infrastructure/SodiumAuthenticationPayloadCipher.php",
+    "sha256": "47232d22c358ad17c7b153d612d3b804b314342128d119e136d8a182ad68c48c"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Infrastructure/SodiumTotpSecretCipher.php",
+    "sha256": "4bfbe5e6ff80f551cc4c408f22332740d8a16352003f54992efd929992d13c08"
+  },
+  {
+    "path": "apps/backend/src/Core/Auth/Infrastructure/TelegramOidcClient.php",
+    "sha256": "e514d5096c9e854e136b336728ebf42d181d7e8d09ea4bdea2b647c06456e36a"
+  },
+  {
+    "path": "apps/backend/src/Core/Client/Application/ClientContextResolver.php",
+    "sha256": "5925d74c5a151b3fb36cc9808aac1f357102b367dd5d78c03655f584a4ec73f5"
+  },
+  {
+    "path": "apps/backend/src/Core/Client/Application/DeviceDetectorInterface.php",
+    "sha256": "1f37d3e09fe6a311ae0b7c7d291a5d9da2e2dd5c4440ebba975233d8463f2a21"
+  },
+  {
+    "path": "apps/backend/src/Core/Client/Application/FingerprintService.php",
+    "sha256": "58a40595e9e820c7af628e70ea378c4ad6bc1146f368c6cf23842a8f052aca46"
+  },
+  {
+    "path": "apps/backend/src/Core/Client/Application/IpAddressResolver.php",
+    "sha256": "99afbf22e8c14f8a8f1f5c960debb60d75d26008ee17ddc7542d727095d53e23"
+  },
+  {
+    "path": "apps/backend/src/Core/Client/Application/RequestIdFactory.php",
+    "sha256": "90571e9c4efdc3c2bb35dd40b8c89100c95117217947d00a74cfb91fbd00873b"
+  },
+  {
+    "path": "apps/backend/src/Core/Client/Application/TrustedProxies.php",
+    "sha256": "4f4bbedbf08121dbf3e765ecf6a0128ce62b105d7de6b339ef2266d707573beb"
+  },
+  {
+    "path": "apps/backend/src/Core/Client/Domain/ClientContext.php",
+    "sha256": "2f62b8f256b3d74b2c253df6b5f492c080fca905affe605b8396d2340ad80c9f"
+  },
+  {
+    "path": "apps/backend/src/Core/Client/Domain/ClientHints.php",
+    "sha256": "3a062a042dedbc824adbc7180058e29025b6fc9ad72ded0ac759dcd262dad611"
+  },
+  {
+    "path": "apps/backend/src/Core/Client/Domain/DeviceInfo.php",
+    "sha256": "4d89be698eeee6073d84614fc8663251b9ff66d7342cc54733eac1e402c80da5"
+  },
+  {
+    "path": "apps/backend/src/Core/Client/Infrastructure/ClientContextMiddleware.php",
+    "sha256": "5b09db9010671ec1fe2deff5fa352fefd72f7c171ec4633fdcf478625a89d09f"
+  },
+  {
+    "path": "apps/backend/src/Core/Client/Infrastructure/MatomoDeviceDetector.php",
+    "sha256": "63f24ca888186059a6e3cd6a0880866e0894f80d3029d587c257a8c26dc9a1a7"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Api/README.md",
+    "sha256": "d814ad0aa915420edbbcb031dd4ba0e8d86ba4f945250b6ad1c44b0473e7191d"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Application/EmailEventPayloadException.php",
+    "sha256": "c3378c14f867191fb1784ffe21708cbbac6663c83657f04e8307875d8f070ea5"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Application/EmailEventType.php",
+    "sha256": "01c97f04143633a141da31e92467ae85409ef85d75c8dbfe42fb587be141c0b2"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Application/EmailOutboxPolicy.php",
+    "sha256": "12e483c7e54a7cd717c70192590a59fbb814352c772004060b1bb3fff7ce49c3"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Application/EmailOutboxProcessor.php",
+    "sha256": "9c90ea1a4c0e911a05db14e46021a12ae7daed10095e6de7df9f0df825908de0"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Application/EmailProcessingReport.php",
+    "sha256": "e504b43eed80fce4f6e3393650d7575ecfe92ffb3e204da639d748d489267a40"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Application/EmailRequest.php",
+    "sha256": "86d835fb83b299d492a0ca2ba6237e763c39cd5d9de278925306fd180ea5e4bc"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Application/EmailSenderInterface.php",
+    "sha256": "66bdceb0dbd838cab9a7d0d7e77c4acd7307d12d1664c9b88bee071b2a55e52f"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Application/EmailService.php",
+    "sha256": "290d0f5a6f76dfbe7d43aa51f35ea97369a4daf0ce73bede83f62415de6340dd"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Application/QueueEmailCommand.php",
+    "sha256": "4a6cdb0394d0f8b723b13b2093061f75515da8ad934fb46d769cf2eeb491c761"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Application/TemplateRendererInterface.php",
+    "sha256": "2472a92e0efc3b66a28bf52202a4e014f70f3213c419845506fd270136d575b6"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Application/TemplateRenderingException.php",
+    "sha256": "1b3cf66150950f54c82a2cdec2ce94ce3bd94e5927da9d3f0e1d5dd4ad680c4c"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Domain/EmailDeliveryResult.php",
+    "sha256": "40f9ac9b5603df764463ae0f93738ac00044c5aa437d75436baf3a3f70f0de4a"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Domain/EmailMessage.php",
+    "sha256": "7d4ce73a3de23c9df2493e468492a3f7842c0816ccbd6a51a40958d1b3b532ab"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Domain/EmailTemplate.php",
+    "sha256": "042905e444430c635428db28c09c6a17ae9c7e72da8fca96d571c821b83103fc"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Infrastructure/FileEmailTemplateRenderer.php",
+    "sha256": "2dbb291432bfe796f3c3355bbb7f33351a20b95fe13e08740c519a94eb24f7fd"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Infrastructure/SmtpConfiguration.php",
+    "sha256": "097778584a966064b62fcdd4ff8f3d2e49ec7533de845201a58fd14f8d8233ad"
+  },
+  {
+    "path": "apps/backend/src/Core/Communication/Infrastructure/SmtpEmailSender.php",
+    "sha256": "318c8c93b8acdd43a7965e103dfe7645e6e911ce9bcdbacd89c3e26f7d21af34"
+  },
+  {
+    "path": "apps/backend/src/Core/Consent/Api/GrantOwnConsentAction.php",
+    "sha256": "386fa6073bd85edf3de0f9a5e5144cbf4e35ac62dcf3e141bae67f798be1bc02"
+  },
+  {
+    "path": "apps/backend/src/Core/Consent/Api/ListOwnConsentsAction.php",
+    "sha256": "a382173b67ebcd1ec7222ec2c956f000a6ab0b3ee29d78466186e8a5eba287ec"
+  },
+  {
+    "path": "apps/backend/src/Core/Consent/Api/WithdrawOwnConsentAction.php",
+    "sha256": "31ee0bc1c5e1ba0a05a367d65c9829a20f17e6a6004994db50225fda62ecfcbc"
+  },
+  {
+    "path": "apps/backend/src/Core/Consent/Application/ConsentDefinition.php",
+    "sha256": "e6d0905fd70350f07b5d5d17ca6e503944d556688062923139a87a67384057ca"
+  },
+  {
+    "path": "apps/backend/src/Core/Consent/Application/ConsentDefinitionRegistry.php",
+    "sha256": "d005c42dda1525bda55e10a5f77d11d222055d8f486d8b77a73690b245760e85"
+  },
+  {
+    "path": "apps/backend/src/Core/Consent/Application/ConsentService.php",
+    "sha256": "e97067ce16a082e433083afe18d0f585b170c750ca14dcad2a13ffb43bed931a"
+  },
+  {
+    "path": "apps/backend/src/Core/Consent/Application/UnknownConsentException.php",
+    "sha256": "cddacf4c78d0b5254a0dd030b166fc2557f5bc35781ebe1350eafa68b1cc8f5d"
+  },
+  {
+    "path": "apps/backend/src/Core/Geo/Application/GeoIpProviderInterface.php",
+    "sha256": "88b3c8ed1120fc6380de3a0027ebac64e6c6c3a4cfa65a25873ef79ffa7d5e4f"
+  },
+  {
+    "path": "apps/backend/src/Core/Geo/Application/GeoIpService.php",
+    "sha256": "1fd6ca9ad96c2ad94c3db8844d3fcb0abf8aab7d79d24f9864accf3c2a3147ea"
+  },
+  {
+    "path": "apps/backend/src/Core/Geo/Domain/GeoLocation.php",
+    "sha256": "473c4f197408b79a20c715f1067fb46ee9ea93d4d2b14f78982a84f39293a174"
+  },
+  {
+    "path": "apps/backend/src/Core/Geo/Infrastructure/MaxMindGeoIpProvider.php",
+    "sha256": "8bed0780166d3b47bcded1422a5b684a89cc74d891c62e25dbe2cc6cd43b2500"
+  },
+  {
+    "path": "apps/backend/src/Core/Geo/Infrastructure/UnknownGeoIpProvider.php",
+    "sha256": "65b470c8ecb1a7b85405e94442cc6f5ab58009cf503453d629fb9fd6709e52bd"
+  },
+  {
+    "path": "apps/backend/src/Core/Internationalization/Application/LocaleContext.php",
+    "sha256": "fdff5078724d68b0b367866264cee1cbd525d5234254a0954adcccf643996276"
+  },
+  {
+    "path": "apps/backend/src/Core/Internationalization/Application/LocaleNormalizer.php",
+    "sha256": "577415b25edda22f429e049aadccc435789628e9abd732aff1b356001b624b52"
+  },
+  {
+    "path": "apps/backend/src/Core/Internationalization/Application/LocaleResolver.php",
+    "sha256": "4e97bc29f9c11c6590e9526d0054519fd46d92e3cec2889ac516bcc32d7639b1"
+  },
+  {
+    "path": "apps/backend/src/Core/Internationalization/Application/ResolvedLocale.php",
+    "sha256": "39c033e240786f10c6cf7911b88d46f6e09b02e4d110baed88a92b40aa5fe089"
+  },
+  {
+    "path": "apps/backend/src/Core/Internationalization/Application/SupportedLocales.php",
+    "sha256": "8263613e025cc3a4c1df3f499b2decd6913b8b4735220a910c92b3441626b0cd"
+  },
+  {
+    "path": "apps/backend/src/Core/Internationalization/Application/TranslationService.php",
+    "sha256": "62f0e5f07c5207bc96cd6c3b269959b3b9507343c557e4f32951588d3b1c3df8"
+  },
+  {
+    "path": "apps/backend/src/Core/Internationalization/Domain/Locale.php",
+    "sha256": "97b44e0dc4ac011b07ac7eb5b13537a7531f30b8ccac6f479963366a7ee9badc"
+  },
+  {
+    "path": "apps/backend/src/Core/Messaging/Application/InboxConsumerGuard.php",
+    "sha256": "dad57a00e5aec31ff6a4ffc535ff2f7b480aa5b22a95ab6fc2f54b82a54cd02b"
+  },
+  {
+    "path": "apps/backend/src/Core/Messaging/Application/InboxEvent.php",
+    "sha256": "370646e7044867b80198b30c51ae5806a126cc9d2ff68767aeb4660d945e2824"
+  },
+  {
+    "path": "apps/backend/src/Core/Messaging/Application/InboxRepository.php",
+    "sha256": "c361303184b4ce146a75f1e3173ffee31c9d57b592375483f4e5d4fc80f6ca69"
+  },
+  {
+    "path": "apps/backend/src/Core/Messaging/Application/OutboxEvent.php",
+    "sha256": "918f3b5a817cd37afa88e9c2d43da43b181661c8e2997813179389d06c8c69c4"
+  },
+  {
+    "path": "apps/backend/src/Core/Messaging/Application/OutboxEventCommand.php",
+    "sha256": "2ad62bf8016233165f8c2e8abd22c946f6af6c8bd5460b55617f1f3a81141bfd"
+  },
+  {
+    "path": "apps/backend/src/Core/Messaging/Application/OutboxPublisher.php",
+    "sha256": "bf45a2a2f48d12598b0ae9910a4c532b3cfc7e1210edf009342a3b5f84249956"
+  },
+  {
+    "path": "apps/backend/src/Core/Messaging/Application/OutboxRepository.php",
+    "sha256": "e0eac8227c650c0913f8ee967c3068231b9c3e238b49f0c5a8a494dda0b5f17e"
+  },
+  {
+    "path": "apps/backend/src/Core/Messaging/Infrastructure/PostgresInboxRepository.php",
+    "sha256": "ac8055521e2e9e1e5a78120d76b948c75d1754633386765b33942cfe4f8b8ed6"
+  },
+  {
+    "path": "apps/backend/src/Core/Messaging/Infrastructure/PostgresOutboxRepository.php",
+    "sha256": "497266f708497aa3748f21d42c4aee3090330eaf8c195426b0537acdc05931c0"
+  },
+  {
+    "path": "apps/backend/src/Core/Module/Api/GetModuleAction.php",
+    "sha256": "a6a9e634fae951a79e4ede6cdfd45562a278734524ffab1a5c2cca5f43470465"
+  },
+  {
+    "path": "apps/backend/src/Core/Module/Api/ListModulesAction.php",
+    "sha256": "9dacd2958d47e50021cdf9838b3ee2e23b3af5efe8de8567d18f363d2d52f050"
+  },
+  {
+    "path": "apps/backend/src/Core/Module/Api/ModuleLifecycleAction.php",
+    "sha256": "a8ad31b7a52052b5d2d8cfe972cd82c8eac2e17719df669c3bdda117dcd36597"
+  },
+  {
+    "path": "apps/backend/src/Core/Module/Application/ModuleRepository.php",
+    "sha256": "b8dacfd8380fdca143b33dfb08aa8c4c2c6b41f8c35d2a2aa3d6500f42badb0b"
+  },
+  {
+    "path": "apps/backend/src/Core/Module/Application/ModuleService.php",
+    "sha256": "59aa56b38cedb5aa54e98a645cb5f7533cb811bd3c002c54171b5a31bad54636"
+  },
+  {
+    "path": "apps/backend/src/Core/Module/Application/ModuleStateChange.php",
+    "sha256": "43197acf1e903b85dbbaa176a335ca84858212337a336a50993cbcc887e56aa5"
+  },
+  {
+    "path": "apps/backend/src/Core/Module/Application/ModuleView.php",
+    "sha256": "3043c2e15540b6130b361e14e57a4dc6edf58cdffa36d772fb2a8c0f718a440b"
+  },
+  {
+    "path": "apps/backend/src/Core/Module/Infrastructure/PostgresModuleRepository.php",
+    "sha256": "b1d5f61393b3d8fb8c16fe30a04e6a4eee69dfa92806a657d0f21ee4e9d19f4f"
+  },
+  {
+    "path": "apps/backend/src/Core/Network/IpRangeMatcher.php",
+    "sha256": "202bc91521630a9a2718cce1c58187f3ff66d18068cd653a808f7700d914f5cd"
+  },
+  {
+    "path": "apps/backend/src/Core/Notification/Application/NotificationPreferenceResolver.php",
+    "sha256": "8388745e5a21569ebd8044a2f99ea64022ef6d1f180899a22ca19e32aaddf6bb"
+  },
+  {
+    "path": "apps/backend/src/Core/Organization/Api/OrganizationAction.php",
+    "sha256": "e5cb5feee55ba1eacdf16caa6d04712d6b2f75e0dceb6fe5ca0767ab5717e832"
+  },
+  {
+    "path": "apps/backend/src/Core/Organization/Api/OrganizationInput.php",
+    "sha256": "314e763cf0b0cf0e6bac0513883a696508ba7e8b260b1687f4753e799ce996cc"
+  },
+  {
+    "path": "apps/backend/src/Core/Organization/Application/Organization.php",
+    "sha256": "f75f98b644bbfe281ea654836e466b386c880ffe7e4dba8c4c975593988416f4"
+  },
+  {
+    "path": "apps/backend/src/Core/Organization/Application/OrganizationAccessPolicy.php",
+    "sha256": "68ff82f538fe85dcc867b617c1f08d8c943763ef0995e5997aa7a71d2a290687"
+  },
+  {
+    "path": "apps/backend/src/Core/Organization/Application/OrganizationContext.php",
+    "sha256": "898ac321179c92ff80af84e644b118c1c796c20de26ac509a3b7ddd1e3e2580a"
+  },
+  {
+    "path": "apps/backend/src/Core/Organization/Application/OrganizationMembership.php",
+    "sha256": "bf58add026899f5fb7ae897c2f13217d11945997d054f4fc211f392397d77af7"
+  },
+  {
+    "path": "apps/backend/src/Core/Organization/Application/OrganizationRepository.php",
+    "sha256": "4e1a310a6f2e3b605219010c4f5ce7c2d6226cd7a47f485cfa4d382a5b34811d"
+  },
+  {
+    "path": "apps/backend/src/Core/Organization/Application/OrganizationService.php",
+    "sha256": "59413a7f96435edb1b420b1c79f179f500cff77f6e4b65e63edfe064c14de7cb"
+  },
+  {
+    "path": "apps/backend/src/Core/Organization/Infrastructure/OrganizationMembershipErasureHandler.php",
+    "sha256": "4a62f73763bcf40258f08a559f01a2cfb2d37560697505bd5f8bfb6cfa5340bf"
+  },
+  {
+    "path": "apps/backend/src/Core/Organization/Infrastructure/OrganizationMembershipPersonalDataContributor.php",
+    "sha256": "8ca9b64be622b317b1df1d92763aeeee25fdad4f12ea972dc4a3ede535c8fb04"
+  },
+  {
+    "path": "apps/backend/src/Core/Organization/Infrastructure/PostgresOrganizationRepository.php",
+    "sha256": "a49e6dc350f480b451ec4f7fe2c4e636d0166599d0a3e5dda2325c61dd80b7ba"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Api/ArchivePersonAction.php",
+    "sha256": "10aa699c555fc44a6d9486b066717274b9554d024ac0957c2a06c24466c8819b"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Api/CreatePersonAction.php",
+    "sha256": "e655b60020857f47f2c0737671b23e98affc75d2803753c49ed4e644dc2c4d67"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Api/CreatePersonContactAction.php",
+    "sha256": "50febad19e9c81aa619c875ad2dc283162e7722a041dc8e6e622e3ac8ba30aab"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Api/GetPersonAction.php",
+    "sha256": "c01635ea197c1304e8383fedb64dfab1f368b6d1dc6fa373998fddb762cdb911"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Api/ListPersonContactsAction.php",
+    "sha256": "4cf8beb00993a2632bf18cca90df4f42e267a3286047023ab5a10aab2f1c83da"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Api/ListPersonsAction.php",
+    "sha256": "9c4b98c651a80179c997a317dbc81de6e796fb74946529cae0bf855ccac59fc9"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Api/PersonInput.php",
+    "sha256": "3f0e0cbea0ee4cd0edd0bd735b3a6e57dfd8a1b3bfe80799f1363c4e0375fd25"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Api/UpdatePersonAction.php",
+    "sha256": "4e5a11cca6546c2d2028c7c16d83048e7e7140aa5b1fcfe3a0af6a78f6b91737"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/ArchivePerson.php",
+    "sha256": "b60589e65354172e6cc66ce95ac27672e8126f4d64b348eeaf39d15aeb59037c"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/ContactNormalizer.php",
+    "sha256": "618701a2420fc2eed6e5cc56528395bb2a25a6569efbb270afd40241a0de3a86"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/CreatePerson.php",
+    "sha256": "d2f3321d3308cb5c39459e8d4a343e3832d1c2bd761c91cdcdf0cda79e94e825"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/CreatePersonCommand.php",
+    "sha256": "0b9399cb3ab2d6abd93076b21fc7e33e48f6e0d660677f6c3f3280c9d96c6e10"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/CreatePersonContact.php",
+    "sha256": "40075bdfc35d1a1d338fd190c98471421b943dc81fcda195ae1dc7574aa3d8ff"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/CreatePersonContactCommand.php",
+    "sha256": "6bf4e7f4e1d8ab09853fca160747679ee026abe3f58569b116679d19c9db8235"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/GetPerson.php",
+    "sha256": "af200b63d1ddd33bb219d75674fff1db1a8f56bf9cb71a259c50c27a838d9670"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/ListPersonContacts.php",
+    "sha256": "a924025dacf7a7fa4214529937cbd937df08f4930d747ce07050c5f70bee5f4c"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/ListPersons.php",
+    "sha256": "0ffa189af7ab601a0af76e2a92e713846005d3d629bafbd94d13c3acbb174886"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/PersonContactRepository.php",
+    "sha256": "433f1f0095f482de0e2ca81f4e136b06b25ab169be08d4a4bafab8ed207de3d6"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/PersonContactView.php",
+    "sha256": "c5036b4ceb371baa99c798e0bf7f1e26ba27bc591c5c5f1888f4dd3b17941969"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/PersonPage.php",
+    "sha256": "542fa7602f8fb34b72d7009b884489c75d6cadee86e6dafd20df265262145ed7"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/PersonRepository.php",
+    "sha256": "23343dd33ba86f09c2952dc0490ab8a7c8b17637f2e538f3459d9281dce24bfc"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/PersonView.php",
+    "sha256": "eaa193898f3649e6c1b3906c3557bbf0371d0b16a7f5e155661d2414cd6bcaf5"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/UpdatePerson.php",
+    "sha256": "34b35ef42055e2c27e31a718abca3e3ce6a995bcdb4044ae577674b1e65996cf"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/UpdatePersonCommand.php",
+    "sha256": "2b8d5e9591214336fe1d9658eaff5e2446fa5b2fe238717d5280b94ec8cfbfd3"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Application/UpdatePersonContact.php",
+    "sha256": "fb7be35cfca2367c48fd1a62cf9a15f2ed42955f1725ba13e7aa6522f3bcee9b"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Infrastructure/CanonicalContactNormalizer.php",
+    "sha256": "458ef493f6a3dc9eec4276df9fea22fb70d9c561d7e14186767d00feba0d7470"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Infrastructure/PostgresPersonContactRepository.php",
+    "sha256": "a7875c8a94bc930b42f47520382fef55a609302c68e41a665dd8069052064afb"
+  },
+  {
+    "path": "apps/backend/src/Core/Person/Infrastructure/PostgresPersonRepository.php",
+    "sha256": "2e7ed23b7842a46e2a0e6751c666ee3641e4b79403b36e99936f99f209ffe927"
+  },
+  {
+    "path": "apps/backend/src/Core/Presence/Api/HeartbeatAction.php",
+    "sha256": "1cf27c1bd0ccb7d457e396cc51c97b2054141640ef6af767c72f5e351332d172"
+  },
+  {
+    "path": "apps/backend/src/Core/Presence/Application/PresenceService.php",
+    "sha256": "e27595486b97ef5ae5efcb3028ffc993edab11d06a25550c5399279d5b717b8a"
+  },
+  {
+    "path": "apps/backend/src/Core/Presence/Application/PresenceVisibilityPolicy.php",
+    "sha256": "673c289c23fb35839d407b585e63f1baee60fcb647780b48799495155bc1f991"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/ExecuteProcessingTerminationAction.php",
+    "sha256": "8b6ab0ceeafa7515637c0dae8de9fdb3914b8f0db4d9a9f76e9eddaac25eaafe"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/ManageDistributionConsentAction.php",
+    "sha256": "38817671e3a54b06c303450da88f254c770614ea76e6a9efd65276aa15f9fa96"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/ManageErasureAction.php",
+    "sha256": "938251d8c7e2eb09f3f2f16d3fa223e3b78bf33cd4fb18494a76b68a51a7ef82"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/ManageLegalHoldsAction.php",
+    "sha256": "15fe13833cea2db40bf9e1e2e7cb8fa91e29527e6d7755fc9efa43c7dfbde9fa"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/ManagePrivacyCorrectionAction.php",
+    "sha256": "14540e7ff321df6fbe5d00dd5b2ee2710227a05372f2fe3e66ea7b4892a8b5ff"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/ManagePrivacyIncidentAction.php",
+    "sha256": "178ae142a893bea35a0ad7eabcea566e526e0e05bdcf5726b8d6f5082f8395c0"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/ManagePrivacyRequestsAction.php",
+    "sha256": "14e6ebcff0148a2cfe040ebae67889109cdc3e2ee153ce48198fe2bd1628fbfd"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/ManageProcessingBlocksAction.php",
+    "sha256": "5028ce5ca1f7e0ddbfe77bc9f15c20c486d9f7e3d37604440e925350553bdccc"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/ManageRepresentationAction.php",
+    "sha256": "72e72f6d5dae7483302e0c16efb7f85f42abcc4e0414cc6ba44e5c35d7d447f1"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/OwnPrivacyRequestsAction.php",
+    "sha256": "83756749fb0f6bde80912ff8ff2bf564d72249187f53d34bd640f88e65ae4e28"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/PersonalDataExportAction.php",
+    "sha256": "cdc0fdf7a863976811218ea2c7882900e49eedae684c3f0f50233f6bc13cdf38"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/PrivacyRequestInput.php",
+    "sha256": "ef5e01e780d6bb378c77b804576a2dab095176eb980167ddba33e29158b1bf3d"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Api/ProcessingInformationAction.php",
+    "sha256": "67d96ef5c97b4d0c8c1d7af8822fa6e414f867433e05f58cf2d067d9be89cefe"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/BusinessCalendarCoverageException.php",
+    "sha256": "cea5a953b733c0a08c7301beb492de6e33279f2d52b9f69e204789132ebc23e4"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/BusinessCalendarInterface.php",
+    "sha256": "cf385a67500e5266d60c0f505caccd95070f3bd48e545d613201f47511d10238"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ComplianceReadinessChecker.php",
+    "sha256": "6cbfa33226d215d9df891263e12f068305e0150e96653a3c84516d3fd27a3b0e"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/CorePrivacyContributorCoverage.php",
+    "sha256": "560463df334669052ca697cdade6c18970f3f3c6331be8d865bbca3612bd4f59"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/CorrectionCommand.php",
+    "sha256": "5190ee9d2b8d256f1b0456b6d529b68651d3d427e6ef40ca1303b2142cc439b8"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/CorrectionContext.php",
+    "sha256": "709447956ac58bd374526fe0f5707c4347f8e32c52367fd733a5f8cfe50d5949"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/CorrectionResult.php",
+    "sha256": "3a584fb7e423f2eed0f92953907e2afa2d028b68619abcaa82e6bdd7524ed1b7"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/CrossBorderTransferDefinition.php",
+    "sha256": "d0f515d389ef8eb795a58950f9b186172c2f34bb4ed67f512b2569c8ee81eeba"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/CrossBorderTransferPolicy.php",
+    "sha256": "b387280d8a708e997940c720a1fea9f3a5b1bf1082242dd0eb6ce61e26dc04b7"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/CrossBorderTransferRegistry.php",
+    "sha256": "e4568956a449034864fab2abbcca9344aacea60afbe17ce7b48c2b7360bc0856"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DataCategoryRegistry.php",
+    "sha256": "db2ed8faae70699f78f7143cf0b5b4f7116315a68f89bc8d240aaa67493c6c06"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DataRecipientDefinition.php",
+    "sha256": "9508c5fd9b0baa50b845335273570526e31e82b1e7e7cd40cad5faf2c7b097ce"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DataRecipientRegistry.php",
+    "sha256": "07a6ac3e11bcc967722ef7eb552f15970abc2b2e3ad1333a11254a58001562b8"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DataResidencyEvidence.php",
+    "sha256": "aec59c78ad3d0b7b8b40b1c04dee393198fb27745657f02a8c6d0c78ed08b52c"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DataSubjectRequestDeadlineView.php",
+    "sha256": "ec7a21cf6f533e598dcd764a9f1f9293a0972372947f52aa5f4245080af58930"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DataSubjectRequestExecutionService.php",
+    "sha256": "f081dc352800c14eb11fc5ce9a3361aa3623c5c2728dc31736de5960d7b27776"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DataSubjectRequestFilter.php",
+    "sha256": "c5a9080d09e1c3207760f6e619128fa7e7ae9d89a48699a6e75b8a19d9bc3dee"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DataSubjectRequestPage.php",
+    "sha256": "02150151b6704b1dcf15623268d6f1d4fba552c60c2697a79f2052eeb138921e"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DataSubjectRequestService.php",
+    "sha256": "0339faf3d14498a9da98304f820c0f4abadd2c813251993dcd65b39c2377ddfa"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DataSubjectRequestStateMachine.php",
+    "sha256": "9fc40664025474021fe6646944a6293a6e71f08961f179b8eb48f445ae806857"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DataSubjectRequestTypeRegistry.php",
+    "sha256": "07bc8e9166b613b4951a818a618847177c23a233c82e70adf14975d427e7bd5b"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DataSubjectRequestView.php",
+    "sha256": "04f5f765003d1d397bd28206a11cabe89465e94c580df2c73c257b606007f5de"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DestructionEvidenceExporter.php",
+    "sha256": "ed2d1a62e681307032c88f06d37741232e011b228a8e80fa451164f0a989b2f1"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DestructionEvidencePolicy.php",
+    "sha256": "ad5bf3ef1ae338d4f4da246403c040acd0490261469f2b99b4be877adbb831c3"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DistributionConsentDefinition.php",
+    "sha256": "373a108f026da5f47862cd65abff78716b6c04ff6eac2ebbafc716be0317ce01"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DistributionConsentDefinitionRegistry.php",
+    "sha256": "6363c44c2baf6bb175415203805dab08ef78b1a1a8f0b55d269fea8991ba7fd2"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/DistributionConsentService.php",
+    "sha256": "10a68e6206a71a7dfded529cd588338ac936ed3c4da0713df0384d3d4d39f393"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ErasureCaseService.php",
+    "sha256": "29f4048ee3b00af48e646d68d4ee05a545e868bef92aca2d407e616f3ed152d3"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ErasureCaseStateMachine.php",
+    "sha256": "7b27b1d1d44b701323a2fd63e5eb11c528fd9a014cda91ea0d2af6def2195ebd"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ErasureExecutor.php",
+    "sha256": "5d57a429c951d31cadc9e495d4c0127d4a91e91acf674e507acff4e6fce52f98"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ErasureRequestCompletionService.php",
+    "sha256": "d122a76c865d6ef210bab025c57e171da510c69c09fe1478d5f403108dcecffe"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/LawfulProcessingBasisContributor.php",
+    "sha256": "88fc012a3683551790777014e3eb38297630eab5d414f334b9812b4629247235"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/LawfulProcessingBasisContributorRegistry.php",
+    "sha256": "bd838bdc0045c95ffc938a6027491dbe0cfc6fc80a074f56f638437ec70e5b4d"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/LawfulProcessingBasisResolver.php",
+    "sha256": "3e6dc6acf85ecbec2318c91379a13abfcaf992df9aa56fe958863e5d33d0961a"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/LegalDestructionPackageService.php",
+    "sha256": "c52fa7a0cc65db81cef89c00f0d5a5f19e3dba198991407087842c933a20ecf1"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/LegalHoldService.php",
+    "sha256": "1d12e40e763e73e7224799f0bbc1b3290cb868892a0035ebf6990dca806faca2"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/LegalRepresentationService.php",
+    "sha256": "f1dd467f92e24a029040a29267f7941116127796201f046ce66c8072becfd450"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PendingErasureProcessor.php",
+    "sha256": "974415887c863e9c5da5cc51a4ce6926ad3ea3f7858e5b4edf27aaf7f332a59f"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataContributor.php",
+    "sha256": "d7fbc86c2c66086f6c9b29badef04cf3c70b1f149d1cd32aede6633c43bb7638"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataContributorRegistry.php",
+    "sha256": "ac976a1e7b3a94e35e9e2bc047351553c0063a32d68070a84fc8c9c657e692ab"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataCorrectionContributor.php",
+    "sha256": "124ed18a6f0aca7e7588078f93072ec16af5d8bb130ee6082082171fcb9fa43c"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataCorrectionContributorRegistry.php",
+    "sha256": "dec4a7073a836dc260e96cf78abc8c128ba94dcd6988e864c3e2df8f6d61e200"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataCorrectionService.php",
+    "sha256": "7c692d17945ae37a5af88433ea2073847e771eec4b33b1700facaa43ff84b1ae"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataErasureHandler.php",
+    "sha256": "4cb7bdb38ae10a3966964dfb2b9ecc4f8134e3af0065170bfe87442eda0d95ee"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataErasureHandlerRegistry.php",
+    "sha256": "0a670b987c8004e303c01fab53176453ebc6e294df6a3e39cc6a1a414ce90443"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataExportContext.php",
+    "sha256": "45ff813abf7c8b747e48b7ace86e4737650119495e294b3aa5445c1b0e8ec4fc"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataExportLimitException.php",
+    "sha256": "e428b9655a01616b93279a0364b03b37a08464c7677d3872626539e96d42675d"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataExportResult.php",
+    "sha256": "62ebdc01b5fcbf8960770b7c6b345d526aec73f2ca07fe31266349d4816ff59a"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataExportService.php",
+    "sha256": "747b5194be7dfcb8d77486b2d971a521116526956d2338e63d1f7ea836812260"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataExporter.php",
+    "sha256": "1b0b015670fabf3e68e681824b3246e56f58c2be19a43f29fcd386122df3f723"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PersonalDataSection.php",
+    "sha256": "5753afeeebed965420de491eb35869a886695910cdd425d3767290f37cdcfeb1"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PrivacyCleanupPolicy.php",
+    "sha256": "af0a0226f70722e2b7d6d45faaddd13c26acec53a225c6a0e57a4e6213801273"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PrivacyCleanupService.php",
+    "sha256": "548e87430f78ec56eb8be9f66790c61a25fd37a8d7f6f42f81fcd5dee4adeebb"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PrivacyCollectionNoticeService.php",
+    "sha256": "07b5ff5c54b7cf6fe03afe1455de6b98b284d871906da2bc95aa62ed36dc4afc"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PrivacyDeadlinePolicy.php",
+    "sha256": "e41b93b5b253ca2bab02906aacc9da76a6a43dbfadc9ab67768f39e3906c37d5"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PrivacyIncidentService.php",
+    "sha256": "33c471f5092858e6f9a3eb1b04997209847e02116eb1c680f97617c2d015564e"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PrivacyRequestExecutionCapabilityRegistry.php",
+    "sha256": "b76508a2d20779809380144ec6adbec7e4fc92bbac8f045b63a6f8267e890ec9"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/PrivacyResourceUsePolicy.php",
+    "sha256": "6dbb195e71fed26f8a5a97767b03c32b095e7b170d664beca8ca7870d529abd3"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessingBlockPolicy.php",
+    "sha256": "5ad39b726501deb806212ebe1064dff51d599f0c4fdcba14be88355b83204111"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessingBlockService.php",
+    "sha256": "1ddec5f2a1e02addf38a75bee5245e7d2b66c6f8d4515e0e9e85a3d9a022484f"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessingInformationDefinition.php",
+    "sha256": "94cbb54cbd4d6d8917264c5dc7785df5b2d85a9ab8d3bdb5d61a660f2f40e97a"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessingInformationRegistry.php",
+    "sha256": "262c839c89215e0251e59788fb0b5a1baeab854ef6f5eba4f303b41cb1cfc820"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessingInformationService.php",
+    "sha256": "139ef2a04a519a97ac4349dc7805f2424ff9c1b66f3682efc98aaa0188486dff"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessingPurposeRegistry.php",
+    "sha256": "5c9776899e3d90feaa5a926cdf86f120f90ccbe6f1f464a15de6798558c473b4"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessingRestrictionContributor.php",
+    "sha256": "509db34748fc6ccfca08b028a6e2a0776463a97bf3fa74376ce2a3aa28ae78d4"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessingRestrictionContributorRegistry.php",
+    "sha256": "6079b6263dc8570125f79151c18807a7c399125f0957eb1b8215bda12adbe70b"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessingRoleDefinition.php",
+    "sha256": "f64c0a1e2c79fabe5f7b6ac181ef1f0e560a7b8b81a2919da3b4fcc11c6afafb"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessingRoleRegistry.php",
+    "sha256": "cf18a0f0bd17db94cce4179e342f5dd5ce85d8db6b6de093e4d8ddf7c2ade403"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessingTerminationService.php",
+    "sha256": "36a18ebb5b979d6700a52ae67aa8fd2e82cc0b61234d411e1e25e07230861bca"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessorDefinition.php",
+    "sha256": "42a49ae2c49677bec38b570d8ed8b6f772540aac5528e210aeaff3189760552c"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/ProcessorRegistry.php",
+    "sha256": "6034f8b3ea2da3ea820cbd9028146f54c444abd91e75cc479e03372d98846030"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/RepresentationScopeRegistry.php",
+    "sha256": "a7d5b48d9ddeac590bb16a54075f78c6335b6fe398084915dbe135a1cd6564f6"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/RepresentativeAuthorityPolicy.php",
+    "sha256": "5af8eb503c43fb7fbdb6bdad8cefb26cb7724cd805b82de146add34c670bee36"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/RetentionBatchEvaluator.php",
+    "sha256": "9343b611b9fdf3ca13b5429085bd8176e1ceb217316ce7cf58e507f89e4ca2e6"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/RetentionCandidateContributor.php",
+    "sha256": "1348a74d5f9a59b5134c9090ee429f66d26928036dcc93f7f085f21406e38b35"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/RetentionCandidateContributorRegistry.php",
+    "sha256": "e4d287b260dc3b8a232b622e3b2acd99c91d4e42720fb97dbb9ba0b2ec98d89d"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/RetentionDecisionService.php",
+    "sha256": "9e566fc63c824833cc8b04577caad34160211a236c98f3136d1151538d95747c"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/RetentionDependencyContributor.php",
+    "sha256": "0f139acb052bcfbe29440ac003f229d58b976eb432017439d359f95fc1b4e1a2"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/RetentionDependencyContributorRegistry.php",
+    "sha256": "a4863d8ec644c34610dd120c566a9fd763359216821889585a323e817a6d875d"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/RetentionEvaluator.php",
+    "sha256": "fe54e64851ed6d720fb1173e77418d30b251b1947c8f552a6c99cd5c8399b629"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Application/RetentionPolicyRegistry.php",
+    "sha256": "e3fac92f73f982873a6d9d2d31fcef1799e3ca3e9483aff95e1435d2aeff4c5c"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Domain/DataCategoryDefinition.php",
+    "sha256": "0bec0cc9f571bff936b41add874502ec635b73bc14f19c7b42e701a3073ea6e2"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Domain/MachineCode.php",
+    "sha256": "c64fb443521938b216eaf0fab536963c3ce178d072ce4ee99e0139083dc78341"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Domain/ProcessingPurposeDefinition.php",
+    "sha256": "505be205a5b656299a8573d404afd2dbad6737db2c83c836ac9ee58c9b922530"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Domain/RetentionCandidate.php",
+    "sha256": "5bdb9f05374d3e5752b875a0cca531900897a499e1130527803d6963e8704ba4"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Domain/RetentionDecision.php",
+    "sha256": "c5c2f1129823e889f95d1723fcc3e03bd98ecbf34dd70c5c2516d0db3258236c"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Domain/RetentionPolicyDefinition.php",
+    "sha256": "6d216a9c916c70180c298c282826d317601f1bb0d5881fee24bc68a672f3b8b4"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Domain/SubjectCategoryDefinition.php",
+    "sha256": "07577051fce0f00b86a85f0841faf3b4f0e19604c2ee8e2859749b75c90283a8"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/AuthPersonalDataContributor.php",
+    "sha256": "4a5abdb21ec2554bdeb8f4bf283228b54c651daa9ec703f91b3e55ec9a2ac0a4"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/ConfiguredBusinessCalendar.php",
+    "sha256": "92001e4da2cd605738505f4344196f9e97fbcd96e74778230e61722edb1a8bbb"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CoreAccountSettingsErasureHandler.php",
+    "sha256": "48c337b64bcddc62cb40a471368b6747da4e69bf07a11dba4363f6de72f49feb"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CoreErasureHandlerProvider.php",
+    "sha256": "85534c69c2b7d669cd7e72acfdc7f88a9ae20a56c597b35deb69d73ae01cf5c3"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CoreHumanAccountAnonymizationHandler.php",
+    "sha256": "682db844adc123fdf5c3e81ba3cb15ed4d8c8b2cf1ab5819633ac5701f18b566"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CorePersonAnonymizationHandler.php",
+    "sha256": "b583f99d386dad389e99e5ffb718d045a0a62128fcb9244fcd0e298e3abee761"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CorePersonContactCorrectionContributor.php",
+    "sha256": "6ab24807e3e7deb8a8147788435890851e064555d20c8587663930414d8ce170"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CorePersonContactErasureHandler.php",
+    "sha256": "ceb9788e87660acf20db96354bf63780781252260c099782d7db4002f772f1eb"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CorePersonCorrectionContributor.php",
+    "sha256": "5670e03ca3db8155f0fca94c8b393d6c782f47f0a8307e27f6a0d894fa2d99c8"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CorePersonalDataContributor.php",
+    "sha256": "852ee57ffe3de09ca3d5ecbdc9992bc9fb74483bbda4246fb9668a3c3644bc38"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CorePersonalDataContributorProvider.php",
+    "sha256": "654997a78af87c492463fece3f86dbdf59b226563207dd29d6a729859d9da299"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CorePersonalDataCorrectionContributorProvider.php",
+    "sha256": "d07163986feb9c1d5058ec5fb9bb293a3c9cce8b3331aded03e00eb3355029f9"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CoreProcessingRestrictionContributor.php",
+    "sha256": "8b55b9e0fb27b15b605f7d3067ba04d59871fd035366eb20c85c18203fb7a767"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CoreResourceBasisContributor.php",
+    "sha256": "e8bfac52e297c7363186da499677de70b98af2a3295f34974542c542e8d3008b"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CoreResourceDependencyContributor.php",
+    "sha256": "ff41f456aeb70d705b4d8751cf89a09333c220bdac8f4222fc55aa5220b23d5a"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CoreResourceRetentionCandidateContributor.php",
+    "sha256": "cd5e114ccc8950f0c01a4f77d0620a6d03a144338bedaf8d5f8456e35862b607"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/CoreRetentionCandidateProvider.php",
+    "sha256": "f2f187823db6fc97b152f5f9660bd24d0284f182f6c6b0c0ba7d3bc1ce09cda0"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/PostgresRepresentativeAuthorityPolicy.php",
+    "sha256": "df670403474cea3b0ce3bc406223306eca7cf3a82e9337014c19b7b712332b4d"
+  },
+  {
+    "path": "apps/backend/src/Core/Privacy/Infrastructure/PrivacyDeploymentConfigLoader.php",
+    "sha256": "bb6113215707173f3966bf1074604d12fc00d2d03b8e78df05b960db3e56134b"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Api/AccountRolesAction.php",
+    "sha256": "80b7ed5dde82a7d47ab72077ac227a8887fa086f5c96bbb5dc1fe55e5e1f1df1"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Api/CustomRoleAction.php",
+    "sha256": "bb67aae6387dd792e9849a1fdd95d31e77d4e2b768e9336b9a2164bfd1a545d5"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Api/ListPermissionsAction.php",
+    "sha256": "fb6d818eab1de126f06a08f775212437436b5be6fa9d0563c651d0a09939c976"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Api/ListRolesAction.php",
+    "sha256": "281b525153682fbbc8d07ae1a47a48384ccbace0c11cf8d8cd0b5304c350c033"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Api/RolePermissionsAction.php",
+    "sha256": "a7088b41cf2e8969822c013ae07f2387abe0bcf1a95fe32810ce8e09ed56fd26"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Application/ListPermissions.php",
+    "sha256": "ba7b939b56092f8a1b2f03243b01f7dd3c98ed9379cb64df15932c59f52e6070"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Application/ListRoles.php",
+    "sha256": "1544bf87d19a83d3a407812253f26c6eec9fcae049815b7ac5770e2500358879"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Application/ManageAccountRoles.php",
+    "sha256": "a812fed4f566c4b234591f425f3c2f345ed3721a7478898d490039020d757faa"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Application/ManageCustomRoles.php",
+    "sha256": "125e2588cb2baf530bd3ce2abeffaf5e846b845627781b1993f589d1dd4962d1"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Application/PermissionPage.php",
+    "sha256": "c075a017dfdf83f66a60368d71732aaaade25fa7e95f1e7fbce472eb37dbaaa7"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Application/PermissionRepository.php",
+    "sha256": "f3638a98d6ca681f667a559466b38a87067b423815d0e2d3974ba12fdc2939a7"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Application/PermissionService.php",
+    "sha256": "9d4fbd144c56daf967145fafd44a9adb029dd7693746f7faee96fb796042c7b6"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Application/PermissionView.php",
+    "sha256": "6d0d944e5064eab1e32c788fe5af79522b594e2ee0533e7cbc19ac75256e0c45"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Application/RolePage.php",
+    "sha256": "fe339f95a9f8eb3d735db80603bc671c546132dd6c4ff0cfea62b29896399027"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Application/RoleRepository.php",
+    "sha256": "5b3cbc92bc755f49cb82e5791fd15186257cafd6fdbe071439351be291d4076b"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Application/RoleView.php",
+    "sha256": "460c7b786a764bc13a4bf761404561ff306a44a75afea942783739cc5ce658ae"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Infrastructure/PostgresPermissionRepository.php",
+    "sha256": "e9e4eb3262df556a7f8a69339548c87de0041ee89347fe0c08e5fbc2afc79631"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Infrastructure/PostgresRoleRepository.php",
+    "sha256": "7cdcc2824b49498ae73ac92fbeb799b26bb9edd4c59765baefa4e1e9b017b504"
+  },
+  {
+    "path": "apps/backend/src/Core/Rbac/Infrastructure/RequirePermission.php",
+    "sha256": "3ef817bfeeac6c5faec22f78fd1315f1093286e78e6ad945a143e0ca32fde7c3"
+  },
+  {
+    "path": "apps/backend/src/Core/Security/Application/IdentifierDigestService.php",
+    "sha256": "a61f466644f85c70c002e0866a692b8a50fde90d8e14170bae11267e8109c121"
+  },
+  {
+    "path": "apps/backend/src/Core/Security/Application/RateLimiterInterface.php",
+    "sha256": "a6662c1f5ca28118eace8c4f1ea9db7769e16a8bfc8ab5249b3473a543f20ce6"
+  },
+  {
+    "path": "apps/backend/src/Core/Security/Application/RateLimiterUnavailableException.php",
+    "sha256": "edc3930f29aadc271abad8d05ce3366d45f433ca4a5265cbd7e62589d44b6a85"
+  },
+  {
+    "path": "apps/backend/src/Core/Security/Application/SecurityAction.php",
+    "sha256": "b3340a3a3de85f2c391b1cd24bba2e997f8088010c2a0a12a6324cc6c2b178a0"
+  },
+  {
+    "path": "apps/backend/src/Core/Security/Application/SecurityAuditCommand.php",
+    "sha256": "e500d12db818280674dc730b44ede8381c87eef2835f576ce2c77b0b61e7c677"
+  },
+  {
+    "path": "apps/backend/src/Core/Security/Application/SecurityAuditService.php",
+    "sha256": "907ea963d9bc8d4980e9ba24681149639b0910e3231c42e8e17310a934ac8d35"
+  },
+  {
+    "path": "apps/backend/src/Core/Security/Application/SessionRiskEvaluator.php",
+    "sha256": "243e772679f432c1e39f375fad959d313726db440d2bc241bdd5dbbac846b53e"
+  },
+  {
+    "path": "apps/backend/src/Core/Security/Domain/SessionRiskAssessment.php",
+    "sha256": "4da9911b0bd570a668c84b53e4bda305603af2bf0dc291c3d97b0c12027e8435"
+  },
+  {
+    "path": "apps/backend/src/Core/Security/Domain/SessionRiskInput.php",
+    "sha256": "ca3f3d503545c0fc86ef41db9aecb968e34aebf0cc3402067ac7fe5a0ecfe7d9"
+  },
+  {
+    "path": "apps/backend/src/Core/Security/Domain/SessionRiskLevel.php",
+    "sha256": "6b15187504abc26848a707b78ecd06533cb916c8f19ef674af867ae47831072e"
+  },
+  {
+    "path": "apps/backend/src/Core/Security/Infrastructure/RedisRateLimiter.php",
+    "sha256": "f6266f7fcadeb15f09638ebf97e5fbf4b6f3080f37d4b255329fcd9d3ff86963"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Api/ConfigurationInput.php",
+    "sha256": "ab88035f247d5bbdd3bde5cacba819fd1264f7f6b311ea2024f548f9e635ab17"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Api/FeatureFlagsAction.php",
+    "sha256": "12c41ea61e53db6c92cdd3af01a0bfc765535d5f42b7f8a6a706e8bc300e846a"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Api/ModuleSettingsAction.php",
+    "sha256": "08e0d120c3b6f23a9aa1259ceaec24662d3ffba183fa1d125e5e74362095d5aa"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Api/PublicConfigAction.php",
+    "sha256": "a52085cb6235086133c8666d32b365f1016ec63c2c79bab296cc3ee4f17a3d6b"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Api/SystemSettingsAction.php",
+    "sha256": "84660e3c369ad75c75e0718c2646ef5635a4362fca6df8dadf9b8a4fe422d4b2"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Application/FeatureEvaluation.php",
+    "sha256": "6a0364b3fdcb1e3d4ecaa7da83334c67486b5d1805099fbd2e26fcd5ce548b84"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Application/FeatureFlag.php",
+    "sha256": "03b9a4e4270ed7df84daadfb1d4a29217ce4a01818e6fb70e15f920bfe30f3c7"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Application/FeatureFlagManager.php",
+    "sha256": "935b98f31a4b72ef28628c34ea11571cea16351657e714f98c46985b92772caf"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Application/FeatureFlagRepository.php",
+    "sha256": "fc39819be18c67a128cdc13092999ae1a15af9ec687b2f90ebf8a9486de39fe4"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Application/FeatureFlagService.php",
+    "sha256": "92ff663bb1dcc9f8a6afd3daa1fc48dc6d40daf568edc6b06e278037e6cb19c0"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Application/ModuleSetting.php",
+    "sha256": "c32c7349e18b0fab9f05eaebd70ef7ea397be75453615c74e6f21e0de0bd6966"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Application/ModuleSettingsRepository.php",
+    "sha256": "e264d1ef4619c331d921be08f96fcab5e69340cabc2cc242ff154548821336ad"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Application/SettingSecurityPolicy.php",
+    "sha256": "1c81ac33e35cb81e41b67d14199f56b34adba23837b91d69d49c4b8eca4d0efe"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Application/SettingsService.php",
+    "sha256": "771986e3e5438a9ae3e16b92b9ebf13cc4f16655678e32e40facf5c527b944a7"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Application/SystemSetting.php",
+    "sha256": "00ce7e3d9dad92a45890d4080ff55512e4ed5203d90aedf30ea08632d1782200"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Application/SystemSettingsRepository.php",
+    "sha256": "6911bc3c8a68085018b24c4d05bfba0036de4f8cef55ca6a11ad355139b6e3b7"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Application/UnsafeSettingException.php",
+    "sha256": "8bce7fb34648b833f39b11b879683e23add9f3cf740cb66ce8bbc150b7a92696"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Infrastructure/PostgresFeatureFlagRepository.php",
+    "sha256": "ce1aff186250311ab8331e38b511a18b3babbcfd6f816f1f1d4dc66c44643b39"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Infrastructure/PostgresJsonValue.php",
+    "sha256": "7e75803bdbe5ce5c6e273f8c0b23dbd7569d24b2343ab7cc1c967584316d30a6"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Infrastructure/PostgresModuleSettingsRepository.php",
+    "sha256": "0c8f896c6b41f08e0a1eea4c55a0111630d2288e4ce13a4fc9eae985b7a6824c"
+  },
+  {
+    "path": "apps/backend/src/Core/Settings/Infrastructure/PostgresSystemSettingsRepository.php",
+    "sha256": "0a96c2b0c7efe7d96b68b07ee6ae54a3346bf6d4499f8e6a810156f02c4b4888"
+  },
+  {
+    "path": "apps/backend/src/Core/Shared/Application/ConflictException.php",
+    "sha256": "9b98d71bcf0887813797b4ef2de66cb139aa51523ba39692757f4cf627b36d95"
+  },
+  {
+    "path": "apps/backend/src/Core/Shared/Application/NotFoundException.php",
+    "sha256": "db42c59bed0dd31cf7f1a3f7f94243bfb46c7ea32aa9abb58bc975e23deba10b"
+  },
+  {
+    "path": "apps/backend/src/Core/Shared/Domain/ValueNormalizer.php",
+    "sha256": "0b5ab720b8a0b9ef69af02e4ff15cc0ffd4e818dd9536afe71e0d8c3df4f0582"
+  },
+  {
+    "path": "apps/backend/src/Core/Shared/Infrastructure/DestructiveOperationBlockedException.php",
+    "sha256": "3e46620bf553d42f2119ed886cc601dec949a72a4054fd1fb5c9d18459556b42"
+  },
+  {
+    "path": "apps/backend/src/Core/Shared/Infrastructure/TestRuntimeGuard.php",
+    "sha256": "d058c019af34c1baa7ce885f6ac71586e50bd6642b732c774c5900448bdc41a1"
+  },
+  {
+    "path": "apps/backend/src/Core/Time/Application/ClockInterface.php",
+    "sha256": "7bc555782e2306751243a7c7953a709103a97b57807da2274713b3761a46f32f"
+  },
+  {
+    "path": "apps/backend/src/Core/Time/Application/DateTimeFormatter.php",
+    "sha256": "46384f60258e0b10513897c1aa5de52b823b4804253686c4409186ede49e2a5d"
+  },
+  {
+    "path": "apps/backend/src/Core/Time/Application/ResolvedTimeZone.php",
+    "sha256": "aaca76ad09da8c2937fed6123fd4d4af58043499d7c94f22e11f9e94422f2f65"
+  },
+  {
+    "path": "apps/backend/src/Core/Time/Application/TimeService.php",
+    "sha256": "9db9de9f65ca71d3f662aecb8c7bd51801fb095cfa96c5a97d9bd0aef2db27da"
+  },
+  {
+    "path": "apps/backend/src/Core/Time/Application/TimeZoneResolver.php",
+    "sha256": "0d98bf86cdc05a149740904ba77ee0e7c9db7badc9ecf1ca8594475c84896a4c"
+  },
+  {
+    "path": "apps/backend/src/Core/Time/Domain/TimeZone.php",
+    "sha256": "785667fcdcf098d8240695c29f75d0a765dc5baee996d434b2acd5c00b9274fb"
+  },
+  {
+    "path": "apps/backend/src/Core/Time/Infrastructure/SystemClock.php",
+    "sha256": "07cde883b9ea12449d620bb1df5f74616fee56ea419ec8195ea39875e0847745"
+  },
+  {
+    "path": "apps/backend/src/Environment.php",
+    "sha256": "30205a455761b479cc598bbbe2108794407c3f28921c3e188adec251e8c23681"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/ApplyEntitlementsAction.php",
+    "sha256": "710f0e9c334456f3e745ed82738b546ed0ac09c390867d2b1b591bdcb9351d16"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/DeploymentEntitlementPuller.php",
+    "sha256": "2bcd3041494a7b59609e2116a346c16861f30542942372613a884954c9286bdd"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/DeploymentStatusReporter.php",
+    "sha256": "4a8abc90a1cb5bcf555f9908d524abac9607b509921a809eeec33d324383fe6d"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/EffectiveRuntimeEntitlements.php",
+    "sha256": "c6993e606a62defd35c82915b41f6cbcbe7ce7d824b0c58f6ec663739c4a4e89"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/EntitlementApplier.php",
+    "sha256": "99d802c1707642df0458c8c11cfd5e4fe0a7f74d9c62fc2ed6c47197714b2b0d"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/EntitlementDocumentRepository.php",
+    "sha256": "3da15a8d75e60c8017f8e68e63b3a34709d2dde90ac5179ec60e3c63b431de89"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/EntitlementDocumentV1.php",
+    "sha256": "45cd48af8c145df9b357244f7edac78488cf0c45fd88bcd8b2d75031dfe928fb"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/EntitlementSignatureVerifier.php",
+    "sha256": "aa1a44bed506540abaa49c21a6861b6b8b6b381148a11a991e921f9b75455f98"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/HttpDeploymentEntitlementPuller.php",
+    "sha256": "8ebb605d341e5a2b8ad4c322c868ca4038e0856de6411c67d17a33db3f327f9e"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/HttpDeploymentStatusReporter.php",
+    "sha256": "fa3c964e7df1910f2094a38bf520731b260efdfd5cb1168638a43a97da703b05"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/InstallationRepository.php",
+    "sha256": "21828b09eccf6067abcba8e1006f7c77bd0e6862e090a10f60bc6641e48ec7db"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/PostgresEffectiveRuntimeEntitlements.php",
+    "sha256": "a9276454ec19bf135a9c7227c5fc9c11fde2f57815595a1dd645b372599ae734"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/PostgresEntitlementApplier.php",
+    "sha256": "e264ac52fde45d4d074a9840239a71518cd10882c5fb7b0e63c025ae5aaaccc7"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/PostgresEntitlementDocumentRepository.php",
+    "sha256": "1bc0ee16beb47d12abe18ca8c10fe2abbc64d1e0860325b1e21043e1f5099a21"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/PostgresInstallationRepository.php",
+    "sha256": "0f4a9fde891a5a1e75ae0927943c31e7501ac96d60673e0ab5d64521b90cd633"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/RuntimeActivationService.php",
+    "sha256": "c1744cb36ac2734d54ab8e109bba5169c4b35ac6ea6dcf9c99488ac02e6d7daf"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/RuntimeEntitlementSynchronizer.php",
+    "sha256": "dab88dd603dffba6ebdcda8e68e4579a6e721741f39bcbdfb290d5e0dd88c169"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/RuntimeInstallationBootstrap.php",
+    "sha256": "88a970ff18a05e5c0724d41b9d19382ea282fc21a9d3118ffa198836d5ac453e"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/RuntimeMigrationArtifact.php",
+    "sha256": "f19dd9edc8d201d361c452575d4b547d4abfc9f8358187f2e6b810e9c2b9193e"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/RuntimeReleaseMetadataUpdater.php",
+    "sha256": "ad975f541ae919b1335539fb6bfdc9c8ad1ef7e4748619cab5fe0900036d8eb7"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/RuntimeSecretResolver.php",
+    "sha256": "42ced84a47ff5e7d662dd9a5d3426976bf3962becc7891e62a7b6c1c7f78751e"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/Scheduler/BackgroundJobStatusRecorder.php",
+    "sha256": "229864318bb8fbe6ba1e9b539e663bb41caf5443ff41cfb44ee4293674bd0457"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/Scheduler/JobSkipped.php",
+    "sha256": "cbd44d87e06d78a869959ef00dc43136dd6b73ffc7c6e64ef0e1b0cae1dd1d68"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/Scheduler/OperationalStatus.php",
+    "sha256": "acd0a75f6e29f048a1d8a95b2ba36ebda3e2ea9a2def6a457c10a3fed746ce37"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/Scheduler/ScheduledJob.php",
+    "sha256": "290c62228085b98d4f793361e52eab4b4b58cf2ae4e9c256c9a2548e1047fb6c"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/Scheduler/SchedulerConfig.php",
+    "sha256": "7bd3967f188af4c8e33930488610e1f7363567a87404c4c2642a52c3664efa8a"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/Scheduler/SchedulerLoop.php",
+    "sha256": "d017175c715775c0f4b0953b27b2f93e174820e44ab6ed5501df0ba99ca30b0c"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/SodiumEntitlementSignatureVerifier.php",
+    "sha256": "2f5376bb3bc1a96350863f9031796d370e0574eafcaaa0b78c0075279b39c5ce"
+  },
+  {
+    "path": "apps/backend/src/PlatformRuntime/TrustedEntitlementKeyRegistry.php",
+    "sha256": "4d5c67d17e19db7463e1605177b5d7349e4d1ebf788f97cf525e1ce68ce4f419"
+  },
+  {
+    "path": "apps/backend/src/Shared/ApplicationParams.php",
+    "sha256": "2c94be2e21d4d1ab840792919ea1f8fd131558f4c769aea4b3433786c475c33a"
+  },
+  {
+    "path": "apps/backend/src/bootstrap.php",
+    "sha256": "e2aec83c3741fbaaac8f152cb842daea7f5cafd76d84fd1a4eec65069296442d"
+  },
+  {
+    "path": "apps/backend/tests/.gitignore",
+    "sha256": "50e0b931bc315fce8e677e1a6e586499524037a4f1eb003870ac4768fd2a3f89"
+  },
+  {
+    "path": "apps/backend/tests/Api.suite.yml",
+    "sha256": "3a9caa46acd1c3c57221b3313f363205eee280e865923e76a70cfc2828888e87"
+  },
+  {
+    "path": "apps/backend/tests/Api/AccountSettingsCest.php",
+    "sha256": "ed6c27c9665791bf2fdd3d6c262645bb0b981244971a973bf2f8d583aaa8251c"
+  },
+  {
+    "path": "apps/backend/tests/Api/AccountsCest.php",
+    "sha256": "b4b65225f59e5febd5bfd1a3822c5496ab9c95035ebfd8a49f94493618f50121"
+  },
+  {
+    "path": "apps/backend/tests/Api/AuthSecurityCest.php",
+    "sha256": "3fb9b86b50b7124f15856b63d22039845216319fbcf59af975466d629849d764"
+  },
+  {
+    "path": "apps/backend/tests/Api/AuthenticationRuntimeCest.php",
+    "sha256": "a78383544d47667acbc154f3f3bf24fb8597cd9dd83b402c3b669a661f11eb06"
+  },
+  {
+    "path": "apps/backend/tests/Api/ConfigurationAuthorizationCest.php",
+    "sha256": "9332d7290e4a184c5624d089b86c1b4a3df25eaad091351a8dd828fccaaca551"
+  },
+  {
+    "path": "apps/backend/tests/Api/ConfigurationRuntimeCest.php",
+    "sha256": "06b38a77db95b59678e78c6947fc19369b11c72c4d30d13b2f76fdbe7a4e62c4"
+  },
+  {
+    "path": "apps/backend/tests/Api/ConsentCest.php",
+    "sha256": "54cb9a37eb20e640393fd6a631994d31df8ce27f04395f2f0e956023c3d86bf7"
+  },
+  {
+    "path": "apps/backend/tests/Api/CredentialLifecycleCest.php",
+    "sha256": "18f6abe5da0fa7441a795267e6299210d0c63f354dc75c67e8a823189b57fa91"
+  },
+  {
+    "path": "apps/backend/tests/Api/CustomRolesCest.php",
+    "sha256": "e71f4daf77e16edc4812a12fa959d277019de4efb499c115eb0866233cfc45d8"
+  },
+  {
+    "path": "apps/backend/tests/Api/DataSubjectRequestsCest.php",
+    "sha256": "4f9a6154c3bbe449dfcd6b3318b82916644b2ee33807b340060f375b0a1892ba"
+  },
+  {
+    "path": "apps/backend/tests/Api/FoundationStabilizationCest.php",
+    "sha256": "a63a6698721cbf3c9714bf57cef572044598cd85f242446b40e7211ddca8254c"
+  },
+  {
+    "path": "apps/backend/tests/Api/HealthCest.php",
+    "sha256": "bd0805e4c39fd7c870ecd05563b2a7226ee13b63f41fc87068fc9fb488555463"
+  },
+  {
+    "path": "apps/backend/tests/Api/IndexCest.php",
+    "sha256": "f21418e7578723a36e766bc5c83f0f1221ec6a4a83b7e4d0d2479ebd728b433c"
+  },
+  {
+    "path": "apps/backend/tests/Api/InternationalizationCest.php",
+    "sha256": "73cabe9df1adee3aaa1fe4b10564f7083500a2b65b4190cb8777f5d57919df9c"
+  },
+  {
+    "path": "apps/backend/tests/Api/MfaAuthenticationCest.php",
+    "sha256": "c7da0a4899fb05a128adcb2669d6d4fe690ed87218dc41380c17578c9433a439"
+  },
+  {
+    "path": "apps/backend/tests/Api/NotFoundCest.php",
+    "sha256": "49a2969b798916aea330ef1ba519a72ac91f78008304291332bcfd4dbc3c897c"
+  },
+  {
+    "path": "apps/backend/tests/Api/OrganizationsCest.php",
+    "sha256": "759a0c1425a4938d14cbf5d4173195fd640693c65a5cd79e2335a93e04033867"
+  },
+  {
+    "path": "apps/backend/tests/Api/PasskeyApiCest.php",
+    "sha256": "042437f31fee3b3c96415385b5ef213ed253b2686489e7a353123222b94e2a87"
+  },
+  {
+    "path": "apps/backend/tests/Api/PasswordChangeCest.php",
+    "sha256": "9234933397285073ea136e95692c3ec232c082ffc6ed866b2ce123f210fc34ff"
+  },
+  {
+    "path": "apps/backend/tests/Api/PersonsCest.php",
+    "sha256": "ed07e312b6399a36c8d6bd0422b4244ea56ab3f22f0b5f10fc6276ccc6a542bb"
+  },
+  {
+    "path": "apps/backend/tests/Api/PrivacyLegalHoldB3Cest.php",
+    "sha256": "ac62fd621d4c7cf54ef9a7b4b61c547ba3a50e609827417f4561d62476e49cdb"
+  },
+  {
+    "path": "apps/backend/tests/Api/PrivacyRepresentationCest.php",
+    "sha256": "edb0b25e6f02d5bb426d2938c277cb07aeaa68033602c06d1f40ac9722747070"
+  },
+  {
+    "path": "apps/backend/tests/Api/RbacCest.php",
+    "sha256": "2929471b3cf5c8644c84c3c2a0705c5c01e35b3753e1a828066d8fbd6ce1dbcb"
+  },
+  {
+    "path": "apps/backend/tests/Api/ServiceCredentialsCest.php",
+    "sha256": "46ab87420792c9687c718b3b61db5debc6af35567b65ccb714a4da51b329b95e"
+  },
+  {
+    "path": "apps/backend/tests/Console.suite.yml",
+    "sha256": "ff5c6799485b04b676a1a34a60cd35b9148eadd9f3bde22855ea90bd8e58df30"
+  },
+  {
+    "path": "apps/backend/tests/Console/YiiCest.php",
+    "sha256": "2ce84dace764bb852bc0e60c8ec727085eb4c0c7e029ffa3d52edf243ade81b3"
+  },
+  {
+    "path": "apps/backend/tests/Fixtures/privacy/synthetic-production-policy.json",
+    "sha256": "2d76f5169b7d723af87bedc35a9d6e4d64e50d051cd21a00c01c147ed479eeba"
+  },
+  {
+    "path": "apps/backend/tests/Functional.suite.yml",
+    "sha256": "e6bec43d01730d98f67154253a602cc2813a8f5797edf118ca155fc8d1e0890c"
+  },
+  {
+    "path": "apps/backend/tests/Functional/AccountSettingsCest.php",
+    "sha256": "c01e92faf32bd09a1d049d8af60fbf48676522abb7b0eba72b70a0d3d617b66c"
+  },
+  {
+    "path": "apps/backend/tests/Functional/AuditMessagingPersistenceCest.php",
+    "sha256": "15670e2e64fd80e615497b81225dd7c7da068d240841588fdfd06d444a334286"
+  },
+  {
+    "path": "apps/backend/tests/Functional/AuthCleanupCest.php",
+    "sha256": "d5a68a2bbb0263792f404bb521ad9d48f62431d62bbd7ce4ab7dea9edf561a75"
+  },
+  {
+    "path": "apps/backend/tests/Functional/AuthPersistenceCest.php",
+    "sha256": "78c1f823b7c068f89d4011706dd83670fddf80b501ac368a6f59df6073d742cc"
+  },
+  {
+    "path": "apps/backend/tests/Functional/AuthorizationLifecycleCest.php",
+    "sha256": "03b6ee6a8993c9a0d43b8660fb66b7db0947076b906078c9f7c9cfd57335d3ee"
+  },
+  {
+    "path": "apps/backend/tests/Functional/CommunicationOutboxCest.php",
+    "sha256": "243a7ccc45f3fc39dc1f25524cf560a726704f693eb5666a9df168f5e7125222"
+  },
+  {
+    "path": "apps/backend/tests/Functional/ConsentCest.php",
+    "sha256": "bfded396e03e199f0f2c641d6d8724a6cbd3408c8bd4c6b789a54236c6807123"
+  },
+  {
+    "path": "apps/backend/tests/Functional/DataSubjectRequestConcurrencyCest.php",
+    "sha256": "e6884785d0564f5f0d1425af4b1708167023d977f967106913d137cda85736c5"
+  },
+  {
+    "path": "apps/backend/tests/Functional/DataSubjectRequestExecutionCest.php",
+    "sha256": "4ca2136e471ca7a15e7309f5d76fa2997f9bf57fceeb1a2131eac2a29ce537c2"
+  },
+  {
+    "path": "apps/backend/tests/Functional/DataSubjectRequestsCest.php",
+    "sha256": "a13c07b9788148afed2f073c059467827cc034d75529604a706df2b8c47f0f18"
+  },
+  {
+    "path": "apps/backend/tests/Functional/ExternalIdentityConcurrencyCest.php",
+    "sha256": "799b529222212b40425ac9a3cc5c8bb26077bf43e5bc1f7c47b7fe7ab8ed328e"
+  },
+  {
+    "path": "apps/backend/tests/Functional/ExternalIdentityMfaPersistenceCest.php",
+    "sha256": "8119802ed4a7ace84dacda6d7442fe235469d780bfcf1c0460091380fc3ad306"
+  },
+  {
+    "path": "apps/backend/tests/Functional/ExternalOidcFlowCest.php",
+    "sha256": "e4e98d1dad402ddb33754d832149b0ea92fc53eafe96dad8c25c798aa7f31b6d"
+  },
+  {
+    "path": "apps/backend/tests/Functional/HomePageCest.php",
+    "sha256": "3af749c599870bdf80ad720957b478d56bb99bd4609de8efce44cc5eb7a6b409"
+  },
+  {
+    "path": "apps/backend/tests/Functional/HumanCredentialBoundaryCest.php",
+    "sha256": "52238e8306410e97932a72ab915c59fb17ddb5e86be252132a7232089d593c48"
+  },
+  {
+    "path": "apps/backend/tests/Functional/InternationalPreferencesCest.php",
+    "sha256": "722960f5f18fc925e505c3a163758c08caeaa5f928fc7478724ee43334107c5f"
+  },
+  {
+    "path": "apps/backend/tests/Functional/MfaRecoveryHardeningCest.php",
+    "sha256": "5ae4367733aa9adc96cea680573ad289546c579891bc19be44ae26423c35df96"
+  },
+  {
+    "path": "apps/backend/tests/Functional/NotificationPolicyCest.php",
+    "sha256": "585a80eb11e930b70bfb8c0686775b0989f1c2679e79fcacc4788f1e6d2d0883"
+  },
+  {
+    "path": "apps/backend/tests/Functional/OrganizationFoundationCest.php",
+    "sha256": "dcd0fa14b465e9548072b80e012ead8a742f337a638f30616d7115cea3057468"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PasskeyConcurrencyCest.php",
+    "sha256": "47ee6e0443ec0790ea044d4add1b4b730a10f72b2606af58fede6891c5053ff5"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PasskeyHardeningCest.php",
+    "sha256": "2dff370a0d8b2348ec5a2ee4aa9de24108c53909d00b22d8735e472c61c5800c"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PasskeyRuntimeCest.php",
+    "sha256": "3cc8f62062602fecf7b3b846b9fcf11e070f8217081b27d6bc744a1abfeff490"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PersonalDataContributorsCest.php",
+    "sha256": "45dc8208395fdcb6fe4d34dd4fd123428dade7ba32fdc1a0ee21cad168e6222d"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PersonalDataCorrectionCest.php",
+    "sha256": "68690761a2c66cdc1b5ae6b69e1ee962b3e45a774f3cafa3ac864661e36c340a"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PersonalDataExportServiceCest.php",
+    "sha256": "a9d242e5d933f0e98d3f804ac1e97aecab08c3a2eaa41ec3107ed331c4846811"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PresenceCest.php",
+    "sha256": "0c78c476fc39457255eeb9d6e2731d5862edd09a848523c0f1359f62936b7324"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PrivacyClockConsistencyCest.php",
+    "sha256": "d77022cfa9a9f13e66f452d995d3d62327f48c789d4a83be82b059f3ee4d5cae"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PrivacyComplianceB5Cest.php",
+    "sha256": "41ee4d7c24b95056074525d4e635db58612b3dc736864ae170c8593cbc1a83d2"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PrivacyErasureB4Cest.php",
+    "sha256": "01127e6916aa84e257e66020b0813510db27940eb0e392bfe0a4a46bb3104b45"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PrivacyFoundationCest.php",
+    "sha256": "1dee371e7ef912c4ea318abb634294af4de016150c75022ad491c4f06d197e26"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PrivacyIdentityErasureCest.php",
+    "sha256": "5d26e6aa831bf830d7329ce5409dfa43f21544991e09d3b0f5c9c2a0ec57d423"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PrivacyOperations45Cest.php",
+    "sha256": "5c3cc90321dca818344b4a56aeed094ec9834515b74c0550cc3e81aa3c346106"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PrivacyProductionContributorsCest.php",
+    "sha256": "e09420ae562904aa0fb91fea6ee712f07f3df3c1bc66098644f1daa195c71b23"
+  },
+  {
+    "path": "apps/backend/tests/Functional/PrivacyRetentionB3Cest.php",
+    "sha256": "ac596444bd54339d91ddc4535dc44875c0423eb204221da42ae843aae100cb76"
+  },
+  {
+    "path": "apps/backend/tests/Functional/RuntimeBootstrapSyncCest.php",
+    "sha256": "9b8b6fb8a97b2e99367914bbbd82a927943bd94f4a559b888661e91bb284b03f"
+  },
+  {
+    "path": "apps/backend/tests/Functional/RuntimeEntitlementsCest.php",
+    "sha256": "d9894f50a19cc05379fc0bef7a31dabb328c268d9e44a712ef4a83f75db456bb"
+  },
+  {
+    "path": "apps/backend/tests/Functional/SchedulerLoopCest.php",
+    "sha256": "8d18379bb8eed7014cc8919e828b15fecc9be39a6dcb74073e4aacac98929504"
+  },
+  {
+    "path": "apps/backend/tests/Functional/SecurityAuditCest.php",
+    "sha256": "03738d50355f5404dcd9fff8e363121839c89704d9c7e9faa95e4b994370b4dc"
+  },
+  {
+    "path": "apps/backend/tests/Functional/SessionLifecycleCest.php",
+    "sha256": "e60d67165485aba21810d08950a0714284b979f7cb1fcd42d3d28986e960bfe3"
+  },
+  {
+    "path": "apps/backend/tests/Functional/SettingsPersistenceCest.php",
+    "sha256": "722992060cd042f1cb6ed0c8f2beec73b919e8dc1b46394bef5b6e8a3c6c7b60"
+  },
+  {
+    "path": "apps/backend/tests/Functional/TotpProvisioningCest.php",
+    "sha256": "8a179b5943bb2d16bdef06c73da8a4ea3e36980f83bbb89b2318363767501495"
+  },
+  {
+    "path": "apps/backend/tests/Functional/VerifiedExternalIdentityFoundationCest.php",
+    "sha256": "4fbced0bdf9da339a225066b06e68a88d696c2ba14167d7cc4c6de8ffed7a3d2"
+  },
+  {
+    "path": "apps/backend/tests/Support/ApiTester.php",
+    "sha256": "369da94167cc4454f1f3432639df4ce3d0b8564bdce3916f687fccf2c35c4380"
+  },
+  {
+    "path": "apps/backend/tests/Support/ConsoleTester.php",
+    "sha256": "417c0f541e6a22cd4d0adcc2157c38a79a3e8fb9230997f96a0efaf9a95cd03c"
+  },
+  {
+    "path": "apps/backend/tests/Support/Extension/TestIsolationExtension.php",
+    "sha256": "0ecc9492605e2713c417e317f24edd5a8e88da135d73fcca4ae0e6a269e66bbd"
+  },
+  {
+    "path": "apps/backend/tests/Support/FunctionalTester.php",
+    "sha256": "7f9e1dad385b05e060f028c78a4fd0a09817dc879b2369126535ac6f54dbe496"
+  },
+  {
+    "path": "apps/backend/tests/Support/TestReset.php",
+    "sha256": "7498995d8feb8d85e3bcd490adb012a397d5d74b134b2e0298869cd395c1b57d"
+  },
+  {
+    "path": "apps/backend/tests/Support/UnitTester.php",
+    "sha256": "dc3beffc901917c7c95d1082c2bd70867353802c0c52175f4d133671cc36421e"
+  },
+  {
+    "path": "apps/backend/tests/Support/WebAuthnTestAuthenticator.php",
+    "sha256": "c70269e205db82820d2499f2a9aace2546f57024d152495915b32a0d7b912ccd"
+  },
+  {
+    "path": "apps/backend/tests/Support/_generated/.gitignore",
+    "sha256": "5c89a8a9c5af258d02d0bfd3582c75963bea53baa1f5f5132662b80020a63452"
+  },
+  {
+    "path": "apps/backend/tests/Support/account-settings-race-worker.php",
+    "sha256": "2b52f9d9e7b90f95b138f4ba66088986c9bd552e8b847b6095627161dd04b490"
+  },
+  {
+    "path": "apps/backend/tests/Support/external-identity-race-worker.php",
+    "sha256": "c50e71ce72c1f5d236bd71f3cd946b23ce338bf33fb855f1dbd1550c26e9842a"
+  },
+  {
+    "path": "apps/backend/tests/Support/privacy-erasure-race-worker.php",
+    "sha256": "5e9e31c320e96ea52f8aa5040c4b6c8b9779076b0ea761bd4e6dcc2b1e38097c"
+  },
+  {
+    "path": "apps/backend/tests/Support/privacy-race-worker.php",
+    "sha256": "fed27cd18715e5581a0fce026bc8276e98ea5ebdedee64e4ebcb23ba996ff9f5"
+  },
+  {
+    "path": "apps/backend/tests/Unit.suite.yml",
+    "sha256": "40589f0ef42b53e5ce2023a833e25fd861c2e32397d40bee69a582c1c18cf967"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Api/Shared/ExceptionResponderFactoryTest.php",
+    "sha256": "c7153efbb0460f33ec705819ecdfd83114f9da4e70b0894b63b42bf1a20ba289"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Api/Shared/OffsetPaginationTest.php",
+    "sha256": "b94730afe6b9aae16daf86c79dc44187aefc13dff55cb269ba027de4952165d6"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Api/Shared/Presenter/OffsetPaginatorPresenterTest.php",
+    "sha256": "53db570b86291d31036d150253fc19e91dc938f53b570a97564fc35ada9a4ef7"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Api/Shared/ResponseFactoryTest.php",
+    "sha256": "2edaccee681445292afe242021f31f0ad53168d7e0f1dcc72e73f56d7bbc5ade"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Api/Shared/SecurityHeadersMiddlewareTest.php",
+    "sha256": "33f9c259f4e56611627a63860334accf9d0c4782792e5ba2f9504d5750b4a541"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Contracts/EventSchemaTest.php",
+    "sha256": "5992d3e7d4869735ac8a8d9c00505a1693f71db80f742ef5c30b2f2cdd366664"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Account/AccountSecurityStateTest.php",
+    "sha256": "8f49d9f51776cfc095dcff0bb5ce084db7d90b04588b6f2b7e3f66dac3beb118"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/AccountSettings/SettingsSchemaRegistryTest.php",
+    "sha256": "ccc6c56a04743f24c5682403284ba545fc2b42fd4b12ef92f4c6dbcf13185c4a"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Auth/MfaSecurityPrimitivesTest.php",
+    "sha256": "5d41029b7c6da96728d2c1ed08be18f5ef82bcd5ac12b37cae6aa1dca036e122"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Auth/OpaqueTokenServiceTest.php",
+    "sha256": "b3447f8a7473590f025a9492dc3a653f78aa53ba3052168d20e5a8d012877c78"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Auth/PasswordAndIdentifierTest.php",
+    "sha256": "0019bc284f59108b2cfa29aa898ea16b018661ba1c97b41ed1be8c6c8afd18da"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Client/ClientContextResolverTest.php",
+    "sha256": "505ab7d1a2a2681b710cd09928ffb06aa37b7e6914ed248d57761f285f5b0061"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Client/DeviceDetectorTest.php",
+    "sha256": "d7a9fddd8b1b883c9df3130da5a8a5ad6e4e1b2a01108cd58a1dfc107dbbd4a7"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Client/FingerprintServiceTest.php",
+    "sha256": "b642c4e4ac107fbd807a08773f86870624d0321fdc6a8057b084e3ce9836afae"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Client/IpAddressResolverTest.php",
+    "sha256": "902e7910c8b64ceabf492dc720b0f7b35ce9e36d8d73534d711caa9e37f3296c"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Communication/EmailRequestTest.php",
+    "sha256": "603485184cecb4223bd844c4784629b9103288edd20548de425cfe19692e3a62"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Communication/FileEmailTemplateRendererTest.php",
+    "sha256": "097127e4f42dc7808281b28bd04e18e7755e65cc7b27b0e49326eb041be6565f"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Communication/SmtpConfigurationTest.php",
+    "sha256": "4b90d6a333e1f2fe522f82aaeded300eff73f698dee3d330677193e74b3c9f38"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/EmailWorkerStatusTest.php",
+    "sha256": "026cb9ee498f326248cc8339896c684ee9e2c28198cfdf9642da6f0ea13ba563"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Geo/GeoIpServiceTest.php",
+    "sha256": "3e411d1c29a1768805beab8ca72c775bdddc9e418b9890adb362a0607440cab4"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/HealthActionsTest.php",
+    "sha256": "97d93bb9f0dbbbc12d8e288e7e21e0914647f3f727f2ace22f002f3151ea19b3"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Internationalization/CatalogArchitectureTest.php",
+    "sha256": "654897fd99499babb12df00a31137fc098899328f1fbbb4c564fc3e46982ac9d"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Internationalization/LocaleNormalizerTest.php",
+    "sha256": "d2f75f060d026eb8a5743a7def9b1a42156fc45253979992b386d10245c6840d"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Internationalization/LocaleResolverTest.php",
+    "sha256": "99863ce502803bb263a319cc5bff6b3339fe50a18307fe541a600e7ca8d9e481"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Internationalization/TranslationServiceTest.php",
+    "sha256": "8a11db6083c67ed56f0503f17f3a63284b3950c67befb47630bacebc2bdeef04"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/OperationalStatusTest.php",
+    "sha256": "1a72a98a3015f4c3a1da25723d1979208ee978e22d8263151dd8dc0e845ea381"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Person/Api/PersonInputTest.php",
+    "sha256": "0b55c455b3f38f60aee959516ab916b721f5e72d94553f5ca970c0f243009a4c"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Rbac/Application/PermissionServiceTest.php",
+    "sha256": "e291df62b3b5220f5b596d368ced39e3b93ffe34ee644f479c4aeddb50753b52"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/RuntimeSecretResolverTest.php",
+    "sha256": "8dd6819f350b1658723dacfd970f24d14cd4e33600d2fa3bb230130f3d7c7345"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/SchedulerConfigTest.php",
+    "sha256": "544d6d450f1d9d1b2c413b81eda58a82febf46f7b85838a0c7cb945a06235cb8"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/AuditPayloadPolicyTest.php",
+    "sha256": "835154c6a97dc611ce2f219034a1536d15c407e272c32b1f81b0064864d462a6"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/BusinessCalendarTest.php",
+    "sha256": "bc67c72402aa3087d01fab6b4ef63a29c671704d9c87ec2994ecace00ef6bb44"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/DataSubjectRequestPolicyTest.php",
+    "sha256": "d4833ed09132da86fbd50eb5a3d2bd05aadd35c8cdbd22493db714507daa01f6"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/DestructionEvidencePolicyTest.php",
+    "sha256": "cb94639ffc9831ed2c99e955633859f8b7fd905c73c17e2ceadbcd39da732bb1"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/PersonalDataExporterTest.php",
+    "sha256": "335485602f5dcb74da7ffb4dfa7a4014ca6b3ab6098b5b7530fbeed2b530e484"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/PrivacyContributorRegistryTest.php",
+    "sha256": "ceed7e14c5d3d996c899c8421a9ac7d95f355c9be4278be8665199c62c00b003"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/PrivacyDeadlinePolicyTest.php",
+    "sha256": "7cc169d0a1a63aff90880a0c6e5f63bd0f265936dfe733e62952ca04ad3783a5"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/PrivacyDeploymentConfigLoaderTest.php",
+    "sha256": "f0eefbbd55fa1d52160fe4d3e19440af380b6458761e3ac64cbe34537aef645e"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/PrivacyEgressPolicyTest.php",
+    "sha256": "7c141e0af4ce53f3679c4c3e97fdc2c6342ca0d6ad42d83c1ed36d5ee21e447d"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/PrivacyIdentityErasureTest.php",
+    "sha256": "6d2ba651c894d92c4696c77911406fad6efe4772408759ecb8dda6b460a66fa0"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/PrivacyProductionConfigurationTest.php",
+    "sha256": "6a1cebef7f316852c0a97692cdcdff1be887b0f35745a8c5f0fe09e0a1ca2c09"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/PrivacyProductionContributorsTest.php",
+    "sha256": "d5123b84c34e1d5295c999e402540fa723a67b52d3b50965f09bc1ed0d702a9f"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/PrivacyReadinessTest.php",
+    "sha256": "7a0816722aa043f09c4240fb6013fb9f848fc3353a28edbd363d4d2a44f818d8"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/PrivacyRegistryTest.php",
+    "sha256": "54de809a3aaaf4c965edf214da4632a6a1f9f60fe6f7209db2f6d8297461fe5a"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/SecurityAuditServiceTest.php",
+    "sha256": "67d42215e278c20efd9d7b9c9b8523fe90fc650206ffe42911600747b373675c"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Security/SessionRiskEvaluatorTest.php",
+    "sha256": "38b0e1d900cc6cccc3831c0322a42c090fe5fb40f18690c900c2282de3ce888a"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Settings/FeatureFlagServiceTest.php",
+    "sha256": "48864968da5fe7592ae4089ba2b525390e5849635d9c42ceeb0acf63f429c3ad"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Settings/SettingSecurityPolicyTest.php",
+    "sha256": "0c3b4dac8a8043aa32336d1a34d2d9ebaa929aa81cffdc1a5e5fea590d6dc9f5"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Shared/Api/CanonicalInputContractTest.php",
+    "sha256": "42d726f9ad3252cd2d15fbcce326bb5efc6781820283b8f4b131f187572a6a2c"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Shared/Domain/ValueNormalizerTest.php",
+    "sha256": "ae5ba724a33404222891fccf3d40a41da094fad5ab00664e04a061751d1c0015"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Shared/Infrastructure/TestRuntimeGuardTest.php",
+    "sha256": "0a37fd02caf54c7c8c44c34876bb063ea0c2f7a633d389543f7d328a90139b56"
+  },
+  {
+    "path": "apps/backend/tests/Unit/Core/Time/TimeFoundationTest.php",
+    "sha256": "74d66fd8ede23b99ce4fc7a5e2316989728f72461acd480208bed3c304ae3192"
+  },
+  {
+    "path": "apps/backend/tests/Unit/EnvironmentTest.php",
+    "sha256": "355945c94a1870e98d9ef2207e61d980b72898457c248c628e9244b307c58785"
+  },
+  {
+    "path": "apps/backend/tests/Unit/PlatformRuntime/RuntimeMigrationArtifactTest.php",
+    "sha256": "3ca1474c8416c54eb59bbe90a7f8e9a8a3c20db66615f4cc3e4a91f69d8a651c"
+  },
+  {
+    "path": "apps/backend/tests/bootstrap.php",
+    "sha256": "459b8a439314d35ab4e2c121cc9a3cadef3fd4df3368e7862e888c0a45fc85ca"
+  },
+  {
+    "path": "apps/backend/yii",
+    "sha256": "a031477d831bad2b7b0a35f931f5a1eae1691252aa2fff0091ac31faded5b611"
+  },
+  {
+    "path": "apps/backend/yii.bat",
+    "sha256": "277a6312b74092bd6b542276766576c81374c5a6aecb9100efbc3ac4d0a32654"
+  },
+  {
+    "path": "contracts/events/.gitkeep",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "contracts/events/control_user.email_verification_requested.v1.schema.json",
+    "sha256": "ddf3eca820088c94941ae97fc4ab0bffa104e9b8e01c803d1d2389ef2f2dc16b"
+  },
+  {
+    "path": "contracts/events/deployment.provision_requested.v1.schema.json",
+    "sha256": "733274246dbc79d7108f2e1ce6a7544863e759d8584f4d647fab0483de65153e"
+  },
+  {
+    "path": "contracts/events/entitlement.issued.v1.schema.json",
+    "sha256": "4554d207b849e7fd8458bd07e012e4c6511c014cc2a2f8f29e8637eb5e14f18e"
+  },
+  {
+    "path": "contracts/events/envelope.v1.schema.json",
+    "sha256": "5a5b79f955fa605e471f833bf79bc2ba394e355adbfebde5a1f517d6aad08e83"
+  },
+  {
+    "path": "contracts/events/fixtures/control_user.email_verification_requested.v1.json",
+    "sha256": "e5cac0688d366507d20bd306df41464f65f93286383201031135479dedecf186"
+  },
+  {
+    "path": "contracts/events/fixtures/deployment.provision_requested.v1.json",
+    "sha256": "9a5bc0a59945d9b2238a787051218a04462c10b7225d1db134202d871e0687ca"
+  },
+  {
+    "path": "contracts/events/fixtures/entitlement.issued.v1.json",
+    "sha256": "4ea39441c27ce513973254688b890131ffd8e014a1ed473361f1adaf4880d920"
+  },
+  {
+    "path": "contracts/openapi/README.md",
+    "sha256": "0e758e846232d422fd13081f58241f35a6fa370e4c554af6c60194a33868051b"
+  },
+  {
+    "path": "contracts/openapi/account-settings.yaml",
+    "sha256": "cb22ac52911b8e0a25e57f52a3963e60b49da57f5f3bfad696c1d2a37c2d75c9"
+  },
+  {
+    "path": "contracts/openapi/auth-passkeys.yaml",
+    "sha256": "9364bd329497f8d998dc2124706ecbed8f76365db6745cdb8072631cb9570944"
+  },
+  {
+    "path": "contracts/openapi/control-plane.yaml",
+    "sha256": "3cfbb84b868afd0f3357bf1fa1cbf6a3c1789c3deee36a2cba3d2739e85c692a"
+  },
+  {
+    "path": "infra/postgres/migrate.sh",
+    "sha256": "7adf160418a3a3381848f3e83f3b3d212b71bad82f906c34e9de458dbf1ab5ee"
+  },
+  {
+    "path": "scripts/database/rehearsal/Dockerfile.core-regression",
+    "sha256": "e32b12bdb6a7c10a51182cb490d12fdde9481f23cf37a6680bed9b25e5f713f8"
+  }
+]

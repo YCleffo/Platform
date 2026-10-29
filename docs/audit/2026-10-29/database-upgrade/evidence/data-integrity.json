@@ -1,0 +1,2728 @@
+{
+  "09f93b19c6be": {
+    "core": {
+      "original_rows": 600,
+      "original_tables": [
+        {
+          "table": "core.account_roles",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.account_settings",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.accounts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.audit_events",
+          "rows": 516,
+          "sha256": "1337902e8d53cbce32713f57d32a18f781c5c7661cf7b2562c0d6122e9d3bf41"
+        },
+        {
+          "table": "core.auth_challenges",
+          "rows": 38,
+          "sha256": "6e5b421514e42acb82db7047e1166f1438ac672de8f7d476f03365f6bfdedc56"
+        },
+        {
+          "table": "core.auth_external_identities",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_identifiers",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_passkeys",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_password_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_providers",
+          "rows": 2,
+          "sha256": "3631a8f9d29445c7b7de69c1a7e52a3b670fccb12b27ebd5e301dd776899ad96"
+        },
+        {
+          "table": "core.auth_recovery_codes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_sessions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_totp_factors",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_deadlines",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_executions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_requests",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.feature_flags",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.inbox_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.legal_representation_scopes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.legal_representations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.module_settings",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.modules",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.organization_memberships",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.organizations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.outbox_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.permissions",
+          "rows": 29,
+          "sha256": "a60ca4ec8b31f463fbe70b5bf66a3a867c7ce4b901cfbc0358e8f1d415d3a3a3"
+        },
+        {
+          "table": "core.person_contacts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.persons",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_cleanup_runs",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_collection_notices",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_consents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_destruction_evidence",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_distribution_consents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_cases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_item_purposes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_categories",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_subject_scope",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incidents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_destruction_packages",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_destruction_signatures",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_processing_blocks",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_retention_decisions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.role_permissions",
+          "rows": 12,
+          "sha256": "abf332d77a0a518c784c98652555c156871ca6dcd1f3abfba42ae0131f4a9053"
+        },
+        {
+          "table": "core.roles",
+          "rows": 2,
+          "sha256": "775ae5b2874aa895d5f657edd4cb736357c70c8ab0562fcaf5ac7ddf2f87165e"
+        },
+        {
+          "table": "core.service_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.system_settings",
+          "rows": 1,
+          "sha256": "0e20bfbedeb0faa9a86a65cbfb321535640361421abc26ccbb16fdc0d1fc9e19"
+        },
+        {
+          "table": "platform_runtime.background_job_status",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "platform_runtime.entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "platform_runtime.installations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "post_upgrade_tables": [
+        {
+          "table": "core.account_roles",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.account_settings",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.accounts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.audit_events",
+          "rows": 516,
+          "sha256": "1337902e8d53cbce32713f57d32a18f781c5c7661cf7b2562c0d6122e9d3bf41"
+        },
+        {
+          "table": "core.auth_challenges",
+          "rows": 38,
+          "sha256": "6e5b421514e42acb82db7047e1166f1438ac672de8f7d476f03365f6bfdedc56"
+        },
+        {
+          "table": "core.auth_external_identities",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_identifiers",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_passkeys",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_password_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_providers",
+          "rows": 2,
+          "sha256": "3631a8f9d29445c7b7de69c1a7e52a3b670fccb12b27ebd5e301dd776899ad96"
+        },
+        {
+          "table": "core.auth_recovery_codes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_sessions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_totp_factors",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_deadlines",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_executions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_requests",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.feature_flags",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.inbox_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.legal_representation_scopes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.legal_representations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.module_settings",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.modules",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.organization_memberships",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.organizations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.outbox_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.permissions",
+          "rows": 29,
+          "sha256": "a60ca4ec8b31f463fbe70b5bf66a3a867c7ce4b901cfbc0358e8f1d415d3a3a3"
+        },
+        {
+          "table": "core.person_contacts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.persons",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_cleanup_runs",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_collection_notices",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_consents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_destruction_evidence",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_distribution_consents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_cases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_item_purposes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_categories",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_subject_scope",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incidents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_destruction_packages",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_destruction_signatures",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_processing_blocks",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_retention_decisions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.role_permissions",
+          "rows": 12,
+          "sha256": "abf332d77a0a518c784c98652555c156871ca6dcd1f3abfba42ae0131f4a9053"
+        },
+        {
+          "table": "core.roles",
+          "rows": 2,
+          "sha256": "775ae5b2874aa895d5f657edd4cb736357c70c8ab0562fcaf5ac7ddf2f87165e"
+        },
+        {
+          "table": "core.service_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.system_settings",
+          "rows": 1,
+          "sha256": "0e20bfbedeb0faa9a86a65cbfb321535640361421abc26ccbb16fdc0d1fc9e19"
+        },
+        {
+          "table": "platform_runtime.background_job_status",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "platform_runtime.entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "platform_runtime.installations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    "commercial": {
+      "original_rows": 59,
+      "original_tables": [
+        {
+          "table": "commercial.audit_events",
+          "rows": 19,
+          "sha256": "a76e8e2cfdd44835f83f58b52c3d4caf072b3bd970fe4f9391e453dad8d48a95"
+        },
+        {
+          "table": "commercial.background_job_status",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.billing_profiles",
+          "rows": 2,
+          "sha256": "4fc3da7cc8c072d8fb70352ebeab8079e71038e0cb53de80ac3248d98cb3859a"
+        },
+        {
+          "table": "commercial.commercial_account_memberships",
+          "rows": 2,
+          "sha256": "dc138712f7da47428c647dfaf891e0272cd2905a4b9131f2dd4179d0bfb68789"
+        },
+        {
+          "table": "commercial.commercial_accounts",
+          "rows": 2,
+          "sha256": "3662b456c62aae81d848d128db98cba734e621a675d0bb2794ec2abb06db8ee0"
+        },
+        {
+          "table": "commercial.control_session_refresh_history",
+          "rows": 3,
+          "sha256": "8c59c71a605089385741759760214faf44b715b3e9da4087f6495885e50b6f36"
+        },
+        {
+          "table": "commercial.control_sessions",
+          "rows": 4,
+          "sha256": "c979218901ae5d742338433b0ce13b1ba03a02219e7d940f6d21feacf96d0b80"
+        },
+        {
+          "table": "commercial.control_user_email_verifications",
+          "rows": 3,
+          "sha256": "bc26ab7b5be9c9ac88aa991aa55cf0083bb6836b4b8d19ef1046eaf6b846b077"
+        },
+        {
+          "table": "commercial.control_users",
+          "rows": 3,
+          "sha256": "19b5ab3b2e4e2db07b6e16e6023ed15280b75c43b17ed07fd648d7451a6973a5"
+        },
+        {
+          "table": "commercial.deployment_domains",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployment_entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployment_operations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployments",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.features",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.idempotency_keys",
+          "rows": 2,
+          "sha256": "1bfcc824b41d4221a9bf09ec3afc835bd88ec2cc1f212045f9bc00bc71651986"
+        },
+        {
+          "table": "commercial.invoice_lines",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.invoices",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.issued_entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.license_installations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.licenses",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.maintenance_contracts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.outbox_events",
+          "rows": 7,
+          "sha256": "3e9f13e46849842c297a5a08a1cf1690eb535c44b264c17a335cbbc89a91bcc1"
+        },
+        {
+          "table": "commercial.payment_attempts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.payment_provider_accounts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.payment_provider_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.payments",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.plan_features",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.plan_prices",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.plans",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_erasure_cases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_export_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_incident_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_incidents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_lifecycle_runs",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_operators",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_subject_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_subject_requests",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.rate_limit_counters",
+          "rows": 12,
+          "sha256": "615c630ef5da6ed773be1afc3246e7a32eaf7aa76fe63ac1ac5fc5c9b4584a26"
+        },
+        {
+          "table": "commercial.receipt_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.receipts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.refund_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.refunds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.release_entitlements",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.releases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.service_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.signing_keys",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.subscription_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.subscriptions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.usage_counters",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.usage_periods",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "post_upgrade_tables": [
+        {
+          "table": "commercial.audit_events",
+          "rows": 19,
+          "sha256": "a76e8e2cfdd44835f83f58b52c3d4caf072b3bd970fe4f9391e453dad8d48a95"
+        },
+        {
+          "table": "commercial.background_job_status",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.billing_profiles",
+          "rows": 2,
+          "sha256": "4fc3da7cc8c072d8fb70352ebeab8079e71038e0cb53de80ac3248d98cb3859a"
+        },
+        {
+          "table": "commercial.commercial_account_memberships",
+          "rows": 2,
+          "sha256": "dc138712f7da47428c647dfaf891e0272cd2905a4b9131f2dd4179d0bfb68789"
+        },
+        {
+          "table": "commercial.commercial_accounts",
+          "rows": 2,
+          "sha256": "3662b456c62aae81d848d128db98cba734e621a675d0bb2794ec2abb06db8ee0"
+        },
+        {
+          "table": "commercial.control_auth_challenges",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.control_session_refresh_history",
+          "rows": 3,
+          "sha256": "8c59c71a605089385741759760214faf44b715b3e9da4087f6495885e50b6f36"
+        },
+        {
+          "table": "commercial.control_sessions",
+          "rows": 4,
+          "sha256": "abbb9424dd35b20b1a4dfe64186b9c014a2023b7cac2759b8cf0b96a93086eea"
+        },
+        {
+          "table": "commercial.control_user_email_verifications",
+          "rows": 3,
+          "sha256": "bc26ab7b5be9c9ac88aa991aa55cf0083bb6836b4b8d19ef1046eaf6b846b077"
+        },
+        {
+          "table": "commercial.control_user_password_resets",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.control_user_recovery_codes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.control_user_totp_factors",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.control_users",
+          "rows": 3,
+          "sha256": "19b5ab3b2e4e2db07b6e16e6023ed15280b75c43b17ed07fd648d7451a6973a5"
+        },
+        {
+          "table": "commercial.deployment_domains",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployment_entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployment_operations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployments",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.external_compensation_attestations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.features",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.financial_operators",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.idempotency_keys",
+          "rows": 2,
+          "sha256": "1bfcc824b41d4221a9bf09ec3afc835bd88ec2cc1f212045f9bc00bc71651986"
+        },
+        {
+          "table": "commercial.invoice_lines",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.invoices",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.issued_entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.license_installations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.licenses",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.maintenance_contracts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.outbox_events",
+          "rows": 7,
+          "sha256": "3e9f13e46849842c297a5a08a1cf1690eb535c44b264c17a335cbbc89a91bcc1"
+        },
+        {
+          "table": "commercial.payment_attempts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.payment_provider_accounts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.payment_provider_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.payments",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.plan_features",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.plan_prices",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.plans",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_erasure_cases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_export_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_incident_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_incidents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_lifecycle_runs",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_operators",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_subject_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_subject_requests",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.rate_limit_counters",
+          "rows": 12,
+          "sha256": "615c630ef5da6ed773be1afc3246e7a32eaf7aa76fe63ac1ac5fc5c9b4584a26"
+        },
+        {
+          "table": "commercial.receipt_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.receipts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.refund_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.refunds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.release_entitlements",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.releases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.renewal_collection_states",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.saved_payment_methods",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.service_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.signing_keys",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.subscription_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.subscription_plan_changes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.subscriptions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.usage_counters",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.usage_periods",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    }
+  },
+  "20a50dc56a75": {
+    "core": {
+      "original_rows": 600,
+      "original_tables": [
+        {
+          "table": "core.account_roles",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.account_settings",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.accounts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.audit_events",
+          "rows": 516,
+          "sha256": "1337902e8d53cbce32713f57d32a18f781c5c7661cf7b2562c0d6122e9d3bf41"
+        },
+        {
+          "table": "core.auth_challenges",
+          "rows": 38,
+          "sha256": "6e5b421514e42acb82db7047e1166f1438ac672de8f7d476f03365f6bfdedc56"
+        },
+        {
+          "table": "core.auth_external_identities",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_identifiers",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_passkeys",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_password_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_providers",
+          "rows": 2,
+          "sha256": "3631a8f9d29445c7b7de69c1a7e52a3b670fccb12b27ebd5e301dd776899ad96"
+        },
+        {
+          "table": "core.auth_recovery_codes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_sessions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_totp_factors",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_deadlines",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_executions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_requests",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.feature_flags",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.inbox_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.legal_representation_scopes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.legal_representations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.module_settings",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.modules",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.organization_memberships",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.organizations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.outbox_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.permissions",
+          "rows": 29,
+          "sha256": "a60ca4ec8b31f463fbe70b5bf66a3a867c7ce4b901cfbc0358e8f1d415d3a3a3"
+        },
+        {
+          "table": "core.person_contacts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.persons",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_cleanup_runs",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_collection_notices",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_consents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_destruction_evidence",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_distribution_consents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_cases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_item_purposes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_categories",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_subject_scope",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incidents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_destruction_packages",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_destruction_signatures",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_processing_blocks",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_retention_decisions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.role_permissions",
+          "rows": 12,
+          "sha256": "abf332d77a0a518c784c98652555c156871ca6dcd1f3abfba42ae0131f4a9053"
+        },
+        {
+          "table": "core.roles",
+          "rows": 2,
+          "sha256": "775ae5b2874aa895d5f657edd4cb736357c70c8ab0562fcaf5ac7ddf2f87165e"
+        },
+        {
+          "table": "core.service_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.system_settings",
+          "rows": 1,
+          "sha256": "0e20bfbedeb0faa9a86a65cbfb321535640361421abc26ccbb16fdc0d1fc9e19"
+        },
+        {
+          "table": "platform_runtime.background_job_status",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "platform_runtime.entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "platform_runtime.installations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "post_upgrade_tables": [
+        {
+          "table": "core.account_roles",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.account_settings",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.accounts",
+          "rows": 2,
+          "sha256": "fd663f74f91e2a663bf5510159cfd4d040abc470bf46efe3628a739020719ed5"
+        },
+        {
+          "table": "core.audit_events",
+          "rows": 516,
+          "sha256": "1337902e8d53cbce32713f57d32a18f781c5c7661cf7b2562c0d6122e9d3bf41"
+        },
+        {
+          "table": "core.auth_challenges",
+          "rows": 38,
+          "sha256": "6e5b421514e42acb82db7047e1166f1438ac672de8f7d476f03365f6bfdedc56"
+        },
+        {
+          "table": "core.auth_external_identities",
+          "rows": 2,
+          "sha256": "a6149927d5934328267abdf32513ce4f105cb004880a9c802e027dd35a5688d7"
+        },
+        {
+          "table": "core.auth_identifiers",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_passkeys",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_password_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_providers",
+          "rows": 3,
+          "sha256": "aa3f54755d3dd24480880b9f6d1c4a21c24d3c2b77ed286da7307425bf4269dc"
+        },
+        {
+          "table": "core.auth_recovery_codes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_sessions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_totp_factors",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_deadlines",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_executions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_requests",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.feature_flags",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.inbox_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.legal_representation_scopes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.legal_representations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.module_settings",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.modules",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.organization_memberships",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.organizations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.outbox_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.permissions",
+          "rows": 29,
+          "sha256": "a60ca4ec8b31f463fbe70b5bf66a3a867c7ce4b901cfbc0358e8f1d415d3a3a3"
+        },
+        {
+          "table": "core.person_contacts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.persons",
+          "rows": 2,
+          "sha256": "ebfdbb1009a6e1e1a7800fa2d3160d7c7d359586e7a2b6ff8d6190c1f46fc84e"
+        },
+        {
+          "table": "core.privacy_cleanup_runs",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_collection_notices",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_consents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_destruction_evidence",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_distribution_consents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_cases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_item_purposes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_categories",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_subject_scope",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incidents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_destruction_packages",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_destruction_signatures",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_processing_blocks",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_retention_decisions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.role_permissions",
+          "rows": 12,
+          "sha256": "abf332d77a0a518c784c98652555c156871ca6dcd1f3abfba42ae0131f4a9053"
+        },
+        {
+          "table": "core.roles",
+          "rows": 2,
+          "sha256": "775ae5b2874aa895d5f657edd4cb736357c70c8ab0562fcaf5ac7ddf2f87165e"
+        },
+        {
+          "table": "core.service_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.system_settings",
+          "rows": 1,
+          "sha256": "0e20bfbedeb0faa9a86a65cbfb321535640361421abc26ccbb16fdc0d1fc9e19"
+        },
+        {
+          "table": "platform_runtime.background_job_status",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "platform_runtime.entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "platform_runtime.installations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "with_synthetic_fixture_before_upgrade": [
+        {
+          "table": "core.account_roles",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.account_settings",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.accounts",
+          "rows": 2,
+          "sha256": "fd663f74f91e2a663bf5510159cfd4d040abc470bf46efe3628a739020719ed5"
+        },
+        {
+          "table": "core.audit_events",
+          "rows": 516,
+          "sha256": "1337902e8d53cbce32713f57d32a18f781c5c7661cf7b2562c0d6122e9d3bf41"
+        },
+        {
+          "table": "core.auth_challenges",
+          "rows": 38,
+          "sha256": "6e5b421514e42acb82db7047e1166f1438ac672de8f7d476f03365f6bfdedc56"
+        },
+        {
+          "table": "core.auth_external_identities",
+          "rows": 2,
+          "sha256": "0fc4f8e8891bd3f15b6a1187a058f15d4fdb0dae282a111ac2378be27dcd208b"
+        },
+        {
+          "table": "core.auth_identifiers",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_passkeys",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_password_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_providers",
+          "rows": 3,
+          "sha256": "aa3f54755d3dd24480880b9f6d1c4a21c24d3c2b77ed286da7307425bf4269dc"
+        },
+        {
+          "table": "core.auth_recovery_codes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_sessions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.auth_totp_factors",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_deadlines",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_request_executions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.data_subject_requests",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.feature_flags",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.inbox_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.legal_representation_scopes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.legal_representations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.module_settings",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.modules",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.organization_memberships",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.organizations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.outbox_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.permissions",
+          "rows": 29,
+          "sha256": "a60ca4ec8b31f463fbe70b5bf66a3a867c7ce4b901cfbc0358e8f1d415d3a3a3"
+        },
+        {
+          "table": "core.person_contacts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.persons",
+          "rows": 2,
+          "sha256": "ebfdbb1009a6e1e1a7800fa2d3160d7c7d359586e7a2b6ff8d6190c1f46fc84e"
+        },
+        {
+          "table": "core.privacy_cleanup_runs",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_collection_notices",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_consents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_destruction_evidence",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_distribution_consents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_cases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_item_purposes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_erasure_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_categories",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incident_subject_scope",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_incidents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_destruction_packages",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_destruction_signatures",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_legal_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_processing_blocks",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.privacy_retention_decisions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.role_permissions",
+          "rows": 12,
+          "sha256": "abf332d77a0a518c784c98652555c156871ca6dcd1f3abfba42ae0131f4a9053"
+        },
+        {
+          "table": "core.roles",
+          "rows": 2,
+          "sha256": "775ae5b2874aa895d5f657edd4cb736357c70c8ab0562fcaf5ac7ddf2f87165e"
+        },
+        {
+          "table": "core.service_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "core.system_settings",
+          "rows": 1,
+          "sha256": "0e20bfbedeb0faa9a86a65cbfb321535640361421abc26ccbb16fdc0d1fc9e19"
+        },
+        {
+          "table": "platform_runtime.background_job_status",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "platform_runtime.entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "platform_runtime.installations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    "commercial": {
+      "original_rows": 59,
+      "original_tables": [
+        {
+          "table": "commercial.audit_events",
+          "rows": 19,
+          "sha256": "a76e8e2cfdd44835f83f58b52c3d4caf072b3bd970fe4f9391e453dad8d48a95"
+        },
+        {
+          "table": "commercial.background_job_status",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.billing_profiles",
+          "rows": 2,
+          "sha256": "4fc3da7cc8c072d8fb70352ebeab8079e71038e0cb53de80ac3248d98cb3859a"
+        },
+        {
+          "table": "commercial.commercial_account_memberships",
+          "rows": 2,
+          "sha256": "dc138712f7da47428c647dfaf891e0272cd2905a4b9131f2dd4179d0bfb68789"
+        },
+        {
+          "table": "commercial.commercial_accounts",
+          "rows": 2,
+          "sha256": "3662b456c62aae81d848d128db98cba734e621a675d0bb2794ec2abb06db8ee0"
+        },
+        {
+          "table": "commercial.control_session_refresh_history",
+          "rows": 3,
+          "sha256": "8c59c71a605089385741759760214faf44b715b3e9da4087f6495885e50b6f36"
+        },
+        {
+          "table": "commercial.control_sessions",
+          "rows": 4,
+          "sha256": "c979218901ae5d742338433b0ce13b1ba03a02219e7d940f6d21feacf96d0b80"
+        },
+        {
+          "table": "commercial.control_user_email_verifications",
+          "rows": 3,
+          "sha256": "bc26ab7b5be9c9ac88aa991aa55cf0083bb6836b4b8d19ef1046eaf6b846b077"
+        },
+        {
+          "table": "commercial.control_users",
+          "rows": 3,
+          "sha256": "19b5ab3b2e4e2db07b6e16e6023ed15280b75c43b17ed07fd648d7451a6973a5"
+        },
+        {
+          "table": "commercial.deployment_domains",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployment_entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployment_operations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployments",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.features",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.idempotency_keys",
+          "rows": 2,
+          "sha256": "1bfcc824b41d4221a9bf09ec3afc835bd88ec2cc1f212045f9bc00bc71651986"
+        },
+        {
+          "table": "commercial.invoice_lines",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.invoices",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.issued_entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.license_installations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.licenses",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.maintenance_contracts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.outbox_events",
+          "rows": 7,
+          "sha256": "3e9f13e46849842c297a5a08a1cf1690eb535c44b264c17a335cbbc89a91bcc1"
+        },
+        {
+          "table": "commercial.payment_attempts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.payment_provider_accounts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.payment_provider_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.payments",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.plan_features",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.plan_prices",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.plans",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_erasure_cases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_export_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_incident_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_incidents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_lifecycle_runs",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_operators",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_subject_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_subject_requests",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.rate_limit_counters",
+          "rows": 12,
+          "sha256": "615c630ef5da6ed773be1afc3246e7a32eaf7aa76fe63ac1ac5fc5c9b4584a26"
+        },
+        {
+          "table": "commercial.receipt_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.receipts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.refund_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.refunds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.release_entitlements",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.releases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.service_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.signing_keys",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.subscription_items",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.subscriptions",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.usage_counters",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.usage_periods",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "post_upgrade_tables": [
+        {
+          "table": "commercial.audit_events",
+          "rows": 19,
+          "sha256": "a76e8e2cfdd44835f83f58b52c3d4caf072b3bd970fe4f9391e453dad8d48a95"
+        },
+        {
+          "table": "commercial.background_job_status",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.billing_profiles",
+          "rows": 3,
+          "sha256": "09f0f5a08d4b9427af051226ab65cc79ee1eaca5578e11a3c476b9b6dfc3a70b"
+        },
+        {
+          "table": "commercial.commercial_account_memberships",
+          "rows": 3,
+          "sha256": "d59db1f6c4ed33f6bb0ce78810b9fd7fe1ea700024e4092e73270568a96fae2e"
+        },
+        {
+          "table": "commercial.commercial_accounts",
+          "rows": 3,
+          "sha256": "c9366b59bd6090e7b4019136eb9c2ac759264ab8e86586744c5339a137e1999f"
+        },
+        {
+          "table": "commercial.control_auth_challenges",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.control_session_refresh_history",
+          "rows": 3,
+          "sha256": "8c59c71a605089385741759760214faf44b715b3e9da4087f6495885e50b6f36"
+        },
+        {
+          "table": "commercial.control_sessions",
+          "rows": 4,
+          "sha256": "589d58309a0a2b06dfaf916e79687f06ff408375a94c5a540f9b75f09b9b04ea"
+        },
+        {
+          "table": "commercial.control_user_email_verifications",
+          "rows": 3,
+          "sha256": "bc26ab7b5be9c9ac88aa991aa55cf0083bb6836b4b8d19ef1046eaf6b846b077"
+        },
+        {
+          "table": "commercial.control_user_password_resets",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.control_user_recovery_codes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.control_user_totp_factors",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.control_users",
+          "rows": 4,
+          "sha256": "fc9b01fb0d39e5aba08cfeb090789092fe4000aa44e51b33ca1f7d0128c3b5b2"
+        },
+        {
+          "table": "commercial.deployment_domains",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployment_entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployment_operations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployments",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.external_compensation_attestations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.features",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.financial_operators",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.idempotency_keys",
+          "rows": 2,
+          "sha256": "1bfcc824b41d4221a9bf09ec3afc835bd88ec2cc1f212045f9bc00bc71651986"
+        },
+        {
+          "table": "commercial.invoice_lines",
+          "rows": 1,
+          "sha256": "93f5865a823737d988d818e55dc3e9282676bf4bef0112938d7aa2af843f5c63"
+        },
+        {
+          "table": "commercial.invoices",
+          "rows": 1,
+          "sha256": "9ba135845218df522352f2279f69b724e53d55e3b8b9772029372e757265c7e4"
+        },
+        {
+          "table": "commercial.issued_entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.license_installations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.licenses",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.maintenance_contracts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.outbox_events",
+          "rows": 7,
+          "sha256": "3e9f13e46849842c297a5a08a1cf1690eb535c44b264c17a335cbbc89a91bcc1"
+        },
+        {
+          "table": "commercial.payment_attempts",
+          "rows": 1,
+          "sha256": "bd668c89749c8f0b6e4518316caf844fab40a3c70c4049200f048f8b47bc3406"
+        },
+        {
+          "table": "commercial.payment_provider_accounts",
+          "rows": 1,
+          "sha256": "3093cf3351f35c62801db5403f1249f73db3445404202c9b56b00f8d5bbaf40b"
+        },
+        {
+          "table": "commercial.payment_provider_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.payments",
+          "rows": 1,
+          "sha256": "522b7ab31fd258dfae5b9afb78d66882b5ede85f662c12a48932cbeab815e806"
+        },
+        {
+          "table": "commercial.plan_features",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.plan_prices",
+          "rows": 1,
+          "sha256": "da85f9471d728c436e6de40d587d846d768deee93a08d9bac085f41293d89797"
+        },
+        {
+          "table": "commercial.plans",
+          "rows": 1,
+          "sha256": "78ee172eec5716465bfd47d6fed7df5a340ae2120012ad41b00a17a037a5797f"
+        },
+        {
+          "table": "commercial.privacy_erasure_cases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_export_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_incident_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_incidents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_lifecycle_runs",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_operators",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_subject_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_subject_requests",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.rate_limit_counters",
+          "rows": 12,
+          "sha256": "615c630ef5da6ed773be1afc3246e7a32eaf7aa76fe63ac1ac5fc5c9b4584a26"
+        },
+        {
+          "table": "commercial.receipt_items",
+          "rows": 2,
+          "sha256": "866724727dcda46c3613d7c763f6baaa500fdc153b3ff2f6e217dc72fca4b492"
+        },
+        {
+          "table": "commercial.receipts",
+          "rows": 2,
+          "sha256": "bc4b1cb1e28fb3d41422d8e142044eb37300f3c38678ea2c0246cb68487afd13"
+        },
+        {
+          "table": "commercial.refund_items",
+          "rows": 1,
+          "sha256": "f9dd9838ad8179ce2729b00410ed2fe684432c1cb93293dceef4e7c9fb63629a"
+        },
+        {
+          "table": "commercial.refunds",
+          "rows": 1,
+          "sha256": "402d6bd1744dbc263a79e468ae7bc0cea51cf41ad750cce45c626ed8553297fa"
+        },
+        {
+          "table": "commercial.release_entitlements",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.releases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.renewal_collection_states",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.saved_payment_methods",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.service_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.signing_keys",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.subscription_items",
+          "rows": 1,
+          "sha256": "39e41aad0b5cecb2c68fcafe088bae4f32129cd51cf69b16c01ad40ff77cbdcc"
+        },
+        {
+          "table": "commercial.subscription_plan_changes",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.subscriptions",
+          "rows": 1,
+          "sha256": "7eb21de5c54cdf144ffa53b820557707818af59fbf7c2515a21af909614b54da"
+        },
+        {
+          "table": "commercial.usage_counters",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.usage_periods",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "with_synthetic_fixture_before_upgrade": [
+        {
+          "table": "commercial.audit_events",
+          "rows": 19,
+          "sha256": "a76e8e2cfdd44835f83f58b52c3d4caf072b3bd970fe4f9391e453dad8d48a95"
+        },
+        {
+          "table": "commercial.background_job_status",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.billing_profiles",
+          "rows": 3,
+          "sha256": "09f0f5a08d4b9427af051226ab65cc79ee1eaca5578e11a3c476b9b6dfc3a70b"
+        },
+        {
+          "table": "commercial.commercial_account_memberships",
+          "rows": 3,
+          "sha256": "d59db1f6c4ed33f6bb0ce78810b9fd7fe1ea700024e4092e73270568a96fae2e"
+        },
+        {
+          "table": "commercial.commercial_accounts",
+          "rows": 3,
+          "sha256": "c9366b59bd6090e7b4019136eb9c2ac759264ab8e86586744c5339a137e1999f"
+        },
+        {
+          "table": "commercial.control_session_refresh_history",
+          "rows": 3,
+          "sha256": "8c59c71a605089385741759760214faf44b715b3e9da4087f6495885e50b6f36"
+        },
+        {
+          "table": "commercial.control_sessions",
+          "rows": 4,
+          "sha256": "c979218901ae5d742338433b0ce13b1ba03a02219e7d940f6d21feacf96d0b80"
+        },
+        {
+          "table": "commercial.control_user_email_verifications",
+          "rows": 3,
+          "sha256": "bc26ab7b5be9c9ac88aa991aa55cf0083bb6836b4b8d19ef1046eaf6b846b077"
+        },
+        {
+          "table": "commercial.control_users",
+          "rows": 4,
+          "sha256": "fc9b01fb0d39e5aba08cfeb090789092fe4000aa44e51b33ca1f7d0128c3b5b2"
+        },
+        {
+          "table": "commercial.deployment_domains",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployment_entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployment_operations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.deployments",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.features",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.idempotency_keys",
+          "rows": 2,
+          "sha256": "1bfcc824b41d4221a9bf09ec3afc835bd88ec2cc1f212045f9bc00bc71651986"
+        },
+        {
+          "table": "commercial.invoice_lines",
+          "rows": 1,
+          "sha256": "93f5865a823737d988d818e55dc3e9282676bf4bef0112938d7aa2af843f5c63"
+        },
+        {
+          "table": "commercial.invoices",
+          "rows": 1,
+          "sha256": "9ba135845218df522352f2279f69b724e53d55e3b8b9772029372e757265c7e4"
+        },
+        {
+          "table": "commercial.issued_entitlement_documents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.license_installations",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.licenses",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.maintenance_contracts",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.outbox_events",
+          "rows": 7,
+          "sha256": "3e9f13e46849842c297a5a08a1cf1690eb535c44b264c17a335cbbc89a91bcc1"
+        },
+        {
+          "table": "commercial.payment_attempts",
+          "rows": 1,
+          "sha256": "bd668c89749c8f0b6e4518316caf844fab40a3c70c4049200f048f8b47bc3406"
+        },
+        {
+          "table": "commercial.payment_provider_accounts",
+          "rows": 1,
+          "sha256": "3093cf3351f35c62801db5403f1249f73db3445404202c9b56b00f8d5bbaf40b"
+        },
+        {
+          "table": "commercial.payment_provider_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.payments",
+          "rows": 1,
+          "sha256": "522b7ab31fd258dfae5b9afb78d66882b5ede85f662c12a48932cbeab815e806"
+        },
+        {
+          "table": "commercial.plan_features",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.plan_prices",
+          "rows": 1,
+          "sha256": "da85f9471d728c436e6de40d587d846d768deee93a08d9bac085f41293d89797"
+        },
+        {
+          "table": "commercial.plans",
+          "rows": 1,
+          "sha256": "78ee172eec5716465bfd47d6fed7df5a340ae2120012ad41b00a17a037a5797f"
+        },
+        {
+          "table": "commercial.privacy_erasure_cases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_export_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_incident_events",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_incidents",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_lifecycle_runs",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_operators",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_subject_holds",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.privacy_subject_requests",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.rate_limit_counters",
+          "rows": 12,
+          "sha256": "615c630ef5da6ed773be1afc3246e7a32eaf7aa76fe63ac1ac5fc5c9b4584a26"
+        },
+        {
+          "table": "commercial.receipt_items",
+          "rows": 2,
+          "sha256": "866724727dcda46c3613d7c763f6baaa500fdc153b3ff2f6e217dc72fca4b492"
+        },
+        {
+          "table": "commercial.receipts",
+          "rows": 2,
+          "sha256": "bc4b1cb1e28fb3d41422d8e142044eb37300f3c38678ea2c0246cb68487afd13"
+        },
+        {
+          "table": "commercial.refund_items",
+          "rows": 1,
+          "sha256": "f9dd9838ad8179ce2729b00410ed2fe684432c1cb93293dceef4e7c9fb63629a"
+        },
+        {
+          "table": "commercial.refunds",
+          "rows": 1,
+          "sha256": "402d6bd1744dbc263a79e468ae7bc0cea51cf41ad750cce45c626ed8553297fa"
+        },
+        {
+          "table": "commercial.release_entitlements",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.releases",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.service_credentials",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.signing_keys",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.subscription_items",
+          "rows": 1,
+          "sha256": "39e41aad0b5cecb2c68fcafe088bae4f32129cd51cf69b16c01ad40ff77cbdcc"
+        },
+        {
+          "table": "commercial.subscriptions",
+          "rows": 1,
+          "sha256": "a36fd9bcd60687ad276e5efc5bcf88e03d3cd50840d6747d85d8f1c99ba5369a"
+        },
+        {
+          "table": "commercial.usage_counters",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "table": "commercial.usage_periods",
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    }
+  }
+}

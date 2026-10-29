@@ -1,5 +1,37 @@
 # Production readiness: состояние работ
 
+## Safe Database Upgrade & Security Boundary — 2026-10-29
+
+**Verdict remains `CORE_NOT_READY`.** [Отчёт](../audit/2026-10-29/database-upgrade/REPORT.md),
+[доказательства](../audit/2026-10-29/database-upgrade/evidence/checks.json),
+[план перехода](SAFE_DATABASE_UPGRADE.md). Base `6e3f0524af607abcdb29632831c97890fe955713`
+plus the working-tree diff; remote CI has not verified this revision.
+
+Two isolated restores of the ordinary local snapshots passed: Core **31→33**,
+Commercial **25→40**. All 600/59 pre-existing rows and old fields were preserved;
+repeat migrations were a data no-op. A separate synthetic legacy-history run
+preserved paid invoice/payment/refund/receipts and external-identity backfill.
+The original 31→32 path exposed eight stale/missing Core CHECKs; new forward
+migration `033` reconciles them without rewriting data. Invalid legacy input
+causes transactional failure, not silent cleanup. Historical SQL files are unchanged.
+
+Restricted clone runtimes passed real application use cases, 22 SQL permission
+denials per run, default-ACL probes and HTTP readiness before/after app restart.
+Both PostgreSQL instances stayed alive; separate internal networks had no host ports.
+These DML grants are a tested compatibility floor, not complete per-worker least
+privilege. Raw dumps/credentials stay private and ignored; rehearsal containers stopped.
+New full Core regression passed on a fresh independent DB with migrations 0→33:
+508 tests / 14,050 assertions, seed `2120741368`, frozen source inside the image.
+Six rehearsal safety tests, live catalog/DBML checks and syntax checks passed.
+Earlier blocked/incomplete/misconfigured harness attempts are recorded and not
+counted as successful regression evidence.
+
+**Originals remain at 31/25 with elevated app roles.** No original migration,
+role cutover, credential rotation, financial deletion or production rollout was
+performed. A managed cutover is a separate remaining operation. This evidence
+does not close the full E matrix, 10,000 VU capacity, provider sandbox, CI/PITR/HA
+or production provisioning. The broader 2026-10-28 audit below remains relevant.
+
 ## Authoritative project audit — 2026-10-28
 
 **Verdict: `CORE_NOT_READY`.** [Полный аудит](../audit/2026-10-28/REPORT.md),

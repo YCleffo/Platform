@@ -1,0 +1,66 @@
+{
+  "base_commit": "6e3f0524af607abcdb29632831c97890fe955713",
+  "historical_core_migrations_unchanged": 32,
+  "files": [
+    {
+      "path": "apps/backend/migrations/sql/015_core_data_hygiene.sql",
+      "sha256": "68e7cbf4e1a4ff394abc15ddab2a76495adaba3ec258d05f490ed646ba741d6f"
+    },
+    {
+      "path": "apps/backend/migrations/sql/033_reconcile_legacy_data_hygiene.sql",
+      "sha256": "a272ce6bee1b89d404b746dd05d57b6d0bb605c0593eec540cfca81643a29e14"
+    },
+    {
+      "path": "compose.upgrade-rehearsal.yaml",
+      "sha256": "44f21e539aa7d19003d7346521dd3bb1c7a682413d463f85fd24955b4f5c38e5"
+    },
+    {
+      "path": "infra/postgres/migrate.sh",
+      "sha256": "7adf160418a3a3381848f3e83f3b3d212b71bad82f906c34e9de458dbf1ab5ee"
+    },
+    {
+      "path": "scripts/database/rehearsal/Dockerfile.core-regression",
+      "sha256": "e32b12bdb6a7c10a51182cb490d12fdde9481f23cf37a6680bed9b25e5f713f8"
+    },
+    {
+      "path": "scripts/database/rehearsal/commercial-probe.php",
+      "sha256": "46ffbcc7ed1f547e4a1d29eb531e9e63d70ffa4a4186b2a4bffd1498735d2163"
+    },
+    {
+      "path": "scripts/database/rehearsal/core-probe.php",
+      "sha256": "0a968906c06288edb197834c736ee34e6c3f3ce95e02e49e86f5f54357af72bc"
+    },
+    {
+      "path": "scripts/database/rehearsal/http-probe.php",
+      "sha256": "4b7c10ccd0d65472363a532178803bc18fea72e6a0cad4a1ba32dc27095fbdfc"
+    },
+    {
+      "path": "scripts/database/rehearsal/legacy-commercial-fixture.sql",
+      "sha256": "f038c4ad6f8d7fa3dfab495f91fa43351c0bf5dcac13697d614d1bacb7894a42"
+    },
+    {
+      "path": "scripts/database/rehearsal/legacy-core-fixture.sql",
+      "sha256": "190be56b026d35bb4914c7abbf1242231ad4978d994fa341cd76c6e5e28e4e8d"
+    },
+    {
+      "path": "scripts/database/rehearsal/run-core-regression.py",
+      "sha256": "267e1bc23a64211eb5933d5d719998dc5ac77446fe37ef13ed3002812c423f84"
+    },
+    {
+      "path": "scripts/database/rehearsal/runtime-grants.sql",
+      "sha256": "09ada22e850f358be5fccb789c04959eb6ec35a120fe4bfd4d1a61e6a3105928"
+    },
+    {
+      "path": "scripts/database/schema_catalog.sql",
+      "sha256": "272845f8e728e60af2f500f6cf75d72be1226b4c0fff881a260b1cdf982f6244"
+    },
+    {
+      "path": "scripts/database/test_upgrade_rehearsal.py",
+      "sha256": "7455bf1996dacb8fb8019da24133d38b293b05d3605ba0ec93edb76b305d34ba"
+    },
+    {
+      "path": "scripts/database/upgrade-rehearsal.py",
+      "sha256": "1ce4245d47940eb08d5d50f7d81614520b981e453a4865b00344f07d471b1cad"
+    }
+  ]
+}

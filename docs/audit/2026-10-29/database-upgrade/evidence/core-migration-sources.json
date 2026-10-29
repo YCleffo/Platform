@@ -1,0 +1,134 @@
+[
+  {
+    "path": "apps/backend/migrations/sql/001_core_schema_and_types.sql",
+    "sha256": "e30dc9f4993b72854ce1473f69118eb711f6ea95458212a056284d767c1d3ce4"
+  },
+  {
+    "path": "apps/backend/migrations/sql/002_core_people.sql",
+    "sha256": "b0438bba25a58d3dadb8e1f22107c50f9dfefd26c7f215c1b76d83640395d90f"
+  },
+  {
+    "path": "apps/backend/migrations/sql/003_core_accounts_auth.sql",
+    "sha256": "63c42dcf150df4d233b3f5e9e7067e786306010341753c2db47af182e0811f04"
+  },
+  {
+    "path": "apps/backend/migrations/sql/004_core_rbac_modules.sql",
+    "sha256": "c125ee25cf9c3ee9522b16875409b3eca703edc76dc976a3cab10ec3123d8c07"
+  },
+  {
+    "path": "apps/backend/migrations/sql/005_core_settings.sql",
+    "sha256": "41890f75c8c1035a3c2efc669e9fa48509e3abd37a3bac94d89ea4161db26302"
+  },
+  {
+    "path": "apps/backend/migrations/sql/006_core_audit_events.sql",
+    "sha256": "b648b6e28067041bfbd2e0f7741b12123042d1eb7eb1f9fd91c3deb3395004f4"
+  },
+  {
+    "path": "apps/backend/migrations/sql/007_core_indexes.sql",
+    "sha256": "f0329990bc1140ac192d875f63257865ad8cddd89de4a320042a36f3bcbf86fb"
+  },
+  {
+    "path": "apps/backend/migrations/sql/008_core_comments.sql",
+    "sha256": "60c3da7b1f8ef1c8c8a8c4343f047123b819425cdc7c54960f6c09985ceebb9a"
+  },
+  {
+    "path": "apps/backend/migrations/sql/009_core_seed.sql",
+    "sha256": "fce4b2865a62c91c36a5df585fd41c4075669d9cf26a1bd0bb75a306fbec740b"
+  },
+  {
+    "path": "apps/backend/migrations/sql/010_core_international_security.sql",
+    "sha256": "625cc33481e98b4cab8e3a9a103750fdd410f47f0cf9a6b75a6fee690058f3cc"
+  },
+  {
+    "path": "apps/backend/migrations/sql/011_core_auth_runtime.sql",
+    "sha256": "0a193606997b37f20f2f67584002947e0154c09411454dd726d88aea59960e09"
+  },
+  {
+    "path": "apps/backend/migrations/sql/012_core_configuration_runtime.sql",
+    "sha256": "8ffa278e0279e4429f253f4724fa81c8735f46c01626b302652a5d9a1c8792b0"
+  },
+  {
+    "path": "apps/backend/migrations/sql/013_external_identity_mfa_runtime.sql",
+    "sha256": "bba96ff4df1b60592d84f42e6b26f77cb2f234b0244d4edcbbe53ce38ffd7b7e"
+  },
+  {
+    "path": "apps/backend/migrations/sql/014_passkey_runtime.sql",
+    "sha256": "2846667774d7de90f8e10b6998bf89ccea42a4f04f53835b937e25b4eda07322"
+  },
+  {
+    "path": "apps/backend/migrations/sql/015_core_data_hygiene.sql",
+    "sha256": "68e7cbf4e1a4ff394abc15ddab2a76495adaba3ec258d05f490ed646ba741d6f"
+  },
+  {
+    "path": "apps/backend/migrations/sql/016_platform_runtime.sql",
+    "sha256": "cdf944427e61acda6bac22146e0cdc8923ec13bdb6d804a46c22943fa7b34434"
+  },
+  {
+    "path": "apps/backend/migrations/sql/017_core_account_settings.sql",
+    "sha256": "78b9cdced7f0452b40c3b47896b3f59e8c74b894c3abc04f38518de88b2be63c"
+  },
+  {
+    "path": "apps/backend/migrations/sql/018_core_consent_runtime.sql",
+    "sha256": "19ecfe2417b6d2a0db41bd8d98c318f4878535c339ba69505112c321f1a69caa"
+  },
+  {
+    "path": "apps/backend/migrations/sql/019_core_privacy_foundation.sql",
+    "sha256": "2a32dcd290bda01bd21b25bbde40144eed992c5def2e4bd82f0ac9b6e5a74d40"
+  },
+  {
+    "path": "apps/backend/migrations/sql/020_core_privacy_invariants.sql",
+    "sha256": "2ef7044f94ad9aa248c072b35001f8ccbab5e3ce34e051c652b351307513f621"
+  },
+  {
+    "path": "apps/backend/migrations/sql/021_core_representation_scopes.sql",
+    "sha256": "25374e33069a51a89ca2042026ce2394fbca96f4cfc4cbe068e1dbf6218a6e62"
+  },
+  {
+    "path": "apps/backend/migrations/sql/022_core_data_subject_requests.sql",
+    "sha256": "fb81eaf0097c113edf94eab562f11621f83dfbc9675040ead94b7a999d3a28be"
+  },
+  {
+    "path": "apps/backend/migrations/sql/023_core_privacy_request_execution.sql",
+    "sha256": "bbb5a15c23c6932fd58363ae39719f3a9ffb0c9b239e6e9e05023eeead150a80"
+  },
+  {
+    "path": "apps/backend/migrations/sql/024_core_privacy_retention.sql",
+    "sha256": "92e4254082dedadf0f3ffb592e6696d8230d1d4d14939d95525ad76b35624337"
+  },
+  {
+    "path": "apps/backend/migrations/sql/025_core_privacy_erasure.sql",
+    "sha256": "8323821f58a2f14341799b094805010f693f7fe20dc01dc47f8e90258241b7f7"
+  },
+  {
+    "path": "apps/backend/migrations/sql/026_core_privacy_compliance.sql",
+    "sha256": "f57880fe9031f29fb602a7e8b751806c39152978ad5088c78f1840c4f817ce2c"
+  },
+  {
+    "path": "apps/backend/migrations/sql/027_core_privacy_lifecycle.sql",
+    "sha256": "df9532dd0e1d4acedaab907144ba6f61c88a334433fb0764512bf253394f6f28"
+  },
+  {
+    "path": "apps/backend/migrations/sql/028_core_organizations.sql",
+    "sha256": "f53120d4c1d20bf2445e0a0555ed9ca7ac6779f273d3539f13a0c2a05a5ea959"
+  },
+  {
+    "path": "apps/backend/migrations/sql/029_core_service_credentials.sql",
+    "sha256": "fd244f8d60f615fd6bbeb52f3c2fd50a11411604244edc0739f55edee4ffa8bd"
+  },
+  {
+    "path": "apps/backend/migrations/sql/030_core_privacy_operations.sql",
+    "sha256": "64dfdd1819c144761df8047f728dd29ae16293ea3d7727b856f60792deb963ad"
+  },
+  {
+    "path": "apps/backend/migrations/sql/031_platform_runtime_operational_status.sql",
+    "sha256": "9d9236e0345c3d2d370ae758d26ffddd24e225a0bfa41cbb8ccf0a81cd802473"
+  },
+  {
+    "path": "apps/backend/migrations/sql/032_external_identity_mini_app_foundation.sql",
+    "sha256": "ef6b43c19e1c4517a3d41d51736ea6c262187a6e5df55f5e819223ab1d3dd820"
+  },
+  {
+    "path": "apps/backend/migrations/sql/033_reconcile_legacy_data_hygiene.sql",
+    "sha256": "a272ce6bee1b89d404b746dd05d57b6d0bb605c0593eec540cfca81643a29e14"
+  }
+]
