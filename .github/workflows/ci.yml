@@ -10,6 +10,24 @@ env:
   COMPOSE_FILE: compose.yaml:compose.ci.yaml
 
 jobs:
+  windows-tools:
+    name: PowerShell operator tools
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check PowerShell syntax
+        shell: pwsh
+        run: |
+          Get-ChildItem scripts -Filter '*.ps1' -Recurse | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
+            if ($errors) { throw ($errors | Out-String) }
+          }
+      - name: Verify changed-file archive and ignored-file exclusion
+        shell: pwsh
+        run: ./scripts/ci/test-project-zip.ps1
+
   backend-qa:
     name: Yii Backend Quality Assurance & Test Isolation
     runs-on: ubuntu-latest

@@ -68,4 +68,4 @@ override не создаёт audit event.
 
 UI, конкретные юридические документы, module-specific бизнес-логика и отдельный
 admin API не входят в этот контур. Durable consent, notification policy и
-ephemeral presence описаны отдельно в `CONSENT.md`, `NOTIFICATIONS.md`, `PRESENCE.md`.
+ephemeral presence описаны отдельно в `PRIVACY_COMPLIANCE_CORE.md`, `NOTIFICATIONS.md`, `PRESENCE.md`.

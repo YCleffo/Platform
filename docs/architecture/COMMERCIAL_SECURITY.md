@@ -1,55 +1,37 @@
-# Commercial Control Plane security boundary
+# Безопасность Commercial Control Plane
 
-Phase 2 uses a dedicated central identity, not Diary authentication. Passwords
-are hashed with Symfony PasswordHasher. Email lookup is lowercase and unique in
-PostgreSQL; presentation email is trimmed and retained separately. Status
-transitions are constrained to `pending_verification`, `active`, `suspended`
-and `disabled`.
+Commercial использует собственные `control_users`, сессии и членство в коммерческих аккаунтах. Учетная запись Core или право `core.superadmin` не предоставляет доступ к Commercial.
 
-Email verification and session credentials are never stored raw. Verification
-tokens are one-time and expiring. Opaque access tokens are short-lived;
-server-side refresh tokens rotate on every use. Reuse of the previous refresh
-token revokes the session family. Logout is idempotent. Expired artifacts are
-removed by `control:security:cleanup`, not by arbitrary HTTP requests.
+## Credentials и сессии
 
-Registration, login, verification resend, refresh and account creation use
-expiring database rate-limit counters with HMAC-pseudonymized keys. API bodies
-are limited to 64 KiB. API errors never include SQL, stack traces, filesystem
-paths or secrets. Auth, account (including billing and payment), privacy, and
-M2M responses are `no-store, private`; all responses receive
-`nosniff`, deny framing, `frame-ancestors 'none'` and `no-referrer`. CORS is
-closed by default. Authentication uses Authorization bearer tokens, not
-cookies, so this API boundary does not rely on cookie CSRF protection.
+Пароли хешируются Symfony PasswordHasher. Нормализованный email уникален, представление для пользователя хранится отдельно. Статусы пользователя: `pending_verification`, `active`, `suspended`, `disabled`.
 
-Account permissions are centralized. Owner, admin, billing and technical are
-Control Plane roles and are unrelated to Diary RBAC. Account membership is
-checked for every account resource. Owner removal and downgrade are serialized
-under the account row lock and backed by deferred database constraints, so
-concurrent requests cannot leave an account ownerless.
+Одноразовые verification/reset artifacts имеют срок действия и сохраняются как хеши. Opaque access tokens короткоживущие; refresh меняется при каждом использовании. Повтор ранее использованного refresh отзывает семейство сессии. Logout идемпотентен. Очистка истёкших артефактов выполняется контролируемой CLI-командой.
 
-Audit events include correlation IDs and fixed, redacted metadata. They never
-copy passwords, raw tokens or Authorization headers. Transactional outbox rows
-contain no raw credential. Registration, verification, login summary, account
-creation, membership changes and billing profile changes are audited. Login
-failure audit is protected by the login rate limits.
+TOTP секрет шифруется отдельным 32-байтовым ключом. Enrollment переходит из pending в active только после проверки кода; повтор TOTP и использованного recovery code отклоняется. Password reset отзывает связанные сессии и security artifacts согласно lifecycle.
 
-`/health` reveals only `ok` or `not_ready` and checks only the presence of the
-required schema objects. Production boot requires both `CONTROL_APP_SECRET`
-and `CONTROL_TOKEN_SECRET` to contain at least 32 characters. The Commercial
-and Diary databases use separate credentials, volumes and networks.
+Успешный fresh TOTP или recovery code повышает текущую password-сессию до `password_totp` или `password_recovery` и атомарно записывает `mfa_authenticated_at`. Refresh сохраняет это свидетельство, но не создаёт новую проверку MFA.
 
-The production Docker image pins the FrankenPHP base manifest, runs as
-`www-data`, installs dependencies with `--no-dev`, excludes tests, `.env` and
-Git metadata, and makes only `var/cache`, `var/log` plus FrankenPHP data/config
-directories writable. CI reports High vulnerabilities and fails on any
-Critical vulnerability.
+## Авторизация и чувствительные действия
 
-The Commercial Control Plane is a separate authentication boundary from Core. It implements encrypted TOTP secrets, pending-to-active enrollment, replay protection, bounded single-use MFA login challenges, one-time recovery codes with concurrency protection, password reset with hash-only/expiring single-use artifacts, and session/security-artifact revocation after reset. Recent primary authentication plus recent MFA protects sensitive Control Plane mutations including billing, refunds, subscriptions, and saved payment methods.
+`AccountAuthorization` проверяет активное членство и permission для каждого account resource. UUID из URL сам по себе не даёт доступ. Owner, admin, billing и technical — роли Commercial. Удаление или понижение владельца блокирует строку аккаунта; deferred constraints запрещают аккаунт без активного владельца.
 
-## Recent authentication и повышение уровня текущей сессии
+Чувствительные операции биллинга, возвратов, подписок и сохранённых способов оплаты требуют recent primary authentication и recent MFA. Внешняя компенсация дополнительно требует двух различных, отдельно уполномоченных финансовых операторов.
 
-После проверки fresh TOTP или одноразового recovery code текущая password-сессия
-атомарно получает метод `password_totp` или `password_recovery` вместе с новым
-`mfa_authenticated_at`. Это сохраняет SQL-инвариант метода и MFA evidence.
-Повтор recovery code отклоняется. Refresh сохраняет evidence, но не создаёт
-новую MFA-проверку. Проверки: `AuthSecurityLifecycleTest` и реальный HTTP smoke.
+## HTTP и аудит
+
+Регистрация, вход, resend, refresh и создание аккаунта ограничены expiring rate-limit counters с HMAC-ключами. Тело API ограничено 64 КиБ. Ошибки не возвращают SQL, stack trace, пути файлов или секреты.
+
+API использует bearer credentials, не cookie authentication. CORS закрыт по умолчанию. Чувствительные ответы имеют `no-store, private`; защитные заголовки запрещают framing и sniffing, ограничивают referrer. Аудит содержит correlation ID, identifiers и разрешённые типизированные поля; пароли, raw tokens, Authorization и произвольные снимки сущностей исключены.
+
+Webhook YooKassa не доверяет JSON или forwarded IP как финансовому доказательству. Окончательное состояние подтверждается серверным запросом провайдеру с проверкой локального контракта.
+
+## Конфигурация и runtime
+
+Production boot требует `CONTROL_APP_SECRET`, `CONTROL_TOKEN_SECRET` и корректный `CONTROL_TOTP_ENCRYPTION_KEY`; checkout также требует действительный HTTPS return URL и merchant configuration. Эти значения не подменяются демонстрационными credentials.
+
+Production image работает как `www-data`, устанавливает зависимости без dev-пакетов и не содержит `.env`, Git metadata или тестов. Запись разрешена в runtime-каталоги. Приложения имеют раздельные DB credentials и сети; HTTP-процесс Commercial не получает Docker socket. Core не получает приватный ключ подписи Commercial.
+
+`/health` — ограниченная проверка доступности приложения. `/health/ready` дополнительно проверяет зависимости и обязательные heartbeat. Успешный HTTP health не подтверждает минимальные привилегии DB role или промышленную отказоустойчивость.
+
+[Секреты и ротация](../operations/ENVIRONMENT.md) · [Инварианты](CORE_INVARIANTS.md) · [Контракт API](COMMERCIAL_CONTROL_PLANE.md)

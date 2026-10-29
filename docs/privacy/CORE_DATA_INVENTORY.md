@@ -1,6 +1,6 @@
 # Core personal data inventory
 
-This inventory started from the 25-table baseline through migration 018 and includes migrations 019-027. It is a technical classification, not a deployment's legal basis or retention schedule. Deployment policy must assign the actual purposes, lawful bases, retention periods, export rules, and processors before production use. `Policy` below means no duration is currently established in Core.
+This inventory classifies the current Core resources; the complete physical table list is in [the schema reference](../database/SCHEMA_REFERENCE.md). It is a technical classification, not a deployment's legal basis or retention schedule. Deployment policy must assign the actual purposes, lawful bases, retention periods, export rules, and processors before production use. `Policy` below means no duration is currently established in Core.
 
 ## Core production lifecycle coverage
 
@@ -38,7 +38,7 @@ This inventory started from the 25-table baseline through migration 018 and incl
 | `privacy_consents`: subject Person, actor Person/Account, authority, purpose, document hash/version, locale, timestamps, request ID | Legal evidence and subject/actor identifiers | Purpose-bound consent history | Consent/privacy policy | Audit: event/IDs only; logs: no document or contact values; export: restricted evidence | Migration 018 rows are preserved as unclassified legacy evidence; current grants require a human actor and purpose |
 | `legal_representations`: subject and representative IDs, authority state, evidence reference/hash, verifier, validity | Legal authority evidence | Verified action on behalf of another Person | Representation/privacy policy | Audit: event/ID only; logs: no evidence reference; export: restricted evidence | No raw scans in Core; revoked authority cannot be reactivated |
 | `legal_representation_scopes`: authority ID and action code | Indirect subject/representative authority evidence | Restrict actions performed for another Person | Representation/privacy policy | Audit: authority ID and event only; logs: no evidence content; export: restricted authority evidence | Scope set is frozen after verification; unscoped legacy records authorize no action |
-| `audit_events`: actor ID, resource ID, IP, user agent, typed JSON payloads | Legal/security evidence and network/device PII | Accountability and security | Audit/privacy policy | Audit: itself; logs: IDs only; export: restricted review | Unknown action payload is denied; operational retention remains for Pass B5 |
+| `audit_events`: actor ID, resource ID, IP, user agent, typed JSON payloads | Legal/security evidence and network/device PII | Accountability and security | Audit/privacy policy | Audit: itself; logs: IDs only; export: restricted review | Unknown action payload is denied; bounded operational cleanup requires an approved retention policy |
 | `data_subject_requests`: subject, submitting Person/Account, authority ID, request type and state | Subject and actor identifiers; privacy case history | Data subject request intake and workflow | DSAR/privacy policy | Audit: IDs and machine codes; logs: no request body; export: restricted case evidence | No free-text request content; unsupported operations cannot be marked complete |
 | `data_subject_request_deadlines`: trigger, original due time, extension, satisfaction | Indirect subject case timing | Statutory deadline tracking | DSAR/privacy policy | Audit: deadline/reason codes; logs: no subject details; export: restricted case evidence | Original due time is immutable; calendar coverage must be verified |
 | `data_subject_request_events`: status changes, actor, reason codes and time | Indirect subject and staff activity evidence | Workflow accountability | DSAR/privacy policy | Audit: machine codes; logs: IDs only; export: restricted case evidence | Ordinary update/delete is blocked; no comments or documents |
@@ -53,11 +53,11 @@ The classification also covers network and device values generated in `ClientCon
 
 Until deployment policy assigns a duration, retention is **policy-required / deployment-defined**. This document does not authorize deletion or publication of any category.
 
-## B5 records (migrations 026-027)
+## Incidents, distribution consent and lifecycle records
 
 `privacy_incidents`, category/scope rows and incident events store safe incident codes, affected subject references and 24/72-hour workflow evidence. `privacy_distribution_consents` stores dedicated public-distribution permissions, field/category codes and document digest. `privacy_cleanup_runs` stores category, policy period and deletion count only. These records require their own reviewed retention and authorized access. Outbox email payloads are cleared on successful delivery; terminal audit/outbox/inbox and DSAR history are eligible for policy-gated, hold-aware bounded cleanup. The separate Commercial inventory is in [CONTROL_PLANE_PRIVACY.md](CONTROL_PLANE_PRIVACY.md).
 
-## B4 erasure records (migration 025)
+## Erasure records
 
 | Table | Personal data and purpose | Retention and handling |
 | --- | --- | --- |
@@ -66,10 +66,10 @@ Until deployment policy assigns a duration, retention is **policy-required / dep
 | `privacy_erasure_item_purposes` | Purpose, trigger, policy and contributor codes | Explains multi-purpose decisions without a resource snapshot. |
 | `privacy_destruction_evidence` | HMAC reference, executor ID, journal event ID and action/result | Separate evidence policy and `evidence_retain_until`; immutable ordinary path; no old value. |
 
-Core B4 deletes only owned PersonContact and AccountSettings records when all purpose evaluations allow it. Person, auth, consent, representation, DSAR, audit, outbox and inbox erasure remain unsupported. A technical evidence export is not a signed organizational act. Backups need expiry and restore-time re-erasure controls.
+Core deletes owned contacts, account settings and eligible organization memberships. It anonymizes Person and human Account through registered handlers after their dependencies are resolved. Consent, representation and legal evidence have no generic destructive handler; auth and operational metadata follow separate controlled lifecycle paths. A technical evidence export is not a signed organizational act. Backups need expiry and restore-time re-erasure controls.
 
-## B2 export allowlists
+## Export allowlists
 
 The structured export includes subject Person names, birth date, status and times; own contacts' type, value, label, primary and verification state; human Account status/type/times; stored settings; consent codes, document version, locale, source, times and actor relation; subject representation status, scopes and times; request status/deadlines; and processing block scope, reason and times. Auth includes identifier type/value/verification and limited external identity, MFA, passkey and session metadata.
 
-Normalized contact identifiers, password hashes, TOTP secrets, recovery hashes, passkey credential/public key, session token hashes, external claims, audit rows and outbox payloads are deliberately excluded. The JSON response is never stored in execution evidence. Migration 023 brings the Core schema to 32 tables.
+Normalized contact identifiers, password hashes, TOTP secrets, recovery hashes, passkey credential/public key, session token hashes, external claims, audit rows and outbox payloads are deliberately excluded. The JSON response is never stored in execution evidence. The current table inventory follows the exported PostgreSQL catalog.

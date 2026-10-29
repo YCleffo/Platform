@@ -1,23 +1,73 @@
-# Privacy Core boundary
+# Персональные данные в Core
 
-Phase 4.1 introduces `Core/Privacy` for generic policy definitions and verified legal representation. It is independent of Education, Chat, Storage, frontend, and Commercial Control Plane. `Person != Account`: a Person is the data subject; an Account is an authenticated system identity. Domain modules must not use `core.persons.read` as permission to enumerate all domain subjects. Domain access still needs tenant, organization, relationship, resource, and field scope. `core.superadmin` retains its existing RBAC bypass; new privacy permissions are not automatically granted to `core.admin`.
+Privacy — часть Core, независимая от Education, Chat и Storage. Модуль связывает цели обработки, основания, согласия, представительство, запросы субъекта и контролируемое уничтожение. Персональные настройки интерфейса не являются юридическим свидетельством.
 
-Pass B1 adds the request and processing-block workflow described in [DATA_SUBJECT_REQUESTS.md](DATA_SUBJECT_REQUESTS.md). Requests preserve separate subject, actor, workflow events, and deadline records. Completion of operations without an execution capability is blocked.
+[Модель данных](../core-data-model.md) · [Хранение и уничтожение](RETENTION_ERASURE.md) · [Расширение модуля](PRIVACY_MODULE_CONTRIBUTORS.md)
 
-Pass B2 adds bounded personal data export, Core Person/contact correction, execution evidence, and module extension contracts. Self and representative export are separate authorization paths. `privacy.request.view` grants case visibility only; `privacy.data.access` and `privacy.data.export` grant the corresponding representative data response. Application-policy times use `ClockInterface`, including representation, consent, request visibility, deadlines, and block expiry. Core remains independent of Education, Chat, and Storage.
+## Субъект и представитель
 
-Configured processing purposes declare a semantic legal basis code, data and subject categories, retention policy code, consent and representative rules, distribution flag, and cross-border policy. Deployments and modules register definitions through DI. Invalid codes, duplicate definitions, missing data categories or retention policies, and contradictory consent basis fail registration. No production purpose, document, or legal wording is seeded. The code does not treat consent as the only legal basis.
+Субъект — Person. Действующий человек определяется через отдельный human Account и его связь с Person. Service/system Account не получает пользовательские privacy-права автоматически.
 
-`AccountSettings` holds user preferences and is not legal evidence. `privacy.show_online_status` defaults to false; a user can opt in. `PresenceVisibilityPolicy` is the shared Core gate before domain relationship checks. Presence uses a Redis TTL, not durable heartbeat history. Passkeys store public key credentials, not biometric templates. Current Core does not process face embeddings, voiceprints, fingerprints, or biometric templates. Special-category health data requires a separate module design review.
+`legal_representations` связывает разных Person: субъекта и представителя. Запись содержит вид полномочия, срок, верификатора и ссылку/hash доказательства, но не сканы документов. Декларация сама по себе не даёт права действовать.
 
-`AuditService` and `PostgresAuditWriter` apply a shared payload policy. Action definitions allow specific typed fields; unknown actions may carry no arbitrary payload. Privacy events contain only actor/resource IDs and typed action codes. Settings values, configuration snapshots, passkey labels, and raw device details are excluded. The shared policy also bounds depth, width, and size. Audit is evidence of actions, not an entity snapshot store. Retention and erasure still need the controlled workflow described in [RETENTION_ERASURE.md](RETENTION_ERASURE.md).
+`legal_representation_scopes` хранит неизменяемый набор действий. Для каждой операции `RepresentativeAuthorityPolicy` проверяет точную пару субъект/представитель, подтверждённый статус, срок, отсутствие отзыва и требуемый scope в той же транзакции. Проверка и отзыв идемпотентны. Запись без scopes остаётся свидетельством, но не разрешает действия.
 
-Production deployment must record actual data residency and processor decisions. Russian subject primary storage must use approved RF-localized infrastructure when the applicable deployment/legal policy requires it. A configuration value alone cannot prove physical residency. SMTP and external identity providers can receive user data; GeoIP uses network data; YooKassa belongs to the separate Control Plane. Cross-border transfer decisions belong to deployment policy, not a hardcoded country rule.
+Management API `/api/core/privacy/representations` требует `core.privacy.representations.manage`. Это управление полномочиями, а не способ произвольно выдать согласие за любого Person.
 
-## Pass B5 technical closure
+## Цели и согласия
 
-Core migrations 026 and 027 add privacy incidents, dedicated distribution consent, and a bounded retention lifecycle. `privacy/cleanup` starts in dry-run mode and prints counts only. Every category except destruction evidence requires an explicit positive retention period. Destruction evidence also checks its stored retention date and a minimum of three years. Core queues action URLs as authenticated ciphertext using the deployment auth encryption key. Published or dead email outbox rows have their payload and headers scrubbed; terminal rows can later be removed by policy. Ordinary append-only writes remain protected. The lifecycle session setting is a controlled code path, but deployment must use a restricted database role and restrict command execution.
+Deployment и модули регистрируют цели, категории данных, retention policies и документы через DI registries. Определения содержат семантическое основание, роль обработки, требования согласия и представительства, политику хранения и трансграничной передачи. Дубликаты, неизвестные категории и противоречивые настройки отклоняются. Production purposes и юридические тексты не подставляются из тестовых fixtures.
 
-`privacy/compliance/check` reports technical readiness and missing configuration only. In production it requires residency evidence and security references, and its output is not a legal certification. The processor, recipient, transfer and platform processing-role registries are deployment supplied; unknown outbound data transfer is denied. See [PROCESSORS_AND_TRANSFERS.md](../privacy/PROCESSORS_AND_TRANSFERS.md), [DATA_RESIDENCY.md](../privacy/DATA_RESIDENCY.md), and [ISPDN_SECURITY_MATRIX.md](../privacy/ISPDN_SECURITY_MATRIX.md).
+`privacy_consents` хранит субъекта, действующих Person/Account, подтверждённое представительство при необходимости, цель и серверную версию/hash документа. Конкурентная выдача сериализуется по субъекту; частичный unique index допускает одно активное согласие по субъекту, коду и цели. Выдача и отзыв атомарны с аудитом. Повторная выдача создаёт новое свидетельство, сохраняя историю.
 
-Phase 4.8 adds `missingContributor` machine codes for each configured purpose and supported Core lifecycle resource. The check verifies candidate, basis, restriction, dependency, and destructive handler registration. Phase 4.9 registers Person and human Account anonymization handlers. Erasure capability is evaluated for a concrete subject and its actual resource inventory; the global capability remains unavailable without a subject. A deployment still needs configured purposes and retention policies with `delete` for child resources and `anonymize` for identity anchors. Consent is resolved from current consent rows; other legal bases without demonstrable runtime evidence remain unknown and retain data.
+Self API: `GET /api/auth/me/consents`, `POST /api/auth/me/consents/{code}`, `DELETE /api/auth/me/consents/{code}`. Субъект берётся из сессии. Клиент не задаёт произвольный subject, hash документа, цель или основание. Внутренние representative операции требуют отдельных `privacy.consent.grant` / `privacy.consent.withdraw` scopes.
+
+`legacy_record=true` означает старое свидетельство без полного набора subject/purpose; оно не считается актуальным согласием по цели. Обычное изменение или удаление свидетельств блокируют SQL guards. Отзыв согласия не удаляет Account и не отменяет другие применимые основания обработки.
+
+## Запросы субъекта
+
+`data_subject_requests` хранит субъекта отдельно от подателя. События, сроки и execution evidence находятся в собственных таблицах. Типы запросов: `access`, `processing_information`, `correction`, `restriction`, `processing_termination`, `erasure`, `export`, `consent_withdrawal`.
+
+Self запрос выводит Person из сессии. Представитель предъявляет действительное полномочие со scope конкретного типа. Просмотр представительского запроса дополнительно требует `privacy.request.view`; отзыв полномочия прекращает доступ и к ранее созданным запросам. Management permissions дают управление делом, но не неограниченный доступ к выгрузке персональных данных.
+
+State machine разделяет регистрацию, проверку identity, рассмотрение, исполнение и результат. Терминальное завершение требует capability и execution/response evidence; изменение статуса не заменяет фактическое исполнение.
+
+Срок хранит trigger, календарный тип, исходный due time, допустимое продление и время удовлетворения. Исходные trigger/due неизменяемы. Рабочие дни считает явно настроенный `ConfiguredBusinessCalendar`; отсутствие покрытия нужного периода блокирует расчёт. Тестовый календарь не становится production calendar.
+
+## Выгрузка
+
+Self маршрут: `GET /api/auth/me/privacy/requests/{id}/data`. Представительский: `GET /api/auth/me/privacy/representations/{representationId}/requests/{id}/data`. Запрос должен быть `in_progress`; проверяются субъект и полномочия `privacy.data.access` либо `privacy.data.export`.
+
+`PersonalDataContributor` получает ограниченный context и возвращает типизированную секцию. Экспорт имеет стабильный порядок, канонические ключи, schema version 1, SHA-256 и размер точного JSON. Лимиты: 32 секции, 1000 записей на секцию, 1 МиБ, глубина 8, строка до 8192 байт. Ошибка contributor или превышение размера отклоняет весь экспорт.
+
+Core отдаёт разрешённые данные субъекта, контакты, human Account metadata, сохранённые настройки, согласия, представительство, собственные запросы и блокировки. Auth отдаёт разрешённые metadata идентификаторов, факторов и сессий. Пароли и их хеши, MFA secrets, recovery hashes, passkey key material, tokens, raw claims, audit dumps и outbox payloads исключены.
+
+Транзакция фиксирует выдачу ответа, digest, размер, actor и сроки до отправки HTTP body. `response_issued` означает выдачу сервером, а не подтверждение получения клиентом. Тело экспорта не сохраняется как evidence. Большой ответ возвращает контролируемый 413; неудача не удовлетворяет deadline.
+
+## Исправление данных
+
+Для correction request управление переводит дело в `in_progress` и подтверждает доказательство через `POST /api/core/privacy/requests/{id}/correction-evidence`. Эта операция идемпотентно запускает соответствующий срок. `POST /api/core/privacy/requests/{id}/corrections` принимает contributor code, resource ID и разрешённый набор изменений.
+
+`core.person` изменяет только имена, отображение и дату рождения через существующий `UpdatePerson`. `core.person_contact` использует доменный `UpdatePersonContact`, проверяет принадлежность субъекту и снимает verification при изменении значения. Отдельного обходного SQL-редактора в Privacy нет.
+
+Изменение, execution evidence, удовлетворение срока и завершение запроса выполняются атомарно. В evidence и аудит попадают ID, коды, пути изменённых полей и время; прежние и новые значения не копируются.
+
+## Блокировки, прекращение и уничтожение
+
+Processing block ограничивает обработку, legal hold независимо запрещает уничтожение. Блокировки могут действовать одновременно. Прекращение обработки создаёт purpose-scoped blocks и вызывает restriction contributors; оно не отключает Account и не удаляет Person.
+
+Retention evaluation и физическое уничтожение — разные операции. Перед действием исполнитель повторно проверяет все применимые цели, основания, holds, зависимости и зарегистрированный handler. Неизвестное состояние сохраняет данные. Подробный порядок и anonymization описаны в [хранении и уничтожении](RETENTION_ERASURE.md).
+
+## Инциденты и минимизация
+
+`PrivacyIncidentService` хранит состояния detected, investigating, contained, resolved, коды категорий и subject scope. Реализованные поля отсчитывают начальный и расследовательский сроки от обнаружения; запись об уведомлении появляется после сообщения уполномоченного сотрудника. Сервис сам не уведомляет внешний орган.
+
+Инцидент не хранит утёкший payload, пароли, токены или списки контактов. Экспорт инцидента — структурированное свидетельство для ответственного лица, а не подтверждение внешней отправки.
+
+Audit использует allowlist типизированных полей и лимиты размера/вложенности. Произвольные снимки сущностей, настройки, raw device details и секреты не записываются. Presence хранится в Redis по TTL; passkeys содержат публичные credentials, а не биометрические шаблоны.
+
+## Конфигурация установки
+
+`privacy/compliance/check` проверяет техническую конфигурацию: цели, contributors, retention, residency, processor/recipient decisions и security references. Для разрушительных действий нужны конкретный субъект, поддерживаемые resources, одобренная evidence policy и полномочия исполнителя. Зелёная техническая проверка не означает юридическое утверждение политики.
+
+[Инвентарь Core](../privacy/CORE_DATA_INVENTORY.md) · [Политика установки](../privacy/PRODUCTION_PROCESSING_POLICY.md) · [Получатели и передача](../privacy/PROCESSORS_AND_TRANSFERS.md)

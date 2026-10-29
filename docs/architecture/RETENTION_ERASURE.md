@@ -1,21 +1,59 @@
-# Retention and erasure boundary
+# Хранение, ограничения обработки и уничтожение
 
-Pass B3 implements purpose-specific retention evaluation, scoped legal holds, and processing termination. Unknown policy, trigger, basis, hold state, or dependency blocks destructive eligibility. A shared physical resource is eligible only when every applicable purpose permits the action. A prior `eligible_delete` decision is evidence of evaluation, not permission for a later delete.
+Retention evaluation определяет допустимость действия; erasure executor исполняет его после повторной проверки. Предыдущее `eligible_delete` не является постоянным разрешением на последующее удаление.
 
-Retention policies declare an explicit `durationUnit`: `calendar_days`, `working_days`, `hours`, or `event_only`. A missing timed duration is an incomplete deployment policy. Core supplies no production retention duration. Contributors supply semantic trigger timestamps.
+## Политики и кандидаты
 
-Pass B4 implements bounded erasure cases and items, handler registration, fresh retention/basis/hold/dependency checks immediately before each physical action, and immutable destruction evidence. Core handlers delete owned `person_contacts`, `account_settings`, and `organization_memberships` when a configured policy permits `delete`. Active membership is a blocking dependency. Phase 4.9 adds Person and human Account handlers for a configured `anonymize` action. Person and human Account physical `DELETE` are not privacy erasure: operational identifiers and credentials are destroyed, the UUID remains as a neutral FK anchor, and separately justified legal evidence remains. Service and system accounts are excluded. Consents, representations, DSAR and immutable evidence have no general destructive handler. `delete`, `anonymize`, and `pseudonymize` remain distinct actions.
+`RetentionCandidateContributor` перечисляет ресурсы субъекта и все применимые цели. Кандидат содержит ID ресурса/субъекта, purpose/policy codes, семантический trigger и время. Export contributor не заменяет источник retention candidates.
 
-The separate destruction evidence policy must be configured before execution. Evidence carries IDs, machine codes, an HMAC resource reference, action/result, execution time, executor, journal event ID, and its own retention date. It contains no deleted value or resource snapshot. Technical export is not a signed organizational act. Case execution is bounded, locked, retryable, and linked to DSAR execution evidence and deadline satisfaction. Partial results remain explicit.
+Политика задаёт действие и явную единицу `calendar_days`, `working_days`, `hours` или `event_only`. Отсутствие нужной продолжительности или trigger делает политику неполной. Production durations не выводятся из тестовых значений.
 
-Processing blocks restrict processing; legal holds independently prevent destruction. A subject may have both. Account disable, Person archive, and consent withdrawal do not erase data. Authentication housekeeping under `auth/cleanup` remains separate.
+`RetentionEvaluator` проверяет цель, policy, trigger, срок, hold, основание, зависимости и действие. Согласие разрешается по текущему non-legacy свидетельству; иные основания требуют runtime evidence contributor. Неизвестное состояние блокирует уничтожение. Если хотя бы одна применимая цель требует хранения, физический ресурс сохраняется.
 
-Phase 4.8 wires production candidate adapters for contacts, settings, and memberships. They use configured purposes and policies, actual consent withdrawal, membership exit, or existing archive timestamps; an unrecognized or absent trigger remains unknown and blocks eligibility. Nonconsent bases without runtime evidence remain unknown. Purpose blocks are enforced by Core contact, account settings, and organization application paths. The restriction contributor keeps no parallel state; `core.privacy_processing_blocks` remains authoritative.
+`RetentionDecisionService` сериализует оценку по ресурсу и пишет минимальную append-only запись. `privacy/retention/evaluate --limit=100` выводит только счётчики и не удаляет данные.
 
-Phase 4.9 extends candidates to Person and human Account only when the configured action is `anonymize`. Child resources retain their configured destructive action. Erasure execution orders contacts, settings and memberships before human Account, and Person last. The Account handler uses existing RBAC, Account lifecycle and Auth cleanup boundaries; it removes operational credentials and sessions, then clears account identity fields. The Person handler refuses to proceed while contacts, memberships or live linked accounts remain, then replaces names with neutral constants and clears birth date and display fields. Both handlers reconcile an existing tombstone without repeating destruction. Existing APIs cannot restore archived identity. Audit records root anonymization with IDs, case ID, action and result only.
+## Processing blocks и legal holds
 
-Backup expiry and restoration controls are a deployment responsibility: a primary-data deletion does not immediately remove immutable backup copies. A restore must suppress use of data erased after its backup was taken and reapply those erasures before serving restored data. See [ERASURE.md](ERASURE.md).
+`privacy_processing_blocks` ограничивает обработку по субъекту, цели или семантическому ресурсу. `privacy_legal_holds` отдельно запрещает уничтожение. Создание активного логического block/hold идемпотентно; release повторяем. Сроки проверяются через общий `ClockInterface`.
 
-Pass B5 prevents technical failure from satisfying an erasure request. Failed items remain retryable and the DSAR deadline stays open. Partial completion is reserved for deliberate legal/basis/eligibility blocks. Destruction evidence policy rejects periods shorter than three years. `privacy/cleanup` handles audit, outbox, inbox, DSAR history, expired blocks and holds, retention decisions, obsolete sessions and destruction evidence in bounded batches. It requires an approved duration per category and honors active holds. Dry-run is the default. Financial and other unconfigured categories remain retained.
+Блокировка проверяется в доменных путях контактов, настроек и организаций. Contributor не хранит параллельную копию состояния. Disable Account, archive Person и отзыв согласия сами по себе не являются erasure.
 
-Status: retention evaluation, legal hold, erasure orchestration and policy-gated cleanup are implemented. Physical erasure remains limited to registered handlers and retention policy. The separate Control Plane boundary is documented in [CONTROL_PLANE_PRIVACY.md](../privacy/CONTROL_PLANE_PRIVACY.md).
+## Прекращение обработки
+
+`POST /api/core/privacy/requests/{id}/processing-termination/execute` принимает запрос `in_progress`. Сервис собирает цели, оценивает основания и создаёт purpose-scoped blocks там, где обработку можно прекратить. Restriction contributors должны повторяемо применять ограничение по block ID.
+
+Действующее основание фиксируется как сохраняемая цель и может дать частичный результат. Неизвестное основание, отсутствующий contributor или его техническая ошибка оставляют запрос открытым. Сервис не удаляет данные и не подменяет проверку исполнения сменой статуса.
+
+## Планирование erasure
+
+Case принадлежит Person и может быть связан с DSAR. Планирование собирает ресурсы по всем зарегистрированным целям и создаёт один item на физический ресурс. Отсутствие кандидатов, неполное покрытие целей или более 1000 кандидатов блокируют планирование. Items хранят ID и коды, а не копии удаляемых значений.
+
+Изменение набора кандидатов после планирования даёт `candidate_set_changed`. Заблокированные и неподдерживаемые ресурсы остаются видимыми; они не исчезают из результата ради успешного статуса.
+
+## Исполнение и handlers
+
+Case advisory lock сериализует исполнителей. Обработка ограничена batch до 100 items. Для каждого item транзакция блокирует субъект/case, заново собирает цели, проверяет policy, основания, holds, зависимости, ownership и соответствие действия handler.
+
+Core поддерживает `delete` для собственных контактов, account settings и organization memberships при допустимой политике. Активное membership блокирует действие. Для Person и human Account поддерживается `anonymize`: операционные идентификаторы и credentials уничтожаются, UUID остаётся нейтральной опорой FK. Service/system Account в этот путь не входит.
+
+Порядок обработки: дочерние контакты/настройки/memberships, human Account, затем Person. Person handler отказывается работать при оставшихся контактах, memberships или живых связанных Accounts. Повтор уже выполненной anonymization распознаёт tombstone и не создаёт второй эффект. Обычные API не восстанавливают анонимизированную identity.
+
+Общего destructive handler для согласий, представительства, DSAR и юридических свидетельств нет. `delete`, `anonymize`, `pseudonymize` различаются; handler не может произвольно подменить действие.
+
+Физическое изменение Core, аудит, destruction evidence и завершение item атомарны. Ошибка откатывает изменение и оставляет item повторяемым. Внешний модуль обязан согласовать effects за пределами этой транзакции по item ID.
+
+## Результат и свидетельства
+
+Destruction evidence содержит ID, машинные коды, HMAC resource reference, действие, время, исполнителя и срок хранения. Значения уничтоженных полей в него не копируются. Evidence policy настраивается отдельно; код отклоняет срок короче трёх лет.
+
+Техническая ошибка не удовлетворяет DSAR deadline. Failed items остаются повторяемыми; частичный результат фиксирует явные ограничения и основания. Завершение запроса требует execution evidence, а не только смены статуса case. Технический экспорт evidence не заменяет подписанный организационный акт.
+
+`privacy/cleanup` по отдельным политикам обрабатывает ограниченные категории: audit, outbox/inbox, историю DSAR, истёкшие blocks/holds, retention decisions, старые sessions и destruction evidence. По умолчанию используется dry-run. Active holds и неутверждённые категории сохраняются. Финансовая история в общий cleanup не включена.
+
+## Резервные копии и доступ
+
+Удаление в основной БД не удаляет старые immutable backups немедленно. Перед обслуживанием восстановленной копии необходимо сверить журнал erasure и повторить уничтожение данных, удалённых после создания копии. Если это невозможно, восстановленная система остаётся изолированной.
+
+CLI erasure требует явных case/executor и полномочий. Runtime DB role и доступ к lifecycle-командам должны быть ограничены отдельно; наличие контролируемого session setting не делает superuser безопасной production-ролью.
+
+[Privacy Core](PRIVACY_COMPLIANCE_CORE.md) · [Contributor contracts](PRIVACY_MODULE_CONTRIBUTORS.md) · [Резервирование](../operations/BACKUP_RESTORE.md)

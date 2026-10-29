@@ -1,15 +1,19 @@
 flowchart TD
-  Request[Запрос возврата и idempotency key] --> Lock[Блокировки payment и refund allocation]
+  Request[Запрос возврата и idempotency key] --> Lock[Блокировки payment и allocation]
   Lock --> Limit{Сумма не превышает settled remainder?}
   Limit -->|Нет| Reject[Отказ без нового финансового эффекта]
-  Limit -->|Да| Reserve[Durable refund и allocation snapshots]
+  Limit -->|Да| Reserve[Durable refund и снимки распределения]
   Reserve --> Provider[Вызов провайдера вне транзакции]
   Provider --> State{Достоверный исход?}
-  State -->|Uncertain| Retry[Повтор с тем же provider request key и reconciliation]
+  State -->|Uncertain| Retry[Тот же provider request key и reconciliation]
   Retry --> Provider
-  State -->|Успех| Success[Один refund effect, audit и отдельный refund receipt]
-  State -->|Окончательный отказ| Case[Durable recovery case]
-  Case --> Evidence[Два разных уполномоченных оператора и точное evidence]
-  Evidence --> External[Подтверждённая внешняя компенсация]
-  Success --> Finish[Финализация зависимой plan change]
+  State -->|Успех| Success[Refund succeeded, audit и отдельный receipt]
+  State -->|Окончательный отказ| Canceled[Refund canceled и сохранённая история]
+  Success --> Dependent{Это компенсация paid_unapplied смены?}
+  Dependent -->|Да| Finish[Финализация plan change в refunded]
+  Dependent -->|Нет| Done[Возврат завершён]
+  Canceled --> Recovery{Есть plan change с recovery_required?}
+  Recovery -->|Нет| Operator[Оператор разбирает отказ; нового возврата автоматически нет]
+  Recovery -->|Да| Evidence[Два финансовых оператора проверяют внешнюю компенсацию]
+  Evidence --> External[Одобрено свидетельство фактически выполненного перевода]
   External --> Finish

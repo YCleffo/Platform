@@ -1,32 +1,21 @@
-# Cross-process Event Contracts v1
+# События между процессами
 
-`contracts/events/envelope.v1.schema.json` defines identity, type, version,
-timestamp, producer, aggregate, correlation/causation and payload. Specific
-payload schemas and valid fixtures currently cover
-`control_user.email_verification_requested`, `deployment.provision_requested`
-and `entitlement.issued`. Internal Audit events are not automatically
-integration events. Changing a required payload field requires a new schema
-version and consumer support; fixtures are validated in the Yii unit suite.
+`contracts/events/envelope.v1.schema.json` задаёт ID события, тип и версию, время, производителя, aggregate, correlation/causation и payload. Версионированные схемы и валидные fixtures существуют для `control_user.email_verification_requested`, `deployment.provision_requested` и `entitlement.issued`.
 
-Commercial outbox migration 020 adds `schema_version=1`, leases, bounded
-attempts and dead-letter state. Existing internal events keep their payloads.
-The email worker is the first production consumer. Other cross-process
-publishers/consumers remain explicitly deferred, and Yii uses
-`core.inbox_events` keyed by `(event_id, consumer)` where external events are
-eventually accepted. Delivery is at-least-once, not exactly-once.
+Изменение обязательной структуры требует новой версии и совместимого потребителя. Fixtures проверяются в unit suite Core. Внутреннее событие аудита или outbox не становится интеграционным контрактом автоматически.
 
-Phase 4.6 writes `entitlement.issued` with `schema_version=1` in the same
-transaction as a new signed deployment document. Its payload contains only
-`entitlement_document_id`, `installation_id`, and `document_sha256`; no document
-bytes, signature or private key material enter the outbox. Repeated fetches of
-an unchanged source do not create another event. The runtime applies the
-document through its authenticated M2M endpoint; the outbox event is not a
-substitute for fetching and verifying the document.
+## Доставка
 
-`subscription.activated`, `subscription.cancelled` and
-`subscription.auto_renew_disabled` remain internal
-Commercial outbox events. They have no versioned cross-process payload
-contract and no Tenant consumer. Tenant rights converge through authenticated
-pull of the latest signed entitlement document, including after repeated or
-delayed sync. Duplicate delivery of those internal events to Tenant is not a
-Core acceptance path; do not add a consumer or transport to simulate it.
+Commercial outbox хранит `schema_version`, lease, количество попыток и terminal/dead состояние. Почтовый worker обрабатывает зарегистрированные email events. Доставка допускает повторы; потребитель отвечает за дедупликацию по идентичности события. Core имеет inbox с уникальностью `(event_id, consumer)` для поддерживаемых входящих операций.
+
+Универсальный транспорт публикации всех событий между Commercial и Core не реализован. Наличие схемы JSON и таблицы outbox не означает наличие такого транспорта.
+
+## Документы прав
+
+Выдача новой подписанной версии записывает `entitlement.issued` в той же транзакции. Payload содержит `entitlement_document_id`, `installation_id`, `document_sha256`. Байты документа, подпись и приватные ключи в outbox не копируются. Неизменившийся источник не создаёт новую версию и событие.
+
+Core получает документ через аутентифицированный M2M pull и проверяет подпись, доверенный ключ, установку, срок и монотонную sequence. Событие outbox не заменяет получение и проверку документа.
+
+`subscription.activated`, `subscription.cancelled`, `subscription.auto_renew_disabled` — внутренние события Commercial. У них нет Tenant consumer. Права Tenant сходятся через получение последнего подписанного документа, включая повторную или задержанную синхронизацию.
+
+[Подписанная доставка](M2M_SERVICE_AUTHENTICATION.md) · [Фоновые процессы](BACKGROUND_JOBS.md)

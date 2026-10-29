@@ -1,5 +1,5 @@
 flowchart TD
-  Supervisor[Запуск scheduler или email worker] --> Tick[Определить due jobs и batch limits]
+  Supervisor[Запуск scheduler] --> Tick[Определить due jobs и batch limits]
   Tick --> Lock{Получен PostgreSQL advisory lock?}
   Lock -->|Нет| Skip[Другой процесс уже выполняет job]
   Lock -->|Да| Run[Один bounded вызов]

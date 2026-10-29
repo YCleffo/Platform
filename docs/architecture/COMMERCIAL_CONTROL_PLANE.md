@@ -1,451 +1,80 @@
-# Commercial Control Plane — текущая реализация
+# Commercial Control Plane
 
-Актуальная карта: [бизнес-процессы](../processes/README.md),
-[физическая БД](../database/README.md).
-Номера Phase ниже объясняют историю появления механизмов, а не текущую готовность.
+`apps/control-plane` — отдельное приложение Symfony. Оно владеет базой `platform_commercial`, схемой `commercial`, центральными пользователями, коммерческими аккаунтами, каталогом и биллингом. Yii Core имеет собственные identities и отдельную БД. Совпадение email или UUID не связывает записи между системами.
 
-`apps/control-plane` is a separate Symfony 7.4/PHP 8.3 application with its
-own `platform_commercial` PostgreSQL database and `commercial` schema. It does
-not receive Yii/Diary database credentials and does not join the Diary Docker
-network.
+[Схема БД](../database/README.md) · [Бизнес-процессы](../processes/README.md) · [HTTP-контракт](../../contracts/openapi/control-plane.yaml)
 
-These boundaries are contractual:
+## Пользователь и коммерческий аккаунт
 
-- Control User != Diary User.
-- Commercial Account != Diary Organization.
-- Control Plane Auth != Diary Auth.
+`control_users` хранит пользователя кабинета; `commercial_accounts` — клиента, которому принадлежат подписки и финансовая история. Доступ связывает `commercial_account_memberships`. Контактные и платёжные реквизиты находятся в `billing_profiles`.
 
-A central Control User is created before any tenant Diary exists. The Control
-Plane owns the commercial subscription and payment contracts. The local
-dedicated provisioner creates isolated Tenant infrastructure through its
-infrastructure provider; production hosting and provider readiness remain separate gates.
+Регистрация создаёт пользователя `pending_verification`, проверочный артефакт, аудит и событие outbox в одной транзакции. После одноразового подтверждения email пользователь становится `active`. Пароли хешируются; access/refresh credentials хранятся как хеши. Refresh меняет токен, а повтор использованного refresh отзывает семейство сессии. MFA и повторная аутентификация описаны в [границе безопасности](COMMERCIAL_SECURITY.md).
 
-## Implemented schema
+Создание аккаунта атомарно записывает аккаунт, членство владельца, аудит, outbox и результат идемпотентности. Изменение владельцев сериализуется блокировкой аккаунта; отложенные constraint triggers запрещают commit без активного владельца. Роли `owner`, `admin`, `billing`, `technical` проверяет `AccountAuthorization`; они не совпадают с RBAC Core.
 
-Doctrine migrations and schema guard tests are the source of truth for the current `commercial.*` schema inventory. Migration
-020 changes the outbox lifecycle without adding another table. Runtime checks
-assert required objects and migration state rather than an exact table count.
-The 21 Phase 1 tables remain unchanged. Phase 2 adds:
+## Каталог и права
 
-- `control_user_email_verifications` — one-time, expiring, hash-only tokens;
-- `control_sessions` — short-lived opaque access tokens and rotating refresh
-  tokens, both stored only as hashes;
-- `control_session_refresh_history` — consumed token hashes for complete family
-  reuse detection;
-- `rate_limit_counters` — expiring, pseudonymized fixed-window counters.
+`plans`, `plan_prices`, `plan_features` задают версионированный контракт. Подписка выбирает опубликованную цену. Опубликованные условия, строки подписки и выпущенного счёта защищены от изменения PostgreSQL guards. Новая цена создаёт новую версию, сохраняя старую историю.
 
-Migrations 008–010 also extend `control_users`, `commercial_accounts` and
-`billing_profiles`. Account creation writes the account, owner membership,
-audit event, outbox event and idempotency result in one transaction. Deferred
-PostgreSQL constraint triggers prevent an account from committing without an
-active owner and serialize concurrent owner removal/downgrade.
+`EffectiveEntitlements` вычисляет права по действующей подписке и её неизменяемым условиям. Отдельной изменяемой таблицы `commercial.entitlements` нет. Usage — самостоятельное оперативное состояние: периоды и счётчики ограничивают квоты, но не создают тарификацию сверх лимита.
 
-Phase 3.1 adds `subscriptions` and `subscription_items`. A draft selects an
-immutable published recurring `plan_price`; partial unique indexes allow at
-most one draft and one active subscription per Commercial Account. Creation,
-its item, audit/outbox events and idempotency result commit atomically.
+## Первая покупка
 
-Phase 3.2 adds no table. Internal `ActivateSubscription` locks and validates
-the subscription contract, calculates its first UTC calendar period, freezes
-its items through PostgreSQL guards, activates the Commercial Account and
-completes onboarding in one transaction. Activation is intentionally not an
-HTTP customer action.
+1. `CreateSubscription` создаёт draft и строки подписки по опубликованной цене.
+2. `IssueInvoice` выпускает счёт со снимками условий, реквизитов, количества, валюты и суммы в минимальных единицах.
+3. `CreatePayment` связывает платёж с точной суммой счёта. Внешние попытки хранятся отдельно в `payment_attempts`.
+4. Подтверждённый settlement атомарно завершает попытку и платёж, оплачивает счёт, активирует подписку, открывает usage period, записывает аудит и outbox.
 
-Phase 3.3 also adds no table. A customer with `billing.manage` can cancel a
-draft or active subscription through an idempotent HTTP action. The internal
-`control:subscriptions:expire` command claims due active subscriptions in
-bounded `FOR UPDATE SKIP LOCKED` batches. Both terminal transitions write
-audit and outbox records atomically. After cancellation or expiration the
-Commercial Account remains `active/completed`, effective entitlements become
-empty, and a new subscription row can be created and activated. Historical
-subscriptions and their items are never recycled or deleted.
+Нулевой счёт создаёт исторический успешный платёж без фиктивной внешней попытки. Активация подписки не является произвольной пользовательской HTTP-командой. Начало оплаченного периода берётся из подтверждённого settlement; будущее время ограничивается текущим временем БД.
 
-Phase 3.4 adds `usage_periods`, `usage_counters` and immutable `usage_mode`
-semantics on catalog features. Explicitly metered integer features use either
-monotonic `counter` or signed `gauge` deltas. Limits come from the effective
-subscription contract and are enforced as hard quotas by an idempotent,
-transactional internal service. Activation creates the open usage period with
-the subscription boundaries; cancellation and expiration close it while
-preserving counters. A replacement subscription receives a new period and
-starts from zero. This operational quota state is not usage-based billing.
+## Провайдер, webhook и фискализация
 
-Phase 3.5 adds `invoices` and `invoice_lines` for the initial
-`subscription_create` charge. `IssueInvoice` derives currency, quantity and
-integer minor-unit amounts from the locked draft subscription contract and
-publishes the invoice atomically with `invoice.issued` audit/outbox records.
-The issued invoice stores immutable billing-profile and catalog snapshots;
-reads never reconstruct history from mutable source rows. Cancelling a draft
-subscription voids its issued invoice in the same transaction and emits
-`invoice.voided`, while cancelling an active subscription preserves the
-historical invoice. The `paid` state belongs exclusively to Payment Core and
-payment settlement activates the subscription atomically.
+YooKassa поддерживает hosted checkout для СБП и банковской карты, а также допустимые сохранённые способы оплаты. Провайдерские credentials разрешаются по `secret_ref` из внешней конфигурации. Они не хранятся в платёжных строках. Для интеграции требуются реальные merchant settings; наличие кода адаптера не подтверждает готовность внешнего провайдера.
 
-Phase 3.6 adds provider-neutral `payment_provider_accounts`, `payments` and
-`payment_attempts`. One payment mirrors one invoice's immutable money, while
-multiple historical attempts model provider retries with at most one pending
-attempt. A trusted internal success confirmation atomically succeeds the
-attempt/payment, pays the invoice, activates its draft subscription, opens the
-usage period and writes audit/outbox lifecycle events. Direct activation is
-payment-gated. Zero-amount invoices create a historical succeeded payment and
-activate without a fake provider or attempt. Refunds and receipts are
-intentionally absent.
+Webhook — уведомление. Inbox дедуплицирует его, затем приложение получает достоверное состояние через API провайдера и сверяет сумму, валюту, локальные идентификаторы. JSON webhook не служит доказательством оплаты. Provider request key сохраняется между повторами одной попытки; неопределённый timeout не разрешает создать новое списание с новым ключом.
 
-Phase 3.7 adds the first concrete provider integration: YooKassa with SBP,
-`capture=true` and hosted redirect confirmation. Credentials remain outside
-PostgreSQL: `payment_provider_accounts.secret_ref` points to an environment
-variable resolved server-side. The provider request uses the existing attempt
-request key as YooKassa `Idempotence-Key`; money is derived from the immutable
-local Payment and only RUB is accepted.
+Сетевой вызов не выполняется внутри финансовой транзакции. Reconciliation восстанавливает результат после неопределённого ответа или остановки процесса. Receipt имеет отдельный жизненный цикл: успешная ненулевая оплата создаёт локальное фискальное обязательство, а worker отправляет его позднее с отдельным стабильным ключом. Ошибка чека не отменяет оплаченный счёт. Нулевые платежи не создают чеков.
 
-`payment_provider_events` is a hash-only webhook inbox. It deduplicates by
-provider account plus deterministic event key and never stores the raw body.
-Webhook JSON is only a notification: final state, amount, currency and local
-metadata are re-fetched from YooKassa before the existing provider-neutral
-bind/completion services are called. Metadata supports recovery when the
-provider created a payment but the process died before the local reference was
-bound. `control:payments:reconcile-yookassa --limit=100` performs the same
-authoritative flow for a bounded batch without holding database locks during
-network I/O. Settlement remains owned by Payment Core.
+## Продление и отмена
 
-Phase 3.8 adds `receipts` and `receipt_items`. A successful non-zero provider
-settlement creates the local fiscal obligation and immutable invoice-line
-snapshot in the same database transaction as Payment, Invoice, Subscription
-and Usage changes. Provider HTTP is never executed in that transaction.
-YooKassa receipt submission uses a separate stable idempotency key and the
-provider payment reference; uncertain failures leave the payment paid and the
-receipt pending for `control:payments:reconcile-yookassa-receipts --limit=100`.
-Only `pending -> succeeded` and `pending -> canceled` transitions are accepted.
-Customer email/name come from the issued invoice snapshot and are excluded
-from the receipt read API, audit and outbox payloads. Zero payments do not
-create receipts.
+Renewal invoice фиксирует следующий период. Ранняя оплата финансирует его, сохраняя текущие границы до перехода. При переходе старый usage period закрывается, новый начинается с нулевых счётчиков.
 
-Phase 3.9 adds immutable `subscription_renewal` invoice periods and the bounded
-`control:billing:prepare-renewals`, `control:billing:collect-renewals` / `control:subscriptions:advance` jobs. Automatic collection uses only an account-owned active default saved card, creates/reuses the existing Payment and PaymentAttempt, and leaves settlement to authoritative provider processing. Early
-payment funds the next period without changing the active period; rollover
-atomically closes the old usage period and opens a zeroed one. Expiration waits
-for the configurable settlement grace and serializes on the subscription row.
+Сбор оплаты использует только активный сохранённый способ соответствующего аккаунта. Dunning управляет ограниченными повторами, отсутствующим способом оплаты, grace и исчерпанием попыток. Короткий settlement grace и клиентский billing grace — разные политики.
 
-An authorized billing owner with recent MFA may disable auto-renewal on an
-active subscription through an idempotent endpoint. This leaves the paid
-period and its entitlements intact, while preventing later renewal invoices,
-saved-card collections and dunning. An already issued unpaid renewal invoice
-and pending local payment are voided/cancelled with audit and internal outbox
-records when no provider attempt is pending. A pending provider attempt must
-be authoritatively reconciled first; an already paid renewal still extends
-access through its purchased service period. The subscription expires at the
-end of the last paid period without renewal grace. An open plan change must be
-resolved first. Immediate subscription cancellation remains a separate action.
-The choice is stored on the subscription and survives worker restarts.
+Отключение автопродления сохраняет уже оплаченный доступ. Новые renewal invoices и списания прекращаются; допустимые неоплаченные локальные операции отменяются. Pending попытка провайдера требует достоверного завершения прежде такой отмены. Уже оплаченный следующий период сохраняется. Немедленная отмена подписки — отдельная операция.
 
-Automatic renewal hardening adds the separate bounded
-`control:billing:process-dunning` job and a provider-neutral policy. A transport-
-uncertain CREATE keeps the same pending PaymentAttempt and provider request key;
-a terminal customer charge consumes one dunning attempt and any later charge uses
-a new PaymentAttempt on the same Payment. Guarded collection states drive
-payment-method-required restoration, retry scheduling, past-due billing grace,
-authoritative webhook/reconciliation recovery, and terminal exhaustion. The short
-renewal settlement race grace remains distinct from customer billing grace.
+Renewal, settlement, expiration и смена тарифа соблюдают общий порядок блокировок. После окончательного expiration поздняя оплата обычного renewal фиксируется в истории и не открывает истёкшую подписку повторно.
 
-Renewal writers lock the subscription, invoice, Payment, collection state and
-PaymentAttempt in that order when those rows are needed. Expiration and
-`dunning_exhausted` are one transaction; a committed settlement wins by making
-expiration a no-op. If expiration commits first, a later provider success pays
-the invoice and emits late settlement without reopening the subscription or
-usage period. A new saved-card CREATE is preceded by a short transaction that
-checks the invoice, Payment, subscription, collection, attempt, saved method and
-provider account. The provider call runs after that transaction commits. A
-session advisory lock keyed by subscription spans this recheck and provider call;
-authoritative attempt completion, cancellation and terminal expiration take the
-same key before their transactions.
-This prevents settlement from committing between the final check and a new
-CREATE without holding financial row locks during network I/O. The lock is
-per subscription, so independent subscriptions can proceed concurrently.
+## Смена тарифа
 
-The same phase adds `refunds` and `refund_items`. Refund money is derived from
-validated invoice-line allocations, while payment locking prevents concurrent
-over-refund. YooKassa create/get calls reuse a stable provider idempotency key;
-webhooks remain hash-only notifications followed by authoritative GET. A
-succeeded refund creates a separate immutable `refund` receipt obligation in
-the settlement transaction and the existing receipt reconciler delivers it.
+`subscription_plan_changes` хранит источник, замену, неизменяемый расчёт, границу периода, счёт и состояние операции. `ProrationCalculator` считает доли периода по UTC и целые минимальные единицы с half-up округлением. Изменение валюты, billing period и переход на равную цену не входят в текущую политику.
 
-The current schema, including clearly marked future entities, is
-`docs/database/commercial/Commercial_ControlPlane_v2.dbml`. Effective
-entitlements are derived at read time from the current active subscription,
-its valid items and immutable plan features. There is no mutable
-`commercial.entitlements` table. Usage is a separate mutable read/write model.
-Phase 3.9 adds immutable renewal service periods, bounded preparation and
-rollover commands, settlement grace, provider-neutral full/partial refunds,
-YooKassa refund reconciliation/webhooks, and separate refund receipts. Invoice
-remains distinct from payment; plan switching and usage-based charging remain
-future work.
+Upgrade создаёт доплату и применяется только в доверенном settlement. Downgrade сохраняет текущие права до границы оплаченного периода. Scheduler материализует условия замены; бесплатная замена применяется на границе, платная — после оплаты. Поздняя оплата уже выпущенного downgrade invoice начинает полный новый период в момент подтверждённого settlement, не открывая старую подписку и не создавая второй счёт.
 
-## HTTP contract
+Неоплаченную замену можно отменить, когда нет pending попытки провайдера. Открытая смена блокирует несовместимую отмену исходной подписки. Идентичный повтор возвращает сохранённый результат; повтор ключа с другим запросом или финансовой операцией отклоняется.
 
-Public endpoints:
+Если оплаченный upgrade применить уже нельзя, операция становится `paid_unapplied`. При полной конфигурации YooKassa резервируется возврат; его подтверждение переводит смену в `refunded`. Иначе требуется операторское восстановление. `compensation_status` различает `pending`, `recovery_required`, `succeeded`; успешная компенсация не удаляет исходную финансовую историю.
 
-- `POST /api/control/auth/register`
-- `POST /api/control/auth/verification/resend`
-- `POST /api/control/auth/verify`
-- `POST /api/control/auth/login`
-- `POST /api/control/auth/refresh`
-- `POST /api/control/auth/logout`
-- `GET /api/control/catalog/plans`
-- `GET /health`
+## Возвраты и внешняя компенсация
 
-Authenticated endpoints create/read commercial accounts, manage memberships,
-save the billing profile, advance onboarding, create/read subscriptions,
-cancel them through `POST /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/cancel`,
-request a replacement through
-`POST /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/plan-changes`,
-read its immutable terms and payment state through
-`GET /api/control/accounts/{accountId}/plan-changes/{changeId}`, and cancel an
-unsettled replacement through the corresponding `/cancel` endpoint,
-issue the initial invoice through
-`POST /api/control/accounts/{accountId}/subscriptions/{subscriptionId}/invoice`,
-read its immutable snapshot through
-`GET /api/control/accounts/{accountId}/invoices/{invoiceId}`, and expose
-payment creation through
-`POST /api/control/accounts/{accountId}/invoices/{invoiceId}/payment`, payment
-reads through `GET /api/control/accounts/{accountId}/payments/{paymentId}`,
-reads sanitized fiscal state through
-`GET /api/control/accounts/{accountId}/payments/{paymentId}/receipt`, and
-starts hosted SBP checkout through
-`POST /api/control/accounts/{accountId}/payments/{paymentId}/checkout`.
-An identical checkout key reuses the original provider attempt after webhook
-settlement and returns its authoritative final state; a new key cannot start
-another checkout for a paid invoice.
-Refunds use item allocations through
-`POST /api/control/accounts/{accountId}/payments/{paymentId}/refunds`, with
-history at the matching `GET` endpoint and
-`GET /api/control/accounts/{accountId}/refunds/{refundId}`. YooKassa
-notifications enter through the Control-User-independent machine endpoint
-`POST /api/control/webhooks/yookassa`; authoritative provider re-fetch is its
-authentication boundary. The endpoint does not trust forwarded IP headers or
-notification JSON as financial proof. The API also exposes
-`GET /api/control/accounts/{accountId}/entitlements` plus the read-only
-`GET /api/control/accounts/{accountId}/usage`. Every account
-resource is authorized from active account membership; an account UUID from
-the URL is never trusted by itself. Roles and permissions live in the central
-`AccountAuthorization` policy, not in controllers and not in Diary RBAC.
+`refunds` и `refund_items` распределяют возврат по исходным строкам счёта. Блокировка платежа и ограничения БД предотвращают возврат сверх подтверждённой суммы, включая конкурентные запросы. Успешный возврат создаёт собственное фискальное обязательство.
 
-`POST /api/m2m/usage` accepts a deployment service credential with
-`usage.write` and an `Idempotency-Key`. The server resolves the deployment's
-commercial account and accepts writes only for active deployments. It uses
-`ApplyUsageDelta`; replay is scoped to the deployment, and successful writes
-do not create audit or outbox events. See `M2M_SERVICE_AUTHENTICATION.md` for
-the request and response contract.
+Внешняя компенсация предназначена для восстановления соответствующей `paid_unapplied` смены. Два разных активных финансовых оператора с recent MFA подтверждают одинаковые реквизиты доказательства и внешнего перевода. Владелец коммерческого аккаунта не становится финансовым оператором автоматически. Одобрение записывает свидетельство и завершает компенсацию, но не отправляет деньги и не создаёт фиктивный refund провайдера. Подробности: [операторская процедура](../operations/EXTERNAL_COMPENSATION.md).
 
-Registration stores the trimmed presentation email and a lowercase normalized
-lookup key. Passwords use Symfony PasswordHasher `auto`. Verification tokens
-are authenticated from an artifact UUID with `CONTROL_TOKEN_SECRET`; only the
-SHA-256 token hash is stored. The transactional outbox contains the recipient
-and verification artifact ID, so a mail worker can reproduce the link without
-persisting the raw token. `control:outbox:process-email` leases those events,
-reconstructs a short-lived verification link, sends via SMTP, and marks them
-published or retries with bounded backoff. `control:outbox:status` reports
-status counts/oldest pending and supports explicit `--requeue=ID` for dead events.
-Use the supervised `control-outbox-worker` Compose service or a production
-cron/systemd equivalent. SMTP is at-least-once; stable `Message-ID` is derived
-from `event_id`, and the raw token and email body never enter the outbox/logs.
+## Установки и подписанные права
 
-## Local validation
+`deployments` и `deployment_operations` хранят желаемое и подтверждённое состояние установки. Scoped M2M credential определяет установку на сервере; переданный клиентом account ID не заменяет эту привязку.
 
-Set a test-only `CONTROL_TEST_PASSWORD`, then run from the repository root:
+Commercial выдаёт неизменяемый Ed25519-документ прав. Одинаковый источник возвращает те же байты, подпись и sequence. Новая версия атомарно создаёт документ и `entitlement.issued`; outbox содержит идентификаторы и digest. Приватный ключ разрешается из внешнего secret file, Core получает только доверенные публичные ключи.
 
-```bash
-bash ./scripts/ci/control-test-start.sh
-bash ./scripts/ci/control-test-run.sh
-APP_ENV=test bash ./scripts/ci/control-test-reset.sh
-bash ./scripts/ci/control-test-stop.sh
-```
+При bootstrap Core применяет документ, проверяет readiness и сообщает применённую sequence через M2M. Commercial принимает ready только для соответствующей операции и выданного документа, после чего делает deployment активным и убирает bootstrap scope. Отозванные credentials и старые sequence не восстанавливают доступ.
 
-PowerShell equivalents are in `scripts/`. The reset command refuses any target
-except `APP_ENV=test`, `CONTROL_TEST_ISOLATED=1`, host
-`control-postgres-test`, database `platform_commercial_test`.
+Локальный dedicated provider реализует создание, обновление и decommission инфраструктуры. В текущем Compose provisioner отключён. HTTP Commercial не имеет Docker socket. Обновление фиксирует `current_release_id` только после проверки нового runtime; автоматического отката БД нет. См. [границы provisioning](../operations/PROVISIONING.md).
 
-For the development profile configure separate `CONTROL_POSTGRES_PASSWORD`,
-`CONTROL_APP_SECRET` and `CONTROL_TOKEN_SECRET` values of at least 32
-characters, plus the real HTTPS `CONTROL_YOOKASSA_RETURN_URL` before live checkout.
-The `.env.example` return URL is only a local placeholder. Configure
-`CONTROL_MAILER_DSN` (`smtp://` or `smtps://`, with optional `?starttls=1`),
-`CONTROL_MAIL_FROM`, `CONTROL_VERIFICATION_URL` and
-`CONTROL_MESSAGE_ID_DOMAIN` for the verification worker. Locally the SMTP
-sink is Mailpit; production must use a real transport and HTTPS verification
-URL. Configure merchant metadata with
-`control:payments:providers:yookassa:configure --shop-id=... --secret-ref=env:YOOKASSA_SECRET_KEY --receipt-mode=yookassa --vat-code=1 --payment-subject=service --payment-mode=full_payment`;
-the command never accepts the secret itself. The production image remains
-FrankenPHP, runs as `www-data`, has
-no dev dependencies or tests, and grants write access only to runtime
-directories.
+## Эксплуатация и границы реализации
 
-## Deferred
+Постоянные `control-scheduler` и `control-outbox-worker` используют тот же образ и конфигурацию, что API. Scheduler исполняет ограниченные задачи и записывает heartbeat; mail worker берёт outbox по lease и повторяет доставку. SMTP допускает повторную доставку, stable `Message-ID` не превращает её в exactly-once.
 
-`licenses`, `license_installations`, `maintenance_contracts`,
-`issued_entitlement_documents`, `releases` and `release_entitlements` remain
-schema foundations. Phase 4.6 uses the separate immutable
-`deployment_entitlement_documents` table for signed deployment snapshots.
-`ReserveDeployment` creates a durable reservation. Phase 4.7 adds an operator
-start and authenticated runtime readiness report for the application bootstrap
-lifecycle. The local dedicated infrastructure provider is now implemented;
-its persisted operation steps cover creation, migrations, activation, update and decommission.
-Control current-user/session APIs and paginated
-commercial read models belong to Phase 4.1. M2M service credentials and usage
-ingestion and signed entitlement delivery are implemented.
+Схема также содержит основы лицензирования и сопровождения. Наличие таблицы не означает готовый пользовательский сценарий. Производственная инфраструктура, DNS/TLS, On-Prem activation, автоматический rollback, дополнительные провайдеры и usage billing не подтверждены текущей локальной установкой.
 
-Additional payment providers and methods, usage/overage billing,
-DNS/TLS, custom domains, On-Prem activation, production infrastructure provisioning,
-automatic rollback, and production observability remain future phases. Hosted YooKassa
-SBP and bank-card checkout, authoritative account-scoped saved payment methods,
-Control Plane MFA/password reset/recent-auth, and
-deployment update foundations are implemented.
-
-The version-1 `ProrationCalculator` provides deterministic UTC microsecond
-time fractions and integer minor-unit amounts with half-up rounding on each
-credit and charge component. `subscription_plan_changes` stores that exact
-calculation, request hash, source and replacement subscription IDs, original
-period boundary, invoice, and state. The active source item and every issued
-invoice remain immutable. A more expensive same-currency, same-period plan
-creates a prorated invoice and replaces the subscription only in the trusted
-payment settlement transaction. A cheaper plan retains existing access until
-the original period boundary. The scheduler then issues the new plan's full
-period invoice; a free replacement applies at the boundary, and a paid
-replacement applies only after trusted settlement. Requests with the same key
-and payload replay the same change. New plan-change requests also record the
-same key and result atomically in `commercial.idempotency_keys`, with the
-shared cross-operation rejection policy. Historic plan changes created before
-this ledger integration retain their per-account key records. A database
-insert guard prevents their keys from being used by a new financial operation.
-The general idempotency insert guard takes a transaction advisory lock on the
-opaque key and rejects a different scope. This serializes even older writers
-that do not acquire the lock in application code. Existing cross-scope
-duplicates, if any, still require a preflight audit and evidence-preserving
-resolution before a global unique index can be added. Cancelling a scheduled or unpaid change
-voids its invoice and payment where safe. Source cancellation is rejected while
-a scheduled, payment-required, or paid-unapplied change is open. Plan-change
-cancellation is rejected while a provider attempt is pending or after
-settlement; a terminal failed attempt may be retained while its unpaid
-invoice and payment are voided. Concurrent requests serialize on
-the source subscription. A paid upgrade that can no longer be applied enters
-`paid_unapplied` and emits `subscription.plan_change_refund_required`. For a
-YooKassa payment with complete fiscal configuration, it also reserves a full
-refund in the same transaction; the existing refund reconciliation worker
-submits it with a stable provider request key. After authoritative full refund,
-`FinalizeRefundedPlanChanges` marks the operation `refunded`, allowing a new
-plan-change request while retaining the full audit trail. Other providers or incomplete
-fiscal configuration require operator recovery, and definitive refund failure
-still requires an operator decision. Equal
-price changes and changes across currencies or billing periods remain outside
-this policy until product rules are approved.
-
-A materialized paid downgrade invoice remains payable after the old period
-ends. This is an intentional late-payment policy: authoritative settlement
-starts the replacement's full service period at the verified settlement
-instant, even if the source has expired. The invoice's immutable amount is
-unchanged; no rights are granted before settlement. A late settlement does
-not reopen the expired source or create a second invoice. Cancellation of an
-unpaid plan change still voids the invoice when no provider attempt is pending.
-
-The plan-change worker now takes the source subscription's renewal session
-lock, then row locks the source before the change. Payment settlement,
-expiry, renewal and cancellation use the same source-first order. This
-prevents a source/change lock inversion when scheduled downgrade and payment
-settlement overlap. The local two-process race suite exercises these paths.
-
-`compensation_status` is null before compensation, `pending` while the
-reserved YooKassa refund is outstanding, `recovery_required` when automatic
-reservation is unsupported or an authoritative provider refund is canceled,
-and `succeeded` only when the full refund is confirmed and the change becomes
-`refunded`. `compensation_reason` retains a machine-readable reason for
-operator cases. The scheduler marks canceled refunds as recovery cases;
-`control:plan-changes:recovery-cases` lists open cases without payment secrets.
-`control:ops:status` exposes counts of paid-but-unapplied changes, cases
-requiring an operator, pending compensation refunds and their oldest age.
-Any nonzero `recoveryRequiredCount` requires investigation; a pending refund
-older than the configured reconciliation interval plus provider response
-window requires investigation. These are local symptom conditions, not proof
-that a production alert receiver is configured.
-For an external full refund, two different active Platform financial operators
-must attest the same restricted document reference, its SHA-256 digest, and
-the external transfer reference. These operators are separately enrolled in
-`commercial.financial_operators` under a reviewed authorization ticket;
-commercial account ownership alone gives no access. The HTTP propose and
-review paths require recent MFA for each actor. The proposal snapshots the
-exact settled payment amount and currency. Approval fails while any local
-provider refund is pending or succeeded, and a different document or a
-self-review is rejected. Rejection retains the evidence and leaves the case
-blocked; a corrected proposal may then be filed. Approval atomically records
-the second attestation and sets the plan change to `refunded`, preserving the
-external attestation as the financial record. It does not manufacture a
-YooKassa refund or send money. Reviewers must independently verify the stored
-document and transfer evidence; the application checks identity, digest
-agreement, amount, state and uniqueness, but cannot verify an external bank
-transfer by itself. Document storage, operator enrollment and audit review
-are operational prerequisites before using this path outside tests. The
-ordinary provider-refund API rejects a payment with an open or approved
-external attestation, preventing a second refund request for the same money.
-The customer plan-change read model reports `compensation_origin` as
-`provider`, `external`, or null; restricted document details stay in the
-financial-operator endpoint.
-
-For an initial purchase, `payments.succeeded_at` and `invoices.paid_at` retain
-the verified settlement instant. Subscription service starts at that instant
-unless it is ahead of Control Plane database time; future-dated provider or
-local timestamps are capped at database time so access is immediately usable.
-
-## Application deployment bootstrap
-
-Phase 5.4 adds a separate local Docker `provisioner-worker` for dedicated dev/test deployments. It consumes `deployment_operations`, checks a published digest-pinned release, creates isolated runtime infrastructure, then invokes the existing activation command. The HTTP Control Plane has no Docker socket. See `docs/operations/PROVISIONING.md` for the boundary and retry behavior.
-
-Reserve a shared or dedicated deployment, then run
-`control:deployments:provision:start --deployment-id=<uuid>`. This locks the
-reserved deployment and its existing provision operation, moves them to
-`provisioning` / `running`, increments `attempt_count`, and returns
-`installationId`, `credentialId`, `credentialSecret`, and scopes once. The
-credential has a finite expiry from `CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS` and is created through `DeploymentCredentialService`; only its hash is
-stored. A repeated start is rejected and cannot retrieve the old secret.
-
-Pass the installation ID and bootstrap credential to the runtime deployment
-environment through its secret/config boundary. Run `runtime:deployment:activate` to initialize the singleton local installation, pull and apply the signed snapshot, then report its applied sequence. The existing `runtime:installation:init` and `runtime:entitlements:sync` remain available as bounded manual steps. During provisioning the issuer signs
-the desired runtime state `active` with current effective features. Moving the
-Control Plane deployment from `provisioning` to `active` alone does not issue a
-duplicate snapshot. Activation sends `{"status":"ready","entitlementSequence":<applied sequence>}` to
-`POST /api/m2m/deployment/status`. Control Plane checks the authenticated
-deployment, running operation and issued sequence before atomically marking
-the deployment active and the operation succeeded and auditing
-`deployment.provisioned`. It removes `deployment.status.write` from that credential in the same transaction and leaves `entitlements.read` plus `usage.write`. A repeated ready report for the latest accepted sequence returns `already_ready` without another audit event. A machine-code failed report marks both failed.
-The runtime report confirms application activation; VM/container creation,
-tenant DB creation, DNS and TLS remain separate external operations.
-
-Operators can inspect expiry using `control:deployments:credential:status --deployment-id=<uuid>` and rotate the single active runtime credential using `control:deployments:credential:rotate --deployment-id=<uuid>`. Rotation issues a new finite credential once and invalidates the old one immediately. The operator must update the external deployment secret source and restart or recreate the runtime process that reads it; Control Plane does not update remote `.env` files.
-
-## Signed deployment entitlement delivery
-
-`GET /api/m2m/entitlements/latest` authenticates a deployment credential with
-`entitlements.read` and derives the deployment only from that credential. Active
-deployments receive the current `EffectiveEntitlements` composition; suspended
-deployments receive `{}` features. Archived and decommissioned deployments are
-denied. A deployment row lock serializes issuance. A source fingerprint makes
-repeat fetches return identical canonical bytes, signature and sequence until
-the effective state, validity boundary or signing key changes. Each new snapshot
-is an immutable v1 Ed25519 document; the same transaction inserts the
-`entitlement.issued` outbox event. Signing uses an active `commercial.signing_keys`
-row and resolves its `private_key_secret_ref` to an external read-only secret
-file. `CONTROL_ENTITLEMENT_SECRET_FILES` maps references to container paths;
-the file contains base64 of a 64-byte Ed25519 secret key. An absent or invalid
-mapping fails issuance closed. The Core runtime receives only trusted public
-keys, never signing secrets.
-
-## Local dedicated decommission
-
-Phase 5.7 local dedicated topology has deployment PostgreSQL and Redis plus HTTP runtime, scheduler, and email worker. All Core processes share the same immutable release image and isolated DB/Redis endpoints. Redis has only the deployment network; PostgreSQL also joins the backup network; Core processes also join the control network. `ready` requires fresh scheduler/email heartbeats and Redis access before Control Plane accepts activation. The local operator reconcile command repairs older active or suspended deployments without a new credential or release change. Decommission quiesces all three Core processes before final backup and removes all owned topology after backup verification.
-
-The existing `commercial.deployment_operations` table carries `deprovision` through `pending`, `running`, `retry`, and `succeeded` or `failed`. An operator request confirms deployment and installation IDs, suspends the deployment, and revokes active M2M credentials transactionally. The existing provisioner worker quiesces runtime, waits for a new verified deployment backup, destroys owned infrastructure, cleans secrets, and archives the deployment. Audit events contain only deployment, installation, and operation UUIDs. Status output contains IDs and machine state only.
-
-The Control Plane's domain `disabled` state does not remove DNS or TLS resources. Decommission is not DSAR erasure, and deployment backups follow their own explicitly configured retention.
-# Release update invariant
-
-`current_release_id` records the release proven to be active; `desired_release_id` records a
-requested update target. Initial provisioning sets both only when activation completes. Legacy
-active deployments may use `control:deployments:release:reconcile`, which verifies all three
-application containers use the desired immutable digest before recording it. Normal infrastructure
-reconciliation must not adopt `desired_release_id` or perform a release update.
+HTTP-пути и поля запроса проверяются по OpenAPI и contract tests. CI запускает unit, интеграционные и cross-plane проверки в изолированной среде. На рабочих БД reset-команды не выполняются.

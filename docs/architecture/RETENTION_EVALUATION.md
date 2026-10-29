@@ -1,7 +1,0 @@
-# Retention evaluation
-
-Modules register `RetentionCandidateContributor` implementations through `retentionCandidateContributors`. Each contributor declares the purposes it covers. Each candidate contains subject/resource IDs, purpose and policy codes, semantic trigger code/time, and contributor code. Contributors must enumerate all applicable purposes for a resource. Processing termination refuses completion if a configured purpose has no candidate contributor. Export contributors are not candidate sources.
-
-`RetentionEvaluator` checks purpose, policy, matching trigger, explicit duration, eligibility time, hold, lawful basis, dependency, and action in that order. Unknown state retains data. Consent uses active non-legacy `privacy_consents`; withdrawal alone never authorizes deletion. Other legal bases require `LawfulProcessingBasisContributor` implementations through `lawfulProcessingBasisContributors`. Dependency checks may be registered through `retentionDependencyContributors`.
-
-`RetentionDecisionService` serializes evaluation by resource, writes minimal append-only rows, and computes a resource aggregate. Any retaining purpose wins over destructive eligibility; anonymize/pseudonymize wins over delete. The bounded `privacy/retention/evaluate --limit=100` command emits counts only. It never executes a resource mutation. B4 must collect a complete resource purpose set and recheck immediately before destruction.
