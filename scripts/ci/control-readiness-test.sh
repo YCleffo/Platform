@@ -8,6 +8,9 @@ fi
 export COMPOSE_FILE="${COMPOSE_FILE:-compose.yaml:compose.ci.yaml}"
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
+# Concurrent integration cases commit fixtures; workers must start on a clean test schema.
+env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+
 # Liveness starts the HTTP process; readiness must still reject absent workers.
 docker compose --profile control-test up -d --wait control-plane-test
 docker compose --profile control-test exec -T control-plane-test sh -se <<'SH'

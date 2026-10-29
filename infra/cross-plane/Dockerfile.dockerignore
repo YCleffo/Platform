@@ -7,3 +7,4 @@ apps/backend/runtime/
 apps/backend/tests/_output/
 apps/backend/.env*
 apps/backend/.git/
+apps/backend/config/.merge-plan.php
