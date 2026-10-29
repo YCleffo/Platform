@@ -24,6 +24,9 @@ echo "Applying migrations to platform_test..."
 docker compose --profile test run --rm db-migrate-test
 
 echo "Starting backend-test..."
-docker compose --profile test up -d backend-test
+docker compose --profile test up -d --wait backend-test
+
+echo "Generating Codeception actors from the checked-out suite configuration..."
+docker compose --profile test exec -T backend-test vendor/bin/codecept build
 
 echo "Test infrastructure is ready."
