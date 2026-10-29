@@ -48,7 +48,7 @@ services:
       - postgres_test_data:/var/lib/postgresql
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-platform_app} -d ${POSTGRES_TEST_DB:-platform_test}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-platform_app} -d ${POSTGRES_TEST_DB:-platform_test}"]
       interval: 3s
       timeout: 3s
       retries: 20
@@ -335,7 +335,7 @@ services:
     volumes:
       - control_postgres_test_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${CONTROL_TEST_USER:-platform_control_test} -d ${CONTROL_TEST_DB:-platform_commercial_test}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${CONTROL_TEST_USER:-platform_control_test} -d ${CONTROL_TEST_DB:-platform_commercial_test}"]
       interval: 3s
       timeout: 3s
       retries: 20

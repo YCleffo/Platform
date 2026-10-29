@@ -16,7 +16,7 @@ cd "${ROOT_DIR}"
 export CROSS_PLANE_REQUIRED=1
 
 echo "=== Starting isolated Core test infrastructure ==="
-docker compose --profile test up -d postgres-test redis-test
+docker compose --profile test up -d --wait postgres-test redis-test
 docker compose --profile test run --rm db-migrate-test
 
 echo "=== Building deterministic cross-plane test image ==="
@@ -25,7 +25,7 @@ docker compose --profile control-test build cross-plane-test
 docker compose --profile control-test run --rm --no-deps cross-plane-test test -f /backend/vendor/autoload.php
 
 echo "=== Starting isolated Commercial test infrastructure ==="
-docker compose --profile control-test up -d control-postgres-test
+docker compose --profile control-test up -d --wait control-postgres-test
 docker compose --profile control-test run --rm --no-deps cross-plane-test php bin/console doctrine:migrations:migrate --no-interaction
 core_ready=$(docker compose --profile test exec -T postgres-test psql -U "${POSTGRES_USER:-platform_app}" \
   -d "${POSTGRES_TEST_DB:-platform_test}" -tA \

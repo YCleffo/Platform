@@ -18,7 +18,7 @@ export CI_GROUP_ID="$(id -g)"
 mkdir -p apps/backend/runtime apps/backend/tests/_output
 
 echo "=== Starting Isolated Test Infrastructure ==="
-docker compose --profile test up -d postgres-test redis-test
+docker compose --profile test up -d --wait postgres-test redis-test
 
 echo "Applying migrations to platform_test..."
 docker compose --profile test run --rm db-migrate-test
