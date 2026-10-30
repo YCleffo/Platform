@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import ToastHost from '@/shared/ui/ToastHost.vue';
+import AppToast from '@/shared/ui/feedback/AppToast.vue';
 </script>
 
 <template>
   <RouterView />
-  <ToastHost />
+  <AppToast />
 </template>

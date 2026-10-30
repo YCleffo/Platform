@@ -2,10 +2,11 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { ShieldCheck } from '@lucide/vue';
 import { useAuthStore } from '@/core/auth/authStore';
 import { errorCodeKey, toErrorMessage } from '@/shared/errors/humanize';
-import Button from '@/shared/ui/Button.vue';
-import FormField from '@/shared/ui/FormField.vue';
+import AppInput from '@/shared/ui/fields/AppInput.vue';
+import AppButton from '@/shared/ui/actions/AppButton.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -41,38 +42,94 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <section>
-    <h1 class="auth-title">{{ $t('auth.mfaTitle') }}</h1>
-    <p class="auth-intro">{{ $t('auth.mfaIntro') }}</p>
-    <form class="auth-form" @submit.prevent="onSubmit">
-      <FormField id="mfa-code" v-model="code" :label="$t('auth.mfaCode')" type="text" inputmode="numeric" />
-      <FormField id="mfa-recovery" v-model="recoveryCode" :label="$t('auth.mfaRecoveryCode')" type="text" />
-      <p v-if="errorMessage" class="auth-error">{{ errorMessage }}</p>
-      <Button type="submit" :loading="submitting">{{ $t('auth.mfaSubmit') }}</Button>
+  <section class="auth-view">
+    <div class="auth-view__mfa-head">
+      <span class="auth-view__mfa-icon" aria-hidden="true">
+        <ShieldCheck :size="28" />
+      </span>
+    </div>
+    <h1 class="auth-view__title">{{ $t('auth.mfaTitle') }}</h1>
+    <p class="auth-view__subtitle">{{ $t('auth.mfaIntro') }}</p>
+
+    <form class="auth-view__form" novalidate @submit.prevent="onSubmit">
+      <AppInput
+        id="mfa-code"
+        v-model="code"
+        :label="$t('auth.mfaCode')"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        placeholder="••••••"
+      />
+      <AppInput
+        id="mfa-recovery"
+        v-model="recoveryCode"
+        :label="$t('auth.mfaRecoveryCode')"
+        autocomplete="off"
+      />
+      <p v-if="errorMessage" class="auth-view__error" role="alert">{{ errorMessage }}</p>
+      <AppButton type="submit" :loading="submitting" block>
+        {{ $t('auth.mfaSubmit') }}
+      </AppButton>
     </form>
   </section>
 </template>
 
 <style scoped>
-.auth-title {
-  font-size: var(--text-xl);
+.auth-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8);
 }
 
-.auth-intro {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  margin-top: var(--space-2);
+.auth-view__mfa-head {
+  display: flex;
+  justify-content: center;
 }
 
-.auth-form {
+.auth-view__mfa-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-badge-module-tile);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.auth-view__title {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--text-1);
+  text-align: center;
+}
+
+.auth-view__subtitle {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.auth-view__form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  margin-top: var(--space-4);
+  gap: var(--space-16);
+  margin-top: var(--space-8);
 }
 
-.auth-error {
-  color: var(--color-danger);
-  font-size: var(--text-sm);
+.auth-view__error {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--danger-text);
+}
+
+@media (min-width: 768px) {
+  .auth-view__title {
+    font-size: 24px;
+    line-height: 32px;
+  }
 }
 </style>

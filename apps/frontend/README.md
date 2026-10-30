@@ -1,19 +1,42 @@
 # Frontend (Platform)
 
-Первый пользовательский интерфейс Platform на **Vue 3 + TypeScript (strict)**, собранный
-на **Vite**. Подключается к существующему **Commercial Control Plane** (Symfony) по
-реальному HTTP-контракту из `contracts/openapi/control-plane.yaml`. Backend не
-мокается: все данные приходят с живого API.
+Пользовательский интерфейс Platform на **Vue 3 + TypeScript (strict)**, собранный на
+**Vite**. Подключается к **Commercial Control Plane** (Symfony) по реальному
+HTTP-контракту `contracts/openapi/control-plane.yaml`. Backend не мокается.
+
+## Дизайн-система
+
+Единый источник токенов — `стили.json` (Figma Tokens). Генератор
+`scripts/generate-tokens.mjs` превращает его в `src/shared/styles/tokens.css`
+(сырые токены: палитра, статусы, тени, отступы, радиусы, размеры). Семантические
+алиасы (`--bg`, `--surface`, `--card`, `--border`, `--text-1`, `--accent`, …)
+живут в `theme.css` и переключаются атрибутом `data-theme`.
+
+```bash
+npm run generate:tokens   # пересобрать tokens.css из стили.json
+```
+
+- Цвета: `#2260FF` (primary), `#F6F8FC` (фон), `#FFFFFF` (карточка), border-first.
+- Типографика: Inter, отдельные mobile/desktop значения (`typography.css`).
+- Радиусы: control 8/10/12, card 14/16/20/24, modal 20, pill 999.
+- Тени: Soft/Card/Popover/Modal/Focus Ring (light + dark).
+
+## Темы (Light / Dark / System)
+
+Тема задаётся атрибутом `data-theme` на `<html>` (без вспышки при загрузке —
+inline-скрипт в `index.html`). Логика — `src/app/theme/index.ts`. Приоритет:
+`system` (автовыбор по `prefers-color-scheme`) по умолчанию, явные `light`/`dark`
+переключаются в шапке. Выбор хранится в `localStorage` (`platform.theme`) — это
+UI-предпочтение, а не authentication token.
 
 ## Технологии
 
 - Vue 3 (Composition API, `<script setup>`)
-- TypeScript в `strict`-режиме (`vue-tsc`)
-- Vite 7
-- Vue Router 4
-- Pinia 3
-- vue-i18n 11 (локализация `en` / `ru`)
-- ESLint 9 (flat config) + `typescript-eslint` + `eslint-plugin-vue`
+- TypeScript `strict` (`vue-tsc`)
+- Vite 7, Vue Router 4, Pinia 3
+- vue-i18n 11 (`en` / `ru`)
+- @lucide/vue (единый набор SVG-иконок)
+- ESLint 9 (flat config)
 
 ## Структура
 
@@ -21,28 +44,34 @@
 src/
   app/
     router/           # маршруты и guard авторизации
-    layouts/          # AppLayout (основной), AuthLayout (авторизация)
+    layouts/          # AppLayout (header + bottom nav), AuthLayout
+    theme/            # light/dark/system переключение
   core/
-    auth/             # in-memory сессия и Pinia-стор авторизации
+    auth/             # in-memory сессия + Pinia-стор
     account/          # Pinia-стор коммерческих аккаунтов
   modules/commercial/
     onboarding/       # регистрация, подтверждение email
-    auth/             # вход, MFA challenge
-    catalog/          # опубликованные тарифы
-    account/          # личный кабинет (список и создание аккаунтов)
+    auth/             # вход, MFA
+    catalog/          # тарифы
+    account/          # личный кабинет
   shared/
     api/              # HTTP transport + commercial-клиент (typed)
-    types/            # типы из OpenAPI-контрактов
-    ui/               # базовые компоненты (Button, FormField, Dialog, ...)
-    composables/      # useToast, useAsyncAction
-    errors/           # безопасное приведение ошибок к сообщению
-    i18n/             # словари en/ru и инициализация
-    styles/           # design tokens и базовые стили
+    ui/
+      actions/        # AppButton, AppIconButton
+      fields/         # AppInput, AppPasswordInput
+      feedback/       # AppBadge, AppEmptyState, AppErrorState, AppSkeleton, AppToast
+      navigation/     # AppHeader, AppBottomNav
+      overlays/       # AppDialog (focus trap, bottom sheet на мобильном)
+      surfaces/       # AppCard, AppDivider
+    styles/           # tokens.css (генер.), theme.css, typography.css, base.css
+    composables/      # useToast, useAsyncAction, useFocusTrap
+    errors/           # безопасные сообщения об ошибках
+    i18n/             # словари en/ru
 ```
 
 ## Запуск
 
-Требуется Node.js 20.19+ (проверено на 24).
+Node.js 20.19+ (проверено на 24).
 
 ```bash
 cd apps/frontend
@@ -50,52 +79,38 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-Dev-сервер проксирует API через Vite:
+Dev-прокси (цели настраиваются в `.env`, см. `.env.example`):
 
-- `/api/control/*` → Commercial Control Plane (по умолчанию `http://localhost:8090`)
-- `/api/*`         → Yii Core backend (по умолчанию `http://localhost:8080`)
+- `/api/control/*` → Commercial Control Plane (`http://localhost:8090`)
+- `/api/*` → Yii Core (`http://localhost:8080`)
 
-Цели прокси настраиваются переменными окружения (`apps/frontend/.env`,
-см. `.env.example`):
+## Проверки
 
 ```bash
-VITE_CORE_PROXY_TARGET=http://localhost:8080
-VITE_COMMERCIAL_PROXY_TARGET=http://localhost:8090
+npm run typecheck        # vue-tsc (strict)
+npm run lint             # eslint
+npm run build            # typecheck + production-сборка
+npm run generate:tokens  # пересборка токенов из стили.json
 ```
 
-Никакие `localhost`-адреса не зашиты в компонентах приложения.
-
-## Сборка и проверки
+Визуальная проверка (Playwright + установленный Chrome/Edge; требует запущенный
+`npm run dev`):
 
 ```bash
-npm run typecheck   # vue-tsc --noEmit (strict)
-npm run lint        # eslint .
-npm run build       # typecheck + production-сборка Vite
+node scripts/screenshot.mjs         # скриншоты экранов в screenshots/
+node scripts/verify-responsive.mjs  # 320–1440px: переполнение и ошибки
 ```
 
 ## Сценарии (реальный backend)
 
-1. Регистрация Commercial-пользователя (`POST /api/control/auth/register`)
-2. Подтверждение email (`POST /api/control/auth/verify`, токен из письма через `/verify-email?token=…`)
-3. Повторная отправка подтверждения (`POST /api/control/auth/verification/resend`)
-4. Вход (`POST /api/control/auth/login`)
-5. MFA challenge при требовании backend (`POST /api/control/auth/mfa/login/verify`)
-6. Выход (`POST /api/control/auth/logout`)
-7. Просмотр опубликованных тарифов (`GET /api/control/catalog/plans`)
-8. Личный кабинет (`GET /api/control/me`, `GET /api/control/accounts`, `POST /api/control/accounts`)
-
+Регистрация → подтверждение email → повторная отправка → вход → MFA → выход →
+каталог → личный кабинет (создание и список Commercial Accounts).
 Создание аккаунта использует `Idempotency-Key` (генерируется один раз на форму).
 
 ## Безопасность сессий
 
-Access и refresh токены хранятся **только в памяти** приложения (не в
-`localStorage`/`sessionStorage`/cookies). После перезагрузки страницы сессия не
-восстанавливается и требуется повторный вход — это осознанное ограничение текущего
-этапа. При 401 выполняется одна попытка обновления access-токена через
-`refresh_token` (одновременные обновления сериализуются, чтобы не срабатывал отзыв
-семейства при повторном использовании refresh-токена); при неудаче сессия очищается
-и происходит переход на экран входа. Персистентная сессия через HttpOnly-cookie/BFF
-на этом этапе не реализована.
-
-Ошибки выводятся из санитизированного ответа API или фиксированных сообщений;
-токены и учётные данные в сообщениях об ошибках не отображаются.
+Access и refresh токены — **только в памяти** (не в `localStorage`/`sessionStorage`/
+cookies); после перезагрузки требуется повторный вход. При 401 — одна попытка
+обновления через `refresh_token` (одновременные обновления сериализуются); при
+неудаче сессия очищается. Персистентная сессия (HttpOnly-cookie/BFF) на этом этапе
+не реализована. Токены и учётные данные в ошибках не отображаются.

@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { Building2, Plus } from '@lucide/vue';
 import { useAccountStore } from '@/core/account/accountStore';
 import { errorCodeKey, toErrorMessage } from '@/shared/errors/humanize';
 import { useToast } from '@/shared/composables/useToast';
-import Button from '@/shared/ui/Button.vue';
-import Dialog from '@/shared/ui/Dialog.vue';
-import EmptyState from '@/shared/ui/EmptyState.vue';
-import ErrorState from '@/shared/ui/ErrorState.vue';
-import FormField from '@/shared/ui/FormField.vue';
-import LoadingState from '@/shared/ui/LoadingState.vue';
+import AppButton from '@/shared/ui/actions/AppButton.vue';
+import AppCard from '@/shared/ui/surfaces/AppCard.vue';
+import AppDialog from '@/shared/ui/overlays/AppDialog.vue';
+import AppEmptyState from '@/shared/ui/feedback/AppEmptyState.vue';
+import AppErrorState from '@/shared/ui/feedback/AppErrorState.vue';
+import AppSkeleton from '@/shared/ui/feedback/AppSkeleton.vue';
+import AppBadge from '@/shared/ui/feedback/AppBadge.vue';
+import AppInput from '@/shared/ui/fields/AppInput.vue';
+import type { CommercialAccountSummary } from '@/shared/types';
 
 const store = useAccountStore();
 const toast = useToast();
@@ -72,128 +76,244 @@ function statusLabel(status: string): string {
 function onboardingLabel(state: string): string {
   return t(`cabinet.onboarding_${state}`);
 }
+
+function statusVariant(status: string): 'neutral' | 'success' | 'warning' | 'danger' {
+  if (status === 'active') {
+    return 'success';
+  }
+  if (status === 'suspended') {
+    return 'warning';
+  }
+  if (status === 'closed') {
+    return 'danger';
+  }
+  return 'neutral';
+}
+
+function onboardingVariant(state: string): 'neutral' | 'success' | 'warning' | 'primary' {
+  if (state === 'ready_for_subscription') {
+    return 'success';
+  }
+  if (state === 'catalog_selection_pending') {
+    return 'warning';
+  }
+  return 'neutral';
+}
+
+function roleVariant(role: string): 'primary' | 'neutral' {
+  return role === 'owner' ? 'primary' : 'neutral';
+}
+
+function accountInitials(account: CommercialAccountSummary): string {
+  const name = account.display_name.trim();
+  return name === '' ? '?' : name.charAt(0).toUpperCase();
+}
 </script>
 
 <template>
-  <section>
-    <header class="cabinet-header">
+  <section class="cabinet">
+    <header class="cabinet__header">
       <div>
-        <h1>{{ $t('cabinet.title') }}</h1>
-        <p class="cabinet-header__subtitle">{{ $t('cabinet.subtitle') }}</p>
+        <h1 class="cabinet__title">{{ $t('cabinet.title') }}</h1>
+        <p class="cabinet__subtitle">{{ $t('cabinet.subtitle') }}</p>
       </div>
-      <Button @click="openDialog">{{ $t('cabinet.create') }}</Button>
+      <AppButton @click="openDialog">
+        <Plus :size="18" aria-hidden="true" />
+        {{ $t('cabinet.create') }}
+      </AppButton>
     </header>
 
-    <LoadingState v-if="store.loading" :label="$t('common.loading')" />
-    <ErrorState v-else-if="store.error" :message="store.error">
-      <Button @click="store.loadAccounts()">{{ $t('common.retry') }}</Button>
-    </ErrorState>
-    <EmptyState v-else-if="store.accounts.length === 0" :title="$t('cabinet.noAccounts')" />
-    <div v-else class="account-table-wrap">
-      <table class="account-table">
-        <thead>
-          <tr>
-            <th>{{ $t('cabinet.displayName') }}</th>
-            <th>{{ $t('cabinet.code') }}</th>
-            <th>{{ $t('cabinet.role') }}</th>
-            <th>{{ $t('cabinet.status') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="account in store.accounts" :key="account.id">
-            <td>{{ account.display_name }}</td>
-            <td class="account-table__code">{{ account.code }}</td>
-            <td>{{ roleLabel(account.role) }}</td>
-            <td>{{ statusLabel(account.status) }} · {{ onboardingLabel(account.onboarding_state) }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-if="store.loading" class="cabinet__grid">
+      <AppCard v-for="i in 2" :key="i" padding="default">
+        <AppSkeleton variant="card" :lines="2" />
+      </AppCard>
     </div>
 
-    <Dialog v-model="dialogOpen" :title="$t('cabinet.createTitle')">
-      <form class="create-form" @submit.prevent="onCreate">
-        <FormField id="account-code" v-model="code" :label="$t('cabinet.code')" required />
-        <FormField id="account-name" v-model="displayName" :label="$t('cabinet.displayName')" required />
-        <FormField id="account-legal" v-model="legalName" :label="$t('cabinet.legalName')" />
-        <p v-if="createError" class="create-form__error">{{ createError }}</p>
+    <AppErrorState v-else-if="store.error" :message="store.error">
+      <AppButton variant="secondary" @click="store.loadAccounts()">
+        {{ $t('common.retry') }}
+      </AppButton>
+    </AppErrorState>
+
+    <AppEmptyState v-else-if="store.accounts.length === 0" :title="$t('cabinet.noAccounts')" :icon="Building2">
+      <AppButton @click="openDialog">{{ $t('cabinet.create') }}</AppButton>
+    </AppEmptyState>
+
+    <div v-else class="cabinet__grid">
+      <AppCard v-for="account in store.accounts" :key="account.id" padding="default" class="account">
+        <div class="account__head">
+          <span class="account__avatar" aria-hidden="true">{{ accountInitials(account) }}</span>
+          <div class="account__identity">
+            <p class="account__name">{{ account.display_name }}</p>
+            <p class="account__code">{{ account.code }}</p>
+          </div>
+          <AppBadge :variant="roleVariant(account.role)">{{ roleLabel(account.role) }}</AppBadge>
+        </div>
+        <div class="account__badges">
+          <AppBadge :variant="statusVariant(account.status)" dot>
+            {{ statusLabel(account.status) }}
+          </AppBadge>
+          <AppBadge :variant="onboardingVariant(account.onboarding_state)">
+            {{ onboardingLabel(account.onboarding_state) }}
+          </AppBadge>
+        </div>
+      </AppCard>
+    </div>
+
+    <AppDialog v-model="dialogOpen" :title="$t('cabinet.createTitle')" :persistent="creating">
+      <form class="create-form" novalidate @submit.prevent="onCreate">
+        <AppInput
+          id="account-code"
+          v-model="code"
+          :label="$t('cabinet.code')"
+          placeholder="acme"
+          autocomplete="off"
+          required
+        />
+        <AppInput
+          id="account-name"
+          v-model="displayName"
+          :label="$t('cabinet.displayName')"
+          autocomplete="off"
+          required
+        />
+        <AppInput
+          id="account-legal"
+          v-model="legalName"
+          :label="$t('cabinet.legalName')"
+          autocomplete="off"
+        />
+        <p v-if="createError" class="create-form__error" role="alert">{{ createError }}</p>
         <div class="create-form__actions">
-          <Button type="button" variant="secondary" @click="dialogOpen = false">
+          <AppButton type="button" variant="secondary" :disabled="creating" @click="dialogOpen = false">
             {{ $t('common.cancel') }}
-          </Button>
-          <Button type="submit" :loading="creating">{{ $t('cabinet.create') }}</Button>
+          </AppButton>
+          <AppButton type="submit" :loading="creating">{{ $t('cabinet.create') }}</AppButton>
         </div>
       </form>
-    </Dialog>
+    </AppDialog>
   </section>
 </template>
 
 <style scoped>
-.cabinet-header {
+.cabinet {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.cabinet__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
+  gap: var(--space-12);
+  margin-bottom: var(--space-24);
 }
 
-.cabinet-header h1 {
-  font-size: var(--text-2xl);
+.cabinet__title {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--text-1);
 }
 
-.cabinet-header__subtitle {
-  color: var(--color-text-muted);
-  margin-top: var(--space-1);
+.cabinet__subtitle {
+  margin-top: var(--space-4);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-2);
 }
 
-.account-table-wrap {
-  overflow-x: auto;
+.cabinet__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-16);
 }
 
-.account-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+.account {
+  display: grid;
+  gap: var(--space-16);
+}
+
+.account__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.account__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-badge-module-tile);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 18px;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.account__identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.account__name {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  color: var(--text-1);
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.account-table th,
-.account-table td {
-  text-align: left;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+.account__code {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-3);
+  font-family: ui-monospace, 'Cascadia Code', 'Roboto Mono', Menlo, monospace;
 }
 
-.account-table th {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  background: var(--color-surface-alt);
-}
-
-.account-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.account-table__code {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
+.account__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
 }
 
 .create-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-16);
 }
 
 .create-form__error {
-  color: var(--color-danger);
-  font-size: var(--text-sm);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--danger-text);
 }
 
 .create-form__actions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--space-3);
+  gap: var(--space-12);
+}
+
+@media (min-width: 768px) {
+  .cabinet__title {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .cabinet__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-20);
+  }
+
+  .create-form__actions {
+    justify-content: flex-start;
+  }
 }
 </style>

@@ -1,0 +1,102 @@
+/* Semantic theme mapping. Raw tokens live in tokens.css (generated). */
+
+:root,
+[data-theme='light'] {
+  --bg: var(--color-app-background);
+  --surface: var(--color-white);
+  --surface-2: var(--color-surface-secondary);
+  --surface-hover: var(--color-surface-hover);
+  --card: var(--color-card);
+  --overlay-surface: var(--color-overlay);
+
+  --border: var(--color-border-default);
+  --border-strong: var(--color-border-strong);
+
+  --text-1: var(--color-text-primary);
+  --text-2: var(--color-text-secondary);
+  --text-3: var(--color-text-muted);
+  --text-disabled: var(--color-text-disabled);
+
+  --accent: var(--color-primary-500);
+  --accent-hover: var(--color-hover-primary);
+  --accent-pressed: var(--color-pressed-primary);
+  --accent-soft: var(--color-primary-50);
+  --accent-soft-2: var(--color-primary-100);
+  --accent-strong: var(--color-primary-600);
+
+  --link: var(--color-link);
+  --link-hover: var(--color-link-hover);
+
+  --focus-border: var(--color-focus-border);
+  --focus-ring: var(--shadow-focus-ring);
+
+  --danger: var(--color-danger-500);
+  --danger-soft: var(--color-danger-50);
+  --danger-text: var(--color-danger-700);
+  --success: var(--color-success-500);
+  --success-soft: var(--color-success-50);
+  --success-text: var(--color-success-700);
+  --warning: var(--color-warning-500);
+  --warning-soft: var(--color-warning-50);
+  --warning-text: var(--color-warning-700);
+  --info: var(--color-info-500);
+  --info-soft: var(--color-info-50);
+  --info-text: var(--color-info-700);
+
+  --backdrop: var(--color-overlay-backdrop);
+  --selected-surface: var(--color-selected-surface);
+  --selected-accent: var(--color-selected-accent);
+  --disabled-text: var(--color-disabled-text);
+  --disabled-border: var(--color-disabled-border);
+  --disabled-surface: var(--color-disabled-surface);
+}
+
+[data-theme='dark'] {
+  --bg: var(--color-app-background);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-secondary);
+  --surface-hover: var(--color-surface-hover);
+  --card: var(--color-card);
+  --overlay-surface: var(--color-card);
+
+  --border: var(--color-border-default);
+  --border-strong: var(--color-border-strong);
+
+  --text-1: var(--color-text-primary);
+  --text-2: var(--color-text-secondary);
+  --text-3: var(--color-text-muted);
+  --text-disabled: var(--color-text-disabled);
+
+  --accent: var(--color-primary-500);
+  --accent-hover: var(--color-hover-primary);
+  --accent-pressed: var(--color-pressed-primary);
+  --accent-soft: var(--color-selected-surface);
+  --accent-soft-2: var(--color-primary-200);
+  --accent-strong: var(--color-primary-300);
+
+  --link: var(--color-link);
+  --link-hover: var(--color-link-hover);
+
+  --focus-border: var(--color-focus-border);
+  --focus-ring: var(--shadow-focus-ring);
+
+  --danger: var(--color-danger-text);
+  --danger-soft: var(--color-error-surface);
+  --danger-text: var(--color-danger-text);
+  --success: var(--color-success-text);
+  --success-soft: var(--color-success-surface);
+  --success-text: var(--color-success-text);
+  --warning: var(--color-warning-text);
+  --warning-soft: var(--color-warning-surface);
+  --warning-text: var(--color-warning-text);
+  --info: var(--color-info-text);
+  --info-soft: var(--color-info-surface);
+  --info-text: var(--color-info-text);
+
+  --backdrop: var(--color-overlay-backdrop);
+  --selected-surface: var(--color-selected-surface);
+  --selected-accent: var(--color-selected-accent);
+  --disabled-text: var(--color-disabled-text);
+  --disabled-border: var(--color-disabled-border);
+  --disabled-surface: var(--color-disabled-surface);
+}

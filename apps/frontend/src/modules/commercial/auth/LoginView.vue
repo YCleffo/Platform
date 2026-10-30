@@ -4,8 +4,9 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '@/core/auth/authStore';
 import { errorCodeKey, toErrorMessage } from '@/shared/errors/humanize';
-import Button from '@/shared/ui/Button.vue';
-import FormField from '@/shared/ui/FormField.vue';
+import AppInput from '@/shared/ui/fields/AppInput.vue';
+import AppPasswordInput from '@/shared/ui/fields/AppPasswordInput.vue';
+import AppButton from '@/shared/ui/actions/AppButton.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -41,21 +42,32 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <section>
-    <h1 class="auth-title">{{ $t('auth.signIn') }}</h1>
-    <form class="auth-form" @submit.prevent="onSubmit">
-      <FormField id="login-email" v-model="email" :label="$t('auth.email')" type="email" autocomplete="email" required />
-      <FormField
+  <section class="auth-view">
+    <h1 class="auth-view__title">{{ $t('auth.signIn') }}</h1>
+    <p class="auth-view__subtitle">{{ $t('auth.signInSubtitle') }}</p>
+
+    <form class="auth-view__form" novalidate @submit.prevent="onSubmit">
+      <AppInput
+        id="login-email"
+        v-model="email"
+        :label="$t('auth.email')"
+        type="email"
+        autocomplete="email"
+        inputmode="email"
+        required
+      />
+      <AppPasswordInput
         id="login-password"
         v-model="password"
         :label="$t('auth.password')"
-        type="password"
         autocomplete="current-password"
         required
       />
-      <p v-if="errorMessage" class="auth-error">{{ errorMessage }}</p>
-      <Button type="submit" :loading="submitting">{{ $t('auth.signIn') }}</Button>
-      <p class="auth-switch">
+      <p v-if="errorMessage" class="auth-view__error" role="alert">{{ errorMessage }}</p>
+      <AppButton type="submit" :loading="submitting" block>
+        {{ $t('auth.signIn') }}
+      </AppButton>
+      <p class="auth-view__switch">
         {{ $t('auth.noAccount') }}
         <RouterLink :to="{ name: 'register' }">{{ $t('nav.register') }}</RouterLink>
       </p>
@@ -64,23 +76,50 @@ async function onSubmit(): Promise<void> {
 </template>
 
 <style scoped>
-.auth-title {
-  font-size: var(--text-xl);
+.auth-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8);
 }
 
-.auth-form {
+.auth-view__title {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--text-1);
+}
+
+.auth-view__subtitle {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-2);
+}
+
+.auth-view__form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-16);
+  margin-top: var(--space-8);
 }
 
-.auth-error {
-  color: var(--color-danger);
-  font-size: var(--text-sm);
+.auth-view__error {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--danger-text);
 }
 
-.auth-switch {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
+.auth-view__switch {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-2);
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .auth-view__title {
+    font-size: 24px;
+    line-height: 32px;
+  }
 }
 </style>
