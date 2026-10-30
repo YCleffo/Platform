@@ -131,6 +131,12 @@ jobs:
       - name: Verify stateless Core application restart with durable PostgreSQL
         run: bash ./scripts/ci/core-app-restart-test.sh
 
+      - name: Build and inspect production Core image
+        run: |
+          docker build -f apps/backend/docker/Dockerfile --target prod -t platform-core:ci apps/backend
+          test "$(docker image inspect platform-core:ci --format '{{.Config.User}}')" = "www-data"
+          docker run --rm --entrypoint sh platform-core:ci -c 'test ! -e /app/tests && test ! -e /app/.env && test ! -e /app/.git && test ! -e /app/vendor/bin/phpunit && test ! -d /app/vendor/phpunit && test ! -e /app/c3.php && test -d /app/resources/email && test -d /app/resources/messages && test -w /data/caddy && test -w /config/caddy'
+
       - name: Diagnose failed core runtime
         if: failure()
         run: |

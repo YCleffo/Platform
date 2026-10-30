@@ -6,6 +6,7 @@ namespace ControlPlane\Infrastructure\Http;
 
 use ControlPlane\Account\Application\BillingProfileService;
 use ControlPlane\Account\Application\CreateCommercialAccount;
+use ControlPlane\Account\Application\ListCommercialAccounts;
 use ControlPlane\Account\Application\MembershipService;
 use ControlPlane\Account\Authorization\AccountAuthorization;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
@@ -24,12 +25,22 @@ final class AccountController extends AbstractController
     public function __construct(
         private readonly Connection $connection,
         private readonly CreateCommercialAccount $accounts,
+        private readonly ListCommercialAccounts $accountList,
         private readonly MembershipService $memberships,
         private readonly BillingProfileService $billing,
         private readonly AccountAuthorization $authorization,
         private readonly DatabaseRateLimiter $rateLimiter,
         private readonly AuthSecurityService $authSecurity,
     ) {
+    }
+
+    #[Route('', name: 'list', methods: ['GET'])]
+    public function list(Request $request): JsonResponse
+    {
+        $limit = (int) $request->query->get('limit', '50');
+        $offset = (int) $request->query->get('offset', '0');
+
+        return new JsonResponse($this->accountList->forUser($this->user()->id(), $limit, $offset));
     }
 
     #[Route('', name: 'create', methods: ['POST'])]

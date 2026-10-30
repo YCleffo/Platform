@@ -30,6 +30,12 @@ paths:
       responses:
         '200': {description: Ready, content: {application/json: {schema: {$ref: '#/components/schemas/Health'}}}}
         '503': {description: Not ready, content: {application/json: {schema: {$ref: '#/components/schemas/Health'}}}}
+  /api/control/me:
+    get:
+      operationId: getCurrentUser
+      responses:
+        '200': {$ref: '#/components/responses/CurrentUser'}
+        '401': {$ref: '#/components/responses/Error'}
   /api/control/auth/register:
     post:
       security: []
@@ -138,6 +144,12 @@ paths:
       operationId: listPlans
       responses: {'200': {$ref: '#/components/responses/Object'}}
   /api/control/accounts:
+    get:
+      operationId: listAccounts
+      parameters:
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+        - {name: offset, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
+      responses: {'200': {$ref: '#/components/responses/CommercialAccounts'}, '401': {$ref: '#/components/responses/Error'}}
     post:
       operationId: createAccount
       parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
@@ -474,6 +486,8 @@ components:
     Receipt: {description: Sanitized fiscal receipt, content: {application/json: {schema: {$ref: '#/components/schemas/Receipt'}}}}
     Entitlement: {description: Signed entitlement package for the authenticated deployment, content: {application/json: {schema: {type: object, required: [documentBase64, signatureBase64, keyId], properties: {documentBase64: {type: string}, signatureBase64: {type: string}, keyId: {type: string}}}}}}
     Error: {description: Sanitized error, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+    CurrentUser: {description: Current authenticated Control Plane user, content: {application/json: {schema: {$ref: '#/components/schemas/CurrentUser'}}}}
+    CommercialAccounts: {description: Commercial accounts the current user can access, content: {application/json: {schema: {$ref: '#/components/schemas/CommercialAccountList'}}}}
   schemas:
     ExternalCompensation:
       type: object
@@ -565,6 +579,41 @@ components:
     PlanChangeCancelled: {type: object, additionalProperties: false, required: [id, status], properties: {id: {type: string, format: uuid}, status: {const: cancelled}}}
     Health: {type: object, additionalProperties: false, required: [status], properties: {status: {type: string, enum: [ok, not_ready]}}}
     Error: {type: object, required: [error], properties: {error: {type: object, required: [code, message], properties: {code: {type: string}, message: {type: string}}}}}
+    CurrentUser:
+      type: object
+      additionalProperties: false
+      required: [id, email, status, email_verified_at, last_login_at, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        email: {type: string, format: email}
+        status: {type: string, enum: [pending_verification, active, suspended, disabled]}
+        email_verified_at: {type: [string, 'null'], format: date-time}
+        last_login_at: {type: [string, 'null'], format: date-time}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    CommercialAccountList:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/CommercialAccountSummary'}}
+        total: {type: integer, minimum: 0}
+        limit: {type: integer, minimum: 1}
+        offset: {type: integer, minimum: 0}
+    CommercialAccountSummary:
+      type: object
+      additionalProperties: false
+      required: [id, code, display_name, legal_name, status, onboarding_state, role, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        code: {type: string}
+        display_name: {type: string}
+        legal_name: {type: [string, 'null']}
+        status: {type: string, enum: [draft, active, suspended, closed]}
+        onboarding_state: {type: string, enum: [profile_required, catalog_selection_pending, ready_for_subscription]}
+        role: {type: string, enum: [owner, admin, billing, technical]}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
     Tokens: {type: object, required: [access_token, refresh_token], properties: {access_token: {type: string}, refresh_token: {type: string}, access_expires_in: {type: integer}, session_expires_in: {type: integer}}}
     MfaChallenge: {type: object, required: [status, challenge_token, expires_in], properties: {status: {const: mfa_required}, challenge_token: {type: string}, expires_in: {type: integer}}}
     MfaStatus: {type: object, required: [enabled, recovery_codes_remaining], properties: {enabled: {type: boolean}, factor_id: {type: [string, 'null'], format: uuid}, recovery_codes_remaining: {type: integer}}}

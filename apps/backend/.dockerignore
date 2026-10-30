@@ -12,6 +12,7 @@
 !/config
 !/public
 !/src
+!/resources
 !/migrations
 !/migrations/sql
 !/migrations/sql/*.sql

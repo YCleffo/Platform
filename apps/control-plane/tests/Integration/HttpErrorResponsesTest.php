@@ -24,7 +24,7 @@ final class HttpErrorResponsesTest extends TestCase
             self::assertSame($code, $body['error']['code']);
             self::assertStringNotContainsString('No route found', (string) $response->getContent());
             if ($status === 405) {
-                self::assertSame('POST', $response->headers->get('Allow'));
+                self::assertSame('GET', $response->headers->get('Allow'));
             }
             if (str_starts_with($path, '/api/control/')) {
                 self::assertTrue($response->headers->hasCacheControlDirective('no-store'));
@@ -39,6 +39,6 @@ final class HttpErrorResponsesTest extends TestCase
     {
         yield 'unknown API route' => ['GET', '/api/unknown', 404, 'resource_not_found'];
         yield 'unknown protected route' => ['GET', '/api/control/accounts/missing/unknown', 404, 'resource_not_found'];
-        yield 'unsupported account method' => ['GET', '/api/control/accounts', 405, 'method_not_allowed'];
+        yield 'unsupported catalog method' => ['DELETE', '/api/control/catalog/plans', 405, 'method_not_allowed'];
     }
 }

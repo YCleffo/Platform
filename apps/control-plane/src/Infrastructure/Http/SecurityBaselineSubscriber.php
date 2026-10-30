@@ -6,6 +6,7 @@ namespace ControlPlane\Infrastructure\Http;
 
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
@@ -21,12 +22,25 @@ final class SecurityBaselineSubscriber implements EventSubscriberInterface
         if (!$event->isMainRequest() || !str_starts_with($event->getRequest()->getPathInfo(), '/api/')) {
             return;
         }
-        $request = $event->getRequest();
-        $contentLength = $request->headers->get('Content-Length');
-        if ((is_string($contentLength) && ctype_digit($contentLength) && (int) $contentLength > self::MAX_BODY_BYTES)
-            || strlen($request->getContent()) > self::MAX_BODY_BYTES) {
-            $event->setResponse(new JsonResponse(['error' => ['code' => 'request_too_large', 'message' => 'The request body is too large.']], Response::HTTP_REQUEST_ENTITY_TOO_LARGE));
+        if (!$this->bodyTooLarge($event->getRequest())) {
+            return;
         }
+        $event->setResponse(new JsonResponse(['error' => ['code' => 'request_too_large', 'message' => 'The request body is too large.']], Response::HTTP_REQUEST_ENTITY_TOO_LARGE));
+    }
+
+    private function bodyTooLarge(Request $request): bool
+    {
+        $contentLength = $request->headers->get('Content-Length');
+        if (is_string($contentLength) && ctype_digit($contentLength)) {
+            return (int) $contentLength > self::MAX_BODY_BYTES;
+        }
+        $resource = $request->getContent(true);
+        if (!is_resource($resource)) {
+            return false;
+        }
+        $prefix = fread($resource, self::MAX_BODY_BYTES + 1);
+
+        return is_string($prefix) && strlen($prefix) > self::MAX_BODY_BYTES;
     }
 
     public function onResponse(ResponseEvent $event): void

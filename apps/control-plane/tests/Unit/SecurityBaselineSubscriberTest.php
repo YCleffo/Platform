@@ -9,11 +9,71 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 final class SecurityBaselineSubscriberTest extends TestCase
 {
+    public function testDeclaredOversizedBodyIsRejectedWithoutReadingIt(): void
+    {
+        $request = Request::create('/api/control/auth/register', 'POST', server: ['HTTP_CONTENT_LENGTH' => '70000']);
+
+        $response = $this->requestResponseFor($request);
+
+        self::assertSame(Response::HTTP_REQUEST_ENTITY_TOO_LARGE, $response->getStatusCode());
+        self::assertSame('request_too_large', json_decode((string) $response->getContent(), true, 8, JSON_THROW_ON_ERROR)['error']['code']);
+    }
+
+    public function testChunkedOversizedBodyIsRejectedThroughBoundedRead(): void
+    {
+        $request = Request::create('/api/control/auth/register', 'POST', content: str_repeat('x', 65_537));
+
+        $response = $this->requestResponseFor($request);
+
+        self::assertSame(Response::HTTP_REQUEST_ENTITY_TOO_LARGE, $response->getStatusCode());
+    }
+
+    public function testChunkedBodyWithinLimitIsAccepted(): void
+    {
+        $request = Request::create('/api/control/auth/register', 'POST', content: str_repeat('x', 65_536));
+
+        $response = $this->requestResponseFor($request);
+
+        self::assertNull($response);
+    }
+
+    public function testDeclaredBodyWithinLimitIsAcceptedWithoutReadingIt(): void
+    {
+        $request = Request::create('/api/control/auth/register', 'POST', server: ['HTTP_CONTENT_LENGTH' => '128']);
+
+        $response = $this->requestResponseFor($request);
+
+        self::assertNull($response);
+    }
+
+    public function testNonApiRequestIsIgnored(): void
+    {
+        $request = Request::create('/health/ready', 'POST', content: str_repeat('x', 200_000));
+
+        $response = $this->requestResponseFor($request);
+
+        self::assertNull($response);
+    }
+
+    private function requestResponseFor(Request $request): ?Response
+    {
+        $event = new RequestEvent(
+            $this->createStub(HttpKernelInterface::class),
+            $request,
+            HttpKernelInterface::MAIN_REQUEST,
+        );
+
+        (new SecurityBaselineSubscriber())->onRequest($event);
+
+        return $event->hasResponse() ? $event->getResponse() : null;
+    }
+
     #[DataProvider('sensitivePaths')]
     public function testSensitiveResponsesCannotBeCached(string $path): void
     {
