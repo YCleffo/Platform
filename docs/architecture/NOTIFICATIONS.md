@@ -1,12 +1,12 @@
-# Notification Policy
+# Политика уведомлений
 
-`NotificationPreferenceResolver` classifies delivery as `security`,
-`transactional` or `product`. Security and transactional email cannot be
-disabled by `notifications.email`; ordinary product email, browser and sound
-delivery consult the versioned Account Settings registry. Modules call the
-central resolver instead of interpreting sparse JSON overrides themselves.
+`NotificationPreferenceResolver` классифицирует доставку как `security`,
+`transactional` или `product`. Безопасность и транзакционные письма нельзя отключить
+через `notifications.email`; обычные продуктовые письма, браузерные и звуковые
+уведомления учитывают версионированный реестр Account Settings. Модули вызывают
+центральный резолвер, а не интерпретируют разреженные JSON-оверрайды самостоятельно.
 
-`AccountSecurityNotifier` is an explicit security-email consumer. Its notices
-(password, MFA, passkey and recovery changes) remain queued when a user turns
-off product email. Message transport/Outbox lifecycle is described in
-`COMMUNICATION.md`; this policy is not a separate delivery ledger.
+`AccountSecurityNotifier` — явный потребитель security-писем. Его уведомления (смена
+пароля, MFA, passkey и recovery) остаются в очереди, даже если пользователь отключил
+продуктовые письма. Транспорт сообщений и жизненный цикл Outbox описаны в
+`COMMUNICATION.md`; эта политика не является отдельным журналом доставки.

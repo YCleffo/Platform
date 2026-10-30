@@ -51,5 +51,8 @@ router.beforeEach((to) => {
   if (to.name === 'login' && auth.isAuthenticated) {
     return { name: 'cabinet' };
   }
+  if (to.name === 'mfa' && auth.status !== 'mfa_required') {
+    return { name: 'login' };
+  }
   return true;
 });

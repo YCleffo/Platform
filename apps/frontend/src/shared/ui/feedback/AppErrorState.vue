@@ -47,15 +47,16 @@ defineEmits<{ retry: [] }>();
 }
 
 .app-error__title {
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 500;
+  font-size: var(--type-body-large-emphasis-size);
+  line-height: var(--type-body-large-emphasis-line);
+  font-weight: var(--type-body-large-emphasis-weight);
   color: var(--text-1);
 }
 
 .app-error__message {
-  font-size: 14px;
-  line-height: 20px;
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
 }
 </style>

@@ -1,11 +1,12 @@
-import { createApp } from 'vue';
+import { createApp, watch } from 'vue';
 import { createPinia } from 'pinia';
 import App from './App.vue';
 import { router } from './app/router';
 import { i18n } from './shared/i18n';
 import { initTheme } from './app/theme';
-import { setUnauthorizedHandler } from './core/auth/session';
+import { sessionEpoch, setUnauthorizedHandler } from './core/auth/session';
 import { useAuthStore } from './core/auth/authStore';
+import { clearToasts } from './shared/composables/useToast';
 import './shared/styles/tokens.css';
 import './shared/styles/theme.css';
 import './shared/styles/typography.css';
@@ -22,9 +23,12 @@ initTheme();
 document.documentElement.lang = String(i18n.global.locale.value);
 
 setUnauthorizedHandler(() => {
-  const auth = useAuthStore();
-  auth.reset();
+  useAuthStore(pinia).reset();
+  clearToasts();
   void router.push({ name: 'login' });
 });
+
+// Any session boundary invalidates transient notifications from the previous user.
+watch(sessionEpoch, clearToasts);
 
 app.mount('#app');

@@ -1,29 +1,33 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { CircleAlert, CircleCheck, LoaderCircle } from '@lucide/vue';
-import { commercialAuth } from '@/shared/api/commercial';
-import { toErrorMessage } from '@/shared/errors/humanize';
+import { useAuthStore } from '@/core/auth/authStore';
+import { resolveErrorMessage } from '@/shared/errors/humanize';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
 
+const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
+
 const state = ref<'loading' | 'success' | 'error'>('loading');
-const error = ref<string | null>(null);
+const errorMessage = ref('');
 
 onMounted(async () => {
   const token = typeof route.query.token === 'string' ? route.query.token : '';
   if (token === '') {
     state.value = 'error';
-    error.value = 'validation_failed';
+    errorMessage.value = t('auth.verifyTokenMissing');
     return;
   }
   try {
-    await commercialAuth.verifyEmail(token);
+    await auth.verifyEmail(token);
     state.value = 'success';
   } catch (err) {
     state.value = 'error';
-    error.value = toErrorMessage(err);
+    errorMessage.value = resolveErrorMessage(err);
   }
 });
 </script>
@@ -52,7 +56,7 @@ onMounted(async () => {
         <CircleAlert :size="28" aria-hidden="true" />
       </span>
       <h1 class="verify-view__title">{{ $t('auth.verifyFailed') }}</h1>
-      <p class="verify-view__text">{{ error }}</p>
+      <p class="verify-view__text" role="alert">{{ errorMessage }}</p>
       <div class="verify-view__actions">
         <RouterLink class="verify-view__link" :to="{ name: 'register' }">
           {{ $t('auth.resend') }}
@@ -102,15 +106,17 @@ onMounted(async () => {
 }
 
 .verify-view__title {
-  font-size: 22px;
-  line-height: 28px;
-  font-weight: 600;
+  font-size: var(--type-h1-size);
+  line-height: var(--type-h1-line);
+  font-weight: var(--type-h1-weight);
+  letter-spacing: var(--type-h1-tracking);
   color: var(--text-1);
 }
 
 .verify-view__text {
-  font-size: 14px;
-  line-height: 20px;
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
   max-width: 320px;
 }
@@ -122,9 +128,9 @@ onMounted(async () => {
 }
 
 .verify-view__link {
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 500;
+  font-size: var(--type-body-medium-emphasis-size);
+  line-height: var(--type-body-medium-emphasis-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
 }
 
 .verify-view__spin {

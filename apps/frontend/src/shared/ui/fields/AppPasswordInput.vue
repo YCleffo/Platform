@@ -47,7 +47,7 @@ const visible = ref(false);
     <template #trailing>
       <AppIconButton
         size="s"
-        :label="visible ? 'Hide password' : 'Show password'"
+        :label="visible ? $t('common.hidePassword') : $t('common.showPassword')"
         @click="visible = !visible"
       >
         <EyeOff v-if="visible" :size="18" aria-hidden="true" />

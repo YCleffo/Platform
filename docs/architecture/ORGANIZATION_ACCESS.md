@@ -1,9 +1,25 @@
-# Organization access foundation
+# Основы доступа к организациям
 
-`Person != Account`: a person can belong to several organizations without an account. An authenticated account resolves to its person for organization membership checks. `Organization != Commercial Account`: the latter belongs to the Control Plane, with no cross-database foreign key or duplicate source of truth. Provisioning mapping is outside this phase.
+`Person != Account`: человек может состоять в нескольких организациях без аккаунта.
+Аутентифицированный аккаунт резолвится в своего person для проверок членства в
+организации. `Organization != Commercial Account`: последний принадлежит Control Plane,
+без cross-database FK и дублирования источника истины. Маппинг провижининга — вне этой
+фазы.
 
-`Membership != domain role`: membership records only the person's active or ended association. It does not grant student, teacher, parent, or administrative roles. `RBAC != organization scope`: organization operations require both the relevant permission and active membership in an active organization. `core.superadmin` retains platform-wide access; an arbitrary API `organizationId` never grants scope.
+`Membership != доменная роль`: членство фиксирует только активную или завершённую связь
+человека. Оно не выдаёт роли ученика, учителя, родителя или администратора.
+`RBAC != область организации`: операции организации требуют и соответствующего
+разрешения, и активного членства в активной организации. `core.superadmin` сохраняет
+платформенный доступ; произвольный `organizationId` из API никогда не даёт область.
 
-The existing `/api/core/persons` and contact routes are platform administration. Education APIs must introduce their own organization and domain relationship checks before exposing student, teacher, or parent records; they must not reuse the global Person list as a domain endpoint.
+Существующие `/api/core/persons` и контактные маршруты — платформенная администрация.
+API образования должны вводить собственные проверки организации и доменных связей до
+выдачи записей учеников, учителей или родителей; они не должны переиспользовать
+глобальный список Person как доменный эндпоинт.
 
-Membership export uses the existing personal data contributor contract. Explicit erasure uses its own ownership-checked handler; the database restricts Person deletion and does not cascade memberships. The existing Privacy workflow determines legal holds and retention eligibility before invoking a handler. Corrections to association state use the membership lifecycle endpoint; no automatic retention period or background cleanup is introduced here.
+Экспорт членства использует существующий контракт contributor персональных данных.
+Явное стирание использует собственный обработчик с проверкой владения; БД ограничивает
+удаление Person и не каскадит членства. Существующий Privacy workflow определяет
+legal holds и право на retention до вызова обработчика. Исправления состояния связи
+идут через эндпоинт жизненного цикла членства; автоматический retention или фоновую
+очистку это не вводит.

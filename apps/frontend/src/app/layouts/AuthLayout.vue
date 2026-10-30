@@ -16,7 +16,7 @@ function toggleLocale(): void {
 <template>
   <div class="auth-layout">
     <header class="auth-layout__header">
-      <RouterLink class="brand" :to="{ name: 'catalog' }" aria-label="Platform">
+      <RouterLink class="brand" :to="{ name: 'catalog' }" :aria-label="$t('app.name')">
         <span class="brand__mark" aria-hidden="true">
           <Layers :size="18" />
         </span>
@@ -78,9 +78,9 @@ function toggleLocale(): void {
 }
 
 .brand__name {
-  font-size: 16px;
-  line-height: 20px;
-  font-weight: 600;
+  font-size: var(--type-h3-size);
+  line-height: var(--type-h3-line);
+  font-weight: var(--type-h3-weight);
 }
 
 .auth-layout__actions {
@@ -90,9 +90,9 @@ function toggleLocale(): void {
 }
 
 .auth-layout__locale {
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
+  font-size: var(--type-body-small-emphasis-size);
+  line-height: var(--type-body-small-emphasis-line);
+  font-weight: var(--type-body-small-emphasis-weight);
   letter-spacing: 0.02em;
 }
 

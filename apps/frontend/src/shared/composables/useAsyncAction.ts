@@ -1,26 +1,39 @@
-import { ref } from 'vue';
-import { toErrorMessage } from '@/shared/errors/humanize';
+import { computed, ref } from 'vue';
+import { RequestAbortedError } from '@/shared/api/errors';
+import { resolveErrorMessage } from '@/shared/errors/humanize';
 
-export function useAsyncAction<Args extends unknown[]>(action: (...args: Args) => Promise<unknown>) {
+/**
+ * Wraps a submit action with a duplicate-submit guard and a localized error message.
+ * The raw error is kept so the message re-localizes when the locale changes.
+ */
+export function useAsyncAction(action: () => Promise<unknown>) {
   const submitting = ref(false);
-  const error = ref<string | null>(null);
+  const error = ref<unknown>(null);
+  const message = computed(() => (error.value === null ? null : resolveErrorMessage(error.value)));
 
-  async function run(...args: Args): Promise<boolean> {
+  function clearError(): void {
+    error.value = null;
+  }
+
+  async function run(): Promise<boolean> {
     if (submitting.value) {
       return false;
     }
     submitting.value = true;
     error.value = null;
     try {
-      await action(...args);
+      await action();
       return true;
     } catch (err) {
-      error.value = toErrorMessage(err);
+      if (err instanceof RequestAbortedError) {
+        return false;
+      }
+      error.value = err;
       return false;
     } finally {
       submitting.value = false;
     }
   }
 
-  return { submitting, error, run };
+  return { submitting, error, message, run, clearError };
 }

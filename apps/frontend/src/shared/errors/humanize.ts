@@ -1,32 +1,37 @@
-import { ApiError, NetworkError, RequestAbortedError } from '@/shared/api/errors';
+import { ApiError, ApiResponseError, NetworkError, RequestAbortedError } from '@/shared/api/errors';
+import { i18n } from '@/shared/i18n';
 
 const CODE_KEYS: Record<string, string> = {
   invalid_credentials: 'auth.invalidCredentials',
+  authentication_required: 'errors.sessionExpired',
   mfa_code_invalid: 'auth.mfaInvalid',
   mfa_challenge_invalid: 'auth.mfaInvalid',
+  mfa_challenge_expired: 'auth.mfaExpired',
   mfa_method_required: 'auth.mfaInvalid',
   rate_limited: 'errors.rate_limited',
   email_unavailable: 'errors.email_unavailable',
   validation_failed: 'errors.validation_failed',
   request_too_large: 'errors.request_too_large',
+  resource_not_found: 'errors.notFound',
 };
 
-export function toErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) {
-    return error.message;
-  }
-  if (error instanceof NetworkError) {
-    return error.message;
-  }
+/**
+ * Maps an unknown failure to a safe, localized, user-facing message.
+ * Unknown API codes fall back to a generic localized message (never a raw English/server string).
+ */
+export function resolveErrorMessage(error: unknown): string {
   if (error instanceof RequestAbortedError) {
     return '';
   }
-  return 'An unexpected error occurred.';
-}
-
-export function errorCodeKey(error: unknown): string | null {
-  if (error instanceof ApiError) {
-    return CODE_KEYS[error.code] ?? null;
+  if (error instanceof NetworkError) {
+    return i18n.global.t('errors.network');
   }
-  return null;
+  if (error instanceof ApiResponseError) {
+    return i18n.global.t('errors.invalidResponse');
+  }
+  if (error instanceof ApiError) {
+    const key = CODE_KEYS[error.code];
+    return i18n.global.t(key ?? 'errors.generic');
+  }
+  return i18n.global.t('common.unexpectedError');
 }

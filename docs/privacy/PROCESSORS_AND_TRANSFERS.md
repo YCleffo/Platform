@@ -1,15 +1,30 @@
-# Processors, recipients and outbound transfer
+# Обработчики, получатели и трансграничная передача
 
-Core defines processor and recipient registrations with purpose, category, country, contract/evidence reference, security and localization confirmations, and effective dates. Transfer decisions are separate and default to deny. `CrossBorderTransferPolicy` rejects unknown SMTP providers and any missing or unapproved transfer decision before sending. No contract text is stored in the database.
+Core определяет регистрации обработчиков и получателей с целью, категорией, страной,
+ссылкой на договор/доказательство, подтверждениями безопасности и локализации, а также
+датами действия. Решения о передаче отдельны и по умолчанию запрещают.
+`CrossBorderTransferPolicy` отклоняет неизвестных SMTP-провайдеров и любое
+отсутствующее или неутверждённое решение о передаче до отправки. Текст договора в БД не
+хранится.
 
-| Integration | Possible outbound data | Deployment decision |
+| Интеграция | Возможные исходящие данные | Решение развёртывания |
 | --- | --- | --- |
-| SMTP | Recipient email/name and rendered message, which may contain security links | Register provider, purposes, categories, country and transfer decision. |
-| Google auth | Login request, callback identifiers and profile claims | Register identity provider and classify permitted claims before enabling. |
-| Telegram auth | Telegram identifier and callback profile fields | Register provider and permitted fields before enabling. |
-| GeoIP | Network address sent to a lookup provider if external | Register provider/location or keep lookup local. |
-| YooKassa (Control Plane) | Payment, billing contact, receipt and fiscal fields | Maintain a separate Control Plane provider decision and contractual evidence. |
+| SMTP | Email/имя получателя и отрендеренное сообщение, которое может содержать security-ссылки | Зарегистрировать провайдера, цели, категории, страну и решение о передаче. |
+| Google auth | Запрос входа, идентификаторы callback и claims профиля | Зарегистрировать identity provider и классифицировать разрешённые claims до включения. |
+| Telegram auth | Идентификатор Telegram и поля профиля из callback | Зарегистрировать провайдера и разрешённые поля до включения. |
+| GeoIP | Сетевой адрес, отправляемый внешнему провайдеру (если внешний) | Зарегистрировать провайдера/локацию или держать lookup локальным. |
+| YooKassa (Control Plane) | Платёжные, биллинговые контактные, чековые и фискальные поля | Вести отдельное решение Control Plane и договорные доказательства. |
 
-Deployment must verify actual provider routing and country. A country code in application configuration alone does not prove routing. For `processor_by_instruction`, the role record must include instruction/contract reference, permitted categories and operations, security confirmation, incident notification and deletion/return obligation. Unknown role or transfer status is a readiness failure.
+Развёртывание обязано проверить фактическую маршрутизацию и страну провайдера. Код
+страны только в конфигурации приложения не доказывает маршрутизацию. Для
+`processor_by_instruction` запись роли должна включать ссылку на поручение/договор,
+разрешённые категории и операции, подтверждение безопасности, уведомление об инцидентах
+и обязанность удаления/возврата. Неизвестная роль или статус передачи — провал
+готовности.
 
-Control Plane has a separate `ControlProviderEgressPolicy` at concrete SMTP and YooKassa payment, refund and fiscal receipt gateways. An allowed decision must match purpose and data categories, name a country and evidence reference, and mark a non-RU transfer as notified. Missing or blocked decisions stop the outbound request. Its deployment configuration is independent of Core's registry.
+У Control Plane отдельная `ControlProviderEgressPolicy` на конкретных SMTP- и
+YooKassa-шлюзах платежей, возвратов и фискальных чеков. Разрешённое решение должно
+соответствовать цели и категориям данных, указывать страну и ссылку на доказательство, а
+также помечать передачу вне РФ как уведомлённую. Отсутствующее или заблокированное
+решение останавливает исходящий запрос. Его конфигурация развёртывания независима от
+реестра Core.

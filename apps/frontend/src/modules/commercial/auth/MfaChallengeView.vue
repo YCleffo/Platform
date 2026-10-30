@@ -1,60 +1,78 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { ShieldCheck } from '@lucide/vue';
 import { useAuthStore } from '@/core/auth/authStore';
-import { errorCodeKey, toErrorMessage } from '@/shared/errors/humanize';
-import AppInput from '@/shared/ui/fields/AppInput.vue';
+import { useAsyncAction } from '@/shared/composables/useAsyncAction';
+import { useForm } from '@/shared/composables/useForm';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
+import AppFormShell from '@/shared/ui/surfaces/AppFormShell.vue';
+import AppInput from '@/shared/ui/fields/AppInput.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
 const { t } = useI18n();
 
-const code = ref('');
-const recoveryCode = ref('');
-const submitting = ref(false);
-const errorMessage = ref<string | null>(null);
+const form = useForm({
+  initial: { code: '', recoveryCode: '' },
+  fields: {
+    code: { id: 'mfa-code', rules: [] },
+    recoveryCode: { id: 'mfa-recovery', rules: [] },
+  },
+});
+
+const crossError = ref<string | null>(null);
+
+const { submitting, message, run } = useAsyncAction(async () => {
+  await auth.verifyMfa(
+    form.values.code.trim() !== '' ? form.values.code.trim() : undefined,
+    form.values.recoveryCode.trim() !== '' ? form.values.recoveryCode.trim() : undefined,
+  );
+  await router.push({ name: 'cabinet' });
+});
+
+onMounted(() => {
+  if (auth.mfaChallenge === null) {
+    void router.push({ name: 'login' });
+  }
+});
 
 async function onSubmit(): Promise<void> {
   if (submitting.value) {
     return;
   }
-  const hasCode = code.value.trim() !== '';
-  const hasRecovery = recoveryCode.value.trim() !== '';
-  if (hasCode === hasRecovery) {
-    errorMessage.value = t('auth.mfaInvalid');
+  if (auth.mfaChallenge === null) {
+    await router.push({ name: 'login' });
     return;
   }
-  submitting.value = true;
-  errorMessage.value = null;
-  try {
-    await auth.verifyMfa(hasCode ? code.value.trim() : undefined, hasRecovery ? recoveryCode.value.trim() : undefined);
-    await router.push({ name: 'cabinet' });
-  } catch (err) {
-    const key = errorCodeKey(err);
-    errorMessage.value = key !== null ? t(key) : toErrorMessage(err);
-  } finally {
-    submitting.value = false;
+  const hasCode = form.values.code.trim() !== '';
+  const hasRecovery = form.values.recoveryCode.trim() !== '';
+  if (hasCode === hasRecovery) {
+    crossError.value = t('auth.mfaInvalid');
+    return;
   }
+  crossError.value = null;
+  await run();
 }
 </script>
 
 <template>
-  <section class="auth-view">
-    <div class="auth-view__mfa-head">
-      <span class="auth-view__mfa-icon" aria-hidden="true">
+  <AppFormShell
+    :title="$t('auth.mfaTitle')"
+    :subtitle="$t('auth.mfaIntro')"
+    :error="message ?? crossError"
+    centered
+  >
+    <template #icon>
+      <span class="mfa__icon" aria-hidden="true">
         <ShieldCheck :size="28" />
       </span>
-    </div>
-    <h1 class="auth-view__title">{{ $t('auth.mfaTitle') }}</h1>
-    <p class="auth-view__subtitle">{{ $t('auth.mfaIntro') }}</p>
-
-    <form class="auth-view__form" novalidate @submit.prevent="onSubmit">
+    </template>
+    <form class="auth-form" novalidate @submit.prevent="onSubmit">
       <AppInput
         id="mfa-code"
-        v-model="code"
+        v-model="form.values.code"
         :label="$t('auth.mfaCode')"
         inputmode="numeric"
         autocomplete="one-time-code"
@@ -62,31 +80,24 @@ async function onSubmit(): Promise<void> {
       />
       <AppInput
         id="mfa-recovery"
-        v-model="recoveryCode"
+        v-model="form.values.recoveryCode"
         :label="$t('auth.mfaRecoveryCode')"
         autocomplete="off"
       />
-      <p v-if="errorMessage" class="auth-view__error" role="alert">{{ errorMessage }}</p>
-      <AppButton type="submit" :loading="submitting" block>
-        {{ $t('auth.mfaSubmit') }}
-      </AppButton>
+      <AppButton type="submit" :loading="submitting" block>{{ $t('auth.mfaSubmit') }}</AppButton>
     </form>
-  </section>
+  </AppFormShell>
 </template>
 
 <style scoped>
-.auth-view {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-8);
-}
-
-.auth-view__mfa-head {
+.auth-form {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-16);
+  text-align: left;
 }
 
-.auth-view__mfa-icon {
+.mfa__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -95,41 +106,5 @@ async function onSubmit(): Promise<void> {
   border-radius: var(--radius-badge-module-tile);
   background: var(--accent-soft);
   color: var(--accent);
-}
-
-.auth-view__title {
-  font-size: 22px;
-  line-height: 28px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  color: var(--text-1);
-  text-align: center;
-}
-
-.auth-view__subtitle {
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--text-2);
-  text-align: center;
-}
-
-.auth-view__form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-16);
-  margin-top: var(--space-8);
-}
-
-.auth-view__error {
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--danger-text);
-}
-
-@media (min-width: 768px) {
-  .auth-view__title {
-    font-size: 24px;
-    line-height: 32px;
-  }
 }
 </style>

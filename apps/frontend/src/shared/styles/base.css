@@ -22,8 +22,8 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.5;
+  font-size: var(--type-body-large-size);
+  line-height: var(--type-body-large-line);
   color: var(--text-1);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;

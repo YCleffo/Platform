@@ -14,7 +14,7 @@ const route = useRoute();
 </script>
 
 <template>
-  <nav class="app-bottom-nav" aria-label="Primary">
+  <nav class="app-bottom-nav" :aria-label="$t('nav.primary')">
     <ul class="app-bottom-nav__list">
       <li v-for="item in items" :key="item.routeName" class="app-bottom-nav__item">
         <RouterLink
@@ -84,9 +84,9 @@ const route = useRoute();
 }
 
 .app-bottom-nav__label {
-  font-size: 11px;
-  line-height: 14px;
-  font-weight: 500;
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
 }
 
 @media (min-width: 768px) {

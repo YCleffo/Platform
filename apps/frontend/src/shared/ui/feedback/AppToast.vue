@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleAlert, CircleCheck, Info, X } from '@lucide/vue';
+import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from '@lucide/vue';
 import { useToast } from '@/shared/composables/useToast';
 import AppIconButton from '../actions/AppIconButton.vue';
 
@@ -8,7 +8,7 @@ const { toasts, dismiss } = useToast();
 
 <template>
   <Teleport to="body">
-    <div class="app-toast-host" role="region" aria-live="polite" aria-label="Notifications">
+    <div class="app-toast-host" role="region" aria-live="polite" :aria-label="$t('common.notifications')">
       <TransitionGroup name="toast">
         <div
           v-for="toast in toasts"
@@ -19,11 +19,12 @@ const { toasts, dismiss } = useToast();
         >
           <span class="app-toast__icon" aria-hidden="true">
             <CircleAlert v-if="toast.kind === 'error'" :size="18" />
+            <TriangleAlert v-else-if="toast.kind === 'warning'" :size="18" />
             <CircleCheck v-else-if="toast.kind === 'success'" :size="18" />
             <Info v-else :size="18" />
           </span>
           <span class="app-toast__message">{{ toast.message }}</span>
-          <AppIconButton size="s" :label="$t('common.close')" @click="dismiss(toast.id)">
+          <AppIconButton size="s" :label="$t('common.dismiss')" @click="dismiss(toast.id)">
             <X :size="16" aria-hidden="true" />
           </AppIconButton>
         </div>
@@ -48,7 +49,7 @@ const { toasts, dismiss } = useToast();
   display: flex;
   align-items: center;
   gap: var(--space-8);
-  padding: var(--space-12) var(--space-12);
+  padding: var(--space-12);
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-control-m);
@@ -65,14 +66,19 @@ const { toasts, dismiss } = useToast();
   color: var(--success);
 }
 
+.app-toast--warning .app-toast__icon {
+  color: var(--warning);
+}
+
 .app-toast--error .app-toast__icon {
   color: var(--danger);
 }
 
 .app-toast__message {
   flex: 1;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-weight);
   color: var(--text-1);
 }
 

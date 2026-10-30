@@ -4,70 +4,61 @@
 **Vite**. Подключается к **Commercial Control Plane** (Symfony) по реальному
 HTTP-контракту `contracts/openapi/control-plane.yaml`. Backend не мокается.
 
-## Дизайн-система
+Подробное руководство по frontend: [docs/frontend/README.md](../../docs/frontend/README.md).
 
-Единый источник токенов — `стили.json` (Figma Tokens). Генератор
-`scripts/generate-tokens.mjs` превращает его в `src/shared/styles/tokens.css`
-(сырые токены: палитра, статусы, тени, отступы, радиусы, размеры). Семантические
-алиасы (`--bg`, `--surface`, `--card`, `--border`, `--text-1`, `--accent`, …)
-живут в `theme.css` и переключаются атрибутом `data-theme`.
-
-```bash
-npm run generate:tokens   # пересобрать tokens.css из стили.json
-```
-
-- Цвета: `#2260FF` (primary), `#F6F8FC` (фон), `#FFFFFF` (карточка), border-first.
-- Типографика: Inter, отдельные mobile/desktop значения (`typography.css`).
-- Радиусы: control 8/10/12, card 14/16/20/24, modal 20, pill 999.
-- Тени: Soft/Card/Popover/Modal/Focus Ring (light + dark).
-
-## Темы (Light / Dark / System)
-
-Тема задаётся атрибутом `data-theme` на `<html>` (без вспышки при загрузке —
-inline-скрипт в `index.html`). Логика — `src/app/theme/index.ts`. Приоритет:
-`system` (автовыбор по `prefers-color-scheme`) по умолчанию, явные `light`/`dark`
-переключаются в шапке. Выбор хранится в `localStorage` (`platform.theme`) — это
-UI-предпочтение, а не authentication token.
-
-## Технологии
-
-- Vue 3 (Composition API, `<script setup>`)
-- TypeScript `strict` (`vue-tsc`)
-- Vite 7, Vue Router 4, Pinia 3
-- vue-i18n 11 (`en` / `ru`)
-- @lucide/vue (единый набор SVG-иконок)
-- ESLint 9 (flat config)
-
-## Структура
+## Архитектура и направление зависимостей
 
 ```text
 src/
-  app/
-    router/           # маршруты и guard авторизации
-    layouts/          # AppLayout (header + bottom nav), AuthLayout
-    theme/            # light/dark/system переключение
-  core/
-    auth/             # in-memory сессия + Pinia-стор
-    account/          # Pinia-стор коммерческих аккаунтов
-  modules/commercial/
-    onboarding/       # регистрация, подтверждение email
-    auth/             # вход, MFA
-    catalog/          # тарифы
-    account/          # личный кабинет
-  shared/
-    api/              # HTTP transport + commercial-клиент (typed)
-    ui/
-      actions/        # AppButton, AppIconButton
-      fields/         # AppInput, AppPasswordInput
-      feedback/       # AppBadge, AppEmptyState, AppErrorState, AppSkeleton, AppToast
-      navigation/     # AppHeader, AppBottomNav
-      overlays/       # AppDialog (focus trap, bottom sheet на мобильном)
-      surfaces/       # AppCard, AppDivider
-    styles/           # tokens.css (генер.), theme.css, typography.css, base.css
-    composables/      # useToast, useAsyncAction, useFocusTrap
-    errors/           # безопасные сообщения об ошибках
-    i18n/             # словари en/ru
+  app/            # router, layouts, theme — собирает приложение
+  core/           # auth (сессия+store), account (store), api (композиция клиента)
+  modules/        # commercial/{auth,onboarding,catalog,account}
+  shared/         # api (транспорт+guards), ui, composables, validation,
+                  # formatting, errors, i18n, styles, types
 ```
+
+Правила: `shared` не импортирует `modules`/`core`; `shared/ui` не знает об API;
+`core` не зависит от страниц модулей; `modules` используют публичные контракты
+`core`/`shared`; `app` связывает маршруты. HTTP-клиент создаётся в `core/api`, а сам
+транспорт (`shared/api/http.ts`) ничего не знает о сессии.
+
+## Сессии и авторизация
+
+- Токены — **только в памяти** (`core/auth/session.ts`), без localStorage/IndexedDB.
+- Один владелец сессии с **epoch**: любая смена (вход, выход, смена пользователя)
+  инвалидирует устаревшие ответы и refresh. Refresh после logout не воскрешает сессию.
+- Явный жизненный цикл: `anonymous` → `authenticating` → `mfa_required` →
+  `authenticated` → `signing_out`. `authenticated` невозможен без загруженного `me`;
+  при сбое `me` токены откатываются.
+- 401 → один refresh на группу запросов (single-flight) → один ретрай. Повторный 401,
+  отклонённый/просроченный refresh и сетевые сбои обрабатываются раздельно.
+- `logout`/смена пользователя очищает auth- и account-состояние, тосты и устаревшие
+  запросы. Данные пользователя A не появляются у пользователя B.
+- MFA challenge живёт только в памяти; прямой переход на `/mfa` без challenge
+  перенаправляет на `/login`.
+
+## Аккаунты
+
+`core/account/accountStore.ts` — единый account-context: список, выбранный аккаунт,
+пагинация (`limit`/`offset`/`total` на существующем API), загрузка, ошибки,
+инвалидация по epoch и защита от устаревших ответов. Создание аккаунта не
+перезагружает весь кабинет — диалог сообщает об успехе, страница обновляет первую
+страницу.
+
+## Дизайн-система
+
+- Канонический источник токенов — `design/design-tokens.json` (авторский файл).
+- `npm run generate:tokens` → `src/shared/styles/tokens.css` (не редактировать вручную).
+- `npm run check:tokens` завершается ошибкой, если CSS рассинхронизирован с JSON.
+- Семантика (`--bg`, `--surface`, `--card`, `--border`, `--text-1`, `--accent`, …)
+  в `theme.css`; темы Light/Dark/System без вспышки (inline-скрипт в `index.html`).
+- Типографика Inter в `typography.css`; border-first стиль.
+
+## Технологии
+
+Vue 3 (Composition API, `<script setup>`), TypeScript strict (`vue-tsc`), Vite 7,
+Vue Router 4, Pinia 3, vue-i18n 11 (`en`/`ru`), `@lucide/vue`, ESLint 9, Vitest +
+`@vue/test-utils` + happy-dom.
 
 ## Запуск
 
@@ -79,38 +70,55 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-Dev-прокси (цели настраиваются в `.env`, см. `.env.example`):
-
-- `/api/control/*` → Commercial Control Plane (`http://localhost:8090`)
-- `/api/*` → Yii Core (`http://localhost:8080`)
+Dev-прокси (цели в `.env`, см. `.env.example`): `/api/control/*` → Control Plane
+(`:8090`), `/api/*` → Yii Core (`:8080`).
 
 ## Проверки
 
 ```bash
-npm run typecheck        # vue-tsc (strict)
-npm run lint             # eslint
-npm run build            # typecheck + production-сборка
-npm run generate:tokens  # пересборка токенов из стили.json
+npm run check:tokens      # токены соответствуют design-tokens.json
+npm run typecheck         # vue-tsc (strict)
+npm run lint              # eslint
+npm run test              # Vitest (unit + component, без БД)
+npm run build             # typecheck + production-сборка
 ```
 
-Визуальная проверка (Playwright + установленный Chrome/Edge; требует запущенный
-`npm run dev`):
+Браузерные проверки (Playwright + установленный Chrome/Edge; нужен `npm run dev`):
 
 ```bash
-node scripts/screenshot.mjs         # скриншоты экранов в screenshots/
-node scripts/verify-responsive.mjs  # 320–1440px: переполнение и ошибки
+node scripts/verify-responsive.mjs  # маршруты/guard, overflow 320–1440, console, темы, keyboard, RU
+node scripts/screenshot.mjs         # скриншоты доступных состояний в screenshots/
 ```
+
+Аутентифицированный кабинет и диалог создания аккаунта требуют работающего backend:
+в браузерных скриптах они честно помечаются `NOT_VERIFIED`. Клавиатурная доступность
+диалога покрыта unit-тестами (`AppDialog.spec.ts`).
 
 ## Сценарии (реальный backend)
 
 Регистрация → подтверждение email → повторная отправка → вход → MFA → выход →
-каталог → личный кабинет (создание и список Commercial Accounts).
+каталог → личный кабинет (создание и список Commercial Accounts) с пагинацией.
 Создание аккаунта использует `Idempotency-Key` (генерируется один раз на форму).
 
-## Безопасность сессий
+## Будущие графики
 
-Access и refresh токены — **только в памяти** (не в `localStorage`/`sessionStorage`/
-cookies); после перезагрузки требуется повторный вход. При 401 — одна попытка
-обновления через `refresh_token` (одновременные обновления сериализуются); при
-неудаче сессия очищается. Персистентная сессия (HttpOnly-cookie/BFF) на этом этапе
-не реализована. Токены и учётные данные в ошибках не отображаются.
+Контракт визуализации (типы, адаптеры, форматирование, доступность) —
+[docs/frontend/CHARTS_CONTRACT.md](../../docs/frontend/CHARTS_CONTRACT.md). Фиктивных
+графиков и аналитики сейчас нет.
+
+## Диагностика
+
+- **TS2307 «Cannot find module '*.vue'» в IDE.** Обычный TypeScript-сервер без Vue
+  language service не умеет резолвить `.vue`. В `env.d.ts` объявлен `declare module '*.vue'`,
+  в `tsconfig.app.json` заданы `baseUrl` и `paths`. Перезапустите TS server в IDE
+  (VSCode: «TypeScript: Restart TS Server») или установите расширение Vue (Volar).
+  Источник истины — `npm run typecheck`, а не подсветка IDE.
+- **Каталог показывает ошибку сети.** Backend не запущен либо неверна цель прокси в
+  `.env` (`VITE_COMMERCIAL_PROXY_TARGET`, по умолчанию `http://localhost:8090`).
+- **`npm run check:tokens` падает.** `tokens.css` правили вручную. Выполните
+  `npm run generate:tokens` и закоммитьте результат.
+- **`/cabinet` перенаправляет на `/login`.** Токены живут только в памяти; после
+  перезагрузки страницы нужен повторный вход — это ожидаемо.
+- **`/mfa` сразу уводит на `/login`.** Нет активного MFA challenge — это корректно.
+- **`npm ci` в CI падает на lockfile.** Обновите `package-lock.json` локально
+  (`npm install`) и закоммитьте его вместе с `package.json`.

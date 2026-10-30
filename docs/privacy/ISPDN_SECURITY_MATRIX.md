@@ -1,17 +1,19 @@
-# ISPDn deployment security matrix
+# Матрица безопасности развёртывания ИСПДн
 
-This is an evidence checklist for a deployment, not an assignment of a protection level. The actual level and controls require an approved threat model and responsible-person decision. Machine-readable fields are in [deployment-checklist.json](deployment-checklist.json).
+Это чек-лист доказательств для развёртывания, а не назначение уровня защищённости.
+Фактический уровень и меры требуют утверждённой модели угроз и решения ответственного
+лица. Машиночитаемые поля — в [deployment-checklist.json](deployment-checklist.json).
 
-| Area | Technical hook or evidence required | Deployment reference |
+| Область | Технический хук или требуемое доказательство | Ссылка развёртывания |
 | --- | --- | --- |
-| Threat model and harm assessment | Approved documents for the deployed system and subjects | Required, unset |
-| Protection level | Determined from deployment threat model | Required, unset |
-| Authentication and authorization | Core/Control Plane identity, scoped permissions, privileged CLI access | Role review required |
-| Access logging and event registration | Allowlisted audit events and incident events | Retention and access review required |
-| Backup and recovery | Restore drills, retention, reapplication of erasure after restore | Evidence required |
-| Vulnerabilities and updates | Scan, patch and review schedule | Evidence required |
-| Incident handling | 24/72 tracking, human submission evidence and escalation | Responsible person required |
-| TLS and encryption | Transport, key management, storage and backup controls | Evidence required |
-| Administrative access and secrets | Least privilege, separate lifecycle role, secret manager | Evidence required |
-| Data residency | Primary, backup, object, log and cache evidence | Country and verification reference required |
-| Processors and transfers | Contract/instruction and outbound decision registry | Evidence required |
+| Модель угроз и оценка вреда | Утверждённые документы для развёрнутой системы и субъектов | Требуется, не задано |
+| Уровень защищённости | Определяется из модели угроз развёртывания | Требуется, не задано |
+| Аутентификация и авторизация | Identity Core/Control Plane, ограниченные права, привилегированный CLI | Требуется ревизия ролей |
+| Логирование доступа и регистрация событий | Разрешённые события аудита и инцидентов | Требуется ревизия хранения и доступа |
+| Резервирование и восстановление | Учения восстановления, хранение, повторное применение стирания после восстановления | Требуются доказательства |
+| Уязвимости и обновления | График сканирования, патчей и ревизий | Требуются доказательства |
+| Обработка инцидентов | Учёт 24/72, доказательства подачи человеком и эскалация | Требуется ответственное лицо |
+| TLS и шифрование | Транспорт, управление ключами, хранение и резервные копии | Требуются доказательства |
+| Административный доступ и секреты | Наименьшие привилегии, отдельная роль жизненного цикла, менеджер секретов | Требуются доказательства |
+| Резидентность данных | Доказательства primary, backup, object, log и cache | Требуются страна и ссылка проверки |
+| Обработчики и передачи | Договор/поручение и реестр решений о передаче | Требуются доказательства |

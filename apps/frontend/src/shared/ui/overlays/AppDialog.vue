@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
 import { X } from '@lucide/vue';
 import { useFocusTrap } from '@/shared/composables/useFocusTrap';
+import { lockScroll, unlockScroll } from '@/shared/composables/useScrollLock';
 import AppIconButton from '../actions/AppIconButton.vue';
 
 interface Props {
@@ -23,12 +24,15 @@ const props = withDefaults(defineProps<Props>(), {
 
 const open = defineModel<boolean>({ default: false });
 
-let uid = 0;
-const titleId = `app-dialog-title-${++uid}`;
-const descriptionId = `app-dialog-description-${++uid}`;
+const uid = useId();
+const titleId = `${uid}-title`;
+const descriptionId = `${uid}-description`;
 
 const dialogEl = ref<HTMLElement | null>(null);
 const { activate, deactivate } = useFocusTrap(dialogEl);
+
+let overlayActive = false;
+let scrollLocked = false;
 
 function requestClose(): void {
   if (props.persistent) {
@@ -43,23 +47,46 @@ function onKeydown(event: KeyboardEvent): void {
   }
 }
 
-watch(open, async (value) => {
-  if (value) {
-    document.addEventListener('keydown', onKeydown);
-    document.body.style.overflow = 'hidden';
-    await nextTick();
-    activate();
-  } else {
-    document.removeEventListener('keydown', onKeydown);
-    document.body.style.overflow = '';
-    deactivate();
+function activateOverlay(): void {
+  if (overlayActive) {
+    return;
   }
-});
+  overlayActive = true;
+  document.addEventListener('keydown', onKeydown);
+  lockScroll();
+  scrollLocked = true;
+  void nextTick(() => {
+    if (overlayActive) {
+      activate();
+    }
+  });
+}
 
-onBeforeUnmount(() => {
+function deactivateOverlay(): void {
   document.removeEventListener('keydown', onKeydown);
-  document.body.style.overflow = '';
-});
+  if (overlayActive) {
+    deactivate();
+    overlayActive = false;
+  }
+  if (scrollLocked) {
+    unlockScroll();
+    scrollLocked = false;
+  }
+}
+
+watch(
+  open,
+  (value) => {
+    if (value) {
+      activateOverlay();
+    } else {
+      deactivateOverlay();
+    }
+  },
+  { immediate: true },
+);
+
+onBeforeUnmount(deactivateOverlay);
 </script>
 
 <template>
@@ -77,11 +104,7 @@ onBeforeUnmount(() => {
       >
         <header class="app-dialog__header">
           <h2 :id="titleId" class="app-dialog__title">{{ title }}</h2>
-          <AppIconButton
-            v-if="!persistent"
-            :label="$t('common.close')"
-            @click="requestClose"
-          >
+          <AppIconButton v-if="!persistent" :label="$t('common.close')" @click="requestClose">
             <X :size="18" aria-hidden="true" />
           </AppIconButton>
         </header>
@@ -129,16 +152,18 @@ onBeforeUnmount(() => {
 }
 
 .app-dialog__title {
-  font-size: 18px;
-  line-height: 24px;
-  font-weight: 600;
+  font-size: var(--type-h2-size);
+  line-height: var(--type-h2-line);
+  font-weight: var(--type-h2-weight);
+  letter-spacing: var(--type-h2-tracking);
   color: var(--text-1);
 }
 
 .app-dialog__description {
   padding: 0 var(--space-20);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
 }
 

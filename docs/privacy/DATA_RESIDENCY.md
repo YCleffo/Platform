@@ -1,5 +1,12 @@
-# Data residency evidence
+# Доказательства резидентности данных
 
-Production Core readiness requires evidence for primary database, backup, object storage, log storage and cache countries, with verification time and reference. The check only verifies that the required configuration fields are present. Infrastructure owners must substantiate physical locations, replication, disaster recovery copies and vendor routing with deployment evidence. Missing evidence makes `privacy/compliance/check` fail.
+Готовность Production Core требует доказательств стран основной БД, резервных копий,
+объектного хранилища, хранения логов и кэша, со временем проверки и ссылкой. Проверка
+лишь подтверждает наличие обязательных полей конфигурации. Владельцы инфраструктуры
+обязаны подтвердить физические локации, репликацию, копии для восстановления после
+аварии и маршрутизацию вендоров доказательствами развёртывания. Отсутствие
+доказательств делает `privacy/compliance/check` неуспешным.
 
-The Control Plane has a separate database and payment integrations; its primary/backup/log residency and processor route must be reviewed independently. No application flag certifies physical placement.
+У Control Plane отдельная БД и платёжные интеграции; резидентность primary/backup/log и
+маршрут обработчиков проверяются независимо. Ни один флаг приложения не удостоверяет
+физическое размещение.

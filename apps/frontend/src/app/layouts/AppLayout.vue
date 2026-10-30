@@ -48,7 +48,7 @@ async function logout(): Promise<void> {
   <div class="app-layout">
     <AppHeader>
       <template #leading>
-        <RouterLink class="brand" :to="{ name: 'catalog' }" aria-label="Platform">
+        <RouterLink class="brand" :to="{ name: 'catalog' }" :aria-label="$t('app.name')">
           <span class="brand__mark" aria-hidden="true">
             <Layers :size="18" />
           </span>
@@ -58,7 +58,7 @@ async function logout(): Promise<void> {
 
       <template #center>
         <span class="app-layout__mobile-title">{{ sectionTitle }}</span>
-        <nav class="app-layout__nav" aria-label="Main">
+        <nav class="app-layout__nav" :aria-label="$t('nav.primary')">
           <RouterLink class="app-layout__nav-link" :to="{ name: 'catalog' }">
             {{ $t('nav.catalog') }}
           </RouterLink>
@@ -119,15 +119,15 @@ async function logout(): Promise<void> {
 }
 
 .brand__name {
-  font-size: 16px;
-  line-height: 20px;
-  font-weight: 600;
+  font-size: var(--type-h3-size);
+  line-height: var(--type-h3-line);
+  font-weight: var(--type-h3-weight);
 }
 
 .app-layout__mobile-title {
-  font-size: 16px;
-  line-height: 20px;
-  font-weight: 600;
+  font-size: var(--type-h3-size);
+  line-height: var(--type-h3-line);
+  font-weight: var(--type-h3-weight);
   color: var(--text-1);
 }
 
@@ -136,9 +136,9 @@ async function logout(): Promise<void> {
 }
 
 .app-layout__locale {
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
+  font-size: var(--type-body-small-emphasis-size);
+  line-height: var(--type-body-small-emphasis-line);
+  font-weight: var(--type-body-small-emphasis-weight);
   letter-spacing: 0.02em;
 }
 
@@ -162,9 +162,9 @@ async function logout(): Promise<void> {
   .app-layout__nav-link {
     padding: var(--space-8) var(--space-12);
     border-radius: var(--radius-control-m);
-    font-size: 14px;
-    line-height: 20px;
-    font-weight: 500;
+    font-size: var(--type-body-medium-emphasis-size);
+    line-height: var(--type-body-medium-emphasis-line);
+    font-weight: var(--type-body-medium-emphasis-weight);
     color: var(--text-2);
   }
 

@@ -1,7 +1,21 @@
 # Свидетельства уничтожения персональных данных
 
-Each successfully completed item has one immutable `privacy_destruction_evidence` row. It records case/item IDs, resource type, an HMAC-SHA256 reference to resource type and ID, policy/action/result codes, execution time, executor account and audit journal event ID. It excludes names, contact values, birth dates, old values, JSON snapshots and deleted entities. The HMAC key and evidence retention policy are deployment configuration; absence blocks execution. `evidence_retain_until` is independent of the destroyed resource's policy and is not an automatic deletion job.
+У каждого успешно завершённого элемента одна неизменяемая строка
+`privacy_destruction_evidence`. Она фиксирует ID кейса/элемента, тип ресурса,
+HMAC-SHA256-ссылку на тип и ID ресурса, коды политики/действия/результата, время
+исполнения, аккаунт исполнителя и ID события журнала аудита. Она не содержит имена,
+контактные значения, даты рождения, старые значения, JSON-снимки и удалённые сущности.
+HMAC-ключ и политика хранения доказательств — конфигурация развёртывания; их отсутствие
+блокирует исполнение. `evidence_retain_until` не зависит от политики уничтоженного
+ресурса и не является автоматическим заданием удаления.
 
-`DestructionEvidenceExporter` produces structured technical data for an organizational act or journal review. It does not issue a signature or claim a legally signed act. Export consumers must apply restricted access and record their own approval and signature process. Audit and outbox cleanup follow their own category policies.
+`DestructionEvidenceExporter` формирует структурированные технические данные для
+организационного акта или проверки журнала. Он не выпускает подпись и не заявляет
+юридически подписанный акт. Потребители экспорта обязаны применять ограниченный доступ
+и фиксировать собственный процесс утверждения и подписи. Очистка Audit и Outbox идёт по
+собственным категорийным политикам.
 
-The database blocks ordinary UPDATE and DELETE of destruction evidence. The controlled privacy cleanup path checks the evidence retention policy, stored retention date and applicable holds before disposal. It is separate from deletion of the underlying resource and starts in dry-run mode.
+БД блокирует обычные UPDATE и DELETE доказательств уничтожения. Контролируемый путь
+privacy cleanup проверяет политику хранения доказательств, сохранённую дату хранения и
+применимые holds перед удалением. Он отделён от удаления самого ресурса и стартует в
+режиме dry-run.

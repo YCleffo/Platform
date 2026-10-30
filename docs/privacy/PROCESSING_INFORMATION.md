@@ -1,5 +1,14 @@
-# Processing information response
+# Ответ с информацией об обработке
 
-The Core `processing_information` DSAR response is built by `ProcessingInformationService` from subject-scoped contributors and deployment definitions. It includes whether processing was found, basis and purpose codes, methods, categories and sources, periods, rights procedure, recipients, processors, transfer decisions and compliance measures. It does not enumerate another subject's records. The self and verified representative routes use the existing DSAR authorization boundary.
+Ответ DSAR `processing_information` в Core строится `ProcessingInformationService` из
+contributors, ограниченных субъектом, и определений развёртывания. Он включает: найден
+ли факт обработки, коды оснований и целей, методы, категории и источники, периоды,
+порядок прав, получателей, обработчиков, решения о передаче и меры соответствия. Он не
+перечисляет записи другого субъекта. Маршруты self и verified representative используют
+существующую границу авторизации DSAR.
 
-Issuance records a digest and execution metadata through `DataSubjectRequestExecutionService`; the response body is never persisted in evidence. Only successful issuance satisfies the request deadline. Deployment must populate complete purpose, role, recipient, processor and transfer definitions before using this as a production response.
+Выдача фиксирует digest и метаданные исполнения через
+`DataSubjectRequestExecutionService`; тело ответа никогда не сохраняется в
+доказательствах. Срок запроса считается соблюдённым только при успешной выдаче.
+Развёртывание обязано заполнить полные определения целей, ролей, получателей,
+обработчиков и передач до использования этого ответа в production.

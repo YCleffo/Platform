@@ -86,9 +86,9 @@ const ariaDescribedBy = computed(() => {
 }
 
 .app-input__label {
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 500;
+  font-size: var(--type-body-medium-emphasis-size);
+  line-height: var(--type-body-medium-emphasis-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--text-2);
 }
 
@@ -139,8 +139,9 @@ const ariaDescribedBy = computed(() => {
   min-width: 0;
   border: none;
   background: transparent;
-  font-size: 16px;
-  line-height: 24px;
+  font-size: var(--type-body-large-size);
+  line-height: var(--type-body-large-line);
+  font-weight: var(--type-body-large-weight);
   color: var(--text-1);
   outline: none;
 }
@@ -161,8 +162,9 @@ const ariaDescribedBy = computed(() => {
 }
 
 .app-input__message {
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
+  font-weight: var(--type-body-small-weight);
   color: var(--text-3);
 }
 

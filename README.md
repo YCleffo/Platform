@@ -23,6 +23,35 @@ Core: `http://localhost:8080`, Commercial: `http://localhost:8090`, Mailpit: `ht
 
 Основной Compose содержит только рабочие сервисы и их зависимости. Все они сгруппированы в `platform`. Логи каждого контейнера ограничены двумя файлами по 10 МБ. Резервные копии и тестовые окружения автоматически не создаются.
 
+## Frontend
+
+SPA на Vue 3 + TypeScript (strict) + Vite, подключается к Commercial Control Plane по
+реальному API. Запускается отдельно от Compose (без своей БД/Redis/контейнера):
+
+```powershell
+cd apps/frontend
+npm install
+npm run dev        # http://localhost:5173
+```
+
+Dev-прокси: `/api/control/*` → Commercial (`:8090`), `/api/*` → Core (`:8080`);
+цели задаются в `apps/frontend/.env` (пример — `.env.example`).
+
+Проверки frontend:
+
+```powershell
+cd apps/frontend
+npm run check:tokens   # токены соответствуют design/design-tokens.json
+npm run typecheck
+npm run lint
+npm run test           # Vitest, без БД
+npm run build
+```
+
+Токены хранятся только в памяти (после перезагрузки нужен повторный вход). Подробности:
+[руководство по frontend](docs/frontend/README.md), [README приложения](apps/frontend/README.md),
+[контракт графиков](docs/frontend/CHARTS_CONTRACT.md).
+
 ## Конфигурация и обновление
 
 `./scripts/init-env.ps1` дополняет `.env` недостающими ключами. Обязательные секреты не имеют запасных значений в Compose. Внешние OAuth и платёжные credentials выдаются провайдерами и заполняются оператором. Изменение существующего пароля PostgreSQL требует синхронной смены пароля роли; простое редактирование `.env` этого не делает.

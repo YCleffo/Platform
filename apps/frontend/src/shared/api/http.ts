@@ -1,7 +1,10 @@
-import { ApiError, NetworkError, RequestAbortedError } from './errors';
+import { ApiError, ApiResponseError, NetworkError, RequestAbortedError } from './errors';
 import type { ApiErrorEnvelope, SessionTokens } from '@/shared/types';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+/** Runtime guard applied at the API boundary before a payload is trusted. */
+export type Validator = (value: unknown) => boolean;
 
 export interface RequestOptions {
   method?: HttpMethod;
@@ -10,9 +13,16 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   signal?: AbortSignal;
   idempotencyKey?: string;
+  validate?: Validator;
 }
 
 type ReadOptions = Omit<RequestOptions, 'method' | 'body'>;
+
+export type RefreshOutcome =
+  | { status: 'refreshed'; tokens: SessionTokens }
+  | { status: 'stale' }
+  | { status: 'expired' }
+  | { status: 'unavailable'; error: Error };
 
 export interface HttpClient {
   request<T>(path: string, options?: RequestOptions): Promise<T>;
@@ -26,20 +36,25 @@ export interface HttpClient {
 export interface HttpClientConfig {
   baseUrl: string;
   getAccessToken: () => string | null;
-  refreshTokens: () => Promise<SessionTokens | null>;
+  getSessionEpoch: () => number;
+  refreshTokens: (expectedEpoch: number) => Promise<RefreshOutcome>;
   onUnauthorized: () => void;
 }
 
 export function createHttpClient(config: HttpClientConfig): HttpClient {
-  let refreshInFlight: Promise<SessionTokens | null> | null = null;
+  let refreshInFlight: { epoch: number; promise: Promise<RefreshOutcome> } | null = null;
 
-  function refreshOnce(): Promise<SessionTokens | null> {
-    if (refreshInFlight === null) {
-      refreshInFlight = config.refreshTokens().finally(() => {
-        refreshInFlight = null;
-      });
+  function refreshOnce(epoch: number): Promise<RefreshOutcome> {
+    if (refreshInFlight !== null && refreshInFlight.epoch === epoch) {
+      return refreshInFlight.promise;
     }
-    return refreshInFlight;
+    const promise = config.refreshTokens(epoch).finally(() => {
+      if (refreshInFlight !== null && refreshInFlight.promise === promise) {
+        refreshInFlight = null;
+      }
+    });
+    refreshInFlight = { epoch, promise };
+    return promise;
   }
 
   async function send<T>(path: string, options: RequestOptions, token: string | null): Promise<T> {
@@ -82,22 +97,43 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
       throw toApiError(response.status, payload, response.headers.get('Retry-After'));
     }
 
+    if (options.validate !== undefined && !options.validate(payload)) {
+      throw new ApiResponseError(path);
+    }
+
     return payload as T;
   }
 
   async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+    const startEpoch = config.getSessionEpoch();
     const token = config.getAccessToken();
     try {
       return await send<T>(path, options, token);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401 && token !== null) {
-        const tokens = await refreshOnce();
-        if (tokens !== null) {
-          return await send<T>(path, options, tokens.access_token);
-        }
-        config.onUnauthorized();
+      if (!(error instanceof ApiError) || error.status !== 401 || token === null) {
         throw error;
       }
+      if (config.getSessionEpoch() !== startEpoch) {
+        // Session was replaced or cleared while the request was in flight.
+        throw error;
+      }
+      const outcome = await refreshOnce(startEpoch);
+      if (outcome.status === 'refreshed') {
+        if (config.getSessionEpoch() !== startEpoch) {
+          throw error;
+        }
+        return await send<T>(path, options, outcome.tokens.access_token);
+      }
+      if (outcome.status === 'expired') {
+        if (config.getSessionEpoch() === startEpoch) {
+          config.onUnauthorized();
+        }
+        throw error;
+      }
+      if (outcome.status === 'unavailable') {
+        throw outcome.error;
+      }
+      // 'stale': session changed on purpose; do not resurrect it.
       throw error;
     }
   }
@@ -148,7 +184,7 @@ function parseJson(raw: string): unknown {
 function toApiError(status: number, payload: unknown, retryAfterHeader: string | null): ApiError {
   const envelope = isErrorEnvelope(payload) ? payload : null;
   const code = envelope?.error.code ?? 'http_error';
-  const message = envelope?.error.message ?? `The request failed with status ${status}.`;
+  const message = envelope?.error.message ?? 'The request failed.';
   return new ApiError(status, code, message, parseRetryAfter(retryAfterHeader));
 }
 

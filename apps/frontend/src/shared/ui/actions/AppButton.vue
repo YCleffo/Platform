@@ -44,7 +44,6 @@ const isDisabled = computed(() => props.disabled || props.loading);
   gap: var(--space-8);
   border: 1px solid transparent;
   border-radius: var(--radius-control-m);
-  font-weight: 500;
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
@@ -58,23 +57,26 @@ const isDisabled = computed(() => props.disabled || props.loading);
 .app-button--s {
   height: var(--control-h-s);
   padding: 0 var(--space-12);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--type-button-s-size);
+  line-height: var(--type-button-s-line);
+  font-weight: var(--type-button-s-weight);
 }
 
 .app-button--m {
   min-height: var(--control-h-m);
   height: 44px;
   padding: 0 var(--space-16);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: var(--type-button-m-size);
+  line-height: var(--type-button-m-line);
+  font-weight: var(--type-button-m-weight);
 }
 
 .app-button--l {
   height: var(--control-h-l);
   padding: 0 var(--space-20);
-  font-size: 16px;
-  line-height: 24px;
+  font-size: var(--type-button-l-size);
+  line-height: var(--type-button-l-line);
+  font-weight: var(--type-button-l-weight);
 }
 
 .app-button--block {

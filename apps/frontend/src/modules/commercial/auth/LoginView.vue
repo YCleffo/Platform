@@ -1,56 +1,52 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '@/core/auth/authStore';
-import { errorCodeKey, toErrorMessage } from '@/shared/errors/humanize';
+import { useAsyncAction } from '@/shared/composables/useAsyncAction';
+import { useForm } from '@/shared/composables/useForm';
+import { email as emailRule, required } from '@/shared/validation/rules';
+import AppButton from '@/shared/ui/actions/AppButton.vue';
+import AppFormShell from '@/shared/ui/surfaces/AppFormShell.vue';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppPasswordInput from '@/shared/ui/fields/AppPasswordInput.vue';
-import AppButton from '@/shared/ui/actions/AppButton.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
-const { t } = useI18n();
 
-const email = ref('');
-const password = ref('');
-const submitting = ref(false);
-const errorMessage = ref<string | null>(null);
+const form = useForm({
+  initial: { email: '', password: '' },
+  fields: {
+    email: { id: 'login-email', rules: [emailRule] },
+    password: { id: 'login-password', rules: [required] },
+  },
+});
 
-async function onSubmit(): Promise<void> {
-  if (submitting.value) {
+const { submitting, message, run } = useAsyncAction(async () => {
+  await auth.login(form.values.email, form.values.password);
+  if (auth.mfaChallenge !== null) {
+    await router.push({ name: 'mfa' });
     return;
   }
-  submitting.value = true;
-  errorMessage.value = null;
-  try {
-    await auth.login(email.value, password.value);
-    if (auth.mfaChallenge !== null) {
-      await router.push({ name: 'mfa' });
-      return;
-    }
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null;
-    await router.push(redirect ? { path: redirect } : { name: 'cabinet' });
-  } catch (err) {
-    const key = errorCodeKey(err);
-    errorMessage.value = key !== null ? t(key) : toErrorMessage(err);
-  } finally {
-    submitting.value = false;
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null;
+  await router.push(redirect !== null ? { path: redirect } : { name: 'cabinet' });
+});
+
+async function onSubmit(): Promise<void> {
+  if (!form.validate()) {
+    return;
   }
+  await run();
 }
 </script>
 
 <template>
-  <section class="auth-view">
-    <h1 class="auth-view__title">{{ $t('auth.signIn') }}</h1>
-    <p class="auth-view__subtitle">{{ $t('auth.signInSubtitle') }}</p>
-
-    <form class="auth-view__form" novalidate @submit.prevent="onSubmit">
+  <AppFormShell :title="$t('auth.signIn')" :subtitle="$t('auth.signInSubtitle')" :error="message">
+    <form class="auth-form" novalidate @submit.prevent="onSubmit">
       <AppInput
         id="login-email"
-        v-model="email"
+        v-model="form.values.email"
         :label="$t('auth.email')"
+        :error="form.errors.email ? $t(form.errors.email) : undefined"
         type="email"
         autocomplete="email"
         inputmode="email"
@@ -58,68 +54,33 @@ async function onSubmit(): Promise<void> {
       />
       <AppPasswordInput
         id="login-password"
-        v-model="password"
+        v-model="form.values.password"
         :label="$t('auth.password')"
+        :error="form.errors.password ? $t(form.errors.password) : undefined"
         autocomplete="current-password"
         required
       />
-      <p v-if="errorMessage" class="auth-view__error" role="alert">{{ errorMessage }}</p>
-      <AppButton type="submit" :loading="submitting" block>
-        {{ $t('auth.signIn') }}
-      </AppButton>
-      <p class="auth-view__switch">
+      <AppButton type="submit" :loading="submitting" block>{{ $t('auth.signIn') }}</AppButton>
+      <p class="auth-form__switch">
         {{ $t('auth.noAccount') }}
         <RouterLink :to="{ name: 'register' }">{{ $t('nav.register') }}</RouterLink>
       </p>
     </form>
-  </section>
+  </AppFormShell>
 </template>
 
 <style scoped>
-.auth-view {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-8);
-}
-
-.auth-view__title {
-  font-size: 22px;
-  line-height: 28px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  color: var(--text-1);
-}
-
-.auth-view__subtitle {
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--text-2);
-}
-
-.auth-view__form {
+.auth-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-16);
-  margin-top: var(--space-8);
 }
 
-.auth-view__error {
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--danger-text);
-}
-
-.auth-view__switch {
-  font-size: 14px;
-  line-height: 20px;
+.auth-form__switch {
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
   text-align: center;
-}
-
-@media (min-width: 768px) {
-  .auth-view__title {
-    font-size: 24px;
-    line-height: 32px;
-  }
 }
 </style>

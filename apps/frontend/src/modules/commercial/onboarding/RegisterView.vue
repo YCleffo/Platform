@@ -2,39 +2,58 @@
 import { ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { MailCheck } from '@lucide/vue';
 import { useAuthStore } from '@/core/auth/authStore';
-import { commercialAuth } from '@/shared/api/commercial';
 import { useAsyncAction } from '@/shared/composables/useAsyncAction';
+import { useForm } from '@/shared/composables/useForm';
 import { useToast } from '@/shared/composables/useToast';
+import { resolveErrorMessage } from '@/shared/errors/humanize';
+import { email as emailRule, password as passwordRule } from '@/shared/validation/rules';
+import AppButton from '@/shared/ui/actions/AppButton.vue';
+import AppFormShell from '@/shared/ui/surfaces/AppFormShell.vue';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppPasswordInput from '@/shared/ui/fields/AppPasswordInput.vue';
-import AppButton from '@/shared/ui/actions/AppButton.vue';
-import { MailCheck } from '@lucide/vue';
 
 const auth = useAuthStore();
 const toast = useToast();
 const { t } = useI18n();
 
-const email = ref('');
-const password = ref('');
 const registered = ref(false);
 const resending = ref(false);
 
-const { submitting, error, run } = useAsyncAction(async () => {
-  await auth.register(email.value, password.value);
+const form = useForm({
+  initial: { email: '', password: '' },
+  fields: {
+    email: { id: 'register-email', rules: [emailRule] },
+    password: { id: 'register-password', rules: [passwordRule] },
+  },
+});
+
+const { submitting, message, run } = useAsyncAction(async () => {
+  await auth.register(form.values.email, form.values.password);
   registered.value = true;
 });
 
+async function onSubmit(): Promise<void> {
+  if (!form.validate()) {
+    return;
+  }
+  await run();
+}
+
 async function resend(): Promise<void> {
-  if (resending.value || email.value === '') {
+  if (resending.value || form.values.email === '') {
     return;
   }
   resending.value = true;
   try {
-    await commercialAuth.resendVerification(email.value);
+    await auth.resendVerification(form.values.email);
     toast.show(t('auth.resendSuccess'), 'success');
-  } catch {
-    toast.show(t('common.unexpectedError'), 'error');
+  } catch (err) {
+    const text = resolveErrorMessage(err);
+    if (text !== '') {
+      toast.show(text, 'error');
+    }
   } finally {
     resending.value = false;
   }
@@ -42,104 +61,71 @@ async function resend(): Promise<void> {
 </script>
 
 <template>
-  <section class="auth-view">
-    <template v-if="registered">
-      <div class="auth-view__status">
-        <span class="auth-view__status-icon">
-          <MailCheck :size="28" aria-hidden="true" />
-        </span>
-      </div>
-      <h1 class="auth-view__title">{{ $t('auth.checkEmail') }}</h1>
-      <p class="auth-view__subtitle">{{ $t('auth.registerSuccess') }}</p>
-      <div class="auth-view__resend">
-        <p class="auth-view__resend-hint">{{ $t('auth.resendTitle') }}</p>
-        <AppButton variant="secondary" :loading="resending" :disabled="email === ''" block @click="resend">
-          {{ $t('auth.resend') }}
-        </AppButton>
-      </div>
-      <RouterLink class="auth-view__link" :to="{ name: 'login' }">{{ $t('nav.login') }}</RouterLink>
+  <AppFormShell
+    v-if="registered"
+    :title="$t('auth.checkEmail')"
+    :subtitle="$t('auth.registerSuccess')"
+    centered
+  >
+    <template #icon>
+      <span class="register__icon" aria-hidden="true">
+        <MailCheck :size="28" />
+      </span>
     </template>
+    <div class="register__resend">
+      <p class="register__hint">{{ $t('auth.resendTitle') }}</p>
+      <AppButton variant="secondary" :loading="resending" :disabled="form.values.email === ''" block @click="resend">
+        {{ $t('auth.resend') }}
+      </AppButton>
+      <RouterLink class="register__link" :to="{ name: 'login' }">{{ $t('nav.login') }}</RouterLink>
+    </div>
+  </AppFormShell>
 
-    <template v-else>
-      <h1 class="auth-view__title">{{ $t('auth.signUp') }}</h1>
-      <p class="auth-view__subtitle">{{ $t('auth.signUpSubtitle') }}</p>
-      <form class="auth-view__form" novalidate @submit.prevent="run()">
-        <AppInput
-          id="register-email"
-          v-model="email"
-          :label="$t('auth.email')"
-          type="email"
-          autocomplete="email"
-          inputmode="email"
-          required
-        />
-        <AppPasswordInput
-          id="register-password"
-          v-model="password"
-          :label="$t('auth.password')"
-          autocomplete="new-password"
-          required
-        />
-        <p v-if="error" class="auth-view__error" role="alert">{{ error }}</p>
-        <AppButton type="submit" :loading="submitting" block>
-          {{ $t('auth.register') }}
-        </AppButton>
-        <p class="auth-view__switch">
-          {{ $t('auth.haveAccount') }}
-          <RouterLink :to="{ name: 'login' }">{{ $t('nav.login') }}</RouterLink>
-        </p>
-      </form>
-    </template>
-  </section>
+  <AppFormShell v-else :title="$t('auth.signUp')" :subtitle="$t('auth.signUpSubtitle')" :error="message">
+    <form class="auth-form" novalidate @submit.prevent="onSubmit">
+      <AppInput
+        id="register-email"
+        v-model="form.values.email"
+        :label="$t('auth.email')"
+        :error="form.errors.email ? $t(form.errors.email) : undefined"
+        type="email"
+        autocomplete="email"
+        inputmode="email"
+        required
+      />
+      <AppPasswordInput
+        id="register-password"
+        v-model="form.values.password"
+        :label="$t('auth.password')"
+        :error="form.errors.password ? $t(form.errors.password) : undefined"
+        autocomplete="new-password"
+        required
+      />
+      <AppButton type="submit" :loading="submitting" block>{{ $t('auth.register') }}</AppButton>
+      <p class="auth-form__switch">
+        {{ $t('auth.haveAccount') }}
+        <RouterLink :to="{ name: 'login' }">{{ $t('nav.login') }}</RouterLink>
+      </p>
+    </form>
+  </AppFormShell>
 </template>
 
 <style scoped>
-.auth-view {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-8);
-}
-
-.auth-view__title {
-  font-size: 22px;
-  line-height: 28px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  color: var(--text-1);
-}
-
-.auth-view__subtitle {
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--text-2);
-}
-
-.auth-view__form {
+.auth-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-16);
-  margin-top: var(--space-8);
 }
 
-.auth-view__error {
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--danger-text);
-}
-
-.auth-view__switch {
-  font-size: 14px;
-  line-height: 20px;
+.auth-form__switch {
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
   text-align: center;
 }
 
-.auth-view__status {
-  display: flex;
-  justify-content: center;
-}
-
-.auth-view__status-icon {
+.register__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -150,28 +136,23 @@ async function resend(): Promise<void> {
   color: var(--success);
 }
 
-.auth-view__resend {
+.register__resend {
   display: grid;
-  gap: var(--space-8);
+  gap: var(--space-12);
+  width: 100%;
 }
 
-.auth-view__resend-hint {
-  font-size: 14px;
-  line-height: 20px;
+.register__hint {
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
 }
 
-.auth-view__link {
+.register__link {
   text-align: center;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 500;
-}
-
-@media (min-width: 768px) {
-  .auth-view__title {
-    font-size: 24px;
-    line-height: 32px;
-  }
+  font-size: var(--type-body-medium-emphasis-size);
+  line-height: var(--type-body-medium-emphasis-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
 }
 </style>

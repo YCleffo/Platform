@@ -25,20 +25,21 @@ withDefaults(defineProps<Props>(), {
   align-items: center;
   gap: var(--space-4);
   border-radius: var(--radius-badge-pill);
-  font-weight: 500;
   white-space: nowrap;
 }
 
 .app-badge--s {
   padding: 2px 8px;
-  font-size: 11px;
-  line-height: 16px;
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
 }
 
 .app-badge--m {
   padding: 3px 10px;
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
+  font-weight: var(--type-body-small-weight);
 }
 
 .app-badge--neutral {

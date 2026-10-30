@@ -1,5 +1,5 @@
 import { mkdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
@@ -7,9 +7,18 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'screenshots');
 mkdirSync(outDir, { recursive: true });
 
-const BASE = 'http://localhost:5173';
+const BASE = process.env.BASE_URL ?? 'http://localhost:5173';
 
-const routes = ['login', 'register', 'mfa', 'verify-email', 'catalog', 'cabinet'];
+// Only unauthenticated, backend-independent states are captured.
+// The authenticated cabinet and the create-account dialog require a running backend
+// and are intentionally NOT screenshotted here (reported as NOT_VERIFIED).
+const routes = [
+  { path: '/login', expected: '/login', name: 'login' },
+  { path: '/register', expected: '/register', name: 'register' },
+  { path: '/verify-email', expected: '/verify-email', name: 'verify-email' },
+  { path: '/', expected: '/', name: 'catalog' },
+];
+
 const viewports = [
   { name: '320x568', width: 320, height: 568 },
   { name: '375x812', width: 375, height: 812 },
@@ -18,32 +27,47 @@ const viewports = [
   { name: '1440x900', width: 1440, height: 900 },
 ];
 
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+async function launch() {
+  for (const channel of ['chrome', 'msedge']) {
+    try {
+      return await chromium.launch({ channel, headless: true });
+    } catch {
+      // try next channel
+    }
+  }
+  return chromium.launch({ headless: true });
+}
 
+const browser = await launch();
+const failures = [];
 const shots = [];
 
-for (const vp of viewports) {
+for (const viewport of viewports) {
   for (const theme of ['light', 'dark']) {
-    const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
-    await context.addInitScript((t) => {
-      localStorage.setItem('platform.theme', t);
-      localStorage.setItem('platform.locale', 'en');
-    }, theme);
+    const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height } });
+    await context.addInitScript(
+      (value) => {
+        localStorage.setItem('platform.theme', value);
+        localStorage.setItem('platform.locale', 'en');
+      },
+      theme,
+    );
     const page = await context.newPage();
 
-    const targets = vp.name === '375x812' || vp.name === '393x852'
-      ? routes
-      : ['login', 'catalog', 'cabinet'];
-
-    for (const route of targets) {
-      const name = `${vp.name}-${route}-${theme}.png`;
+    for (const route of routes) {
+      const name = `${viewport.name}-${route.name}-${theme}.png`;
       try {
-        await page.goto(`${BASE}/${route === 'catalog' ? '' : route}`, { waitUntil: 'networkidle', timeout: 15000 });
-        await page.waitForTimeout(400);
+        await page.goto(`${BASE}${route.path}`, { waitUntil: 'networkidle', timeout: 15000 });
+        await page.waitForTimeout(250);
+        const pathname = new URL(page.url()).pathname;
+        if (pathname !== route.expected) {
+          failures.push(`${name}: resolved to ${pathname}, expected ${route.expected}`);
+          continue;
+        }
         await page.screenshot({ path: join(outDir, name), fullPage: false });
         shots.push(name);
-      } catch (err) {
-        console.error(`FAILED ${name}: ${String(err)}`);
+      } catch (error) {
+        failures.push(`${name}: ${String(error)}`);
       }
     }
 
@@ -53,7 +77,16 @@ for (const vp of viewports) {
 
 await browser.close();
 
-console.log('CAPTURED:');
-for (const s of shots) {
-  console.log(`  screenshots/${s}`);
+console.log(`CAPTURED ${shots.length} screenshots in screenshots/`);
+for (const shot of shots) {
+  console.log(`  screenshots/${shot}`);
+}
+console.log('NOT_VERIFIED: authenticated cabinet and create-account dialog (no backend available).');
+
+if (failures.length > 0) {
+  console.error('SCREENSHOT FAILURES:');
+  for (const failure of failures) {
+    console.error(`  ${failure}`);
+  }
+  process.exit(1);
 }

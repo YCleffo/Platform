@@ -1,12 +1,12 @@
-# Presence and Privacy
+# Присутствие и приватность
 
-Authenticated `POST /api/auth/me/presence/heartbeat` refreshes an ephemeral
-Redis `presence:{accountId}` key with a 90-second TTL. The key records last
-seen and a client instance hint. TTL expiry means offline; logout may
-best-effort clear the key. Heartbeats create neither SQL rows nor Audit/Outbox
-events. Redis failure yields an unknown state without breaking authentication.
+Аутентифицированный `POST /api/auth/me/presence/heartbeat` обновляет эфемерный ключ
+Redis `presence:{accountId}` с TTL 90 секунд. Ключ хранит время последней активности и
+подсказку об экземпляре клиента. Истечение TTL означает офлайн; logout может
+best-effort очистить ключ. Heartbeat не создаёт строк SQL и событий Audit/Outbox. Сбой
+Redis даёт неизвестное состояние, не ломая аутентификацию.
 
-No public `isOnline(accountId)` API is exposed. Internal consumers must use
-`PresenceVisibilityPolicy`, which returns hidden when
-`privacy.show_online_status=false`. Domain modules remain responsible for
-relationship-level access (conversation membership, blocks, school roles).
+Публичного API `isOnline(accountId)` нет. Внутренние потребители обязаны использовать
+`PresenceVisibilityPolicy`, который возвращает hidden при
+`privacy.show_online_status=false`. Доменные модули сами отвечают за доступ на уровне
+отношений (членство в беседе, блокировки, школьные роли).

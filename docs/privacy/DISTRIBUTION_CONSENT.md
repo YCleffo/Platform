@@ -1,5 +1,12 @@
-# Consent for public distribution
+# Согласие на публичное распространение
 
-Core migration 026 stores distribution consent separately from ordinary purpose consent. A grant identifies subject and actor or verified representative, purpose, category and field codes, conditions, restrictions, document version/hash, grant time and withdrawal time. The default decision is deny. `DistributionConsentService::allows()` checks an active dedicated grant, requested category/field, channel restrictions and required conditions.
+Миграция Core 026 хранит согласие на распространение отдельно от обычного согласия на
+цель. Грант определяет субъект и актора либо подтверждённого представителя, цель,
+категорию и коды полей, условия, ограничения, версию/хеш документа, время выдачи и
+время отзыва. Решение по умолчанию — запрет. `DistributionConsentService::allows()`
+проверяет активный выделенный грант, запрошенную категорию/поле, ограничения канала и
+обязательные условия.
 
-Modules that later publish avatars, names, achievements or profiles must call this decision along with their own access checks. Ordinary processing consent and interface settings are insufficient for public distribution.
+Модули, которые позже публикуют аватары, имена, достижения или профили, обязаны
+вызывать это решение вместе со своими проверками доступа. Обычного согласия на
+обработку и настроек интерфейса недостаточно для публичного распространения.
