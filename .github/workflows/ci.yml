@@ -387,5 +387,7 @@ jobs:
         run: npm run lint
       - name: Unit and component tests
         run: npm run test
+      - name: Verify mutating E2E refuses without an isolated runtime
+        run: node scripts/e2e-account-workspace.mjs --check-guard
       - name: Production build
         run: npm run build

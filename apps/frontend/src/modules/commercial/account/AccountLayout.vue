@@ -87,8 +87,7 @@ function switchAccount(id: string): void {
           </div>
         </div>
         <AccountSwitcher
-          v-if="store.accounts.length > 1"
-          :accounts="store.accounts"
+          v-if="store.total > 1"
           :current-id="detail.id"
           :current-name="detail.display_name"
           @select="switchAccount"

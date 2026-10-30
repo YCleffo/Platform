@@ -92,6 +92,49 @@ export interface CommercialMembershipList {
   offset: number;
 }
 
+export interface MfaStatus {
+  enabled: boolean;
+  factor_id: string | null;
+  recovery_codes_remaining: number;
+}
+
+export interface TotpSetup {
+  factor_id: string;
+  secret: string;
+  otpauth_uri: string;
+}
+
+export interface RecoveryCodesResult {
+  recovery_codes: string[];
+}
+
+export interface ReauthenticateInput {
+  password: string;
+  code?: string;
+  recoveryCode?: string;
+}
+
+export type AuthenticationMethod = 'password' | 'password_totp' | 'password_recovery';
+
+export interface ControlSession {
+  id: string;
+  issued_at: string;
+  last_used_at: string;
+  expires_at: string;
+  revoked_at: string | null;
+  revoke_reason: string | null;
+  user_agent: string;
+  authentication_method: AuthenticationMethod;
+  primary_authenticated_at: string;
+  mfa_authenticated_at: string | null;
+  current: boolean;
+}
+
+export interface ControlSessionList {
+  items: ControlSession[];
+}
+
+
 export interface PlanPrice {
   id: string;
   currency: string;

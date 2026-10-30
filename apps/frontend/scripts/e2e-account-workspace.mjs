@@ -7,9 +7,46 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'screenshots');
 mkdirSync(outDir, { recursive: true });
 
-const APP = process.env.APP_URL ?? 'http://localhost:5173';
-const API = process.env.CONTROL_API_URL ?? 'http://localhost:8090';
-const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025';
+const APP = process.env.APP_URL ?? '';
+const API = process.env.CONTROL_API_URL ?? '';
+const MAILPIT = process.env.MAILPIT_URL ?? '';
+
+/**
+ * Mutating E2E is refused unless an explicitly approved isolated runtime is configured.
+ * A single environment variable is not enough: runtime marker, isolated DB marker,
+ * write permission, explicit URLs, an allowlisted host and non-default credentials
+ * are all required.
+ */
+export function evaluateMutationGate(env) {
+  const reasons = [];
+  if (env.E2E_RUNTIME !== 'isolated-ci') reasons.push('E2E_RUNTIME must be "isolated-ci"');
+  if (env.E2E_ISOLATED_DB !== '1') reasons.push('E2E_ISOLATED_DB must be "1"');
+  if (env.E2E_ALLOW_MUTATIONS !== '1') reasons.push('E2E_ALLOW_MUTATIONS must be "1"');
+  if (!env.E2E_PASSWORD) reasons.push('E2E_PASSWORD is required (no default credentials)');
+
+  const allowedHosts = (env.E2E_ALLOWED_HOSTS ?? '')
+    .split(',')
+    .map((host) => host.trim())
+    .filter(Boolean);
+  if (allowedHosts.length === 0) reasons.push('E2E_ALLOWED_HOSTS is required');
+
+  for (const key of ['APP_URL', 'CONTROL_API_URL', 'MAILPIT_URL']) {
+    const value = env[key];
+    if (!value) {
+      reasons.push(`${key} is required`);
+      continue;
+    }
+    try {
+      const url = new URL(value);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') reasons.push(`${key} must use http(s)`);
+      if (!allowedHosts.includes(url.hostname)) reasons.push(`${key} host "${url.hostname}" is not allowlisted`);
+    } catch {
+      reasons.push(`${key} is not a valid URL`);
+    }
+  }
+
+  return { allowed: reasons.length === 0, reasons };
+}
 
 const failures = [];
 const check = (condition, message) => {
@@ -103,10 +140,20 @@ async function assertNoOverflow(page, label) {
 }
 
 async function main() {
+  const gate = evaluateMutationGate(process.env);
+  if (!gate.allowed) {
+    console.error('NOT_VERIFIED: mutating account-workspace E2E refused (no approved isolated runtime).');
+    for (const reason of gate.reasons) {
+      console.error(`  - ${reason}`);
+    }
+    console.error('No users, accounts or memberships were created.');
+    process.exit(2);
+  }
+
   const runId = Date.now().toString(36);
   const emailA = process.env.E2E_EMAIL_A ?? `e2e-a-${runId}@example.test`;
   const emailB = process.env.E2E_EMAIL_B ?? `e2e-b-${runId}@example.test`;
-  const password = process.env.E2E_PASSWORD ?? 'correct horse battery staple';
+  const password = process.env.E2E_PASSWORD;
   const codeA = `e2e-a-${runId}`;
   const codeB = `e2e-b-${runId}`;
   const nameA = `E2E A ${runId}`;
@@ -254,6 +301,19 @@ async function main() {
 
   await context.close();
   await browser.close();
+}
+
+if (process.argv.includes('--check-guard')) {
+  const gate = evaluateMutationGate(process.env);
+  if (gate.allowed) {
+    console.error('E2E GUARD FAILED: mutating run would be allowed without explicit isolated markers.');
+    process.exit(1);
+  }
+  console.log('E2E GUARD OK: mutating run is refused without an approved isolated runtime.');
+  for (const reason of gate.reasons) {
+    console.log(`  - ${reason}`);
+  }
+  process.exit(0);
 }
 
 await main();

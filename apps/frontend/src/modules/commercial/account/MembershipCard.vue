@@ -1,11 +1,22 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import { Pencil, Trash2 } from '@lucide/vue';
 import AppBadge from '@/shared/ui/feedback/AppBadge.vue';
+import AppIconButton from '@/shared/ui/actions/AppIconButton.vue';
 import { formatDateTime } from '@/shared/formatting/date';
 import { roleVariant } from './accountPresentation';
 import type { CommercialMembership } from '@/shared/types';
 
-defineProps<{ membership: CommercialMembership }>();
+defineProps<{
+  membership: CommercialMembership;
+  canManage: boolean;
+  canRemove: boolean;
+}>();
+
+const emit = defineEmits<{
+  'change-role': [];
+  remove: [];
+}>();
 
 const { t, locale } = useI18n();
 </script>
@@ -18,14 +29,34 @@ const { t, locale } = useI18n();
         {{ $t('account.memberSince') }} {{ formatDateTime(membership.created_at, locale) }}
       </span>
     </div>
-    <AppBadge :variant="roleVariant(membership.role)">{{ t(`cabinet.role_${membership.role}`) }}</AppBadge>
+    <div class="member__side">
+      <AppBadge :variant="roleVariant(membership.role)">{{ t(`cabinet.role_${membership.role}`) }}</AppBadge>
+      <div v-if="canManage || canRemove" class="member__actions">
+        <AppIconButton
+          v-if="canManage"
+          :label="$t('account.changeRole')"
+          @click="emit('change-role')"
+        >
+          <Pencil :size="18" aria-hidden="true" />
+        </AppIconButton>
+        <AppIconButton
+          v-if="canRemove"
+          :label="$t('account.removeMember')"
+          @click="emit('remove')"
+        >
+          <Trash2 :size="18" aria-hidden="true" />
+        </AppIconButton>
+      </div>
+    </div>
   </li>
 </template>
 
 <style scoped>
 .member {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-12);
   padding: var(--space-16);
   background: var(--card);
@@ -55,5 +86,17 @@ const { t, locale } = useI18n();
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
   color: var(--text-3);
+}
+
+.member__side {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.member__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
 }
 </style>

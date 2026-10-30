@@ -14,6 +14,7 @@ const routes = [
   { path: '/mfa', expected: '/login', selector: 'form' },
   { path: '/accounts/018f0000-0000-7000-8000-000000000001', expected: '/login', selector: 'form' },
   { path: '/accounts/018f0000-0000-7000-8000-000000000001/members', expected: '/login', selector: 'form' },
+  { path: '/settings/security', expected: '/login', selector: 'form' },
 ];
 
 const problems = [];
@@ -143,5 +144,6 @@ if (problems.length > 0) {
 
 console.log(
   'RESPONSIVE CHECKS PASSED: routes, guards, overflow (320–1440), console, theme, keyboard, RU.\n' +
-    'NOT_VERIFIED: authenticated cabinet and create-account dialog (no backend in this check).',
+    'READ-ONLY SMOKE: no authentication and no data mutations.\n' +
+    'NOT_VERIFIED here: authenticated cabinet, account workspace, Security Center, MFA and membership mutations (need an isolated runtime).',
 );

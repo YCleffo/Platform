@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { Building2, Layers, LayoutGrid, LogIn, LogOut, Moon, Sun } from '@lucide/vue';
+import { Building2, Layers, LayoutGrid, LogIn, LogOut, Moon, ShieldCheck, Sun } from '@lucide/vue';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useTheme } from '@/app/theme';
 import { setLocale } from '@/shared/i18n';
@@ -21,6 +21,9 @@ const sectionTitle = computed(() => {
   if (route.name === 'cabinet') {
     return t('nav.cabinet');
   }
+  if (route.name === 'security') {
+    return t('nav.security');
+  }
   if (route.name === 'catalog') {
     return t('nav.catalog');
   }
@@ -30,6 +33,7 @@ const sectionTitle = computed(() => {
 const bottomItems = computed<BottomNavItem[]>(() => [
   { label: t('nav.catalog'), icon: LayoutGrid, routeName: 'catalog' },
   { label: t('nav.cabinet'), icon: Building2, routeName: 'cabinet' },
+  { label: t('nav.security'), icon: ShieldCheck, routeName: 'security' },
 ]);
 
 const localeLabel = computed(() => (locale.value === 'ru' ? 'RU' : 'EN'));
@@ -64,6 +68,9 @@ async function logout(): Promise<void> {
           </RouterLink>
           <RouterLink class="app-layout__nav-link" :to="{ name: 'cabinet' }">
             {{ $t('nav.cabinet') }}
+          </RouterLink>
+          <RouterLink class="app-layout__nav-link" :to="{ name: 'security' }">
+            {{ $t('nav.security') }}
           </RouterLink>
         </nav>
       </template>

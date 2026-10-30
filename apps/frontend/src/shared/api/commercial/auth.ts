@@ -1,6 +1,25 @@
 import type { HttpClient } from '../http';
-import { isLoginResult, isRegisterResult, isSessionTokens, isStatusResult } from '../guards';
-import type { LoginResult, RegisterResult, SessionTokens, StatusResult } from '@/shared/types';
+import {
+  isControlSessionList,
+  isLoginResult,
+  isMfaStatus,
+  isRecoveryCodesResult,
+  isRegisterResult,
+  isSessionTokens,
+  isStatusResult,
+  isTotpSetup,
+} from '../guards';
+import type {
+  ControlSessionList,
+  LoginResult,
+  MfaStatus,
+  ReauthenticateInput,
+  RecoveryCodesResult,
+  RegisterResult,
+  SessionTokens,
+  StatusResult,
+  TotpSetup,
+} from '@/shared/types';
 
 export interface MfaVerificationInput {
   code?: string;
@@ -13,7 +32,13 @@ export interface CommercialAuthApi {
   verifyEmail(token: string): Promise<StatusResult>;
   login(email: string, password: string): Promise<LoginResult>;
   verifyMfaLogin(challengeToken: string, input: MfaVerificationInput): Promise<SessionTokens>;
-  logout(): Promise<void>;
+  /** Sends the logout request with an explicit snapshot of the token being revoked. */
+  logout(token: string): Promise<void>;
+  mfaStatus(): Promise<MfaStatus>;
+  beginTotpSetup(): Promise<TotpSetup>;
+  confirmTotpSetup(factorId: string, code: string): Promise<RecoveryCodesResult>;
+  reauthenticate(input: ReauthenticateInput): Promise<void>;
+  sessions(): Promise<ControlSessionList>;
 }
 
 export function createCommercialAuthApi(http: HttpClient): CommercialAuthApi {
@@ -36,6 +61,25 @@ export function createCommercialAuthApi(http: HttpClient): CommercialAuthApi {
         },
         { validate: isSessionTokens },
       ),
-    logout: () => http.post<void>('/auth/logout'),
+    logout: (token) =>
+      http.post<void>('/auth/logout', undefined, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    mfaStatus: () => http.get<MfaStatus>('/auth/mfa/status', { validate: isMfaStatus }),
+    beginTotpSetup: () =>
+      http.post<TotpSetup>('/auth/mfa/totp/setup', {}, { validate: isTotpSetup }),
+    confirmTotpSetup: (factorId, code) =>
+      http.post<RecoveryCodesResult>(
+        '/auth/mfa/totp/confirm',
+        { factor_id: factorId, code },
+        { validate: isRecoveryCodesResult },
+      ),
+    reauthenticate: (input) =>
+      http.post<void>('/auth/reauthenticate', {
+        password: input.password,
+        code: input.code ?? null,
+        recovery_code: input.recoveryCode ?? null,
+      }),
+    sessions: () => http.get<ControlSessionList>('/auth/sessions', { validate: isControlSessionList }),
   };
 }

@@ -2,7 +2,7 @@ import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { commercialAccount, commercialAuth } from '@/core/api';
 import { SupersededOperationError } from '@/shared/api/errors';
-import { beginSession, endSession, hasSession, sessionTokens } from './session';
+import { beginSession, endSession, getAccessToken, getSessionEpoch, hasSession, sessionTokens } from './session';
 import type { CurrentUser, LoginResult, MfaChallenge, RegisterResult, SessionTokens, StatusResult } from '@/shared/types';
 
 export type AuthStatus = 'anonymous' | 'authenticating' | 'mfa_required' | 'authenticated' | 'signing_out';
@@ -21,6 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Monotonic token: a login/MFA/logout that is superseded must never apply its result.
   let operationId = 0;
+  let refreshUserId = 0;
 
   const isAuthenticated = computed(() => status.value === 'authenticated' && sessionTokens.value !== null);
   const currentUser = computed(() => user.value);
@@ -109,18 +110,40 @@ export const useAuthStore = defineStore('auth', () => {
     if (status.value !== 'authenticated') {
       return;
     }
-    user.value = await commercialAccount.me();
+    const operation = operationId;
+    const epoch = getSessionEpoch();
+    const refresh = ++refreshUserId;
+    let me: CurrentUser;
+    try {
+      me = await commercialAccount.me();
+    } catch (error) {
+      if (operation !== operationId || epoch !== getSessionEpoch() || refresh !== refreshUserId) {
+        return;
+      }
+      throw error;
+    }
+    if (
+      operation !== operationId ||
+      epoch !== getSessionEpoch() ||
+      refresh !== refreshUserId ||
+      status.value !== 'authenticated'
+    ) {
+      return;
+    }
+    user.value = me;
   }
 
-  async function logout(): Promise<void> {
+  /**
+   * Local logout is immediate. The captured token is used only for the revocation request;
+   * a late or failed response can never affect a newer session.
+   */
+  function logout(): void {
+    const accessToken = getAccessToken();
     operationId += 1;
     status.value = 'signing_out';
-    try {
-      await commercialAuth.logout();
-    } catch {
-      // Local state must be cleared even when the server call fails.
-    } finally {
-      reset();
+    reset();
+    if (accessToken !== null) {
+      void Promise.resolve(commercialAuth.logout(accessToken)).catch(() => undefined);
     }
   }
 

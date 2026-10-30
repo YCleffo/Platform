@@ -20,6 +20,8 @@ describe('MembershipList', () => {
           member('1', 'owner@example.test', 'owner'),
           member('2', 'tech@example.test', 'technical'),
         ],
+        manageableIds: [],
+        removableIds: [],
       },
       global: { plugins: [i18n] },
     });
@@ -32,7 +34,7 @@ describe('MembershipList', () => {
 
   it('renders no rows for an empty list', () => {
     const wrapper = mount(MembershipList, {
-      props: { memberships: [] },
+      props: { memberships: [], manageableIds: [], removableIds: [] },
       global: { plugins: [i18n] },
     });
 

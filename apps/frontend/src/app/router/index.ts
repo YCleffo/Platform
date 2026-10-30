@@ -6,6 +6,7 @@ import AccountCabinetView from '@/modules/commercial/account/AccountCabinetView.
 import AccountLayout from '@/modules/commercial/account/AccountLayout.vue';
 import AccountOverviewView from '@/modules/commercial/account/AccountOverviewView.vue';
 import AccountMembersView from '@/modules/commercial/account/AccountMembersView.vue';
+import SecuritySettingsView from '@/modules/commercial/security/SecuritySettingsView.vue';
 import LoginView from '@/modules/commercial/auth/LoginView.vue';
 import RegisterView from '@/modules/commercial/onboarding/RegisterView.vue';
 import VerifyEmailView from '@/modules/commercial/onboarding/VerifyEmailView.vue';
@@ -22,6 +23,12 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
         children: [
           { path: '', name: 'catalog', component: CatalogView },
           { path: 'cabinet', name: 'cabinet', component: AccountCabinetView, meta: { requiresAuth: true } },
+          {
+            path: 'settings/security',
+            name: 'security',
+            component: SecuritySettingsView,
+            meta: { requiresAuth: true },
+          },
           {
             path: 'accounts/:accountId',
             component: AccountLayout,

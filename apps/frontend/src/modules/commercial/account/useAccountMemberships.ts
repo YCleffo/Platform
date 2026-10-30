@@ -1,6 +1,6 @@
 import { computed, ref, watch, type Ref } from 'vue';
 import { commercialAccount } from '@/core/api';
-import { getSessionEpoch } from '@/core/auth/session';
+import { getSessionEpoch, sessionEpoch } from '@/core/auth/session';
 import { RequestAbortedError } from '@/shared/api/errors';
 import { resolveErrorMessage } from '@/shared/errors/humanize';
 import type { CommercialMembership } from '@/shared/types';
@@ -67,6 +67,16 @@ export function useAccountMemberships(accountId: Ref<string>, enabled: Ref<boole
     },
     { immediate: true },
   );
+
+  // Logout / user switch invalidates membership data even while a request is in flight.
+  watch(sessionEpoch, () => {
+    requestToken += 1;
+    memberships.value = [];
+    total.value = 0;
+    offset.value = 0;
+    error.value = null;
+    loading.value = false;
+  });
 
   function nextPage(): void {
     if (hasNext.value) {

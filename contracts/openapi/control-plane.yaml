@@ -92,7 +92,7 @@ paths:
       operationId: reauthenticate
       description: 'MFA-enabled users must provide exactly one of code or recovery_code; non-MFA users provide neither. A successful MFA step-up updates the current authentication method and recent MFA evidence atomically.'
       requestBody: {$ref: '#/components/requestBodies/Reauthenticate'}
-      responses: {'200': {$ref: '#/components/responses/Object'}, '400': {$ref: '#/components/responses/Error'}}
+      responses: {'200': {$ref: '#/components/responses/Reauthenticated'}, '400': {$ref: '#/components/responses/Error'}, '403': {$ref: '#/components/responses/Error'}}
   /api/control/auth/mfa/status:
     get:
       operationId: mfaStatus
@@ -101,12 +101,12 @@ paths:
     post:
       operationId: beginTotpSetup
       requestBody: {$ref: '#/components/requestBodies/Object'}
-      responses: {'201': {$ref: '#/components/responses/Object'}, '403': {$ref: '#/components/responses/Error'}}
+      responses: {'201': {$ref: '#/components/responses/TotpSetup'}, '403': {$ref: '#/components/responses/Error'}}
   /api/control/auth/mfa/totp/confirm:
     post:
       operationId: confirmTotpSetup
       requestBody: {$ref: '#/components/requestBodies/TotpConfirm'}
-      responses: {'200': {$ref: '#/components/responses/Object'}, '400': {$ref: '#/components/responses/Error'}}
+      responses: {'200': {$ref: '#/components/responses/RecoveryCodes'}, '400': {$ref: '#/components/responses/Error'}}
   /api/control/auth/mfa/login/verify:
     post:
       security: []
@@ -177,7 +177,7 @@ paths:
     patch:
       operationId: changeMembershipRole
       requestBody: {$ref: '#/components/requestBodies/Object'}
-      responses: {'204': {description: Updated}, '409': {$ref: '#/components/responses/Error'}}
+      responses: {'200': {description: Updated, content: {application/json: {schema: {type: object, required: [status], properties: {status: {const: updated}}}}}}, '409': {$ref: '#/components/responses/Error'}}
     delete:
       operationId: removeMembership
       responses: {'204': {description: Removed}, '409': {$ref: '#/components/responses/Error'}}
@@ -478,6 +478,9 @@ components:
     LoginResult: {description: Tokens or an MFA challenge, content: {application/json: {schema: {oneOf: [{$ref: '#/components/schemas/Tokens'}, {$ref: '#/components/schemas/MfaChallenge'}]}}}}
     MfaStatus: {description: MFA state, content: {application/json: {schema: {$ref: '#/components/schemas/MfaStatus'}}}}
     Sessions: {description: Owned sessions only, content: {application/json: {schema: {type: object, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/Session'}}}}}}}
+    TotpSetup: {description: Pending authenticator setup, content: {application/json: {schema: {$ref: '#/components/schemas/TotpSetup'}}}}
+    RecoveryCodes: {description: One-time recovery codes, content: {application/json: {schema: {$ref: '#/components/schemas/RecoveryCodes'}}}}
+    Reauthenticated: {description: Step-up completed, content: {application/json: {schema: {$ref: '#/components/schemas/Reauthenticated'}}}}
     Subscription: {description: Subscription, content: {application/json: {schema: {$ref: '#/components/schemas/Subscription'}}}}
     SubscriptionCreated: {description: Created draft subscription, content: {application/json: {schema: {$ref: '#/components/schemas/SubscriptionCreated'}}}}
     AutoRenewalDisabled: {description: Auto-renewal disabled, active paid period retained, content: {application/json: {schema: {$ref: '#/components/schemas/AutoRenewalDisabled'}}}}
@@ -670,6 +673,21 @@ components:
     Tokens: {type: object, required: [access_token, refresh_token], properties: {access_token: {type: string}, refresh_token: {type: string}, access_expires_in: {type: integer}, session_expires_in: {type: integer}}}
     MfaChallenge: {type: object, required: [status, challenge_token, expires_in], properties: {status: {const: mfa_required}, challenge_token: {type: string}, expires_in: {type: integer}}}
     MfaStatus: {type: object, required: [enabled, recovery_codes_remaining], properties: {enabled: {type: boolean}, factor_id: {type: [string, 'null'], format: uuid}, recovery_codes_remaining: {type: integer}}}
+    TotpSetup:
+      type: object
+      additionalProperties: false
+      required: [factor_id, secret, otpauth_uri]
+      properties:
+        factor_id: {type: string, format: uuid}
+        secret: {type: string}
+        otpauth_uri: {type: string}
+    RecoveryCodes:
+      type: object
+      additionalProperties: false
+      required: [recovery_codes]
+      properties:
+        recovery_codes: {type: array, items: {type: string}}
+    Reauthenticated: {type: object, additionalProperties: false, required: [status], properties: {status: {const: reauthenticated}}}
     Session: {type: object, required: [id, authentication_method, primary_authenticated_at, current], properties: {id: {type: string, format: uuid}, issued_at: {type: string, format: date-time}, last_used_at: {type: string, format: date-time}, expires_at: {type: string, format: date-time}, revoked_at: {type: [string, 'null'], format: date-time}, revoke_reason: {type: [string, 'null']}, user_agent: {type: string}, authentication_method: {type: string, enum: [password, password_totp, password_recovery]}, primary_authenticated_at: {type: string, format: date-time}, mfa_authenticated_at: {type: [string, 'null'], format: date-time}, current: {type: boolean}}}
     Subscription:
       type: object

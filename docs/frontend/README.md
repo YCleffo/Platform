@@ -98,13 +98,58 @@ src/
 `technical` его не имеют. Frontend скрывает вкладку по `permissions.view_members`, но
 сервер повторно проверяет доступ.
 
-### E2E рабочего пространства
+### Browser validation
 
-`node scripts/e2e-account-workspace.mjs` — реальный сценарий (нужны запущенные
-control-plane и Mailpit): регистрация/подтверждение (или существующие пользователи через
-`E2E_EMAIL_A`/`E2E_EMAIL_B`), вход, создание аккаунтов, обзор, участники, переключение,
-неизвестный аккаунт, прямой URL с повторным входом, темы, 320/1440, клавиатура,
-запрет доступа к чужому аккаунту.
+- `scripts/verify-responsive.mjs` — **read-only smoke**: без авторизации и мутаций.
+  Публичные экраны, guard-редиректы (включая `/accounts/*` и `/settings/security`),
+  overflow 320–1440, темы, keyboard, RU.
+- `scripts/e2e-account-workspace.mjs` — **мутирующий E2E**. По умолчанию отказывает и
+  завершается с `NOT_VERIFIED` (exit 2) до любых HTTP-запросов. Требует одновременно:
+  `E2E_RUNTIME=isolated-ci`, `E2E_ISOLATED_DB=1`, `E2E_ALLOW_MUTATIONS=1`, явные
+  `APP_URL`/`CONTROL_API_URL`/`MAILPIT_URL`, `E2E_ALLOWED_HOSTS` и `E2E_PASSWORD`
+  (без дефолтных credentials).
+- CI проверяет сам отказ: `node scripts/e2e-account-workspace.mjs --check-guard`.
+- Мутирующий E2E не запускается на локальной рабочей БД; при отсутствии изолированного
+  runtime он помечается `NOT_VERIFIED`.
+
+## Security Center и управление доступом
+
+Маршрут `/settings/security` — защищённые пользовательские настройки Control Plane (не
+Commercial Account). Используются реальные API:
+
+- `GET /auth/mfa/status` — включена ли MFA и сколько recovery-кодов осталось;
+- `POST /auth/mfa/totp/setup` — pending factor: `factor_id`, `secret`, `otpauth_uri`;
+- `POST /auth/mfa/totp/confirm` — подтверждение кода и одноразовые `recovery_codes`;
+- `POST /auth/reauthenticate` — step-up; backend обновляет
+  `primary_authenticated_at`/`mfa_authenticated_at` текущей сессии;
+- `GET /auth/sessions` — текущая сессия и метод входа.
+
+QR строится локально (`qrcode.vue`); `otpauth_uri` и секрет не передаются сторонним
+сервисам, не логируются и не попадают в persistent storage. Recovery-коды показываются
+один раз и очищаются при закрытии диалога. «MFA включена» показывается только после
+успешного `confirm`.
+
+### Step-up
+
+`useSensitiveAction` выполняет чувствительное действие; при
+`recent_authentication_required`/`recent_mfa_required` открывает
+`ReauthenticateDialog` (пароль; при включённой MFA — TOTP или recovery-код) и после
+успеха повторяет действие ровно один раз. `mfa_enrollment_required` показывает ссылку в
+Security Center. Серверные проверки не обходятся.
+
+### Управление участниками
+
+`PATCH`/`DELETE /accounts/{id}/memberships/{membershipId}` требуют серверных permissions
+и `requireSensitiveMfa`. UI:
+
+- `owner` управляет владением и всеми ролями; `admin` — только не-владельцами и не может
+  назначать `owner`; `billing`/`technical` не получают действий;
+- изменение роли и удаление идут через подтверждение и step-up;
+- нет оптимистичных обновлений: после успеха перезагружаются участники и account
+  permissions; при потере доступа — переход на `/cabinet`;
+- последний owner защищён backend (409), UI показывает отказ;
+- self-removal очищает account context и уводит из недоступного аккаунта;
+- приглашений по email нет.
 
 ## Дизайн-система
 

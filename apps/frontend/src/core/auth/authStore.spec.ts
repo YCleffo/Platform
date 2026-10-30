@@ -196,4 +196,153 @@ describe('authStore', () => {
     expect(store.status).toBe('anonymous');
     expect(getAccessToken()).toBeNull();
   });
+
+  it('clears local state immediately on logout and ignores a late response', async () => {
+    vi.mocked(commercialAuth.login).mockResolvedValue(tokens('1'));
+    vi.mocked(commercialAccount.me).mockResolvedValue(user('a'));
+    let resolveLogout: () => void = () => {};
+    const pendingLogout = new Promise<void>((resolve) => {
+      resolveLogout = resolve;
+    });
+    vi.mocked(commercialAuth.logout).mockReturnValueOnce(pendingLogout);
+
+    const store = useAuthStore();
+    await store.login('a@example.test', 'password12345');
+
+    store.logout();
+    expect(store.status).toBe('anonymous');
+    expect(store.currentUser).toBeNull();
+    expect(store.isAuthenticated).toBe(false);
+    expect(getAccessToken()).toBeNull();
+    expect(vi.mocked(commercialAuth.logout)).toHaveBeenCalledWith('access-1');
+
+    resolveLogout();
+    await pendingLogout;
+    expect(store.status).toBe('anonymous');
+    expect(store.currentUser).toBeNull();
+    expect(getAccessToken()).toBeNull();
+  });
+
+  it('does not block local logout on a network failure', async () => {
+    vi.mocked(commercialAuth.login).mockResolvedValue(tokens('1'));
+    vi.mocked(commercialAccount.me).mockResolvedValue(user('a'));
+    vi.mocked(commercialAuth.logout).mockRejectedValueOnce(new Error('offline'));
+
+    const store = useAuthStore();
+    await store.login('a@example.test', 'password12345');
+
+    store.logout();
+    expect(store.status).toBe('anonymous');
+    expect(getAccessToken()).toBeNull();
+  });
+
+  it('allows a new login while the previous logout request is pending', async () => {
+    vi.mocked(commercialAuth.login).mockResolvedValue(tokens('1'));
+    vi.mocked(commercialAccount.me).mockResolvedValue(user('a'));
+    let resolveLogout: () => void = () => {};
+    const pendingLogout = new Promise<void>((resolve) => {
+      resolveLogout = resolve;
+    });
+    vi.mocked(commercialAuth.logout).mockReturnValueOnce(pendingLogout);
+
+    const store = useAuthStore();
+    await store.login('a@example.test', 'password12345');
+    store.logout();
+
+    vi.mocked(commercialAuth.login).mockResolvedValueOnce(tokens('b'));
+    vi.mocked(commercialAccount.me).mockResolvedValueOnce(user('b'));
+    await store.login('b@example.test', 'password12345');
+    expect(store.currentUser?.id).toBe('b');
+    expect(getAccessToken()).toBe('access-b');
+
+    resolveLogout();
+    await pendingLogout;
+    expect(store.currentUser?.id).toBe('b');
+    expect(getAccessToken()).toBe('access-b');
+  });
+
+  it('ignores refreshUser after logout', async () => {
+    vi.mocked(commercialAuth.login).mockResolvedValue(tokens('1'));
+    vi.mocked(commercialAccount.me).mockResolvedValue(user('a'));
+    let resolveMe: (value: CurrentUser) => void = () => {};
+    const pendingMe = new Promise<CurrentUser>((resolve) => {
+      resolveMe = resolve;
+    });
+
+    const store = useAuthStore();
+    await store.login('a@example.test', 'password12345');
+    vi.mocked(commercialAccount.me).mockReturnValueOnce(pendingMe);
+
+    const refresh = store.refreshUser();
+    store.logout();
+    resolveMe(user('stale'));
+    await refresh;
+
+    expect(store.status).toBe('anonymous');
+    expect(store.currentUser).toBeNull();
+  });
+
+  it('ignores refreshUser after a different user logs in', async () => {
+    vi.mocked(commercialAuth.login).mockResolvedValue(tokens('1'));
+    vi.mocked(commercialAccount.me).mockResolvedValue(user('a'));
+    let resolveMe: (value: CurrentUser) => void = () => {};
+    const pendingMe = new Promise<CurrentUser>((resolve) => {
+      resolveMe = resolve;
+    });
+
+    const store = useAuthStore();
+    await store.login('a@example.test', 'password12345');
+    vi.mocked(commercialAccount.me).mockReturnValueOnce(pendingMe);
+    const refresh = store.refreshUser();
+
+    vi.mocked(commercialAuth.logout).mockResolvedValue(undefined);
+    store.logout();
+    vi.mocked(commercialAuth.login).mockResolvedValueOnce(tokens('b'));
+    vi.mocked(commercialAccount.me).mockResolvedValueOnce(user('b'));
+    await store.login('b@example.test', 'password12345');
+
+    resolveMe(user('a-stale'));
+    await refresh;
+
+    expect(store.currentUser?.id).toBe('b');
+    expect(getAccessToken()).toBe('access-b');
+  });
+
+  it('applies only the newest concurrent refreshUser result', async () => {
+    vi.mocked(commercialAuth.login).mockResolvedValue(tokens('1'));
+    vi.mocked(commercialAccount.me).mockResolvedValue(user('a'));
+    let resolveFirst: (value: CurrentUser) => void = () => {};
+    let resolveSecond: (value: CurrentUser) => void = () => {};
+    const first = new Promise<CurrentUser>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const second = new Promise<CurrentUser>((resolve) => {
+      resolveSecond = resolve;
+    });
+
+    const store = useAuthStore();
+    await store.login('a@example.test', 'password12345');
+    vi.mocked(commercialAccount.me).mockReturnValueOnce(first).mockReturnValueOnce(second);
+
+    const firstRun = store.refreshUser();
+    const secondRun = store.refreshUser();
+    resolveSecond(user('new'));
+    await secondRun;
+    resolveFirst(user('old'));
+    await firstRun;
+
+    expect(store.currentUser?.id).toBe('new');
+  });
+
+  it('rethrows a current refreshUser error without clearing the user', async () => {
+    vi.mocked(commercialAuth.login).mockResolvedValue(tokens('1'));
+    vi.mocked(commercialAccount.me).mockResolvedValue(user('a'));
+
+    const store = useAuthStore();
+    await store.login('a@example.test', 'password12345');
+    vi.mocked(commercialAccount.me).mockRejectedValueOnce(new ApiError(500, 'server_error', 'boom'));
+
+    await expect(store.refreshUser()).rejects.toBeInstanceOf(ApiError);
+    expect(store.currentUser?.id).toBe('a');
+  });
 });

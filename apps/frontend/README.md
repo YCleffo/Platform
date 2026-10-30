@@ -86,10 +86,16 @@ npm run build             # typecheck + production-сборка
 Браузерные проверки (Playwright + установленный Chrome/Edge; нужен `npm run dev`):
 
 ```bash
-node scripts/verify-responsive.mjs  # маршруты/guard, overflow 320–1440, console, темы, keyboard, RU
-node scripts/screenshot.mjs         # скриншоты доступных состояний в screenshots/
-node scripts/e2e-account-workspace.mjs  # реальный E2E рабочего пространства (backend + Mailpit)
+node scripts/verify-responsive.mjs  # read-only smoke: маршруты/guard, overflow, console, темы, keyboard, RU
+node scripts/screenshot.mjs         # скриншоты неаутентифицированных состояний
+node scripts/e2e-account-workspace.mjs --check-guard  # проверка отказа мутирующего E2E без isolated runtime
 ```
+
+Мутирующий E2E (`node scripts/e2e-account-workspace.mjs`) запускается только в явно
+подтверждённом изолированном окружении (`E2E_RUNTIME=isolated-ci`, `E2E_ISOLATED_DB=1`,
+`E2E_ALLOW_MUTATIONS=1`, allowlisted hosts, `E2E_PASSWORD`). По умолчанию он отказывает
+(`NOT_VERIFIED`, exit 2) и не выполняет HTTP-запросов; на локальной рабочей БД не
+запускается.
 
 Аутентифицированный кабинет и диалог создания аккаунта требуют работающего backend:
 в браузерных скриптах они честно помечаются `NOT_VERIFIED`. Клавиатурная доступность

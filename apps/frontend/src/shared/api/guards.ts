@@ -5,16 +5,21 @@ import type {
   CommercialAccountSummary,
   CommercialMembership,
   CommercialMembershipList,
+  ControlSession,
+  ControlSessionList,
   CreateAccountResult,
   CurrentUser,
   LoginResult,
   MfaChallenge,
+  MfaStatus,
   Plan,
   PlanCatalogResponse,
   PlanPrice,
+  RecoveryCodesResult,
   RegisterResult,
   SessionTokens,
   StatusResult,
+  TotpSetup,
 } from '@/shared/types';
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -150,6 +155,49 @@ export function isCommercialMembershipList(value: unknown): value is CommercialM
     isNumber(value.limit) &&
     isNumber(value.offset)
   );
+}
+
+export function isMfaStatus(value: unknown): value is MfaStatus {
+  return (
+    isRecord(value) &&
+    isBoolean(value.enabled) &&
+    (value.factor_id === null || isString(value.factor_id)) &&
+    isNumber(value.recovery_codes_remaining)
+  );
+}
+
+export function isTotpSetup(value: unknown): value is TotpSetup {
+  return (
+    isRecord(value) &&
+    isString(value.factor_id) &&
+    isString(value.secret) &&
+    isString(value.otpauth_uri)
+  );
+}
+
+export function isRecoveryCodesResult(value: unknown): value is RecoveryCodesResult {
+  return isRecord(value) && Array.isArray(value.recovery_codes) && value.recovery_codes.every(isString);
+}
+
+export function isControlSession(value: unknown): value is ControlSession {
+  return (
+    isRecord(value) &&
+    isString(value.id) &&
+    isString(value.issued_at) &&
+    isString(value.last_used_at) &&
+    isString(value.expires_at) &&
+    isNullableString(value.revoked_at) &&
+    isNullableString(value.revoke_reason) &&
+    isString(value.user_agent) &&
+    isString(value.authentication_method) &&
+    isString(value.primary_authenticated_at) &&
+    isNullableString(value.mfa_authenticated_at) &&
+    isBoolean(value.current)
+  );
+}
+
+export function isControlSessionList(value: unknown): value is ControlSessionList {
+  return isRecord(value) && Array.isArray(value.items) && value.items.every(isControlSession);
 }
 
 export function isCreateAccountResult(value: unknown): value is CreateAccountResult {

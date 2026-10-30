@@ -7,6 +7,7 @@ import {
   isCurrentUser,
 } from '../guards';
 import type {
+  AccountRole,
   CommercialAccountDetail,
   CommercialAccountList,
   CommercialMembershipList,
@@ -21,6 +22,8 @@ export interface CommercialAccountApi {
   getAccount(accountId: string): Promise<CommercialAccountDetail>;
   listMemberships(accountId: string, limit?: number, offset?: number): Promise<CommercialMembershipList>;
   createAccount(payload: CreateAccountPayload, idempotencyKey: string): Promise<CreateAccountResult>;
+  changeMembershipRole(accountId: string, membershipId: string, role: AccountRole): Promise<void>;
+  removeMembership(accountId: string, membershipId: string): Promise<void>;
 }
 
 export function createCommercialAccountApi(http: HttpClient): CommercialAccountApi {
@@ -43,5 +46,9 @@ export function createCommercialAccountApi(http: HttpClient): CommercialAccountA
         idempotencyKey,
         validate: isCreateAccountResult,
       }),
+    changeMembershipRole: (accountId, membershipId, role) =>
+      http.patch<void>(`/accounts/${accountId}/memberships/${membershipId}`, { role }),
+    removeMembership: (accountId, membershipId) =>
+      http.delete<void>(`/accounts/${accountId}/memberships/${membershipId}`),
   };
 }

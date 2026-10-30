@@ -2,12 +2,29 @@
 import MembershipCard from './MembershipCard.vue';
 import type { CommercialMembership } from '@/shared/types';
 
-defineProps<{ memberships: CommercialMembership[] }>();
+defineProps<{
+  memberships: CommercialMembership[];
+  manageableIds: string[];
+  removableIds: string[];
+}>();
+
+defineEmits<{
+  'change-role': [membership: CommercialMembership];
+  remove: [membership: CommercialMembership];
+}>();
 </script>
 
 <template>
   <ul class="members" role="list">
-    <MembershipCard v-for="membership in memberships" :key="membership.id" :membership="membership" />
+    <MembershipCard
+      v-for="membership in memberships"
+      :key="membership.id"
+      :membership="membership"
+      :can-manage="manageableIds.includes(membership.id)"
+      :can-remove="removableIds.includes(membership.id)"
+      @change-role="$emit('change-role', membership)"
+      @remove="$emit('remove', membership)"
+    />
   </ul>
 </template>
 

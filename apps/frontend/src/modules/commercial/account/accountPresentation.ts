@@ -1,6 +1,34 @@
-import type { CommercialAccountSummary } from '@/shared/types';
+import type {
+  AccountRole,
+  CommercialAccountPermissions,
+  CommercialAccountSummary,
+} from '@/shared/types';
 
 export type BadgeVariant = 'neutral' | 'primary' | 'success' | 'warning' | 'danger';
+
+export interface RoleOption {
+  value: AccountRole;
+  label: string;
+}
+
+/** Server RBAC mirrored only for showing/hiding actions; the backend re-checks. */
+export function canManageMembership(role: AccountRole, permissions: CommercialAccountPermissions): boolean {
+  return role === 'owner' ? permissions.manage_ownership : permissions.manage_members;
+}
+
+export function assignableRoles(
+  currentRole: AccountRole,
+  permissions: CommercialAccountPermissions,
+): AccountRole[] {
+  if (!canManageMembership(currentRole, permissions)) {
+    return [];
+  }
+  const all: AccountRole[] = ['owner', 'admin', 'billing', 'technical'];
+  const allowed: AccountRole[] = permissions.manage_ownership
+    ? all
+    : ['admin', 'billing', 'technical'];
+  return allowed.filter((role) => role !== currentRole);
+}
 
 export function roleVariant(role: string): BadgeVariant {
   return role === 'owner' ? 'primary' : 'neutral';
