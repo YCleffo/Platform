@@ -13,6 +13,8 @@
 
 Compose передаёт Core адрес `postgres:5432`, Commercial — `control-postgres:5432`. Это имена сервисов внутри разных сетей. Приложение Core требует свои `DB_*` и не подхватывает `POSTGRES_*` при их отсутствии. Явный `DB_PASSWORD_FILE` используется только в выделенном provisioner-контракте с закреплённым путём секрета.
 
+Локальная почта поступает в Mailpit: SMTP `mailpit:1025`, просмотр писем — `http://localhost:8025`. `LOCAL_MAIL_ENABLED=true` и `LOCAL_MAIL_COUNTRY=RU` регистрируют этот приёмник только в конфигурации Core `dev`; другой SMTP-хост, порт или TLS с этим флагом отклоняются. Commercial использует локальную запись `smtp` из `CONTROL_PRIVACY_PROVIDER_DECISIONS` в `.env.example`. Пароли SMTP для Mailpit не нужны. При переходе на внешний SMTP выключите локальный флаг и задайте конфигурацию реального провайдера; production-конфигурация Core локальный профиль не загружает.
+
 ## Изменение
 
 ```powershell

@@ -12,6 +12,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
@@ -33,13 +34,30 @@ final class ApiExceptionSubscriber implements EventSubscriberInterface
                 $exception->errorCode, $exception->getMessage()],
             $exception instanceof AccessDeniedException && ApiRequest::bearer($request) === '' => [Response::HTTP_UNAUTHORIZED, 'authentication_required', 'Authentication is required.'],
             $exception instanceof AccessDeniedException => [Response::HTTP_NOT_FOUND, 'resource_not_found', 'The requested resource was not found.'],
+            $exception instanceof HttpExceptionInterface => [
+                $exception->getStatusCode(),
+                match ($exception->getStatusCode()) {
+                    Response::HTTP_NOT_FOUND => 'resource_not_found',
+                    Response::HTTP_METHOD_NOT_ALLOWED => 'method_not_allowed',
+                    default => $exception->getStatusCode() >= 500 ? 'internal_error' : 'http_error',
+                },
+                match ($exception->getStatusCode()) {
+                    Response::HTTP_NOT_FOUND => 'The requested resource was not found.',
+                    Response::HTTP_METHOD_NOT_ALLOWED => 'The HTTP method is not allowed.',
+                    default => 'The HTTP request could not be completed.',
+                },
+            ],
             $exception instanceof UniqueConstraintViolationException => [Response::HTTP_CONFLICT, 'conflict', 'The requested resource conflicts with existing data.'],
             $exception instanceof \JsonException => [Response::HTTP_BAD_REQUEST, 'invalid_json', 'The request body is not valid JSON.'],
             $exception instanceof \InvalidArgumentException => [Response::HTTP_UNPROCESSABLE_ENTITY, 'validation_failed', 'The request data is invalid.'],
             $exception instanceof \DomainException => [Response::HTTP_CONFLICT, 'operation_rejected', 'The requested operation is not allowed.'],
             default => [Response::HTTP_INTERNAL_SERVER_ERROR, 'internal_error', 'The request could not be completed.'],
         };
-        $response = new JsonResponse(['error' => ['code' => $code, 'message' => $message]], $status);
+        $response = new JsonResponse(
+            ['error' => ['code' => $code, 'message' => $message]],
+            $status,
+            $exception instanceof HttpExceptionInterface ? $exception->getHeaders() : [],
+        );
         if ($exception instanceof RateLimitExceeded) {
             $response->headers->set('Retry-After', (string) $exception->retryAfter);
         }

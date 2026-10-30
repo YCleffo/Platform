@@ -2,7 +2,12 @@ openapi: 3.1.0
 info:
   title: Platform Commercial Control Plane API
   version: 3.9.0
-  description: Customer-facing Commercial API. Provider secrets, request keys, raw webhooks and fiscal customer PII are never returned.
+  description: >-
+    Customer-facing Commercial API. Provider secrets, request keys, raw webhooks
+    and fiscal customer PII are never returned. Unknown API routes return 404
+    with error.code resource_not_found. Unsupported HTTP methods return 405
+    with error.code method_not_allowed and an Allow header. HTTP exceptions
+    preserve their status and protocol headers without exposing internal messages.
 servers:
   - url: /
 security:
@@ -30,7 +35,7 @@ paths:
       security: []
       operationId: register
       requestBody: {$ref: '#/components/requestBodies/EmailPassword'}
-      responses: {'201': {$ref: '#/components/responses/Object'}, '422': {$ref: '#/components/responses/Error'}}
+      responses: {'202': {$ref: '#/components/responses/Object'}, '422': {$ref: '#/components/responses/Error'}}
   /api/control/auth/verification/resend:
     post:
       security: []
