@@ -77,15 +77,16 @@ describe('http client', () => {
     expect(refreshTokens).toHaveBeenCalledTimes(1);
   });
 
-  it('does not refresh a second time when the retry also returns 401', async () => {
+  it('does not refresh a second time when the retry also returns 401 and ends the session', async () => {
     const fetchMock = vi.fn(async () => unauthorized());
     vi.stubGlobal('fetch', fetchMock);
     const refreshTokens = vi.fn(async () => refreshed('access-2', 'r2'));
-    const { client } = makeClient({ refreshTokens });
+    const { client, onUnauthorized } = makeClient({ refreshTokens });
 
     await expect(client.get('/me')).rejects.toBeInstanceOf(ApiError);
     expect(refreshTokens).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
   });
 
   it('calls onUnauthorized when the refresh is rejected', async () => {

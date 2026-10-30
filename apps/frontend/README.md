@@ -88,6 +88,7 @@ npm run build             # typecheck + production-сборка
 ```bash
 node scripts/verify-responsive.mjs  # маршруты/guard, overflow 320–1440, console, темы, keyboard, RU
 node scripts/screenshot.mjs         # скриншоты доступных состояний в screenshots/
+node scripts/e2e-account-workspace.mjs  # реальный E2E рабочего пространства (backend + Mailpit)
 ```
 
 Аутентифицированный кабинет и диалог создания аккаунта требуют работающего backend:

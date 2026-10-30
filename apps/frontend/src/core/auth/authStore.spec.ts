@@ -4,7 +4,7 @@ import { commercialAccount, commercialAuth } from '@/core/api';
 import { endSession, getAccessToken } from './session';
 import { MfaChallengeMissingError, useAuthStore } from './authStore';
 import { ApiError } from '@/shared/api/errors';
-import type { CurrentUser } from '@/shared/types';
+import type { CurrentUser, SessionTokens } from '@/shared/types';
 
 vi.mock('@/core/api', () => ({
   commercialAuth: {
@@ -129,5 +129,71 @@ describe('authStore', () => {
   it('rejects verifyMfa when no challenge is active', async () => {
     const store = useAuthStore();
     await expect(store.verifyMfa('123456')).rejects.toBeInstanceOf(MfaChallengeMissingError);
+  });
+
+  it('ignores a login that resolves after a newer login', async () => {
+    let resolveFirst: (value: SessionTokens) => void = () => {};
+    let resolveSecond: (value: SessionTokens) => void = () => {};
+    const firstAttempt = new Promise<SessionTokens>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const secondAttempt = new Promise<SessionTokens>((resolve) => {
+      resolveSecond = resolve;
+    });
+    vi.mocked(commercialAuth.login).mockReturnValueOnce(firstAttempt).mockReturnValueOnce(secondAttempt);
+    vi.mocked(commercialAccount.me).mockResolvedValue(user('b'));
+
+    const store = useAuthStore();
+    const first = store.login('a@example.test', 'password12345');
+    const second = store.login('b@example.test', 'password12345');
+
+    resolveSecond(tokens('b'));
+    await second;
+    resolveFirst(tokens('a'));
+    await first.catch(() => undefined);
+
+    expect(store.status).toBe('authenticated');
+    expect(getAccessToken()).toBe('access-b');
+    expect(store.currentUser?.id).toBe('b');
+  });
+
+  it('ignores a login that finishes after logout', async () => {
+    let resolveLogin: (value: SessionTokens) => void = () => {};
+    const pending = new Promise<SessionTokens>((resolve) => {
+      resolveLogin = resolve;
+    });
+    vi.mocked(commercialAuth.login).mockReturnValueOnce(pending);
+    vi.mocked(commercialAuth.logout).mockResolvedValue(undefined);
+
+    const store = useAuthStore();
+    const login = store.login('a@example.test', 'password12345');
+    await store.logout();
+    resolveLogin(tokens('a'));
+    await login.catch(() => undefined);
+
+    expect(store.status).toBe('anonymous');
+    expect(getAccessToken()).toBeNull();
+    expect(store.currentUser).toBeNull();
+  });
+
+  it('ignores an MFA result after the session was reset', async () => {
+    vi.mocked(commercialAuth.login).mockResolvedValue(mfaChallenge);
+    let resolveVerify: (value: SessionTokens) => void = () => {};
+    const pending = new Promise<SessionTokens>((resolve) => {
+      resolveVerify = resolve;
+    });
+    vi.mocked(commercialAuth.verifyMfaLogin).mockReturnValueOnce(pending);
+
+    const store = useAuthStore();
+    await store.login('a@example.test', 'password12345');
+    expect(store.status).toBe('mfa_required');
+
+    const verify = store.verifyMfa('123456');
+    store.reset();
+    resolveVerify(tokens('mfa'));
+    await verify.catch(() => undefined);
+
+    expect(store.status).toBe('anonymous');
+    expect(getAccessToken()).toBeNull();
   });
 });

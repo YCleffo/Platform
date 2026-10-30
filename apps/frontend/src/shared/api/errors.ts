@@ -26,6 +26,14 @@ export class RequestAbortedError extends Error {
   }
 }
 
+/** A newer operation replaced this one; its result must be ignored. */
+export class SupersededOperationError extends Error {
+  constructor() {
+    super('The operation was superseded by a newer request.');
+    this.name = 'SupersededOperationError';
+  }
+}
+
 /** The server answered with a payload that does not match the documented contract. */
 export class ApiResponseError extends Error {
   readonly path: string;

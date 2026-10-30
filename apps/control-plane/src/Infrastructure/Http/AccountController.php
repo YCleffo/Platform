@@ -6,6 +6,8 @@ namespace ControlPlane\Infrastructure\Http;
 
 use ControlPlane\Account\Application\BillingProfileService;
 use ControlPlane\Account\Application\CreateCommercialAccount;
+use ControlPlane\Account\Application\GetCommercialAccount;
+use ControlPlane\Account\Application\ListAccountMemberships;
 use ControlPlane\Account\Application\ListCommercialAccounts;
 use ControlPlane\Account\Application\MembershipService;
 use ControlPlane\Account\Authorization\AccountAuthorization;
@@ -26,6 +28,8 @@ final class AccountController extends AbstractController
         private readonly Connection $connection,
         private readonly CreateCommercialAccount $accounts,
         private readonly ListCommercialAccounts $accountList,
+        private readonly GetCommercialAccount $accountDetail,
+        private readonly ListAccountMemberships $membershipList,
         private readonly MembershipService $memberships,
         private readonly BillingProfileService $billing,
         private readonly AccountAuthorization $authorization,
@@ -61,13 +65,16 @@ final class AccountController extends AbstractController
     #[Route('/{accountId}', name: 'get', methods: ['GET'])]
     public function get(string $accountId): JsonResponse
     {
-        $this->authorization->requirePermission($this->user()->id(), $accountId, 'account.read');
-        $account = $this->connection->fetchAssociative('SELECT id, code, display_name, legal_name, status, onboarding_state, created_at, updated_at FROM commercial.commercial_accounts WHERE id = ?', [$accountId]);
-        if ($account === false) {
-            throw new \DomainException('Account was not found.');
-        }
+        return new JsonResponse($this->accountDetail->forUser($this->user()->id(), $accountId));
+    }
 
-        return new JsonResponse($account);
+    #[Route('/{accountId}/memberships', name: 'membership_list', methods: ['GET'])]
+    public function listMemberships(string $accountId, Request $request): JsonResponse
+    {
+        $limit = (int) $request->query->get('limit', '50');
+        $offset = (int) $request->query->get('offset', '0');
+
+        return new JsonResponse($this->membershipList->forUser($this->user()->id(), $accountId, $limit, $offset));
     }
 
     #[Route('/{accountId}/memberships', name: 'membership_add', methods: ['POST'])]

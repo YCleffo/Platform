@@ -66,12 +66,45 @@ src/
 - Logout очищает auth-состояние, account-состояние и тосты; данные пользователя A не
   появляются у пользователя B.
 
-## Account context
+## Account context и рабочее пространство аккаунта
 
-`core/account/accountStore.ts` — единый контекст аккаунтов: список, выбранный аккаунт,
-пагинация (`limit`/`offset`/`total` существующего API), загрузка, ошибки, инвалидация по
-epoch и защита от устаревших ответов. Создание аккаунта не перезагружает кабинет — диалог
-сообщает об успехе, страница обновляет первую страницу.
+`core/account/accountStore.ts` — единый контекст: список (пагинация `limit`/`offset`/
+`total`), детали выбранного аккаунта (`selectedAccountId`, `accountDetail`,
+`detailLoading`, `detailError`, `loadAccount`, `invalidateAccount`,
+`clearAccountContext`), защита от устаревших ответов и очистка по epoch. URL —
+источник `accountId`; store владеет загруженными данными. При смене аккаунта прежние
+данные не показываются.
+
+Маршруты:
+
+- `/accounts/:accountId` — обзор аккаунта;
+- `/accounts/:accountId/members` — участники (только просмотр).
+
+`AccountLayout` загружает детали, показывает заголовок, breadcrumbs, переключатель
+аккаунтов и вкладки; `AccountOverviewView` — сведения и статус; `AccountMembersView` —
+список участников с пагинацией. Токены живут в памяти: после полной перезагрузки
+защищённый URL уводит на `/login?redirect=...` и после входа возвращает на нужный
+аккаунт.
+
+### Read API аккаунта
+
+- `GET /api/control/accounts/{accountId}` — сведения + `role` текущего пользователя и
+  `permissions` (`read_account`, `view_members`, `manage_members`,
+  `manage_ownership`, `manage_billing`, `manage_technical`), вычисленные на сервере.
+- `GET /api/control/accounts/{accountId}/memberships` — активные участники, пагинация
+  `limit`/`offset`/`total`, поля `id`, `user_id`, `email`, `role`, `created_at`.
+
+Право просмотра участников — `membership.read` у `owner` и `admin`. `billing` и
+`technical` его не имеют. Frontend скрывает вкладку по `permissions.view_members`, но
+сервер повторно проверяет доступ.
+
+### E2E рабочего пространства
+
+`node scripts/e2e-account-workspace.mjs` — реальный сценарий (нужны запущенные
+control-plane и Mailpit): регистрация/подтверждение (или существующие пользователи через
+`E2E_EMAIL_A`/`E2E_EMAIL_B`), вход, создание аккаунтов, обзор, участники, переключение,
+неизвестный аккаунт, прямой URL с повторным входом, темы, 320/1440, клавиатура,
+запрет доступа к чужому аккаунту.
 
 ## Дизайн-система
 

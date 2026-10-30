@@ -122,7 +122,19 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
         if (config.getSessionEpoch() !== startEpoch) {
           throw error;
         }
-        return await send<T>(path, options, outcome.tokens.access_token);
+        try {
+          return await send<T>(path, options, outcome.tokens.access_token);
+        } catch (retryError) {
+          // The refreshed token is still rejected: the session is unusable.
+          if (
+            retryError instanceof ApiError &&
+            retryError.status === 401 &&
+            config.getSessionEpoch() === startEpoch
+          ) {
+            config.onUnauthorized();
+          }
+          throw retryError;
+        }
       }
       if (outcome.status === 'expired') {
         if (config.getSessionEpoch() === startEpoch) {

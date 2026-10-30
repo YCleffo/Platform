@@ -10,28 +10,38 @@ function storedTheme(): Theme {
 }
 
 const theme = ref<Theme>(storedTheme());
-const media = window.matchMedia('(prefers-color-scheme: dark)');
-
-function systemDark(): boolean {
-  return media.matches;
-}
+const systemDark = ref(false);
+let media: MediaQueryList | null = null;
 
 function applyTheme(): void {
-  const resolved = theme.value === 'system' ? (systemDark() ? 'dark' : 'light') : theme.value;
+  const resolved = theme.value === 'system' ? (systemDark.value ? 'dark' : 'light') : theme.value;
   document.documentElement.dataset.theme = resolved;
 }
 
-export function initTheme(): void {
-  applyTheme();
-  media.addEventListener('change', () => {
+function ensureMedia(): void {
+  if (media !== null) {
+    return;
+  }
+  media = window.matchMedia('(prefers-color-scheme: dark)');
+  systemDark.value = media.matches;
+  media.addEventListener('change', (event) => {
+    systemDark.value = event.matches;
     if (theme.value === 'system') {
       applyTheme();
     }
   });
 }
 
+export function initTheme(): void {
+  ensureMedia();
+  applyTheme();
+}
+
 export function useTheme() {
-  const resolved = computed(() => (theme.value === 'system' ? (systemDark() ? 'dark' : 'light') : theme.value));
+  ensureMedia();
+  const resolved = computed(() =>
+    theme.value === 'system' ? (systemDark.value ? 'dark' : 'light') : theme.value,
+  );
   const isDark = computed(() => resolved.value === 'dark');
 
   function setTheme(next: Theme): void {

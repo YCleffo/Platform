@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue';
-import { RequestAbortedError } from '@/shared/api/errors';
+import { RequestAbortedError, SupersededOperationError } from '@/shared/api/errors';
 import { resolveErrorMessage } from '@/shared/errors/humanize';
 
 /**
@@ -25,7 +25,7 @@ export function useAsyncAction(action: () => Promise<unknown>) {
       await action();
       return true;
     } catch (err) {
-      if (err instanceof RequestAbortedError) {
+      if (err instanceof RequestAbortedError || err instanceof SupersededOperationError) {
         return false;
       }
       error.value = err;

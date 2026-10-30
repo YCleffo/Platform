@@ -1,4 +1,10 @@
-import { ApiError, ApiResponseError, NetworkError, RequestAbortedError } from '@/shared/api/errors';
+import {
+  ApiError,
+  ApiResponseError,
+  NetworkError,
+  RequestAbortedError,
+  SupersededOperationError,
+} from '@/shared/api/errors';
 import { i18n } from '@/shared/i18n';
 
 const CODE_KEYS: Record<string, string> = {
@@ -20,7 +26,7 @@ const CODE_KEYS: Record<string, string> = {
  * Unknown API codes fall back to a generic localized message (never a raw English/server string).
  */
 export function resolveErrorMessage(error: unknown): string {
-  if (error instanceof RequestAbortedError) {
+  if (error instanceof RequestAbortedError || error instanceof SupersededOperationError) {
     return '';
   }
   if (error instanceof NetworkError) {

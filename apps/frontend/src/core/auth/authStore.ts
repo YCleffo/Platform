@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { commercialAccount, commercialAuth } from '@/core/api';
+import { SupersededOperationError } from '@/shared/api/errors';
 import { beginSession, endSession, hasSession, sessionTokens } from './session';
 import type { CurrentUser, LoginResult, MfaChallenge, RegisterResult, SessionTokens, StatusResult } from '@/shared/types';
 
@@ -18,15 +19,25 @@ export const useAuthStore = defineStore('auth', () => {
   const mfaChallenge = ref<MfaChallenge | null>(null);
   const status = ref<AuthStatus>(hasSession() ? 'authenticated' : 'anonymous');
 
+  // Monotonic token: a login/MFA/logout that is superseded must never apply its result.
+  let operationId = 0;
+
   const isAuthenticated = computed(() => status.value === 'authenticated' && sessionTokens.value !== null);
   const currentUser = computed(() => user.value);
 
-  async function establishSession(tokens: SessionTokens): Promise<void> {
+  async function establishSession(tokens: SessionTokens, operation: number): Promise<void> {
     beginSession(tokens);
     try {
-      user.value = await commercialAccount.me();
+      const me = await commercialAccount.me();
+      if (operation !== operationId) {
+        return;
+      }
+      user.value = me;
       status.value = 'authenticated';
     } catch (error) {
+      if (operation !== operationId) {
+        return;
+      }
       // Never leave the app "authenticated" without a loaded user context.
       endSession();
       user.value = null;
@@ -48,17 +59,24 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(email: string, password: string): Promise<void> {
+    const operation = ++operationId;
     status.value = 'authenticating';
     mfaChallenge.value = null;
     try {
       const result = await commercialAuth.login(email, password);
+      if (operation !== operationId) {
+        throw new SupersededOperationError();
+      }
       if (isMfaChallenge(result)) {
         mfaChallenge.value = result;
         status.value = 'mfa_required';
         return;
       }
-      await establishSession(result);
+      await establishSession(result, operation);
     } catch (error) {
+      if (operation !== operationId) {
+        throw new SupersededOperationError();
+      }
       status.value = mfaChallenge.value !== null ? 'mfa_required' : 'anonymous';
       throw error;
     }
@@ -69,12 +87,19 @@ export const useAuthStore = defineStore('auth', () => {
     if (challenge === null) {
       throw new MfaChallengeMissingError();
     }
+    const operation = ++operationId;
     status.value = 'authenticating';
     try {
       const tokens = await commercialAuth.verifyMfaLogin(challenge.challenge_token, { code, recoveryCode });
+      if (operation !== operationId) {
+        throw new SupersededOperationError();
+      }
       mfaChallenge.value = null;
-      await establishSession(tokens);
+      await establishSession(tokens, operation);
     } catch (error) {
+      if (operation !== operationId) {
+        throw new SupersededOperationError();
+      }
       status.value = mfaChallenge.value !== null ? 'mfa_required' : 'anonymous';
       throw error;
     }
@@ -88,6 +113,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout(): Promise<void> {
+    operationId += 1;
     status.value = 'signing_out';
     try {
       await commercialAuth.logout();
@@ -99,6 +125,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function reset(): void {
+    operationId += 1;
     endSession();
     user.value = null;
     mfaChallenge.value = null;

@@ -1,8 +1,15 @@
 import type { HttpClient } from '../http';
-import { isCommercialAccountList, isCommercialAccountSummary, isCreateAccountResult, isCurrentUser } from '../guards';
+import {
+  isCommercialAccountDetail,
+  isCommercialAccountList,
+  isCommercialMembershipList,
+  isCreateAccountResult,
+  isCurrentUser,
+} from '../guards';
 import type {
+  CommercialAccountDetail,
   CommercialAccountList,
-  CommercialAccountSummary,
+  CommercialMembershipList,
   CreateAccountPayload,
   CreateAccountResult,
   CurrentUser,
@@ -11,7 +18,8 @@ import type {
 export interface CommercialAccountApi {
   me(): Promise<CurrentUser>;
   listAccounts(limit?: number, offset?: number): Promise<CommercialAccountList>;
-  getAccount(accountId: string): Promise<CommercialAccountSummary>;
+  getAccount(accountId: string): Promise<CommercialAccountDetail>;
+  listMemberships(accountId: string, limit?: number, offset?: number): Promise<CommercialMembershipList>;
   createAccount(payload: CreateAccountPayload, idempotencyKey: string): Promise<CreateAccountResult>;
 }
 
@@ -24,7 +32,12 @@ export function createCommercialAccountApi(http: HttpClient): CommercialAccountA
         validate: isCommercialAccountList,
       }),
     getAccount: (accountId) =>
-      http.get<CommercialAccountSummary>(`/accounts/${accountId}`, { validate: isCommercialAccountSummary }),
+      http.get<CommercialAccountDetail>(`/accounts/${accountId}`, { validate: isCommercialAccountDetail }),
+    listMemberships: (accountId, limit = 50, offset = 0) =>
+      http.get<CommercialMembershipList>(`/accounts/${accountId}/memberships`, {
+        query: { limit, offset },
+        validate: isCommercialMembershipList,
+      }),
     createAccount: (payload, idempotencyKey) =>
       http.post<CreateAccountResult>('/accounts', payload, {
         idempotencyKey,

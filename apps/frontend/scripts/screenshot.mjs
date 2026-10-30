@@ -81,7 +81,8 @@ console.log(`CAPTURED ${shots.length} screenshots in screenshots/`);
 for (const shot of shots) {
   console.log(`  screenshots/${shot}`);
 }
-console.log('NOT_VERIFIED: authenticated cabinet and create-account dialog (no backend available).');
+console.log('NOT_VERIFIED: authenticated cabinet, account workspace and create-account dialog (no auth in this static check).');
+console.log('Use scripts/e2e-account-workspace.mjs with a running backend for the authenticated workspace.');
 
 if (failures.length > 0) {
   console.error('SCREENSHOT FAILURES:');

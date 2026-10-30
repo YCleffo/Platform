@@ -41,7 +41,14 @@ defineEmits<{
   </AppEmptyState>
 
   <div v-else class="account-list__grid">
-    <AccountCard v-for="account in accounts" :key="account.id" :account="account" />
+    <RouterLink
+      v-for="account in accounts"
+      :key="account.id"
+      class="account-list__link"
+      :to="{ name: 'account-overview', params: { accountId: account.id } }"
+    >
+      <AccountCard :account="account" />
+    </RouterLink>
   </div>
 </template>
 
@@ -50,6 +57,21 @@ defineEmits<{
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-16);
+}
+
+.account-list__link {
+  display: block;
+  color: inherit;
+  border-radius: var(--radius-card-m);
+}
+
+.account-list__link:hover {
+  text-decoration: none;
+}
+
+.account-list__link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 @media (min-width: 768px) {

@@ -64,6 +64,34 @@ export interface CommercialAccountList {
   offset: number;
 }
 
+export interface CommercialAccountPermissions {
+  read_account: boolean;
+  view_members: boolean;
+  manage_members: boolean;
+  manage_ownership: boolean;
+  manage_billing: boolean;
+  manage_technical: boolean;
+}
+
+export interface CommercialAccountDetail extends CommercialAccountSummary {
+  permissions: CommercialAccountPermissions;
+}
+
+export interface CommercialMembership {
+  id: string;
+  user_id: string;
+  email: string;
+  role: AccountRole;
+  created_at: string;
+}
+
+export interface CommercialMembershipList {
+  items: CommercialMembership[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface PlanPrice {
   id: string;
   currency: string;

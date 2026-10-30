@@ -12,6 +12,8 @@ const routes = [
   // Protected / challenge routes must redirect to /login when unauthenticated.
   { path: '/cabinet', expected: '/login', selector: 'form' },
   { path: '/mfa', expected: '/login', selector: 'form' },
+  { path: '/accounts/018f0000-0000-7000-8000-000000000001', expected: '/login', selector: 'form' },
+  { path: '/accounts/018f0000-0000-7000-8000-000000000001/members', expected: '/login', selector: 'form' },
 ];
 
 const problems = [];

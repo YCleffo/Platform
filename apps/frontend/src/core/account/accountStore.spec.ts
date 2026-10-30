@@ -5,7 +5,11 @@ import { commercialAccount } from '@/core/api';
 import { beginSession, endSession } from '@/core/auth/session';
 import { useAccountStore } from './accountStore';
 import { ApiError } from '@/shared/api/errors';
-import type { CommercialAccountList, CommercialAccountSummary } from '@/shared/types';
+import type {
+  CommercialAccountDetail,
+  CommercialAccountList,
+  CommercialAccountSummary,
+} from '@/shared/types';
 
 vi.mock('@/core/api', () => ({
   commercialAuth: {
@@ -20,6 +24,7 @@ vi.mock('@/core/api', () => ({
     me: vi.fn(),
     listAccounts: vi.fn(),
     getAccount: vi.fn(),
+    listMemberships: vi.fn(),
     createAccount: vi.fn(),
   },
   commercialCatalog: { listPlans: vi.fn() },
@@ -35,6 +40,18 @@ const account = (id: string): CommercialAccountSummary => ({
   role: 'owner',
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
+});
+
+const detail = (id: string): CommercialAccountDetail => ({
+  ...account(id),
+  permissions: {
+    read_account: true,
+    view_members: true,
+    manage_members: true,
+    manage_ownership: true,
+    manage_billing: true,
+    manage_technical: true,
+  },
 });
 
 const page = (
@@ -106,7 +123,7 @@ describe('accountStore', () => {
     await vi.waitFor(() => expect(store.offset).toBe(0));
   });
 
-  it('ignores a stale response from an earlier request', async () => {
+  it('ignores a stale list response from an earlier request', async () => {
     let resolveFirst: (value: CommercialAccountList) => void = () => {};
     const first = new Promise<CommercialAccountList>((resolve) => {
       resolveFirst = resolve;
@@ -126,33 +143,102 @@ describe('accountStore', () => {
     expect(store.offset).toBe(20);
   });
 
-  it('clears all account state when the session ends', async () => {
+  it('loads account detail and exposes role capabilities', async () => {
+    vi.mocked(commercialAccount.getAccount).mockResolvedValue(detail('a'));
+
+    const store = useAccountStore();
+    await store.loadAccount('a');
+
+    expect(store.selectedAccountId).toBe('a');
+    expect(store.accountDetail?.id).toBe('a');
+    expect(store.accountDetail?.permissions.view_members).toBe(true);
+    expect(store.detailError).toBeNull();
+    expect(store.detailLoading).toBe(false);
+  });
+
+  it('clears the previous detail immediately when switching accounts', async () => {
+    let resolveB: (value: CommercialAccountDetail) => void = () => {};
+    const pendingB = new Promise<CommercialAccountDetail>((resolve) => {
+      resolveB = resolve;
+    });
+    vi.mocked(commercialAccount.getAccount)
+      .mockResolvedValueOnce(detail('a'))
+      .mockReturnValueOnce(pendingB);
+
+    const store = useAccountStore();
+    await store.loadAccount('a');
+    expect(store.accountDetail?.id).toBe('a');
+
+    const loadingB = store.loadAccount('b');
+    expect(store.accountDetail).toBeNull();
+    expect(store.selectedAccountId).toBe('b');
+
+    resolveB(detail('b'));
+    await loadingB;
+    expect(store.accountDetail?.id).toBe('b');
+  });
+
+  it('ignores a stale detail response', async () => {
+    let resolveA: (value: CommercialAccountDetail) => void = () => {};
+    const pendingA = new Promise<CommercialAccountDetail>((resolve) => {
+      resolveA = resolve;
+    });
+    vi.mocked(commercialAccount.getAccount)
+      .mockReturnValueOnce(pendingA)
+      .mockResolvedValueOnce(detail('b'));
+
+    const store = useAccountStore();
+    const first = store.loadAccount('a');
+    const second = store.loadAccount('b');
+    await second;
+    resolveA(detail('a'));
+    await first;
+
+    expect(store.accountDetail?.id).toBe('b');
+    expect(store.selectedAccountId).toBe('b');
+  });
+
+  it('stores detail errors without exposing stale data', async () => {
+    vi.mocked(commercialAccount.getAccount).mockRejectedValue(
+      new ApiError(404, 'resource_not_found', 'not found'),
+    );
+
+    const store = useAccountStore();
+    await store.loadAccount('private');
+
+    expect(store.accountDetail).toBeNull();
+    expect(store.detailError).not.toBeNull();
+    expect(store.detailErrorMessage).not.toBeNull();
+  });
+
+  it('clears list and detail on logout / session end', async () => {
     vi.mocked(commercialAccount.listAccounts).mockResolvedValue(page([account('1')], 1));
+    vi.mocked(commercialAccount.getAccount).mockResolvedValue(detail('1'));
 
     const store = useAccountStore();
     await store.loadPage(0);
-    store.selectAccount('1');
-    expect(store.selected?.id).toBe('1');
+    await store.loadAccount('1');
+    expect(store.accountDetail).not.toBeNull();
 
     endSession();
     await nextTick();
 
     expect(store.accounts).toHaveLength(0);
-    expect(store.selected).toBeNull();
     expect(store.total).toBe(0);
+    expect(store.accountDetail).toBeNull();
+    expect(store.selectedAccountId).toBeNull();
   });
 
-  it('drops the selected account when a different user signs in', async () => {
-    vi.mocked(commercialAccount.listAccounts).mockResolvedValue(page([account('1')], 1));
+  it('drops detail when a different user signs in', async () => {
+    vi.mocked(commercialAccount.getAccount).mockResolvedValue(detail('1'));
 
     const store = useAccountStore();
-    await store.loadPage(0);
-    store.selectAccount('1');
+    await store.loadAccount('1');
 
     beginSession({ access_token: 'access-b', refresh_token: 'refresh-b' });
     await nextTick();
 
-    expect(store.selected).toBeNull();
-    expect(store.accounts).toHaveLength(0);
+    expect(store.accountDetail).toBeNull();
+    expect(store.selectedAccountId).toBeNull();
   });
 });

@@ -2,7 +2,8 @@
 import { useI18n } from 'vue-i18n';
 import AppBadge from '@/shared/ui/feedback/AppBadge.vue';
 import AppCard from '@/shared/ui/surfaces/AppCard.vue';
-import { accountInitials, onboardingVariant, roleVariant, statusVariant } from './accountPresentation';
+import AccountStatus from './AccountStatus.vue';
+import { accountInitials, roleVariant } from './accountPresentation';
 import type { CommercialAccountSummary } from '@/shared/types';
 
 defineProps<{ account: CommercialAccountSummary }>();
@@ -11,7 +12,7 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <AppCard padding="default" class="account">
+  <AppCard padding="default" interactive class="account">
     <div class="account__head">
       <span class="account__avatar" aria-hidden="true">{{ accountInitials(account) }}</span>
       <div class="account__identity">
@@ -20,14 +21,7 @@ const { t } = useI18n();
       </div>
       <AppBadge :variant="roleVariant(account.role)">{{ t(`cabinet.role_${account.role}`) }}</AppBadge>
     </div>
-    <div class="account__badges">
-      <AppBadge :variant="statusVariant(account.status)" dot>
-        {{ t(`cabinet.status_${account.status}`) }}
-      </AppBadge>
-      <AppBadge :variant="onboardingVariant(account.onboarding_state)">
-        {{ t(`cabinet.onboarding_${account.onboarding_state}`) }}
-      </AppBadge>
-    </div>
+    <AccountStatus :status="account.status" :onboarding-state="account.onboarding_state" />
   </AppCard>
 </template>
 
@@ -78,11 +72,5 @@ const { t } = useI18n();
   font-weight: var(--type-body-small-weight);
   color: var(--text-3);
   font-family: ui-monospace, 'Cascadia Code', 'Roboto Mono', Menlo, monospace;
-}
-
-.account__badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-8);
 }
 </style>

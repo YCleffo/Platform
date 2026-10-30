@@ -1,6 +1,10 @@
 import type {
+  CommercialAccountDetail,
   CommercialAccountList,
+  CommercialAccountPermissions,
   CommercialAccountSummary,
+  CommercialMembership,
+  CommercialMembershipList,
   CreateAccountResult,
   CurrentUser,
   LoginResult,
@@ -101,6 +105,47 @@ export function isCommercialAccountList(value: unknown): value is CommercialAcco
   }
   return (
     value.items.every(isCommercialAccountSummary) &&
+    isNumber(value.total) &&
+    isNumber(value.limit) &&
+    isNumber(value.offset)
+  );
+}
+
+export function isCommercialAccountPermissions(value: unknown): value is CommercialAccountPermissions {
+  return (
+    isRecord(value) &&
+    isBoolean(value.read_account) &&
+    isBoolean(value.view_members) &&
+    isBoolean(value.manage_members) &&
+    isBoolean(value.manage_ownership) &&
+    isBoolean(value.manage_billing) &&
+    isBoolean(value.manage_technical)
+  );
+}
+
+export function isCommercialAccountDetail(value: unknown): value is CommercialAccountDetail {
+  return (
+    isCommercialAccountSummary(value) &&
+    isCommercialAccountPermissions((value as { permissions?: unknown }).permissions)
+  );
+}
+
+export function isCommercialMembership(value: unknown): value is CommercialMembership {
+  return (
+    isRecord(value) &&
+    isString(value.id) &&
+    isString(value.user_id) &&
+    isString(value.email) &&
+    isString(value.role) &&
+    isString(value.created_at)
+  );
+}
+
+export function isCommercialMembershipList(value: unknown): value is CommercialMembershipList {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.items) &&
+    value.items.every(isCommercialMembership) &&
     isNumber(value.total) &&
     isNumber(value.limit) &&
     isNumber(value.offset)

@@ -159,9 +159,15 @@ paths:
     parameters: [{$ref: '#/components/parameters/AccountId'}]
     get:
       operationId: getAccount
-      responses: {'200': {$ref: '#/components/responses/Object'}, '404': {$ref: '#/components/responses/Error'}}
+      responses: {'200': {$ref: '#/components/responses/CommercialAccountDetail'}, '404': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/memberships:
     parameters: [{$ref: '#/components/parameters/AccountId'}]
+    get:
+      operationId: listMemberships
+      parameters:
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+        - {name: offset, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
+      responses: {'200': {$ref: '#/components/responses/CommercialMemberships'}, '404': {$ref: '#/components/responses/Error'}}
     post:
       operationId: addMembership
       requestBody: {$ref: '#/components/requestBodies/Object'}
@@ -488,6 +494,8 @@ components:
     Error: {description: Sanitized error, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
     CurrentUser: {description: Current authenticated Control Plane user, content: {application/json: {schema: {$ref: '#/components/schemas/CurrentUser'}}}}
     CommercialAccounts: {description: Commercial accounts the current user can access, content: {application/json: {schema: {$ref: '#/components/schemas/CommercialAccountList'}}}}
+    CommercialAccountDetail: {description: Commercial account with the current user's role and capabilities, content: {application/json: {schema: {$ref: '#/components/schemas/CommercialAccountDetail'}}}}
+    CommercialMemberships: {description: Active memberships of a commercial account, content: {application/json: {schema: {$ref: '#/components/schemas/CommercialMembershipList'}}}}
   schemas:
     ExternalCompensation:
       type: object
@@ -614,6 +622,51 @@ components:
         role: {type: string, enum: [owner, admin, billing, technical]}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
+    CommercialAccountPermissions:
+      type: object
+      additionalProperties: false
+      required: [read_account, view_members, manage_members, manage_ownership, manage_billing, manage_technical]
+      properties:
+        read_account: {type: boolean}
+        view_members: {type: boolean}
+        manage_members: {type: boolean}
+        manage_ownership: {type: boolean}
+        manage_billing: {type: boolean}
+        manage_technical: {type: boolean}
+    CommercialAccountDetail:
+      type: object
+      additionalProperties: false
+      required: [id, code, display_name, legal_name, status, onboarding_state, role, created_at, updated_at, permissions]
+      properties:
+        id: {type: string, format: uuid}
+        code: {type: string}
+        display_name: {type: string}
+        legal_name: {type: [string, 'null']}
+        status: {type: string, enum: [draft, active, suspended, closed]}
+        onboarding_state: {type: string, enum: [profile_required, catalog_selection_pending, ready_for_subscription]}
+        role: {type: string, enum: [owner, admin, billing, technical]}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        permissions: {$ref: '#/components/schemas/CommercialAccountPermissions'}
+    CommercialMembership:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, email, role, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        user_id: {type: string, format: uuid}
+        email: {type: string, format: email}
+        role: {type: string, enum: [owner, admin, billing, technical]}
+        created_at: {type: string, format: date-time}
+    CommercialMembershipList:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/CommercialMembership'}}
+        total: {type: integer, minimum: 0}
+        limit: {type: integer, minimum: 1}
+        offset: {type: integer, minimum: 0}
     Tokens: {type: object, required: [access_token, refresh_token], properties: {access_token: {type: string}, refresh_token: {type: string}, access_expires_in: {type: integer}, session_expires_in: {type: integer}}}
     MfaChallenge: {type: object, required: [status, challenge_token, expires_in], properties: {status: {const: mfa_required}, challenge_token: {type: string}, expires_in: {type: integer}}}
     MfaStatus: {type: object, required: [enabled, recovery_codes_remaining], properties: {enabled: {type: boolean}, factor_id: {type: [string, 'null'], format: uuid}, recovery_codes_remaining: {type: integer}}}
