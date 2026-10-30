@@ -48,6 +48,7 @@ deployment/entitlements/signing/*
 .DS_Store
 Thumbs.db
 Desktop.ini
+.kilo
 
 # Local archives
 *.zip
