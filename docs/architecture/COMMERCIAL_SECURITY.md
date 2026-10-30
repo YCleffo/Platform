@@ -35,3 +35,11 @@ Production image работает как `www-data`, устанавливает 
 `/health` — ограниченная проверка доступности приложения. `/health/ready` дополнительно проверяет зависимости и обязательные heartbeat. Успешный HTTP health не подтверждает минимальные привилегии DB role или промышленную отказоустойчивость.
 
 [Секреты и ротация](../operations/ENVIRONMENT.md) · [Инварианты](CORE_INVARIANTS.md) · [Контракт API](COMMERCIAL_CONTROL_PLANE.md)
+
+## Приглашения
+
+- Токен: 256-битный доменно-разделённый HMAC (`i1.<id>.<version>.<mac>`), в БД только SHA-256 hash; версия ротируется при resend, старые ссылки недействительны; срок по умолчанию 7 дней (`CONTROL_INVITATION_TTL_SECONDS`).
+- Ссылка: `/invitation#token=…` (fragment не уходит на сервер при обычном запросе). Frontend хранит токен только в памяти, очищает fragment через `history.replaceState`, не пишет в storage/query/analytics/логи; `Referrer-Policy: no-referrer`.
+- Preview — без авторизации и без изменения состояния. Accept/decline — auth + подтверждённый email + совпадение нормализованного адреса. Idempotency key на создание; rate limit на create/resend; `requireSensitiveMfa` на create/resend/revoke.
+- Egress: SMTP purpose `control_account_invitation` с категориями `contact_email, invitation_link, organization_name`. Без утверждённого решения оператора отправка отклоняется; readiness checker требует это решение.
+- P0 RBAC bypass в `MembershipService::add()` закрыт: проверка внутри транзакции после блокировки аккаунта, учёт текущей роли, 409 на смену роли через add.

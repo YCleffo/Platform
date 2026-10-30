@@ -199,6 +199,15 @@ services:
             $verificationUrl: '%env(CONTROL_VERIFICATION_URL)%'
             $messageIdDomain: '%env(CONTROL_MESSAGE_ID_DOMAIN)%'
 
+    ControlPlane\Account\Invitation\Application\InvitationService:
+        arguments:
+            $ttlSeconds: '%env(int:CONTROL_INVITATION_TTL_SECONDS)%'
+
+    ControlPlane\Infrastructure\Outbox\InvitationEmailProcessor:
+        arguments:
+            $invitationUrl: '%env(CONTROL_INVITATION_URL)%'
+            $messageIdDomain: '%env(CONTROL_MESSAGE_ID_DOMAIN)%'
+
     ControlPlane\Infrastructure\Outbox\SecurityEmailProcessor:
         arguments:
             $passwordResetUrl: '%env(CONTROL_PASSWORD_RESET_URL)%'
@@ -209,6 +218,7 @@ services:
             $processors:
                 - '@ControlPlane\Infrastructure\Outbox\VerificationEmailProcessor'
                 - '@ControlPlane\Infrastructure\Outbox\SecurityEmailProcessor'
+                - '@ControlPlane\Infrastructure\Outbox\InvitationEmailProcessor'
 
     ControlPlane\Privacy\ControlPrivacyRetentionPolicy:
         arguments:

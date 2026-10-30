@@ -75,6 +75,14 @@ WHERE contact_email = ? AND commercial_account_id IN
 SQL, [$user['email_normalized'], $controlUserId]);
             $alias = 'erased-' . $controlUserId . '@privacy.invalid';
             $connection->executeStatement(<<<'SQL'
+UPDATE commercial.commercial_account_invitations
+SET email = ?, email_normalized = ?,
+    status = CASE WHEN status = 'pending' THEN 'revoked' ELSE status END,
+    revoked_at = CASE WHEN status = 'pending' THEN COALESCE(revoked_at, now()) ELSE revoked_at END,
+    updated_at = now()
+WHERE email_normalized = ?
+SQL, [$alias, $alias, $user['email_normalized']]);
+            $connection->executeStatement(<<<'SQL'
 UPDATE commercial.control_users
 SET status = 'disabled', email = ?, email_normalized = ?, password_hash = '!erased-disabled!',
     updated_at = now(), archived_at = COALESCE(archived_at, now()), last_login_at = NULL

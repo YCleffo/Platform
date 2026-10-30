@@ -47,12 +47,20 @@ JOIN commercial.control_users u ON u.id = m.control_user_id
 WHERE m.control_user_id = ? AND r.customer_email = u.email_normalized
 ORDER BY r.created_at, r.id
 SQL, [$controlUserId]);
+        $invitations = $this->connection->fetchAllAssociative(<<<'SQL'
+SELECT i.id, i.commercial_account_id, i.role, i.status, i.created_at, i.expires_at, i.accepted_at, i.declined_at, i.revoked_at
+FROM commercial.commercial_account_invitations i
+JOIN commercial.control_users u ON u.id = ?
+WHERE i.invited_by = ? OR i.accepted_by = ? OR i.email_normalized = u.email_normalized
+ORDER BY i.created_at, i.id
+SQL, [$controlUserId, $controlUserId, $controlUserId]);
 
         return [
             ['kind' => 'memberships', 'items' => $memberships],
             ['kind' => 'billing_contacts', 'items' => $contacts],
             ['kind' => 'invoice_contact_snapshots', 'items' => $invoices],
             ['kind' => 'receipt_contact_snapshots', 'items' => $receipts],
+            ['kind' => 'invitations', 'items' => $invitations],
         ];
     }
 }

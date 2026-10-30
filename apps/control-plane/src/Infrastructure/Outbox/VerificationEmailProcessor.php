@@ -38,7 +38,15 @@ final readonly class VerificationEmailProcessor implements EmailEventProcessor
         }
         try {
             $message = $this->message($claim);
-            $this->transport->send($message['recipient'], $message['subject'], $message['text'], $message['html'], $message['message_id']);
+            $this->transport->send(
+                $message['recipient'],
+                $message['subject'],
+                $message['text'],
+                $message['html'],
+                $message['message_id'],
+                'control_email_verification',
+                ['contact_email', 'verification_link'],
+            );
             $this->connection->executeStatement(<<<'SQL'
 UPDATE commercial.outbox_events
 SET status = 'published', published_at = now(), locked_at = NULL, lock_token = NULL,

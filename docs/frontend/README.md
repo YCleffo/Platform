@@ -229,3 +229,11 @@ unit-тестами.
 - Использовать существующий HTTP transport и Idempotency-Key для мутаций.
 - Не хардкодить цвета/радиусы/типографику — только токены.
 - Не оставлять мёртвый код и конкурирующие реализации CSS.
+
+## Приглашения
+
+Управление — `/accounts/:accountId/invitations` (вкладка при `permissions.manage_members`): список с пагинацией, создание (email + роль `admin`/`billing`/`technical`, без `owner`), resend/revoke, step-up через `useSensitiveAction`, состояния loading/empty/error/expired/revoked/pending. Показывается «queued», а не «delivered» (backend не отслеживает доставку).
+
+Получатель — `/invitation` (публичный): токен читается из fragment `#token=…`, хранится только в памяти и удаляется из адресной строки; preview без мутаций; accept/decline — явные действия. После accept обновляется список аккаунтов и открывается Workspace; после decline membership не создаётся. Переход на login/register сохраняет `redirect=/invitation` без токена; после перезагрузки без fragment предлагается открыть ссылку из письма.
+
+E2E: мутирующий runner требует `E2E_RUNTIME=isolated-ci`, `E2E_ISOLATED_DB=1`, `E2E_ALLOW_MUTATIONS=1`, `E2E_ISOLATION_PROOF` (не короче 32 символов), allowlisted нелокальные хосты и `E2E_PASSWORD`; loopback/private хосты отклоняются. `--check-guard` выполняется в CI, а полный mutating E2E на локальной БД не запускается (`NOT_VERIFIED`).

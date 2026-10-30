@@ -15,7 +15,8 @@ security:
         - { path: '^/api/m2m/', roles: PUBLIC_ACCESS }
         - { path: '^/health(?:/(?:live|ready))?$', roles: PUBLIC_ACCESS }
         - { path: '^/api/control/auth/(register|verify|verification/resend|login|refresh|logout|password/reset/(request|confirm)|mfa/login/verify)$', roles: PUBLIC_ACCESS }
-        - { path: '^/api/control/catalog/plans$', roles: PUBLIC_ACCESS }
-        - { path: '^/api/control/webhooks/yookassa$', roles: PUBLIC_ACCESS }
+- { path: '^/api/control/catalog/plans$', roles: PUBLIC_ACCESS }
+- { path: '^/api/control/invitations/preview$', roles: PUBLIC_ACCESS }
+- { path: '^/api/control/webhooks/yookassa$', roles: PUBLIC_ACCESS }
         - { path: '^/api/control/', roles: ROLE_CONTROL_USER }
         - { path: '^/', roles: PUBLIC_ACCESS }

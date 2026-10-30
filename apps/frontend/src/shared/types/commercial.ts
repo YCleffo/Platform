@@ -134,6 +134,54 @@ export interface ControlSessionList {
   items: ControlSession[];
 }
 
+export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'revoked' | 'expired';
+export type InvitationRole = 'admin' | 'billing' | 'technical';
+
+export interface AccountInvitation {
+  id: string;
+  email: string;
+  role: InvitationRole;
+  status: InvitationStatus;
+  created_at: string;
+  expires_at: string;
+  accepted_at?: string | null;
+  declined_at?: string | null;
+  revoked_at?: string | null;
+  invited_by: string;
+  inviter_email?: string;
+}
+
+export interface AccountInvitationList {
+  items: AccountInvitation[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface InvitationPreview {
+  status: InvitationStatus;
+  organization_name: string;
+  role: InvitationRole;
+  expires_at: string;
+  email: string;
+}
+
+export interface CreateInvitationPayload {
+  email: string;
+  role: InvitationRole;
+}
+
+export interface InvitationAcceptResult {
+  account_id: string;
+  role: AccountRole;
+  status: 'accepted';
+}
+
+export interface InvitationDeclineResult {
+  status: 'declined';
+}
+
+
 
 export interface PlanPrice {
   id: string;

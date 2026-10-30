@@ -7,6 +7,8 @@ import AccountLayout from '@/modules/commercial/account/AccountLayout.vue';
 import AccountOverviewView from '@/modules/commercial/account/AccountOverviewView.vue';
 import AccountMembersView from '@/modules/commercial/account/AccountMembersView.vue';
 import SecuritySettingsView from '@/modules/commercial/security/SecuritySettingsView.vue';
+import InvitationsView from '@/modules/commercial/invitations/InvitationsView.vue';
+import InvitationAcceptView from '@/modules/commercial/invitations/InvitationAcceptView.vue';
 import LoginView from '@/modules/commercial/auth/LoginView.vue';
 import RegisterView from '@/modules/commercial/onboarding/RegisterView.vue';
 import VerifyEmailView from '@/modules/commercial/onboarding/VerifyEmailView.vue';
@@ -46,6 +48,12 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
                 component: AccountMembersView,
                 meta: { requiresAuth: true },
               },
+              {
+                path: 'invitations',
+                name: 'account-invitations',
+                component: InvitationsView,
+                meta: { requiresAuth: true },
+              },
             ],
           },
         ],
@@ -69,6 +77,11 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
         path: '/mfa',
         component: AuthLayout,
         children: [{ path: '', name: 'mfa', component: MfaChallengeView }],
+      },
+      {
+        path: '/invitation',
+        component: AuthLayout,
+        children: [{ path: '', name: 'invitation', component: InvitationAcceptView }],
       },
     ],
   });

@@ -1017,6 +1017,31 @@ Table commercial.usage_periods {
   Note: 'usage_period_subscription_consistency: TRIGGER DEFERRABLE INITIALLY DEFERRED\nusage_periods_bounds_check: CHECK (ends_at > starts_at)\nusage_periods_closed_check: CHECK (status::text = \'open\'::text AND closed_at IS NULL OR status::text = \'closed\'::text AND closed_at IS NOT NULL)\nusage_periods_created_at_not_null: NOT NULL created_at\nusage_periods_ends_at_not_null: NOT NULL ends_at\nusage_periods_id_not_null: NOT NULL id\nusage_periods_starts_at_not_null: NOT NULL starts_at\nusage_periods_status_check: CHECK (status::text = ANY (ARRAY[\'open\'::character varying, \'closed\'::character varying]::text[]))\nusage_periods_status_not_null: NOT NULL status\nusage_periods_subscription_id_fkey: FOREIGN KEY (subscription_id) REFERENCES commercial.subscriptions(id) ON DELETE RESTRICT\nusage_periods_subscription_id_not_null: NOT NULL subscription_id\nCREATE UNIQUE INDEX usage_periods_one_open_per_subscription_uidx ON commercial.usage_periods USING btree (subscription_id) WHERE ((status)::text = \'open\'::text)\nCREATE INDEX usage_periods_subscription_history_idx ON commercial.usage_periods USING btree (subscription_id, starts_at DESC)\nCREATE TRIGGER usage_period_guard BEFORE DELETE OR UPDATE ON commercial.usage_periods FOR EACH ROW EXECUTE FUNCTION commercial.protect_usage_period()\nCREATE CONSTRAINT TRIGGER usage_period_subscription_consistency AFTER INSERT OR UPDATE ON commercial.usage_periods DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION commercial.assert_subscription_usage_period()'
 }
 
+Table commercial.commercial_account_invitations {
+  id uuid [pk, not null]
+  commercial_account_id uuid [not null]
+  email "character varying(320)" [not null]
+  email_normalized "character varying(320)" [not null]
+  role "character varying(16)" [not null]
+  invited_by uuid [not null]
+  token_hash bytea [not null]
+  token_version integer [not null, default: `1`]
+  status "character varying(16)" [not null, default: `'pending'::character varying`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+  expires_at "timestamp with time zone" [not null]
+  accepted_by uuid [null]
+  accepted_at "timestamp with time zone" [null]
+  declined_at "timestamp with time zone" [null]
+  revoked_at "timestamp with time zone" [null]
+  indexes {
+    token_hash [name: 'commercial_account_invitations_token_hash_key', type: btree, unique]
+    (commercial_account_id, status) [name: 'commercial_account_invitations_account_status_idx', type: btree]
+    expires_at [name: 'commercial_account_invitations_expires_at_idx', type: btree]
+  }
+  Note: 'commercial_account_invitations_pkey: PRIMARY KEY (id)\ncommercial_account_invitations_token_hash_key: UNIQUE (token_hash)\ncommercial_account_invitations_commercial_account_id_fkey: FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id)\ncommercial_account_invitations_invited_by_fkey: FOREIGN KEY (invited_by) REFERENCES commercial.control_users(id)\ncommercial_account_invitations_accepted_by_fkey: FOREIGN KEY (accepted_by) REFERENCES commercial.control_users(id)\ncommercial_account_invitations_role_check: CHECK (role::text = ANY (ARRAY[\'admin\'::character varying, \'billing\'::character varying, \'technical\'::character varying]::text[]))\ncommercial_account_invitations_status_check: CHECK (status::text = ANY (ARRAY[\'pending\'::character varying, \'accepted\'::character varying, \'declined\'::character varying, \'revoked\'::character varying, \'expired\'::character varying]::text[]))\ncommercial_account_invitations_email_check: CHECK (length(btrim(email_normalized::text)) > 0)\nCREATE INDEX commercial_account_invitations_account_status_idx ON commercial.commercial_account_invitations USING btree (commercial_account_id, status)\nCREATE INDEX commercial_account_invitations_expires_at_idx ON commercial.commercial_account_invitations USING btree (expires_at)\nCREATE UNIQUE INDEX commercial_account_invitations_pending_email_key ON commercial.commercial_account_invitations USING btree (commercial_account_id, email_normalized) WHERE (status::text = \'pending\'::text)\nCREATE UNIQUE INDEX commercial_account_invitations_token_hash_key ON commercial.commercial_account_invitations USING btree (token_hash)\nCREATE UNIQUE INDEX commercial_account_invitations_pkey ON commercial.commercial_account_invitations USING btree (id)'
+}
+
 Ref: commercial.audit_events.commercial_account_id > commercial.commercial_accounts.id [delete: restrict, update: no action]
 Ref: commercial.billing_profiles.commercial_account_id > commercial.commercial_accounts.id [delete: restrict, update: no action]
 Ref: commercial.commercial_account_memberships.commercial_account_id > commercial.commercial_accounts.id [delete: restrict, update: no action]
@@ -1111,3 +1136,6 @@ Ref: commercial.subscriptions.commercial_account_id > commercial.commercial_acco
 Ref: commercial.usage_counters.feature_id > commercial.features.id [delete: restrict, update: no action]
 Ref: commercial.usage_counters.usage_period_id > commercial.usage_periods.id [delete: restrict, update: no action]
 Ref: commercial.usage_periods.subscription_id > commercial.subscriptions.id [delete: restrict, update: no action]
+Ref: commercial.commercial_account_invitations.commercial_account_id > commercial.commercial_accounts.id [delete: no action, update: no action]
+Ref: commercial.commercial_account_invitations.invited_by > commercial.control_users.id [delete: no action, update: no action]
+Ref: commercial.commercial_account_invitations.accepted_by > commercial.control_users.id [delete: no action, update: no action]

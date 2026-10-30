@@ -52,7 +52,8 @@ final readonly class ControlPrivacyReadinessChecker
             }
             if ($decision['status'] === 'allowed') {
                 $uses = $provider === 'smtp'
-                    ? [['control_email_verification', ['contact_email', 'verification_link']]]
+                    ? [['control_email_verification', ['contact_email', 'verification_link']],
+                       ['control_account_invitation', ['contact_email', 'invitation_link', 'organization_name']]]
                     : [['payment', ['payment_reference','billing_contact']],
                        ['refund', ['payment_reference','billing_contact']],
                        ['fiscal_receipt', ['billing_contact','fiscal_details']]];

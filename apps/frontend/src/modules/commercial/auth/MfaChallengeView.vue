@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { ShieldCheck } from '@lucide/vue';
 import { useAuthStore } from '@/core/auth/authStore';
@@ -12,6 +12,10 @@ import AppInput from '@/shared/ui/fields/AppInput.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
+const redirectTarget = computed(() =>
+  typeof route.query.redirect === 'string' ? route.query.redirect : null,
+);
 const { t } = useI18n();
 
 const form = useForm({
@@ -29,7 +33,7 @@ const { submitting, message, run } = useAsyncAction(async () => {
     form.values.code.trim() !== '' ? form.values.code.trim() : undefined,
     form.values.recoveryCode.trim() !== '' ? form.values.recoveryCode.trim() : undefined,
   );
-  await router.push({ name: 'cabinet' });
+  await router.push(redirectTarget.value !== null ? { path: redirectTarget.value } : { name: 'cabinet' });
 });
 
 onMounted(() => {

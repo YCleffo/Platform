@@ -82,4 +82,128 @@ final class MembershipManagementTest extends DatabaseTestCase
         $this->expectException(AccessDeniedException::class);
         $service->changeRole($owner, $accountB, $foreignMembership, 'admin', $this->uuid());
     }
+
+    public function testAdminCannotDemoteActiveOwnerThroughAdd(): void
+    {
+        $owner = $this->user('add-owner@example.test');
+        $admin = $this->user('add-admin@example.test');
+        $account = $this->createAccount($owner, 'add-owner-account');
+        $service = $this->service();
+        $service->add($owner, $account, $admin, 'admin', $this->uuid());
+
+        try {
+            $service->add($admin, $account, $owner, 'billing', $this->uuid());
+            self::fail('Admin demoted an owner through add().');
+        } catch (AccessDeniedException) {
+            self::addToAssertionCount(1);
+        }
+
+        self::assertSame('owner', $this->connection->fetchOne(
+            'SELECT role FROM commercial.commercial_account_memberships WHERE control_user_id = ? AND commercial_account_id = ?',
+            [$owner, $account],
+        ));
+    }
+
+    public function testOwnerAddIsIdempotentAndRoleChangesRequireTheDedicatedEndpoint(): void
+    {
+        $owner = $this->user('add-idempotent-owner@example.test');
+        $member = $this->user('add-idempotent-member@example.test');
+        $account = $this->createAccount($owner, 'add-idempotent-account');
+        $service = $this->service();
+
+        $first = $service->add($owner, $account, $member, 'technical', $this->uuid());
+        $second = $service->add($owner, $account, $member, 'technical', $this->uuid());
+        self::assertSame($first, $second);
+        self::assertSame(1, (int) $this->connection->fetchOne(
+            'SELECT count(*) FROM commercial.commercial_account_memberships WHERE control_user_id = ? AND commercial_account_id = ?',
+            [$member, $account],
+        ));
+
+        try {
+            $service->add($owner, $account, $member, 'billing', $this->uuid());
+            self::fail('add() changed an active membership role.');
+        } catch (\DomainException) {
+            self::addToAssertionCount(1);
+        }
+        self::assertSame('technical', $this->connection->fetchOne(
+            'SELECT role FROM commercial.commercial_account_memberships WHERE id = ?',
+            [$first],
+        ));
+    }
+
+    public function testRevokedMembershipReactivationIsAuthorizedAndAudited(): void
+    {
+        $owner = $this->user('add-reactivate-owner@example.test');
+        $member = $this->user('add-reactivate-member@example.test');
+        $account = $this->createAccount($owner, 'add-reactivate-account');
+        $service = $this->service();
+
+        $membershipId = $service->add($owner, $account, $member, 'billing', $this->uuid());
+        $service->remove($owner, $account, $membershipId, $this->uuid());
+        $reactivated = $service->add($owner, $account, $member, 'technical', $this->uuid());
+
+        self::assertSame($membershipId, $reactivated);
+        $row = $this->connection->fetchAssociative(
+            'SELECT role, revoked_at FROM commercial.commercial_account_memberships WHERE id = ?',
+            [$membershipId],
+        );
+        self::assertIsArray($row);
+        self::assertSame('technical', $row['role']);
+        self::assertNull($row['revoked_at']);
+        self::assertGreaterThanOrEqual(1, (int) $this->connection->fetchOne(
+            "SELECT count(*) FROM commercial.audit_events WHERE commercial_account_id = ? AND action = 'commercial_membership.reactivated'",
+            [$account],
+        ));
+    }
+
+    public function testAdminCannotReactivateRevokedOwnerRowAsNonOwner(): void
+    {
+        $owner = $this->user('add-revoked-owner@example.test');
+        $admin = $this->user('add-revoked-admin@example.test');
+        $secondOwner = $this->user('add-revoked-second-owner@example.test');
+        $account = $this->createAccount($owner, 'add-revoked-account');
+        $service = $this->service();
+        $service->add($owner, $account, $admin, 'admin', $this->uuid());
+        $secondOwnerMembership = $service->add($owner, $account, $secondOwner, 'owner', $this->uuid());
+        $service->remove($owner, $account, $secondOwnerMembership, $this->uuid());
+
+        try {
+            $service->add($admin, $account, $secondOwner, 'billing', $this->uuid());
+            self::fail('Admin reactivated a revoked owner row as billing.');
+        } catch (AccessDeniedException) {
+            self::addToAssertionCount(1);
+        }
+
+        $row = $this->connection->fetchAssociative(
+            'SELECT role, revoked_at FROM commercial.commercial_account_memberships WHERE id = ?',
+            [$secondOwnerMembership],
+        );
+        self::assertIsArray($row);
+        self::assertSame('owner', $row['role']);
+        self::assertNotNull($row['revoked_at']);
+    }
+
+    public function testInitiatorLosingPermissionIsRejected(): void
+    {
+        $owner = $this->user('add-lost-owner@example.test');
+        $admin = $this->user('add-lost-admin@example.test');
+        $target = $this->user('add-lost-target@example.test');
+        $account = $this->createAccount($owner, 'add-lost-account');
+        $service = $this->service();
+        $adminMembership = $service->add($owner, $account, $admin, 'admin', $this->uuid());
+        $service->remove($owner, $account, $adminMembership, $this->uuid());
+
+        $this->expectException(AccessDeniedException::class);
+        $service->add($admin, $account, $target, 'billing', $this->uuid());
+    }
+
+    private function createAccount(string $owner, string $code): string
+    {
+        return (new CreateCommercialAccount($this->connection))->create($owner, $code, 'Policy Account', null, $code . '-key', $this->uuid());
+    }
+
+    private function service(): MembershipService
+    {
+        return new MembershipService($this->connection, new AccountAuthorization($this->connection));
+    }
 }

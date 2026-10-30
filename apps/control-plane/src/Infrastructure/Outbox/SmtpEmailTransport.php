@@ -21,9 +21,16 @@ final readonly class SmtpEmailTransport implements EmailTransport
         }
     }
 
-    public function send(string $recipient, string $subject, string $text, string $html, string $messageId): void
-    {
-        $this->egress->assertAllowed('smtp', 'control_email_verification', ['contact_email', 'verification_link']);
+    public function send(
+        string $recipient,
+        string $subject,
+        string $text,
+        string $html,
+        string $messageId,
+        string $purpose = 'control_email_verification',
+        array $categories = ['contact_email', 'verification_link'],
+    ): void {
+        $this->egress->assertAllowed('smtp', $purpose, $categories);
         if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false
             || preg_match('/[\r\n]/', $recipient . $subject . $messageId) === 1
             || preg_match('/^[a-z0-9.-]+@[a-z0-9.-]+$/i', $messageId) !== 1

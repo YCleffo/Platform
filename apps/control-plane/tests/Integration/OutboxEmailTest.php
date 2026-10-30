@@ -96,14 +96,21 @@ final class RecordingEmailTransport implements EmailTransport
 {
     public bool $fail = false;
 
-    /** @var list<array{recipient: string, subject: string, text: string, html: string, message_id: string}> */
+    /** @var list<array{recipient: string, subject: string, text: string, html: string, message_id: string, purpose: string, categories: list<string>}> */
     public array $messages = [];
 
-    public function send(string $recipient, string $subject, string $text, string $html, string $messageId): void
-    {
+    public function send(
+        string $recipient,
+        string $subject,
+        string $text,
+        string $html,
+        string $messageId,
+        string $purpose = 'control_email_verification',
+        array $categories = ['contact_email', 'verification_link'],
+    ): void {
         if ($this->fail) {
             throw new \RuntimeException('secret transport error must not be logged');
         }
-        $this->messages[] = compact('recipient', 'subject', 'text', 'html') + ['message_id' => $messageId];
+        $this->messages[] = compact('recipient', 'subject', 'text', 'html', 'purpose', 'categories') + ['message_id' => $messageId];
     }
 }

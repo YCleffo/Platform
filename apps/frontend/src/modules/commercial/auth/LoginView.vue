@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useAsyncAction } from '@/shared/composables/useAsyncAction';
@@ -12,6 +13,9 @@ import AppPasswordInput from '@/shared/ui/fields/AppPasswordInput.vue';
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
+const redirectTarget = computed(() =>
+  typeof route.query.redirect === 'string' ? route.query.redirect : null,
+);
 
 const form = useForm({
   initial: { email: '', password: '' },
@@ -24,11 +28,13 @@ const form = useForm({
 const { submitting, message, run } = useAsyncAction(async () => {
   await auth.login(form.values.email, form.values.password);
   if (auth.mfaChallenge !== null) {
-    await router.push({ name: 'mfa' });
+    await router.push({
+      name: 'mfa',
+      query: redirectTarget.value !== null ? { redirect: redirectTarget.value } : {},
+    });
     return;
   }
-  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null;
-  await router.push(redirect !== null ? { path: redirect } : { name: 'cabinet' });
+  await router.push(redirectTarget.value !== null ? { path: redirectTarget.value } : { name: 'cabinet' });
 });
 
 async function onSubmit(): Promise<void> {
@@ -63,7 +69,9 @@ async function onSubmit(): Promise<void> {
       <AppButton type="submit" :loading="submitting" block>{{ $t('auth.signIn') }}</AppButton>
       <p class="auth-form__switch">
         {{ $t('auth.noAccount') }}
-        <RouterLink :to="{ name: 'register' }">{{ $t('nav.register') }}</RouterLink>
+        <RouterLink :to="{ name: 'register', query: redirectTarget ? { redirect: redirectTarget } : {} }">
+          {{ $t('nav.register') }}
+        </RouterLink>
       </p>
     </form>
   </AppFormShell>

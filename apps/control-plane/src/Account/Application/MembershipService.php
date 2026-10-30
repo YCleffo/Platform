@@ -16,18 +16,46 @@ final readonly class MembershipService
     public function add(string $actorId, string $accountId, string $targetUserId, string $role, string $correlationId): string
     {
         AccountAuthorization::assertRole($role);
-        $this->requireManageRole($actorId, $accountId, $role);
 
         return $this->connection->transactional(function (Connection $connection) use ($actorId, $accountId, $targetUserId, $role, $correlationId): string {
             $this->lockAccount($connection, $accountId);
+            $existing = $connection->fetchAssociative(
+                'SELECT id, role, revoked_at FROM commercial.commercial_account_memberships WHERE control_user_id = ? AND commercial_account_id = ? FOR UPDATE',
+                [$targetUserId, $accountId],
+            );
+            $existingRole = $existing === false ? null : (string) $existing['role'];
+
+            // Authorization is evaluated inside the account lock and considers the
+            // target's current role, so add() can never bypass ownership.manage.
+            $this->requirePolicyRole($actorId, $accountId, $existingRole, $role);
+
             if ($connection->fetchOne("SELECT 1 FROM commercial.control_users WHERE id = ? AND status = 'active'", [$targetUserId]) === false) {
                 throw new \DomainException('Membership target must be an active Control User.');
             }
+
+            if ($existing !== false && $existing['revoked_at'] === null) {
+                if ($existingRole === $role) {
+                    // Idempotent: an active membership with the same role is unchanged.
+                    return (string) $existing['id'];
+                }
+                // Role changes must use the dedicated endpoint and its policy.
+                throw new \DomainException('An active membership already exists; use the role change endpoint.');
+            }
+
+            if ($existing !== false) {
+                $membershipId = (string) $existing['id'];
+                $connection->executeStatement(
+                    'UPDATE commercial.commercial_account_memberships SET role = ?, revoked_at = NULL WHERE id = ?',
+                    [$role, $membershipId],
+                );
+                $this->audit($connection, $actorId, $accountId, $membershipId, 'commercial_membership.reactivated', $correlationId, ['role' => $role]);
+
+                return $membershipId;
+            }
+
             $membershipId = $connection->fetchOne(<<<'SQL'
 INSERT INTO commercial.commercial_account_memberships (control_user_id, commercial_account_id, role)
 VALUES (?, ?, ?)
-ON CONFLICT (control_user_id, commercial_account_id)
-DO UPDATE SET role = EXCLUDED.role, revoked_at = NULL
 RETURNING id
 SQL, [$targetUserId, $accountId, $role]);
             if (!is_string($membershipId)) {
@@ -77,6 +105,12 @@ SQL, [$targetUserId, $accountId, $role]);
     private function requireManageRole(string $actorId, string $accountId, string $role): void
     {
         $this->authorization->requirePermission($actorId, $accountId, $role === 'owner' ? 'ownership.manage' : 'membership.manage');
+    }
+
+    private function requirePolicyRole(string $actorId, string $accountId, ?string $existingRole, string $targetRole): void
+    {
+        $requiresOwnership = $existingRole === 'owner' || $targetRole === 'owner';
+        $this->authorization->requirePermission($actorId, $accountId, $requiresOwnership ? 'ownership.manage' : 'membership.manage');
     }
 
     private function lockAccount(Connection $connection, string $accountId): void

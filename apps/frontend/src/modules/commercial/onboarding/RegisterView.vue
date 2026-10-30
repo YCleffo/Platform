@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { RouterLink } from 'vue-router';
+import { computed, ref } from 'vue';
+import { RouterLink, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { MailCheck } from '@lucide/vue';
 import { useAuthStore } from '@/core/auth/authStore';
@@ -15,6 +15,10 @@ import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppPasswordInput from '@/shared/ui/fields/AppPasswordInput.vue';
 
 const auth = useAuthStore();
+const route = useRoute();
+const redirectTarget = computed(() =>
+  typeof route.query.redirect === 'string' ? route.query.redirect : null,
+);
 const toast = useToast();
 const { t } = useI18n();
 
@@ -77,7 +81,9 @@ async function resend(): Promise<void> {
       <AppButton variant="secondary" :loading="resending" :disabled="form.values.email === ''" block @click="resend">
         {{ $t('auth.resend') }}
       </AppButton>
-      <RouterLink class="register__link" :to="{ name: 'login' }">{{ $t('nav.login') }}</RouterLink>
+      <RouterLink class="register__link" :to="{ name: 'login', query: redirectTarget ? { redirect: redirectTarget } : {} }">
+        {{ $t('nav.login') }}
+      </RouterLink>
     </div>
   </AppFormShell>
 
@@ -104,7 +110,9 @@ async function resend(): Promise<void> {
       <AppButton type="submit" :loading="submitting" block>{{ $t('auth.register') }}</AppButton>
       <p class="auth-form__switch">
         {{ $t('auth.haveAccount') }}
-        <RouterLink :to="{ name: 'login' }">{{ $t('nav.login') }}</RouterLink>
+        <RouterLink :to="{ name: 'login', query: redirectTarget ? { redirect: redirectTarget } : {} }">
+          {{ $t('nav.login') }}
+        </RouterLink>
       </p>
     </form>
   </AppFormShell>

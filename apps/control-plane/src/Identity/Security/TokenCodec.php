@@ -55,6 +55,33 @@ final readonly class TokenCodec
         $this->validateArtifactToken($token, 'm1', 'mfa-challenge');
     }
 
+    /**
+     * Domain-separated invitation token. The version rotates on resend, so an older
+     * link can never match the newly stored hash.
+     */
+    public function invitationToken(string $invitationId, int $version): string
+    {
+        if (!Uuid::isValid($invitationId) || $version < 1) {
+            throw new \InvalidArgumentException('Invalid invitation artifact.');
+        }
+        $id = strtolower($invitationId);
+        $mac = hash_hmac('sha256', 'invitation:' . $id . ':' . $version, $this->secret, true);
+
+        return 'i1.' . $id . '.' . $version . '.' . self::base64Url($mac);
+    }
+
+    public function validateInvitationToken(string $token): string
+    {
+        $parts = explode('.', $token);
+        if (count($parts) !== 4 || $parts[0] !== 'i1' || !Uuid::isValid($parts[1])
+            || !ctype_digit($parts[2]) || (int) $parts[2] < 1
+            || !hash_equals($this->invitationToken($parts[1], (int) $parts[2]), $token)) {
+            throw new \DomainException('Invalid invitation token.');
+        }
+
+        return strtolower($parts[1]);
+    }
+
     public function hash(string $token): string
     {
         return hash('sha256', $token);

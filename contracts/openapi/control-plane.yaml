@@ -138,6 +138,22 @@ paths:
       operationId: revokeOtherSessions
       requestBody: {$ref: '#/components/requestBodies/Object'}
       responses: {'204': {description: Other sessions revoked}, '403': {$ref: '#/components/responses/Error'}}
+  /api/control/invitations/preview:
+    post:
+      security: []
+      operationId: previewInvitation
+      requestBody: {$ref: '#/components/requestBodies/InvitationToken'}
+      responses: {'200': {$ref: '#/components/responses/InvitationPreview'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/control/invitations/accept:
+    post:
+      operationId: acceptInvitation
+      requestBody: {$ref: '#/components/requestBodies/InvitationToken'}
+      responses: {'200': {description: Accepted, content: {application/json: {schema: {type: object, required: [account_id, role, status], properties: {account_id: {type: string, format: uuid}, role: {type: string, enum: [owner, admin, billing, technical]}, status: {const: accepted}}}}}}, '400': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/control/invitations/decline:
+    post:
+      operationId: declineInvitation
+      requestBody: {$ref: '#/components/requestBodies/InvitationToken'}
+      responses: {'200': {description: Declined, content: {application/json: {schema: {type: object, required: [status], properties: {status: {const: declined}}}}}}, '400': {$ref: '#/components/responses/Error'}, '404': {$ref: '#/components/responses/Error'}}
   /api/control/catalog/plans:
     get:
       security: []
@@ -181,6 +197,29 @@ paths:
     delete:
       operationId: removeMembership
       responses: {'204': {description: Removed}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/invitations:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    get:
+      operationId: listInvitations
+      parameters:
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+        - {name: offset, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
+      responses: {'200': {$ref: '#/components/responses/InvitationList'}, '404': {$ref: '#/components/responses/Error'}}
+    post:
+      operationId: createInvitation
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody: {$ref: '#/components/requestBodies/InvitationCreate'}
+      responses: {'201': {$ref: '#/components/responses/Invitation'}, '409': {$ref: '#/components/responses/Error'}, '422': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/invitations/{invitationId}:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/InvitationId'}]
+    delete:
+      operationId: revokeInvitation
+      responses: {'204': {description: Revoked}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/invitations/{invitationId}/resend:
+    parameters: [{$ref: '#/components/parameters/AccountId'}, {$ref: '#/components/parameters/InvitationId'}]
+    post:
+      operationId: resendInvitation
+      responses: {'200': {$ref: '#/components/responses/Invitation'}, '409': {$ref: '#/components/responses/Error'}}
   /api/control/accounts/{accountId}/billing-profile:
     parameters: [{$ref: '#/components/parameters/AccountId'}]
     put:
@@ -409,6 +448,7 @@ components:
     IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 1, maxLength: 200}}
     AccountId: {name: accountId, in: path, required: true, schema: {type: string, format: uuid}}
     MembershipId: {name: membershipId, in: path, required: true, schema: {type: string, format: uuid}}
+    InvitationId: {name: invitationId, in: path, required: true, schema: {type: string, format: uuid}}
     SubscriptionId: {name: subscriptionId, in: path, required: true, schema: {type: string, format: uuid}}
     PlanChangeId: {name: changeId, in: path, required: true, schema: {type: string, format: uuid}}
     AttestationId: {name: attestationId, in: path, required: true, schema: {type: string, format: uuid}}
@@ -448,6 +488,8 @@ components:
     Reauthenticate: {required: true, content: {application/json: {schema: {type: object, required: [password], properties: {password: {type: string, format: password}, code: {type: [string, 'null']}, recovery_code: {type: [string, 'null']}}}}}}
     TotpConfirm: {required: true, content: {application/json: {schema: {type: object, required: [factor_id, code], properties: {factor_id: {type: string, format: uuid}, code: {type: string}}}}}}
     MfaVerify: {required: true, content: {application/json: {schema: {type: object, required: [challenge_token], properties: {challenge_token: {type: string}, code: {type: [string, 'null']}, recovery_code: {type: [string, 'null']}}}}}}
+    InvitationCreate: {required: true, content: {application/json: {schema: {type: object, required: [email, role], properties: {email: {type: string, format: email}, role: {type: string, enum: [admin, billing, technical]}}}}}}
+    InvitationToken: {required: true, content: {application/json: {schema: {type: object, required: [token], properties: {token: {type: string}}}}}}
     Checkout:
       required: true
       content:
@@ -481,6 +523,9 @@ components:
     TotpSetup: {description: Pending authenticator setup, content: {application/json: {schema: {$ref: '#/components/schemas/TotpSetup'}}}}
     RecoveryCodes: {description: One-time recovery codes, content: {application/json: {schema: {$ref: '#/components/schemas/RecoveryCodes'}}}}
     Reauthenticated: {description: Step-up completed, content: {application/json: {schema: {$ref: '#/components/schemas/Reauthenticated'}}}}
+    Invitation: {description: Account invitation, content: {application/json: {schema: {$ref: '#/components/schemas/Invitation'}}}}
+    InvitationList: {description: Account invitations, content: {application/json: {schema: {$ref: '#/components/schemas/InvitationList'}}}}
+    InvitationPreview: {description: Minimal invitation preview, content: {application/json: {schema: {$ref: '#/components/schemas/InvitationPreview'}}}}
     Subscription: {description: Subscription, content: {application/json: {schema: {$ref: '#/components/schemas/Subscription'}}}}
     SubscriptionCreated: {description: Created draft subscription, content: {application/json: {schema: {$ref: '#/components/schemas/SubscriptionCreated'}}}}
     AutoRenewalDisabled: {description: Auto-renewal disabled, active paid period retained, content: {application/json: {schema: {$ref: '#/components/schemas/AutoRenewalDisabled'}}}}
@@ -670,6 +715,41 @@ components:
         total: {type: integer, minimum: 0}
         limit: {type: integer, minimum: 1}
         offset: {type: integer, minimum: 0}
+    Invitation:
+      type: object
+      additionalProperties: false
+      required: [id, email, role, status, created_at, expires_at, invited_by]
+      properties:
+        id: {type: string, format: uuid}
+        email: {type: string, format: email}
+        role: {type: string, enum: [admin, billing, technical]}
+        status: {type: string, enum: [pending, accepted, declined, revoked, expired]}
+        created_at: {type: string, format: date-time}
+        expires_at: {type: string, format: date-time}
+        accepted_at: {type: [string, 'null'], format: date-time}
+        declined_at: {type: [string, 'null'], format: date-time}
+        revoked_at: {type: [string, 'null'], format: date-time}
+        invited_by: {type: string, format: uuid}
+        inviter_email: {type: string, format: email}
+    InvitationList:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/Invitation'}}
+        total: {type: integer, minimum: 0}
+        limit: {type: integer, minimum: 1}
+        offset: {type: integer, minimum: 0}
+    InvitationPreview:
+      type: object
+      additionalProperties: false
+      required: [status, organization_name, role, expires_at, email]
+      properties:
+        status: {type: string, enum: [pending, accepted, declined, revoked, expired]}
+        organization_name: {type: string}
+        role: {type: string, enum: [admin, billing, technical]}
+        expires_at: {type: string, format: date-time}
+        email: {type: string}
     Tokens: {type: object, required: [access_token, refresh_token], properties: {access_token: {type: string}, refresh_token: {type: string}, access_expires_in: {type: integer}, session_expires_in: {type: integer}}}
     MfaChallenge: {type: object, required: [status, challenge_token, expires_in], properties: {status: {const: mfa_required}, challenge_token: {type: string}, expires_in: {type: integer}}}
     MfaStatus: {type: object, required: [enabled, recovery_codes_remaining], properties: {enabled: {type: boolean}, factor_id: {type: [string, 'null'], format: uuid}, recovery_codes_remaining: {type: integer}}}

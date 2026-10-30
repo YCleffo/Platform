@@ -1,4 +1,6 @@
 import type {
+  AccountInvitation,
+  AccountInvitationList,
   CommercialAccountDetail,
   CommercialAccountList,
   CommercialAccountPermissions,
@@ -9,6 +11,8 @@ import type {
   ControlSessionList,
   CreateAccountResult,
   CurrentUser,
+  InvitationAcceptResult,
+  InvitationPreview,
   LoginResult,
   MfaChallenge,
   MfaStatus,
@@ -198,6 +202,45 @@ export function isControlSession(value: unknown): value is ControlSession {
 
 export function isControlSessionList(value: unknown): value is ControlSessionList {
   return isRecord(value) && Array.isArray(value.items) && value.items.every(isControlSession);
+}
+
+export function isAccountInvitation(value: unknown): value is AccountInvitation {
+  return (
+    isRecord(value) &&
+    isString(value.id) &&
+    isString(value.email) &&
+    isString(value.role) &&
+    isString(value.status) &&
+    isString(value.created_at) &&
+    isString(value.expires_at) &&
+    isString(value.invited_by)
+  );
+}
+
+export function isAccountInvitationList(value: unknown): value is AccountInvitationList {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.items) &&
+    value.items.every(isAccountInvitation) &&
+    isNumber(value.total) &&
+    isNumber(value.limit) &&
+    isNumber(value.offset)
+  );
+}
+
+export function isInvitationPreview(value: unknown): value is InvitationPreview {
+  return (
+    isRecord(value) &&
+    isString(value.status) &&
+    isString(value.organization_name) &&
+    isString(value.role) &&
+    isString(value.expires_at) &&
+    isString(value.email)
+  );
+}
+
+export function isInvitationAcceptResult(value: unknown): value is InvitationAcceptResult {
+  return isRecord(value) && isString(value.account_id) && isString(value.role) && value.status === 'accepted';
 }
 
 export function isCreateAccountResult(value: unknown): value is CreateAccountResult {

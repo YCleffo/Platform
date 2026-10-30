@@ -2,6 +2,7 @@ import { getAccessToken, getSessionEpoch, runUnauthorizedHandler } from '@/core/
 import { createCommercialAccountApi } from '@/shared/api/commercial/account';
 import { createCommercialAuthApi } from '@/shared/api/commercial/auth';
 import { createCommercialCatalogApi } from '@/shared/api/commercial/catalog';
+import { createCommercialInvitationApi } from '@/shared/api/commercial/invitations';
 import { createHttpClient } from '@/shared/api/http';
 import { refreshAccessToken } from './refresh';
 
@@ -18,3 +19,4 @@ const http = createHttpClient({
 export const commercialAuth = createCommercialAuthApi(http);
 export const commercialAccount = createCommercialAccountApi(http);
 export const commercialCatalog = createCommercialCatalogApi(http);
+export const commercialInvitation = createCommercialInvitationApi(http);

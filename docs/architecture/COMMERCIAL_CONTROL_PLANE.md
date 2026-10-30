@@ -78,3 +78,17 @@ Commercial выдаёт неизменяемый Ed25519-документ пра
 Схема также содержит основы лицензирования и сопровождения. Наличие таблицы не означает готовый пользовательский сценарий. Производственная инфраструктура, DNS/TLS, On-Prem activation, автоматический rollback, дополнительные провайдеры и usage billing не подтверждены текущей локальной установкой.
 
 HTTP-пути и поля запроса проверяются по OpenAPI и contract tests. CI запускает unit, интеграционные и cross-plane проверки в изолированной среде. На рабочих БД reset-команды не выполняются.
+
+## Приглашения в Commercial Account
+
+`commercial.commercial_account_invitations` хранит приглашения по email. Допустимые роли — `admin`, `billing`, `technical`; `owner` через приглашение не назначается. Токен — domain-separated HMAC (`TokenCodec::invitationToken`, версия ротируется при resend); в БД только `token_hash`. Статусы: `pending`, `accepted`, `declined`, `revoked`, `expired`. Частичный уникальный индекс запрещает два активных pending на один email в аккаунте; истёкшие pending переводятся в `expired` транзакционно при создании.
+
+API:
+- `POST/GET /api/control/accounts/{id}/invitations` — создание (Idempotency-Key, `membership.manage` и sensitive MFA) и список;
+- `DELETE .../{invitationId}` — отзыв; `POST .../{invitationId}/resend` — новый токен и срок, старый инвалидируется;
+- `POST /api/control/invitations/preview` — публичный минимум (организация, роль, статус, срок, маскированный email), без изменения состояния;
+- `POST /api/control/invitations/accept|decline` — только аутентифицированный пользователь с подтверждённым email и совпадающим адресом. Accept транзакционен (account lock → invitation → membership); повторный accept, чужой email, истёкший или отозванный токен отклоняются; существующий активный membership не меняет роль; membership не создаётся до accept.
+
+Письмо ставится в outbox (`commercial_account.invitation_requested`, payload без email и токена); `InvitationEmailProcessor` восстанавливает ссылку `/invitation#token=…` из ID и версии и отправляет через SMTP purpose `control_account_invitation`. Без утверждённого provider decision отправка контролируемо отклоняется.
+
+P0 RBAC: `MembershipService::add()` проверяет права внутри транзакции после account-lock с учётом текущей и новой роли. Активный membership с другой ролью отклоняется (409, используйте PATCH), повтор с той же ролью идемпотентен, owner через add не понижается, последний owner защищён.

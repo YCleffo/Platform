@@ -31,6 +31,7 @@ const errorText = computed(() => {
   return store.detailErrorMessage ?? t('common.unexpectedError');
 });
 const canViewMembers = computed(() => detail.value?.permissions.view_members === true);
+const canManageInvitations = computed(() => detail.value?.permissions.manage_members === true);
 
 watch(
   accountId,
@@ -103,6 +104,12 @@ function switchAccount(id: string): void {
           :to="{ name: 'account-members', params: { accountId: detail.id } }"
         >
           {{ $t('account.members') }}
+        </RouterLink>
+        <RouterLink
+          v-if="canManageInvitations"
+          :to="{ name: 'account-invitations', params: { accountId: detail.id } }"
+        >
+          {{ $t('invitations.title') }}
         </RouterLink>
       </nav>
 

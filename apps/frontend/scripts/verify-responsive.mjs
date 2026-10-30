@@ -15,6 +15,9 @@ const routes = [
   { path: '/accounts/018f0000-0000-7000-8000-000000000001', expected: '/login', selector: 'form' },
   { path: '/accounts/018f0000-0000-7000-8000-000000000001/members', expected: '/login', selector: 'form' },
   { path: '/settings/security', expected: '/login', selector: 'form' },
+  { path: '/accounts/018f0000-0000-7000-8000-000000000001/invitations', expected: '/login', selector: 'form' },
+  { path: '/invitation', expected: '/invitation', selector: '.invitation-accept' },
+
 ];
 
 const problems = [];
