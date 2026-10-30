@@ -8,6 +8,7 @@ pinned Mermaid CLI. Node dependencies находятся только в это�
 ```powershell
 npm ci --prefix scripts/documentation --ignore-scripts
 npm run check:dbml --prefix scripts/documentation
+npm run check:python --prefix scripts/documentation
 
 # Укажите установленный Chrome/Chromium, без загрузки браузера через npm:
 $env:PUPPETEER_EXECUTABLE_PATH='C:/Program Files/Google/Chrome/Application/chrome.exe'

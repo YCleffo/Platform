@@ -32,6 +32,12 @@ FROM dunglas/frankenphp:1.12-php8.3@sha256:d5c2c5cdc8b6e73d861cccbf26ddab6443e3d
 
 COPY --from=frankenphp-builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 
+# The pinned upstream image predates Debian's CVE-2026-111497 fix.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends --only-upgrade libbrotli1 \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libbrotli1)" ge '1.1.0-2+deb13u1' \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN install-php-extensions \
     opcache \
     intl \

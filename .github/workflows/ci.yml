@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 env:
   COMPOSE_FILE: compose.yaml:compose.ci.yaml
@@ -16,6 +17,7 @@ jobs:
   windows-tools:
     name: PowerShell operator tools
     runs-on: windows-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
       - name: Check PowerShell syntax
@@ -37,6 +39,7 @@ jobs:
   backend-qa:
     name: Yii Backend Quality Assurance & Test Isolation
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     env:
       POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
@@ -142,6 +145,7 @@ jobs:
   control-plane-qa:
     name: Symfony Commercial Control Plane Quality Assurance
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     env:
       # Compose resolves both planes; credentials are generated per job.
       POSTGRES_DB: platform_test
@@ -284,6 +288,7 @@ jobs:
   cross-plane-e2e:
     name: Strict Core to Control Plane Cross-Plane E2E
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     env:
       POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
@@ -330,6 +335,7 @@ jobs:
   documentation-qa:
     name: Database diagrams and documentation consistency
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -349,3 +355,4 @@ jobs:
         run: |
           npm ci --prefix scripts/documentation --ignore-scripts
           npm run check:dbml --prefix scripts/documentation
+          npm run check:python --prefix scripts/documentation

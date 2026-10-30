@@ -33,6 +33,8 @@ Core: `http://localhost:8080`, Commercial: `http://localhost:8090`, Mailpit: `ht
 
 `.github/workflows/ci.yml` запускает Core, Commercial, межсервисные и инфраструктурные проверки в GitHub Actions. `compose.ci.yaml` дополняет основной файл только для CI; сценарии `scripts/ci` отказываются запускаться без `CI=true`. На локальных рабочих базах интеграционные тесты и reset-команды не запускаются.
 
+CI можно запустить вручную: **Actions → Platform CI → Run workflow**. Сообщение коммита с `[skip ci]` пропускает автоматический запуск при push, но не ручной запуск.
+
 Проверка сохранённых схем и документации без дополнительных контейнеров:
 
 ```powershell
