@@ -94,3 +94,32 @@ access token в памяти и `HttpOnly/Secure` refresh-механизм. Пр
 своих сессий только UX-данные: session ID, признак текущей сессии, browser/OS/device, IP, приблизительное
 местоположение и временные метки. Хеш fingerprint, внутренние risk signals, состояние trusted proxy,
 исходные forwarded headers и данные другого аккаунта наружу не выдаются.
+
+## Client context, trusted proxy, device and GeoIP
+
+Один неизменяемый `ClientContext` вычисляется middleware один раз и содержит resolved IP,
+`User-Agent`, `Accept-Language`, locale, timezone и источник её разрешения, нормализованные client hints,
+device info, необязательный client-instance ID, необязательный fingerprint HMAC, приблизительный GeoIP
+и request ID. Actions не переинтерпретируют заголовки самостоятельно.
+
+Прямой socket address авторитетен по умолчанию. `Forwarded` и `X-Forwarded-For` учитываются только при
+совпадении непосредственного peer с явным IP или CIDR в `TRUSTED_PROXIES`. Цепочка обходится от
+приложения к клиенту и останавливается на первом недоверенном адресе; некорректные значения
+игнорируются. Ни JSON запроса, ни недоверенный proxy header не задают security IP.
+
+Device parsing локальный и provider-based: browser, OS, широкий device type/model и client type.
+Запрещены canvas, audio, font, WebGL, hardware serial и другие инвазивные способы fingerprinting.
+Client-instance UUID не равен серверному session ID. Device fingerprint — HMAC-SHA-256 по небольшому
+набору стабильных нормализованных сигналов без IP, GeoIP, токенов и timezone; хранится только бинарный
+HMAC и используется как risk signal, а не как identity или proof of authentication.
+
+GeoIP — приблизительное местоположение по IP. Private, reserved, loopback, invalid и unavailable-database
+lookups возвращают unknown. Adapter читает локальную MaxMind GeoLite2 database по конфигурации; бинарная
+база не коммитится. Отсутствие базы или ошибка lookup не ломают запрос, внешний HTTP-вызов не требуется.
+Redis не является источником истины для сессий или GeoIP.
+
+Audit retention — политика установки. IP, User-Agent, приблизительное местоположение, client-instance ID
+и fingerprint HMAC относятся к security/privacy data. Пароли, hashes, session/refresh tokens, TOTP
+secrets, recovery codes, challenge secrets, SMTP credentials и raw fingerprints не попадают в Audit
+metadata или произвольные логи. GeoIP, timezone, forwarded headers и fingerprint signals не являются
+доказательством компрометации.

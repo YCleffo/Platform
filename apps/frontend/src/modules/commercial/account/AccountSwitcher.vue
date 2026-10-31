@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { ChevronDown } from '@lucide/vue';
+import { ChevronDown } from '@/shared/ui/icons';
 import AccountSwitcherDialog from './AccountSwitcherDialog.vue';
 
 defineProps<{
@@ -57,16 +57,19 @@ const open = ref(false);
   background: var(--surface);
   color: var(--text-1);
   cursor: pointer;
+  transition: var(--theme-transition);
 }
 
 .switcher__button:hover {
   background: var(--surface-hover);
+  transition: var(--theme-transition);
 }
 
 .switcher__button:focus-visible {
   border-color: var(--focus-border);
   box-shadow: var(--focus-ring);
   outline: none;
+  transition: var(--theme-transition);
 }
 
 .switcher__text {
@@ -79,6 +82,7 @@ const open = ref(false);
   font-size: var(--type-body-small-size);
   line-height: var(--type-body-small-line);
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .switcher__value {

@@ -96,17 +96,21 @@ function switchAccount(id: string): void {
       </header>
 
       <nav class="account-layout__tabs" :aria-label="$t('account.sections')">
-        <RouterLink :to="{ name: 'account-overview', params: { accountId: detail.id } }">
+        <RouterLink active-class="" exact-active-class="account-layout__tab--active" :to="{ name: 'account-overview', params: { accountId: detail.id } }">
           {{ $t('account.overview') }}
         </RouterLink>
         <RouterLink
           v-if="canViewMembers"
+          active-class=""
+          exact-active-class="account-layout__tab--active"
           :to="{ name: 'account-members', params: { accountId: detail.id } }"
         >
           {{ $t('account.members') }}
         </RouterLink>
         <RouterLink
           v-if="canManageInvitations"
+          active-class=""
+          exact-active-class="account-layout__tab--active"
           :to="{ name: 'account-invitations', params: { accountId: detail.id } }"
         >
           {{ $t('invitations.title') }}
@@ -135,10 +139,12 @@ function switchAccount(id: string): void {
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .account-layout__crumb-current {
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .account-layout__header {
@@ -149,6 +155,7 @@ function switchAccount(id: string): void {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-card-m);
+  transition: var(--theme-transition);
 }
 
 .account-layout__identity {
@@ -164,13 +171,15 @@ function switchAccount(id: string): void {
   letter-spacing: var(--type-h1-tracking);
   color: var(--text-1);
   overflow-wrap: anywhere;
+  transition: var(--theme-transition);
 }
 
 .account-layout__code {
   font-size: var(--type-body-small-size);
   line-height: var(--type-body-small-line);
   color: var(--text-3);
-  font-family: ui-monospace, 'Cascadia Code', 'Roboto Mono', Menlo, monospace;
+  font-family: var(--font-mono);
+  transition: var(--theme-transition);
 }
 
 .account-layout__badges {
@@ -195,16 +204,19 @@ function switchAccount(id: string): void {
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--text-2);
   white-space: nowrap;
+  transition: var(--theme-transition);
 }
 
 .account-layout__tabs a:hover {
   color: var(--text-1);
   text-decoration: none;
+  transition: var(--theme-transition);
 }
 
-.account-layout__tabs a.router-link-active {
+.account-layout__tabs a.account-layout__tab--active {
   color: var(--accent-strong);
   border-bottom-color: var(--accent);
+  transition: var(--theme-transition);
 }
 
 @media (min-width: 768px) {

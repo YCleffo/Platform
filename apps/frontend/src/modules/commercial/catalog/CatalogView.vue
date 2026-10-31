@@ -51,6 +51,7 @@ const { plans, loading, errorMessage, load } = usePlanCatalog();
   font-weight: var(--type-h1-weight);
   letter-spacing: var(--type-h1-tracking);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .catalog__subtitle {
@@ -59,6 +60,7 @@ const { plans, loading, errorMessage, load } = usePlanCatalog();
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .catalog__grid {

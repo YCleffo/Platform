@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
 import AppDialog from '@/shared/ui/overlays/AppDialog.vue';
+import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
 import type { RoleOption } from './accountPresentation';
 import type { AccountRole } from '@/shared/types';
 
@@ -45,11 +46,7 @@ function submit(): void {
   >
     <form class="role-form" @submit.prevent="submit">
       <label class="role-form__label" for="member-role">{{ $t('account.selectRole') }}</label>
-      <select id="member-role" v-model="selected" class="role-form__select" :disabled="busy">
-        <option v-for="option in roles" :key="option.value" :value="option.value">
-          {{ option.label }}
-        </option>
-      </select>
+      <AppDropdown id="member-role" v-model="selected" :label="$t('account.selectRole')" :options="roles" :disabled="busy" />
       <p v-if="error" class="role-form__error" role="alert">{{ error }}</p>
       <div class="role-form__actions">
         <AppButton type="button" variant="secondary" :disabled="busy" @click="open = false">
@@ -75,28 +72,14 @@ function submit(): void {
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--text-2);
-}
-
-.role-form__select {
-  height: var(--control-h-l);
-  padding: 0 var(--space-12);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-control-m);
-  background: var(--surface);
-  color: var(--text-1);
-  font-size: var(--type-body-medium-size);
-}
-
-.role-form__select:focus-visible {
-  border-color: var(--focus-border);
-  box-shadow: var(--focus-ring);
-  outline: none;
+  transition: var(--theme-transition);
 }
 
 .role-form__error {
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--danger-text);
+  transition: var(--theme-transition);
 }
 
 .role-form__actions {

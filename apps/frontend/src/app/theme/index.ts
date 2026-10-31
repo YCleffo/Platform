@@ -1,21 +1,55 @@
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 export type Theme = 'light' | 'dark' | 'system';
 
 const STORAGE_KEY = 'platform.theme';
 
 function storedTheme(): Theme {
-  const value = localStorage.getItem(STORAGE_KEY);
-  return value === 'light' || value === 'dark' || value === 'system' ? value : 'system';
+  try {
+    const value = localStorage.getItem(STORAGE_KEY);
+    return value === 'light' || value === 'dark' || value === 'system' ? value : 'system';
+  } catch { return 'system'; }
 }
 
 const theme = ref<Theme>(storedTheme());
 const systemDark = ref(false);
 let media: MediaQueryList | null = null;
+let activeTransition: ViewTransition | undefined;
+let changeId = 0;
+let storageListening = false;
 
 function applyTheme(): void {
   const resolved = theme.value === 'system' ? (systemDark.value ? 'dark' : 'light') : theme.value;
   document.documentElement.dataset.theme = resolved;
+}
+
+function changeTheme(next: Theme, persist = true): void {
+  theme.value = next;
+  if (persist) { try { localStorage.setItem(STORAGE_KEY, next); } catch { /* Session-only preferences still work. */ } }
+  const id = ++changeId;
+  activeTransition?.skipTransition();
+  activeTransition = undefined;
+  const root = document.documentElement;
+  root.dataset.themeChanging = '';
+  const commit = () => {
+    if (id !== changeId) return;
+    applyTheme();
+  };
+  const reduced = root.dataset.motion === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (typeof document.startViewTransition === 'function' && !reduced) {
+    try {
+      activeTransition = document.startViewTransition(async () => { commit(); await nextTick(); });
+      void activeTransition.ready.catch(() => undefined);
+      void activeTransition.finished.catch(() => undefined).finally(() => {
+        if (id === changeId) { delete root.dataset.themeChanging; activeTransition = undefined; }
+      });
+      return;
+    } catch { /* Atomic fallback if capture is unavailable. */ }
+  }
+  commit();
+  // Commit all colors together before restoring hover transitions in older browsers.
+  void root.offsetWidth;
+  delete root.dataset.themeChanging;
 }
 
 function ensureMedia(): void {
@@ -27,7 +61,7 @@ function ensureMedia(): void {
   media.addEventListener('change', (event) => {
     systemDark.value = event.matches;
     if (theme.value === 'system') {
-      applyTheme();
+      changeTheme('system', false);
     }
   });
 }
@@ -35,6 +69,12 @@ function ensureMedia(): void {
 export function initTheme(): void {
   ensureMedia();
   applyTheme();
+  if (!storageListening) {
+    window.addEventListener('storage', (event) => {
+      if (event.key === STORAGE_KEY || event.key === null) changeTheme(storedTheme(), false);
+    });
+    storageListening = true;
+  }
 }
 
 export function useTheme() {
@@ -45,9 +85,7 @@ export function useTheme() {
   const isDark = computed(() => resolved.value === 'dark');
 
   function setTheme(next: Theme): void {
-    theme.value = next;
-    localStorage.setItem(STORAGE_KEY, next);
-    applyTheme();
+    changeTheme(next);
   }
 
   function toggleTheme(): void {

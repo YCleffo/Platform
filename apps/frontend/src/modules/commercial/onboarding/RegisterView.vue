@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { MailCheck } from '@lucide/vue';
+import { MailCheck } from '@/shared/ui/icons';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useAsyncAction } from '@/shared/composables/useAsyncAction';
 import { useForm } from '@/shared/composables/useForm';
@@ -131,6 +131,7 @@ async function resend(): Promise<void> {
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
   text-align: center;
+  transition: var(--theme-transition);
 }
 
 .register__icon {
@@ -142,6 +143,7 @@ async function resend(): Promise<void> {
   border-radius: var(--radius-badge-module-tile);
   background: var(--success-soft);
   color: var(--success);
+  transition: var(--theme-transition);
 }
 
 .register__resend {
@@ -155,6 +157,7 @@ async function resend(): Promise<void> {
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .register__link {

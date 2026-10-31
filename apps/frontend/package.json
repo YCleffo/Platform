@@ -11,10 +11,12 @@
     "test": "vitest run",
     "generate:tokens": "node scripts/generate-tokens.mjs",
     "check:tokens": "node scripts/check-tokens.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate:icons": "node scripts/generate-icons.mjs",
+    "check:icons": "node scripts/generate-icons.mjs --check",
+    "check:styles": "node scripts/check-styles.mjs"
   },
   "dependencies": {
-    "@lucide/vue": "^1.65.0",
     "pinia": "^3.0.3",
     "qrcode.vue": "^3.11.0",
     "vue": "^3.5.17",

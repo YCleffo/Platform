@@ -14,6 +14,18 @@ permissions:
   contents: read
 
 jobs:
+  ci-configuration:
+    name: Workflow and shell configuration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate workflow expressions and embedded shell scripts
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.11 -color
+      - name: Parse CI shell entry points
+        run: |
+          for script in scripts/ci/*.sh; do bash -n "$script"; done
+
   windows-tools:
     name: PowerShell operator tools
     runs-on: windows-latest
@@ -135,7 +147,45 @@ jobs:
         run: |
           docker build -f apps/backend/docker/Dockerfile --target prod -t platform-core:ci apps/backend
           test "$(docker image inspect platform-core:ci --format '{{.Config.User}}')" = "www-data"
-          docker run --rm --entrypoint sh platform-core:ci -c 'test ! -e /app/tests && test ! -e /app/.env && test ! -e /app/.git && test ! -e /app/vendor/bin/phpunit && test ! -d /app/vendor/phpunit && test ! -e /app/c3.php && test -d /app/resources/email && test -d /app/resources/messages && test -w /data/caddy && test -w /config/caddy'
+          docker run --rm --entrypoint sh platform-core:ci -c 'test ! -e /app/tests && test ! -e /app/.env && test ! -e /app/.git && test ! -e /app/vendor/bin/phpunit && test ! -d /app/vendor/phpunit && test ! -e /app/c3.php && test -d /app/resources/email && test -d /app/resources/messages && test -w /app/runtime/cache/ro && test -w /app/runtime/logs && test -w /data/caddy && test -w /config/caddy'
+
+      - name: Boot production Core HTTP against the isolated database without checkout mounts
+        run: bash ./scripts/ci/production-image-smoke.sh core
+
+      - name: Inventory all high and critical Core image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.69.3
+          image-ref: platform-core:ci
+          scanners: vuln
+          format: json
+          output: trivy-core.json
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: '0'
+
+      - name: Summarize all Core image findings
+        run: python3 scripts/ci/summarize-image-scan.py trivy-core.json --plane Core
+
+      - name: Enforce zero fixable high and critical Core image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.69.3
+          image-ref: platform-core:ci
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Upload complete Core vulnerability inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-image-vulnerabilities-${{ github.run_id }}
+          path: trivy-core.json
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Diagnose failed core runtime
         if: failure()
@@ -196,6 +246,9 @@ jobs:
           composer install --no-interaction --prefer-dist
           composer check-platform-reqs
           composer audit
+
+      - name: Early YAML syntax gate
+        run: php ./scripts/ci/control-config-lint.php
 
       - name: Static analysis
         working-directory: apps/control-plane
@@ -263,23 +316,43 @@ jobs:
           test "$(docker image inspect platform-control-plane:ci --format '{{.Config.User}}')" = "www-data"
           docker run --rm --entrypoint sh platform-control-plane:ci -c 'test ! -e /app/tests && test ! -e /app/.env && test ! -e /app/.git && test ! -e /app/vendor/bin/phpunit && test -w /app/var/cache && test -w /app/var/log'
 
-      - name: Report high-severity image vulnerabilities
+      - name: Boot production Commercial HTTP against the isolated database without checkout mounts
+        run: bash ./scripts/ci/production-image-smoke.sh commercial
+
+      - name: Inventory all high and critical Commercial image vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          version: v0.69.3
           image-ref: platform-control-plane:ci
-          format: table
-          severity: HIGH
-          ignore-unfixed: true
+          scanners: vuln
+          format: json
+          output: trivy-commercial.json
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
           exit-code: '0'
 
-      - name: Enforce zero critical image vulnerabilities
+      - name: Summarize all Commercial image findings
+        run: python3 scripts/ci/summarize-image-scan.py trivy-commercial.json --plane Commercial
+
+      - name: Enforce zero fixable high and critical Commercial image vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          version: v0.69.3
           image-ref: platform-control-plane:ci
+          scanners: vuln
           format: table
-          severity: CRITICAL
+          severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: '1'
+
+      - name: Upload complete Commercial vulnerability inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: commercial-image-vulnerabilities-${{ github.run_id }}
+          path: trivy-commercial.json
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Diagnose failed commercial runtime
         if: failure()
@@ -362,6 +435,7 @@ jobs:
           npm ci --prefix scripts/documentation --ignore-scripts
           npm run check:dbml --prefix scripts/documentation
           npm run check:python --prefix scripts/documentation
+          npm audit --audit-level=high --prefix scripts/documentation
 
   frontend-qa:
     name: Frontend quality
@@ -379,8 +453,14 @@ jobs:
           cache-dependency-path: apps/frontend/package-lock.json
       - name: Install dependencies
         run: npm ci
+      - name: Audit locked dependencies
+        run: npm audit --audit-level=high
+      - name: Verify local SVG sprite
+        run: npm run check:icons
       - name: Verify design tokens are generated from the canonical source
         run: npm run check:tokens
+      - name: Verify shared style variables and animation timings
+        run: npm run check:styles
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
@@ -388,6 +468,153 @@ jobs:
       - name: Unit and component tests
         run: npm run test
       - name: Verify mutating E2E refuses without an isolated runtime
-        run: node scripts/e2e-account-workspace.mjs --check-guard
+        run: |
+          node scripts/e2e-account-workspace.mjs --check-guard
+          node scripts/e2e-invitation-lifecycle.mjs --check-guard
       - name: Production build
         run: npm run build
+
+  browser-e2e:
+    name: Browser invitation and MFA E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      POSTGRES_DB: platform_test
+      POSTGRES_TEST_DB: platform_test
+      POSTGRES_USER: platform_app
+      CONTROL_TEST_DB: platform_commercial_test
+      CONTROL_TEST_USER: platform_control_test
+      CONTROL_TEST_PORT: "8091"
+      MAILPIT_TEST_UI_PORT: "8026"
+      PLATFORM_BASE_DOMAIN: platform.example
+      CONTROL_VERIFICATION_URL: https://e2e.platform.test:4173/verify-email
+      CONTROL_INVITATION_URL: https://e2e.platform.test:4173/invitation
+      CONTROL_PASSWORD_RESET_URL: https://e2e.platform.test:4173/reset-password
+      E2E_ALLOWED_HOSTS: e2e.platform.test
+      E2E_RUNTIME: isolated-ci
+      E2E_ISOLATED_DB: "1"
+      E2E_ALLOW_MUTATIONS: "1"
+      APP_URL: https://e2e.platform.test:4173
+      CONTROL_API_URL: http://e2e.platform.test:8091
+      MAILPIT_URL: http://e2e.platform.test:8026
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Generate isolated CI secrets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, os, secrets
+          values = {k: secrets.token_hex(32) for k in (
+              'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
+              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY', 'E2E_ISOLATION_PROOF')}
+          values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
+              'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
+          values['E2E_PASSWORD'] = secrets.token_urlsafe(24)
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for key, value in values.items():
+                  print('::add-mask::' + value)
+                  output.write(key + '=' + value + '\n')
+          PY
+      - name: Map disposable browser host alias
+        run: echo "127.0.0.1 e2e.platform.test" | sudo tee -a /etc/hosts
+      - name: Validate Compose profiles
+        run: docker compose --profile control --profile test --profile control-test --profile backup --profile provisioner config --quiet
+      - name: Start isolated Commercial database and migrate from empty
+        run: bash ./scripts/ci/control-test-start.sh
+      - name: Reset disposable Commercial fixtures
+        run: env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+      - name: Start Commercial HTTP runtime and Mailpit
+        run: docker compose --profile control-test up -d --wait control-plane-test mailpit-test
+      - name: Start the real outbox worker
+        run: bash ./scripts/ci/control-email-worker-start.sh
+      - name: Set up Node for Playwright
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - name: Install frontend dependencies and Chromium
+        working-directory: apps/frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Generate disposable frontend TLS certificate
+        run: |
+          mkdir -p /tmp/e2e-cert
+          openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
+            -keyout /tmp/e2e-cert/key.pem -out /tmp/e2e-cert/cert.pem \
+            -subj "/CN=e2e.platform.test"
+      - name: Start disposable frontend runtime
+        working-directory: apps/frontend
+        env:
+          VITE_COMMERCIAL_PROXY_TARGET: http://127.0.0.1:8091
+          VITE_HTTPS_KEY: /tmp/e2e-cert/key.pem
+          VITE_HTTPS_CERT: /tmp/e2e-cert/cert.pem
+        run: |
+          node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173 --strictPort > /tmp/vite-e2e.log 2>&1 &
+          echo $! > /tmp/vite-e2e.pid
+          for _attempt in $(seq 1 60); do
+            if curl -kfsS https://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8091/health/live
+          curl -fsS 'http://127.0.0.1:8026/api/v1/messages?limit=1'
+          curl -kfsS https://127.0.0.1:4173/ >/dev/null
+      - name: Run browser account workspace flow
+        working-directory: apps/frontend
+        run: node scripts/e2e-account-workspace.mjs
+      - name: Start production preview for appearance verification
+        working-directory: apps/frontend
+        run: |
+          npm run build
+          node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4174 --strictPort > /tmp/vite-appearance.log 2>&1 &
+          echo $! > /tmp/vite-appearance.pid
+          for _attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4174/settings >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4174/settings >/dev/null
+      - name: Verify appearance settings and synchronized motion
+        working-directory: apps/frontend
+        env:
+          BASE_URL: http://127.0.0.1:4174
+        run: |
+          node scripts/verify-appearance.mjs
+          node scripts/verify-menus.mjs
+          node scripts/verify-responsive.mjs
+      - name: Reset disposable Commercial fixtures before invitation flow
+        run: |
+          docker compose --profile control-test stop control-plane-test
+          env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+          docker compose --profile control-test up -d --wait control-plane-test
+          bash ./scripts/ci/control-email-worker-start.sh
+      - name: Run browser invitation and MFA flow
+        working-directory: apps/frontend
+        run: node scripts/e2e-invitation-lifecycle.mjs
+      - name: Collect browser runtime logs
+        if: always()
+        run: cp /tmp/vite-e2e.log apps/frontend/vite-e2e.log 2>/dev/null || true
+      - name: Upload browser artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-e2e-${{ github.run_id }}
+          path: |
+            apps/frontend/screenshots
+            apps/frontend/vite-e2e.log
+          if-no-files-found: ignore
+      - name: Diagnose failed browser runtime
+        if: failure()
+        run: |
+          docker compose --profile control-test ps -a
+          docker compose --profile control-test logs --no-color --tail 200 control-postgres-test control-plane-test mailpit-test
+          cat /tmp/vite-e2e.log || true
+      - name: Stop isolated browser runtime
+        if: always()
+        run: |
+          if [[ -s /tmp/vite-e2e.pid ]]; then kill "$(cat /tmp/vite-e2e.pid)" 2>/dev/null || true; fi
+          if [[ -s /tmp/vite-appearance.pid ]]; then kill "$(cat /tmp/vite-appearance.pid)" 2>/dev/null || true; fi
+          rm -f /tmp/vite-appearance.pid
+          rm -f /tmp/vite-e2e.pid /tmp/e2e-cert/key.pem /tmp/e2e-cert/cert.pem
+          bash ./scripts/ci/control-test-stop.sh

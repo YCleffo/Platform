@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
-import { Building2, LayoutGrid } from '@lucide/vue';
+import { Building2, LayoutGrid } from '@/shared/ui/icons';
 import AppBottomNav from './AppBottomNav.vue';
 import { i18n } from '@/shared/i18n';
 

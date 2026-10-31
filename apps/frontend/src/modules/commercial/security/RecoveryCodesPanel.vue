@@ -51,6 +51,7 @@ async function copy(): Promise<void> {
   border: 1px solid var(--border);
   border-radius: var(--radius-control-m);
   padding: var(--space-12);
+  transition: var(--theme-transition);
 }
 
 .recovery__codes {
@@ -61,14 +62,16 @@ async function copy(): Promise<void> {
   border: 1px solid var(--border);
   border-radius: var(--radius-control-m);
   background: var(--surface-2);
+  transition: var(--theme-transition);
 }
 
 .recovery__code {
-  font-family: ui-monospace, 'Cascadia Code', 'Roboto Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: var(--type-body-small-size);
   line-height: var(--type-body-small-line);
   color: var(--text-1);
   overflow-wrap: anywhere;
+  transition: var(--theme-transition);
 }
 
 @media (max-width: 360px) {

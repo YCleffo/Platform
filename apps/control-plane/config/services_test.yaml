@@ -1,0 +1,14 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    ControlPlane\Identity\Application\AuthService:
+        public: true
+        arguments:
+            $verificationTtlSeconds: '%env(int:CONTROL_VERIFICATION_TTL_SECONDS)%'
+            $accessTokenTtlSeconds: '%env(int:CONTROL_ACCESS_TOKEN_TTL_SECONDS)%'
+            $sessionTtlSeconds: '%env(int:CONTROL_SESSION_TTL_SECONDS)%'
+
+    ControlPlane\Account\Application\CreateCommercialAccount:
+        public: true

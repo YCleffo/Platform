@@ -1,0 +1,64 @@
+/* Runtime preferences layer. Generated design tokens keep the canonical values. */
+:root {
+  --z-menu: 1200;
+  --ui-density-scale: 1;
+  --ui-font-scale: 1;
+  --ui-spacing-scale: 1;
+  --ui-radius-scale: 1;
+  --ui-shadow-strength: 1;
+  --ui-button-padding-x: 16px;
+  --ui-button-padding-y: 10px;
+  --ui-motion-scale: 1;
+  --ui-theme-duration: 200ms;
+  --motion-theme-duration: calc(var(--ui-theme-duration) * var(--ui-motion-scale));
+  --motion-color-duration: var(--motion-theme-duration);
+  --motion-fast-duration: calc(120ms * var(--ui-motion-scale));
+  --motion-enter-duration: calc(180ms * var(--ui-motion-scale));
+  --motion-leave-duration: calc(120ms * var(--ui-motion-scale));
+  --motion-spinner-duration: calc(800ms * var(--ui-motion-scale));
+  --motion-skeleton-duration: calc(1400ms * var(--ui-motion-scale));
+  --motion-ease: cubic-bezier(.2, 0, 0, 1);
+  --motion-linear: linear;
+  --motion-pulse-ease: ease-in-out;
+  --button-height-m: max(var(--control-h-m), calc(44px * var(--ui-density-scale)));
+  --theme-transition: background-color var(--motion-color-duration) var(--motion-ease),
+    color var(--motion-color-duration) var(--motion-ease),
+    border-color var(--motion-color-duration) var(--motion-ease),
+    box-shadow var(--motion-color-duration) var(--motion-ease);
+}
+
+/* New/old snapshots crossfade together; element transitions must not run underneath. */
+:root[data-theme-changing] { --motion-color-duration: 0ms; }
+::view-transition { pointer-events: none; }
+::view-transition-group(root),
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--motion-theme-duration);
+  animation-timing-function: var(--motion-ease);
+}
+
+:root[data-shadows='none'] {
+  --shadow-soft: none;
+  --shadow-card: none;
+  --shadow-popover: none;
+  --shadow-modal: none;
+}
+
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+  animation: none !important;
+  transition-duration: 0ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --ui-motion-scale: 0; }
+  *, *::before, *::after { animation: none !important; transition-duration: 0ms !important; scroll-behavior: auto !important; }
+}
+
+@media (pointer: coarse) {
+  .app-button, .app-icon-button, .app-input__control, .app-dropdown__trigger, .app-dropdown__clear, .app-menu__item, .app-menu__back, .app-menu__search input, .appearance-view input[type='range'] { min-height: 44px; }
+  .app-icon-button { min-width: 44px; }
+}

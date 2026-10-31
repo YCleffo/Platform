@@ -55,7 +55,7 @@ function onMfaEnabled(): void {
 <template>
   <section class="security-view">
     <header class="security-view__header">
-      <h1 class="security-view__title">{{ $t('security.title') }}</h1>
+      <h2 class="security-view__title">{{ $t('security.title') }}</h2>
       <p class="security-view__subtitle">{{ $t('security.subtitle') }}</p>
     </header>
 
@@ -102,7 +102,7 @@ function onMfaEnabled(): void {
           </div>
           <div class="security-view__detail">
             <dt>{{ $t('security.lastUsedAt') }}</dt>
-            <dd>{{ formatDateTime(current.last_used_at, locale) }}</dd>
+            <dd>{{ current.last_used_at ? formatDateTime(current.last_used_at, locale) : '—' }}</dd>
           </div>
           <div class="security-view__detail">
             <dt>{{ $t('security.expiresAt') }}</dt>
@@ -146,12 +146,14 @@ function onMfaEnabled(): void {
   font-weight: var(--type-h1-weight);
   letter-spacing: var(--type-h1-tracking);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .security-view__subtitle {
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .security-view__grid {
@@ -172,12 +174,14 @@ function onMfaEnabled(): void {
   line-height: var(--type-h3-line);
   font-weight: var(--type-h3-weight);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .security-view__muted {
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .security-view__details {
@@ -204,6 +208,7 @@ function onMfaEnabled(): void {
   font-size: var(--type-body-small-size);
   line-height: var(--type-body-small-line);
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .security-view__detail dd {
@@ -212,6 +217,7 @@ function onMfaEnabled(): void {
   line-height: var(--type-body-medium-line);
   color: var(--text-1);
   text-align: right;
+  transition: var(--theme-transition);
 }
 
 @media (min-width: 768px) {

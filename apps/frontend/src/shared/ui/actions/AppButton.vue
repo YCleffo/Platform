@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { LoaderCircle } from '@lucide/vue';
+import { LoaderCircle } from '@/shared/ui/icons';
 
 interface Props {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -41,39 +41,37 @@ const isDisabled = computed(() => props.disabled || props.loading);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-8);
+  gap: var(--gap-s);
   border: 1px solid transparent;
   border-radius: var(--radius-control-m);
   cursor: pointer;
   user-select: none;
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 100%;
+  text-align: center;
   transition:
-    background-color 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease,
-    box-shadow 120ms ease;
+    var(--theme-transition);
 }
 
 .app-button--s {
-  height: var(--control-h-s);
-  padding: 0 var(--space-12);
+  min-height: var(--control-h-s);
+  padding: var(--pad-button-s-vertical) var(--pad-button-s-horizontal);
   font-size: var(--type-button-s-size);
   line-height: var(--type-button-s-line);
   font-weight: var(--type-button-s-weight);
 }
 
 .app-button--m {
-  min-height: var(--control-h-m);
-  height: 44px;
-  padding: 0 var(--space-16);
+  min-height: var(--button-height-m);
+  padding: var(--pad-button-m-vertical) var(--pad-button-m-horizontal);
   font-size: var(--type-button-m-size);
   line-height: var(--type-button-m-line);
   font-weight: var(--type-button-m-weight);
 }
 
 .app-button--l {
-  height: var(--control-h-l);
-  padding: 0 var(--space-20);
+  min-height: var(--control-h-l);
+  padding: var(--pad-button-l-vertical) var(--pad-button-l-horizontal);
   font-size: var(--type-button-l-size);
   line-height: var(--type-button-l-line);
   font-weight: var(--type-button-l-weight);
@@ -91,51 +89,61 @@ const isDisabled = computed(() => props.disabled || props.loading);
 .app-button--primary {
   background: var(--accent);
   color: var(--color-white);
+  transition: var(--theme-transition);
 }
 
 .app-button--primary:hover:not(:disabled) {
   background: var(--accent-hover);
+  transition: var(--theme-transition);
 }
 
 .app-button--primary:active:not(:disabled) {
   background: var(--accent-pressed);
+  transition: var(--theme-transition);
 }
 
 .app-button--secondary {
   background: var(--surface);
   color: var(--text-1);
   border-color: var(--border-strong);
+  transition: var(--theme-transition);
 }
 
 .app-button--secondary:hover:not(:disabled) {
   background: var(--surface-hover);
+  transition: var(--theme-transition);
 }
 
 .app-button--secondary:active:not(:disabled) {
   background: var(--surface-2);
+  transition: var(--theme-transition);
 }
 
 .app-button--ghost {
   background: transparent;
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .app-button--ghost:hover:not(:disabled) {
   background: var(--surface-hover);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .app-button--danger {
   background: var(--danger);
   color: var(--color-white);
+  transition: var(--theme-transition);
 }
 
 .app-button--danger:hover:not(:disabled) {
   background: var(--color-danger-700);
+  transition: var(--theme-transition);
 }
 
 .app-button__spinner {
-  animation: app-button-spin 700ms linear infinite;
+  animation: app-button-spin var(--motion-spinner-duration) var(--motion-linear) infinite;
 }
 
 @keyframes app-button-spin {

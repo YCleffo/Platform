@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { RotateCw, Trash2 } from '@lucide/vue';
+import { RotateCw, Trash2 } from '@/shared/ui/icons';
 import AppBadge from '@/shared/ui/feedback/AppBadge.vue';
 import AppIconButton from '@/shared/ui/actions/AppIconButton.vue';
 import { formatDateTime } from '@/shared/formatting/date';
@@ -71,6 +71,7 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-card-s);
+  transition: var(--theme-transition);
 }
 
 .invitation__identity {
@@ -88,6 +89,7 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: var(--theme-transition);
 }
 
 .invitation__meta {
@@ -95,6 +97,7 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
   line-height: var(--type-body-small-line);
   color: var(--text-3);
   overflow-wrap: anywhere;
+  transition: var(--theme-transition);
 }
 
 .invitation__side {

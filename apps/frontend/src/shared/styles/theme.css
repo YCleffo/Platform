@@ -26,6 +26,7 @@
 
   --link: var(--color-link);
   --link-hover: var(--color-link-hover);
+  --accent-text: var(--link);
 
   --focus-border: var(--color-focus-border);
   --focus-ring: var(--shadow-focus-ring);

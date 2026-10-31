@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
+import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 
 export interface BottomNavItem {
@@ -8,9 +9,10 @@ export interface BottomNavItem {
   routeName: string;
 }
 
-defineProps<{ items: BottomNavItem[] }>();
+const props = defineProps<{ items: BottomNavItem[]; activeRouteName?: string }>();
 
 const route = useRoute();
+const active = computed(() => props.activeRouteName ?? route.name);
 </script>
 
 <template>
@@ -19,9 +21,10 @@ const route = useRoute();
       <li v-for="item in items" :key="item.routeName" class="app-bottom-nav__item">
         <RouterLink
           class="app-bottom-nav__link"
-          :class="{ 'app-bottom-nav__link--active': route.name === item.routeName }"
+          :class="{ 'app-bottom-nav__link--active': active === item.routeName }"
           :to="{ name: item.routeName }"
-          :aria-current="route.name === item.routeName ? 'page' : undefined"
+          :aria-current="active === item.routeName ? 'page' : undefined"
+          active-class="" exact-active-class=""
         >
           <span class="app-bottom-nav__icon" aria-hidden="true">
             <component :is="item.icon" :size="22" />
@@ -43,6 +46,7 @@ const route = useRoute();
   background: var(--surface);
   border-top: 1px solid var(--border);
   padding-bottom: env(safe-area-inset-bottom);
+  transition: var(--theme-transition);
 }
 
 .app-bottom-nav__list {
@@ -63,11 +67,12 @@ const route = useRoute();
   gap: var(--space-4);
   height: 100%;
   color: var(--text-3);
-  transition: color 120ms ease;
+  transition: var(--theme-transition);
 }
 
 .app-bottom-nav__link--active {
-  color: var(--accent);
+  color: var(--accent-text);
+  transition: var(--theme-transition);
 }
 
 .app-bottom-nav__icon {
@@ -81,6 +86,7 @@ const route = useRoute();
 
 .app-bottom-nav__link--active .app-bottom-nav__icon {
   background: var(--accent-soft);
+  transition: var(--theme-transition);
 }
 
 .app-bottom-nav__label {

@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { CircleCheck } from '@lucide/vue';
+import { CircleCheck } from '@/shared/ui/icons';
 import { ApiError } from '@/shared/api/errors';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useAccountStore } from '@/core/account/accountStore';
@@ -49,7 +49,7 @@ const ACTION_KEYS: Record<string, string> = {
 
 const previewErrorText = computed(() => {
   const failure = error.value;
-  if (failure instanceof ApiError && failure.status === 404) {
+  if (failure instanceof ApiError && (failure.status === 404 || failure.status === 403)) {
     return t('invitations.invalid');
   }
   return errorMessage.value ?? t('invitations.loadFailed');
@@ -122,14 +122,6 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
   <section class="invitation-accept">
     <AppSkeleton v-if="loading" variant="text" :lines="3" />
 
-    <AppEmptyState v-else-if="!hasToken" :title="$t('invitations.missingToken')" :description="$t('invitations.missingTokenHint')">
-      <RouterLink :to="{ name: 'catalog' }">{{ $t('nav.catalog') }}</RouterLink>
-    </AppEmptyState>
-
-    <AppErrorState v-else-if="error" :message="previewErrorText">
-      <RouterLink :to="{ name: 'catalog' }">{{ $t('nav.catalog') }}</RouterLink>
-    </AppErrorState>
-
     <div v-else-if="declined" class="invitation-accept__status">
       <span class="invitation-accept__icon" aria-hidden="true">
         <CircleCheck :size="28" />
@@ -137,6 +129,14 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
       <h1 class="invitation-accept__title">{{ $t('invitations.declined') }}</h1>
       <RouterLink :to="{ name: 'catalog' }">{{ $t('nav.catalog') }}</RouterLink>
     </div>
+
+    <AppEmptyState v-else-if="!hasToken" :title="$t('invitations.missingToken')" :description="$t('invitations.missingTokenHint')">
+      <RouterLink :to="{ name: 'catalog' }">{{ $t('nav.catalog') }}</RouterLink>
+    </AppEmptyState>
+
+    <AppErrorState v-else-if="error" :message="previewErrorText">
+      <RouterLink :to="{ name: 'catalog' }">{{ $t('nav.catalog') }}</RouterLink>
+    </AppErrorState>
 
     <div v-else-if="preview" class="invitation-accept__content">
       <h1 class="invitation-accept__title">{{ $t('invitations.acceptTitle') }}</h1>
@@ -218,12 +218,14 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
   font-weight: var(--type-h1-weight);
   letter-spacing: var(--type-h1-tracking);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .invitation-accept__intro {
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .invitation-accept__details {
@@ -235,12 +237,14 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
   border: 1px solid var(--border);
   border-radius: var(--radius-control-m);
   background: var(--surface-2);
+  transition: var(--theme-transition);
 }
 
 .invitation-accept__detail {
   font-size: var(--type-body-small-size);
   line-height: var(--type-body-small-line);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .invitation-accept__actions {
@@ -259,6 +263,7 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--danger-text);
+  transition: var(--theme-transition);
 }
 
 .invitation-accept__status {
@@ -278,6 +283,7 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
   border-radius: var(--radius-badge-module-tile);
   background: var(--success-soft);
   color: var(--success);
+  transition: var(--theme-transition);
 }
 
 .invitation-accept__decline {

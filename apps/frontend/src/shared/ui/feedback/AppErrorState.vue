@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleAlert } from '@lucide/vue';
+import { CircleAlert } from '@/shared/ui/icons';
 
 interface Props {
   title?: string;
@@ -44,6 +44,7 @@ defineEmits<{ retry: [] }>();
   border-radius: var(--radius-badge-module-tile);
   background: var(--danger-soft);
   color: var(--danger);
+  transition: var(--theme-transition);
 }
 
 .app-error__title {
@@ -51,6 +52,7 @@ defineEmits<{ retry: [] }>();
   line-height: var(--type-body-large-emphasis-line);
   font-weight: var(--type-body-large-emphasis-weight);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .app-error__message {
@@ -58,5 +60,6 @@ defineEmits<{ retry: [] }>();
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 </style>

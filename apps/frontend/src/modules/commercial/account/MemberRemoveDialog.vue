@@ -49,6 +49,7 @@ const emit = defineEmits<{
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--danger-text);
+  transition: var(--theme-transition);
 }
 
 .remove-form__actions {

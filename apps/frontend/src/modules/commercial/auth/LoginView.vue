@@ -90,5 +90,6 @@ async function onSubmit(): Promise<void> {
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
   text-align: center;
+  transition: var(--theme-transition);
 }
 </style>

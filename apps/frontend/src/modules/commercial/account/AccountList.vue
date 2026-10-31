@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Building2, Plus } from '@lucide/vue';
+import { Building2, Plus } from '@/shared/ui/icons';
 import AccountCard from './AccountCard.vue';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
 import AppCard from '@/shared/ui/surfaces/AppCard.vue';
@@ -63,6 +63,7 @@ defineEmits<{
   display: block;
   color: inherit;
   border-radius: var(--radius-card-m);
+  transition: var(--theme-transition);
 }
 
 .account-list__link:hover {
@@ -72,6 +73,7 @@ defineEmits<{
 .account-list__link:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
+  transition: var(--theme-transition);
 }
 
 @media (min-width: 768px) {

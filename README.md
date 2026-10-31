@@ -4,6 +4,27 @@ Platform состоит из Yii Core и Symfony Commercial Control Plane. Core 
 
 [Документация](docs/README.md) · [Бизнес-процессы](docs/processes/README.md) · [База данных](docs/database/README.md)
 
+## Структура репозитория
+
+| Каталог | Назначение |
+| --- | --- |
+| `apps/backend` | Yii Core: HTTP, CLI, фоновые процессы, SQL-миграции и тесты |
+| `apps/control-plane` | Symfony Commercial: identities, каталог, биллинг, provisioning и Doctrine migrations |
+| `apps/frontend` | Vue 3 SPA: Commercial UI, Security Center и приём приглашений |
+| `contracts/openapi` | HTTP-контракты, используемые проверками совместимости |
+| `contracts/events` | Схемы событий между процессами |
+| `deployment` | Политики privacy и локальные mount points для подписания |
+| `infra` | Образы и скрипты инфраструктурных возможностей |
+| `scripts` | Ручные операции запуска, диагностики, смены паролей и восстановления |
+| `scripts/ci` | Изолированные сценарии только для CI |
+| `scripts/database` | Применение миграций в постоянных контейнерах и экспорт метаданных |
+| `scripts/documentation` | Детерминированные генераторы и проверки документации |
+| `docs` | Архитектура, эксплуатация, схема БД и процессы |
+| `compose.yaml` | Постоянные сервисы проекта `platform` |
+| `compose.ci.yaml` | Дополнительные сервисы проверки в CI |
+
+Generated caches, `.env`, секреты и локальные дампы не являются исходниками и не входят в Git. Рабочие PostgreSQL-тома управляются отдельно от файлов репозитория.
+
 ## Запуск
 
 Нужны Docker Compose, PowerShell и Python 3. Запуск из корня репозитория:
@@ -41,6 +62,7 @@ Dev-прокси: `/api/control/*` → Commercial (`:8090`), `/api/*` → Core (
 
 ```powershell
 cd apps/frontend
+npm run check:icons    # локальный SVG-спрайт соответствует исходникам
 npm run check:tokens   # токены соответствуют design/design-tokens.json
 npm run typecheck
 npm run lint
@@ -51,6 +73,10 @@ npm run build
 Токены хранятся только в памяти (после перезагрузки нужен повторный вход). Подробности:
 [руководство по frontend](docs/frontend/README.md), [README приложения](apps/frontend/README.md),
 [контракт графиков](docs/frontend/CHARTS_CONTRACT.md).
+
+Шрифты Inter/Space Mono и используемые Solar SVG поставляются локально. Полные исходные
+библиотеки иконок и шрифтов сохранены для дальнейшей разработки; в bundle попадают только
+выбранный спрайт и WOFF2. CDN для них не используется.
 
 ## Конфигурация и обновление
 
@@ -63,6 +89,11 @@ npm run build
 `.github/workflows/ci.yml` запускает Core, Commercial, межсервисные и инфраструктурные проверки в GitHub Actions. `compose.ci.yaml` дополняет основной файл только для CI; сценарии `scripts/ci` отказываются запускаться без `CI=true`. На локальных рабочих базах интеграционные тесты и reset-команды не запускаются.
 
 CI можно запустить вручную: **Actions → Platform CI → Run workflow**. Сообщение коммита с `[skip ci]` пропускает автоматический запуск при push, но не ручной запуск.
+
+Имена тестовых томов и сетей учитывают `COMPOSE_PROJECT_NAME`; отдельный проверочный проект
+можно удалить независимо от рабочей установки. Docker build cache и результаты browser E2E
+не являются данными приложения. Рабочие PostgreSQL volumes и source-библиотеки при чистке
+сохраняются.
 
 Проверка сохранённых схем и документации без дополнительных контейнеров:
 

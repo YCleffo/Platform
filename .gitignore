@@ -52,3 +52,6 @@ Desktop.ini
 
 # Local archives
 *.zip
+
+# Disposable browser verification output
+apps/frontend/screenshots/

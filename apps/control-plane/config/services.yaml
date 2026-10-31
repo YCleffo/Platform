@@ -9,6 +9,10 @@ parameters:
     env(CONTROL_PRIVACY_ERASURE_POLICY_APPROVED): 'false'
     env(CONTROL_PRIVACY_IDENTITY_RETENTION_DAYS): '-1'
     env(CONTROL_PRIVACY_BILLING_CONTACT_RETENTION_DAYS): '-1'
+    env(CONTROL_E2E_ISOLATION_NONCE): ''
+    control_e2e_isolation_nonce: '%env(CONTROL_E2E_ISOLATION_NONCE)%'
+    env(CONTROL_YOOKASSA_WEBHOOK_IPS): ''
+    control_yookassa_webhook_ips: '%env(CONTROL_YOOKASSA_WEBHOOK_IPS)%'
     # Deployment must set reviewed per-category periods before cleanup can run.
     control_privacy_retention_days: '%env(json:CONTROL_PRIVACY_RETENTION_DAYS)%'
     control_privacy_operator_notification: '%env(json:CONTROL_PRIVACY_OPERATOR_NOTIFICATION)%'
@@ -32,9 +36,17 @@ services:
             - '../src/**/Domain/'
 
     ControlPlane\Infrastructure\Http\HealthController:
+        arguments:
+            $environment: '%kernel.environment%'
+            $isolationNonce: '%control_e2e_isolation_nonce%'
         tags: ['controller.service_arguments']
 
     ControlPlane\Infrastructure\Http\PrivacyController:
+        tags: ['controller.service_arguments']
+
+    ControlPlane\Infrastructure\Http\YooKassaWebhookController:
+        arguments:
+            $allowedIps: '%control_yookassa_webhook_ips%'
         tags: ['controller.service_arguments']
 
     ControlPlane\Billing\Domain\ProrationCalculator: ~

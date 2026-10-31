@@ -36,9 +36,9 @@ final class CreateCommercialAccountTest extends DatabaseTestCase
         $service = new CreateCommercialAccount($this->connection);
         $user = $this->user();
         $correlation = \Symfony\Component\Uid\Uuid::v7()->toRfc4122();
-        $service->create($user, 'academy-one', 'Academy One', null, 'request-one', $correlation);
+        $accountId = $service->create($user, 'academy-one', 'Academy One', null, 'request-one', $correlation);
         $this->expectDatabaseRejection(fn () => $service->create($user, 'academy-one', 'Different Display Name', null, 'request-two', $correlation));
         self::assertSame(0, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.idempotency_keys WHERE idempotency_key = 'request-two'"));
-        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events WHERE event_type = 'commercial_account.created'"));
+        self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.outbox_events WHERE event_type = 'commercial_account.created' AND aggregate_id = ?", [$accountId]));
     }
 }

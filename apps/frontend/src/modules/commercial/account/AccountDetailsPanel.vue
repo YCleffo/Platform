@@ -57,6 +57,7 @@ const { t, locale } = useI18n();
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-emphasis-weight);
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .details__value {
@@ -65,10 +66,11 @@ const { t, locale } = useI18n();
   line-height: var(--type-body-medium-line);
   color: var(--text-1);
   overflow-wrap: anywhere;
+  transition: var(--theme-transition);
 }
 
 .details__value--mono {
-  font-family: ui-monospace, 'Cascadia Code', 'Roboto Mono', Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 @media (min-width: 768px) {

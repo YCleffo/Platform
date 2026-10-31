@@ -15,7 +15,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
 final class SecurityBaselineSubscriber implements EventSubscriberInterface
 {
     private const MAX_BODY_BYTES = 65_536;
-    private const SENSITIVE_API_PATH = '~^/api/(?:control/(?:auth|accounts|privacy)(?:/|$)|m2m(?:/|$))~';
+    private const SENSITIVE_API_PATH = '~^/api/(?:control|m2m)(?:/|$)~';
 
     public function onRequest(RequestEvent $event): void
     {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { Check, Tag } from '@lucide/vue';
+import { Check, Tag } from '@/shared/ui/icons';
 import AppCard from '@/shared/ui/surfaces/AppCard.vue';
 import AppDivider from '@/shared/ui/surfaces/AppDivider.vue';
 import { formatMoney } from '@/shared/formatting/money';
@@ -76,6 +76,7 @@ function priceText(price: PlanPrice): string {
   font-weight: var(--type-h2-weight);
   letter-spacing: var(--type-h2-tracking);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .plan__version {
@@ -84,6 +85,7 @@ function priceText(price: PlanPrice): string {
   font-weight: var(--type-body-small-weight);
   color: var(--text-3);
   white-space: nowrap;
+  transition: var(--theme-transition);
 }
 
 .plan__code {
@@ -92,6 +94,7 @@ function priceText(price: PlanPrice): string {
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .plan__prices {
@@ -109,6 +112,7 @@ function priceText(price: PlanPrice): string {
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--accent-strong);
+  transition: var(--theme-transition);
 }
 
 .plan__divider {
@@ -128,6 +132,7 @@ function priceText(price: PlanPrice): string {
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .plan__feature-check {
@@ -140,6 +145,7 @@ function priceText(price: PlanPrice): string {
   background: var(--success-soft);
   color: var(--success);
   flex: 0 0 auto;
+  transition: var(--theme-transition);
 }
 
 .plan__feature-dot {
@@ -156,6 +162,7 @@ function priceText(price: PlanPrice): string {
 .plan__feature-value {
   color: var(--text-1);
   font-weight: 500;
+  transition: var(--theme-transition);
 }
 
 .plan__empty {
@@ -166,5 +173,6 @@ function priceText(price: PlanPrice): string {
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 </style>

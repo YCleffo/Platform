@@ -10,6 +10,7 @@
 | `AUTH_IDENTIFIER_HMAC_KEY`, `DEVICE_FINGERPRINT_KEY` | Хеширование идентификаторов и отпечатков Core |
 | `AUTH_TOTP_ENCRYPTION_KEY`, `CONTROL_TOTP_ENCRYPTION_KEY` | Отдельные ключи XChaCha20-Poly1305, base64 от 32 случайных байтов |
 | OAuth, SMTP, YooKassa | Реальные значения выдаёт соответствующий провайдер; генератор их не подменяет |
+| `CONTROL_YOOKASSA_WEBHOOK_IPS` | Необязательный CIDR-список источников YooKassa webhook; пустое значение оставляет только rate limit |
 
 Compose передаёт Core адрес `postgres:5432`, Commercial — `control-postgres:5432`. Это имена сервисов внутри разных сетей. Приложение Core требует свои `DB_*` и не подхватывает `POSTGRES_*` при их отсутствии. Явный `DB_PASSWORD_FILE` используется только в выделенном provisioner-контракте с закреплённым путём секрета.
 

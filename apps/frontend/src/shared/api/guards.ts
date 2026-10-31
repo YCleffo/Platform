@@ -188,12 +188,14 @@ export function isControlSession(value: unknown): value is ControlSession {
     isRecord(value) &&
     isString(value.id) &&
     isString(value.issued_at) &&
-    isString(value.last_used_at) &&
+    isNullableString(value.last_used_at) &&
     isString(value.expires_at) &&
     isNullableString(value.revoked_at) &&
     isNullableString(value.revoke_reason) &&
-    isString(value.user_agent) &&
-    isString(value.authentication_method) &&
+    isNullableString(value.user_agent) &&
+    (value.authentication_method === 'password' ||
+      value.authentication_method === 'password_totp' ||
+      value.authentication_method === 'password_recovery') &&
     isString(value.primary_authenticated_at) &&
     isNullableString(value.mfa_authenticated_at) &&
     isBoolean(value.current)

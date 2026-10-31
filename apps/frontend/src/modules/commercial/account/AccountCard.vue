@@ -49,6 +49,7 @@ const { t } = useI18n();
   font-size: var(--type-h2-size);
   font-weight: var(--type-h2-weight);
   flex: 0 0 auto;
+  transition: var(--theme-transition);
 }
 
 .account__identity {
@@ -64,6 +65,7 @@ const { t } = useI18n();
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: var(--theme-transition);
 }
 
 .account__code {
@@ -71,6 +73,7 @@ const { t } = useI18n();
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
   color: var(--text-3);
-  font-family: ui-monospace, 'Cascadia Code', 'Roboto Mono', Menlo, monospace;
+  font-family: var(--font-mono);
+  transition: var(--theme-transition);
 }
 </style>

@@ -51,6 +51,7 @@ withDefaults(defineProps<Props>(), {
   font-weight: var(--type-h1-weight);
   letter-spacing: var(--type-h1-tracking);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .app-form-shell__subtitle {
@@ -58,6 +59,7 @@ withDefaults(defineProps<Props>(), {
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .app-form-shell__error {
@@ -65,6 +67,7 @@ withDefaults(defineProps<Props>(), {
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--danger-text);
+  transition: var(--theme-transition);
 }
 
 .app-form-shell__body {

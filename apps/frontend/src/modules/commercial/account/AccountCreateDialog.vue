@@ -108,6 +108,7 @@ async function onSubmit(): Promise<void> {
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--danger-text);
+  transition: var(--theme-transition);
 }
 
 .account-create__actions {

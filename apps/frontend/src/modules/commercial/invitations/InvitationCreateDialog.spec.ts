@@ -18,11 +18,15 @@ describe('InvitationCreateDialog', () => {
     });
     try {
       await flush();
+      document.querySelector<HTMLButtonElement>('#invitation-role')!.click();
+      await flush();
       const options = Array.from(
-        document.querySelectorAll<HTMLOptionElement>('#invitation-role option'),
-      ).map((option) => option.value);
+        document.querySelectorAll<HTMLElement>('#invitation-role-menu [data-menu-id]'),
+      ).map((option) => option.dataset.menuId);
       expect(options).toEqual(['admin', 'billing', 'technical']);
       expect(options).not.toContain('owner');
+      document.querySelector<HTMLElement>('[data-menu-id="admin"]')!.click();
+      await flush();
 
       const email = document.querySelector<HTMLInputElement>('#invitation-email');
       expect(email).not.toBeNull();

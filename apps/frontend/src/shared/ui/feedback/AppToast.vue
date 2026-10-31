@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from '@lucide/vue';
+import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from '@/shared/ui/icons';
 import { useToast } from '@/shared/composables/useToast';
 import AppIconButton from '../actions/AppIconButton.vue';
 
@@ -54,24 +54,29 @@ const { toasts, dismiss } = useToast();
   border: 1px solid var(--border);
   border-radius: var(--radius-control-m);
   box-shadow: var(--shadow-popover);
+  transition: var(--theme-transition);
 }
 
 .app-toast__icon {
   display: inline-flex;
   align-items: center;
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .app-toast--success .app-toast__icon {
   color: var(--success);
+  transition: var(--theme-transition);
 }
 
 .app-toast--warning .app-toast__icon {
   color: var(--warning);
+  transition: var(--theme-transition);
 }
 
 .app-toast--error .app-toast__icon {
   color: var(--danger);
+  transition: var(--theme-transition);
 }
 
 .app-toast__message {
@@ -80,13 +85,13 @@ const { toasts, dismiss } = useToast();
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .toast-enter-active,
 .toast-leave-active {
   transition:
-    opacity 160ms ease,
-    transform 160ms ease;
+    var(--theme-transition), opacity var(--motion-enter-duration) var(--motion-ease), transform var(--motion-enter-duration) var(--motion-ease);
 }
 
 .toast-enter-from,

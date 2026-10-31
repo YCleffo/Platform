@@ -20,7 +20,8 @@ final class RecentAuthenticationTest extends DatabaseTestCase
         $session = $auth->login($email, $password, '192.0.2.77', 'recent test', $correlation);
         $principal = $auth->authenticateAccessToken($session['access_token']);
         $setup = $security->beginTotpSetup($principal, $correlation);
-        $security->confirmTotpSetup($principal, $setup['factor_id'], $this->totp($setup['secret'], time()), $correlation);
+        $recoveryCodes = $security->confirmTotpSetup($principal, $setup['factor_id'], $this->totp($setup['secret'], time()), $correlation);
+        $security->reauthenticate($principal, $password, $this->totp($setup['secret'], time() + 30), null, $correlation);
 
         $this->expireEvidence((string) $principal->sessionId(), false, true);
         $staleMfa = $auth->authenticateAccessToken($session['access_token']);
@@ -31,7 +32,7 @@ final class RecentAuthenticationTest extends DatabaseTestCase
             self::assertSame('recent_mfa_required', $failure->errorCode);
         }
 
-        $security->reauthenticate($staleMfa, $password, $this->totp($setup['secret'], time() + 30), null, $correlation);
+        $security->reauthenticate($staleMfa, $password, null, $recoveryCodes[0], $correlation);
         $security->requireSensitiveMfa($auth->authenticateAccessToken($session['access_token']));
 
         $this->expireEvidence((string) $principal->sessionId(), true, true);
@@ -43,7 +44,7 @@ final class RecentAuthenticationTest extends DatabaseTestCase
             self::assertSame('recent_authentication_required', $failure->errorCode);
         }
 
-        $security->reauthenticate($stalePrimary, $password, $this->totp($setup['secret'], time() + 60), null, $correlation);
+        $security->reauthenticate($stalePrimary, $password, null, $recoveryCodes[1], $correlation);
         $security->requireSensitiveMfa($auth->authenticateAccessToken($session['access_token']));
     }
 
@@ -84,10 +85,11 @@ final class RecentAuthenticationTest extends DatabaseTestCase
         $principal = $auth->authenticateAccessToken($session['access_token']);
         $setup = $security->beginTotpSetup($principal, $correlation);
         $security->confirmTotpSetup($principal, $setup['factor_id'], $this->totp($setup['secret'], time()), $correlation);
+        $security->reauthenticate($principal, $password, $this->totp($setup['secret'], time() + 30), null, $correlation);
         $this->expireEvidence((string) $principal->sessionId(), false, true);
 
         try {
-            $security->reauthenticate($principal, 'wrong password', $this->totp($setup['secret'], time() + 30), null, $correlation);
+            $security->reauthenticate($principal, 'wrong password', $this->totp($setup['secret'], time() + 60), null, $correlation);
             self::fail('Wrong password accepted for step-up.');
         } catch (AuthFailure $failure) {
             self::assertSame('invalid_credentials', $failure->errorCode);

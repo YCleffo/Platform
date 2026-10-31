@@ -30,6 +30,13 @@ paths:
       responses:
         '200': {description: Ready, content: {application/json: {schema: {$ref: '#/components/schemas/Health'}}}}
         '503': {description: Not ready, content: {application/json: {schema: {$ref: '#/components/schemas/Health'}}}}
+  /health/isolation:
+    get:
+      security: []
+      operationId: healthIsolation
+      responses:
+        '200': {description: Disposable runtime nonce proof, content: {application/json: {schema: {$ref: '#/components/schemas/Object'}}}}
+        '404': {description: Isolation proof is not available, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
   /api/control/me:
     get:
       operationId: getCurrentUser
@@ -768,7 +775,21 @@ components:
       properties:
         recovery_codes: {type: array, items: {type: string}}
     Reauthenticated: {type: object, additionalProperties: false, required: [status], properties: {status: {const: reauthenticated}}}
-    Session: {type: object, required: [id, authentication_method, primary_authenticated_at, current], properties: {id: {type: string, format: uuid}, issued_at: {type: string, format: date-time}, last_used_at: {type: string, format: date-time}, expires_at: {type: string, format: date-time}, revoked_at: {type: [string, 'null'], format: date-time}, revoke_reason: {type: [string, 'null']}, user_agent: {type: string}, authentication_method: {type: string, enum: [password, password_totp, password_recovery]}, primary_authenticated_at: {type: string, format: date-time}, mfa_authenticated_at: {type: [string, 'null'], format: date-time}, current: {type: boolean}}}
+    Session:
+      type: object
+      required: [id, issued_at, last_used_at, expires_at, revoked_at, revoke_reason, user_agent, authentication_method, primary_authenticated_at, mfa_authenticated_at, current]
+      properties:
+        id: {type: string, format: uuid}
+        issued_at: {type: string, format: date-time}
+        last_used_at: {type: [string, 'null'], format: date-time}
+        expires_at: {type: string, format: date-time}
+        revoked_at: {type: [string, 'null'], format: date-time}
+        revoke_reason: {type: [string, 'null']}
+        user_agent: {type: [string, 'null']}
+        authentication_method: {type: string, enum: [password, password_totp, password_recovery]}
+        primary_authenticated_at: {type: string, format: date-time}
+        mfa_authenticated_at: {type: [string, 'null'], format: date-time}
+        current: {type: boolean}
     Subscription:
       type: object
       required: [id, status, billing_status, past_due_since, grace_until, auto_renew_enabled, renewal_required]

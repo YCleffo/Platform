@@ -17,7 +17,7 @@ final class OperationalStatusTest extends TestCase
     {
         $db = $this->createMock(Connection::class);
         $db->expects(self::once())->method('fetchOne')->willThrowException(new \RuntimeException('private SQL detail'));
-        $health = new HealthController();
+        $health = new HealthController('test', str_repeat('a', 64));
         self::assertSame('{"status":"ok"}', $health->live()->getContent());
         $response = $health->ready(new OperationalStatus($db));
         self::assertSame(503, $response->getStatusCode());

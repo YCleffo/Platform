@@ -1249,6 +1249,601 @@
     },
     {
       "rls": false,
+      "name": "commercial_account_invitations",
+      "schema": "commercial",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "commercial_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "email",
+          "type": "character varying(320)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "email_normalized",
+          "type": "character varying(320)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "role",
+          "type": "character varying(16)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "invited_by",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "token_hash",
+          "type": "bytea",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bytea",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "token_version",
+          "type": "integer",
+          "comment": null,
+          "default": "1",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "status",
+          "type": "character varying(16)",
+          "comment": null,
+          "default": "'pending'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "accepted_by",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "declined_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "commercial_account_id",
+            "status"
+          ],
+          "name": "commercial_account_invitations_account_status_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX commercial_account_invitations_account_status_idx ON commercial.commercial_account_invitations USING btree (commercial_account_id, status)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "expires_at"
+          ],
+          "name": "commercial_account_invitations_expires_at_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX commercial_account_invitations_expires_at_idx ON commercial.commercial_account_invitations USING btree (expires_at)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "commercial_account_id",
+            "email_normalized"
+          ],
+          "name": "commercial_account_invitations_pending_email_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "((status)::text = 'pending'::text)",
+          "definition": "CREATE UNIQUE INDEX commercial_account_invitations_pending_email_key ON commercial.commercial_account_invitations USING btree (commercial_account_id, email_normalized) WHERE ((status)::text = 'pending'::text)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "commercial_account_invitations_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX commercial_account_invitations_pkey ON commercial.commercial_account_invitations USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "token_hash"
+          ],
+          "name": "commercial_account_invitations_token_hash_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX commercial_account_invitations_token_hash_key ON commercial.commercial_account_invitations USING btree (token_hash)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "f",
+          "name": "commercial_account_invitations_accepted_by_fkey",
+          "columns": [
+            "accepted_by"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (accepted_by) REFERENCES commercial.control_users(id)",
+          "target_table": "control_users",
+          "target_schema": "commercial",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "commercial_account_invitations_commercial_account_id_fkey",
+          "columns": [
+            "commercial_account_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id)",
+          "target_table": "commercial_accounts",
+          "target_schema": "commercial",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "commercial_account_invitations_commercial_account_id_not_null",
+          "columns": [
+            "commercial_account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL commercial_account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "commercial_account_invitations_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "commercial_account_invitations_email_check",
+          "columns": [
+            "email_normalized"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (length(btrim(email_normalized::text)) > 0)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "commercial_account_invitations_email_normalized_not_null",
+          "columns": [
+            "email_normalized"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL email_normalized",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "commercial_account_invitations_email_not_null",
+          "columns": [
+            "email"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL email",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "commercial_account_invitations_expires_at_not_null",
+          "columns": [
+            "expires_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL expires_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "commercial_account_invitations_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "commercial_account_invitations_invited_by_fkey",
+          "columns": [
+            "invited_by"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (invited_by) REFERENCES commercial.control_users(id)",
+          "target_table": "control_users",
+          "target_schema": "commercial",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "commercial_account_invitations_invited_by_not_null",
+          "columns": [
+            "invited_by"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL invited_by",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "commercial_account_invitations_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "commercial_account_invitations_role_check",
+          "columns": [
+            "role"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (role::text = ANY (ARRAY['admin'::character varying, 'billing'::character varying, 'technical'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "commercial_account_invitations_role_not_null",
+          "columns": [
+            "role"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL role",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "commercial_account_invitations_status_check",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'declined'::character varying, 'revoked'::character varying, 'expired'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "commercial_account_invitations_status_not_null",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL status",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "commercial_account_invitations_token_hash_key",
+          "columns": [
+            "token_hash"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (token_hash)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "commercial_account_invitations_token_hash_not_null",
+          "columns": [
+            "token_hash"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL token_hash",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "commercial_account_invitations_token_version_check",
+          "columns": [
+            "token_version"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (token_version >= 1)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "commercial_account_invitations_token_version_not_null",
+          "columns": [
+            "token_version"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL token_version",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "commercial_account_invitations_updated_at_not_null",
+          "columns": [
+            "updated_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL updated_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
       "name": "commercial_account_memberships",
       "schema": "commercial",
       "columns": [
@@ -24704,406 +25299,6 @@
           "initially_deferred": false
         }
       ]
-    },
-    {
-      "rls": false,
-      "name": "commercial_account_invitations",
-      "schema": "commercial",
-      "columns": [
-        {
-          "name": "id",
-          "type": "uuid",
-          "comment": null,
-          "default": null,
-          "is_enum": false,
-          "identity": "",
-          "nullable": false,
-          "generated": "",
-          "type_name": "uuid",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "commercial_account_id",
-          "type": "uuid",
-          "comment": null,
-          "default": null,
-          "is_enum": false,
-          "identity": "",
-          "nullable": false,
-          "generated": "",
-          "type_name": "uuid",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "email",
-          "type": "character varying(320)",
-          "comment": null,
-          "default": null,
-          "is_enum": false,
-          "identity": "",
-          "nullable": false,
-          "generated": "",
-          "type_name": "varchar",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "email_normalized",
-          "type": "character varying(320)",
-          "comment": null,
-          "default": null,
-          "is_enum": false,
-          "identity": "",
-          "nullable": false,
-          "generated": "",
-          "type_name": "varchar",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "role",
-          "type": "character varying(16)",
-          "comment": null,
-          "default": null,
-          "is_enum": false,
-          "identity": "",
-          "nullable": false,
-          "generated": "",
-          "type_name": "varchar",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "invited_by",
-          "type": "uuid",
-          "comment": null,
-          "default": null,
-          "is_enum": false,
-          "identity": "",
-          "nullable": false,
-          "generated": "",
-          "type_name": "uuid",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "token_hash",
-          "type": "bytea",
-          "comment": null,
-          "default": null,
-          "is_enum": false,
-          "identity": "",
-          "nullable": false,
-          "generated": "",
-          "type_name": "bytea",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "token_version",
-          "type": "integer",
-          "comment": null,
-          "default": "1",
-          "is_enum": false,
-          "identity": "",
-          "nullable": false,
-          "generated": "",
-          "type_name": "int4",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "status",
-          "type": "character varying(16)",
-          "comment": null,
-          "default": "'pending'::character varying",
-          "is_enum": false,
-          "identity": "",
-          "nullable": false,
-          "generated": "",
-          "type_name": "varchar",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "comment": null,
-          "default": "now()",
-          "is_enum": false,
-          "identity": "",
-          "nullable": false,
-          "generated": "",
-          "type_name": "timestamptz",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "comment": null,
-          "default": "now()",
-          "is_enum": false,
-          "identity": "",
-          "nullable": false,
-          "generated": "",
-          "type_name": "timestamptz",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "expires_at",
-          "type": "timestamp with time zone",
-          "comment": null,
-          "default": null,
-          "is_enum": false,
-          "identity": "",
-          "nullable": false,
-          "generated": "",
-          "type_name": "timestamptz",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "accepted_by",
-          "type": "uuid",
-          "comment": null,
-          "default": null,
-          "is_enum": false,
-          "identity": "",
-          "nullable": true,
-          "generated": "",
-          "type_name": "uuid",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "accepted_at",
-          "type": "timestamp with time zone",
-          "comment": null,
-          "default": null,
-          "is_enum": false,
-          "identity": "",
-          "nullable": true,
-          "generated": "",
-          "type_name": "timestamptz",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "declined_at",
-          "type": "timestamp with time zone",
-          "comment": null,
-          "default": null,
-          "is_enum": false,
-          "identity": "",
-          "nullable": true,
-          "generated": "",
-          "type_name": "timestamptz",
-          "type_schema": "pg_catalog"
-        },
-        {
-          "name": "revoked_at",
-          "type": "timestamp with time zone",
-          "comment": null,
-          "default": null,
-          "is_enum": false,
-          "identity": "",
-          "nullable": true,
-          "generated": "",
-          "type_name": "timestamptz",
-          "type_schema": "pg_catalog"
-        }
-      ],
-      "comment": null,
-      "indexes": [
-        {
-          "keys": [
-            "commercial_account_id",
-            "status"
-          ],
-          "name": "commercial_account_invitations_account_status_idx",
-          "method": "btree",
-          "unique": false,
-          "primary": false,
-          "key_count": 2,
-          "predicate": null,
-          "definition": "CREATE INDEX commercial_account_invitations_account_status_idx ON commercial.commercial_account_invitations USING btree (commercial_account_id, status)",
-          "attribute_count": 2
-        },
-        {
-          "keys": [
-            "expires_at"
-          ],
-          "name": "commercial_account_invitations_expires_at_idx",
-          "method": "btree",
-          "unique": false,
-          "primary": false,
-          "key_count": 1,
-          "predicate": null,
-          "definition": "CREATE INDEX commercial_account_invitations_expires_at_idx ON commercial.commercial_account_invitations USING btree (expires_at)",
-          "attribute_count": 1
-        },
-        {
-          "keys": [
-            "commercial_account_id",
-            "email_normalized"
-          ],
-          "name": "commercial_account_invitations_pending_email_key",
-          "method": "btree",
-          "unique": true,
-          "primary": false,
-          "key_count": 2,
-          "predicate": "(status::text = 'pending'::text)",
-          "definition": "CREATE UNIQUE INDEX commercial_account_invitations_pending_email_key ON commercial.commercial_account_invitations USING btree (commercial_account_id, email_normalized) WHERE (status::text = 'pending'::text)",
-          "attribute_count": 2
-        },
-        {
-          "keys": [
-            "token_hash"
-          ],
-          "name": "commercial_account_invitations_token_hash_key",
-          "method": "btree",
-          "unique": true,
-          "primary": false,
-          "key_count": 1,
-          "predicate": null,
-          "definition": "CREATE UNIQUE INDEX commercial_account_invitations_token_hash_key ON commercial.commercial_account_invitations USING btree (token_hash)",
-          "attribute_count": 1
-        },
-        {
-          "keys": [
-            "id"
-          ],
-          "name": "commercial_account_invitations_pkey",
-          "method": "btree",
-          "unique": true,
-          "primary": true,
-          "key_count": 1,
-          "predicate": null,
-          "definition": "CREATE UNIQUE INDEX commercial_account_invitations_pkey ON commercial.commercial_account_invitations USING btree (id)",
-          "attribute_count": 1
-        }
-      ],
-      "policies": [],
-      "triggers": [],
-      "force_rls": false,
-      "constraints": [
-        {
-          "kind": "p",
-          "name": "commercial_account_invitations_pkey",
-          "columns": [
-            "id"
-          ],
-          "on_delete": " ",
-          "on_update": " ",
-          "deferrable": false,
-          "definition": "PRIMARY KEY (id)",
-          "target_table": null,
-          "target_schema": null,
-          "target_columns": null,
-          "initially_deferred": false
-        },
-        {
-          "kind": "u",
-          "name": "commercial_account_invitations_token_hash_key",
-          "columns": [
-            "token_hash"
-          ],
-          "on_delete": " ",
-          "on_update": " ",
-          "deferrable": false,
-          "definition": "UNIQUE (token_hash)",
-          "target_table": null,
-          "target_schema": null,
-          "target_columns": null,
-          "initially_deferred": false
-        },
-        {
-          "kind": "f",
-          "name": "commercial_account_invitations_commercial_account_id_fkey",
-          "columns": [
-            "commercial_account_id"
-          ],
-          "on_delete": "a",
-          "on_update": "a",
-          "deferrable": false,
-          "definition": "FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id)",
-          "target_table": "commercial_accounts",
-          "target_schema": "commercial",
-          "target_columns": [
-            "id"
-          ],
-          "initially_deferred": false
-        },
-        {
-          "kind": "f",
-          "name": "commercial_account_invitations_invited_by_fkey",
-          "columns": [
-            "invited_by"
-          ],
-          "on_delete": "a",
-          "on_update": "a",
-          "deferrable": false,
-          "definition": "FOREIGN KEY (invited_by) REFERENCES commercial.control_users(id)",
-          "target_table": "control_users",
-          "target_schema": "commercial",
-          "target_columns": [
-            "id"
-          ],
-          "initially_deferred": false
-        },
-        {
-          "kind": "f",
-          "name": "commercial_account_invitations_accepted_by_fkey",
-          "columns": [
-            "accepted_by"
-          ],
-          "on_delete": "a",
-          "on_update": "a",
-          "deferrable": false,
-          "definition": "FOREIGN KEY (accepted_by) REFERENCES commercial.control_users(id)",
-          "target_table": "control_users",
-          "target_schema": "commercial",
-          "target_columns": [
-            "id"
-          ],
-          "initially_deferred": false
-        },
-        {
-          "kind": "c",
-          "name": "commercial_account_invitations_role_check",
-          "columns": [
-            "role"
-          ],
-          "on_delete": " ",
-          "on_update": " ",
-          "deferrable": false,
-          "definition": "CHECK (role::text = ANY (ARRAY['admin'::character varying, 'billing'::character varying, 'technical'::character varying]::text[]))",
-          "target_table": null,
-          "target_schema": null,
-          "target_columns": null,
-          "initially_deferred": false
-        },
-        {
-          "kind": "c",
-          "name": "commercial_account_invitations_status_check",
-          "columns": [
-            "status"
-          ],
-          "on_delete": " ",
-          "on_update": " ",
-          "deferrable": false,
-          "definition": "CHECK (status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'declined'::character varying, 'revoked'::character varying, 'expired'::character varying]::text[]))",
-          "target_table": null,
-          "target_schema": null,
-          "target_columns": null,
-          "initially_deferred": false
-        },
-        {
-          "kind": "c",
-          "name": "commercial_account_invitations_email_check",
-          "columns": [
-            "email_normalized"
-          ],
-          "on_delete": " ",
-          "on_update": " ",
-          "deferrable": false,
-          "definition": "CHECK (length(btrim(email_normalized::text)) > 0)",
-          "target_table": null,
-          "target_schema": null,
-          "target_columns": null,
-          "initially_deferred": false
-        }
-      ]
     }
   ],
   "schemas": [
@@ -25303,7 +25498,7 @@
     {
       "name": "validate_privacy_audit_metadata",
       "schema": "commercial",
-      "definition": "CREATE OR REPLACE FUNCTION commercial.validate_privacy_audit_metadata()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF length(NEW.metadata::text)>512 OR EXISTS(SELECT 1 FROM jsonb_object_keys(NEW.metadata) key WHERE key NOT IN ('role','reason','failure_code','deploymentId','installationId','operationId','sourceReleaseId','targetReleaseId'))\n OR EXISTS(SELECT 1 FROM jsonb_each(NEW.metadata) entry WHERE jsonb_typeof(entry.value)<>'string' OR length(entry.value #>> '{}')>80)\n THEN RAISE EXCEPTION 'audit metadata is outside privacy allowlist' USING ERRCODE='check_violation'; END IF;\n IF EXISTS(SELECT 1 FROM jsonb_each_text(NEW.metadata) entry WHERE entry.key IN ('deploymentId','installationId','operationId')\n   AND (NEW.action NOT IN ('deployment.decommission_requested','deployment.decommissioned','deployment.updated')\n     OR entry.value !~ '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$'))\n THEN RAISE EXCEPTION 'deployment audit metadata is invalid' USING ERRCODE='check_violation'; END IF;\n IF NEW.action = 'deployment.updated' AND (\n   (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(NEW.metadata) key)\n     <> ARRAY['deploymentId','operationId','sourceReleaseId','targetReleaseId']::text[]\n   OR EXISTS (SELECT 1 FROM jsonb_each_text(NEW.metadata) e WHERE e.value !~ '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$')\n ) THEN RAISE EXCEPTION 'update audit metadata is invalid' USING ERRCODE='check_violation'; END IF;\n IF jsonb_exists(NEW.metadata,'role') AND (NEW.action NOT IN ('commercial_membership.saved','commercial_membership.role_changed') OR NEW.metadata->>'role' NOT IN ('owner','admin','billing','technical')) THEN RAISE EXCEPTION 'audit role metadata is invalid' USING ERRCODE='check_violation'; END IF;\n IF jsonb_exists(NEW.metadata,'reason') AND (NEW.action<>'control_session.login' OR NEW.metadata->>'reason'<>'invalid_credentials') THEN RAISE EXCEPTION 'audit reason metadata is invalid' USING ERRCODE='check_violation'; END IF;\n IF jsonb_exists(NEW.metadata,'failure_code') AND (NEW.action NOT IN ('payment.attempt.failed','refund.canceled') OR NEW.metadata->>'failure_code' !~ '^[a-z0-9]+([._-][a-z0-9]+)*$') THEN RAISE EXCEPTION 'audit failure metadata is invalid' USING ERRCODE='check_violation'; END IF;\n RETURN NEW;\nEND $function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION commercial.validate_privacy_audit_metadata()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF jsonb_typeof(NEW.metadata) <> 'object' THEN RAISE EXCEPTION 'audit metadata must be an object' USING ERRCODE='check_violation'; END IF;\n\n IF length(NEW.metadata::text)>512 OR EXISTS(SELECT 1 FROM jsonb_object_keys(NEW.metadata) key WHERE key NOT IN ('role','reason','failure_code','deploymentId','installationId','operationId','sourceReleaseId','targetReleaseId'))\n OR EXISTS(SELECT 1 FROM jsonb_each(NEW.metadata) entry WHERE jsonb_typeof(entry.value)<>'string' OR length(entry.value #>> '{}')>80)\n THEN RAISE EXCEPTION 'audit metadata is outside privacy allowlist' USING ERRCODE='check_violation'; END IF;\n IF EXISTS(SELECT 1 FROM jsonb_each_text(NEW.metadata) entry WHERE entry.key IN ('deploymentId','installationId','operationId')\n   AND (NEW.action NOT IN ('deployment.decommission_requested','deployment.decommissioned','deployment.updated')\n     OR entry.value !~ '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$'))\n THEN RAISE EXCEPTION 'deployment audit metadata is invalid' USING ERRCODE='check_violation'; END IF;\n IF NEW.action = 'deployment.updated' AND (\n   (SELECT array_agg(key ORDER BY key) FROM jsonb_object_keys(NEW.metadata) key)\n     <> ARRAY['deploymentId','operationId','sourceReleaseId','targetReleaseId']::text[]\n   OR EXISTS (SELECT 1 FROM jsonb_each_text(NEW.metadata) e WHERE e.value !~ '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$')\n ) THEN RAISE EXCEPTION 'update audit metadata is invalid' USING ERRCODE='check_violation'; END IF;\n IF jsonb_exists(NEW.metadata,'role') AND (NEW.action NOT IN ('commercial_membership.saved','commercial_membership.role_changed','commercial_membership.reactivated','commercial_invitation.created','commercial_invitation.accepted') OR NEW.metadata->>'role' NOT IN ('owner','admin','billing','technical')) THEN RAISE EXCEPTION 'audit role metadata is invalid' USING ERRCODE='check_violation'; END IF;\n IF jsonb_exists(NEW.metadata,'reason') AND (NEW.action<>'control_session.login' OR NEW.metadata->>'reason'<>'invalid_credentials') THEN RAISE EXCEPTION 'audit reason metadata is invalid' USING ERRCODE='check_violation'; END IF;\n IF jsonb_exists(NEW.metadata,'failure_code') AND (NEW.action NOT IN ('payment.attempt.failed','refund.canceled') OR NEW.metadata->>'failure_code' !~ '^[a-z0-9]+([._-][a-z0-9]+)*$') THEN RAISE EXCEPTION 'audit failure metadata is invalid' USING ERRCODE='check_violation'; END IF;\n RETURN NEW;\nEND $function$\n"
     },
     {
       "name": "validate_receipt_snapshot",
@@ -25357,7 +25552,9 @@
     "ControlPlane\\Migrations\\Version20261014000200",
     "ControlPlane\\Migrations\\Version20261014000300",
     "ControlPlane\\Migrations\\Version20261015000100",
-    "ControlPlane\\Migrations\\Version20261023000100"
+    "ControlPlane\\Migrations\\Version20261023000100",
+    "ControlPlane\\Migrations\\Version20261031000100",
+    "ControlPlane\\Migrations\\Version20261031000200"
   ],
   "migration_sources": [
     {
@@ -25519,6 +25716,14 @@
     {
       "path": "apps/control-plane/migrations/Version20261023000100.php",
       "sha256": "c441730ad28ebbc7fd864323eb76f00d7497e9513325cd42e8c7588d92bda205"
+    },
+    {
+      "path": "apps/control-plane/migrations/Version20261031000100.php",
+      "sha256": "17d751d99d322bb37470fb33b4225f1ef0450cd4a2d26a2c08a5d66dbbaba3ec"
+    },
+    {
+      "path": "apps/control-plane/migrations/Version20261031000200.php",
+      "sha256": "78d31a835a45cfd2b6088967ea150cd5c9820946a31434fdf5c2c508af7e77eb"
     }
   ]
 }

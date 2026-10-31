@@ -90,48 +90,51 @@ const ariaDescribedBy = computed(() => {
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .app-input__required {
   color: var(--danger);
   margin-left: 2px;
+  transition: var(--theme-transition);
 }
 
 .app-input__control {
   display: flex;
   align-items: center;
-  gap: var(--space-8);
+  gap: var(--gap-s);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-control-m);
   background: var(--surface);
   transition:
-    border-color 120ms ease,
-    box-shadow 120ms ease,
-    background-color 120ms ease;
+    var(--theme-transition);
 }
 
 .app-input__control--m {
-  height: var(--control-h-m);
-  padding: 0 var(--space-12);
+  min-height: var(--control-h-m);
+  padding: var(--pad-input-m-vertical) var(--pad-input-m-horizontal);
 }
 
 .app-input__control--l {
-  height: var(--control-h-l);
-  padding: 0 var(--space-12);
+  min-height: var(--control-h-l);
+  padding: var(--pad-input-l-vertical) var(--pad-input-l-horizontal);
 }
 
 .app-input__control:focus-within {
   border-color: var(--focus-border);
   box-shadow: var(--focus-ring);
+  transition: var(--theme-transition);
 }
 
 .app-input__control--error {
   border-color: var(--danger);
+  transition: var(--theme-transition);
 }
 
 .app-input__control--disabled {
   background: var(--disabled-surface);
   border-color: var(--disabled-border);
+  transition: var(--theme-transition);
 }
 
 .app-input__native {
@@ -144,21 +147,25 @@ const ariaDescribedBy = computed(() => {
   font-weight: var(--type-body-large-weight);
   color: var(--text-1);
   outline: none;
+  transition: var(--theme-transition);
 }
 
 .app-input__native::placeholder {
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .app-input__native:disabled {
   color: var(--disabled-text);
   cursor: not-allowed;
+  transition: var(--theme-transition);
 }
 
 .app-input__affix {
   display: inline-flex;
   align-items: center;
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .app-input__message {
@@ -166,9 +173,11 @@ const ariaDescribedBy = computed(() => {
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .app-input__message--error {
   color: var(--danger-text);
+  transition: var(--theme-transition);
 }
 </style>

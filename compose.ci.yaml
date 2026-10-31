@@ -179,7 +179,7 @@ services:
       PROVISIONER_ENABLED: "false"
       PROVISIONER_MAX_ATTEMPTS: "5"
       PROVISIONER_RETRY_BASE_SECONDS: "30"
-      PROVISIONER_CONTROL_NETWORK: platform_control_test_net
+      PROVISIONER_CONTROL_NETWORK: ${COMPOSE_PROJECT_NAME:-platform}_control_test_net
       PROVISIONER_CONTROL_PLANE_URL: http://control-plane-test:8000
       PROVISIONER_MIGRATOR_IMAGE: platform-provisioner-migrator:local
       PROVISIONER_SECRET_HOST_DIR: /tmp/provisioning-secrets
@@ -245,6 +245,22 @@ services:
     networks:
       - test_net
 
+  backend-production-smoke:
+    profiles: ["test"]
+    extends:
+      service: backend-test
+    image: ${CORE_SMOKE_IMAGE:-platform-core:ci}
+    volumes: !override
+      - ./apps/backend/tests/Fixtures/privacy/synthetic-production-policy.json:/run/privacy/smoke-policy.json:ro
+    ports: !reset []
+    environment:
+      APP_ENV: prod
+      TEST_ISOLATED_RUNTIME: "0"
+      PRIVACY_CONFIG_FILE: /run/privacy/smoke-policy.json
+      CORE_SCHEDULER_ENABLED: "false"
+      CORE_EMAIL_WORKER_ENABLED: "false"
+      SMOKE_URL: http://127.0.0.1:80
+
   # Commercial and Core retain separate database credentials and networks.
   control-migrate:
     profiles: ["control"]
@@ -259,6 +275,8 @@ services:
       CONTROL_TOKEN_SECRET: ${CONTROL_TOKEN_SECRET:?}
       CONTROL_TOTP_ENCRYPTION_KEY: ${CONTROL_TOTP_ENCRYPTION_KEY:?}
       CONTROL_VERIFICATION_TTL_SECONDS: ${CONTROL_VERIFICATION_TTL_SECONDS:-86400}
+      CONTROL_INVITATION_URL: ${CONTROL_INVITATION_URL:-http://localhost:5173/invitation}
+      CONTROL_INVITATION_TTL_SECONDS: ${CONTROL_INVITATION_TTL_SECONDS:-604800}
       CONTROL_ACCESS_TOKEN_TTL_SECONDS: ${CONTROL_ACCESS_TOKEN_TTL_SECONDS:-900}
       CONTROL_SESSION_TTL_SECONDS: ${CONTROL_SESSION_TTL_SECONDS:-2592000}
       CONTROL_PASSWORD_RESET_TTL_SECONDS: ${CONTROL_PASSWORD_RESET_TTL_SECONDS:-3600}
@@ -340,6 +358,13 @@ services:
       timeout: 3s
       retries: 20
     networks: [control_test_net]
+  mailpit-test:
+    profiles: ["control-test"]
+    image: axllent/mailpit:v1.31.1
+    restart: "no"
+    ports:
+      - "127.0.0.1:${MAILPIT_TEST_UI_PORT:-8026}:8025"
+    networks: [control_test_net]
   control-plane-test:
     profiles: ["control-test"]
     build:
@@ -354,11 +379,16 @@ services:
       CONTROL_APP_SECRET: ${CONTROL_APP_SECRET:?}
       CONTROL_TOKEN_SECRET: ${CONTROL_TOKEN_SECRET:?}
       CONTROL_TOTP_ENCRYPTION_KEY: ${CONTROL_TOTP_ENCRYPTION_KEY:?}
-      CONTROL_MAILER_DSN: smtp://mailpit:1025
+      CONTROL_MAILER_DSN: smtp://mailpit-test:1025
       CONTROL_MAIL_FROM: no-reply@platform.local
-      CONTROL_VERIFICATION_URL: http://localhost:5173/verify-email
-      CONTROL_PASSWORD_RESET_URL: http://localhost:5173/reset-password
+      CONTROL_VERIFICATION_URL: ${CONTROL_VERIFICATION_URL:-http://localhost:5173/verify-email}
+      CONTROL_INVITATION_URL: ${CONTROL_INVITATION_URL:-http://localhost:5173/invitation}
+      CONTROL_INVITATION_TTL_SECONDS: ${CONTROL_INVITATION_TTL_SECONDS:-604800}
+      CONTROL_PASSWORD_RESET_URL: ${CONTROL_PASSWORD_RESET_URL:-http://localhost:5173/reset-password}
       CONTROL_MESSAGE_ID_DOMAIN: platform.local
+      CONTROL_E2E_ISOLATION_NONCE: ${E2E_ISOLATION_PROOF:-}
+      CONTROL_YOOKASSA_WEBHOOK_IPS: ${CONTROL_YOOKASSA_WEBHOOK_IPS:-}
+      CONTROL_PRIVACY_PROVIDER_DECISIONS: '{"smtp":{"status":"allowed","country":"RU","evidence_reference":"local://docker-compose/mailpit-test","purposes":["control_email_verification","control_password_reset","control_security_notification","control_account_invitation"],"data_categories":["contact_email","verification_link","reset_link","security_notification","invitation_link","organization_name"]}}'
       CONTROL_VERIFICATION_TTL_SECONDS: 86400
       CONTROL_ACCESS_TOKEN_TTL_SECONDS: 900
       CONTROL_SESSION_TTL_SECONDS: 2592000
@@ -397,7 +427,23 @@ services:
       timeout: 3s
       retries: 20
       start_period: 5s
+    ports:
+      - "127.0.0.1:${CONTROL_TEST_PORT:-8091}:8000"
     networks: [control_test_net, test_net]
+  control-production-smoke:
+    profiles: ["control-test"]
+    extends:
+      service: control-plane-test
+    image: ${CONTROL_SMOKE_IMAGE:-platform-control-plane:ci}
+    volumes: !reset []
+    ports: !reset []
+    environment:
+      APP_ENV: prod
+      CONTROL_TEST_ISOLATED: "0"
+      CONTROL_SCHEDULER_ENABLED: "false"
+      CONTROL_OUTBOX_WORKER_ENABLED: "false"
+      SMOKE_URL: http://127.0.0.1:8000
+
   cross-plane-test:
     profiles: ["control-test"]
     extends:
@@ -405,6 +451,8 @@ services:
     build:
       context: .
       dockerfile: infra/cross-plane/Dockerfile
+      args:
+        CONTROL_TEST_IMAGE: ${COMPOSE_PROJECT_NAME:-platform}-control-plane-test:latest
     volumes: []
   provisioner-migrator:
     profiles: ["provisioner-build"]
@@ -464,19 +512,19 @@ services:
 
 volumes:
   postgres_test_data:
-    name: platform_postgres_test_data
+    name: ${COMPOSE_PROJECT_NAME:-platform}_postgres_test_data
   redis_test_data:
-    name: platform_redis_test_data
+    name: ${COMPOSE_PROJECT_NAME:-platform}_redis_test_data
   control_postgres_test_data:
-    name: platform_control_postgres_test_data
+    name: ${COMPOSE_PROJECT_NAME:-platform}_control_postgres_test_data
 
 networks:
   backup_net:
-    name: platform_backup_net
+    name: ${COMPOSE_PROJECT_NAME:-platform}_backup_net
     internal: true
   test_net:
-    name: platform_test_net
+    name: ${COMPOSE_PROJECT_NAME:-platform}_test_net
     internal: false
   control_test_net:
-    name: platform_control_test_net
+    name: ${COMPOSE_PROJECT_NAME:-platform}_control_test_net
     internal: false

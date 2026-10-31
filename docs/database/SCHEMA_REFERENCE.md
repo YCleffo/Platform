@@ -11,7 +11,7 @@ DBML служит представлением для диаграммы, а н�
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `core` | 50 | 561 | 86 | 195 | 161 | 18 |
 | `platform_runtime` | 3 | 36 | 1 | 18 | 7 | 2 |
-| `commercial` | 61 | 615 | 97 | 271 | 176 | 53 |
+| `commercial` | 61 | 615 | 97 | 272 | 176 | 53 |
 
 Технические `public.platform_migrations` и `public.doctrine_migration_versions` не являются бизнес-таблицами и не включены в инвентарь.
 Cross-plane ID в подписанном документе не создаёт FK между двумя базами.
@@ -1457,6 +1457,37 @@ CHECK: 6; индексов: 1; пользовательских triggers: 0.
 
 CHECK: 6; индексов: 3; пользовательских triggers: 0.
 
+## commercial.commercial_account_invitations
+
+| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | — | — |
+| `commercial_account_id` | `uuid` | нет | — | — |
+| `email` | `character varying(320)` | нет | — | — |
+| `email_normalized` | `character varying(320)` | нет | — | — |
+| `role` | `character varying(16)` | нет | — | — |
+| `invited_by` | `uuid` | нет | — | — |
+| `token_hash` | `bytea` | нет | — | — |
+| `token_version` | `integer` | нет | 1 | — |
+| `status` | `character varying(16)` | нет | 'pending'::character varying | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+| `updated_at` | `timestamp with time zone` | нет | now() | — |
+| `expires_at` | `timestamp with time zone` | нет | — | — |
+| `accepted_by` | `uuid` | да | — | — |
+| `accepted_at` | `timestamp with time zone` | да | — | — |
+| `declined_at` | `timestamp with time zone` | да | — | — |
+| `revoked_at` | `timestamp with time zone` | да | — | — |
+
+**Первичный ключ:** PRIMARY KEY (id).
+
+**Реальные внешние ключи:**
+
+- `commercial_account_invitations_accepted_by_fkey`: `FOREIGN KEY (accepted_by) REFERENCES commercial.control_users(id)`.
+- `commercial_account_invitations_commercial_account_id_fkey`: `FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id)`.
+- `commercial_account_invitations_invited_by_fkey`: `FOREIGN KEY (invited_by) REFERENCES commercial.control_users(id)`.
+
+CHECK: 4; индексов: 5; пользовательских triggers: 0.
+
 ## commercial.commercial_account_memberships
 
 | Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
@@ -2786,35 +2817,4 @@ CHECK: 1; индексов: 2; пользовательских triggers: 1.
 - `usage_periods_subscription_id_fkey`: `FOREIGN KEY (subscription_id) REFERENCES commercial.subscriptions(id) ON DELETE RESTRICT`.
 
 CHECK: 3; индексов: 3; пользовательских triggers: 2.
-
-## commercial.commercial_account_invitations
-
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | нет | — | — |
-| `commercial_account_id` | `uuid` | нет | — | — |
-| `email` | `character varying(320)` | нет | — | — |
-| `email_normalized` | `character varying(320)` | нет | — | — |
-| `role` | `character varying(16)` | нет | — | — |
-| `invited_by` | `uuid` | нет | — | — |
-| `token_hash` | `bytea` | нет | — | — |
-| `token_version` | `integer` | нет | 1 | — |
-| `status` | `character varying(16)` | нет | 'pending'::character varying | — |
-| `created_at` | `timestamp with time zone` | нет | now() | — |
-| `updated_at` | `timestamp with time zone` | нет | now() | — |
-| `expires_at` | `timestamp with time zone` | нет | — | — |
-| `accepted_by` | `uuid` | да | — | — |
-| `accepted_at` | `timestamp with time zone` | да | — | — |
-| `declined_at` | `timestamp with time zone` | да | — | — |
-| `revoked_at` | `timestamp with time zone` | да | — | — |
-
-**Первичный ключ:** PRIMARY KEY (id).
-
-**Реальные внешние ключи:**
-
-- `commercial_account_invitations_commercial_account_id_fkey`: `FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id)`.
-- `commercial_account_invitations_invited_by_fkey`: `FOREIGN KEY (invited_by) REFERENCES commercial.control_users(id)`.
-- `commercial_account_invitations_accepted_by_fkey`: `FOREIGN KEY (accepted_by) REFERENCES commercial.control_users(id)`.
-
-CHECK: 3; индексов: 5; пользовательских triggers: 0.
 

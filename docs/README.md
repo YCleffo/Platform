@@ -7,6 +7,10 @@
 3. [Схема базы данных](database/README.md): DBML и полный справочник реальных объектов PostgreSQL.
 4. [Конфигурация и секреты](operations/ENVIRONMENT.md) и [Обновление баз данных](operations/SAFE_DATABASE_UPGRADE.md): команды оператора.
 
+## План развития
+
+- [Commercial и будущий Education](roadmap/PLATFORM_ROADMAP.md).
+
 ## Frontend
 
 | Документ | О чём |
@@ -28,7 +32,6 @@
 | [Инварианты Core](architecture/CORE_INVARIANTS.md) |
 | [Архитектура баз данных](architecture/DATABASE.md) |
 | [События между процессами](architecture/EVENT_CONTRACTS.md) |
-| [Интернационализация и безопасность Core](architecture/INTERNATIONAL_SECURITY_CORE.md) |
 | [Интернационализация Core и локализация API](architecture/INTERNATIONALIZATION.md) |
 | [M2M-аутентификация сервисов](architecture/M2M_SERVICE_AUTHENTICATION.md) |
 | [Правила модульности](architecture/MODULARITY.md) |
@@ -37,7 +40,6 @@
 | [Присутствие и приватность](architecture/PRESENCE.md) |
 | [Персональные данные в Core](architecture/PRIVACY_COMPLIANCE_CORE.md) |
 | [Расширение Privacy через contributors](architecture/PRIVACY_MODULE_CONTRIBUTORS.md) |
-| [Структура репозитория](architecture/PROJECT_TREE.md) |
 | [Хранение, ограничения обработки и уничтожение](architecture/RETENTION_ERASURE.md) |
 | [Защита транспорта, браузерная граница и секреты](architecture/SECURITY_HARDENING.md) |
 | [User Settings / Privacy Core](architecture/USER_SETTINGS_PRIVACY.md) |
@@ -47,6 +49,7 @@
 | Документ |
 | --- |
 | [Резервирование и восстановление](operations/BACKUP_RESTORE.md) |
+| [Роли PostgreSQL и минимальные привилегии](operations/DATABASE_ROLES.md) |
 | [Конфигурация и секреты](operations/ENVIRONMENT.md) |
 | [Компенсация внешних смен тарифа](operations/EXTERNAL_COMPENSATION.md) |
 | [Критерии выпуска](operations/PRODUCTION_READINESS_PROGRESS.md) |
@@ -77,4 +80,3 @@
 
 - [Справочник фактической базы данных](database/SCHEMA_REFERENCE.md).
 - [Покрытие таблиц Core и Runtime](core-database-coverage.md).
-- [Схема Core](database/core/README.md).

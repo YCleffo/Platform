@@ -137,12 +137,14 @@ function done(): void {
   line-height: var(--type-h3-line);
   font-weight: var(--type-h3-weight);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .mfa-setup__intro {
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .mfa-setup__qr {
@@ -152,6 +154,7 @@ function done(): void {
   border: 1px solid var(--border);
   border-radius: var(--radius-card-s);
   background: var(--color-white);
+  transition: var(--theme-transition);
 }
 
 .mfa-setup__manual {
@@ -161,25 +164,29 @@ function done(): void {
   border: 1px solid var(--border);
   border-radius: var(--radius-control-m);
   background: var(--surface-2);
+  transition: var(--theme-transition);
 }
 
 .mfa-setup__manual-label {
   font-size: var(--type-body-small-size);
   line-height: var(--type-body-small-line);
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .mfa-setup__secret {
-  font-family: ui-monospace, 'Cascadia Code', 'Roboto Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--text-1);
   overflow-wrap: anywhere;
+  transition: var(--theme-transition);
 }
 
 .mfa-setup__error {
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--danger-text);
+  transition: var(--theme-transition);
 }
 </style>

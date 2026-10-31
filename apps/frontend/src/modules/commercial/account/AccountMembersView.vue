@@ -224,12 +224,14 @@ async function confirmRemove(): Promise<void> {
   font-weight: var(--type-h2-weight);
   letter-spacing: var(--type-h2-tracking);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .members__subtitle {
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .members__notice {
@@ -244,6 +246,7 @@ async function confirmRemove(): Promise<void> {
   color: var(--warning-text);
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
+  transition: var(--theme-transition);
 }
 
 .members__notice a {

@@ -21,13 +21,14 @@ body {
 body {
   min-height: 100vh;
   min-height: 100dvh;
-  font-family: var(--font-sans);
+  font-family: var(--type-body-large-family), var(--font-sans);
   font-size: var(--type-body-large-size);
   line-height: var(--type-body-large-line);
   color: var(--text-1);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  transition: var(--theme-transition);
 }
 
 h1,
@@ -52,10 +53,12 @@ ol {
 a {
   color: var(--link);
   text-decoration: none;
+  transition: var(--theme-transition);
 }
 
 a:hover {
   color: var(--link-hover);
+  transition: var(--theme-transition);
 }
 
 button,
@@ -64,6 +67,7 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+  transition: var(--theme-transition);
 }
 
 button {
@@ -71,6 +75,7 @@ button {
   border: none;
   padding: 0;
   cursor: pointer;
+  transition: var(--theme-transition);
 }
 
 img,
@@ -82,6 +87,7 @@ svg {
 :focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
+  transition: var(--theme-transition);
 }
 
 .visually-hidden {
@@ -94,15 +100,4 @@ svg {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
 }

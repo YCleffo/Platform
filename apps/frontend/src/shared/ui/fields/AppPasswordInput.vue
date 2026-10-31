@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Eye, EyeOff } from '@lucide/vue';
+import { Eye, EyeOff } from '@/shared/ui/icons';
 import AppInput from './AppInput.vue';
 import AppIconButton from '../actions/AppIconButton.vue';
 

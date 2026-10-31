@@ -84,7 +84,17 @@ final class AuthSecurityLifecycleTest extends DatabaseTestCase
         $secret='GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'; $cipher=new \ControlPlane\Identity\Security\TotpSecretCipher('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='); $factor=$this->uuid();
         $this->connection->executeStatement("INSERT INTO commercial.control_user_totp_factors (id,control_user_id,secret_ciphertext,key_version,status,confirmed_at) VALUES (?, ?, decode(?, 'hex'),'v1','active',now())",[$factor,$user,bin2hex($cipher->encrypt($secret))]);
         $security->requireSensitiveMfa($principal);
+        $this->connection->executeStatement('UPDATE commercial.control_sessions SET user_agent=NULL WHERE id=?', [$sessionB]);
         $rows=$security->sessions($principal); self::assertCount(2,$rows); self::assertArrayHasKey('mfa_authenticated_at',$rows[0]);
+        foreach ($rows as $row) {
+            self::assertNull($row['last_used_at'], 'A session may be listed before its first refresh.');
+            self::assertSame($row['id'] === $sessionA, $row['current']);
+            foreach (['issued_at', 'expires_at', 'primary_authenticated_at', 'mfa_authenticated_at'] as $field) {
+                self::assertIsString($row[$field]);
+                self::assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/', $row[$field]);
+            }
+            if ($row['id'] === $sessionB) self::assertNull($row['user_agent']);
+        }
     }
 
     public function testDatabaseAllowsOnlyOneActiveChallengeAndPendingSetup(): void

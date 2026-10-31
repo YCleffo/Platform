@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { CircleAlert, CircleCheck, LoaderCircle } from '@lucide/vue';
+import { CircleAlert, CircleCheck, LoaderCircle } from '@/shared/ui/icons';
 import { useAuthStore } from '@/core/auth/authStore';
 import { resolveErrorMessage } from '@/shared/errors/humanize';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
@@ -92,17 +92,20 @@ onMounted(async () => {
 
 .verify-view__icon--loading {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
+  transition: var(--theme-transition);
 }
 
 .verify-view__icon--success {
   background: var(--success-soft);
   color: var(--success);
+  transition: var(--theme-transition);
 }
 
 .verify-view__icon--error {
   background: var(--danger-soft);
   color: var(--danger);
+  transition: var(--theme-transition);
 }
 
 .verify-view__title {
@@ -111,6 +114,7 @@ onMounted(async () => {
   font-weight: var(--type-h1-weight);
   letter-spacing: var(--type-h1-tracking);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .verify-view__text {
@@ -119,6 +123,7 @@ onMounted(async () => {
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
   max-width: 320px;
+  transition: var(--theme-transition);
 }
 
 .verify-view__actions {
@@ -134,7 +139,7 @@ onMounted(async () => {
 }
 
 .verify-view__spin {
-  animation: verify-spin 800ms linear infinite;
+  animation: verify-spin var(--motion-spinner-duration) var(--motion-linear) infinite;
 }
 
 @keyframes verify-spin {

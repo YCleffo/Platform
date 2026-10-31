@@ -1,7 +1,17 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { evaluateMutationGate } from './e2e-guard.mjs';
+import {
+  assertAccountNavigation,
+  assertPrimaryNavigation,
+  createCommercialAccount,
+  launchBrowser,
+  navigateClientSide,
+  registerAndVerify,
+  submitLogin,
+  verifySecuritySession,
+} from './e2e-support.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'screenshots');
@@ -11,145 +21,10 @@ const APP = process.env.APP_URL ?? '';
 const API = process.env.CONTROL_API_URL ?? '';
 const MAILPIT = process.env.MAILPIT_URL ?? '';
 
-/**
- * Mutating E2E is refused unless an explicitly approved isolated runtime is configured.
- * A single environment variable is not enough: runtime marker, isolated DB marker,
- * write permission, explicit URLs, an allowlisted host and non-default credentials
- * are all required.
- */
-export function evaluateMutationGate(env) {
-  const reasons = [];
-  if (env.E2E_RUNTIME !== 'isolated-ci') reasons.push('E2E_RUNTIME must be "isolated-ci"');
-  if (env.E2E_ISOLATED_DB !== '1') reasons.push('E2E_ISOLATED_DB must be "1"');
-  if (env.E2E_ALLOW_MUTATIONS !== '1') reasons.push('E2E_ALLOW_MUTATIONS must be "1"');
-  if (!env.E2E_PASSWORD) reasons.push('E2E_PASSWORD is required (no default credentials)');
-  if (!env.E2E_ISOLATION_PROOF || env.E2E_ISOLATION_PROOF.length < 32) {
-    reasons.push('E2E_ISOLATION_PROOF must be a runtime-provided nonce (at least 32 characters)');
-  }
-
-  const allowedHosts = (env.E2E_ALLOWED_HOSTS ?? '')
-    .split(',')
-    .map((host) => host.trim())
-    .filter(Boolean);
-  if (allowedHosts.length === 0) reasons.push('E2E_ALLOWED_HOSTS is required');
-
-  for (const key of ['APP_URL', 'CONTROL_API_URL', 'MAILPIT_URL']) {
-    const value = env[key];
-    if (!value) {
-      reasons.push(`${key} is required`);
-      continue;
-    }
-    try {
-      const url = new URL(value);
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') reasons.push(`${key} must use http(s)`);
-      if (!allowedHosts.includes(url.hostname)) reasons.push(`${key} host "${url.hostname}" is not allowlisted`);
-      if (isLocalHost(url.hostname)) reasons.push(`${key} must point at an isolated CI runtime, not a local working environment`);
-    } catch {
-      reasons.push(`${key} is not a valid URL`);
-    }
-  }
-
-  return { allowed: reasons.length === 0, reasons };
-}
-
-function isLocalHost(hostname) {
-  const host = hostname.toLowerCase();
-  return (
-    host === 'localhost' ||
-    host === '::1' ||
-    host === '[::1]' ||
-    host === '0.0.0.0' ||
-    host.startsWith('127.') ||
-    host.endsWith('.localhost') ||
-    host.startsWith('10.') ||
-    host.startsWith('192.168.') ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(host)
-  );
-}
-
 const failures = [];
 const check = (condition, message) => {
   if (!condition) failures.push(message);
 };
-
-async function launch() {
-  for (const channel of ['chrome', 'msedge']) {
-    try {
-      return await chromium.launch({ channel, headless: true });
-    } catch {
-      // try next channel
-    }
-  }
-  return chromium.launch({ headless: true });
-}
-
-async function waitForVerificationToken(email) {
-  const deadline = Date.now() + 60_000;
-  while (Date.now() < deadline) {
-    const list = await (await fetch(`${MAILPIT}/api/v1/messages?limit=100`)).json();
-    for (const message of list.messages ?? []) {
-      if (!JSON.stringify(message.To ?? '').includes(email)) continue;
-      const full = await (await fetch(`${MAILPIT}/api/v1/message/${message.ID}`)).json();
-      const blob = `${full.Text ?? ''}\n${full.HTML ?? ''}`;
-      const match = /verify-email\?token=([^\s"'<>&]+)/.exec(blob);
-      if (match) return decodeURIComponent(match[1]);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }
-  throw new Error(`Verification email for ${email} did not arrive.`);
-}
-
-async function registerAndVerify(email, password) {
-  const registered = await fetch(`${API}/api/control/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  if (registered.status !== 202) {
-    throw new Error(`Register ${email} failed: HTTP ${registered.status}`);
-  }
-  const token = await waitForVerificationToken(email);
-  const verified = await fetch(`${API}/api/control/auth/verify`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token }),
-  });
-  if (verified.status !== 200) {
-    throw new Error(`Verify ${email} failed: HTTP ${verified.status}`);
-  }
-}
-
-async function submitLogin(page, email, password) {
-  await page.fill('#login-email', email);
-  await page.fill('#login-password', password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await page.waitForURL((url) => url.pathname !== '/login', { timeout: 20_000 });
-}
-
-async function createAccount(page, code, name) {
-  await page.locator('button', { hasText: 'Create account' }).first().click();
-  const dialog = page.locator('[role="dialog"]');
-  await dialog.waitFor({ state: 'visible' });
-  await dialog.locator('#account-code').fill(code);
-  await dialog.locator('#account-name').fill(name);
-  await dialog.locator('button', { hasText: 'Create account' }).first().click();
-  await dialog.waitFor({ state: 'hidden', timeout: 20_000 });
-
-  const link = page.locator('a[href^="/accounts/"]').filter({ hasText: name }).first();
-  await link.waitFor({ state: 'visible', timeout: 20_000 });
-  const href = await link.getAttribute('href');
-  if (href === null) {
-    throw new Error(`Account link for ${name} has no href.`);
-  }
-  return href.split('/').pop();
-}
-
-async function navigateClientSide(page, path) {
-  await page.evaluate((target) => {
-    window.history.pushState({}, '', target);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, path);
-}
 
 async function assertNoOverflow(page, label) {
   const ok = await page.evaluate(
@@ -159,7 +34,7 @@ async function assertNoOverflow(page, label) {
 }
 
 async function main() {
-  const gate = evaluateMutationGate(process.env);
+  const gate = await evaluateMutationGate(process.env);
   if (!gate.allowed) {
     console.error('NOT_VERIFIED: mutating account-workspace E2E refused (no approved isolated runtime).');
     for (const reason of gate.reasons) {
@@ -179,17 +54,17 @@ async function main() {
   const nameB = `E2E B ${runId}`;
 
   if (process.env.E2E_EMAIL_A === undefined) {
-    await registerAndVerify(emailA, password);
+    await registerAndVerify({ api: API, mailpit: MAILPIT, email: emailA, password });
   }
   if (process.env.E2E_EMAIL_B === undefined) {
-    await registerAndVerify(emailB, password);
+    await registerAndVerify({ api: API, mailpit: MAILPIT, email: emailB, password });
   }
 
-  const browser = await launch();
+  const browser = await launchBrowser();
   const pageErrors = [];
   let accountAId = '';
 
-  const context = await browser.newContext({ viewport: { width: 393, height: 852 } });
+  const context = await browser.newContext({ viewport: { width: 393, height: 852 }, ignoreHTTPSErrors: true });
   await context.addInitScript(() => {
     localStorage.setItem('platform.locale', 'en');
     localStorage.setItem('platform.theme', 'light');
@@ -208,15 +83,25 @@ async function main() {
     await submitLogin(page, emailA, password);
     await page.waitForURL('**/cabinet', { timeout: 20_000 });
 
-    const accountA = await createAccount(page, codeA, nameA);
+    await assertPrimaryNavigation(page, '/cabinet');
+    await navigateClientSide(page, '/');
+    await page.getByRole('heading', { level: 1 }).waitFor();
+    await assertPrimaryNavigation(page, '/');
+    await verifySecuritySession(page);
+    await navigateClientSide(page, '/cabinet');
+    await page.locator('button', { hasText: 'Create account' }).first().waitFor();
+    await assertPrimaryNavigation(page, '/cabinet');
+
+    const accountA = await createCommercialAccount(page, codeA, nameA);
     accountAId = accountA;
-    const accountB = await createAccount(page, codeB, nameB);
+    const accountB = await createCommercialAccount(page, codeB, nameB);
     check(Boolean(accountA) && Boolean(accountB), 'both accounts must be created');
 
     // Client-side navigation to the account (no reload: tokens live in memory).
     await page.locator('a[href^="/accounts/"]').filter({ hasText: nameA }).first().click();
     await page.waitForURL(`**/accounts/${accountA}`, { timeout: 20_000 });
     await page.waitForSelector('.account-layout__name', { timeout: 20_000 });
+    await assertAccountNavigation(page, `/accounts/${accountA}`);
     check((await page.locator('.account-layout__name').textContent())?.includes(nameA), 'overview shows account A name');
     check(await page.getByText('Owner', { exact: true }).first().isVisible(), 'overview shows the current role');
     check(await page.getByText('Draft', { exact: true }).first().isVisible(), 'overview shows the account status');
@@ -227,22 +112,25 @@ async function main() {
     await page.locator('.account-layout__tabs a', { hasText: 'Members' }).first().click();
     await page.waitForURL(`**/accounts/${accountA}/members`, { timeout: 20_000 });
     await page.waitForSelector('.member__email', { timeout: 20_000 });
+    await assertAccountNavigation(page, `/accounts/${accountA}/members`);
     check((await page.locator('.member__email').first().textContent())?.trim() === emailA, 'members list shows the owner email');
     check(await page.getByText('Owner', { exact: true }).first().isVisible(), 'members list shows the role');
     await assertNoOverflow(page, 'members 393');
     await page.screenshot({ path: join(outDir, 'frontend04-members-393-light.png') });
 
     // Account switching.
-    await page.selectOption('.switcher__select', { label: nameB });
+    await page.getByRole('button', { name: 'Switch account' }).click();
+    const switcher = page.locator('[role="dialog"]').filter({ hasText: 'Switch account' });
+    await switcher.locator('.picker__item').filter({ hasText: nameB }).click();
     await page.waitForURL(`**/accounts/${accountB}`, { timeout: 20_000 });
     await page.waitForSelector('.account-layout__name', { timeout: 20_000 });
     check((await page.locator('.account-layout__name').textContent())?.includes(nameB), 'switcher opens account B');
 
     // Keyboard reachability of the switcher.
-    await page.focus('.switcher__select');
+    await page.getByRole('button', { name: 'Switch account' }).focus();
     await page.keyboard.press('Tab');
-    const activeTag = await page.evaluate(() => document.activeElement?.tagName ?? '');
-    check(activeTag !== 'SELECT', 'Tab must move focus away from the switcher');
+    const activeLabel = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? '');
+    check(activeLabel !== 'Switch account', 'Tab must move focus away from the switcher');
 
     // Unknown account via client-side navigation.
     await navigateClientSide(page, '/accounts/018f0000-0000-7000-8000-0000000000ff');
@@ -282,7 +170,7 @@ async function main() {
   }
 
   // Cross-user isolation with a separate session.
-  const contextB = await browser.newContext({ viewport: { width: 393, height: 852 } });
+  const contextB = await browser.newContext({ viewport: { width: 393, height: 852 }, ignoreHTTPSErrors: true });
   await contextB.addInitScript(() => {
     localStorage.setItem('platform.locale', 'en');
     localStorage.setItem('platform.theme', 'light');
@@ -323,7 +211,7 @@ async function main() {
 }
 
 if (process.argv.includes('--check-guard')) {
-  const gate = evaluateMutationGate(process.env);
+  const gate = await evaluateMutationGate(process.env, { verifyRuntime: false });
   if (gate.allowed) {
     console.error('E2E GUARD FAILED: mutating run would be allowed without explicit isolated markers.');
     process.exit(1);

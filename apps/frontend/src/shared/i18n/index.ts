@@ -6,7 +6,8 @@ export const SUPPORTED_LOCALES = ['en', 'ru'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 function detectLocale(): SupportedLocale {
-  const stored = localStorage.getItem('platform.locale');
+  let stored: string | null = null;
+  try { stored = localStorage.getItem('platform.locale'); } catch { /* Browser language remains available. */ }
   if (stored === 'en' || stored === 'ru') {
     return stored;
   }
@@ -23,6 +24,6 @@ export const i18n = createI18n({
 
 export function setLocale(locale: SupportedLocale): void {
   i18n.global.locale.value = locale;
-  localStorage.setItem('platform.locale', locale);
+  try { localStorage.setItem('platform.locale', locale); } catch { /* Session-only language remains available. */ }
   document.documentElement.lang = locale;
 }

@@ -8,6 +8,8 @@ DBML получен из каталога PostgreSQL после применен
 | Runtime | [Platform_Runtime_v1.dbml](runtime/Platform_Runtime_v1.dbml) | Общий с Core |
 | Commercial | [Commercial_ControlPlane_v2.dbml](commercial/Commercial_ControlPlane_v2.dbml) | [schema.catalog.json](commercial/schema.catalog.json) |
 
+Core DBML описывает схему `core`; общий JSON Core содержит также `platform_runtime`. Оба файла генерируются из фактического PostgreSQL после миграций, а не поддерживаются вручную.
+
 [Справочник таблиц и полей](SCHEMA_REFERENCE.md) · [Модель данных](../core-data-model.md) · [Бизнес-процессы](../processes/README.md)
 
 Для обновления по существующим рабочим PostgreSQL-контейнерам:

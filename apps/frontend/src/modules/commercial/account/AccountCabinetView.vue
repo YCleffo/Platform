@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Plus } from '@lucide/vue';
+import { Plus } from '@/shared/ui/icons';
 import { useAccountStore } from '@/core/account/accountStore';
 import { useToast } from '@/shared/composables/useToast';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
@@ -94,6 +94,7 @@ async function onCreated(): Promise<void> {
   font-weight: var(--type-h1-weight);
   letter-spacing: var(--type-h1-tracking);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .cabinet__subtitle {
@@ -102,5 +103,6 @@ async function onCreated(): Promise<void> {
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 </style>

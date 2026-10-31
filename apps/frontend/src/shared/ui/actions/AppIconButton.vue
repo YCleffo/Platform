@@ -40,42 +40,44 @@ defineEmits<{
   cursor: pointer;
   color: var(--text-2);
   transition:
-    background-color 120ms ease,
-    color 120ms ease,
-    border-color 120ms ease;
+    var(--theme-transition);
 }
 
 .app-icon-button--s {
-  width: 32px;
-  height: 32px;
+  width: var(--control-h-s);
+  height: var(--control-h-s);
 }
 
 .app-icon-button--m {
-  width: 44px;
-  height: 44px;
+  width: var(--button-height-m);
+  height: var(--button-height-m);
 }
 
 .app-icon-button--l {
-  width: 48px;
-  height: 48px;
+  width: var(--control-h-l);
+  height: var(--control-h-l);
 }
 
 .app-icon-button--ghost {
   background: transparent;
+  transition: var(--theme-transition);
 }
 
 .app-icon-button--ghost:hover:not(:disabled) {
   background: var(--surface-hover);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .app-icon-button--secondary {
   background: var(--surface);
   border-color: var(--border);
+  transition: var(--theme-transition);
 }
 
 .app-icon-button--secondary:hover:not(:disabled) {
   background: var(--surface-hover);
+  transition: var(--theme-transition);
 }
 
 .app-icon-button:disabled {

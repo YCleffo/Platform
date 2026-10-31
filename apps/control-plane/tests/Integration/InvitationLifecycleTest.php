@@ -25,6 +25,10 @@ final class InvitationLifecycleTest extends DatabaseTestCase
         self::assertSame('invitee@example.test', $created['email']);
         self::assertArrayNotHasKey('token', $created);
         self::assertArrayNotHasKey('token_hash', $created);
+        self::assertSame('object', $this->connection->fetchOne(
+            "SELECT jsonb_typeof(metadata) FROM commercial.audit_events WHERE action = 'commercial_invitation.created' AND resource_id = ?",
+            [$created['id']],
+        ));
 
         $payload = (string) $this->connection->fetchOne(
             "SELECT payload::text FROM commercial.outbox_events WHERE event_type = 'commercial_account.invitation_requested' AND aggregate_id = ?",
@@ -142,7 +146,7 @@ final class InvitationLifecycleTest extends DatabaseTestCase
         $owner = $this->user('inv-email-owner@example.test');
         $unverified = $this->uuid();
         $this->connection->executeStatement(
-            "INSERT INTO commercial.control_users (id, email, email_normalized, password_hash, status, password_changed_at) VALUES (?, 'inv-unverified@example.test', 'inv-unverified@example.test', '!test-hash!', 'active', now())",
+            "INSERT INTO commercial.control_users (id, email, email_normalized, password_hash, status, password_changed_at) VALUES (?, 'inv-unverified@example.test', 'inv-unverified@example.test', '!test-hash!', 'pending_verification', now())",
             [$unverified],
         );
         $account = $this->accountFor($owner, 'inv-email-account');
@@ -186,6 +190,52 @@ final class InvitationLifecycleTest extends DatabaseTestCase
         $replacement = $service->create($owner, $account, 'inv-expire-invitee@example.test', 'technical', 'expire-key-2', $this->uuid());
         self::assertSame('pending', $replacement['status']);
         self::assertSame('expired', $this->connection->fetchOne('SELECT status FROM commercial.commercial_account_invitations WHERE id = ?', [$created['id']]));
+    }
+
+    public function testIdempotentReplayRequiresCurrentPermission(): void
+    {
+        $owner = $this->user('inv-replay-owner@example.test');
+        $admin = $this->user('inv-replay-admin@example.test');
+        $account = $this->accountFor($owner, 'inv-replay-account');
+        $memberships = new \ControlPlane\Account\Application\MembershipService($this->connection, new AccountAuthorization($this->connection));
+        $adminMembership = $memberships->add($owner, $account, $admin, 'admin', $this->uuid());
+        $service = $this->service();
+
+        $created = $service->create($admin, $account, 'replay@example.test', 'technical', 'replay-key', $this->uuid());
+        $memberships->remove($owner, $account, $adminMembership, $this->uuid());
+
+        try {
+            $service->create($admin, $account, 'replay@example.test', 'technical', 'replay-key', $this->uuid());
+            self::fail('A revoked administrator replayed the invitation result.');
+        } catch (AccessDeniedException) {
+            self::addToAssertionCount(1);
+        }
+
+        try {
+            $service->create($this->user('inv-replay-stranger@example.test'), $account, 'replay@example.test', 'technical', 'replay-key', $this->uuid());
+            self::fail('An unrelated user replayed another account invitation.');
+        } catch (AccessDeniedException) {
+            self::addToAssertionCount(1);
+        }
+
+        $retried = $service->create($owner, $account, 'replay@example.test', 'technical', 'replay-key', $this->uuid());
+        self::assertSame($created['id'], $retried['id']);
+    }
+
+    public function testRevokePendingInvitationStoresObjectMetadata(): void
+    {
+        $owner = $this->user('inv-revoke-owner@example.test');
+        $account = $this->accountFor($owner, 'inv-revoke-account');
+        $service = $this->service();
+        $created = $service->create($owner, $account, 'revoke@example.test', 'admin', 'revoke-key', $this->uuid());
+
+        $service->revoke($owner, $account, (string) $created['id'], $this->uuid());
+
+        self::assertSame('revoked', $this->connection->fetchOne('SELECT status FROM commercial.commercial_account_invitations WHERE id = ?', [$created['id']]));
+        self::assertSame('object', $this->connection->fetchOne(
+            "SELECT jsonb_typeof(metadata) FROM commercial.audit_events WHERE action = 'commercial_invitation.revoked' AND resource_id = ?",
+            [$created['id']],
+        ));
     }
 
     public function testRolePolicyForInvitations(): void

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
-import { Inbox } from '@lucide/vue';
+import { Inbox } from '@/shared/ui/icons';
 
 interface Props {
   title?: string;
@@ -47,6 +47,7 @@ withDefaults(defineProps<Props>(), {
   border-radius: var(--radius-badge-module-tile);
   background: var(--surface-2);
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .app-empty__title {
@@ -54,6 +55,7 @@ withDefaults(defineProps<Props>(), {
   line-height: var(--type-body-large-emphasis-line);
   font-weight: var(--type-body-large-emphasis-weight);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .app-empty__description {
@@ -61,6 +63,7 @@ withDefaults(defineProps<Props>(), {
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .app-empty__action {

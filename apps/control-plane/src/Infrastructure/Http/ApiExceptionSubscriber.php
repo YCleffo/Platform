@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ControlPlane\Infrastructure\Http;
 
+use ControlPlane\Account\Invitation\Application\InvitationUnavailable;
 use ControlPlane\Identity\Application\AuthFailure;
 use ControlPlane\Identity\Security\RateLimitExceeded;
 use ControlPlane\Payment\Provider\PaymentProviderException;
@@ -32,6 +33,7 @@ final class ApiExceptionSubscriber implements EventSubscriberInterface
                 in_array($exception->errorCode, ['invalid_credentials', 'invalid_access_token'], true) || str_starts_with($exception->errorCode, 'refresh_') ? Response::HTTP_UNAUTHORIZED
                 : (in_array($exception->errorCode, ['mfa_enrollment_required', 'recent_authentication_required', 'recent_mfa_required'], true) ? Response::HTTP_FORBIDDEN : Response::HTTP_BAD_REQUEST),
                 $exception->errorCode, $exception->getMessage()],
+            $exception instanceof InvitationUnavailable => [Response::HTTP_NOT_FOUND, 'resource_not_found', 'The requested resource was not found.'],
             $exception instanceof AccessDeniedException && ApiRequest::bearer($request) === '' => [Response::HTTP_UNAUTHORIZED, 'authentication_required', 'Authentication is required.'],
             $exception instanceof AccessDeniedException => [Response::HTTP_NOT_FOUND, 'resource_not_found', 'The requested resource was not found.'],
             $exception instanceof HttpExceptionInterface => [

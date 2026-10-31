@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { Plus } from '@lucide/vue';
+import { Plus } from '@/shared/ui/icons';
 import { useAccountStore } from '@/core/account/accountStore';
 import { resolveErrorMessage } from '@/shared/errors/humanize';
 import { useToast } from '@/shared/composables/useToast';
@@ -212,6 +212,7 @@ async function confirmRevoke(): Promise<void> {
   font-weight: var(--type-h2-weight);
   letter-spacing: var(--type-h2-tracking);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .invitations__subtitle {
@@ -219,6 +220,7 @@ async function confirmRevoke(): Promise<void> {
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .invitations__list {
@@ -239,6 +241,7 @@ async function confirmRevoke(): Promise<void> {
   color: var(--warning-text);
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
+  transition: var(--theme-transition);
 }
 
 .revoke {
@@ -251,6 +254,7 @@ async function confirmRevoke(): Promise<void> {
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   color: var(--danger-text);
+  transition: var(--theme-transition);
 }
 
 .revoke__actions {

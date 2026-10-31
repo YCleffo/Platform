@@ -86,4 +86,21 @@ describe('SecuritySettingsView', () => {
       wrapper.unmount();
     }
   });
+
+  it('renders a fresh session with nullable last use and user agent', async () => {
+    vi.mocked(commercialAuth.mfaStatus).mockResolvedValue({
+      enabled: false, factor_id: null, recovery_codes_remaining: 0,
+    });
+    vi.mocked(commercialAuth.sessions).mockResolvedValue({
+      items: [{ ...session, authentication_method: 'password', last_used_at: null, user_agent: null }],
+    });
+    const wrapper = mount(SecuritySettingsView, { global: { plugins: [i18n] } });
+    try {
+      await vi.waitFor(() => expect(wrapper.find('.security-view__details').exists()).toBe(true));
+      expect(wrapper.findAll('.security-view__detail dd')[1]?.text()).toBe('—');
+      expect(wrapper.find('.security-view__session .app-error-state').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+    }
+  });
 });

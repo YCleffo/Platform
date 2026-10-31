@@ -36,6 +36,7 @@ const store = useAccountStore();
   line-height: var(--type-h3-line);
   font-weight: var(--type-h3-weight);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 @media (min-width: 768px) {

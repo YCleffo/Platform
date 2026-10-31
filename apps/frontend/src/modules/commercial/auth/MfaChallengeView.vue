@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { ShieldCheck } from '@lucide/vue';
+import { ShieldCheck } from '@/shared/ui/icons';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useAsyncAction } from '@/shared/composables/useAsyncAction';
 import { useForm } from '@/shared/composables/useForm';
@@ -109,6 +109,7 @@ async function onSubmit(): Promise<void> {
   height: 56px;
   border-radius: var(--radius-badge-module-tile);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
+  transition: var(--theme-transition);
 }
 </style>

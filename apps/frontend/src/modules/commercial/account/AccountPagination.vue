@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight } from '@lucide/vue';
+import { ChevronLeft, ChevronRight } from '@/shared/ui/icons';
 import AppIconButton from '@/shared/ui/actions/AppIconButton.vue';
 
 interface Props {
@@ -48,6 +48,7 @@ defineEmits<{
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .account-pagination__controls {
@@ -62,5 +63,6 @@ defineEmits<{
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
   white-space: nowrap;
+  transition: var(--theme-transition);
 }
 </style>

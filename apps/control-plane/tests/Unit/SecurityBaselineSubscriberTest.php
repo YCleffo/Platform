@@ -96,6 +96,12 @@ final class SecurityBaselineSubscriberTest extends TestCase
         yield 'refund' => ['/api/control/accounts/a/refunds/r'];
         yield 'receipt' => ['/api/control/accounts/a/payments/p/receipt'];
         yield 'privacy' => ['/api/control/privacy/me/export'];
+        yield 'catalog' => ['/api/control/catalog/plans'];
+        yield 'webhook' => ['/api/control/webhooks/yookassa'];
+        yield 'invitation preview' => ['/api/control/invitations/preview'];
+        yield 'invitation accept' => ['/api/control/invitations/accept'];
+        yield 'invitation decline' => ['/api/control/invitations/decline'];
+        yield 'account invitations' => ['/api/control/accounts/a/invitations'];
         yield 'm2m' => ['/api/m2m/entitlements/latest'];
     }
 
@@ -111,10 +117,9 @@ final class SecurityBaselineSubscriberTest extends TestCase
     /** @return iterable<string, array{string}> */
     public static function otherPaths(): iterable
     {
-        yield 'catalog' => ['/api/control/catalog/plans'];
-        yield 'webhook' => ['/api/control/webhooks/yookassa'];
-        yield 'similar auth path' => ['/api/control/authentic'];
+        yield 'unknown API' => ['/api/unknown'];
         yield 'health' => ['/health/ready'];
+        yield 'non-API page' => ['/cabinet'];
     }
 
     private function responseFor(string $path, int $status): Response

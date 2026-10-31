@@ -44,6 +44,11 @@ final readonly class InvitationService
         $scope = 'invitation.create.' . str_replace('-', '', $accountId);
 
         return $this->connection->transactional(function (Connection $db) use ($actorId, $accountId, $email, $role, $key, $hash, $scope, $correlationId): array {
+            // Authorization is evaluated on every branch, including idempotent
+            // replay, under the same account lock used by membership operations.
+            $this->lockAccount($db, $accountId);
+            $this->authorization->requirePermission($actorId, $accountId, 'membership.manage');
+
             $inserted = $db->executeStatement(
                 "INSERT INTO commercial.idempotency_keys (scope, idempotency_key, request_sha256, status, expires_at) VALUES (?, ?, decode(?, 'hex'), 'pending', now() + interval '24 hours') ON CONFLICT (scope, idempotency_key) DO NOTHING",
                 [$scope, $key, $hash],
@@ -66,9 +71,6 @@ final readonly class InvitationService
 
                 return $existing;
             }
-
-            $this->lockAccount($db, $accountId);
-            $this->authorization->requirePermission($actorId, $accountId, 'membership.manage');
 
             $db->executeStatement(
                 "UPDATE commercial.commercial_account_invitations SET status = 'expired', updated_at = now() WHERE commercial_account_id = ? AND email_normalized = ? AND status = 'pending' AND expires_at <= now()",
@@ -146,7 +148,7 @@ SQL,
                 [$invitationId, $accountId],
             );
             if ($invitation === false) {
-                throw new AccessDeniedException('Invitation is not available.');
+                throw new InvitationUnavailable();
             }
             if ($invitation['status'] === 'revoked') {
                 return;
@@ -175,7 +177,7 @@ SQL,
                 [$invitationId, $accountId],
             );
             if ($invitation === false) {
-                throw new AccessDeniedException('Invitation is not available.');
+                throw new InvitationUnavailable();
             }
             if ($invitation['status'] !== 'pending') {
                 throw new \DomainException('Invitation is no longer pending.');
@@ -215,7 +217,7 @@ SQL,
             [$invitationId, $this->tokens->hash($token)],
         );
         if ($row === false) {
-            throw new AccessDeniedException('Invitation is not available.');
+            throw new InvitationUnavailable();
         }
         $status = $this->effectiveStatus((string) $row['status'], (string) $row['expires_at']);
 
@@ -242,7 +244,7 @@ SQL,
                 [$invitationId, $tokenHash],
             );
             if ($initial === false) {
-                throw new AccessDeniedException('Invitation is not available.');
+                throw new InvitationUnavailable();
             }
             $accountId = (string) $initial['commercial_account_id'];
             $this->lockAccount($db, $accountId);
@@ -251,7 +253,7 @@ SQL,
                 [$invitationId, $accountId, $tokenHash],
             );
             if ($invitation === false) {
-                throw new AccessDeniedException('Invitation is not available.');
+                throw new InvitationUnavailable();
             }
             $status = $this->effectiveStatus((string) $invitation['status'], (string) $invitation['expires_at']);
             if ($status === 'expired') {
@@ -308,7 +310,7 @@ SQL,
                 [$invitationId, $tokenHash],
             );
             if ($initial === false) {
-                throw new AccessDeniedException('Invitation is not available.');
+                throw new InvitationUnavailable();
             }
             $accountId = (string) $initial['commercial_account_id'];
             $this->lockAccount($db, $accountId);
@@ -317,7 +319,7 @@ SQL,
                 [$invitationId, $accountId, $tokenHash],
             );
             if ($invitation === false) {
-                throw new AccessDeniedException('Invitation is not available.');
+                throw new InvitationUnavailable();
             }
             $status = $this->effectiveStatus((string) $invitation['status'], (string) $invitation['expires_at']);
             if ($status === 'declined') {
@@ -346,10 +348,10 @@ SQL,
             'SELECT id, email_normalized, status, email_verified_at FROM commercial.control_users WHERE id = ?',
             [$userId],
         );
-        if ($user === false || $user['status'] !== 'active' || !is_string($user['email_normalized'])) {
+        if ($user === false || !in_array($user['status'], ['active', 'pending_verification'], true) || !is_string($user['email_normalized'])) {
             throw new AuthFailure('invalid_access_token', 'Authentication is required.');
         }
-        if ($user['email_verified_at'] === null) {
+        if ($user['status'] !== 'active' || $user['email_verified_at'] === null) {
             throw new AuthFailure('email_verification_required', 'Verify your email address before responding to the invitation.');
         }
 
@@ -394,7 +396,7 @@ SQL,
     {
         $db->executeStatement(
             "INSERT INTO commercial.audit_events (actor_type, actor_id, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome, metadata) VALUES ('control_user', ?, ?, ?, 'commercial_account_invitation', ?, ?, 'success', ?::jsonb)",
-            [$actorId, $accountId, $action, $invitationId, $correlationId, json_encode($metadata, JSON_THROW_ON_ERROR)],
+            [$actorId, $accountId, $action, $invitationId, $correlationId, json_encode((object) $metadata, JSON_THROW_ON_ERROR)],
         );
     }
 
@@ -408,7 +410,7 @@ SQL,
         try {
             return $this->tokens->validateInvitationToken($token);
         } catch (\DomainException|\InvalidArgumentException) {
-            throw new AccessDeniedException('Invitation is not available.');
+            throw new InvitationUnavailable();
         }
     }
 

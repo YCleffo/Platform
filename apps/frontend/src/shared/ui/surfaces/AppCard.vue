@@ -25,27 +25,28 @@ withDefaults(defineProps<Props>(), {
   border: 1px solid var(--border);
   border-radius: var(--radius-card-m);
   box-shadow: var(--shadow-soft);
+  transition: var(--theme-transition);
 }
 
 .app-card--compact {
-  padding: var(--space-16);
+  padding: var(--pad-card-compact);
 }
 
 .app-card--default {
-  padding: var(--space-20);
+  padding: var(--pad-card-default);
 }
 
 .app-card--large {
-  padding: var(--space-24);
+  padding: var(--pad-card-large);
 }
 
 .app-card--interactive {
   transition:
-    border-color 120ms ease,
-    box-shadow 120ms ease;
+    var(--theme-transition);
 }
 
 .app-card--interactive:hover {
   border-color: var(--border-strong);
+  transition: var(--theme-transition);
 }
 </style>

@@ -19,6 +19,7 @@ const CODE_KEYS: Record<string, string> = {
   validation_failed: 'errors.validation_failed',
   request_too_large: 'errors.request_too_large',
   resource_not_found: 'errors.notFound',
+  operation_rejected: 'errors.operationRejected',
 };
 
 /**

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
-import { X } from '@lucide/vue';
+import { X } from '@/shared/ui/icons';
 import { useFocusTrap } from '@/shared/composables/useFocusTrap';
 import { lockScroll, unlockScroll } from '@/shared/composables/useScrollLock';
 import AppIconButton from '../actions/AppIconButton.vue';
@@ -87,10 +87,20 @@ watch(
 );
 
 onBeforeUnmount(deactivateOverlay);
+
+function markLeaving(element: Element): void {
+  element.setAttribute('inert', '');
+  element.setAttribute('aria-hidden', 'true');
+}
+function markEntering(element: Element): void {
+  element.removeAttribute('inert');
+  element.removeAttribute('aria-hidden');
+}
 </script>
 
 <template>
   <Teleport to="body">
+    <Transition name="dialog" @before-leave="markLeaving" @before-enter="markEntering">
     <div v-if="open" class="app-dialog" @mousedown.self="closeOnBackdrop ? requestClose() : undefined">
       <div
         ref="dialogEl"
@@ -116,10 +126,17 @@ onBeforeUnmount(deactivateOverlay);
         </div>
       </div>
     </div>
+    </Transition>
   </Teleport>
 </template>
 
 <style scoped>
+.dialog-enter-active { transition: var(--theme-transition), opacity var(--motion-enter-duration) var(--motion-ease); }
+.dialog-leave-active { transition: var(--theme-transition), opacity var(--motion-leave-duration) var(--motion-ease); }
+.dialog-enter-active .app-dialog__panel { transition: var(--theme-transition), transform var(--motion-enter-duration) var(--motion-ease); }
+.dialog-leave-active .app-dialog__panel { transition: var(--theme-transition), transform var(--motion-leave-duration) var(--motion-ease); }
+.dialog-enter-from, .dialog-leave-to { opacity: 0; }
+.dialog-enter-from .app-dialog__panel, .dialog-leave-to .app-dialog__panel { transform: translateY(var(--space-12)); }
 .app-dialog {
   position: fixed;
   inset: 0;
@@ -128,6 +145,7 @@ onBeforeUnmount(deactivateOverlay);
   align-items: flex-end;
   justify-content: center;
   background: var(--backdrop);
+  transition: var(--theme-transition);
 }
 
 .app-dialog__panel {
@@ -141,14 +159,15 @@ onBeforeUnmount(deactivateOverlay);
   box-shadow: var(--shadow-modal);
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom);
+  transition: var(--theme-transition);
 }
 
 .app-dialog__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-12);
-  padding: var(--space-20) var(--space-20) var(--space-8);
+  gap: var(--gap-l);
+  padding: var(--pad-modal-default) var(--pad-modal-default) var(--space-8);
 }
 
 .app-dialog__title {
@@ -157,25 +176,27 @@ onBeforeUnmount(deactivateOverlay);
   font-weight: var(--type-h2-weight);
   letter-spacing: var(--type-h2-tracking);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .app-dialog__description {
-  padding: 0 var(--space-20);
+  padding: 0 var(--pad-modal-default);
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 
 .app-dialog__body {
-  padding: var(--space-16) var(--space-20) var(--space-20);
+  padding: var(--space-16) var(--pad-modal-default) var(--pad-modal-default);
   overflow-y: auto;
 }
 
 @media (min-width: 768px) {
   .app-dialog {
     align-items: center;
-    padding: var(--space-24);
+    padding: var(--pad-modal-large);
   }
 
   .app-dialog__panel {
@@ -194,15 +215,15 @@ onBeforeUnmount(deactivateOverlay);
   }
 
   .app-dialog__header {
-    padding: var(--space-24) var(--space-24) var(--space-8);
+    padding: var(--pad-modal-large) var(--pad-modal-large) var(--space-8);
   }
 
   .app-dialog__description {
-    padding: 0 var(--space-24);
+    padding: 0 var(--pad-modal-large);
   }
 
   .app-dialog__body {
-    padding: var(--space-16) var(--space-24) var(--space-24);
+    padding: var(--space-16) var(--pad-modal-large) var(--pad-modal-large);
   }
 }
 </style>

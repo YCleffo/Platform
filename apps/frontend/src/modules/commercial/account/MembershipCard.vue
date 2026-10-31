@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { Pencil, Trash2 } from '@lucide/vue';
+import { Pencil, Trash2 } from '@/shared/ui/icons';
 import AppBadge from '@/shared/ui/feedback/AppBadge.vue';
 import AppIconButton from '@/shared/ui/actions/AppIconButton.vue';
 import { formatDateTime } from '@/shared/formatting/date';
@@ -62,6 +62,7 @@ const { t, locale } = useI18n();
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-card-s);
+  transition: var(--theme-transition);
 }
 
 .member__identity {
@@ -79,6 +80,7 @@ const { t, locale } = useI18n();
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: var(--theme-transition);
 }
 
 .member__since {
@@ -86,6 +88,7 @@ const { t, locale } = useI18n();
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .member__side {

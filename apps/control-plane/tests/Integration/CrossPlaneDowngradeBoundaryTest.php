@@ -113,6 +113,23 @@ final class CrossPlaneDowngradeBoundaryTest extends RefundTestCase
                 status: 'draft', featureValues: [$paidFeature => true]);
             [$freePlan, $freePrice] = $this->planPrice('boundary-' . $suffix . '-free',
                 status: 'draft', featureValues: [$freeFeature => true]);
+            // A monthly period cannot end on the 31st if the preceding month
+            // has only 30 days. Use a real annual period on those dates instead
+            // of PHP's overflowing "-1 month" (which can sleep for a whole day).
+            $boundary = $this->activationInstant()
+                ->modify($case === 'renewal-restart' ? '+8 seconds' : '+5 seconds');
+            $previousMonth = $boundary->modify('first day of previous month');
+            $billingPeriod = (int) $boundary->format('j') <= (int) $previousMonth->format('t')
+                ? 'month' : 'year';
+            $activation = $billingPeriod === 'month'
+                ? $boundary->setDate((int) $previousMonth->format('Y'),
+                    (int) $previousMonth->format('n'), (int) $boundary->format('j'))
+                : $boundary->setDate((int) $boundary->format('Y') - 1,
+                    (int) $boundary->format('n'), (int) $boundary->format('j'));
+            foreach ([$oldPrice, $paidPrice, $freePrice] as $priceId) {
+                $this->connection->executeStatement(
+                    'UPDATE commercial.plan_prices SET billing_period=? WHERE id=?', [$billingPeriod, $priceId]);
+            }
             $this->connection->executeStatement('UPDATE commercial.plan_prices SET amount_minor=2000 WHERE id=?', [$oldPrice]);
             $this->connection->executeStatement('UPDATE commercial.plan_prices SET amount_minor=500 WHERE id=?', [$paidPrice]);
             $this->connection->executeStatement('UPDATE commercial.plan_prices SET amount_minor=0 WHERE id=?', [$freePrice]);
@@ -122,8 +139,6 @@ final class CrossPlaneDowngradeBoundaryTest extends RefundTestCase
             }
             $source = $this->draftSubscription($account, $profile, [$oldPrice]);
             // A genuine short remaining term avoids mutating immutable usage history.
-            $activation = $this->activationInstant()->modify('-1 month')
-                ->modify($case === 'renewal-restart' ? '+8 seconds' : '+5 seconds');
             $this->activatePaid($account, $source, $activation, $this->uuid());
             $this->applyDocument($issuer, $deployment, $installationId, $applier);
             self::assertSame(['boundary.' . $suffix . '.old' => true], $runtime->forInstallation($installationId));
@@ -316,6 +331,7 @@ final class CrossPlaneDowngradeBoundaryTest extends RefundTestCase
             'SELECT current_period_end FROM commercial.subscriptions WHERE id=?', [$subscriptionId]));
         $this->connection->commit();
         $delay = $boundary->getTimestamp() - time() + 1;
+        self::assertLessThanOrEqual(15, $delay, 'Fixture period must end within seconds, not days.');
         if ($delay > 0) {
             sleep($delay);
         }

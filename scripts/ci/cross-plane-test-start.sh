@@ -22,7 +22,8 @@ docker compose --profile test run --rm db-migrate-test
 echo "=== Building deterministic cross-plane test image ==="
 docker compose --profile control-test build control-plane-test
 docker compose --profile control-test build cross-plane-test
-docker compose --profile control-test run --rm --no-deps cross-plane-test test -f /backend/vendor/autoload.php
+docker compose --profile control-test run --rm --no-deps cross-plane-test sh -ec \
+  'test -f /backend/vendor/autoload.php && test ! -e /backend/.env && test ! -e /backend/.git && test ! -e /backend/c3.php'
 
 echo "=== Starting isolated Commercial test infrastructure ==="
 docker compose --profile control-test up -d --wait control-postgres-test

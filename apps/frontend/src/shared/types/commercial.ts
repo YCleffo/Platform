@@ -119,11 +119,11 @@ export type AuthenticationMethod = 'password' | 'password_totp' | 'password_reco
 export interface ControlSession {
   id: string;
   issued_at: string;
-  last_used_at: string;
+  last_used_at: string | null;
   expires_at: string;
   revoked_at: string | null;
   revoke_reason: string | null;
-  user_agent: string;
+  user_agent: string | null;
   authentication_method: AuthenticationMethod;
   primary_authenticated_at: string;
   mfa_authenticated_at: string | null;

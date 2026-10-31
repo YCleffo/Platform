@@ -43,7 +43,10 @@ export function buildTokensCss() {
   const color = (name, value) => w(`  --color-${name}: ${value};`);
   const shadow = (name, value) => {
     const { color: c, x, y, blur, spread } = value;
-    w(`  --shadow-${name}: ${x}px ${y}px ${blur}px ${spread}px ${c};`);
+    const color = name !== 'focus-ring' && /^#[\da-f]{8}$/i.test(c)
+      ? `rgb(${parseInt(c.slice(1, 3), 16)} ${parseInt(c.slice(3, 5), 16)} ${parseInt(c.slice(5, 7), 16)} / calc(${parseInt(c.slice(7, 9), 16) / 255} * var(--ui-shadow-strength, 1)))`
+      : c;
+    w(`  --shadow-${name}: ${x}px ${y}px ${blur}px ${spread}px ${color};`);
   };
 
   w('/* AUTO-GENERATED from design/design-tokens.json. Do not edit by hand. Run: npm run generate:tokens */');
@@ -167,31 +170,47 @@ export function buildTokensCss() {
   w('');
   w(':root {');
   w('  /* Spacing */');
-  for (const [step, v] of Object.entries(numbers.Spacing)) w(`  --space-${step}: ${v.$value}px;`);
+  for (const [step, v] of Object.entries(numbers.Spacing)) w(`  --space-${step}: calc(${v.$value}px * var(--ui-density-scale, 1) * var(--ui-spacing-scale, 1));`);
+  w('');
+  w('  /* Gaps */');
+  for (const [name, v] of Object.entries(numbers.Gap)) w(`  --gap-${kebab(name)}: calc(${v.$value}px * var(--ui-density-scale, 1) * var(--ui-spacing-scale, 1));`);
+  w('');
+  w('  /* Padding */');
+  for (const [name, v] of Object.entries(flattenTextStyles(numbers.Padding))) {
+    const key = kebab(name);
+    const button = /^button-([sml])-(horizontal|vertical)$/.exec(key);
+    const axis = button?.[2] === 'horizontal' ? 'x' : 'y';
+    const base = axis === 'x' ? 16 : 10;
+    w(button
+      ? `  --pad-${key}: calc(var(--ui-button-padding-${axis}, ${base}px) * ${v / base} * var(--ui-density-scale, 1));`
+      : `  --pad-${key}: calc(${v}px * var(--ui-density-scale, 1) * var(--ui-spacing-scale, 1));`);
+  }
   w('');
   w('  /* Radius */');
   for (const [name, v] of Object.entries(numbers.Radius)) {
     const n = kebab(name);
     if (typeof v.$value === 'number') {
-      w(`  --radius-${n}: ${v.$value}px;`);
+      w(`  --radius-${n}: calc(${v.$value}px * var(--ui-radius-scale, 1));`);
       continue;
     }
     for (const [step, vv] of Object.entries(v)) {
-      w(`  --radius-${n}-${kebab(step)}: ${vv.$value}px;`);
+      w(`  --radius-${n}-${kebab(step)}: calc(${vv.$value}px * var(--ui-radius-scale, 1));`);
     }
   }
   w('');
   w('  /* Control height + icon size */');
-  w('  --control-h-s: 32px;');
-  w('  --control-h-m: 40px;');
-  w('  --control-h-l: 48px;');
-  w('  --icon-xs: 14px;');
-  w('  --icon-s: 16px;');
-  w('  --icon-m: 20px;');
-  w('  --icon-l: 24px;');
-  w('  --icon-xl: 32px;');
-  w('  --bottom-nav-h: 72px;');
-  w('  --page-pad-x: 18px;');
+  for (const [size, v] of Object.entries(numbers.Size['Control Height'])) {
+    w(`  --control-h-${kebab(size)}: calc(${v.$value}px * var(--ui-density-scale, 1));`);
+  }
+  for (const [size, v] of Object.entries(numbers.Size.Icon)) {
+    w(`  --icon-${kebab(size)}: ${v.$value}px;`);
+  }
+  w(`  --bottom-nav-h: max(${numbers.Size['Mobile Bottom Nav'].$value}px, calc(${numbers.Size['Mobile Bottom Nav'].$value}px * var(--ui-font-scale, 1)));`);
+  const pagePadding = numbers.Padding.Page;
+  w(`  --page-pad-x: ${pagePadding['Mobile Horizontal'].$value}px;`);
+  w(`  --page-pad-y: ${pagePadding['Mobile Vertical'].$value}px;`);
+  w(`  --page-pad-x-tablet: ${pagePadding.Tablet.$value}px;`);
+  w(`  --page-pad-x-desktop: ${pagePadding.Desktop.$value}px;`);
   w('}');
   w('');
 
@@ -200,8 +219,9 @@ export function buildTokensCss() {
   const textNames = new Set([...Object.keys(mobileText), ...Object.keys(desktopText)]);
   const typeVars = (name, style, indent) => {
     const key = kebab(name);
-    w(`${indent}--type-${key}-size: ${style.fontSize}px;`);
-    w(`${indent}--type-${key}-line: ${style.lineHeight}px;`);
+    w(`${indent}--type-${key}-family: ${JSON.stringify(style.fontFamily)};`);
+    w(`${indent}--type-${key}-size: calc(${style.fontSize}px * var(--ui-font-scale, 1));`);
+    w(`${indent}--type-${key}-line: calc(${style.lineHeight}px * var(--ui-font-scale, 1));`);
     w(`${indent}--type-${key}-weight: ${FONT_WEIGHTS[style.fontWeight] ?? 400};`);
     w(`${indent}--type-${key}-tracking: ${trackingToEm(style.letterSpacing)};`);
   };

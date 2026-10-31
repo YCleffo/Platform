@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { Layers, Moon, Sun } from '@lucide/vue';
+import { Layers, Moon, Settings, Sun } from '@/shared/ui/icons';
 import { useTheme } from '@/app/theme';
+import { useRouter } from 'vue-router';
 import { setLocale } from '@/shared/i18n';
 import AppIconButton from '@/shared/ui/actions/AppIconButton.vue';
+import SiteContextMenu from './SiteContextMenu.vue';
 
 const { locale } = useI18n();
 const { isDark, toggleTheme } = useTheme();
+const router = useRouter();
 
 function toggleLocale(): void {
   setLocale(locale.value === 'ru' ? 'en' : 'ru');
@@ -14,6 +17,7 @@ function toggleLocale(): void {
 </script>
 
 <template>
+  <SiteContextMenu>
   <div class="auth-layout">
     <header class="auth-layout__header">
       <RouterLink class="brand" :to="{ name: 'catalog' }" :aria-label="$t('app.name')">
@@ -23,6 +27,7 @@ function toggleLocale(): void {
         <span class="brand__name">{{ $t('app.name') }}</span>
       </RouterLink>
       <div class="auth-layout__actions">
+        <AppIconButton :label="$t('nav.settings')" @click="router.push({ name: 'settings' })"><Settings :size="20" aria-hidden="true" /></AppIconButton>
         <AppIconButton :label="isDark ? $t('theme.light') : $t('theme.dark')" @click="toggleTheme">
           <Sun v-if="isDark" :size="20" aria-hidden="true" />
           <Moon v-else :size="20" aria-hidden="true" />
@@ -39,6 +44,7 @@ function toggleLocale(): void {
       </div>
     </main>
   </div>
+  </SiteContextMenu>
 </template>
 
 <style scoped>
@@ -47,23 +53,26 @@ function toggleLocale(): void {
   display: flex;
   flex-direction: column;
   background: var(--bg);
+  transition: var(--theme-transition);
 }
 
 .auth-layout__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-12);
+  gap: var(--gap-l);
   padding: var(--space-8) var(--page-pad-x);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  transition: var(--theme-transition);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-8);
+  gap: var(--gap-s);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .brand__mark {
@@ -75,6 +84,7 @@ function toggleLocale(): void {
   border-radius: var(--radius-control-s);
   background: var(--accent);
   color: var(--color-white);
+  transition: var(--theme-transition);
 }
 
 .brand__name {
@@ -86,7 +96,7 @@ function toggleLocale(): void {
 .auth-layout__actions {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--gap-xs);
 }
 
 .auth-layout__locale {
@@ -112,16 +122,18 @@ function toggleLocale(): void {
   border-radius: var(--radius-card-l);
   box-shadow: var(--shadow-card);
   padding: var(--space-24);
+  transition: var(--theme-transition);
 }
 
 @media (min-width: 768px) {
   .auth-layout__header {
-    padding: var(--space-12) var(--space-32);
+    padding: var(--space-12) var(--page-pad-x-desktop);
   }
 
   .auth-layout__main {
     align-items: center;
-    padding: var(--space-48) var(--space-24);
+    padding: var(--space-48) var(--page-pad-x-tablet);
   }
 }
+@media (max-width: 479px) { .brand__name { display: none; } }
 </style>

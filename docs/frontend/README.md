@@ -1,239 +1,178 @@
 # Frontend Platform
 
-Frontend Platform — SPA на **Vue 3 + TypeScript (strict)** и **Vite**. Работает с
-реальным **Commercial Control Plane** (Symfony) по контракту
-`contracts/openapi/control-plane.yaml`. Моков и фиктивных данных в runtime нет.
+SPA на Vue 3, TypeScript strict и Vite. Использует Commercial Control Plane по
+[OpenAPI](../../contracts/openapi/control-plane.yaml). Токены авторизации живут только
+в памяти; persistent storage используется для темы, языка и внешнего вида. После перезагрузки нужен вход.
 
-Код: [`apps/frontend`](../../apps/frontend/README.md). Контракт будущих графиков:
-[CHARTS_CONTRACT.md](CHARTS_CONTRACT.md).
+## Границы приложения
 
-## Стек
+| Слой | Ответственность |
+| --- | --- |
+| `app` | Router, layouts, theme, appearance preferences, сборка приложения |
+| `core` | Один auth/session owner, account context, композиция HTTP-клиента |
+| `modules/commercial` | auth, onboarding, catalog, account, security, invitations |
+| `modules/settings` | Настройки внешнего вида, общий layout настроек и примеры компонентов |
+| `shared` | HTTP transport/guards, UI, i18n, formatting, validation, local assets |
 
-Vue 3 (Composition API, `<script setup>`), TypeScript strict (`vue-tsc`), Vite 7,
-Vue Router 4, Pinia 3, vue-i18n 11 (`en`/`ru`), `@lucide/vue`, ESLint 9,
-Vitest + `@vue/test-utils` + happy-dom.
+`shared` не импортирует `core` или `modules`; UI не выполняет HTTP-запросы.
+`core` не зависит от страниц. Модули используют публичные контракты `core/shared`.
+Core Account, Control User и Commercial Account остаются разными identities.
+Education dashboard из SVG — будущий модуль; его API ещё не реализован.
 
-## Быстрый старт
+## Реальные маршруты и сценарии
 
-Нужен Node.js 20.19+ (проверено на 24).
+| Route | Сценарий |
+| --- | --- |
+| `/` | Опубликованный Commercial catalog |
+| `/register`, `/verify-email`, `/login`, `/mfa` | Регистрация, подтверждение и вход |
+| `/cabinet` | Список и создание Commercial Accounts |
+| `/accounts/:accountId` | Overview, сведения и текущие permissions |
+| `/accounts/:accountId/members` | Список, изменение ролей, removal; защита последнего owner |
+| `/accounts/:accountId/invitations` | Создание, список, resend, revoke |
+| `/invitation` | Публичный preview; accept/decline после входа |
+| `/settings/security` | MFA enrollment, recovery codes, sessions, step-up |
+| `/settings` | Тема, язык, размеры, отступы, анимации и тени; доступно без входа |
+| `/settings/components` | Рабочие примеры общих dropdown и контекстного меню |
 
-```bash
-cd apps/frontend
-npm install
-npm run dev      # http://localhost:5173
+Invitation token захватывается из `#token=…`, удаляется из адресной строки и хранится
+в памяти. Preview не меняет данные. Account permissions вычисляет сервер и повторно
+проверяет при мутациях; UI скрывает недоступные действия.
+
+Session epoch и request IDs отбрасывают устаревшие ответы после logout/смены аккаунта.
+HTTP 401 вызывает один single-flight refresh и максимум один retry. Просроченная
+сессия и временная ошибка сети обрабатываются раздельно. Sensitive mutations требуют
+MFA/recent authentication; `useSensitiveAction` повторяет действие после step-up.
+
+## Дизайн и локальные ресурсы
+
+Источники: [design-tokens.json](../../apps/frontend/design/design-tokens.json)
+и [мобильный SVG](../../apps/frontend/design/мобайл.svg).
+`generate:tokens` переносит цвета, typography, spacing/gap/padding/radius/size;
+`theme.css` сопоставляет их семантическим переменным Light/Dark/System.
+
+**Иконки:** выбранные Solar Linear SVG находятся в `src/shared/ui/icons/svg/`.
+`npm run generate:icons` создаёт небольшой `sprite.svg`; `AppIcon` использует
+`<use href="local-sprite.svg#symbol">`. Named exports сохраняют типизированные
+компоненты и dynamic component props. В production Vite выпускает спрайт с hash в имени.
+Полный Solar pack сохранён в `src/shared/Solar icons/` как библиотека для будущих экранов;
+он не импортируется целиком и не входит в production bundle. Зависимость Lucide удалена.
+`check:icons` проверяет соответствие
+спрайта исходникам; в CI это обязательный gate. Иконки используют `currentColor`,
+декоративные SVG скрыты от screen reader, доступное имя задаёт button/link.
+
+Новая иконка выбирается из полной библиотеки и добавляется проверенным SVG 24×24 в `svg/`, затем обновляется
+спрайт и typed export. Не загружать icon CDN и не включать весь каталог в bundle.
+Сложную многоцветную иллюстрацию держать отдельным asset; UI-пиктограммы переиспользовать
+через спрайт. Поведение ссылок на symbol описано в
+[MDN](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/use).
+
+В будущем переключение Linear/Bold организуется через карту вариантов внутри `AppIcon`;
+экраны продолжают использовать семантические имена. Полную библиотеку не нужно загружать
+в браузер ради такого переключения. Спрайт остаётся заменяемой деталью рендера.
+
+**Шрифты:** `fonts.css` подключает local Inter variable 100–900 и Space Mono 400/700
+в WOFF2. Исходные TTF/static/Roboto сохранены как библиотека; в сборку они не импортируются.
+Inter — основная typography,
+Space Mono — коды/идентификаторы. Google Fonts и внешних font links нет.
+При сборке сохраняются [third-party notices](../../apps/frontend/public/third-party-notices.txt)
+и полные OFL в `public/licenses`.
+
+## Настройки внешнего вида и анимации
+
+`app/appearance` владеет валидируемыми настройками и применяет их к корневым CSS-переменным.
+`platform.appearance.v1` хранит только UI-предпочтения. Изменения применяются сразу,
+синхронизируются между вкладками и переживают перезагрузку. При запрете storage
+интерфейс работает в пределах текущей вкладки и сообщает, что сохранение недоступно.
+Сброс внешнего вида сохраняет выбранные язык и тему.
+
+| Настройка | Допустимые значения |
+| --- | --- |
+| Плотность | compact / comfortable / spacious; коэффициенты 0,85 / 1 / 1,15 |
+| Масштаб шрифта | 90–140%; меняются размер и line-height |
+| Отступы | 75–125% поверх плотности |
+| Кнопки | Горизонтальный padding 8–32 px, вертикальный 6–16 px; без обрезания текста фиксированной высотой |
+| Скругления | 0–150% |
+| Тени | none / subtle / normal / strong; focus ring сохраняется |
+| Анимации | Вкл./выкл., скорость 0,5–2×, смена темы 0–600 ms |
+
+Исходный JSON дизайна не меняется: генератор CSS выражает размеры через масштабируемые
+переменные. Новые компоненты используют эти же токены. На touch-устройствах высота
+интерактивных контролов остаётся не меньше 44 px.
+
+`shared/styles/appearance.css` задаёт общие `--motion-*-duration`, easing и
+`--theme-transition`. Цвета компонентов не получают собственные длительности.
+При смене темы View Transitions одновременно смешивает старый и новый снимки страницы;
+вложенные CSS color transitions на это время отключены. Повторный быстрый выбор отменяет
+предыдущий переход, побеждает последний выбор. Без View Transitions тема применяется
+атомарно. Системный reduced motion имеет приоритет над пользовательским включением.
+Механизмы описаны в [MDN View Transitions](https://developer.mozilla.org/en-US/docs/Web/API/Document/startViewTransition)
+и [MDN reduced motion](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion).
+
+## Dropdown и контекстное меню
+
+Общая механика находится в `shared/ui/menus/AppMenu.vue`, без HTTP и маршрутизации.
+`MenuItem` задаёт уникальный `id`, текст, optional description/icon/shortcut,
+disabled, radio/checkbox состояние, children и kind item/group/separator.
+Событие `select(item)` передаёт действие владельцу меню. IDs уникальны во всём дереве;
+подписи выводятся как текст. `searchable` ищет листья по всей иерархии с путём к разделу.
+Disabled родителя наследуется потомками.
+
+`shared/ui/fields/AppDropdown.vue` принимает `options: DropdownOption[]`, `label`,
+`v-model`, optional id/searchable/multiple/clearable/disabled/invalid/placeholder.
+Одиночная модель — строка, множественная — массив строк. Родитель с children открывает
+раздел, выбирается конечный пункт. Multiple оставляет меню открытым и переключает
+checkbox-состояния; clearable сбрасывает выбор. Внешний `<label for>` связан с id кнопки,
+а обязательный `label` даёт ей доступное имя даже без внешней подписи.
+Компонент эмитит модель; сериализация формы и серверная валидация остаются у вызывающего кода.
+
+```vue
+<AppDropdown v-model="language" label="Язык" :options="languages" searchable />
+<AppDropdown v-model="selected" label="Разделы" :options="tree" multiple searchable clearable />
+<AppContextMenu :items="actions" label="Действия" @select="handleAction">
+  <section tabindex="0">Область контекстного меню</section>
+</AppContextMenu>
 ```
 
-Dev-прокси Vite (цели задаются в `apps/frontend/.env`, пример — `.env.example`):
+Десктоп показывает соседние каскадные панели; у края они разворачиваются и ограничиваются
+viewport. Если цепочка не помещается или ширина меньше 640 px, показывается один уровень
+с кнопкой «Назад». Поиск работает и из вложенного уровня, не теряя фокус при смене панели.
+Enter/Space выбирают, Up/Down/Home/End перемещают фокус, Right открывает раздел,
+Left и Escape возвращают назад. Escape в корне закрывает меню и возвращает фокус;
+Tab закрывает его и продолжает обычный порядок формы. Disabled доступны фокусу, но не
+активируются; структура и состояния используют ARIA menu/menuitemradio/menuitemcheckbox.
+Основа клавиатурного поведения: [WAI-ARIA menu](https://www.w3.org/WAI/ARIA/apg/patterns/menubar/).
 
-| Префикс | Куда проксируется | Переменная |
-| --- | --- | --- |
-| `/api/control/*` | Commercial Control Plane (`:8090`) | `VITE_COMMERCIAL_PROXY_TARGET` |
-| `/api/*` | Yii Core (`:8080`) | `VITE_CORE_PROXY_TARGET` |
+В диалоге меню портируется внутрь modal scope, поэтому первый Escape закрывает меню,
+следующий — диалог. Outside pointer закрывает меню без перехвата фокуса у новой цели.
+Слоты footer предназначены для пояснения списка.
 
-Адреса `localhost` не зашиты в компонентах — только в конфиге прокси.
+`AppContextMenu` открывается по contextmenu или Shift+F10/ContextMenu на фокусируемой
+области. Поля, contenteditable, ссылки, кнопки, выделенный текст и Shift+right click
+сохраняют браузерное меню. Атрибут `data-native-context` исключает произвольную область.
+`app/layouts/SiteContextMenu.vue` добавляет действия страницы: переходы, тему и плотность.
+Все четыре прежних native select заменены: язык, тени, роль участника и роль приглашения.
 
-## Слои и зависимости
+## Проверки и запуск
 
-```text
-src/
-  app/        router, layouts, theme — собирает приложение
-  core/       auth (сессия + store), account (store), api (композиция клиента)
-  modules/    commercial/{auth,onboarding,catalog,account}
-  shared/     api, ui, composables, validation, formatting, errors, i18n, styles, types
-```
+Команды: [README приложения](../../apps/frontend/README.md).
+Vite proxy `/api/control` направляет в Commercial, `/api` — в Core; адреса задаются
+`VITE_COMMERCIAL_PROXY_TARGET` и `VITE_CORE_PROXY_TARGET`, не компонентами.
 
-Правила:
+Vitest выполняет unit/component tests без БД. `verify-responsive.mjs` проверяет
+публичные и guard-состояния на 320–1440px, темы, keyboard, RU и overflow.
+Это не подтверждение аутентифицированных сценариев. `verify-appearance.mjs` проверяет
+переменные, сохранение, reduced motion, синхронность темы и размеры. `verify-menus.mjs`
+проверяет поиск, keyboard/focus, каскад, мобильный Back, края экрана, modal scope и context menu.
+Проверки внешнего вида выполняются на production preview; devtools-зависимости dev-сборки
+сами обращаются к localStorage и мешают корректной проверке полностью запрещённого storage.
+`check:styles` блокирует неопределённые CSS-переменные, локальные animation timings
+и transitions без общей цветовой части. Все проверки включены в CI.
 
-- `shared` не импортирует `modules`/`core`; `shared/ui` не знает об API.
-- `core` не зависит от страниц модулей.
-- `modules` используют публичные контракты `core`/`shared`.
-- HTTP-клиент создаётся в `core/api`; сам транспорт `shared/api/http.ts` не знает о сессии.
-- Один владелец у каждого состояния.
+Полный CI browser job запускает отдельные PostgreSQL/Commercial/Mailpit, outbox worker,
+Vite и Chromium. `e2e-account-workspace.mjs` и `e2e-invitation-lifecycle.mjs` выполняют
+реальные account и invitation/MFA/membership flows. Guard требует isolation nonce,
+подтверждённый сервером. Рабочие БД для этого не используются; после job ресурсы удаляются.
 
-## Сессии и авторизация
-
-- Access/refresh токены хранятся **только в памяти** (`core/auth/session.ts`). Никакого
-  `localStorage`/`sessionStorage`/IndexedDB. После перезагрузки нужен повторный вход.
-- Один владелец сессии с **epoch**: вход, выход и смена пользователя увеличивают epoch и
-  инвалидируют устаревшие запросы и refresh. Запоздавший refresh после logout не
-  восстанавливает сессию.
-- Жизненный цикл: `anonymous → authenticating → mfa_required → authenticated → signing_out`.
-  `authenticated` невозможен без загруженного `me`; при сбое `me` токены откатываются.
-- 401 → один refresh на группу запросов (single-flight) → максимум один ретрай. Отдельно
-  обрабатываются: повторный 401, `expired` refresh, `stale` (сессия сменилась) и сетевой
-  `unavailable` (без разлогина).
-- MFA challenge живёт в памяти; прямой `/mfa` без challenge перенаправляет на `/login`.
-- Logout очищает auth-состояние, account-состояние и тосты; данные пользователя A не
-  появляются у пользователя B.
-
-## Account context и рабочее пространство аккаунта
-
-`core/account/accountStore.ts` — единый контекст: список (пагинация `limit`/`offset`/
-`total`), детали выбранного аккаунта (`selectedAccountId`, `accountDetail`,
-`detailLoading`, `detailError`, `loadAccount`, `invalidateAccount`,
-`clearAccountContext`), защита от устаревших ответов и очистка по epoch. URL —
-источник `accountId`; store владеет загруженными данными. При смене аккаунта прежние
-данные не показываются.
-
-Маршруты:
-
-- `/accounts/:accountId` — обзор аккаунта;
-- `/accounts/:accountId/members` — участники (только просмотр).
-
-`AccountLayout` загружает детали, показывает заголовок, breadcrumbs, переключатель
-аккаунтов и вкладки; `AccountOverviewView` — сведения и статус; `AccountMembersView` —
-список участников с пагинацией. Токены живут в памяти: после полной перезагрузки
-защищённый URL уводит на `/login?redirect=...` и после входа возвращает на нужный
-аккаунт.
-
-### Read API аккаунта
-
-- `GET /api/control/accounts/{accountId}` — сведения + `role` текущего пользователя и
-  `permissions` (`read_account`, `view_members`, `manage_members`,
-  `manage_ownership`, `manage_billing`, `manage_technical`), вычисленные на сервере.
-- `GET /api/control/accounts/{accountId}/memberships` — активные участники, пагинация
-  `limit`/`offset`/`total`, поля `id`, `user_id`, `email`, `role`, `created_at`.
-
-Право просмотра участников — `membership.read` у `owner` и `admin`. `billing` и
-`technical` его не имеют. Frontend скрывает вкладку по `permissions.view_members`, но
-сервер повторно проверяет доступ.
-
-### Browser validation
-
-- `scripts/verify-responsive.mjs` — **read-only smoke**: без авторизации и мутаций.
-  Публичные экраны, guard-редиректы (включая `/accounts/*` и `/settings/security`),
-  overflow 320–1440, темы, keyboard, RU.
-- `scripts/e2e-account-workspace.mjs` — **мутирующий E2E**. По умолчанию отказывает и
-  завершается с `NOT_VERIFIED` (exit 2) до любых HTTP-запросов. Требует одновременно:
-  `E2E_RUNTIME=isolated-ci`, `E2E_ISOLATED_DB=1`, `E2E_ALLOW_MUTATIONS=1`, явные
-  `APP_URL`/`CONTROL_API_URL`/`MAILPIT_URL`, `E2E_ALLOWED_HOSTS` и `E2E_PASSWORD`
-  (без дефолтных credentials).
-- CI проверяет сам отказ: `node scripts/e2e-account-workspace.mjs --check-guard`.
-- Мутирующий E2E не запускается на локальной рабочей БД; при отсутствии изолированного
-  runtime он помечается `NOT_VERIFIED`.
-
-## Security Center и управление доступом
-
-Маршрут `/settings/security` — защищённые пользовательские настройки Control Plane (не
-Commercial Account). Используются реальные API:
-
-- `GET /auth/mfa/status` — включена ли MFA и сколько recovery-кодов осталось;
-- `POST /auth/mfa/totp/setup` — pending factor: `factor_id`, `secret`, `otpauth_uri`;
-- `POST /auth/mfa/totp/confirm` — подтверждение кода и одноразовые `recovery_codes`;
-- `POST /auth/reauthenticate` — step-up; backend обновляет
-  `primary_authenticated_at`/`mfa_authenticated_at` текущей сессии;
-- `GET /auth/sessions` — текущая сессия и метод входа.
-
-QR строится локально (`qrcode.vue`); `otpauth_uri` и секрет не передаются сторонним
-сервисам, не логируются и не попадают в persistent storage. Recovery-коды показываются
-один раз и очищаются при закрытии диалога. «MFA включена» показывается только после
-успешного `confirm`.
-
-### Step-up
-
-`useSensitiveAction` выполняет чувствительное действие; при
-`recent_authentication_required`/`recent_mfa_required` открывает
-`ReauthenticateDialog` (пароль; при включённой MFA — TOTP или recovery-код) и после
-успеха повторяет действие ровно один раз. `mfa_enrollment_required` показывает ссылку в
-Security Center. Серверные проверки не обходятся.
-
-### Управление участниками
-
-`PATCH`/`DELETE /accounts/{id}/memberships/{membershipId}` требуют серверных permissions
-и `requireSensitiveMfa`. UI:
-
-- `owner` управляет владением и всеми ролями; `admin` — только не-владельцами и не может
-  назначать `owner`; `billing`/`technical` не получают действий;
-- изменение роли и удаление идут через подтверждение и step-up;
-- нет оптимистичных обновлений: после успеха перезагружаются участники и account
-  permissions; при потере доступа — переход на `/cabinet`;
-- последний owner защищён backend (409), UI показывает отказ;
-- self-removal очищает account context и уводит из недоступного аккаунта;
-- приглашений по email нет.
-
-## Дизайн-система
-
-- Канонический источник — `apps/frontend/design/design-tokens.json` (авторский файл).
-- `npm run generate:tokens` → `src/shared/styles/tokens.css` (цвета, тени, отступы,
-  радиусы, размеры и типографика из `Text Styles`, mobile + desktop). Файл не редактируется вручную.
-- `npm run check:tokens` падает, если CSS рассинхронизирован с JSON.
-- Семантика (`--bg`, `--surface`, `--card`, `--border`, `--text-1`, `--accent`, статусы)
-  в `theme.css`; темы Light/Dark/System без вспышки (inline-скрипт в `index.html`).
-- Стиль border-first: карточки и поля отделены границей, тени умеренные.
-- Запрещены хардкод-цвета, радиусы и размеры шрифтов вне токенов.
-
-## Компоненты
-
-`shared/ui`: `AppButton`, `AppIconButton`, `AppInput`, `AppPasswordInput`, `AppBadge`,
-`AppCard`, `AppDivider`, `AppEmptyState`, `AppErrorState`, `AppSkeleton`, `AppHeader`,
-`AppBottomNav`, `AppDialog`, `AppFormShell`, `AppToast`.
-
-`AppDialog` — focus trap, возврат фокуса, scroll lock со счётчиком, Escape, backdrop,
-`persistent`, mobile bottom-sheet. `AppToast` — очередь до 4, success/error/warning/info,
-ручное закрытие, очистка при смене сессии.
-
-## Локализация
-
-Словари `en`/`ru` в `src/shared/i18n/messages`. Неизвестные коды API ошибок дают
-безопасное локализованное сообщение, а не сырой серверный текст. Паритет ключей EN/RU
-проверяется тестом.
-
-## Проверки
-
-```bash
-cd apps/frontend
-npm run check:tokens   # токены соответствуют design-tokens.json
-npm run typecheck      # vue-tsc (strict)
-npm run lint           # eslint
-npm run test           # Vitest: unit + component, без БД
-npm run build          # typecheck + production-сборка
-```
-
-Браузерные проверки (Playwright + установленный Chrome/Edge; нужен `npm run dev`):
-
-```bash
-node scripts/verify-responsive.mjs  # маршруты/guard, overflow 320–1440, console, темы, keyboard, RU
-node scripts/screenshot.mjs         # скриншоты доступных состояний в screenshots/
-```
-
-Аутентифицированный кабинет и диалог создания аккаунта требуют работающего backend и в
-браузерных скриптах помечаются `NOT_VERIFIED`; клавиатурная доступность диалога покрыта
-unit-тестами.
-
-## CI
-
-Задача `frontend-qa` в `.github/workflows/ci.yml`: Node 24, `npm ci`,
-`npm run check:tokens`, `typecheck`, `lint`, `test`, `build`. Без `continue-on-error`;
-существующие backend/cross-plane проверки не отключены.
-
-## Диагностика
-
-- **TS2307 «Cannot find module '*.vue'» в IDE.** Обычный TS-сервер без Vue language
-  service не резолвит SFC. В `env.d.ts` есть `declare module '*.vue'`, в
-  `tsconfig.app.json` — `baseUrl` и `paths`. Перезапустите TS server в IDE
-  (VSCode: «TypeScript: Restart TS Server») или установите расширение Vue (Volar).
-  Источник истины — `npm run typecheck`, а не подсветка IDE.
-- **Каталог показывает ошибку сети.** Backend не запущен либо неверна цель прокси в
-  `.env`. Проверьте `VITE_COMMERCIAL_PROXY_TARGET`.
-- **`check:tokens` падает.** Кто-то правил `tokens.css` вручную. Выполните
-  `npm run generate:tokens`.
-- **Переход на `/cabinet` кидает на `/login`.** Нет сессии (токены только в памяти) —
-  это ожидаемо после перезагрузки страницы.
-- **`/mfa` сразу уводит на `/login`.** Нет активного MFA challenge — это корректно.
-
-## Правила разработки
-
-- Не хранить токены в persistent storage.
-- Не добавлять mock API и фиктивные данные.
-- Не ослаблять проверки MFA/авторизации.
-- Использовать существующий HTTP transport и Idempotency-Key для мутаций.
-- Не хардкодить цвета/радиусы/типографику — только токены.
-- Не оставлять мёртвый код и конкурирующие реализации CSS.
-
-## Приглашения
-
-Управление — `/accounts/:accountId/invitations` (вкладка при `permissions.manage_members`): список с пагинацией, создание (email + роль `admin`/`billing`/`technical`, без `owner`), resend/revoke, step-up через `useSensitiveAction`, состояния loading/empty/error/expired/revoked/pending. Показывается «queued», а не «delivered» (backend не отслеживает доставку).
-
-Получатель — `/invitation` (публичный): токен читается из fragment `#token=…`, хранится только в памяти и удаляется из адресной строки; preview без мутаций; accept/decline — явные действия. После accept обновляется список аккаунтов и открывается Workspace; после decline membership не создаётся. Переход на login/register сохраняет `redirect=/invitation` без токена; после перезагрузки без fragment предлагается открыть ссылку из письма.
-
-E2E: мутирующий runner требует `E2E_RUNTIME=isolated-ci`, `E2E_ISOLATED_DB=1`, `E2E_ALLOW_MUTATIONS=1`, `E2E_ISOLATION_PROOF` (не короче 32 символов), allowlisted нелокальные хосты и `E2E_PASSWORD`; loopback/private хосты отклоняются. `--check-guard` выполняется в CI, а полный mutating E2E на локальной БД не запускается (`NOT_VERIFIED`).
+Результаты и production-ограничения: [критерии выпуска](../operations/PRODUCTION_READINESS_PROGRESS.md).
+Дальнейшие модули: [единый roadmap](../roadmap/PLATFORM_ROADMAP.md).
+Будущие графики: [контракт](CHARTS_CONTRACT.md).

@@ -7,19 +7,26 @@ FROM composer/composer:2-bin AS composer
 FROM dunglas/frankenphp:1.12.7-builder-php8.3@sha256:ff93138a6f94e59de46d69e49f77007fe0274f04ca1ec5b70a58ebbf0c821e98 AS frankenphp-builder
 
 ENV PATH="/usr/local/go/bin:${PATH}" \
+    GOTOOLCHAIN=go1.26.10 \
     GODEBUG=http2client=0
 
 WORKDIR /go/src/app/caddy
 
-RUN go get \
-        github.com/getkin/kin-openapi@v0.144.0 \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go get \
+        github.com/getkin/kin-openapi@v0.149.0 \
+        github.com/go-jose/go-jose/v4@v4.1.6 \
         google.golang.org/grpc@v1.83.2 \
-        golang.org/x/crypto@v0.56.0 \
+        golang.org/x/crypto@v0.57.0 \
+        golang.org/x/net@v0.60.0 \
     && go mod tidy
 
 WORKDIR /go/src/app/caddy/frankenphp
 
-RUN GOBIN=/usr/local/bin \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    GOBIN=/usr/local/bin \
     ../../go.sh install \
         -trimpath \
         -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP v1.12.7 PHP 8.3 Caddy' -X 'github.com/caddyserver/caddy/v2.CustomBinaryName=frankenphp' -X 'github.com/caddyserver/caddy/v2/modules/caddyhttp.ServerHeader=FrankenPHP Caddy'" \
@@ -32,17 +39,19 @@ FROM dunglas/frankenphp:1.12-php8.3@sha256:d5c2c5cdc8b6e73d861cccbf26ddab6443e3d
 
 COPY --from=frankenphp-builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 
-# The pinned upstream image predates Debian's CVE-2026-111497 fix.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends --only-upgrade libbrotli1 \
-    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libbrotli1)" ge '1.1.0-2+deb13u1' \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN install-php-extensions \
     opcache \
     intl \
     pdo_pgsql \
     zip
+
+# Apply available Debian fixes, then remove compiler headers from runtime images.
+# PHP extensions are already compiled; test/Composer operations need no C++ toolchain.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && apt-get purge -y linux-libc-dev \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libbrotli1)" ge '1.1.0-2+deb13u1' \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV LC_ALL=C.UTF-8
 

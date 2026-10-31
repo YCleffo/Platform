@@ -9,6 +9,8 @@ const routes = [
   { path: '/register', expected: '/register', selector: 'form' },
   { path: '/verify-email', expected: '/verify-email', selector: '.verify-view' },
   { path: '/', expected: '/', selector: '.catalog' },
+  { path: '/settings', expected: '/settings', selector: '.appearance-view' },
+  { path: '/settings/components', expected: '/settings/components', selector: '.components-view' },
   // Protected / challenge routes must redirect to /login when unauthenticated.
   { path: '/cabinet', expected: '/login', selector: 'form' },
   { path: '/mfa', expected: '/login', selector: 'form' },

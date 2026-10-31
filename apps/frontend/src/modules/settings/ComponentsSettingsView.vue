@@ -1,0 +1,66 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
+import AppContextMenu from '@/shared/ui/menus/AppContextMenu.vue';
+import AppDialog from '@/shared/ui/overlays/AppDialog.vue';
+import AppCard from '@/shared/ui/surfaces/AppCard.vue';
+import AppButton from '@/shared/ui/actions/AppButton.vue';
+import { LayoutGrid, Pencil, Settings } from '@/shared/ui/icons';
+import type { DropdownOption, MenuItem } from '@/shared/ui/menus/types';
+
+const { t } = useI18n();
+const single = ref('ru');
+const searchable = ref('en');
+const multiple = ref<string[]>(['ru']);
+const hierarchy = ref('');
+const dialogValue = ref('ru');
+const dialog = ref(false);
+const message = ref('');
+const languages = [ { value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }, { value: 'de', label: 'Deutsch' }, { value: 'es', label: 'Español' }, { value: 'fr', label: 'Français' }, { value: 'ja', label: '日本語' } ];
+const options = computed<DropdownOption[]>(() => [...languages, { value: 'disabled', label: t('menus.unavailable'), disabled: true }]);
+const tree = computed<DropdownOption[]>(() => [
+  { value: 'tools', label: t('menus.tools'), icon: Settings, children: [
+    { value: 'design', label: t('menus.design'), icon: Pencil, children: [
+      { value: 'colors', label: t('menus.colors'), description: 'RGB · HEX' }, { value: 'typography', label: t('menus.typography') },
+    ] },
+    { value: 'development', label: t('menus.development'), children: [{ value: 'frontend', label: t('menus.frontend') }, { value: 'backend', label: t('menus.backend') }] },
+  ] },
+  { value: 'languages', label: t('menus.language'), icon: LayoutGrid, children: languages },
+]);
+const contextItems = computed<MenuItem[]>(() => [
+  { id: 'group', kind: 'group', label: t('menus.context') },
+  { id: 'message', label: t('menus.contextAction'), icon: Pencil },
+  { id: 'separator', kind: 'separator', label: '' },
+  { id: 'nested', label: t('menus.tools'), children: [{ id: 'nested-message', label: t('menus.contextAction') }] },
+  { id: 'disabled', label: t('menus.unavailable'), disabled: true },
+]);
+</script>
+
+<template>
+  <div class="components-view">
+    <header><h2>{{ $t('menus.demoTitle') }}</h2><p>{{ $t('menus.demoDescription') }}</p></header>
+    <div class="components-view__grid">
+      <AppCard><label for="demo-single">{{ $t('menus.simple') }}</label><AppDropdown id="demo-single" v-model="single" :label="$t('menus.simple')" :options="options" /></AppCard>
+      <AppCard><label for="demo-search">{{ $t('menus.searchable') }}</label><AppDropdown id="demo-search" v-model="searchable" :label="$t('menus.searchable')" :options="options" searchable clearable /></AppCard>
+      <AppCard><label for="demo-multiple">{{ $t('menus.multiple') }}</label><AppDropdown id="demo-multiple" v-model="multiple" :label="$t('menus.multiple')" :options="options" searchable multiple clearable /></AppCard>
+      <AppCard><label for="demo-hierarchy">{{ $t('menus.hierarchy') }}</label><AppDropdown id="demo-hierarchy" v-model="hierarchy" :label="$t('menus.hierarchy')" :options="tree" searchable clearable><template #footer><p class="components-view__hint">{{ $t('menus.footer') }}</p></template></AppDropdown></AppCard>
+    </div>
+    <AppContextMenu :items="contextItems" :label="$t('menus.context')" @select="message = $t('menus.contextDone')">
+      <div id="demo-context" class="components-view__context" tabindex="0" :aria-label="$t('menus.context')"><h3>{{ $t('menus.context') }}</h3><p>{{ $t('menus.contextHint') }}</p><p role="status">{{ message }}</p></div>
+    </AppContextMenu>
+    <AppButton id="demo-dialog-open" variant="secondary" @click="dialog = true">{{ $t('menus.dialog') }}</AppButton>
+    <AppDialog v-model="dialog" :title="$t('menus.dialogTitle')"><AppDropdown id="demo-dialog" v-model="dialogValue" :label="$t('menus.language')" :options="options" searchable /><AppButton @click="dialog = false">{{ $t('common.close') }}</AppButton></AppDialog>
+  </div>
+</template>
+
+<style scoped>
+.components-view { display: grid; gap: var(--space-24); min-width: 0; }
+.components-view h2 { font-size: var(--type-h2-size); line-height: var(--type-h2-line); }
+.components-view p { color: var(--text-2); font-size: var(--type-body-medium-size); line-height: var(--type-body-medium-line); transition: var(--theme-transition); }
+.components-view__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--space-20); min-width: 0; }
+.components-view__grid .app-card { display: grid; align-content: start; gap: var(--space-12); min-width: 0; }
+.components-view__grid label { font-size: var(--type-body-medium-emphasis-size); font-weight: var(--type-body-medium-emphasis-weight); }
+.components-view__context { border: 1px dashed var(--border-strong); border-radius: var(--radius-card-m); background: var(--surface); padding: var(--space-24); display: grid; gap: var(--space-12); transition: var(--theme-transition); }
+.components-view__hint { font-size: var(--type-body-small-size); line-height: var(--type-body-small-line); padding: var(--space-8); color: var(--text-2); transition: var(--theme-transition); }
+</style>

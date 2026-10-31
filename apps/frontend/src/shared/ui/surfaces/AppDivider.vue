@@ -11,6 +11,7 @@ withDefaults(defineProps<{ vertical?: boolean }>(), { vertical: false });
   height: 1px;
   width: 100%;
   background: var(--border);
+  transition: var(--theme-transition);
 }
 
 .app-divider--vertical {

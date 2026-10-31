@@ -42,7 +42,8 @@ withDefaults(defineProps<Props>(), {
   display: block;
   border-radius: var(--radius-control-s);
   background: var(--surface-hover);
-  animation: app-skeleton-pulse 1.4s ease-in-out infinite;
+  animation: app-skeleton-pulse var(--motion-skeleton-duration) var(--motion-pulse-ease) infinite;
+  transition: var(--theme-transition);
 }
 
 .app-skeleton__line {

@@ -120,16 +120,19 @@ function choose(accountId: string): void {
   background: var(--surface-2);
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
+  transition: var(--theme-transition);
 }
 
 .picker__current-label {
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .picker__current-name {
   color: var(--text-1);
   font-weight: 500;
   overflow-wrap: anywhere;
+  transition: var(--theme-transition);
 }
 
 .picker__list {
@@ -152,18 +155,19 @@ function choose(accountId: string): void {
   text-align: left;
   cursor: pointer;
   transition:
-    border-color 120ms ease,
-    background-color 120ms ease;
+    var(--theme-transition);
 }
 
 .picker__item:hover {
   border-color: var(--border-strong);
   background: var(--surface-hover);
+  transition: var(--theme-transition);
 }
 
 .picker__item--current {
   border-color: var(--accent);
   background: var(--accent-soft);
+  transition: var(--theme-transition);
 }
 
 .picker__name {
@@ -174,14 +178,16 @@ function choose(accountId: string): void {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: var(--theme-transition);
 }
 
 .picker__code {
   grid-row: 2;
-  font-family: ui-monospace, 'Cascadia Code', 'Roboto Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: var(--type-body-small-size);
   line-height: var(--type-body-small-line);
   color: var(--text-3);
+  transition: var(--theme-transition);
 }
 
 .picker__role {
@@ -191,5 +197,6 @@ function choose(accountId: string): void {
   font-size: var(--type-body-small-size);
   line-height: var(--type-body-small-line);
   color: var(--text-2);
+  transition: var(--theme-transition);
 }
 </style>

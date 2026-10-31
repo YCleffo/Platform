@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { Building2, Layers, LayoutGrid, LogIn, LogOut, Moon, ShieldCheck, Sun } from '@lucide/vue';
+import { Building2, Layers, LayoutGrid, LogIn, LogOut, Moon, Settings, Sun } from '@/shared/ui/icons';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useTheme } from '@/app/theme';
 import { setLocale } from '@/shared/i18n';
@@ -10,6 +10,7 @@ import AppHeader from '@/shared/ui/navigation/AppHeader.vue';
 import AppBottomNav from '@/shared/ui/navigation/AppBottomNav.vue';
 import type { BottomNavItem } from '@/shared/ui/navigation/AppBottomNav.vue';
 import AppIconButton from '@/shared/ui/actions/AppIconButton.vue';
+import SiteContextMenu from './SiteContextMenu.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -17,23 +18,14 @@ const route = useRoute();
 const { t, locale } = useI18n();
 const { isDark, toggleTheme } = useTheme();
 
-const sectionTitle = computed(() => {
-  if (route.name === 'cabinet') {
-    return t('nav.cabinet');
-  }
-  if (route.name === 'security') {
-    return t('nav.security');
-  }
-  if (route.name === 'catalog') {
-    return t('nav.catalog');
-  }
-  return t('app.name');
-});
+const primaryNavigation = computed(() => typeof route.meta.primaryNavigation === 'string'
+  ? route.meta.primaryNavigation : typeof route.name === 'string' ? route.name : '');
+const sectionTitle = computed(() => bottomItems.value.find((item) => item.routeName === primaryNavigation.value)?.label ?? t('app.name'));
 
 const bottomItems = computed<BottomNavItem[]>(() => [
   { label: t('nav.catalog'), icon: LayoutGrid, routeName: 'catalog' },
   { label: t('nav.cabinet'), icon: Building2, routeName: 'cabinet' },
-  { label: t('nav.security'), icon: ShieldCheck, routeName: 'security' },
+  { label: t('nav.settings'), icon: Settings, routeName: 'settings' },
 ]);
 
 const localeLabel = computed(() => (locale.value === 'ru' ? 'RU' : 'EN'));
@@ -49,6 +41,7 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
+  <SiteContextMenu>
   <div class="app-layout">
     <AppHeader>
       <template #leading>
@@ -63,14 +56,11 @@ async function logout(): Promise<void> {
       <template #center>
         <span class="app-layout__mobile-title">{{ sectionTitle }}</span>
         <nav class="app-layout__nav" :aria-label="$t('nav.primary')">
-          <RouterLink class="app-layout__nav-link" :to="{ name: 'catalog' }">
-            {{ $t('nav.catalog') }}
-          </RouterLink>
-          <RouterLink class="app-layout__nav-link" :to="{ name: 'cabinet' }">
-            {{ $t('nav.cabinet') }}
-          </RouterLink>
-          <RouterLink class="app-layout__nav-link" :to="{ name: 'security' }">
-            {{ $t('nav.security') }}
+          <RouterLink v-for="item in bottomItems" :key="item.routeName"
+            class="app-layout__nav-link" :class="{ 'app-layout__nav-link--active': primaryNavigation === item.routeName }"
+            active-class="" exact-active-class="" :to="{ name: item.routeName }"
+            :aria-current="primaryNavigation === item.routeName ? 'page' : undefined">
+            {{ item.label }}
           </RouterLink>
         </nav>
       </template>
@@ -96,8 +86,9 @@ async function logout(): Promise<void> {
       <RouterView />
     </main>
 
-    <AppBottomNav :items="bottomItems" />
+    <AppBottomNav :items="bottomItems" :active-route-name="primaryNavigation" />
   </div>
+  </SiteContextMenu>
 </template>
 
 <style scoped>
@@ -110,8 +101,9 @@ async function logout(): Promise<void> {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-8);
+  gap: var(--gap-s);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .brand__mark {
@@ -123,6 +115,7 @@ async function logout(): Promise<void> {
   border-radius: var(--radius-control-s);
   background: var(--accent);
   color: var(--color-white);
+  transition: var(--theme-transition);
 }
 
 .brand__name {
@@ -132,10 +125,16 @@ async function logout(): Promise<void> {
 }
 
 .app-layout__mobile-title {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: var(--type-h3-size);
   line-height: var(--type-h3-line);
   font-weight: var(--type-h3-weight);
   color: var(--text-1);
+  transition: var(--theme-transition);
 }
 
 .app-layout__nav {
@@ -152,7 +151,7 @@ async function logout(): Promise<void> {
 .app-layout__main {
   flex: 1;
   width: 100%;
-  padding: var(--space-16) var(--page-pad-x) calc(var(--bottom-nav-h) + var(--space-24) + env(safe-area-inset-bottom));
+  padding: var(--page-pad-y) var(--page-pad-x) calc(var(--bottom-nav-h) + var(--space-24) + env(safe-area-inset-bottom));
 }
 
 @media (min-width: 768px) {
@@ -162,8 +161,10 @@ async function logout(): Promise<void> {
 
   .app-layout__nav {
     display: flex;
+    flex-wrap: wrap;
+    min-width: 0;
     align-items: center;
-    gap: var(--space-8);
+    gap: var(--gap-s);
   }
 
   .app-layout__nav-link {
@@ -173,20 +174,25 @@ async function logout(): Promise<void> {
     line-height: var(--type-body-medium-emphasis-line);
     font-weight: var(--type-body-medium-emphasis-weight);
     color: var(--text-2);
+    transition: var(--theme-transition);
   }
 
   .app-layout__nav-link:hover {
     background: var(--surface-hover);
     color: var(--text-1);
+    transition: var(--theme-transition);
   }
 
-  .app-layout__nav-link.router-link-active {
-    color: var(--accent);
+  .app-layout__nav-link--active {
+    color: var(--accent-text);
     background: var(--accent-soft);
+    transition: var(--theme-transition);
   }
 
   .app-layout__main {
-    padding: var(--space-24) var(--space-32) var(--space-40);
+    padding: var(--space-24) var(--page-pad-x-desktop) var(--space-40);
   }
 }
+
+@media (max-width: 479px) { .brand__name { display: none; } }
 </style>

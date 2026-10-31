@@ -166,7 +166,17 @@ final readonly class AuthSecurityService
     /** @return list<array<string, mixed>> */
     public function sessions(ControlUserPrincipal $user): array
     {
-        return $this->connection->fetchAllAssociative('SELECT id, issued_at, last_used_at, expires_at, revoked_at, revoke_reason, user_agent, authentication_method, primary_authenticated_at, mfa_authenticated_at, (id = ?::uuid) AS current FROM commercial.control_sessions WHERE control_user_id = ? ORDER BY issued_at DESC', [$user->sessionId(), $user->id()]);
+        $sessions = $this->connection->fetchAllAssociative('SELECT id, issued_at, last_used_at, expires_at, revoked_at, revoke_reason, user_agent, authentication_method, primary_authenticated_at, mfa_authenticated_at, (id = ?::uuid) AS current FROM commercial.control_sessions WHERE control_user_id = ? ORDER BY issued_at DESC', [$user->sessionId(), $user->id()]);
+        foreach ($sessions as &$session) {
+            foreach (['issued_at', 'last_used_at', 'expires_at', 'revoked_at', 'primary_authenticated_at', 'mfa_authenticated_at'] as $field) {
+                if (is_string($session[$field])) {
+                    $session[$field] = (new \DateTimeImmutable($session[$field]))->format(\DateTimeInterface::RFC3339);
+                }
+            }
+        }
+        unset($session);
+
+        return $sessions;
     }
 
     public function revokeSession(ControlUserPrincipal $user, string $sessionId, string $correlation): void

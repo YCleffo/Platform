@@ -131,6 +131,6 @@ SQL, [$targetUserId, $accountId, $role]);
     /** @param array<string, string> $metadata */
     private function audit(Connection $connection, string $actorId, string $accountId, string $membershipId, string $action, string $correlationId, array $metadata): void
     {
-        $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, actor_id, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome, metadata) VALUES ('control_user', ?, ?, ?, 'commercial_account_membership', ?, ?, 'success', ?::jsonb)", [$actorId, $accountId, $action, $membershipId, $correlationId, json_encode($metadata, JSON_THROW_ON_ERROR)]);
+        $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, actor_id, commercial_account_id, action, resource_type, resource_id, correlation_id, outcome, metadata) VALUES ('control_user', ?, ?, ?, 'commercial_account_membership', ?, ?, 'success', ?::jsonb)", [$actorId, $accountId, $action, $membershipId, $correlationId, json_encode((object) $metadata, JSON_THROW_ON_ERROR)]);
     }
 }

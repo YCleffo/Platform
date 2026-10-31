@@ -22,6 +22,7 @@ withDefaults(defineProps<{ sticky?: boolean }>(), { sticky: true });
 .app-header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  transition: var(--theme-transition);
 }
 
 .app-header--sticky {

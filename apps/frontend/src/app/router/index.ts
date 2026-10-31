@@ -13,6 +13,9 @@ import LoginView from '@/modules/commercial/auth/LoginView.vue';
 import RegisterView from '@/modules/commercial/onboarding/RegisterView.vue';
 import VerifyEmailView from '@/modules/commercial/onboarding/VerifyEmailView.vue';
 import MfaChallengeView from '@/modules/commercial/auth/MfaChallengeView.vue';
+import SettingsLayout from '@/modules/settings/SettingsLayout.vue';
+import AppearanceSettingsView from '@/modules/settings/AppearanceSettingsView.vue';
+import ComponentsSettingsView from '@/modules/settings/ComponentsSettingsView.vue';
 import { useAuthStore } from '@/core/auth/authStore';
 
 export function createAppRouter(history: RouterHistory = createWebHistory(import.meta.env.BASE_URL)) {
@@ -26,15 +29,17 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
           { path: '', name: 'catalog', component: CatalogView },
           { path: 'cabinet', name: 'cabinet', component: AccountCabinetView, meta: { requiresAuth: true } },
           {
-            path: 'settings/security',
-            name: 'security',
-            component: SecuritySettingsView,
-            meta: { requiresAuth: true },
+            path: 'settings', component: SettingsLayout, meta: { primaryNavigation: 'settings' },
+            children: [
+              { path: '', name: 'settings', component: AppearanceSettingsView },
+              { path: 'components', name: 'settings-components', component: ComponentsSettingsView },
+              { path: 'security', name: 'security', component: SecuritySettingsView, meta: { requiresAuth: true } },
+            ],
           },
           {
             path: 'accounts/:accountId',
             component: AccountLayout,
-            meta: { requiresAuth: true },
+            meta: { requiresAuth: true, primaryNavigation: 'cabinet' },
             children: [
               {
                 path: '',
