@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<{
   id?: string;
   searchable?: boolean;
   closeOnSelect?: boolean;
-  initialFocus?: 'first' | 'last';
+  initialFocus?: 'first' | 'last' | 'selected';
 }>(), { anchor: null, point: null, id: undefined, searchable: false, closeOnSelect: true, initialFocus: 'first' });
 const open = defineModel<boolean>({ default: false });
 const emit = defineEmits<{ select: [item: MenuItem] }>();
@@ -46,6 +46,11 @@ function focusItem(panelIndex: number, last = false): void {
   const items = buttons(panel);
   (last ? items.at(-1) : items[0])?.focus({ preventScroll: true });
   if (!items.length) panel?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true });
+}
+async function clearSearch(): Promise<void> {
+  query.value = '';
+  await nextTick();
+  layer.value?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true });
 }
 function row(id: string): HTMLButtonElement | undefined {
   return panels().flatMap(buttons).find(button => button.dataset.menuId === id);
@@ -187,7 +192,11 @@ watch(open, async value => {
   if (!open.value || disposed) return;
   layout(); await nextTick(); layout();
   if (props.searchable && props.initialFocus !== 'last') layer.value?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true });
-  else focusItem(0, props.initialFocus === 'last');
+  else {
+    const selected = props.initialFocus === 'selected' ? panels()[0]?.querySelector<HTMLButtonElement>('[aria-checked="true"]') : null;
+    if (selected) selected.focus({ preventScroll: true });
+    else focusItem(0, props.initialFocus === 'last');
+  }
   document.addEventListener('pointerdown', outside, true);
   document.addEventListener('keydown', onKeydown, true);
   window.addEventListener('resize', scheduleLayout);
@@ -213,17 +222,17 @@ onBeforeUnmount(() => { disposed = true; cleanup(); });
 
 <template>
   <Teleport :to="teleportTarget">
-    <div v-if="open" :id="menuId" ref="layer" class="app-menu" @contextmenu.prevent>
+    <div v-if="open" :id="`${menuId}-layer`" ref="layer" class="app-menu" @contextmenu.prevent>
       <section v-for="(level, index) in levels" :key="level.depth" class="app-menu__panel" :data-menu-depth="level.depth"
         :style="{ width: `${panelWidth}px`, left: `${positions[index]?.left ?? 12}px`, top: `${positions[index]?.top ?? 12}px` }">
         <header v-if="level.depth || searchable" class="app-menu__header">
-          <button v-if="level.depth" type="button" class="app-menu__back" :aria-label="$t('menus.back')" @click="back(level.depth)"><ChevronLeft :size="18" aria-hidden="true" /><span>{{ level.label }}</span></button>
+          <button v-if="level.depth" type="button" class="app-menu__back" @click="back(level.depth)"><ChevronLeft :size="18" aria-hidden="true" /><span>{{ $t('menus.back') }} <small>{{ level.label }}</small></span></button>
           <div v-if="searchable && (!level.depth || drill)" class="app-menu__search">
             <input v-model="query" type="search" :aria-label="$t('menus.search')" :placeholder="$t('menus.search')" autocomplete="off" />
-            <button v-if="query" type="button" :aria-label="$t('menus.clearSearch')" @click="query = ''"><X :size="16" aria-hidden="true" /></button>
+            <button v-if="query" type="button" :aria-label="$t('menus.clearSearch')" @click="clearSearch"><X :size="16" aria-hidden="true" /></button>
           </div>
         </header>
-        <ul :id="`${menuId}-${level.depth}`" role="menu" :aria-label="level.label" class="app-menu__list">
+        <ul :id="index === 0 ? menuId : `${menuId}-${level.depth}`" role="menu" :aria-label="level.label" class="app-menu__list">
           <li v-for="item in level.items" :key="item.id" :role="item.kind === 'separator' ? 'separator' : 'none'" :class="{ 'app-menu__separator': item.kind === 'separator' }">
             <span v-if="item.kind === 'group'" class="app-menu__group">{{ item.label }}</span>
             <button v-else-if="item.kind !== 'separator'" type="button" :data-menu-id="item.id" tabindex="-1"
@@ -256,6 +265,7 @@ onBeforeUnmount(() => { disposed = true; cleanup(); });
 .app-menu__back, .app-menu__search { display: flex; gap: var(--space-8); align-items: center; min-width: 0; }
 .app-menu__back { padding: var(--space-8); text-align: left; }
 .app-menu__back span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-menu__back small { display: block; overflow: hidden; text-overflow: ellipsis; font-size: var(--type-body-small-size); line-height: var(--type-body-small-line); color: var(--text-2); transition: var(--theme-transition); }
 .app-menu__search { border: 1px solid var(--border); border-radius: var(--radius-control-s); padding: var(--space-6) var(--space-8); background: var(--bg); transition: var(--theme-transition); }
 .app-menu__search:focus-within { box-shadow: var(--focus-ring); transition: var(--theme-transition); }
 .app-menu__search input { width: 100%; min-width: 0; border: 0; outline: none; background: transparent; color: inherit; font: inherit; font-size: var(--type-body-medium-size); line-height: var(--type-body-medium-line); }

@@ -13,6 +13,8 @@
   --motion-theme-duration: calc(var(--ui-theme-duration) * var(--ui-motion-scale));
   --motion-color-duration: var(--motion-theme-duration);
   --motion-fast-duration: calc(120ms * var(--ui-motion-scale));
+  --motion-control-duration: calc(240ms * var(--ui-motion-scale));
+  --motion-spring-ease: cubic-bezier(.22, 1.35, .36, 1);
   --motion-enter-duration: calc(180ms * var(--ui-motion-scale));
   --motion-leave-duration: calc(120ms * var(--ui-motion-scale));
   --motion-spinner-duration: calc(800ms * var(--ui-motion-scale));

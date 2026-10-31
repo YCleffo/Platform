@@ -9,6 +9,42 @@ use ControlPlane\Identity\Application\AuthService;
 
 final class ControlAuthTest extends DatabaseTestCase
 {
+    public function testActivityWritesAreBoundedWhileFirstAndStaleUsageAreRecorded(): void
+    {
+        $auth = $this->authService();
+        $correlation = $this->uuid();
+        $registered = $auth->register('activity@example.test', 'correct horse battery staple', '192.0.2.40', $correlation);
+        $auth->verifyEmail($registered['verification_token'], $correlation);
+        $session = $auth->login('activity@example.test', 'correct horse battery staple', '192.0.2.40', 'PHPUnit', $correlation);
+        $version = fn () => $this->connection->fetchOne('SELECT ctid::text FROM commercial.control_sessions WHERE control_user_id = ?', [$registered['user_id']]);
+        $initial = $version();
+        self::assertIsString($initial);
+        $auth->authenticateAccessToken($session['access_token']);
+        $firstUse = $version();
+        self::assertNotSame($initial, $firstUse);
+        self::assertNotNull($this->connection->fetchOne('SELECT last_used_at FROM commercial.control_sessions WHERE control_user_id = ?', [$registered['user_id']]));
+        $auth->authenticateAccessToken($session['access_token']);
+        self::assertSame($firstUse, $version(), 'A fresh usage timestamp must not create another PostgreSQL row version.');
+        $this->connection->executeStatement("UPDATE commercial.control_sessions SET issued_at=now()-interval '2 minutes', primary_authenticated_at=now()-interval '2 minutes', last_used_at=now()-interval '61 seconds' WHERE control_user_id=?", [$registered['user_id']]);
+        $stale = $version();
+        $auth->authenticateAccessToken($session['access_token']);
+        self::assertNotSame($stale, $version(), 'Stale activity must be refreshed.');
+        self::assertTrue($this->connection->fetchOne("SELECT last_used_at > now()-interval '1 minute' FROM commercial.control_sessions WHERE control_user_id=?", [$registered['user_id']]));
+    }
+
+    public function testRecentActivityDoesNotCacheAuthorizationAfterLogout(): void
+    {
+        $auth = $this->authService();
+        $correlation = $this->uuid();
+        $registered = $auth->register('activity-revoked@example.test', 'correct horse battery staple', '192.0.2.41', $correlation);
+        $auth->verifyEmail($registered['verification_token'], $correlation);
+        $session = $auth->login('activity-revoked@example.test', 'correct horse battery staple', '192.0.2.41', 'PHPUnit', $correlation);
+        $auth->authenticateAccessToken($session['access_token']);
+        $auth->authenticateAccessToken($session['access_token']);
+        $auth->logout($session['access_token'], $correlation);
+        $this->expectAuthFailure(fn () => $auth->authenticateAccessToken($session['access_token']), 'invalid_access_token');
+    }
+
     public function testRegistrationVerificationLoginRefreshAndLogoutLifecycle(): void
     {
         $auth = $this->authService();

@@ -58,7 +58,8 @@ try {
   await page.setViewportSize({ width: 393, height: 852 });
   await page.waitForFunction(() => document.querySelectorAll('.app-menu__panel').length === 1);
   await bounds(page);
-  check(await page.locator('#demo-hierarchy').getAttribute('aria-controls') === await page.locator('.app-menu').getAttribute('id'), 'Popup controls reference broke in mobile hierarchy');
+  const popupId = await page.locator('#demo-hierarchy').getAttribute('aria-controls');
+  check(popupId && await page.locator(`[id="${popupId}"]`).getAttribute('role') === 'menu', 'Popup controls reference broke in mobile hierarchy');
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.waitForFunction(() => document.querySelectorAll('.app-menu__panel').length === 3);
   await page.keyboard.press('ArrowLeft');
@@ -100,7 +101,7 @@ try {
     await bounds(page);
     if (width < 900) {
       check(await page.locator('.app-menu__panel').count() === 1, `${width}px hierarchy did not switch to Back navigation`);
-      await page.getByRole('button', { name: 'Back', exact: true }).click();
+      await page.locator('.app-menu__back').click();
       await page.locator('[data-menu-id="development"]').waitFor();
     }
     await page.locator('[data-menu-id]').first().focus();
@@ -117,6 +118,7 @@ try {
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
   await page.goto(`${base}/settings`, { waitUntil: 'networkidle' });
   await page.locator('#appearance-font-scale').focus(); await page.keyboard.press('End');
+  await page.locator('#appearance-advanced summary').click();
   await page.locator('#appearance-spacing-scale').focus(); await page.keyboard.press('End');
   await page.getByRole('radio', { name: 'Spacious', exact: true }).check();
   await page.getByRole('link', { name: 'Components', exact: true }).click();

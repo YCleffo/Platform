@@ -32,7 +32,7 @@ function toggleLocale(): void {
           <Sun v-if="isDark" :size="20" aria-hidden="true" />
           <Moon v-else :size="20" aria-hidden="true" />
         </AppIconButton>
-        <AppIconButton :label="$t('theme.locale')" @click="toggleLocale">
+        <AppIconButton :label="`${locale === 'ru' ? 'RU' : 'EN'}: ${$t('theme.locale')}`" @click="toggleLocale">
           <span class="auth-layout__locale">{{ locale === 'ru' ? 'RU' : 'EN' }}</span>
         </AppIconButton>
       </div>

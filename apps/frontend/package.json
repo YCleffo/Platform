@@ -14,7 +14,11 @@
     "preview": "vite preview",
     "generate:icons": "node scripts/generate-icons.mjs",
     "check:icons": "node scripts/generate-icons.mjs --check",
-    "check:styles": "node scripts/check-styles.mjs"
+    "check:styles": "node scripts/check-styles.mjs",
+    "verify:ux": "node scripts/verify-ux.mjs",
+    "verify:controls": "node scripts/verify-controls.mjs",
+    "verify:accessibility": "node scripts/verify-accessibility.mjs",
+    "test:load": "node scripts/load-commercial.mjs"
   },
   "dependencies": {
     "pinia": "^3.0.3",
@@ -24,6 +28,7 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@types/node": "^24.0.14",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/test-utils": "^2.5.1",

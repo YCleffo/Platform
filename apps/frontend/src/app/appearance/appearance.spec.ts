@@ -5,6 +5,62 @@ let stop: (() => void) | undefined;
 afterEach(() => { stop?.(); vi.unstubAllGlobals(); vi.restoreAllMocks(); useAppearance().resetAppearance(); });
 
 describe('appearance preferences', () => {
+  it('coalesces a continuous edit into one undo and does not record no-op updates', () => {
+    localStorage.removeItem(APPEARANCE_KEY);
+    stop = initAppearance();
+    const prefs = useAppearance();
+    prefs.updateAppearance({ fontScale: 1 });
+    expect(prefs.canUndo.value).toBe(false);
+    prefs.beginEdit();
+    prefs.updateAppearance({ fontScale: 1.1 });
+    prefs.updateAppearance({ fontScale: 1.2 });
+    prefs.updateAppearance({ fontScale: 1.4 });
+    prefs.endEdit();
+    expect(prefs.canUndo.value).toBe(true);
+    prefs.undoAppearance();
+    expect(prefs.appearance.fontScale).toBe(1);
+    expect(prefs.canUndo.value).toBe(false);
+    expect(JSON.parse(localStorage.getItem(APPEARANCE_KEY)!).fontScale).toBe(1);
+  });
+
+  it('applies presets without changing motion preferences and can undo a reset', () => {
+    localStorage.removeItem(APPEARANCE_KEY);
+    stop = initAppearance();
+    const prefs = useAppearance();
+    prefs.updateAppearance({ animations: false, themeDuration: 420 });
+    prefs.applyPreset('reading');
+    expect(prefs.activePreset.value).toBe('reading');
+    expect(prefs.appearance).toMatchObject({ fontScale: 1.2, buttonPaddingX: 20, animations: false, themeDuration: 420 });
+    prefs.resetAppearance();
+    expect(prefs.isDefault.value).toBe(true);
+    prefs.undoAppearance();
+    expect(prefs.appearance).toMatchObject({ fontScale: 1.2, animations: false, themeDuration: 420 });
+    prefs.updateAppearance({ buttonPaddingX: 22 });
+    expect(prefs.activePreset.value).toBe(null);
+  });
+
+  it('drops stale undo history when another tab changes the preferences', () => {
+    localStorage.removeItem(APPEARANCE_KEY);
+    stop = initAppearance();
+    const prefs = useAppearance();
+    prefs.updateAppearance({ fontScale: 1.4 });
+    localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ fontScale: .95 }));
+    window.dispatchEvent(new StorageEvent('storage', { key: APPEARANCE_KEY }));
+    expect(prefs.canUndo.value).toBe(false);
+    prefs.undoAppearance();
+    expect(prefs.appearance.fontScale).toBe(.95);
+  });
+
+  it('reports blocked storage immediately and keeps corrupt JSON recoverable', () => {
+    localStorage.setItem(APPEARANCE_KEY, '{broken');
+    stop = initAppearance();
+    expect(useAppearance().storageAvailable.value).toBe(true);
+    vi.stubGlobal('localStorage', { getItem: () => { throw new DOMException('Blocked', 'SecurityError'); } });
+    stop = initAppearance();
+    expect(useAppearance().storageAvailable.value).toBe(false);
+    expect(useAppearance().isDefault.value).toBe(true);
+  });
+
   it('bounds untrusted stored values and drops unknown fields', () => {
     const value = normalizeAppearance({ fontScale: 99, spacingScale: -1, themeDuration: 'url(https://invalid)',
       radiusScale: NaN, density: 'unknown', buttonPaddingX: Infinity, extra: 'ignored' });

@@ -6,6 +6,11 @@ export async function selectDropdown(page, id, value) {
   await page.locator(`[id="${id}-menu"] [data-menu-id="${value}"]`).click();
 }
 
+export async function stableScreenshot(page, path) {
+  await page.waitForFunction(() => !document.documentElement.hasAttribute('data-theme-changing'));
+  await page.screenshot({ path, animations: 'disabled' });
+}
+
 export async function launchBrowser() {
   for (const channel of ['chrome', 'msedge']) {
     try {
@@ -125,6 +130,8 @@ export async function assertAccountNavigation(page, path) {
   if ((await active.count()) !== 1 || (await active.getAttribute('href')) !== path) {
     throw new Error(`Account navigation does not select only ${path}.`);
   }
+  const indicators = await page.locator('.account-layout__tabs a').evaluateAll(tabs => tabs.filter(tab => !['none', 'normal'].includes(getComputedStyle(tab, '::after').content)).map(tab => tab.getAttribute('href')));
+  if (indicators.length !== 1 || indicators[0] !== path) throw new Error(`Account navigation has stale visual indicators: ${indicators}`);
 }
 
 export function dialog(page, title) {

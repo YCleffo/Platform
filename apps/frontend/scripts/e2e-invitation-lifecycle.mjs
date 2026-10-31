@@ -11,6 +11,7 @@ import {
   navigateClientSide,
   registerAndVerify,
   submitLogin,
+  stableScreenshot,
   verifySecuritySession,
   waitForMailToken,
 } from './e2e-support.mjs';
@@ -293,7 +294,8 @@ async function main() {
     await pageA2.locator('#mfa-code').fill(await nextCode());
     await pageA2.getByRole('button', { name: 'Verify', exact: true }).click();
     await pageA2.waitForURL('**/cabinet', { timeout: 20_000 });
-    await pageA2.screenshot({ path: join(outDir, 'e2e-owner-after-mfa-login.png') });
+    await pageA2.locator('.account-list__link').filter({ hasText: `Invitation E2E ${runId}` }).waitFor({ timeout: 20_000 });
+    await stableScreenshot(pageA2, join(outDir, 'e2e-owner-after-mfa-login.png'));
     await contextA2.close();
 
     await contextD.close();

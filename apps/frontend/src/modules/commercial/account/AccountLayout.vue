@@ -197,6 +197,7 @@ function switchAccount(id: string): void {
 }
 
 .account-layout__tabs a {
+  position: relative;
   padding: var(--space-12) var(--space-12);
   border-bottom: 2px solid transparent;
   font-size: var(--type-body-medium-emphasis-size);
@@ -215,7 +216,18 @@ function switchAccount(id: string): void {
 
 .account-layout__tabs a.account-layout__tab--active {
   color: var(--accent-strong);
-  border-bottom-color: var(--accent);
+  transition: var(--theme-transition);
+}
+
+/* The indicator belongs only to the current route; the old one cannot linger
+   during the shared color transition after navigation. */
+.account-layout__tabs a.account-layout__tab--active::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--accent);
   transition: var(--theme-transition);
 }
 

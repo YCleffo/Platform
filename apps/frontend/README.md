@@ -26,11 +26,24 @@ npm run build
 ```bash
 node scripts/verify-appearance.mjs
 node scripts/verify-menus.mjs
+node scripts/verify-ux.mjs
+node scripts/verify-accessibility.mjs
 node scripts/verify-responsive.mjs
 ```
 
-Эти три проверки не меняют данные сервера. Account/invitation E2E запускаются только
+Эти проверки не меняют данные сервера. UX-прогон сохраняет screenshots и проверяет повторные
+открытия без утечки глобальных обработчиков. Проверка axe-core запускается без исключений
+правил для WCAG A/AA; автоматический результат дополняет ручную проверку.
+Account/invitation E2E запускаются только
 через одноразовый CI runtime с isolation nonce; рабочие БД использовать нельзя.
+
+Нагрузка: `npm run test:load` с `LOAD_PROFILE=smoke|standard|stress` и теми же обязательными
+E2E isolation markers/nonce. Перед запуском на **одноразовой** Commercial БД применить
+`scripts/ci/seed-load-catalog.sql` (через psql из корня репозитория). Скрипт отказывается
+работать с другим именем БД. Smoke — 1/5 одновременных запросов по 5 s;
+standard — 1/5/20/50 по 15 s; stress добавляет 100. Четыре GET endpoint проверяются
+с валидным токеном и непустыми fixtures; error rate ≤1%, p95 ≤1000 ms для каждого этапа
+и endpoint. JSON сохраняется в screenshots. Это локальный closed workload, не production SLO.
 
 Шрифты и SVG-иконки локальные, без Google Fonts или icon CDN.
 Иконки: `src/shared/ui/icons/svg/`, затем `npm run generate:icons`.

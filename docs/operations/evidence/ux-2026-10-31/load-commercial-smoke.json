@@ -1,0 +1,207 @@
+{
+  "profile": "smoke",
+  "generatedAt": "2026-10-31T14:06:53.343Z",
+  "durationMs": 5000,
+  "workload": "Authenticated read mix: populated catalog, identity, nonempty account list, active sessions; one shared user/session; no request retry",
+  "stages": [
+    {
+      "concurrency": 1,
+      "seconds": 5.029652600000001,
+      "requests": 168,
+      "errors": 0,
+      "errorRate": 0,
+      "rps": 33.401909308805934,
+      "p50": 30.37960000000021,
+      "p95": 33.54110000000037,
+      "p99": 40.19410000000062,
+      "max": 40.55090000000018,
+      "statuses": {
+        "200": 168
+      },
+      "budget": {
+        "p95": 1000,
+        "errorRate": 0.01,
+        "minRequests": 20
+      },
+      "passed": true,
+      "routes": {
+        "/api/control/catalog/plans": {
+          "requests": 42,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 8.350477327201483,
+          "p50": 31.63090000000011,
+          "p95": 33.51460000000043,
+          "p99": 34.52340000000004,
+          "max": 34.52340000000004,
+          "statuses": {
+            "200": 42
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "/api/control/me": {
+          "requests": 42,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 8.350477327201483,
+          "p50": 29.378899999999703,
+          "p95": 31.443900000000212,
+          "p99": 33.85660000000007,
+          "max": 33.85660000000007,
+          "statuses": {
+            "200": 42
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "/api/control/accounts?limit=20&offset=0": {
+          "requests": 42,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 8.350477327201483,
+          "p50": 31.42410000000018,
+          "p95": 33.84360000000015,
+          "p99": 40.19410000000062,
+          "max": 40.19410000000062,
+          "statuses": {
+            "200": 42
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "/api/control/auth/sessions": {
+          "requests": 42,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 8.350477327201483,
+          "p50": 29.959000000000742,
+          "p95": 31.92569999999978,
+          "p99": 40.55090000000018,
+          "max": 40.55090000000018,
+          "statuses": {
+            "200": 42
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        }
+      }
+    },
+    {
+      "concurrency": 5,
+      "seconds": 5.034504699999999,
+      "requests": 827,
+      "errors": 0,
+      "errorRate": 0,
+      "rps": 164.2664073786643,
+      "p50": 29.27440000000024,
+      "p95": 40.3033000000014,
+      "p99": 47.85450000000128,
+      "max": 59.24109999999928,
+      "statuses": {
+        "200": 827
+      },
+      "budget": {
+        "p95": 1000,
+        "errorRate": 0.01,
+        "minRequests": 20
+      },
+      "passed": true,
+      "routes": {
+        "/api/control/auth/sessions": {
+          "requests": 206,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 40.91762989117878,
+          "p50": 28.099200000000565,
+          "p95": 36.70020000000113,
+          "p99": 42.24799999999959,
+          "max": 59.24109999999928,
+          "statuses": {
+            "200": 206
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "/api/control/accounts?limit=20&offset=0": {
+          "requests": 207,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 41.116259162495176,
+          "p50": 29.504000000000815,
+          "p95": 40.52130000000034,
+          "p99": 52.32040000000052,
+          "max": 56.099599999997736,
+          "statuses": {
+            "200": 207
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "/api/control/me": {
+          "requests": 207,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 41.116259162495176,
+          "p50": 28.20759999999973,
+          "p95": 39.3527000000031,
+          "p99": 44.33259999999973,
+          "max": 45.54110000000219,
+          "statuses": {
+            "200": 207
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "/api/control/catalog/plans": {
+          "requests": 207,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 41.116259162495176,
+          "p50": 31.580799999999726,
+          "p95": 43.25240000000122,
+          "p99": 47.69759999999951,
+          "max": 50.89639999999963,
+          "statuses": {
+            "200": 207
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        }
+      }
+    }
+  ],
+  "passed": true
+}

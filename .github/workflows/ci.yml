@@ -471,6 +471,7 @@ jobs:
         run: |
           node scripts/e2e-account-workspace.mjs --check-guard
           node scripts/e2e-invitation-lifecycle.mjs --check-guard
+          node scripts/load-commercial.mjs --check-guard
       - name: Production build
         run: npm run build
 
@@ -582,6 +583,9 @@ jobs:
         run: |
           node scripts/verify-appearance.mjs
           node scripts/verify-menus.mjs
+          node scripts/verify-ux.mjs
+          node scripts/verify-controls.mjs
+          node scripts/verify-accessibility.mjs
           node scripts/verify-responsive.mjs
       - name: Reset disposable Commercial fixtures before invitation flow
         run: |
@@ -592,6 +596,24 @@ jobs:
       - name: Run browser invitation and MFA flow
         working-directory: apps/frontend
         run: node scripts/e2e-invitation-lifecycle.mjs
+      - name: Reset isolated fixtures before load without disabling registration limits
+        run: |
+          docker compose --profile control-test stop control-plane-test
+          env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+          docker compose --profile control-test up -d --wait control-plane-test
+          bash ./scripts/ci/control-email-worker-start.sh
+      - name: Prepare synthetic load catalog in the isolated test database
+        run: |
+          if docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d postgres -v ON_ERROR_STOP=1 < scripts/ci/seed-load-catalog.sql; then
+            echo 'Load fixtures were incorrectly allowed outside the test database.' >&2
+            exit 1
+          fi
+          docker compose --profile control-test exec -T control-postgres-test psql -U "$CONTROL_TEST_USER" -d "$CONTROL_TEST_DB" -v ON_ERROR_STOP=1 < scripts/ci/seed-load-catalog.sql
+      - name: Verify lightweight authenticated load thresholds
+        working-directory: apps/frontend
+        env:
+          LOAD_PROFILE: smoke
+        run: node scripts/load-commercial.mjs
       - name: Collect browser runtime logs
         if: always()
         run: cp /tmp/vite-e2e.log apps/frontend/vite-e2e.log 2>/dev/null || true

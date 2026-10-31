@@ -2,8 +2,8 @@ export default {
   menus: {
     back: 'Back', search: 'Search…', clearSearch: 'Clear search', noResults: 'Nothing found',
     choose: 'Choose an option', clearSelection: 'Clear selection', siteContext: 'Page actions',
-    components: 'Components', demoTitle: 'Dropdowns and menus',
-    demoDescription: 'Reusable controls: search, multiple selection, cascading levels and context actions.',
+    components: 'Components', demoTitle: 'Interface components',
+    demoDescription: 'Checkboxes, switches, searchable dropdowns, cascading menus and context actions.',
     simple: 'Single choice', searchable: 'Searchable list', multiple: 'Multiple choice', hierarchy: 'Cascading hierarchy',
     language: 'Language', tools: 'Tools', design: 'Design', development: 'Development',
     colors: 'Colors', typography: 'Typography', frontend: 'Frontend', backend: 'Backend',
@@ -32,6 +32,12 @@ export default {
     settings: 'Settings',
   },
   appearance: {
+    advanced: 'Spacing, buttons and corners',
+    undo: 'Undo change', defaultValue: 'Default', resetControl: 'Reset to default: {label}', decrease: 'Decrease {label}', increase: 'Increase {label}',
+    presets: 'Start with a preset', presetsHint: 'Choose a starting point, then adjust the details. Your theme and motion settings stay as you chose them.',
+    preset_default: 'Balanced', preset_default_hint: 'Everyday sizes and spacing.',
+    preset_compact: 'Compact', preset_compact_hint: 'More content on screen.',
+    preset_reading: 'Easy reading', preset_reading_hint: 'Larger text and roomier buttons.',
     title: 'Settings', subtitle: 'Make Platform comfortable for you.', sections: 'Settings sections',
     appearance: 'Appearance', colorLanguage: 'Theme and language', theme: 'Color theme',
     theme_light: 'Light', theme_dark: 'Dark', theme_system: 'System', language: 'Language',
@@ -257,6 +263,12 @@ export default {
     state_expired: 'This invitation has expired.',
     loadFailed: 'Could not load the invitation.',
     maskedEmail: 'Sent to {email}',
+  },
+  controls: {
+    checkboxes: 'Checkboxes', checkboxHint: 'Select options individually or together. A dash means some are selected.',
+    selectAll: 'Select all', firstOption: 'First option', secondOption: 'Second option', unavailable: 'Unavailable option',
+    switches: 'Switches', switchHint: 'Changes take effect immediately. Use Space to toggle with a keyboard.',
+    switchExample: 'Example switch', switchDescription: 'Try pressing and switching it on and off.', previewSelection: 'Example selection',
   },
   validation: {
     required: 'This field is required.',

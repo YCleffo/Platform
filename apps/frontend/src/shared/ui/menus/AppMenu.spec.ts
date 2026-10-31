@@ -14,6 +14,25 @@ function click(selector: string) { document.querySelector<HTMLButtonElement>(sel
 function key(key: string) { document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })); }
 
 describe('shared menus', () => {
+  it('returns focus to search after its clear button disappears', async () => {
+    const wrapper = mount(AppDropdown, { attachTo: document.body, props: { id: 'clear-search-unit', label: 'Choice', modelValue: 'two', options, searchable: true }, global });
+    try {
+      click('#clear-search-unit'); await flush();
+      const input = document.querySelector<HTMLInputElement>('.app-menu input')!;
+      input.value = 'one'; input.dispatchEvent(new Event('input', { bubbles: true })); await flush();
+      const button = document.querySelector<HTMLButtonElement>('.app-menu__search button')!;
+      button.focus(); button.click(); await flush();
+      expect(document.activeElement).toBe(document.querySelector('.app-menu input'));
+      expect(document.querySelectorAll('[data-menu-id]')).toHaveLength(3);
+    } finally { wrapper.unmount(); }
+  });
+  it('focuses the selected item when a non-searchable dropdown is reopened', async () => {
+    const wrapper = mount(AppDropdown, { attachTo: document.body, props: { id: 'selected-unit', label: 'Choice', modelValue: 'two', options }, global });
+    try {
+      click('#selected-unit'); await flush();
+      expect(document.activeElement?.getAttribute('data-menu-id')).toBe('two');
+    } finally { wrapper.unmount(); }
+  });
   it('searches nested labels and descriptions, carrying inherited restrictions', () => {
     const items: MenuItem[] = [{ id: 'folder', label: 'Design', disabled: true, children: [{ id: 'leaf', label: 'Color', description: 'HEX' }] }];
     expect(searchMenu(items, 'hex')[0]).toMatchObject({ id: 'leaf', disabled: true, description: 'Design · HEX' });

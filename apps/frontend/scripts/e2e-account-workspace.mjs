@@ -10,6 +10,7 @@ import {
   navigateClientSide,
   registerAndVerify,
   submitLogin,
+  stableScreenshot,
   verifySecuritySession,
 } from './e2e-support.mjs';
 
@@ -106,7 +107,7 @@ async function main() {
     check(await page.getByText('Owner', { exact: true }).first().isVisible(), 'overview shows the current role');
     check(await page.getByText('Draft', { exact: true }).first().isVisible(), 'overview shows the account status');
     await assertNoOverflow(page, 'overview 393');
-    await page.screenshot({ path: join(outDir, 'frontend04-overview-393-light.png') });
+    await stableScreenshot(page, join(outDir, 'frontend04-overview-393-light.png'));
 
     // Members (read-only).
     await page.locator('.account-layout__tabs a', { hasText: 'Members' }).first().click();
@@ -116,7 +117,7 @@ async function main() {
     check((await page.locator('.member__email').first().textContent())?.trim() === emailA, 'members list shows the owner email');
     check(await page.getByText('Owner', { exact: true }).first().isVisible(), 'members list shows the role');
     await assertNoOverflow(page, 'members 393');
-    await page.screenshot({ path: join(outDir, 'frontend04-members-393-light.png') });
+    await stableScreenshot(page, join(outDir, 'frontend04-members-393-light.png'));
 
     // Account switching.
     await page.getByRole('button', { name: 'Switch account' }).click();
@@ -155,14 +156,14 @@ async function main() {
     await page.waitForFunction((previous) => document.documentElement.dataset.theme !== previous, themeBefore);
     const themeAfter = await page.evaluate(() => document.documentElement.dataset.theme);
     check(themeAfter !== themeBefore, 'theme toggle changes data-theme');
-    await page.screenshot({ path: join(outDir, 'frontend04-overview-393-dark.png') });
+    await stableScreenshot(page, join(outDir, 'frontend04-overview-393-dark.png'));
     await page.locator('header button').first().click();
 
     // Mobile boundary and desktop layout.
     await page.setViewportSize({ width: 320, height: 720 });
     await assertNoOverflow(page, 'overview 320');
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.screenshot({ path: join(outDir, 'frontend04-overview-1440-light.png') });
+    await stableScreenshot(page, join(outDir, 'frontend04-overview-1440-light.png'));
     await assertNoOverflow(page, 'overview 1440');
     await page.setViewportSize({ width: 393, height: 852 });
   } catch (error) {

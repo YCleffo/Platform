@@ -21,7 +21,7 @@ const uid = useId();
 const fieldId = computed(() => props.id ?? `dropdown-${uid}`);
 const open = ref(false);
 const trigger = ref<HTMLButtonElement | null>(null);
-const initialFocus = ref<'first' | 'last'>('first');
+const initialFocus = ref<'first' | 'last' | 'selected'>('selected');
 const selected = computed(() => Array.isArray(model.value) ? model.value : model.value ? [model.value] : []);
 function convert(options: readonly DropdownOption<Value>[], disabled = false): MenuItem[] {
   return options.map(option => ({ id: option.value, label: option.label, description: option.description, icon: option.icon,
@@ -52,7 +52,7 @@ watch(() => props.disabled, value => { if (value) open.value = false; });
     <button :id="fieldId" ref="trigger" v-bind="$attrs" type="button" class="app-dropdown__trigger" :disabled="disabled"
       aria-haspopup="menu" :aria-expanded="open" :aria-controls="open ? `${fieldId}-menu` : undefined"
       :aria-labelledby="`${fieldId}-label ${fieldId}-value`" :aria-invalid="invalid || undefined"
-      @click="initialFocus = 'first'; open = !open" @keydown="keydown">
+      @click="initialFocus = 'selected'; open = !open" @keydown="keydown">
       <span :id="`${fieldId}-value`" class="app-dropdown__value" :class="{ 'app-dropdown__value--empty': !text }">{{ text || placeholder || $t('menus.choose') }}</span>
       <ChevronDown :size="18" aria-hidden="true" />
     </button>

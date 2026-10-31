@@ -2,8 +2,8 @@ export default {
   menus: {
     back: 'Назад', search: 'Поиск…', clearSearch: 'Очистить поиск', noResults: 'Ничего не найдено',
     choose: 'Выберите вариант', clearSelection: 'Очистить выбор', siteContext: 'Действия страницы',
-    components: 'Компоненты', demoTitle: 'Дропдауны и меню',
-    demoDescription: 'Общие компоненты: поиск, множественный выбор, каскадные уровни и контекстные действия.',
+    components: 'Компоненты', demoTitle: 'Компоненты интерфейса',
+    demoDescription: 'Чекбоксы, переключатели, списки с поиском, каскадные меню и контекстные действия.',
     simple: 'Один вариант', searchable: 'Список с поиском', multiple: 'Несколько вариантов', hierarchy: 'Каскадная иерархия',
     language: 'Язык', tools: 'Инструменты', design: 'Дизайн', development: 'Разработка',
     colors: 'Цвета', typography: 'Типографика', frontend: 'Фронтенд', backend: 'Бэкенд',
@@ -32,6 +32,12 @@ export default {
     settings: 'Настройки',
   },
   appearance: {
+    advanced: 'Интервалы, кнопки и скругления',
+    undo: 'Отменить изменение', defaultValue: 'По умолчанию', resetControl: 'Вернуть по умолчанию: {label}', decrease: 'Уменьшить: {label}', increase: 'Увеличить: {label}',
+    presets: 'Готовые варианты', presetsHint: 'Выберите основу и настройте детали. Выбранные тема и анимации сохранятся.',
+    preset_default: 'Обычный', preset_default_hint: 'Размеры и отступы на каждый день.',
+    preset_compact: 'Компактный', preset_compact_hint: 'Больше содержимого на экране.',
+    preset_reading: 'Удобное чтение', preset_reading_hint: 'Крупный текст и просторные кнопки.',
     title: 'Настройки', subtitle: 'Настройте Platform так, как удобно вам.', sections: 'Разделы настроек',
     appearance: 'Внешний вид', colorLanguage: 'Тема и язык', theme: 'Цветовая тема',
     theme_light: 'Светлая', theme_dark: 'Тёмная', theme_system: 'Системная', language: 'Язык',
@@ -257,6 +263,12 @@ export default {
     state_expired: 'Срок действия приглашения истёк.',
     loadFailed: 'Не удалось загрузить приглашение.',
     maskedEmail: 'Отправлено на {email}',
+  },
+  controls: {
+    checkboxes: 'Чекбоксы', checkboxHint: 'Выбирайте пункты по одному или все сразу. Черта означает, что выбрана часть.',
+    selectAll: 'Выбрать все', firstOption: 'Первый пункт', secondOption: 'Второй пункт', unavailable: 'Недоступный пункт',
+    switches: 'Переключатели', switchHint: 'Изменения применяются сразу. С клавиатуры переключайте пробелом.',
+    switchExample: 'Пример переключателя', switchDescription: 'Попробуйте нажать, включить и выключить.', previewSelection: 'Пример выбора',
   },
   validation: {
     required: 'Обязательное поле.',
