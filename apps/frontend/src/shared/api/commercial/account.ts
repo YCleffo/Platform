@@ -17,7 +17,7 @@ import type {
 } from '@/shared/types';
 
 export interface CommercialAccountApi {
-  me(): Promise<CurrentUser>;
+  me(signal?: AbortSignal): Promise<CurrentUser>;
   listAccounts(limit?: number, offset?: number): Promise<CommercialAccountList>;
   getAccount(accountId: string): Promise<CommercialAccountDetail>;
   listMemberships(accountId: string, limit?: number, offset?: number): Promise<CommercialMembershipList>;
@@ -28,7 +28,7 @@ export interface CommercialAccountApi {
 
 export function createCommercialAccountApi(http: HttpClient): CommercialAccountApi {
   return {
-    me: () => http.get<CurrentUser>('/me', { validate: isCurrentUser }),
+    me: (signal) => http.get<CurrentUser>('/me', { validate: isCurrentUser, signal }),
     listAccounts: (limit = 20, offset = 0) =>
       http.get<CommercialAccountList>('/accounts', {
         query: { limit, offset },

@@ -13,6 +13,10 @@ import LoginView from '@/modules/commercial/auth/LoginView.vue';
 import RegisterView from '@/modules/commercial/onboarding/RegisterView.vue';
 import VerifyEmailView from '@/modules/commercial/onboarding/VerifyEmailView.vue';
 import MfaChallengeView from '@/modules/commercial/auth/MfaChallengeView.vue';
+import PasswordResetRequestView from '@/modules/commercial/auth/PasswordResetRequestView.vue';
+import PasswordResetConfirmView from '@/modules/commercial/auth/PasswordResetConfirmView.vue';
+import ResendVerificationView from '@/modules/commercial/onboarding/ResendVerificationView.vue';
+import NotFoundView from '@/app/views/NotFoundView.vue';
 import SettingsLayout from '@/modules/settings/SettingsLayout.vue';
 import AppearanceSettingsView from '@/modules/settings/AppearanceSettingsView.vue';
 import ComponentsSettingsView from '@/modules/settings/ComponentsSettingsView.vue';
@@ -61,6 +65,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
               },
             ],
           },
+          { path: ':pathMatch(.*)*', name: 'not-found', component: NotFoundView },
         ],
       },
       {
@@ -77,6 +82,21 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
         path: '/verify-email',
         component: AuthLayout,
         children: [{ path: '', name: 'verify-email', component: VerifyEmailView }],
+      },
+      {
+        path: '/resend-verification',
+        component: AuthLayout,
+        children: [{ path: '', name: 'resend-verification', component: ResendVerificationView }],
+      },
+      {
+        path: '/forgot-password',
+        component: AuthLayout,
+        children: [{ path: '', name: 'password-reset-request', component: PasswordResetRequestView }],
+      },
+      {
+        path: '/reset-password',
+        component: AuthLayout,
+        children: [{ path: '', name: 'password-reset-confirm', component: PasswordResetConfirmView }],
       },
       {
         path: '/mfa',

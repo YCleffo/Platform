@@ -30,6 +30,16 @@ try {
   check(!await toggle.isChecked(), 'Switch works with keyboard Space');
   await page.getByText('Example switch', { exact: true }).click();
   check(await toggle.isChecked(), 'Switch works from its full label');
+  const nativeForm = page.locator('#demo-native-form');
+  const formName = page.locator('#demo-form-name');
+  await formName.fill('Audit');
+  const formData = await nativeForm.evaluate(form => Object.fromEntries(new FormData(form).entries()));
+  check(formData.username === 'Audit' && formData.updates === 'on', 'Native form attributes and values stay on the real controls');
+  await page.locator('#demo-form-reset').click();
+  await page.waitForFunction(() => document.querySelector('#demo-form-name')?.value === '');
+  check(await formName.inputValue() === '' && !await page.locator('#demo-form-updates').isChecked(), 'Native reset restores the control state');
+  const restored = (await page.locator('#demo-form-model').textContent())?.replace(/\s+/g, ' ').trim() ?? '';
+  check(restored.includes('—') && restored.endsWith('off'), `Native reset restores the Vue state: ${restored}`);
   const control = page.locator('label[for="demo-switch"] .app-switch__control');
   const point = await control.boundingBox();
   await page.mouse.move(point.x + point.width / 2, point.y + point.height / 2); await page.mouse.down();

@@ -1,0 +1,118 @@
+[
+  {
+    "name": "production-build-core",
+    "command": [
+      "docker",
+      "build",
+      "-f",
+      "apps/backend/docker/Dockerfile",
+      "--target",
+      "prod",
+      "-t",
+      "platform-core:deep-audit",
+      "apps/backend"
+    ],
+    "exit": 0,
+    "seconds": 29.47
+  },
+  {
+    "name": "production-inspect-core",
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--entrypoint",
+      "sh",
+      "platform-core:deep-audit",
+      "-c",
+      "test \"$(id -u)\" -ne 0 && test ! -e /app/tests && test ! -e /app/.env && test ! -e /app/.git && test ! -e /app/vendor/bin/phpunit"
+    ],
+    "exit": 0,
+    "seconds": 0.63
+  },
+  {
+    "name": "scan-core",
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "-v",
+      "/var/run/docker.sock:/var/run/docker.sock",
+      "-v",
+      "C:/Platform/runtime/deep-audit-20261031/trivy-cache:/root/.cache/trivy",
+      "-v",
+      "C:/Platform/runtime/deep-audit-20261031:/out",
+      "aquasec/trivy:0.69.3",
+      "image",
+      "--scanners",
+      "vuln",
+      "--severity",
+      "HIGH,CRITICAL",
+      "--format",
+      "json",
+      "--output",
+      "/out/trivy-core.json",
+      "platform-core:deep-audit"
+    ],
+    "exit": 0,
+    "seconds": 160.93
+  },
+  {
+    "name": "production-build-commercial",
+    "command": [
+      "docker",
+      "build",
+      "-f",
+      "apps/control-plane/docker/Dockerfile",
+      "--target",
+      "app",
+      "-t",
+      "platform-commercial:deep-audit",
+      "apps/control-plane"
+    ],
+    "exit": 0,
+    "seconds": 18.66
+  },
+  {
+    "name": "production-inspect-commercial",
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--entrypoint",
+      "sh",
+      "platform-commercial:deep-audit",
+      "-c",
+      "test \"$(id -u)\" -ne 0 && test ! -e /app/tests && test ! -e /app/.env && test ! -e /app/.git && test ! -e /app/vendor/bin/phpunit"
+    ],
+    "exit": 0,
+    "seconds": 0.99
+  },
+  {
+    "name": "scan-commercial",
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "-v",
+      "/var/run/docker.sock:/var/run/docker.sock",
+      "-v",
+      "C:/Platform/runtime/deep-audit-20261031/trivy-cache:/root/.cache/trivy",
+      "-v",
+      "C:/Platform/runtime/deep-audit-20261031:/out",
+      "aquasec/trivy:0.69.3",
+      "image",
+      "--scanners",
+      "vuln",
+      "--severity",
+      "HIGH,CRITICAL",
+      "--format",
+      "json",
+      "--output",
+      "/out/trivy-commercial.json",
+      "platform-commercial:deep-audit"
+    ],
+    "exit": 0,
+    "seconds": 6.61
+  }
+]

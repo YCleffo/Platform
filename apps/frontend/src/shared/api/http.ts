@@ -87,6 +87,9 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
     }
 
     if (response.status === 204) {
+      if (options.validate !== undefined) {
+        throw new ApiResponseError(path);
+      }
       return undefined as T;
     }
 

@@ -33,6 +33,10 @@ try {
   check(await page.locator('#demo-single').innerText() === 'Русский', 'Keyboard selection failed');
   check(await page.locator('#demo-single').evaluate(el => el === document.activeElement), 'Selection did not restore focus');
   await page.locator('#demo-search').click();
+  const searchInputShadow = await page.getByRole('searchbox').evaluate(el => getComputedStyle(el).boxShadow);
+  const searchFieldShadow = await page.getByRole('searchbox').evaluate(el => getComputedStyle(el.parentElement).boxShadow);
+  check(searchInputShadow === 'none', 'Search input must not draw a second focus ring');
+  check(searchFieldShadow !== 'none', 'Search field must keep one focus ring');
   await page.getByRole('searchbox').fill('deu');
   check(await page.locator('[data-menu-id]').count() === 1, 'Search did not filter');
   await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
@@ -117,6 +121,13 @@ try {
   check(await page.locator('#demo-hierarchy').innerText() === 'Typography', 'Nested search failed');
   await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
   await page.goto(`${base}/settings`, { waitUntil: 'networkidle' });
+  const languageLabel = page.locator('label[for="appearance-language"]');
+  await languageLabel.click();
+  await page.locator('.app-menu__panel').waitFor();
+  check(await page.getByRole('searchbox').count() === 0, 'Short language dropdown must not show search');
+  await languageLabel.click();
+  await page.waitForTimeout(400);
+  check(await page.locator('.app-menu__panel').count() === 0, 'Label click must close an open dropdown without replaying its open animation');
   await page.locator('#appearance-font-scale').focus(); await page.keyboard.press('End');
   await page.locator('#appearance-advanced summary').click();
   await page.locator('#appearance-spacing-scale').focus(); await page.keyboard.press('End');

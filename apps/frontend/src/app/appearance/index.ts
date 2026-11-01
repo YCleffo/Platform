@@ -29,8 +29,32 @@ export const APPEARANCE_PRESETS = {
 } satisfies Record<string, Partial<Appearance>>;
 export type AppearancePreset = keyof typeof APPEARANCE_PRESETS;
 
+const NUMERIC_STEPS = {
+  fontScale: { min: .9, max: 1.4, step: .05 },
+  spacingScale: { min: .75, max: 1.25, step: .05 },
+  radiusScale: { min: 0, max: 1.5, step: .1 },
+  buttonPaddingX: { min: 8, max: 32, step: 1 },
+  buttonPaddingY: { min: 6, max: 16, step: 1 },
+  animationSpeed: { min: .5, max: 2, step: .25 },
+  themeDuration: { min: 0, max: 600, step: 20 },
+} as const;
+
 function bounded(value: unknown, fallback: number, min: number, max: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
+}
+
+/**
+ * Native range inputs snap to `min + n * step`. Stored preferences must use the
+ * same grid so the thumb, output and applied CSS cannot disagree.
+ */
+function stepped(
+  value: unknown,
+  fallback: number,
+  limits: { min: number; max: number; step: number },
+): number {
+  const current = bounded(value, fallback, limits.min, limits.max);
+  const aligned = limits.min + Math.round((current - limits.min) / limits.step) * limits.step;
+  return Number(Math.max(limits.min, Math.min(limits.max, aligned)).toFixed(6));
 }
 
 export function normalizeAppearance(value: unknown): Appearance {
@@ -38,15 +62,15 @@ export function normalizeAppearance(value: unknown): Appearance {
   const d = DEFAULT_APPEARANCE;
   return {
     density: v.density === 'compact' || v.density === 'spacious' ? v.density : d.density,
-    fontScale: bounded(v.fontScale, d.fontScale, .9, 1.4),
-    spacingScale: bounded(v.spacingScale, d.spacingScale, .75, 1.25),
-    radiusScale: bounded(v.radiusScale, d.radiusScale, 0, 1.5),
-    buttonPaddingX: bounded(v.buttonPaddingX, d.buttonPaddingX, 8, 32),
-    buttonPaddingY: bounded(v.buttonPaddingY, d.buttonPaddingY, 6, 16),
+    fontScale: stepped(v.fontScale, d.fontScale, NUMERIC_STEPS.fontScale),
+    spacingScale: stepped(v.spacingScale, d.spacingScale, NUMERIC_STEPS.spacingScale),
+    radiusScale: stepped(v.radiusScale, d.radiusScale, NUMERIC_STEPS.radiusScale),
+    buttonPaddingX: stepped(v.buttonPaddingX, d.buttonPaddingX, NUMERIC_STEPS.buttonPaddingX),
+    buttonPaddingY: stepped(v.buttonPaddingY, d.buttonPaddingY, NUMERIC_STEPS.buttonPaddingY),
     shadows: v.shadows === 'none' || v.shadows === 'subtle' || v.shadows === 'strong' ? v.shadows : d.shadows,
     animations: typeof v.animations === 'boolean' ? v.animations : d.animations,
-    animationSpeed: bounded(v.animationSpeed, d.animationSpeed, .5, 2),
-    themeDuration: bounded(v.themeDuration, d.themeDuration, 0, 600),
+    animationSpeed: stepped(v.animationSpeed, d.animationSpeed, NUMERIC_STEPS.animationSpeed),
+    themeDuration: stepped(v.themeDuration, d.themeDuration, NUMERIC_STEPS.themeDuration),
   };
 }
 

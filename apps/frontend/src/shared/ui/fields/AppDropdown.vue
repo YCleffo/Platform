@@ -11,11 +11,12 @@ const props = withDefaults(defineProps<{
   id?: string;
   placeholder?: string;
   disabled?: boolean;
-  searchable?: boolean;
+  /** `auto` shows search only for long option lists; `true` forces it. */
+  searchable?: boolean | 'auto';
   multiple?: boolean;
   clearable?: boolean;
   invalid?: boolean;
-}>(), { id: undefined, placeholder: undefined, disabled: false, searchable: false, multiple: false, clearable: false, invalid: false });
+}>(), { id: undefined, placeholder: undefined, disabled: false, searchable: 'auto', multiple: false, clearable: false, invalid: false });
 const model = defineModel<Value | Value[]>({ required: true });
 const uid = useId();
 const fieldId = computed(() => props.id ?? `dropdown-${uid}`);
@@ -33,6 +34,8 @@ function flatten(options: readonly DropdownOption<Value>[]): DropdownOption<Valu
   return options.flatMap(option => option.children?.length ? flatten(option.children) : [option]);
 }
 const text = computed(() => flatten(props.options).filter(option => selected.value.includes(option.value)).map(option => option.label).join(', '));
+const searchEnabled = computed(() => props.searchable === true
+  || (props.searchable === 'auto' && flatten(props.options).length > 8));
 function choose(item: MenuItem): void {
   const value = flatten(props.options).find(option => option.value === item.id)?.value;
   if (value === undefined) return;
@@ -57,7 +60,7 @@ watch(() => props.disabled, value => { if (value) open.value = false; });
       <ChevronDown :size="18" aria-hidden="true" />
     </button>
     <button v-if="clearable && selected.length" type="button" class="app-dropdown__clear" :disabled="disabled" :aria-label="$t('menus.clearSelection')" @click="model = (multiple ? [] : '') as Value | Value[]"><X :size="16" aria-hidden="true" /></button>
-    <AppMenu :id="`${fieldId}-menu`" v-model="open" :anchor="trigger" :items="items" :label="label" :searchable="searchable" :close-on-select="!multiple" :initial-focus="initialFocus" @select="choose">
+    <AppMenu :id="`${fieldId}-menu`" v-model="open" :anchor="trigger" :items="items" :label="label" :searchable="searchEnabled" :close-on-select="!multiple" :initial-focus="initialFocus" @select="choose">
       <template #footer><slot name="footer" /></template>
     </AppMenu>
   </div>

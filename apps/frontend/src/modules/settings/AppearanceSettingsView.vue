@@ -68,7 +68,7 @@ function chooseTheme(value: Theme): void { setTheme(value); }
           </div>
         </fieldset>
         <label class="appearance-view__select-label" for="appearance-language">{{ $t('appearance.language') }}</label>
-        <AppDropdown id="appearance-language" :model-value="locale" :label="$t('appearance.language')" :options="[{ value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }]" searchable @update:model-value="languageChange" />
+        <AppDropdown id="appearance-language" :model-value="locale" :label="$t('appearance.language')" :options="[{ value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }]" @update:model-value="languageChange" />
       </AppCard>
 
       <AppCard>
@@ -155,8 +155,8 @@ function chooseTheme(value: Theme): void { setTheme(value); }
 .appearance-view__fieldset { border: 0; padding: 0; margin: 0 0 var(--space-20); min-width: 0; }
 .appearance-view__fieldset legend, .appearance-view__select-label, .appearance-range label { font-size: var(--type-body-medium-emphasis-size); line-height: var(--type-body-medium-emphasis-line); font-weight: var(--type-body-medium-emphasis-weight); }
 .appearance-view__fieldset legend { margin-bottom: var(--space-12); }
-.appearance-view__choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(72px * var(--ui-font-scale))), 1fr)); gap: var(--gap-s); }
-.appearance-choice { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--gap-s); padding: var(--space-12) var(--space-8); border: 1px solid var(--border-strong); border-radius: var(--radius-control-m); cursor: pointer; color: var(--text-2); min-width: 0; text-align: center; font-size: var(--type-body-small-size); overflow-wrap: anywhere; transition: var(--theme-transition); }
+.appearance-view__choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(88px * var(--ui-font-scale))), 1fr)); gap: var(--gap-s); }
+.appearance-choice { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--gap-s); padding: var(--space-12) var(--space-8); border: 1px solid var(--border-strong); border-radius: var(--radius-control-m); cursor: pointer; color: var(--text-2); min-width: 0; text-align: center; font-size: var(--type-body-small-size); overflow-wrap: normal; hyphens: none; transition: var(--theme-transition); }
 .appearance-choice input { position: absolute; opacity: 0; inset: 0; margin: 0; width: 100%; height: 100%; cursor: pointer; }
 .appearance-choice:has(:focus-visible) { box-shadow: var(--focus-ring); transition: var(--theme-transition); }
 .appearance-choice--selected { color: var(--accent-text); background: var(--accent-soft); border-color: var(--accent); transition: var(--theme-transition); }

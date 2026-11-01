@@ -80,6 +80,18 @@ export function isStatusResult(value: unknown): value is StatusResult {
   return isRecord(value) && isString(value.status);
 }
 
+export function isAcceptedStatus(value: unknown): value is StatusResult {
+  return isRecord(value) && value.status === 'accepted';
+}
+
+export function isVerifiedStatus(value: unknown): value is StatusResult {
+  return isRecord(value) && value.status === 'verified';
+}
+
+export function isPasswordChangedStatus(value: unknown): value is StatusResult {
+  return isRecord(value) && value.status === 'password_changed';
+}
+
 export function isCurrentUser(value: unknown): value is CurrentUser {
   return (
     isRecord(value) &&

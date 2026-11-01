@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAttrs } from 'vue';
+import { onBeforeUnmount, onMounted, ref, useAttrs } from 'vue';
 import { Check } from '@/shared/ui/icons';
 
 defineOptions({ inheritAttrs: false });
@@ -9,18 +9,33 @@ const props = withDefaults(defineProps<{
 }>(), { disabled: false, indeterminate: false, required: false, description: undefined, name: undefined, value: undefined });
 const model = defineModel<boolean>({ default: false });
 const attrs = useAttrs();
+const input = ref<HTMLInputElement | null>(null);
+let form: HTMLFormElement | null = null;
 function describedBy(): string | undefined {
   return [props.description ? `${props.id}-description` : '', typeof attrs['aria-describedby'] === 'string' ? attrs['aria-describedby'] : ''].filter(Boolean).join(' ') || undefined;
 }
 function change(event: Event): void {
   if (!props.disabled) model.value = (event.target as HTMLInputElement).checked;
 }
+function onReset(): void {
+  if (input.value !== null) {
+    model.value = input.value.defaultChecked;
+  }
+}
+onMounted(() => {
+  form = input.value?.form ?? null;
+  form?.addEventListener('reset', onReset);
+});
+onBeforeUnmount(() => {
+  form?.removeEventListener('reset', onReset);
+  form = null;
+});
 </script>
 
 <template>
   <label class="app-checkbox" :class="{ 'app-checkbox--disabled': disabled }" :for="id">
     <span class="app-checkbox__control">
-      <input :id="id" v-bind="$attrs" type="checkbox" :checked="model" :indeterminate="indeterminate" :disabled="disabled" :required="required" :name="name" :value="value" :aria-labelledby="`${id}-label`" :aria-describedby="describedBy()" @change="change" />
+      <input ref="input" :id="id" v-bind="$attrs" type="checkbox" :checked="model" :indeterminate="indeterminate" :disabled="disabled" :required="required" :name="name" :value="value" :aria-labelledby="`${id}-label`" :aria-describedby="describedBy()" @change="change" />
       <span class="app-checkbox__box" aria-hidden="true"><Check :size="17" /><span class="app-checkbox__dash" /></span>
     </span>
     <span class="app-checkbox__copy"><span :id="`${id}-label`" class="app-checkbox__label">{{ label }}</span><span v-if="description" :id="`${id}-description`" class="app-checkbox__description">{{ description }}</span></span>

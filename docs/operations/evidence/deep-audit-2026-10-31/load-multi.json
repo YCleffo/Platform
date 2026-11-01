@@ -1,0 +1,511 @@
+{
+  "generatedAt": "2026-11-01T15:26:08.954Z",
+  "users": 10,
+  "initialAccounts": 1000,
+  "workload": "10 independent sessions; catalog/identity/pagination/sessions; 80 staggered real account creates alongside reads; 20s write intervals; no retries. Separate replay/quota checks excluded from latency stages.",
+  "stages": [
+    {
+      "name": "baseline",
+      "concurrency": 10,
+      "seconds": 30.0310177,
+      "requests": 8905,
+      "errors": 0,
+      "errorRate": 0,
+      "rps": 296.52674741022844,
+      "p50": 32.596700000001874,
+      "p95": 46.279499999996915,
+      "p99": 55.604699999999866,
+      "max": 125.27779999999984,
+      "statuses": {
+        "200": 8905
+      },
+      "budget": {
+        "p95": 1000,
+        "errorRate": 0.01,
+        "minRequests": 100
+      },
+      "passed": true,
+      "routes": {
+        "sessions": {
+          "requests": 2226,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 74.12336212635245,
+          "p50": 31.624000000003434,
+          "p95": 45.446100000001024,
+          "p99": 55.433499999999185,
+          "max": 83.03909999999996,
+          "statuses": {
+            "200": 2226
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "accounts-page": {
+          "requests": 2226,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 74.12336212635245,
+          "p50": 33.79650000000038,
+          "p95": 46.9320000000007,
+          "p99": 55.09820000000036,
+          "max": 105.54190000000017,
+          "statuses": {
+            "200": 2226
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "identity": {
+          "requests": 2226,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 74.12336212635245,
+          "p50": 31.082699999999022,
+          "p95": 43.840799999999945,
+          "p99": 53.821899999999005,
+          "max": 105.88329999999951,
+          "statuses": {
+            "200": 2226
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "catalog": {
+          "requests": 2227,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 74.15666103117111,
+          "p50": 33.790899999999965,
+          "p95": 47.859300000000076,
+          "p99": 58.7696999999971,
+          "max": 125.27779999999984,
+          "statuses": {
+            "200": 2227
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        }
+      }
+    },
+    {
+      "name": "extended-read-write",
+      "concurrency": 50,
+      "seconds": 120.20068650000002,
+      "requests": 34584,
+      "errors": 0,
+      "errorRate": 0,
+      "rps": 287.71882263750626,
+      "p50": 157.10440000001108,
+      "p95": 310.01799999998184,
+      "p99": 471.05449999999837,
+      "max": 1630.0984999999928,
+      "statuses": {
+        "200": 34584
+      },
+      "budget": {
+        "p95": 1000,
+        "errorRate": 0.01,
+        "minRequests": 100
+      },
+      "passed": true,
+      "routes": {
+        "catalog": {
+          "requests": 8646,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 71.92970565937657,
+          "p50": 157.91670000000158,
+          "p95": 319.8264999999956,
+          "p99": 480.5180999999866,
+          "max": 1500.3536999999924,
+          "statuses": {
+            "200": 8646
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "identity": {
+          "requests": 8646,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 71.92970565937657,
+          "p50": 154.7167000000045,
+          "p95": 301.90669999999227,
+          "p99": 459.5200000000186,
+          "max": 1630.0984999999928,
+          "statuses": {
+            "200": 8646
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "accounts-page": {
+          "requests": 8646,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 71.92970565937657,
+          "p50": 159.57870000001276,
+          "p95": 313.5196999999753,
+          "p99": 481.2007000000158,
+          "max": 1601.854800000001,
+          "statuses": {
+            "200": 8646
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "sessions": {
+          "requests": 8646,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 71.92970565937657,
+          "p50": 156.22960000000603,
+          "p95": 301.86979999998584,
+          "p99": 445.7627000000066,
+          "max": 1552.0791000000027,
+          "statuses": {
+            "200": 8646
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        }
+      }
+    },
+    {
+      "name": "burst",
+      "concurrency": 100,
+      "seconds": 15.309158900000009,
+      "requests": 3746,
+      "errors": 0,
+      "errorRate": 0,
+      "rps": 244.6901246808535,
+      "p50": 384.66419999999925,
+      "p95": 600.303899999999,
+      "p99": 752.3714000000036,
+      "max": 945.1080999999831,
+      "statuses": {
+        "200": 3746
+      },
+      "budget": {
+        "p95": 1000,
+        "errorRate": 0.01,
+        "minRequests": 100
+      },
+      "passed": true,
+      "routes": {
+        "accounts-page": {
+          "requests": 937,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 61.205191357704145,
+          "p50": 390.2988999999943,
+          "p95": 629.0646000000124,
+          "p99": 767.5447000000277,
+          "max": 945.1080999999831,
+          "statuses": {
+            "200": 937
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "identity": {
+          "requests": 937,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 61.205191357704145,
+          "p50": 379.3929000000062,
+          "p95": 593.5431000000099,
+          "p99": 733.7501000000047,
+          "max": 876.7633000000205,
+          "statuses": {
+            "200": 937
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "sessions": {
+          "requests": 936,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 61.1398709827226,
+          "p50": 380.945000000007,
+          "p95": 598.0233000000007,
+          "p99": 748.3681000000215,
+          "max": 890.7565999999933,
+          "statuses": {
+            "200": 936
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "catalog": {
+          "requests": 936,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 61.1398709827226,
+          "p50": 388.5832999999984,
+          "p95": 599.1730000000098,
+          "p99": 746.3919000000169,
+          "max": 846.5934000000125,
+          "statuses": {
+            "200": 936
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        }
+      }
+    },
+    {
+      "name": "recovery",
+      "concurrency": 10,
+      "seconds": 30.057407800000014,
+      "requests": 5836,
+      "errors": 0,
+      "errorRate": 0,
+      "rps": 194.16178663284455,
+      "p50": 49.37160000001313,
+      "p95": 72.5616999999911,
+      "p99": 88.36280000000261,
+      "max": 281.4004999999888,
+      "statuses": {
+        "200": 5836
+      },
+      "budget": {
+        "p95": 1000,
+        "errorRate": 0.01,
+        "minRequests": 100
+      },
+      "passed": true,
+      "routes": {
+        "identity": {
+          "requests": 1459,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 48.54044665821114,
+          "p50": 47.240200000000186,
+          "p95": 68.13390000001527,
+          "p99": 80.30779999998049,
+          "max": 279.2962000000116,
+          "statuses": {
+            "200": 1459
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "catalog": {
+          "requests": 1459,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 48.54044665821114,
+          "p50": 50.70240000000922,
+          "p95": 74.17170000000624,
+          "p99": 87.38149999998859,
+          "max": 276.7019000000146,
+          "statuses": {
+            "200": 1459
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "sessions": {
+          "requests": 1459,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 48.54044665821114,
+          "p50": 47.755999999993946,
+          "p95": 72.55430000001797,
+          "p99": 86.00770000001648,
+          "max": 281.4004999999888,
+          "statuses": {
+            "200": 1459
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        },
+        "accounts-page": {
+          "requests": 1459,
+          "errors": 0,
+          "errorRate": 0,
+          "rps": 48.54044665821114,
+          "p50": 51.48910000000615,
+          "p95": 75.59209999997984,
+          "p99": 94.4212000000116,
+          "max": 277.82379999998375,
+          "statuses": {
+            "200": 1459
+          },
+          "budget": {
+            "p95": 1000,
+            "errorRate": 0.01,
+            "minRequests": 1
+          },
+          "passed": true
+        }
+      }
+    }
+  ],
+  "writes": {
+    "requests": 80,
+    "errors": 0,
+    "errorRate": 0,
+    "rps": 0.5595337010638242,
+    "p50": 242.488400000002,
+    "p95": 471.62690000000293,
+    "p99": 640.5843999999925,
+    "max": 640.5843999999925,
+    "statuses": {
+      "201": 80
+    },
+    "budget": {
+      "p95": 1000,
+      "errorRate": 0.01,
+      "minRequests": 80
+    },
+    "passed": true
+  },
+  "authorizationDenial": 404,
+  "checks": [
+    {
+      "user": 0,
+      "idempotency": true,
+      "permitted": true,
+      "rateLimit": true,
+      "count": 109,
+      "correctCount": true
+    },
+    {
+      "user": 1,
+      "idempotency": true,
+      "permitted": true,
+      "rateLimit": true,
+      "count": 109,
+      "correctCount": true
+    },
+    {
+      "user": 2,
+      "idempotency": true,
+      "permitted": true,
+      "rateLimit": true,
+      "count": 109,
+      "correctCount": true
+    },
+    {
+      "user": 3,
+      "idempotency": true,
+      "permitted": true,
+      "rateLimit": true,
+      "count": 109,
+      "correctCount": true
+    },
+    {
+      "user": 4,
+      "idempotency": true,
+      "permitted": true,
+      "rateLimit": true,
+      "count": 109,
+      "correctCount": true
+    },
+    {
+      "user": 5,
+      "idempotency": true,
+      "permitted": true,
+      "rateLimit": true,
+      "count": 109,
+      "correctCount": true
+    },
+    {
+      "user": 6,
+      "idempotency": true,
+      "permitted": true,
+      "rateLimit": true,
+      "count": 109,
+      "correctCount": true
+    },
+    {
+      "user": 7,
+      "idempotency": true,
+      "permitted": true,
+      "rateLimit": true,
+      "count": 109,
+      "correctCount": true
+    },
+    {
+      "user": 8,
+      "idempotency": true,
+      "permitted": true,
+      "rateLimit": true,
+      "count": 109,
+      "correctCount": true
+    },
+    {
+      "user": 9,
+      "idempotency": true,
+      "permitted": true,
+      "rateLimit": true,
+      "count": 109,
+      "correctCount": true
+    }
+  ],
+  "passed": true
+}

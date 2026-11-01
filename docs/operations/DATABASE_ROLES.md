@@ -59,9 +59,18 @@ SELECT pg_read_file('/etc/passwd');            -- ERROR
 
 Скрипт проверен на отдельной базе Commercial: `SELECT` из `commercial` проходит, а `CREATE TABLE`,
 `TRUNCATE` и `DELETE FROM public.doctrine_migration_versions` завершаются `permission denied`.
+CI gate `scripts/ci/db-role-gate.sh core|commercial` выполняет это на одноразовых БД:
+создаёт отдельную runtime-роль, проверяет `rolsuper/rolcreatedb/rolcreaterole/rolbypassrls = 0`,
+разрешает чтение прикладной таблицы и требует отказа для DDL, `TRUNCATE`, удаления history
+миграций (`public.platform_migrations` в Core, `public.doctrine_migration_versions`
+в Commercial) и `pg_read_file`. Это gate для ролей, а не доказательство всех
+HTTP/worker flows; полный lifecycle под runtime-role остаётся обязательной
+release-проверкой (F08).
 
 ## Ограничения
 
+- Локальный Compose по-прежнему использует bootstrap-суперпользователя. Это dev-модель,
+  а не production credentials; перед production обе БД должны быть переключены на runtime-роль.
 - Скрипт не переключает рабочую установку автоматически: это осознанная операция оператора.
 - Существующие объекты должны принадлежать migrator либо owner; `REASSIGN OWNED` не выполняется
   автоматически.

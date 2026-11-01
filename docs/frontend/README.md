@@ -25,6 +25,9 @@ Education dashboard из SVG — будущий модуль; его API ещё 
 | --- | --- |
 | `/` | Опубликованный Commercial catalog |
 | `/register`, `/verify-email`, `/login`, `/mfa` | Регистрация, подтверждение и вход |
+| `/resend-verification` | Повторная отправка письма подтверждения по email без повторной регистрации |
+| `/forgot-password`, `/reset-password?token=…` | Запрос и подтверждение сброса пароля |
+| `/does-not-exist` и другие неизвестные URL | Локализованная 404-страница с возвратом к каталогу |
 | `/cabinet` | Список и создание Commercial Accounts |
 | `/accounts/:accountId` | Overview, сведения и текущие permissions |
 | `/accounts/:accountId/members` | Список, изменение ролей, removal; защита последнего owner |
@@ -35,8 +38,10 @@ Education dashboard из SVG — будущий модуль; его API ещё 
 | `/settings/components` | Рабочие примеры общих dropdown и контекстного меню |
 
 Invitation token захватывается из `#token=…`, удаляется из адресной строки и хранится
-в памяти. Preview не меняет данные. Account permissions вычисляет сервер и повторно
-проверяет при мутациях; UI скрывает недоступные действия.
+в памяти. Reset token приходит в `?token=…`, не пишется в storage и удаляется из URL
+после успешной смены пароля. Публичные ответы запроса reset и resend не раскрывают,
+существует ли аккаунт. Preview не меняет данные. Account permissions вычисляет сервер
+и повторно проверяет при мутациях; UI скрывает недоступные действия.
 
 Session epoch и request IDs отбрасывают устаревшие ответы после logout/смены аккаунта.
 HTTP 401 вызывает один single-flight refresh и максимум один retry. Просроченная
@@ -124,6 +129,9 @@ Disabled родителя наследуется потомками.
 
 `shared/ui/fields/AppDropdown.vue` принимает `options: DropdownOption[]`, `label`,
 `v-model`, optional id/searchable/multiple/clearable/disabled/invalid/placeholder.
+`searchable` по умолчанию `auto`: поле поиска появляется только для длинных списков
+(больше 8 листьев), поэтому короткие выборы языка/темы/роли остаются компактными;
+`searchable` без значения или `true` принудительно включает поиск.
 Одиночная модель — строка, множественная — массив строк. Родитель с children открывает
 раздел, выбирается конечный пункт. Multiple оставляет меню открытым и переключает
 checkbox-состояния; clearable сбрасывает выбор. Внешний `<label for>` связан с id кнопки,
@@ -131,7 +139,7 @@ checkbox-состояния; clearable сбрасывает выбор. Внеш
 Компонент эмитит модель; сериализация формы и серверная валидация остаются у вызывающего кода.
 
 ```vue
-<AppDropdown v-model="language" label="Язык" :options="languages" searchable />
+<AppDropdown v-model="language" label="Язык" :options="languages" />
 <AppDropdown v-model="selected" label="Разделы" :options="tree" multiple searchable clearable />
 <AppContextMenu :items="actions" label="Действия" @select="handleAction">
   <section tabindex="0">Область контекстного меню</section>
@@ -158,6 +166,8 @@ Tab закрывает его и продолжает обычный поряд�
 Все четыре прежних native select заменены: язык, тени, роль участника и роль приглашения.
 При открытии списка без поиска фокус переходит к выбранному пункту; стрелки на кнопке
 по-прежнему открывают первый/последний вариант. Очистка поиска сохраняет фокус в поле.
+Внешний `<label for>` не считается outside-click: клик по нему переключает dropdown один
+раз, а не закрывает и сразу переоткрывает меню с повторной анимацией.
 
 ## Проверки и запуск
 
@@ -179,8 +189,9 @@ Vitest выполняет unit/component tests без БД. `verify-responsive.m
 число глобальных overlay listeners должно вернуться к исходному. Замер полного цикла
 Playwright включает автоматизацию и не является метрикой input latency.
 `verify-accessibility.mjs` использует axe-core для public/auth/settings/cascade/modal/mobile
-в обеих темах, без отключения правил A/AA. Это дополняет проверку клавиатуры и скриншотов,
-но не доказывает полное соответствие WCAG: [границы автоматической проверки](https://playwright.dev/docs/accessibility-testing).
+в обеих темах, без отключения правил A/AA; authenticated state сканируется в browser E2E
+(включая QR настройки MFA). Это дополняет проверку клавиатуры и скриншотов, но не доказывает
+полное соответствие WCAG: [границы автоматической проверки](https://playwright.dev/docs/accessibility-testing).
 
 `load-commercial.mjs` выполняет nonce-проверку одноразового окружения **до** создания fixtures.
 Профили и команды описаны в README приложения. Чередуются четыре GET endpoint с валидацией
@@ -193,8 +204,12 @@ smoke, локальная проверка может использовать s
 
 Полный CI browser job запускает отдельные PostgreSQL/Commercial/Mailpit, outbox worker,
 Vite и Chromium. `e2e-account-workspace.mjs` и `e2e-invitation-lifecycle.mjs` выполняют
-реальные account и invitation/MFA/membership flows. Guard требует isolation nonce,
-подтверждённый сервером. Рабочие БД для этого не используются; после job ресурсы удаляются.
+реальные account и invitation/MFA/membership flows; authenticated accessibility matrix
+включает Security Center, MFA setup, recovery codes и MFA challenge. `e2e-auth-recovery.mjs`
+проверяет standalone resend после reload, ротацию verification token, реальное письмо
+reset, подтверждение в новой вкладке, single-use/invalid/missing token и гигиену URL.
+Guard требует isolation nonce, подтверждённый сервером. Рабочие БД для этого не
+используются; после job ресурсы удаляются.
 
 ### Checkbox, switch и range
 
@@ -203,6 +218,10 @@ Vite и Chromium. `e2e-account-workspace.mjs` и `e2e-invitation-lifecycle.mjs` 
 поддерживает `indeterminate`, `required` и `value`. Это настоящие HTML inputs: сохраняются
 Space/Tab, label click, disabled и участие в формах. `indeterminate` управляется отдельно
 от значения. Подсказка и внешний `aria-describedby` объединяются; имя берётся из label.
+`AppInput`, `AppCheckbox` и `AppSwitch` переносят нативные form-атрибуты (`name`,
+`form`, `required`, `autocomplete` и другие) на реальный control, а не на wrapper.
+Native `form.reset()` синхронно возвращает модель к `defaultValue`/`defaultChecked`,
+поэтому DOM, Vue state и `FormData` не расходятся. Disabled controls не отправляются.
 
 Switch применяется для немедленного изменения настройки (например, анимаций), checkbox —
 для выбора пунктов. Примеры с общим/частичным выбором и disabled доступны на
@@ -214,10 +233,11 @@ blur и отключение завершают редактирование. Dr
 Цвета используют `--theme-transition`, геометрия — `--motion-control-duration` и
 `--motion-spring-ease`; скорость и reduced motion наследуются из настроек сайта.
 
-`BASE_URL=http://127.0.0.1:5173 npm run verify:controls` проверяет 24 browser assertions:
-mouse/touch/keyboard, mixed/disabled, release outside, Undo, reload, reduced motion и
-320 px / 140% text. Скрипт включён в browser CI; screenshots пишутся в игнорируемую
-папку `screenshots`. Проверенные снимки: [набор controls](../operations/evidence/controls-2026-10-31/README.md).
+`BASE_URL=http://127.0.0.1:5173 npm run verify:controls` проверяет 27 browser assertions:
+mouse/touch/keyboard, mixed/disabled, native form attributes/reset, release outside, Undo,
+reload, reduced motion и 320 px / 140% text. Скрипт включён в browser CI; screenshots
+пишутся в игнорируемую папку `screenshots`. Проверенные снимки:
+[набор controls](../operations/evidence/controls-2026-10-31/README.md).
 
 Результаты и production-ограничения: [критерии выпуска](../operations/PRODUCTION_READINESS_PROGRESS.md).
 Дальнейшие модули: [единый roadmap](../roadmap/PLATFORM_ROADMAP.md).

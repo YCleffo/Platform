@@ -1,0 +1,120 @@
+{
+  "postgres-test": {
+    "networks": [
+      "test_net"
+    ],
+    "ports": [
+      {
+        "mode": "ingress",
+        "host_ip": "127.0.0.1",
+        "target": 5432,
+        "published": "15437",
+        "protocol": "tcp"
+      }
+    ],
+    "volumes": [
+      {
+        "type": "volume",
+        "target": "/var/lib/postgresql",
+        "source": "platform-deep-audit-20261031_postgres_test_data"
+      }
+    ]
+  },
+  "redis-test": {
+    "networks": [
+      "test_net"
+    ],
+    "ports": [
+      {
+        "mode": "ingress",
+        "host_ip": "127.0.0.1",
+        "target": 6379,
+        "published": "16384",
+        "protocol": "tcp"
+      }
+    ],
+    "volumes": [
+      {
+        "type": "volume",
+        "target": "/data",
+        "source": "platform-deep-audit-20261031_redis_test_data"
+      }
+    ]
+  },
+  "backend-test": {
+    "networks": [
+      "test_net"
+    ],
+    "ports": [
+      {
+        "mode": "ingress",
+        "host_ip": "127.0.0.1",
+        "target": 80,
+        "published": "18085",
+        "protocol": "tcp"
+      }
+    ],
+    "volumes": [
+      {
+        "type": "bind",
+        "target": "/app",
+        "source": "C:\\Platform\\apps\\backend"
+      },
+      {
+        "type": "bind",
+        "target": "/contracts",
+        "source": "C:\\Platform\\contracts"
+      }
+    ]
+  },
+  "control-postgres-test": {
+    "networks": [
+      "control_test_net"
+    ],
+    "ports": [],
+    "volumes": [
+      {
+        "type": "volume",
+        "target": "/var/lib/postgresql",
+        "source": "platform-deep-audit-20261031_control_postgres_test_data"
+      }
+    ]
+  },
+  "control-plane-test": {
+    "networks": [
+      "control_test_net",
+      "test_net"
+    ],
+    "ports": [
+      {
+        "mode": "ingress",
+        "host_ip": "127.0.0.1",
+        "target": 8000,
+        "published": "18095",
+        "protocol": "tcp"
+      }
+    ],
+    "volumes": [
+      {
+        "type": "bind",
+        "target": "/contracts",
+        "source": "C:\\Platform\\contracts\\openapi"
+      }
+    ]
+  },
+  "mailpit-test": {
+    "networks": [
+      "control_test_net"
+    ],
+    "ports": [
+      {
+        "mode": "ingress",
+        "host_ip": "127.0.0.1",
+        "target": 8025,
+        "published": "18030",
+        "protocol": "tcp"
+      }
+    ],
+    "volumes": []
+  }
+}

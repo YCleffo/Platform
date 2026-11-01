@@ -1,13 +1,15 @@
 import type { HttpClient } from '../http';
 import {
+  isAcceptedStatus,
   isControlSessionList,
   isLoginResult,
   isMfaStatus,
+  isPasswordChangedStatus,
   isRecoveryCodesResult,
   isRegisterResult,
   isSessionTokens,
-  isStatusResult,
   isTotpSetup,
+  isVerifiedStatus,
 } from '../guards';
 import type {
   ControlSessionList,
@@ -30,8 +32,14 @@ export interface CommercialAuthApi {
   register(email: string, password: string): Promise<RegisterResult>;
   resendVerification(email: string): Promise<StatusResult>;
   verifyEmail(token: string): Promise<StatusResult>;
-  login(email: string, password: string): Promise<LoginResult>;
-  verifyMfaLogin(challengeToken: string, input: MfaVerificationInput): Promise<SessionTokens>;
+  requestPasswordReset(email: string): Promise<StatusResult>;
+  confirmPasswordReset(token: string, password: string): Promise<StatusResult>;
+  login(email: string, password: string, signal?: AbortSignal): Promise<LoginResult>;
+  verifyMfaLogin(
+    challengeToken: string,
+    input: MfaVerificationInput,
+    signal?: AbortSignal,
+  ): Promise<SessionTokens>;
   /** Sends the logout request with an explicit snapshot of the token being revoked. */
   logout(token: string): Promise<void>;
   mfaStatus(): Promise<MfaStatus>;
@@ -46,12 +54,24 @@ export function createCommercialAuthApi(http: HttpClient): CommercialAuthApi {
     register: (email, password) =>
       http.post<RegisterResult>('/auth/register', { email, password }, { validate: isRegisterResult }),
     resendVerification: (email) =>
-      http.post<StatusResult>('/auth/verification/resend', { email }, { validate: isStatusResult }),
+      http.post<StatusResult>('/auth/verification/resend', { email }, { validate: isAcceptedStatus }),
     verifyEmail: (token) =>
-      http.post<StatusResult>('/auth/verify', { token }, { validate: isStatusResult }),
-    login: (email, password) =>
-      http.post<LoginResult>('/auth/login', { email, password }, { validate: isLoginResult }),
-    verifyMfaLogin: (challengeToken, input) =>
+      http.post<StatusResult>('/auth/verify', { token }, { validate: isVerifiedStatus }),
+    requestPasswordReset: (email) =>
+      http.post<StatusResult>(
+        '/auth/password/reset/request',
+        { email },
+        { validate: isAcceptedStatus },
+      ),
+    confirmPasswordReset: (token, password) =>
+      http.post<StatusResult>(
+        '/auth/password/reset/confirm',
+        { token, password },
+        { validate: isPasswordChangedStatus },
+      ),
+    login: (email, password, signal) =>
+      http.post<LoginResult>('/auth/login', { email, password }, { validate: isLoginResult, signal }),
+    verifyMfaLogin: (challengeToken, input, signal) =>
       http.post<SessionTokens>(
         '/auth/mfa/login/verify',
         {
@@ -59,7 +79,7 @@ export function createCommercialAuthApi(http: HttpClient): CommercialAuthApi {
           code: input.code ?? null,
           recovery_code: input.recoveryCode ?? null,
         },
-        { validate: isSessionTokens },
+        { validate: isSessionTokens, signal },
       ),
     logout: (token) =>
       http.post<void>('/auth/logout', undefined, {

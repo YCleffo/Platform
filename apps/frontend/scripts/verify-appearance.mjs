@@ -31,6 +31,14 @@ async function overflow(page, label) {
   }
   check(!bad, `${label}: horizontal overflow`);
 }
+async function wholeLabels(page, label) {
+  const split = await page.locator('.appearance-choice span').evaluateAll(spans => spans.flatMap(span => {
+    const range = document.createRange();
+    range.selectNodeContents(span);
+    return range.getClientRects().length > 1 ? [span.textContent?.trim() ?? ''] : [];
+  }));
+  check(split.length === 0, `${label}: labels break inside words: ${split.join(', ')}`);
+}
 
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
@@ -82,6 +90,7 @@ try {
   for (const width of [320, 393, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     await overflow(page, `${width}px spacious + largest font`);
+    await wholeLabels(page, `${width}px spacious + largest font`);
   }
   await page.reload({ waitUntil: 'networkidle' });
   check(await page.locator('#appearance-font-scale').inputValue() === '1.4', 'Preferences were not restored on reload');
@@ -107,6 +116,13 @@ try {
   await page.getByRole('radio', { name: 'Dark', exact: true }).check(); await settled(page);
   await page.screenshot({ path: 'screenshots/settings-desktop-dark.png', fullPage: true });
   await selectDropdown(page, 'appearance-language', 'ru');
+  await range(page, 'appearance-font-scale', 1.4);
+  await page.getByRole('radio', { name: 'Просторная', exact: true }).check();
+  for (const width of [320, 393]) {
+    await page.setViewportSize({ width, height: 852 });
+    await overflow(page, `${width}px Russian spacious + largest font`);
+    await wholeLabels(page, `${width}px Russian spacious + largest font`);
+  }
   await page.setViewportSize({ width: 393, height: 852 });
   await page.screenshot({ path: 'screenshots/settings-mobile-ru-dark.png', fullPage: true });
   await overflow(page, 'Russian mobile');

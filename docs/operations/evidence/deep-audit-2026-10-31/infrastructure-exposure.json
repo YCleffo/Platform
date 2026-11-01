@@ -1,0 +1,54 @@
+{
+  "platform-redis-1": {
+    "ports": {
+      "6379/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "6379"
+        }
+      ]
+    }
+  },
+  "platform-postgres-1": {
+    "ports": {
+      "5432/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "5432"
+        }
+      ]
+    }
+  },
+  "platform-control-postgres-1": {
+    "ports": {
+      "5432/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "5434"
+        }
+      ]
+    }
+  },
+  "platform-mailpit-1": {
+    "ports": {
+      "1025/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "1025"
+        }
+      ],
+      "8025/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "8025"
+        }
+      ]
+    }
+  },
+  "redisConfiguration": {
+    "passwordEnabled": false,
+    "protectedMode": "no",
+    "bind": "* -::*"
+  },
+  "hostTcpRedisPingWithoutAuth": "+PONG"
+}

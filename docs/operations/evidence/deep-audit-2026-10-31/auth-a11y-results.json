@@ -1,0 +1,22 @@
+[
+  {
+    "name": "http",
+    "exit": 0
+  },
+  {
+    "name": "outbox",
+    "exit": 0
+  },
+  {
+    "name": "authenticated-a11y",
+    "exit": 0
+  },
+  {
+    "name": "stop",
+    "exit": 0
+  },
+  {
+    "name": "reset",
+    "exit": 0
+  }
+]

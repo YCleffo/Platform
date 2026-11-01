@@ -1,5 +1,6 @@
+import AxeBuilder from '@axe-core/playwright';
 import { createHmac } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { evaluateMutationGate } from './e2e-guard.mjs';
@@ -28,6 +29,18 @@ const failures = [];
 const check = (condition, message) => {
   if (!condition) failures.push(message);
 };
+const accessibility = [];
+async function scanAccessibility(page, label) {
+  const dangling = await page.locator('[aria-controls], [aria-labelledby], [aria-describedby], [aria-owns]').evaluateAll(elements => elements.flatMap(element =>
+    ['aria-controls', 'aria-labelledby', 'aria-describedby', 'aria-owns'].flatMap(attribute => (element.getAttribute(attribute)?.split(/\s+/) ?? []).filter(id => id && !document.getElementById(id)).map(id => `${attribute}: ${id}`))));
+  if (dangling.length) throw new Error(`${label}: dangling ARIA references: ${dangling.join(', ')}`);
+  const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  accessibility.push({ label, violations: result.violations.map(item => ({ id: item.id, impact: item.impact, nodes: item.nodes.map(node => node.target) })) });
+  writeFileSync(join(outDir, 'authenticated-accessibility.json'), JSON.stringify({ passed: !accessibility.some(item => item.violations.length), results: accessibility }, null, 2));
+  if (result.violations.length) {
+    throw new Error(`${label}: accessibility violations ${JSON.stringify(result.violations.map(item => ({ id: item.id, impact: item.impact, targets: item.nodes.map(node => node.target) })))}`);
+  }
+}
 
 function base32Decode(secret) {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -78,9 +91,11 @@ async function enrollMfa(page) {
   await page.getByRole('heading', { name: 'Security', exact: true }).waitFor({ timeout: 20_000 });
   await page.getByText('Not enabled', { exact: true }).waitFor({ timeout: 20_000 });
   await page.screenshot({ path: join(outDir, 'e2e-mfa-before-setup.png') });
+  await scanAccessibility(page, 'security-center');
   await page.getByRole('button', { name: 'Connect authenticator' }).click();
   const setup = dialog(page, 'Connect authenticator');
   await setup.waitFor({ state: 'visible' });
+  await scanAccessibility(page, 'mfa-setup-dialog');
   const secret = (await setup.locator('.mfa-setup__secret').textContent())?.trim() ?? '';
   check(secret.length > 0, 'MFA setup exposes the manual secret');
   if (secret === '') throw new Error('MFA secret is unavailable.');
@@ -88,6 +103,7 @@ async function enrollMfa(page) {
   await setup.locator('#totp-code').fill(await nextCode());
   await setup.getByRole('button', { name: 'Confirm code' }).click();
   await setup.getByRole('heading', { name: 'Recovery codes' }).waitFor({ timeout: 20_000 });
+  await scanAccessibility(page, 'mfa-recovery-codes');
   await setup.getByRole('button', { name: 'I have saved the codes' }).click();
   await setup.waitFor({ state: 'hidden', timeout: 20_000 });
   await page.getByText('Enabled', { exact: true }).first().waitFor({ timeout: 20_000 });
@@ -291,12 +307,40 @@ async function main() {
     await pageA2.goto(`${APP}/login`, { waitUntil: 'networkidle' });
     await submitLogin(pageA2, emailA, PASSWORD);
     await pageA2.waitForURL('**/mfa', { timeout: 20_000 });
+    await pageA2.locator('#mfa-code').waitFor({ state: 'visible', timeout: 20_000 });
+    await scanAccessibility(pageA2, 'mfa-challenge');
     await pageA2.locator('#mfa-code').fill(await nextCode());
     await pageA2.getByRole('button', { name: 'Verify', exact: true }).click();
     await pageA2.waitForURL('**/cabinet', { timeout: 20_000 });
     await pageA2.locator('.account-list__link').filter({ hasText: `Invitation E2E ${runId}` }).waitFor({ timeout: 20_000 });
     await stableScreenshot(pageA2, join(outDir, 'e2e-owner-after-mfa-login.png'));
     await contextA2.close();
+
+    const lateContext = await browser.newContext({ viewport: { width: 393, height: 852 }, ignoreHTTPSErrors: true });
+    await lateContext.addInitScript(() => localStorage.setItem('platform.locale', 'en'));
+    const latePage = await lateContext.newPage();
+    await latePage.route('**/api/control/auth/mfa/login/verify', async route => {
+      try {
+        const response = await route.fetch();
+        await new Promise(resolve => setTimeout(resolve, 1_500));
+        await route.fulfill({ response });
+      } catch {
+        // The abandoned MFA request was aborted by the page lifecycle.
+      }
+    });
+    await latePage.goto(`${APP}/login`, { waitUntil: 'networkidle' });
+    await submitLogin(latePage, emailA, PASSWORD);
+    await latePage.waitForURL('**/mfa', { timeout: 20_000 });
+    await latePage.locator('#mfa-code').fill(await nextCode());
+    const startedMfa = latePage.waitForRequest('**/api/control/auth/mfa/login/verify', { timeout: 10_000 });
+    await latePage.getByRole('button', { name: 'Verify', exact: true }).click();
+    await startedMfa;
+    await navigateClientSide(latePage, '/register');
+    await latePage.waitForURL('**/register', { timeout: 20_000 });
+    await latePage.waitForTimeout(2_000);
+    check(new URL(latePage.url()).pathname === '/register', 'a late MFA response does not leave the new page');
+    check(await latePage.locator('#register-email').isVisible(), 'the newer registration form remains intact after late MFA');
+    await lateContext.close();
 
     await contextD.close();
     await contextC.close();

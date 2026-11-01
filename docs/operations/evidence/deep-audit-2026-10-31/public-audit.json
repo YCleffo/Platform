@@ -1,0 +1,78 @@
+{
+  "/reset-password?token=synthetic-audit-token": {
+    "title": "Platform",
+    "bodyText": "",
+    "mainCount": 0
+  },
+  "/does-not-exist": {
+    "title": "Platform",
+    "bodyText": "",
+    "mainCount": 0
+  },
+  "login": {
+    "links": [
+      {
+        "text": "Platform",
+        "href": "/"
+      },
+      {
+        "text": "Sign up",
+        "href": "/register"
+      }
+    ]
+  },
+  "resend": {
+    "url": "http://127.0.0.1:15184/register",
+    "buttons": [
+      "",
+      "",
+      "EN",
+      "",
+      "Register"
+    ],
+    "emailValue": ""
+  },
+  "formInitial": {
+    "entries": [
+      [
+        "agree",
+        "yes"
+      ],
+      [
+        "motion",
+        "on"
+      ]
+    ],
+    "nameOnInput": "",
+    "model": "{\"check\":true,\"toggle\":true,\"name\":\"Initial\"}"
+  },
+  "formPristineReset": {
+    "checked": true,
+    "switched": false,
+    "model": "{\"check\":true,\"toggle\":true,\"name\":\"Initial\"}"
+  },
+  "formAfterReset": {
+    "checked": false,
+    "switched": false,
+    "name": "",
+    "model": "{\"check\":false,\"toggle\":false,\"name\":\"Changed\"}",
+    "entries": []
+  },
+  "unexpected204": {
+    "injected": true,
+    "registrationSuccessShown": true,
+    "body": "Check your email\n\nWe sent a verification email. Check your inbox and follow the link.\n\nDid not receive the email?\n\nResend confirmation\nSign in"
+  },
+  "extremeMobile": {
+    "viewport": 320,
+    "scrollWidth": 320,
+    "overflow": false
+  },
+  "mobileMenu": [
+    {
+      "width": 260.75,
+      "scrollWidth": 261,
+      "clientWidth": 261
+    }
+  ]
+}

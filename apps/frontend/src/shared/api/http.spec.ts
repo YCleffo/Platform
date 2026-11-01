@@ -149,6 +149,14 @@ describe('http client', () => {
     await expect(client.post('/logout')).resolves.toBeUndefined();
   });
 
+  it('rejects a 204 response when the endpoint requires a validated payload', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+    const { client } = makeClient();
+    await expect(
+      client.post('/auth/register', {}, { validate: (value) => typeof value === 'object' && value !== null }),
+    ).rejects.toBeInstanceOf(ApiResponseError);
+  });
+
   it('maps aborted requests to RequestAbortedError', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('aborted', 'AbortError')));
     const { client } = makeClient();

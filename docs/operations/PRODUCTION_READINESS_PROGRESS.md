@@ -1,9 +1,34 @@
-# Проверка проекта и CI — 2026-10-31
+# Проверка проекта и CI — 2026-11-01
 
-**Production: `CORE_NOT_READY`.** Рабочее дерево на базе
-`3fa7eb0f02e9a076793a4c656c54226b64129037` проверено локально на Windows и в Linux Docker.
-Новых коммитов и push со стороны агента нет. Прогон выполнен локально по workflow;
-результат не объявляется результатом GitHub runner. [Машиночитаемые проверки](evidence/ux-2026-10-31/checks.json).
+**Production: `NOT_READY`.** Живой статус обновлён после
+[независимого аудита](DEEP_AUDIT_2026-11-01.md) ревизии
+`fa313953ca07cf1df9f904f5a61e4e5a10f068e7`. Разделы ниже, датированные 2026-10-31,
+сохранены как история проверок; они не заменяют текущий статус исправлений.
+Локальный прогон не является результатом GitHub runner. Новых коммитов и push нет.
+
+## Статус исправлений по аудиту 2026-11-01
+
+| Finding | Статус | Что изменено / что осталось |
+| --- | --- | --- |
+| F01 password recovery | Готово в коде | `/forgot-password`, `/reset-password?token=…`, generic request, invalid/used/missing token, очистка URL |
+| F02 resend verification | Готово в коде | `/resend-verification`, ссылки из login и verification error, generic acknowledgement, ротация токена |
+| F03 native form contract | Готово в коде | `name`/form attrs на реальном control; native reset синхронно возвращает Vue state; browser regression |
+| F04 204 contract | Готово в коде | 204 с обязательной схемой отклоняется; void endpoints сохранены |
+| F05 404 | Готово в коде | Catch-all route и локализованная страница возврата |
+| F06 reflow labels | Готово в коде | Колонки масштабируются с fontScale; слова не рвутся; проверка 320/393 RU |
+| F07 working runtime | Готово локально | Control Plane image `sha256:2ca05ee…` пересобран из source, control-контейнеры перезапущены; health live/ready = ok, optimization присутствует в `/app/src` |
+| F08 DB roles | Частично | CI denial gate `db-role-gate.sh` для обеих БД добавлен; рабочий/production runtime ещё не переключён на отдельные credentials |
+| F09 late login | Готово в коде | AbortSignal + lifecycle guard для login и MFA; late result не меняет route |
+| F10 MFA QR a11y | Готово в коде | Accessible name на SVG; authenticated axe matrix в browser E2E |
+| F11 infra images | Готово в конфигурации | Postgres `18.6-trixie` и Mailpit `v1.33.0` закреплены digest; отдельный CI scan job; рабочие контейнеры перезапущены, схемы/данные сохранены |
+| F12 app image residual risk | Задокументировано, blocker | Оценка достижимости и условия решения: [IMAGE_RISK_DECISION_2026-11-01](IMAGE_RISK_DECISION_2026-11-01.md); риск не принят |
+| F13 off-step preferences | Готово в коде | Numeric settings нормализуются к step сетке; state/CSS/ARIA совпадают |
+
+Локально после изменений: frontend typecheck/lint/build/tokens/icons/styles — PASS;
+151 unit/component tests в 34 files — PASS; public accessibility — 28 состояний,
+0 автоматических A/AA violations; appearance/controls/UX/menus/responsive — PASS
+(27 browser assertions для controls). Account recovery E2E добавлен в browser CI,
+но локально против рабочей БД не запускался.
 
 ## Исправленные дефекты
 
@@ -38,11 +63,11 @@
 | Commercial final full после оптимизации активности сессии | PASS: 449 tests / 4 916 assertions; отдельный ControlAuthTest — 6 / 27 |
 | Cross-plane bootstrap, HTTP runtime, downgrade/renewal/restart | PASS: 8 tests / 331 assertions |
 | Browser E2E после финальной правки API | PASS: account workspace и invitation/membership/MFA; checks подсветки навигации и реальной активной сессии |
-| Frontend unit/component | PASS: 146 tests / 34 files после обновления controls; typecheck, lint, build, local tokens/icons/styles |
-| Доступность | PASS: 18 public/auth/settings/menu/modal/mobile состояний в Light/Dark, 0 автоматических A/AA violations; без исключения правил |
+| Frontend unit/component | PASS: 151 tests / 34 files после recovery/form/step исправлений; typecheck, lint, build, local tokens/icons/styles |
+| Доступность | PASS: 28 public/auth/settings/menu/modal/mobile состояний в Light/Dark, 0 автоматических A/AA violations; без исключения правил; authenticated MFA matrix в browser E2E |
 | Повторные действия UI | PASS: 30 циклов меню, 10 диалогов; глобальные listeners до/после — 1/1; orphan overlay — 0 |
 | Настройки и меню на production preview | PASS: theme timing, rapid changes, reduced motion, storage/reload/multi-tab, custom select, cascade/Back, keyboard, dialog scope, context menus |
-| Responsive browser smoke | PASS: 13 маршрутов × 9 ширин 320–1440 px, RU, темы, guards и отсутствие горизонтального overflow |
+| Responsive browser smoke | PASS: 18 маршрутов × 9 ширин 320–1440 px, RU, темы, guards и отсутствие горизонтального overflow |
 | Production HTTP smoke | PASS для Core и Commercial: non-root, без checkout mounts, live + schema readiness HTTP 200 |
 | Composer / PHP static analysis | PASS: strict validate, platform requirements, audit; Core Psalm и Commercial PHPStan — 0 errors |
 | CI configuration | PASS: Actionlint + embedded ShellCheck, bash syntax; PowerShell syntax и ZIP regression |
@@ -75,8 +100,9 @@ smoke workers отключены. Эти проверки подтверждаю
 
 ## Что реально проверяет CI
 
-[Workflow](../../.github/workflows/ci.yml) содержит 8 jobs: configuration,
-Windows tools, Core, Commercial, cross-plane, documentation, frontend и browser E2E.
+[Workflow](../../.github/workflows/ci.yml) содержит 9 jobs: configuration,
+Windows tools, Core, Commercial, infrastructure images, cross-plane, documentation,
+frontend и browser E2E.
 Тестовые suites не отключены, ошибки tests не игнорируются. npm audit блокирует
 HIGH/CRITICAL. Production image gate блокирует HIGH/CRITICAL с выпущенным исправлением.
 
@@ -95,7 +121,8 @@ JSON inventory сохраняется как artifact на 7 дней. Прох�
 До исправлений Trivy нашёл в Commercial 128 исправляемых HIGH, в Core —
 14 исправляемых CRITICAL и 93 HIGH. После обновлений в обоих production images
 исправляемых HIGH/CRITICAL **0**. Полный scan каждого образа всё ещё содержит
-**1 CRITICAL и 58 HIGH без доступного исправления**; исключающие CVE ignore-файлы не добавлены.
+**1 CRITICAL и 60 HIGH без доступного исправления** по аудиту 1 ноября; число HIGH менялось
+при обновлении scanner DB без изменения source. Исключающие CVE ignore-файлы не добавлены.
 
 CRITICAL — `libxml2`, CVE-2026-6653. Debian trixie отмечен vulnerable/no-dsa;
 исправление есть в unstable, но отсутствует в текущем stable package.
@@ -109,9 +136,17 @@ CRITICAL — `libxml2`, CVE-2026-6653. Debian trixie отмечен vulnerable/n
 [minimatch advisory](https://github.com/advisories/GHSA-g3hv-75wg-m249),
 [glob advisory](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).
 
+PostgreSQL/Mailpit в Compose обновлены до `18.6-trixie` и `v1.33.0` с digest и
+перезапущены на рабочих томах: Core — 53 прикладные таблицы/2 схемы, Commercial —
+61 прикладная таблица/42 migration versions, все контейнеры healthy. Infrastructure
+scan job теперь явно сканирует PostgreSQL, Redis и Mailpit отдельно от app images.
+Mailpit — dev/test инфраструктура. Остаточный риск app images зафиксирован как
+release blocker: [IMAGE_RISK_DECISION_2026-11-01](IMAGE_RISK_DECISION_2026-11-01.md).
+
 До production также остаются: least-privilege DB roles вместо локальных bootstrap
-credentials ([инструкция](DATABASE_ROLES.md)), реальный provider/YooKassa smoke,
-утверждённая privacy policy, HA, restore/PITR drill, TLS/DNS и нагрузочный SLO.
+credentials ([инструкция](DATABASE_ROLES.md); CI denial gate добавлен, рабочий runtime
+ещё не переключён), реальный provider/YooKassa smoke, утверждённая privacy policy, HA,
+restore/PITR drill, TLS/DNS и нагрузочный SLO.
 Прежний локальный 10 000 VU прогон с 82,75% HTTP errors / p95 10,52 s не считается пройденным.
 
 ## БД, frontend и документы
@@ -167,8 +202,8 @@ Axe сохраняет incomplete-результаты в JSON: символы �
 клавиатурой/скриншотами; наличие всех aria-controls/labelledby/describedby/owns проверяет скрипт.
 Автоматический PASS не равен полной WCAG-сертификации.
 
-Следующее обновление checkbox/switch/range добавило ещё 5 component tests и 24 browser
-assertions для настоящих mouse/touch/keyboard событий. Итого frontend: 146 tests / 34 files.
+Следующее обновление checkbox/switch/range добавило ещё 5 component tests и 27 browser
+assertions, включая native form attributes/reset. Итого frontend: 151 tests / 34 files.
 Новые элементы используют общие theme/motion variables и reduced motion; повторные
 appearance/menu/UX/responsive и accessibility checks прошли. [Снимки и проверки controls](evidence/controls-2026-10-31/README.md).
 
@@ -240,7 +275,14 @@ Buildx показывает 0 Б и пустую history.
 сохранены по ссылкам выше. Исходники тестов и полные
 библиотеки иконок/шрифтов сохранены.
 
-Рабочие 12 контейнеров не пересоздавались. Backend-оптимизация проверена в новом
-production image и isolated HTTP runtime; для её применения в рабочем локальном
-Control Plane требуется обычная пересборка/перезапуск его образа. Рабочие БД не мигрировались
-и не заполнялись тестовыми данными в этом проходе.
+В текущем проходе Control Plane image пересобран из source и рабочие control-контейнеры
+перезапущены без миграции и очистки данных. Новый image
+`sha256:2ca05ee845b667fd68023de1a8de9cf7a07e8d482305fd906eb9ca0a041bafe6` совпадает
+с image ID запущенного `platform-control-plane-1`; внутри контейнера присутствует
+минутное ограничение `last_used_at`. `/health/live` и `/health/ready` — 200, Commercial DB
+сохранила 6 control users и 42 migration versions. Полные login/account flows не
+повторялись без тестовых credentials; это остаётся smoke-задачей после выкладки.
+PostgreSQL/Mailpit/Redis рабочие контейнеры пересозданы на закреплённых digest;
+PostgreSQL сохранил именованные тома, проверены схемы и health. Первый pull Redis
+по неверному digest дал 8.8.4, который не прочитал существующий AOF; digest исправлен
+на текущий `8-alpine` (8.10.x), после чего Redis и зависимые workers восстановлены.

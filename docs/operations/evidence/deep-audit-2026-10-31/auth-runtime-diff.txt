@@ -1,0 +1,19 @@
+--- working-image/AuthService.php
++++ source/AuthService.php
+@@ -259,7 +259,15 @@
+         if ($user === false || $user['status'] !== 'active' || !is_string($user['id']) || !is_string($user['email_normalized']) || !is_string($user['password_hash'])) {
+             throw new AuthFailure('invalid_access_token');
+         }
+-        $this->connection->executeStatement("UPDATE commercial.control_sessions SET last_used_at = now() WHERE access_token_hash = decode(?, 'hex')", [$this->tokens->hash($accessToken)]);
++        // Usage is an approximate activity indicator, not an authorization cache.
++        // Match the bounded M2M activity update: parallel reads must not serialize
++        // on a session-row write/WAL flush for every request. Revocation and both
++        // expiry timestamps are still checked above on every authentication.
++        $this->connection->executeStatement(<<<'SQL'
++UPDATE commercial.control_sessions SET last_used_at = now()
++WHERE access_token_hash = decode(?, 'hex') AND revoked_at IS NULL
++  AND (last_used_at IS NULL OR last_used_at < now() - interval '1 minute')
++SQL, [$this->tokens->hash($accessToken)]);
+ 
+         return new ControlUserPrincipal($user['id'], $user['email_normalized'], $user['password_hash'],
+             is_string($user['session_id'] ?? null) ? $user['session_id'] : null,

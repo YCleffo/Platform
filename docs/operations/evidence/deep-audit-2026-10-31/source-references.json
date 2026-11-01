@@ -1,0 +1,84 @@
+{
+  "F01": [
+    {
+      "path": "apps/frontend/src/app/router/index.ts",
+      "sha256": "fa74c23f27c846e0393360b7cc420b14c9f9c3ca414eff97a9fa5b973fa1e4b9"
+    },
+    {
+      "path": "apps/frontend/src/modules/commercial/auth/LoginView.vue",
+      "sha256": "77f9a2c9cf521d0f93351dc4c67615c382904b62b2c4363f55498eb183de81b9"
+    },
+    {
+      "path": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
+      "sha256": "a0dcc2a242504e97cb08e30599c050d68769d249c3bca0816a957a0e3c89f80d"
+    }
+  ],
+  "F02": [
+    {
+      "path": "apps/frontend/src/modules/commercial/onboarding/VerifyEmailView.vue",
+      "sha256": "b97aeb017cdfa69e9f1cb5cfd1c21922c1c78f65db653e92dcfa52ebf3e4bb8a"
+    },
+    {
+      "path": "apps/frontend/src/modules/commercial/onboarding/RegisterView.vue",
+      "sha256": "b47b347e2ef7d2c6f3fa0d32ee0b3761334ec291f2f1df58aab8c0321cd9752b"
+    }
+  ],
+  "F03": [
+    {
+      "path": "apps/frontend/src/shared/ui/fields/AppSwitch.vue",
+      "sha256": "6c35062e88f05bc5242bf3879cd5005132a41bfa3dce7a34045f500ff43b6864"
+    },
+    {
+      "path": "apps/frontend/src/shared/ui/fields/AppInput.vue",
+      "sha256": "e478e9e20bd3d72eeffcb2cd8884c449667e571ed36f04cc0c585b85fdd88455"
+    }
+  ],
+  "F04": [
+    {
+      "path": "apps/frontend/src/shared/api/http.ts",
+      "sha256": "2f373643937361dab2a75a29a8af4f03de53b0444054b2ce619cdcd14f194c03"
+    },
+    {
+      "path": "apps/frontend/src/modules/commercial/onboarding/RegisterView.vue",
+      "sha256": "b47b347e2ef7d2c6f3fa0d32ee0b3761334ec291f2f1df58aab8c0321cd9752b"
+    }
+  ],
+  "F05": [
+    {
+      "path": "apps/frontend/src/app/router/index.ts",
+      "sha256": "fa74c23f27c846e0393360b7cc420b14c9f9c3ca414eff97a9fa5b973fa1e4b9"
+    }
+  ],
+  "F06": [
+    {
+      "path": "apps/frontend/src/modules/settings/AppearanceSettingsView.vue",
+      "sha256": "618cead9ca914d625063b97f6e3f48fde4ebc507be24643fff2a5a93e5bfe125"
+    }
+  ],
+  "F07": [
+    {
+      "path": "apps/control-plane/src/Identity/Application/AuthService.php",
+      "sha256": "4303bcb584a6af6daab85abefce798ff29ef9e6fd179352cb9b62a1dd8e0a028"
+    }
+  ],
+  "F08": [
+    {
+      "path": "docs/operations/DATABASE_ROLES.md",
+      "sha256": "d280c16ee41fca86bd35620d45ed987691911fd2a5118380d7e48406a91a60bd"
+    },
+    {
+      "path": "scripts/operations/provision-db-role.sh",
+      "sha256": "083559c6348f8bc98eef45d995d609de0d7adf65997b16796db98e2a46b308a9"
+    }
+  ],
+  "F09": [
+    {
+      "path": "apps/frontend/src/modules/commercial/auth/LoginView.vue",
+      "sha256": "77f9a2c9cf521d0f93351dc4c67615c382904b62b2c4363f55498eb183de81b9"
+    },
+    {
+      "path": "apps/frontend/src/shared/composables/useAsyncAction.ts",
+      "sha256": "0bf8830f95b644ab721a53e2a474fed74f19ff43fc4ca1d7bd49b82671c70bd9"
+    }
+  ]
+}

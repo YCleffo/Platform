@@ -73,6 +73,33 @@ describe('appearance preferences', () => {
     expect(value).not.toHaveProperty('extra');
   });
 
+  it('aligns stored numeric values with the native range steps', () => {
+    const value = normalizeAppearance({
+      fontScale: 1.03,
+      spacingScale: 1.03,
+      radiusScale: .12,
+      buttonPaddingX: 16.6,
+      buttonPaddingY: 9.4,
+      animationSpeed: 1.1,
+      themeDuration: 201,
+    });
+    expect(value).toMatchObject({
+      fontScale: 1.05,
+      spacingScale: 1.05,
+      radiusScale: .1,
+      buttonPaddingX: 17,
+      buttonPaddingY: 9,
+      animationSpeed: 1,
+      themeDuration: 200,
+    });
+
+    localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ fontScale: 1.03 }));
+    stop = initAppearance();
+    const prefs = useAppearance();
+    expect(prefs.appearance.fontScale).toBe(1.05);
+    expect(document.documentElement.style.getPropertyValue('--ui-font-scale')).toBe('1.05');
+  });
+
   it('restores and synchronizes CSS, persists changes and resets defaults', () => {
     localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ density: 'compact', fontScale: 1.2 }));
     stop = initAppearance();

@@ -1,0 +1,67 @@
+[
+  {
+    "command": [
+      "python",
+      "scripts/database/export_schema.py",
+      "--plane",
+      "core",
+      "--from-snapshot",
+      "--check"
+    ],
+    "exit": 0
+  },
+  {
+    "command": [
+      "python",
+      "scripts/database/export_schema.py",
+      "--plane",
+      "commercial",
+      "--from-snapshot",
+      "--check"
+    ],
+    "exit": 0
+  },
+  {
+    "command": [
+      "python",
+      "scripts/documentation/build-reference.py",
+      "--check"
+    ],
+    "exit": 0
+  },
+  {
+    "command": [
+      "python",
+      "scripts/documentation/build-coverage.py",
+      "--check"
+    ],
+    "exit": 0
+  },
+  {
+    "command": [
+      "python",
+      "scripts/documentation/check-links.py"
+    ],
+    "exit": 0
+  },
+  {
+    "command": [
+      "npm.cmd",
+      "run",
+      "check:dbml",
+      "--prefix",
+      "scripts/documentation"
+    ],
+    "exit": 0
+  },
+  {
+    "command": [
+      "npm.cmd",
+      "run",
+      "check:python",
+      "--prefix",
+      "scripts/documentation"
+    ],
+    "exit": 0
+  }
+]

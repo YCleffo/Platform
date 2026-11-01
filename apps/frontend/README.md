@@ -33,9 +33,11 @@ node scripts/verify-responsive.mjs
 
 Эти проверки не меняют данные сервера. UX-прогон сохраняет screenshots и проверяет повторные
 открытия без утечки глобальных обработчиков. Проверка axe-core запускается без исключений
-правил для WCAG A/AA; автоматический результат дополняет ручную проверку.
-Account/invitation E2E запускаются только
+правил для WCAG A/AA; authenticated matrix в browser E2E включает Security Center, MFA setup,
+recovery codes и MFA challenge. Account/invitation/recovery E2E запускаются только
 через одноразовый CI runtime с isolation nonce; рабочие БД использовать нельзя.
+Сценарии восстановления: `/forgot-password`, `/reset-password?token=…` и
+`/resend-verification`; неизвестные URL показывают локализованную 404-страницу.
 
 Нагрузка: `npm run test:load` с `LOAD_PROFILE=smoke|standard|stress` и теми же обязательными
 E2E isolation markers/nonce. Перед запуском на **одноразовой** Commercial БД применить

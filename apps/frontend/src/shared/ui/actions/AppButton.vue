@@ -5,7 +5,7 @@ import { LoaderCircle } from '@/shared/ui/icons';
 interface Props {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 's' | 'm' | 'l';
-  type?: 'button' | 'submit';
+  type?: 'button' | 'submit' | 'reset';
   loading?: boolean;
   disabled?: boolean;
   block?: boolean;

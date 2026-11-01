@@ -93,8 +93,14 @@ function done(): void {
 
     <div v-else-if="setup" class="mfa-setup">
       <p class="mfa-setup__intro">{{ $t('security.mfaSetupIntro') }}</p>
-      <div class="mfa-setup__qr" role="img" :aria-label="$t('security.qrLabel')">
-        <QrcodeSvg :value="setup.otpauth_uri" :size="200" level="M" :margin="2" />
+      <div class="mfa-setup__qr">
+        <QrcodeSvg
+          :value="setup.otpauth_uri"
+          :size="200"
+          level="M"
+          :margin="2"
+          :aria-label="$t('security.qrLabel')"
+        />
       </div>
       <div class="mfa-setup__manual">
         <span class="mfa-setup__manual-label">{{ $t('security.manualSecret') }}</span>

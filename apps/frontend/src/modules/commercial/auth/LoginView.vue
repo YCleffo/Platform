@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onBeforeUnmount } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useAsyncAction } from '@/shared/composables/useAsyncAction';
@@ -16,6 +16,13 @@ const route = useRoute();
 const redirectTarget = computed(() =>
   typeof route.query.redirect === 'string' ? route.query.redirect : null,
 );
+const controller = new AbortController();
+let active = true;
+
+onBeforeUnmount(() => {
+  active = false;
+  controller.abort();
+});
 
 const form = useForm({
   initial: { email: '', password: '' },
@@ -26,7 +33,10 @@ const form = useForm({
 });
 
 const { submitting, message, run } = useAsyncAction(async () => {
-  await auth.login(form.values.email, form.values.password);
+  await auth.login(form.values.email, form.values.password, controller.signal);
+  if (!active) {
+    return;
+  }
   if (auth.mfaChallenge !== null) {
     await router.push({
       name: 'mfa',
@@ -48,6 +58,9 @@ async function onSubmit(): Promise<void> {
 <template>
   <AppFormShell :title="$t('auth.signIn')" :subtitle="$t('auth.signInSubtitle')" :error="message">
     <form class="auth-form" novalidate @submit.prevent="onSubmit">
+      <p v-if="route.query.reset === 'success'" class="auth-form__notice" role="status">
+        {{ $t('auth.resetSuccess') }}
+      </p>
       <AppInput
         id="login-email"
         v-model="form.values.email"
@@ -66,12 +79,18 @@ async function onSubmit(): Promise<void> {
         autocomplete="current-password"
         required
       />
+      <p class="auth-form__aux">
+        <RouterLink :to="{ name: 'password-reset-request' }">{{ $t('auth.forgotPassword') }}</RouterLink>
+      </p>
       <AppButton type="submit" :loading="submitting" block>{{ $t('auth.signIn') }}</AppButton>
       <p class="auth-form__switch">
         {{ $t('auth.noAccount') }}
         <RouterLink :to="{ name: 'register', query: redirectTarget ? { redirect: redirectTarget } : {} }">
           {{ $t('nav.register') }}
         </RouterLink>
+      </p>
+      <p class="auth-form__switch">
+        <RouterLink :to="{ name: 'resend-verification' }">{{ $t('auth.resendLink') }}</RouterLink>
       </p>
     </form>
   </AppFormShell>
@@ -90,6 +109,24 @@ async function onSubmit(): Promise<void> {
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
   text-align: center;
+  transition: var(--theme-transition);
+}
+
+.auth-form__aux {
+  font-size: var(--type-body-medium-emphasis-size);
+  line-height: var(--type-body-medium-emphasis-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
+  text-align: end;
+}
+
+.auth-form__notice {
+  padding: var(--space-12);
+  border: 1px solid var(--success);
+  border-radius: var(--radius-control-m);
+  background: var(--success-soft);
+  color: var(--success-text);
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
   transition: var(--theme-transition);
 }
 </style>

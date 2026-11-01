@@ -26,10 +26,14 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => status.value === 'authenticated' && sessionTokens.value !== null);
   const currentUser = computed(() => user.value);
 
-  async function establishSession(tokens: SessionTokens, operation: number): Promise<void> {
+  async function establishSession(
+    tokens: SessionTokens,
+    operation: number,
+    signal?: AbortSignal,
+  ): Promise<void> {
     beginSession(tokens);
     try {
-      const me = await commercialAccount.me();
+      const me = await commercialAccount.me(signal);
       if (operation !== operationId) {
         return;
       }
@@ -59,12 +63,20 @@ export const useAuthStore = defineStore('auth', () => {
     return commercialAuth.verifyEmail(token);
   }
 
-  async function login(email: string, password: string): Promise<void> {
+  async function requestPasswordReset(email: string): Promise<StatusResult> {
+    return commercialAuth.requestPasswordReset(email);
+  }
+
+  async function confirmPasswordReset(token: string, password: string): Promise<StatusResult> {
+    return commercialAuth.confirmPasswordReset(token, password);
+  }
+
+  async function login(email: string, password: string, signal?: AbortSignal): Promise<void> {
     const operation = ++operationId;
     status.value = 'authenticating';
     mfaChallenge.value = null;
     try {
-      const result = await commercialAuth.login(email, password);
+      const result = await commercialAuth.login(email, password, signal);
       if (operation !== operationId) {
         throw new SupersededOperationError();
       }
@@ -73,7 +85,7 @@ export const useAuthStore = defineStore('auth', () => {
         status.value = 'mfa_required';
         return;
       }
-      await establishSession(result, operation);
+      await establishSession(result, operation, signal);
     } catch (error) {
       if (operation !== operationId) {
         throw new SupersededOperationError();
@@ -83,7 +95,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function verifyMfa(code?: string, recoveryCode?: string): Promise<void> {
+  async function verifyMfa(
+    code?: string,
+    recoveryCode?: string,
+    signal?: AbortSignal,
+  ): Promise<void> {
     const challenge = mfaChallenge.value;
     if (challenge === null) {
       throw new MfaChallengeMissingError();
@@ -91,12 +107,16 @@ export const useAuthStore = defineStore('auth', () => {
     const operation = ++operationId;
     status.value = 'authenticating';
     try {
-      const tokens = await commercialAuth.verifyMfaLogin(challenge.challenge_token, { code, recoveryCode });
+      const tokens = await commercialAuth.verifyMfaLogin(
+        challenge.challenge_token,
+        { code, recoveryCode },
+        signal,
+      );
       if (operation !== operationId) {
         throw new SupersededOperationError();
       }
       mfaChallenge.value = null;
-      await establishSession(tokens, operation);
+      await establishSession(tokens, operation, signal);
     } catch (error) {
       if (operation !== operationId) {
         throw new SupersededOperationError();
@@ -164,6 +184,8 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     resendVerification,
     verifyEmail,
+    requestPasswordReset,
+    confirmPasswordReset,
     login,
     verifyMfa,
     refreshUser,

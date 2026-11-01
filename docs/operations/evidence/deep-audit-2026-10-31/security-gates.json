@@ -1,0 +1,10 @@
+[
+  {
+    "image": "platform-core:deep-audit",
+    "exit": 0
+  },
+  {
+    "image": "platform-commercial:deep-audit",
+    "exit": 0
+  }
+]

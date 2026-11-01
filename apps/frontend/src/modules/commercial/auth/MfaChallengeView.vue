@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { ShieldCheck } from '@/shared/ui/icons';
@@ -17,6 +17,13 @@ const redirectTarget = computed(() =>
   typeof route.query.redirect === 'string' ? route.query.redirect : null,
 );
 const { t } = useI18n();
+const controller = new AbortController();
+let active = true;
+
+onBeforeUnmount(() => {
+  active = false;
+  controller.abort();
+});
 
 const form = useForm({
   initial: { code: '', recoveryCode: '' },
@@ -32,7 +39,11 @@ const { submitting, message, run } = useAsyncAction(async () => {
   await auth.verifyMfa(
     form.values.code.trim() !== '' ? form.values.code.trim() : undefined,
     form.values.recoveryCode.trim() !== '' ? form.values.recoveryCode.trim() : undefined,
+    controller.signal,
   );
+  if (!active) {
+    return;
+  }
   await router.push(redirectTarget.value !== null ? { path: redirectTarget.value } : { name: 'cabinet' });
 });
 

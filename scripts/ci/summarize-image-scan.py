@@ -22,7 +22,11 @@ class ScanReport(TypedDict):
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("report", type=Path)
-parser.add_argument("--plane", choices=["Core", "Commercial"], required=True)
+parser.add_argument(
+    "--plane",
+    choices=["Core", "Commercial", "PostgreSQL", "Redis", "Mailpit"],
+    required=True,
+)
 args = parser.parse_args()
 report = cast(ScanReport, json.loads(args.report.read_text(encoding="utf-8")))
 if "Results" not in report:

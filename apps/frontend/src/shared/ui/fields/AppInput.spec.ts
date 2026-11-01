@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { defineComponent, nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import AppInput from './AppInput.vue';
 
@@ -39,5 +40,29 @@ describe('AppInput', () => {
     });
     expect(wrapper.get('input').attributes('disabled')).toBeDefined();
     expect(wrapper.get('.app-input__control').classes()).toContain('app-input__control--error');
+  });
+
+  it('keeps native form attributes on the input and synchronizes a native reset', async () => {
+    const Host = defineComponent({
+      components: { AppInput },
+      data: () => ({ value: 'Changed' }),
+      template: '<form><AppInput id="username" v-model="value" name="username" /></form>',
+    });
+    const wrapper = mount(Host);
+    try {
+      const input = wrapper.get('input');
+      const form = wrapper.get('form').element as HTMLFormElement;
+      expect(input.attributes('name')).toBe('username');
+      expect(new FormData(form).get('username')).toBe('Changed');
+
+      form.reset();
+      await nextTick();
+
+      expect(wrapper.vm.value).toBe('');
+      expect(input.element.value).toBe('');
+      expect(new FormData(form).get('username')).toBe('');
+    } finally {
+      wrapper.unmount();
+    }
   });
 });

@@ -6,12 +6,14 @@
 
 ## Текущий этап: Commercial
 
-Статус: функциональные блоки реализованы, проверяются CI и одноразовым browser E2E.
+Статус: пользовательские recovery-сценарии и общие контролы проверяются CI и одноразовым browser E2E.
+Production readiness остаётся `NOT_READY` до закрытия F08/F11/F12 и эксплуатационных проверок.
 
 | Блок | Route | Владелец данных | Фактический API | Критерий приёмки |
 | --- | --- | --- | --- | --- |
 | Регистрация и вход | `/register`, `/login` | Control User | `/api/control/auth/*` | реальный backend, токены только в памяти |
-| MFA и step-up | `/mfa`, `/settings/security` | Control User | `/api/control/auth/mfa/*`, `/api/control/auth/reauthenticate` | enrollment, challenge и step-up покрыты integration/browser тестами |
+| Восстановление доступа | `/resend-verification`, `/forgot-password`, `/reset-password?token=…` | Control User | `/api/control/auth/verification/resend`, `/api/control/auth/password/reset/*` | generic acknowledgement, ротация/single-use токена, invalid/used/missing token без пустого экрана |
+| MFA и step-up | `/mfa`, `/settings/security` | Control User | `/api/control/auth/mfa/*`, `/api/control/auth/reauthenticate` | enrollment, challenge и step-up покрыты integration/browser тестами; QR имеет accessible name |
 | Каталог | `/` | Commercial Catalog | `/api/control/catalog/plans` | опубликованные версии и цены, без mock |
 | Кабинет | `/cabinet` | Commercial Account | `/api/control/accounts` | пагинация, создание с Idempotency-Key |
 | Участники | `/accounts/:id/members` | Commercial Membership | `/api/control/accounts/:id/memberships` | permissions на сервере, последний owner защищён |
@@ -20,6 +22,13 @@
 | Локальные шрифты | все экраны | Frontend | — | Inter и Space Mono из bundle, без Google Fonts |
 
 Ограничение: Commercial UI не является Education dashboard и не должен получать учебные сущности.
+
+### Граница текущего Commercial релиза
+
+В пользовательскую границу входят catalog, аккаунты, участники, приглашения, вход/MFA и
+восстановление доступа. Checkout/subscription UI и полный Security management lifecycle
+не считаются завершёнными только из-за наличия backend endpoints: их пользовательские
+сценарии нужно явно включить в отдельный релизный этап и покрыть browser E2E.
 
 ## Следующий этап: Education
 
@@ -48,8 +57,10 @@ CI и отдельного решения о backend Education. До этого 
 
 ## Ближайшие задачи после исправлений аудита
 
-- Повторить полный GitHub Actions workflow на зафиксированном SHA.
-- Проверить browser E2E artifacts (screenshots, логи Vite) на стабильность.
-- Выполнить production database role provisioning и privilege-denial tests на изолированной копии.
-- Обновить рабочую установку после зелёного CI и проверить сохранность данных.
+- Повторить полный GitHub Actions workflow на зафиксированном SHA, включая recovery E2E и
+  authenticated accessibility matrix.
+- Выполнить production database role provisioning и privilege-denial tests на изолированной копии (F08).
+- Обновить и сканировать PostgreSQL/Mailpit images, оформить решение по остаточным CVE (F11/F12).
+- Подтвердить, что рабочий Control Plane artifact связан с проверенным SHA, и повторить
+  health/login/account smoke после restart.
 - Начать Education только по плану выше.

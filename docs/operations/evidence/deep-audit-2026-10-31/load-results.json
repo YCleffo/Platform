@@ -1,0 +1,233 @@
+[
+  {
+    "name": "smoke-stop",
+    "command": [
+      "docker",
+      "compose",
+      "--profile",
+      "control-test",
+      "stop",
+      "control-plane-test"
+    ],
+    "exit": 0,
+    "seconds": 2.59
+  },
+  {
+    "name": "smoke-reset",
+    "command": [
+      "C:/Program Files/Git/bin/bash.exe",
+      "scripts/ci/control-test-reset.sh"
+    ],
+    "exit": 0,
+    "seconds": 6.69
+  },
+  {
+    "name": "smoke-http",
+    "command": [
+      "docker",
+      "compose",
+      "--profile",
+      "control-test",
+      "up",
+      "-d",
+      "--wait",
+      "control-plane-test",
+      "mailpit-test"
+    ],
+    "exit": 0,
+    "seconds": 6.16
+  },
+  {
+    "name": "smoke-worker",
+    "command": [
+      "C:/Program Files/Git/bin/bash.exe",
+      "scripts/ci/control-email-worker-start.sh"
+    ],
+    "exit": 0,
+    "seconds": 0.69
+  },
+  {
+    "name": "smoke-catalog",
+    "command": [
+      "docker",
+      "compose",
+      "--profile",
+      "control-test",
+      "exec",
+      "-T",
+      "control-postgres-test",
+      "psql",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-U",
+      "platform_control_test",
+      "-d",
+      "platform_commercial_test"
+    ],
+    "exit": 0,
+    "seconds": 0.21
+  },
+  {
+    "name": "load-ci-smoke",
+    "command": [
+      "node",
+      "scripts/load-commercial.mjs"
+    ],
+    "exit": 0,
+    "seconds": 15.89
+  },
+  {
+    "name": "multi-stop",
+    "command": [
+      "docker",
+      "compose",
+      "--profile",
+      "control-test",
+      "stop",
+      "control-plane-test"
+    ],
+    "exit": 0,
+    "seconds": 0.92
+  },
+  {
+    "name": "multi-reset",
+    "command": [
+      "C:/Program Files/Git/bin/bash.exe",
+      "scripts/ci/control-test-reset.sh"
+    ],
+    "exit": 0,
+    "seconds": 6.77
+  },
+  {
+    "name": "multi-http",
+    "command": [
+      "docker",
+      "compose",
+      "--profile",
+      "control-test",
+      "up",
+      "-d",
+      "--wait",
+      "control-plane-test",
+      "mailpit-test"
+    ],
+    "exit": 0,
+    "seconds": 6.26
+  },
+  {
+    "name": "multi-worker",
+    "command": [
+      "C:/Program Files/Git/bin/bash.exe",
+      "scripts/ci/control-email-worker-start.sh"
+    ],
+    "exit": 0,
+    "seconds": 2.0
+  },
+  {
+    "name": "multi-catalog",
+    "command": [
+      "docker",
+      "compose",
+      "--profile",
+      "control-test",
+      "exec",
+      "-T",
+      "control-postgres-test",
+      "psql",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-U",
+      "platform_control_test",
+      "-d",
+      "platform_commercial_test"
+    ],
+    "exit": 0,
+    "seconds": 0.22
+  },
+  {
+    "name": "load-multi",
+    "command": [
+      "node",
+      "runtime/deep-audit-20261031/load-multi.mjs"
+    ],
+    "exit": 1,
+    "seconds": 8.64
+  },
+  {
+    "name": "multi-stop",
+    "command": [
+      "docker",
+      "compose",
+      "--profile",
+      "control-test",
+      "stop",
+      "control-plane-test"
+    ],
+    "exit": 0,
+    "seconds": 0.72
+  },
+  {
+    "name": "multi-reset",
+    "command": [
+      "C:/Program Files/Git/bin/bash.exe",
+      "scripts/ci/control-test-reset.sh"
+    ],
+    "exit": 0,
+    "seconds": 8.11
+  },
+  {
+    "name": "multi-http",
+    "command": [
+      "docker",
+      "compose",
+      "--profile",
+      "control-test",
+      "up",
+      "-d",
+      "--wait",
+      "control-plane-test",
+      "mailpit-test"
+    ],
+    "exit": 0,
+    "seconds": 6.7
+  },
+  {
+    "name": "multi-worker",
+    "command": [
+      "C:/Program Files/Git/bin/bash.exe",
+      "scripts/ci/control-email-worker-start.sh"
+    ],
+    "exit": 0,
+    "seconds": 1.97
+  },
+  {
+    "name": "multi-catalog",
+    "command": [
+      "docker",
+      "compose",
+      "--profile",
+      "control-test",
+      "exec",
+      "-T",
+      "control-postgres-test",
+      "psql",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-U",
+      "platform_control_test",
+      "-d",
+      "platform_commercial_test"
+    ],
+    "exit": 0,
+    "seconds": 0.2
+  },
+  {
+    "name": "load-multi",
+    "command": [
+      "node",
+      "runtime/deep-audit-20261031/load-multi.mjs"
+    ],
+    "exit": 0,
+    "seconds": 209.35
+  }
+]

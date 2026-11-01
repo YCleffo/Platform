@@ -1,19 +1,34 @@
 <script setup lang="ts">
-import { useAttrs } from 'vue';
+import { onBeforeUnmount, onMounted, ref, useAttrs } from 'vue';
 defineOptions({ inheritAttrs: false });
 const props = withDefaults(defineProps<{ id: string; label: string; description?: string; disabled?: boolean; name?: string }>(), { description: undefined, disabled: false, name: undefined });
 const model = defineModel<boolean>({ default: false });
 const attrs = useAttrs();
+const input = ref<HTMLInputElement | null>(null);
+let form: HTMLFormElement | null = null;
 function describedBy(): string | undefined {
   return [props.description ? `${props.id}-description` : '', typeof attrs['aria-describedby'] === 'string' ? attrs['aria-describedby'] : ''].filter(Boolean).join(' ') || undefined;
 }
+function onReset(): void {
+  if (input.value !== null) {
+    model.value = input.value.defaultChecked;
+  }
+}
+onMounted(() => {
+  form = input.value?.form ?? null;
+  form?.addEventListener('reset', onReset);
+});
+onBeforeUnmount(() => {
+  form?.removeEventListener('reset', onReset);
+  form = null;
+});
 </script>
 
 <template>
   <label class="app-switch" :class="{ 'app-switch--disabled': disabled }" :for="id">
     <span class="app-switch__copy"><span :id="`${id}-label`" class="app-switch__label">{{ label }}</span><span v-if="description" :id="`${id}-description`" class="app-switch__description">{{ description }}</span></span>
     <span class="app-switch__control">
-      <input :id="id" v-bind="$attrs" v-model="model" type="checkbox" role="switch" :disabled="disabled" :name="name" :aria-labelledby="`${id}-label`" :aria-describedby="describedBy()" />
+      <input ref="input" :id="id" v-bind="$attrs" v-model="model" type="checkbox" role="switch" :disabled="disabled" :name="name" :aria-labelledby="`${id}-label`" :aria-describedby="describedBy()" />
       <span class="app-switch__track" aria-hidden="true"><span class="app-switch__thumb" /></span>
     </span>
   </label>

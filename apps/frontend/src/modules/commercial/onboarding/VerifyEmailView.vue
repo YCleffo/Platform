@@ -58,7 +58,7 @@ onMounted(async () => {
       <h1 class="verify-view__title">{{ $t('auth.verifyFailed') }}</h1>
       <p class="verify-view__text" role="alert">{{ errorMessage }}</p>
       <div class="verify-view__actions">
-        <RouterLink class="verify-view__link" :to="{ name: 'register' }">
+        <RouterLink class="verify-view__link" :to="{ name: 'resend-verification' }">
           {{ $t('auth.resend') }}
         </RouterLink>
         <RouterLink class="verify-view__link" :to="{ name: 'login' }">{{ $t('nav.login') }}</RouterLink>

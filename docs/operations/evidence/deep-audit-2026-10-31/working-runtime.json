@@ -1,0 +1,30 @@
+{
+  "platform-backend-1": {
+    "tables": 54,
+    "invalidIndexes": 0,
+    "unvalidatedConstraints": 0,
+    "applicationRole": {
+      "rolname": "platform_app",
+      "rolsuper": true,
+      "rolcreatedb": true,
+      "rolcreaterole": true,
+      "rolbypassrls": true
+    }
+  },
+  "platform-control-plane-1": {
+    "tables": 62,
+    "invalidIndexes": 0,
+    "unvalidatedConstraints": 0,
+    "applicationRole": {
+      "rolname": "platform_control",
+      "rolsuper": true,
+      "rolcreatedb": true,
+      "rolcreaterole": true,
+      "rolbypassrls": true
+    }
+  },
+  "8080Ready": 200,
+  "8090Ready": 200,
+  "authServiceSourceHash": "4303bcb584a6af6daab85abefce798ff29ef9e6fd179352cb9b62a1dd8e0a028",
+  "authServiceRuntimeHash": "f25695bc744459d7ea468129882e05758d290453621c5b0705efe5af59f8c4e0"
+}

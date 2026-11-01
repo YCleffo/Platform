@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "checks": [
+    "Native mixed checkbox state",
+    "Whole label selects both children",
+    "Keyboard Space clears the group",
+    "Partial selection restores native mixed state",
+    "Disabled controls remain native and unfocusable",
+    "Switch works with keyboard Space",
+    "Switch works from its full label",
+    "Switch thumb expands during a real press",
+    "Native slider follows real pointer dragging",
+    "Slider thumb grows during press",
+    "Release outside slider clears pressed state",
+    "A complete drag is undone in one step",
+    "Keyboard End reaches the range maximum",
+    "Keyboard Home reaches the range minimum",
+    "Animation switch disables dependent settings",
+    "Switch setting survives a reload",
+    "Reduced motion removes switch transitions",
+    "OS reduced motion keeps dependent settings disabled",
+    "Switch responds to touch across the whole label",
+    "Checkbox group responds to touch",
+    "Native range follows real touch dragging",
+    "Touch release clears pressed state",
+    "320px with 140% text has no horizontal overflow",
+    "No browser errors: "
+  ]
+}

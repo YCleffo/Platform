@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "cycles": 30,
+  "dialogCycles": 10,
+  "listenerBaseline": 1,
+  "listenerFinal": 1,
+  "interactionCycleP95Ms": 580.3364999999994,
+  "externalOriginsOutsideVisualAssets": [
+    "http://local.adguard.org"
+  ],
+  "screenshots": [
+    "ux-settings-desktop-light",
+    "ux-settings-desktop-dark",
+    "ux-cascade-desktop",
+    "ux-settings-mobile-ru",
+    "ux-settings-mobile-ru-dark",
+    "ux-settings-mobile-ranges",
+    "ux-settings-mobile-advanced",
+    "ux-settings-mobile-motion",
+    "ux-settings-320-large-font",
+    "ux-cascade-mobile-back",
+    "ux-cascade-landscape"
+  ]
+}

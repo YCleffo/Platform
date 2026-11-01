@@ -1,0 +1,290 @@
+[
+  {
+    "path": "docs/core-data-model.md",
+    "title": "# Модель данных Platform",
+    "lines": 53,
+    "bytes": 4200
+  },
+  {
+    "path": "docs/core-database-coverage.md",
+    "title": "# Покрытие таблиц Core и Runtime",
+    "lines": 77,
+    "bytes": 26636
+  },
+  {
+    "path": "docs/README.md",
+    "title": "# Документация Platform",
+    "lines": 82,
+    "bytes": 5595
+  },
+  {
+    "path": "docs/architecture/AUTHENTICATION_AUTHORIZATION.md",
+    "title": "# Среда аутентификации Core и граница авторизации",
+    "lines": 180,
+    "bytes": 10336
+  },
+  {
+    "path": "docs/architecture/BACKGROUND_JOBS.md",
+    "title": "# Background jobs",
+    "lines": 39,
+    "bytes": 6968
+  },
+  {
+    "path": "docs/architecture/COMMERCIAL_CONTROL_PLANE.md",
+    "title": "# Commercial Control Plane",
+    "lines": 94,
+    "bytes": 18120
+  },
+  {
+    "path": "docs/architecture/COMMERCIAL_SECURITY.md",
+    "title": "# Безопасность Commercial Control Plane",
+    "lines": 51,
+    "bytes": 8161
+  },
+  {
+    "path": "docs/architecture/COMMUNICATION.md",
+    "title": "# Communication в Core",
+    "lines": 159,
+    "bytes": 7288
+  },
+  {
+    "path": "docs/architecture/CORE_BACKEND.md",
+    "title": "# Архитектура backend-приложения Core",
+    "lines": 111,
+    "bytes": 10660
+  },
+  {
+    "path": "docs/architecture/CORE_INVARIANTS.md",
+    "title": "# Platform Core invariants",
+    "lines": 103,
+    "bytes": 6157
+  },
+  {
+    "path": "docs/architecture/DATABASE.md",
+    "title": "# Архитектура баз данных",
+    "lines": 16,
+    "bytes": 2055
+  },
+  {
+    "path": "docs/architecture/EVENT_CONTRACTS.md",
+    "title": "# События между процессами",
+    "lines": 21,
+    "bytes": 3003
+  },
+  {
+    "path": "docs/architecture/INTERNATIONALIZATION.md",
+    "title": "# Интернационализация Core и локализация API",
+    "lines": 160,
+    "bytes": 12859
+  },
+  {
+    "path": "docs/architecture/M2M_SERVICE_AUTHENTICATION.md",
+    "title": "# M2M service authentication foundation",
+    "lines": 78,
+    "bytes": 8454
+  },
+  {
+    "path": "docs/architecture/MODULARITY.md",
+    "title": "# Правила модульности",
+    "lines": 26,
+    "bytes": 2058
+  },
+  {
+    "path": "docs/architecture/NOTIFICATIONS.md",
+    "title": "# Политика уведомлений",
+    "lines": 12,
+    "bytes": 1210
+  },
+  {
+    "path": "docs/architecture/ORGANIZATION_ACCESS.md",
+    "title": "# Основы доступа к организациям",
+    "lines": 25,
+    "bytes": 2620
+  },
+  {
+    "path": "docs/architecture/PRESENCE.md",
+    "title": "# Присутствие и приватность",
+    "lines": 12,
+    "bytes": 1118
+  },
+  {
+    "path": "docs/architecture/PRIVACY_COMPLIANCE_CORE.md",
+    "title": "# Персональные данные в Core",
+    "lines": 73,
+    "bytes": 13024
+  },
+  {
+    "path": "docs/architecture/PRIVACY_MODULE_CONTRIBUTORS.md",
+    "title": "# Расширение Privacy через contributors",
+    "lines": 20,
+    "bytes": 3396
+  },
+  {
+    "path": "docs/architecture/RETENTION_ERASURE.md",
+    "title": "# Хранение, ограничения обработки и уничтожение",
+    "lines": 59,
+    "bytes": 9388
+  },
+  {
+    "path": "docs/architecture/SECURITY_HARDENING.md",
+    "title": "# Защита транспорта, браузерная граница и секреты",
+    "lines": 125,
+    "bytes": 9377
+  },
+  {
+    "path": "docs/architecture/USER_SETTINGS_PRIVACY.md",
+    "title": "# User Settings / Privacy Core",
+    "lines": 71,
+    "bytes": 4910
+  },
+  {
+    "path": "docs/database/README.md",
+    "title": "# Схема базы данных",
+    "lines": 28,
+    "bytes": 2474
+  },
+  {
+    "path": "docs/database/SCHEMA_REFERENCE.md",
+    "title": "# Справочник фактической базы данных",
+    "lines": 2820,
+    "bytes": 146718
+  },
+  {
+    "path": "docs/frontend/CHARTS_CONTRACT.md",
+    "title": "# Контракт графиков и аналитики (на будущее)",
+    "lines": 106,
+    "bytes": 6513
+  },
+  {
+    "path": "docs/frontend/README.md",
+    "title": "# Frontend Platform",
+    "lines": 224,
+    "bytes": 21118
+  },
+  {
+    "path": "docs/operations/AGENT_DEEP_AUDIT_BRIEF.md",
+    "title": "# Задание агенту: независимый глубокий аудит Platform",
+    "lines": 271,
+    "bytes": 28969
+  },
+  {
+    "path": "docs/operations/BACKUP_RESTORE.md",
+    "title": "# Резервирование и восстановление",
+    "lines": 22,
+    "bytes": 3213
+  },
+  {
+    "path": "docs/operations/DATABASE_ROLES.md",
+    "title": "# Роли PostgreSQL и минимальные привилегии",
+    "lines": 69,
+    "bytes": 4687
+  },
+  {
+    "path": "docs/operations/ENVIRONMENT.md",
+    "title": "# Конфигурация и секреты",
+    "lines": 54,
+    "bytes": 6672
+  },
+  {
+    "path": "docs/operations/EXTERNAL_COMPENSATION.md",
+    "title": "# External plan-change compensation",
+    "lines": 51,
+    "bytes": 3107
+  },
+  {
+    "path": "docs/operations/PRODUCTION_READINESS_PROGRESS.md",
+    "title": "# Проверка проекта и CI — 2026-10-31",
+    "lines": 246,
+    "bytes": 24382
+  },
+  {
+    "path": "docs/operations/PROVISIONING.md",
+    "title": "# Local Docker deployment provisioning",
+    "lines": 65,
+    "bytes": 8923
+  },
+  {
+    "path": "docs/operations/SAFE_DATABASE_UPGRADE.md",
+    "title": "# Обновление баз данных",
+    "lines": 42,
+    "bytes": 3895
+  },
+  {
+    "path": "docs/privacy/CONTROL_PLANE_PRIVACY.md",
+    "title": "# Control Plane personal data boundary",
+    "lines": 28,
+    "bytes": 5632
+  },
+  {
+    "path": "docs/privacy/CORE_DATA_INVENTORY.md",
+    "title": "# Core personal data inventory",
+    "lines": 75,
+    "bytes": 15202
+  },
+  {
+    "path": "docs/privacy/DATA_RESIDENCY.md",
+    "title": "# Доказательства резидентности данных",
+    "lines": 12,
+    "bytes": 1255
+  },
+  {
+    "path": "docs/privacy/DISTRIBUTION_CONSENT.md",
+    "title": "# Согласие на публичное распространение",
+    "lines": 12,
+    "bytes": 1289
+  },
+  {
+    "path": "docs/privacy/ISPDN_SECURITY_MATRIX.md",
+    "title": "# Матрица безопасности развёртывания ИСПДн",
+    "lines": 19,
+    "bytes": 2955
+  },
+  {
+    "path": "docs/privacy/PERSONAL_DATA_DESTRUCTION_EVIDENCE.md",
+    "title": "# Свидетельства уничтожения персональных данных",
+    "lines": 21,
+    "bytes": 2296
+  },
+  {
+    "path": "docs/privacy/PROCESSING_INFORMATION.md",
+    "title": "# Ответ с информацией об обработке",
+    "lines": 14,
+    "bytes": 1440
+  },
+  {
+    "path": "docs/privacy/PROCESSORS_AND_TRANSFERS.md",
+    "title": "# Обработчики, получатели и трансграничная передача",
+    "lines": 30,
+    "bytes": 3755
+  },
+  {
+    "path": "docs/privacy/PRODUCTION_PROCESSING_POLICY.md",
+    "title": "# Production processing policy",
+    "lines": 30,
+    "bytes": 3839
+  },
+  {
+    "path": "docs/processes/README.md",
+    "title": "# Бизнес-процессы Platform",
+    "lines": 34,
+    "bytes": 3669
+  },
+  {
+    "path": "docs/roadmap/PLATFORM_ROADMAP.md",
+    "title": "# План развития Platform",
+    "lines": 55,
+    "bytes": 6315
+  },
+  {
+    "path": "docs/security/AUTHENTICATION_AND_MFA.md",
+    "title": "# Аутентификация, внешние identity и MFA",
+    "lines": 197,
+    "bytes": 23439
+  },
+  {
+    "path": "docs/operations/evidence/controls-2026-10-31/README.md",
+    "title": "# Обновление checkbox / switch / range — 2026-10-31",
+    "lines": 21,
+    "bytes": 1989
+  }
+]

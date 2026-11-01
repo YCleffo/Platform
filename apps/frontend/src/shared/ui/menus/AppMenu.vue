@@ -126,9 +126,16 @@ function scheduleLayout(event?: Event): void {
   cancelAnimationFrame(frame);
   frame = requestAnimationFrame(layout);
 }
+function isAnchorLabel(target: Node): boolean {
+  if (!(target instanceof Element) || props.anchor === null) return false;
+  const label = target.closest('label');
+  if (!(label instanceof HTMLLabelElement)) return false;
+  return label.control === props.anchor || (props.anchor.id !== '' && label.htmlFor === props.anchor.id);
+}
 function outside(event: PointerEvent): void {
   const target = event.target;
   if (!(target instanceof Node) || layer.value?.contains(target) || props.anchor?.contains(target)) return;
+  if (isAnchorLabel(target)) return;
   close(false);
 }
 function onKeydown(event: KeyboardEvent): void {
@@ -225,7 +232,7 @@ onBeforeUnmount(() => { disposed = true; cleanup(); });
     <div v-if="open" :id="`${menuId}-layer`" ref="layer" class="app-menu" @contextmenu.prevent>
       <section v-for="(level, index) in levels" :key="level.depth" class="app-menu__panel" :data-menu-depth="level.depth"
         :style="{ width: `${panelWidth}px`, left: `${positions[index]?.left ?? 12}px`, top: `${positions[index]?.top ?? 12}px` }">
-        <header v-if="level.depth || searchable" class="app-menu__header">
+        <header v-if="level.depth || searchable" class="app-menu__header" :class="{ 'app-menu__header--nested': level.depth }">
           <button v-if="level.depth" type="button" class="app-menu__back" @click="back(level.depth)"><ChevronLeft :size="18" aria-hidden="true" /><span>{{ $t('menus.back') }} <small>{{ level.label }}</small></span></button>
           <div v-if="searchable && (!level.depth || drill)" class="app-menu__search">
             <input v-model="query" type="search" :aria-label="$t('menus.search')" :placeholder="$t('menus.search')" autocomplete="off" />
@@ -261,16 +268,19 @@ onBeforeUnmount(() => { disposed = true; cleanup(); });
 .app-menu { position: fixed; inset: 0; z-index: var(--z-menu); pointer-events: none; }
 .app-menu__panel { position: fixed; display: flex; flex-direction: column; max-height: calc(100dvh - 24px); pointer-events: auto; padding: var(--space-6); color: var(--text-1); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-control-l); box-shadow: var(--shadow-popover); transition: var(--theme-transition); animation: menu-enter var(--motion-enter-duration) var(--motion-ease); }
 @keyframes menu-enter { from { opacity: 0; transform: translateY(var(--space-4)); } to { opacity: 1; transform: translateY(0); } }
-.app-menu__header { display: grid; gap: var(--space-6); padding: var(--space-4); border-bottom: 1px solid var(--border); transition: var(--theme-transition); }
+.app-menu__header { display: grid; gap: var(--space-6); padding: var(--space-4); transition: var(--theme-transition); }
+.app-menu__header--nested { border-bottom: 1px solid var(--border); }
 .app-menu__back, .app-menu__search { display: flex; gap: var(--space-8); align-items: center; min-width: 0; }
 .app-menu__back { padding: var(--space-8); text-align: left; }
 .app-menu__back span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-menu__back small { display: block; overflow: hidden; text-overflow: ellipsis; font-size: var(--type-body-small-size); line-height: var(--type-body-small-line); color: var(--text-2); transition: var(--theme-transition); }
 .app-menu__search { border: 1px solid var(--border); border-radius: var(--radius-control-s); padding: var(--space-6) var(--space-8); background: var(--bg); transition: var(--theme-transition); }
-.app-menu__search:focus-within { box-shadow: var(--focus-ring); transition: var(--theme-transition); }
-.app-menu__search input { width: 100%; min-width: 0; border: 0; outline: none; background: transparent; color: inherit; font: inherit; font-size: var(--type-body-medium-size); line-height: var(--type-body-medium-line); }
+.app-menu__search:focus-within { border-color: var(--focus-border); box-shadow: inset 0 0 0 1px var(--focus-border); transition: var(--theme-transition); }
+.app-menu__search input { width: 100%; min-width: 0; border: 0; outline: none; appearance: none; background: transparent; color: inherit; font: inherit; font-size: var(--type-body-medium-size); line-height: var(--type-body-medium-line); }
+.app-menu__search input:focus-visible { box-shadow: none; }
 .app-menu__search input::-webkit-search-cancel-button { display: none; }
-.app-menu__search button { display: flex; padding: var(--space-4); }
+.app-menu__search button { display: flex; padding: var(--space-4); border-radius: var(--radius-control-s); }
+.app-menu__search button:hover { background: var(--surface-hover); }
 .app-menu__list { overflow-y: auto; overscroll-behavior: contain; min-height: 0; margin: 0; padding: 0; list-style: none; }
 .app-menu__item, .app-menu__back { width: 100%; min-height: var(--button-height-m); border: 0; border-radius: var(--radius-control-s); background: transparent; color: inherit; cursor: pointer; font: inherit; font-size: var(--type-body-medium-size); line-height: var(--type-body-medium-line); transition: var(--theme-transition); }
 .app-menu__item { display: flex; align-items: center; gap: var(--gap-s); padding: var(--space-8) var(--space-12); text-align: left; }

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, useAttrs } from 'vue';
+
+defineOptions({ inheritAttrs: false });
 
 interface Props {
   id: string;
@@ -29,15 +31,37 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const model = defineModel<string | number>({ default: '' });
+const attrs = useAttrs();
+const input = ref<HTMLInputElement | null>(null);
+let form: HTMLFormElement | null = null;
 
 const ariaDescribedBy = computed(() => {
+  const ids: string[] = [];
   if (props.error !== undefined) {
-    return `${props.id}-error`;
+    ids.push(`${props.id}-error`);
+  } else if (props.hint !== undefined) {
+    ids.push(`${props.id}-hint`);
   }
-  if (props.hint !== undefined) {
-    return `${props.id}-hint`;
+  if (typeof attrs['aria-describedby'] === 'string') {
+    ids.push(attrs['aria-describedby']);
   }
-  return undefined;
+  return ids.length > 0 ? ids.join(' ') : undefined;
+});
+
+function onReset(): void {
+  if (input.value !== null) {
+    model.value = input.value.defaultValue;
+  }
+}
+
+onMounted(() => {
+  form = input.value?.form ?? null;
+  form?.addEventListener('reset', onReset);
+});
+
+onBeforeUnmount(() => {
+  form?.removeEventListener('reset', onReset);
+  form = null;
 });
 </script>
 
@@ -55,6 +79,8 @@ const ariaDescribedBy = computed(() => {
     >
       <span v-if="$slots.leading" class="app-input__affix"><slot name="leading" /></span>
       <input
+        ref="input"
+        v-bind="$attrs"
         :id="id"
         v-model="model"
         class="app-input__native"

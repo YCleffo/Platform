@@ -7,6 +7,7 @@ import AppDialog from '@/shared/ui/overlays/AppDialog.vue';
 import AppCard from '@/shared/ui/surfaces/AppCard.vue';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
 import AppCheckbox from '@/shared/ui/fields/AppCheckbox.vue';
+import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppSwitch from '@/shared/ui/fields/AppSwitch.vue';
 import { LayoutGrid, Pencil, Settings } from '@/shared/ui/icons';
 import type { DropdownOption, MenuItem } from '@/shared/ui/menus/types';
@@ -23,6 +24,8 @@ const selectedExamples = ref([true, false]);
 const allExamples = computed({ get: () => selectedExamples.value.every(Boolean), set: (value: boolean) => { selectedExamples.value = [value, value]; } });
 const someExamples = computed(() => selectedExamples.value.some(Boolean) && !allExamples.value);
 const switchExample = ref(true);
+const formName = ref('Changed');
+const formUpdates = ref(true);
 const languages = [ { value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }, { value: 'de', label: 'Deutsch' }, { value: 'es', label: 'Español' }, { value: 'fr', label: 'Français' }, { value: 'ja', label: '日本語' } ];
 const options = computed<DropdownOption[]>(() => [...languages, { value: 'disabled', label: t('menus.unavailable'), disabled: true }]);
 const tree = computed<DropdownOption[]>(() => [
@@ -61,6 +64,19 @@ const contextItems = computed<MenuItem[]>(() => [
         <AppSwitch id="demo-switch" v-model="switchExample" :label="$t('controls.switchExample')" :description="$t('controls.switchDescription')" />
         <AppSwitch id="demo-switch-disabled" :model-value="false" :label="$t('controls.unavailable')" disabled />
       </AppCard>
+      <AppCard>
+        <h3>{{ $t('controls.nativeForm') }}</h3><p>{{ $t('controls.nativeFormHint') }}</p>
+        <form id="demo-native-form" class="components-view__form">
+          <AppInput id="demo-form-name" v-model="formName" :label="$t('controls.formName')" name="username" />
+          <AppSwitch id="demo-form-updates" v-model="formUpdates" :label="$t('controls.formUpdates')" name="updates" />
+          <output id="demo-form-model" class="components-view__hint" for="demo-form-name demo-form-updates">
+            {{ $t('controls.formState') }}: {{ formName || '—' }} · {{ formUpdates ? 'on' : 'off' }}
+          </output>
+          <div class="components-view__form-actions">
+            <AppButton id="demo-form-reset" type="reset" variant="secondary">{{ $t('controls.resetForm') }}</AppButton>
+          </div>
+        </form>
+      </AppCard>
     </div>
     <div class="components-view__grid">
       <AppCard><label for="demo-single">{{ $t('menus.simple') }}</label><AppDropdown id="demo-single" v-model="single" :label="$t('menus.simple')" :options="options" /></AppCard>
@@ -87,4 +103,6 @@ const contextItems = computed<MenuItem[]>(() => [
 .components-view__grid label { font-size: var(--type-body-medium-emphasis-size); font-weight: var(--type-body-medium-emphasis-weight); }
 .components-view__context { border: 1px dashed var(--border-strong); border-radius: var(--radius-card-m); background: var(--surface); padding: var(--space-24); display: grid; gap: var(--space-12); transition: var(--theme-transition); }
 .components-view__hint { font-size: var(--type-body-small-size); line-height: var(--type-body-small-line); padding: var(--space-8); color: var(--text-2); transition: var(--theme-transition); }
+.components-view__form { display: grid; gap: var(--space-16); min-width: 0; }
+.components-view__form-actions { display: flex; justify-content: flex-end; }
 </style>

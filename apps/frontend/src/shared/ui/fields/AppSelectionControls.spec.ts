@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { defineComponent, nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import AppCheckbox from './AppCheckbox.vue';
 import AppSwitch from './AppSwitch.vue';
@@ -35,5 +36,29 @@ describe('selection control contracts', () => {
     expect(wrapper.findAll('button, [tabindex]')).toHaveLength(0);
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
     wrapper.unmount();
+  });
+
+  it('synchronizes a native form reset for a switch and keeps its name native', async () => {
+    const Host = defineComponent({
+      components: { AppSwitch },
+      data: () => ({ value: true }),
+      template: '<form><AppSwitch id="motion" v-model="value" name="motion" label="Motion" /></form>',
+    });
+    const wrapper = mount(Host);
+    try {
+      const input = wrapper.get<HTMLInputElement>('input');
+      const form = wrapper.get('form').element as HTMLFormElement;
+      expect(input.element.name).toBe('motion');
+      expect(new FormData(form).get('motion')).toBe('on');
+
+      form.reset();
+      await nextTick();
+
+      expect(wrapper.vm.value).toBe(false);
+      expect(input.element.checked).toBe(false);
+      expect(new FormData(form).get('motion')).toBeNull();
+    } finally {
+      wrapper.unmount();
+    }
   });
 });

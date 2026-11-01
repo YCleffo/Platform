@@ -67,7 +67,8 @@ jobs:
           import base64, os, secrets
           values = {k: secrets.token_hex(32) for k in (
               'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
-              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY')}
+              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY',
+              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD')}
           values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
               'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
           with open(os.environ['GITHUB_ENV'], 'a') as output:
@@ -142,6 +143,9 @@ jobs:
 
       - name: Verify stateless Core application restart with durable PostgreSQL
         run: bash ./scripts/ci/core-app-restart-test.sh
+
+      - name: Verify Core runtime role least privilege
+        run: bash ./scripts/ci/db-role-gate.sh core
 
       - name: Build and inspect production Core image
         run: |
@@ -221,7 +225,8 @@ jobs:
           import base64, os, secrets
           values = {k: secrets.token_hex(32) for k in (
               'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
-              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY')}
+              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY',
+              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD')}
           values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
               'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
           with open(os.environ['GITHUB_ENV'], 'a') as output:
@@ -310,6 +315,9 @@ jobs:
       - name: Verify Control Plane readiness with actual workers
         run: bash ./scripts/ci/control-readiness-test.sh
 
+      - name: Verify Commercial runtime role least privilege
+        run: bash ./scripts/ci/db-role-gate.sh commercial
+
       - name: Build and inspect production Control Plane image
         run: |
           docker build -f apps/control-plane/docker/Dockerfile --target app -t platform-control-plane:ci apps/control-plane
@@ -364,6 +372,54 @@ jobs:
         if: always()
         run: bash ./scripts/ci/control-test-stop.sh
 
+  infrastructure-images:
+    name: Infrastructure image security inventory
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: postgres:18.6-trixie@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
+            plane: PostgreSQL
+          - image: redis:8-alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
+            plane: Redis
+          - image: axllent/mailpit:v1.33.0@sha256:9b3a463be15354c0f0eba91697d80e3e0d8a5623ef0e627cacc836bc17fd5231
+            plane: Mailpit
+    steps:
+      - uses: actions/checkout@v5
+      - name: Inventory all high and critical infrastructure image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.69.3
+          image-ref: ${{ matrix.image }}
+          scanners: vuln
+          format: json
+          output: trivy-${{ matrix.plane }}.json
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: '0'
+      - name: Summarize infrastructure image findings
+        run: python3 scripts/ci/summarize-image-scan.py trivy-${{ matrix.plane }}.json --plane ${{ matrix.plane }}
+      - name: Enforce zero fixable high and critical infrastructure image vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.69.3
+          image-ref: ${{ matrix.image }}
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Upload complete infrastructure vulnerability inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: infrastructure-image-vulnerabilities-${{ matrix.plane }}-${{ github.run_id }}
+          path: trivy-${{ matrix.plane }}.json
+          if-no-files-found: ignore
+          retention-days: 7
+
   cross-plane-e2e:
     name: Strict Core to Control Plane Cross-Plane E2E
     runs-on: ubuntu-24.04
@@ -387,7 +443,8 @@ jobs:
           import base64, os, secrets
           values = {k: secrets.token_hex(32) for k in (
               'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
-              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY')}
+              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY',
+              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD')}
           values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
               'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
           with open(os.environ['GITHUB_ENV'], 'a') as output:
@@ -471,6 +528,7 @@ jobs:
         run: |
           node scripts/e2e-account-workspace.mjs --check-guard
           node scripts/e2e-invitation-lifecycle.mjs --check-guard
+          node scripts/e2e-auth-recovery.mjs --check-guard
           node scripts/load-commercial.mjs --check-guard
       - name: Production build
         run: npm run build
@@ -596,6 +654,9 @@ jobs:
       - name: Run browser invitation and MFA flow
         working-directory: apps/frontend
         run: node scripts/e2e-invitation-lifecycle.mjs
+      - name: Run browser account recovery flow
+        working-directory: apps/frontend
+        run: node scripts/e2e-auth-recovery.mjs
       - name: Reset isolated fixtures before load without disabling registration limits
         run: |
           docker compose --profile control-test stop control-plane-test

@@ -1,0 +1,16 @@
+{
+  "revision": "fa313953ca07cf1df9f904f5a61e4e5a10f068e7",
+  "startedFromCleanTree": true,
+  "recordedAt": "2026-11-01T15:11:16.269028+00:00",
+  "node": "v24.19.0",
+  "npm": "11.17.0",
+  "docker": "29.9.2",
+  "dockerResources": "CPU=16 RAM=33612775424 OS=Docker Desktop",
+  "localAdaptations": [
+    "Windows PowerShell/Git Bash, COMPOSE_FILE separator semicolon",
+    "CI=true is explicitly set for authorized disposable local workflow entrypoints; not a GitHub runner",
+    "Frontend npm ci in separate temporary directory; installed working dependencies also validated with npm ls",
+    "PHPStan container mounts apps/backend read-only to reproduce CI host dependency layout",
+    "Self-signed TLS accepted only by disposable browser contexts; application URLs use allowlisted localtest.me and nonce proof"
+  ]
+}

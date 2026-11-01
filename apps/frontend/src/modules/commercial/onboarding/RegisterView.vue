@@ -114,6 +114,9 @@ async function resend(): Promise<void> {
           {{ $t('nav.login') }}
         </RouterLink>
       </p>
+      <p class="auth-form__switch">
+        <RouterLink :to="{ name: 'resend-verification' }">{{ $t('auth.resendLink') }}</RouterLink>
+      </p>
     </form>
   </AppFormShell>
 </template>

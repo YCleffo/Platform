@@ -47,4 +47,21 @@ describe('router account guard', () => {
     await router.push('/');
     expect(router.currentRoute.value.name).toBe('catalog');
   });
+
+  it('exposes account recovery routes and a catch-all page', async () => {
+    const router = createAppRouter(createMemoryHistory());
+
+    await router.push('/forgot-password');
+    expect(router.currentRoute.value.name).toBe('password-reset-request');
+
+    await router.push('/reset-password?token=synthetic');
+    expect(router.currentRoute.value.name).toBe('password-reset-confirm');
+    expect(router.currentRoute.value.query.token).toBe('synthetic');
+
+    await router.push('/resend-verification');
+    expect(router.currentRoute.value.name).toBe('resend-verification');
+
+    await router.push('/does-not-exist');
+    expect(router.currentRoute.value.name).toBe('not-found');
+  });
 });
