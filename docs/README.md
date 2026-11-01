@@ -1,23 +1,26 @@
 # Документация Platform
 
-## Порядок чтения
+## Быстрый вход
 
-1. [Модель данных Platform](core-data-model.md): идентичности, владельцы данных и неизменяемая история.
-2. [Бизнес-процессы Platform](processes/README.md): регистрация, оплата, смена тарифа и фоновые операции.
-3. [Схема базы данных](database/README.md): DBML и полный справочник реальных объектов PostgreSQL.
-4. [Конфигурация и секреты](operations/ENVIRONMENT.md) и [Обновление баз данных](operations/SAFE_DATABASE_UPGRADE.md): команды оператора.
+- [Запустить проект](../README.md#запуск).
+- [Актуальный аудит: ошибки и следующие задачи](AUDIT.md).
+- [Разработка frontend и команды проверок](../apps/frontend/README.md).
+- [Что входит в Commercial и что планируется дальше](roadmap/PLATFORM_ROADMAP.md).
+- [Условия выпуска](operations/READINESS.md).
 
-## План развития
+## Для эксплуатации
 
-- [Commercial и будущий Education](roadmap/PLATFORM_ROADMAP.md).
+- [Настройки и секреты](operations/ENVIRONMENT.md).
+- [Обновление БД без потери данных](operations/SAFE_DATABASE_UPGRADE.md).
+- [Резервирование и восстановление](operations/BACKUP_RESTORE.md).
 
-## Frontend
+<details>
+<summary>Технические контракты и справочники для разработчиков</summary>
 
-| Документ | О чём |
-| --- | --- |
-| [Руководство по frontend](frontend/README.md) | стек, запуск, слои, сессии, account context, дизайн-система, тесты, CI, диагностика |
-| [Контракт графиков и аналитики](frontend/CHARTS_CONTRACT.md) | модель данных, адаптеры, форматирование, доступность для будущих графиков |
-| [README приложения](../apps/frontend/README.md) | команды запуска и проверок, прокси, ограничения |
+- [Модель данных и владельцы](core-data-model.md).
+- [Бизнес-процессы](processes/README.md).
+- [Фактическая схема PostgreSQL](database/README.md).
+- [Архитектура frontend и компонентов](frontend/README.md).
 
 ## Архитектура
 
@@ -52,7 +55,7 @@
 | [Роли PostgreSQL и минимальные привилегии](operations/DATABASE_ROLES.md) |
 | [Конфигурация и секреты](operations/ENVIRONMENT.md) |
 | [Компенсация внешних смен тарифа](operations/EXTERNAL_COMPENSATION.md) |
-| [Критерии выпуска](operations/PRODUCTION_READINESS_PROGRESS.md) |
+| [Критерии выпуска](operations/READINESS.md) |
 | [Провижининг локального Docker-развёртывания](operations/PROVISIONING.md) |
 | [Безопасное обновление баз данных](operations/SAFE_DATABASE_UPGRADE.md) |
 
@@ -80,3 +83,5 @@
 
 - [Справочник фактической базы данных](database/SCHEMA_REFERENCE.md).
 - [Покрытие таблиц Core и Runtime](core-database-coverage.md).
+
+</details>

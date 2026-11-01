@@ -2,7 +2,7 @@
 
 Platform состоит из Yii Core и Symfony Commercial Control Plane. Core управляет идентичностями, доступом, организациями и персональными данными. Commercial управляет каталогом, подписками, платежами и жизненным циклом установок. У приложений раздельные базы и учётные данные.
 
-[Документация](docs/README.md) · [Бизнес-процессы](docs/processes/README.md) · [База данных](docs/database/README.md)
+[Актуальный аудит](docs/AUDIT.md) · [Документация](docs/README.md) · [Бизнес-процессы](docs/processes/README.md) · [База данных](docs/database/README.md)
 
 ## Структура репозитория
 
@@ -51,7 +51,7 @@ SPA на Vue 3 + TypeScript (strict) + Vite, подключается к Commerc
 
 ```powershell
 cd apps/frontend
-npm install
+npm ci
 npm run dev        # http://localhost:5173
 ```
 
@@ -71,8 +71,7 @@ npm run build
 ```
 
 Токены хранятся только в памяти (после перезагрузки нужен повторный вход). Подробности:
-[руководство по frontend](docs/frontend/README.md), [README приложения](apps/frontend/README.md),
-[контракт графиков](docs/frontend/CHARTS_CONTRACT.md).
+[руководство по frontend](docs/frontend/README.md) и [README приложения](apps/frontend/README.md).
 
 Шрифты Inter/Space Mono и используемые Solar SVG поставляются локально. Полные исходные
 библиотеки иконок и шрифтов сохранены для дальнейшей разработки; в bundle попадают только
@@ -107,4 +106,4 @@ npm ci --prefix scripts/documentation --ignore-scripts
 npm run check:dbml --prefix scripts/documentation
 ```
 
-Состояние требований к промышленной эксплуатации описано в [критериях выпуска](docs/operations/PRODUCTION_READINESS_PROGRESS.md).
+Состояние требований к промышленной эксплуатации описано в [критериях выпуска](docs/operations/READINESS.md).

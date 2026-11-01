@@ -50,4 +50,4 @@ permissions, каталог, покупку, plan changes, renewal, refund, prov
 privacy и workers. Стрелка процесса означает действие, FK означает связь строк.
 
 Критерии промышленного выпуска описаны в
-[журнале готовности](operations/PRODUCTION_READINESS_PROGRESS.md).
+[условиях выпуска](operations/READINESS.md).

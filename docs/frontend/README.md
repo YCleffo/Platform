@@ -220,8 +220,9 @@ Space/Tab, label click, disabled и участие в формах. `indetermina
 от значения. Подсказка и внешний `aria-describedby` объединяются; имя берётся из label.
 `AppInput`, `AppCheckbox` и `AppSwitch` переносят нативные form-атрибуты (`name`,
 `form`, `required`, `autocomplete` и другие) на реальный control, а не на wrapper.
-Native `form.reset()` синхронно возвращает модель к `defaultValue`/`defaultChecked`,
-поэтому DOM, Vue state и `FormData` не расходятся. Disabled controls не отправляются.
+Обычный `form.reset()` синхронизирует модель с `defaultValue`/`defaultChecked`.
+Известное ограничение: отменённый reset пока тоже меняет модель; см. [аудит](../AUDIT.md).
+Disabled controls не отправляются.
 
 Switch применяется для немедленного изменения настройки (например, анимаций), checkbox —
 для выбора пунктов. Примеры с общим/частичным выбором и disabled доступны на
@@ -236,9 +237,8 @@ blur и отключение завершают редактирование. Dr
 `BASE_URL=http://127.0.0.1:5173 npm run verify:controls` проверяет 27 browser assertions:
 mouse/touch/keyboard, mixed/disabled, native form attributes/reset, release outside, Undo,
 reload, reduced motion и 320 px / 140% text. Скрипт включён в browser CI; screenshots
-пишутся в игнорируемую папку `screenshots`. Проверенные снимки:
-[набор controls](../operations/evidence/controls-2026-10-31/README.md).
+пишутся в игнорируемую папку `screenshots`; несколько текущих снимков доступны
+из [аудита](../AUDIT.md).
 
-Результаты и production-ограничения: [критерии выпуска](../operations/PRODUCTION_READINESS_PROGRESS.md).
+Результаты и production-ограничения: [критерии выпуска](../operations/READINESS.md).
 Дальнейшие модули: [единый roadmap](../roadmap/PLATFORM_ROADMAP.md).
-Будущие графики: [контракт](CHARTS_CONTRACT.md).

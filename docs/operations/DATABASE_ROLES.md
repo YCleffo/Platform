@@ -65,7 +65,11 @@ CI gate `scripts/ci/db-role-gate.sh core|commercial` выполняет это �
 миграций (`public.platform_migrations` в Core, `public.doctrine_migration_versions`
 в Commercial) и `pg_read_file`. Это gate для ролей, а не доказательство всех
 HTTP/worker flows; полный lifecycle под runtime-role остаётся обязательной
-release-проверкой (F08).
+release-проверкой.
+
+Известный пробел текущего gate: он принимает любой SQL error за отказ по правам.
+`TRUNCATE` таблицы с внешними ключами может вернуть `0A000` при наличии права;
+требуется проверка SQLSTATE `42501` и явного отсутствия привилегии. См. [аудит](../AUDIT.md).
 
 ## Ограничения
 
