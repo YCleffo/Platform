@@ -85,7 +85,7 @@ watch(() => props.disabled, value => { if (value) open.value = false; });
 </template>
 
 <style scoped>
-.app-dropdown { display: flex; align-items: stretch; gap: var(--space-4); width: 100%; min-width: 0; }
+.app-dropdown { position: relative; display: flex; align-items: stretch; gap: var(--space-4); width: 100%; min-width: 0; }
 .app-dropdown__trigger { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-s); width: 100%; min-width: 0; min-height: var(--button-height-m); padding: var(--space-8) var(--space-12); border: 1px solid var(--border-strong); border-radius: var(--radius-control-m); background: var(--surface); color: var(--text-1); font: inherit; font-size: var(--type-body-medium-size); line-height: var(--type-body-medium-line); text-align: left; cursor: pointer; transition: var(--theme-transition); }
 .app-dropdown__trigger:focus-visible, .app-dropdown__trigger[aria-expanded="true"] { border-color: var(--focus-border); box-shadow: var(--focus-ring); outline: none; transition: var(--theme-transition); }
 .app-dropdown--invalid .app-dropdown__trigger { border-color: var(--danger); transition: var(--theme-transition); }

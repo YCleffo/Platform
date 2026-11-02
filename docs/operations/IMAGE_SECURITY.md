@@ -2,14 +2,11 @@
 
 Статус остаточного риска приложения: **NOT_ACCEPTED / release blocker**.
 
-Последний сохранённый baseline от 1 ноября 2026 для прежних production-сборок Core и
-Commercial: в каждом образе 1 CRITICAL (`CVE-2026-6653`, libxml2) и 60 HIGH, известных
-исправлений scanner не указал. Это результат конкретного прошлого сканирования,
-**не свежий verdict для текущих digest**. Компактная сводка сохранена в
-[результатах аудита](../evidence/current/checks.json); полные inventories следует хранить
-в CI artifacts соответствующей сборки, а не в Git с историей аудитов.
+Текущие версии образов, результаты inventory, fixable gate и границы проверки собраны
+в [едином аудите](../AUDIT.md#остаточный-security-inventory-образов). Полные inventories
+следует хранить в CI artifacts соответствующей сборки, а не в Git с историей аудитов.
 
-PostgreSQL, Redis и Mailpit закреплены digest в Compose и имеют отдельный CI scan job.
+PostgreSQL base, Redis и Mailpit закреплены digest и имеют отдельный CI scan job.
 Само обновление тега или digest не подтверждает отсутствие уязвимостей; перед выпуском
 нужен новый scan точных используемых образов.
 

@@ -76,7 +76,7 @@ final readonly class ListAccountAuditEvents
         if ($hasMore) {
             array_pop($rows);
         }
-        $nextCursor = $hasMore && $rows !== [] ? (string) $rows[array_key_last($rows)]['id'] : null;
+        $nextCursor = $hasMore ? (string) $rows[array_key_last($rows)]['id'] : null;
 
         $items = [];
         foreach ($rows as $row) {

@@ -240,7 +240,7 @@ watch(accountId, load);
   height: 100%;
   border-radius: inherit;
   background: var(--accent);
-  transition: width var(--motion-enter-duration) var(--motion-ease);
+  transition: width var(--motion-enter-duration) var(--motion-ease), var(--theme-transition);
 }
 
 .usage__bar-fill--warn {

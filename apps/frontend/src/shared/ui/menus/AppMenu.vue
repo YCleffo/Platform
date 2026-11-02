@@ -214,6 +214,15 @@ watch(open, async value => {
   window.addEventListener('scroll', scheduleLayout, true);
   if (typeof ResizeObserver !== 'undefined') { observer = new ResizeObserver(() => scheduleLayout()); panels().forEach(panel => observer?.observe(panel)); }
 }, { immediate: true });
+// A resize can replace the cascade with a taller drill panel. Measure the new
+// DOM before clamping its position, and observe the replacement panel as well.
+watch(levels, async () => {
+  await nextTick();
+  if (!open.value || disposed) return;
+  layout();
+  observer?.disconnect();
+  panels().forEach(panel => observer?.observe(panel));
+});
 watch(query, async () => {
   const input = document.activeElement instanceof HTMLInputElement && layer.value?.contains(document.activeElement) ? document.activeElement : null;
   const start = input?.selectionStart ?? null;

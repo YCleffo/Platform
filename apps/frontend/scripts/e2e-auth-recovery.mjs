@@ -179,6 +179,12 @@ async function main() {
     await latePage.close();
   } catch (error) {
     failures.push(`account recovery flow: ${String(error)}`);
+    for (const [index, page] of context.pages().entries()) {
+      const path = new URL(page.url()).pathname;
+      const text = await page.locator('main').innerText().catch(() => 'Main content unavailable');
+      failures.push(`page ${path}: ${text.slice(0, 1400)}`);
+      await page.screenshot({ path: join(outDir, `recovery-failure-${index}.png`), animations: 'disabled' }).catch(() => undefined);
+    }
   }
 
   if (pageErrors.length > 0) failures.push(`browser errors: ${pageErrors.join(' | ')}`);

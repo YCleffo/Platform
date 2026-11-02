@@ -9,7 +9,10 @@ x-logging: &bounded_logs
 services:
   postgres:
     logging: *bounded_logs
-    image: postgres:18.6-trixie@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
+    image: platform-postgres:local
+    pull_policy: build
+    build:
+      context: ./infra/postgres
     restart: unless-stopped
 
     environment:
@@ -346,7 +349,10 @@ services:
   control-postgres:
     logging: *bounded_logs
     profiles: ["control"]
-    image: postgres:18.6-trixie@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
+    image: platform-postgres:local
+    pull_policy: build
+    build:
+      context: ./infra/postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${CONTROL_POSTGRES_DB:-platform_commercial}

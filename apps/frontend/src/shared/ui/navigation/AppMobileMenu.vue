@@ -351,7 +351,7 @@ onBeforeUnmount(deactivateOverlay);
   margin-top: var(--space-16);
   padding: var(--space-12);
   border: 1px solid var(--border);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-card-m);
   background: linear-gradient(135deg, var(--surface-2), var(--surface));
   color: var(--text-1);
   transition: var(--theme-transition);
@@ -540,12 +540,12 @@ onBeforeUnmount(deactivateOverlay);
 
 .mobile-menu-enter-active,
 .mobile-menu-leave-active {
-  transition: opacity var(--motion-enter-duration) var(--motion-ease);
+  transition: opacity var(--motion-enter-duration) var(--motion-ease), var(--theme-transition);
 }
 
 .mobile-menu-enter-active .mobile-menu__panel,
 .mobile-menu-leave-active .mobile-menu__panel {
-  transition: transform var(--motion-enter-duration) var(--motion-ease);
+  transition: transform var(--motion-enter-duration) var(--motion-ease), var(--theme-transition);
 }
 
 .mobile-menu-enter-from,

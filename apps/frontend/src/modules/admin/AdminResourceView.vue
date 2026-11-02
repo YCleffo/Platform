@@ -334,7 +334,7 @@ watch(() => props.config.listPath, () => { offset.value = 0; void load(); });
     <AppDialog v-model="createOpen" :title="$t('admin.createTitle', { resource: config.title })" :persistent="busy">
       <div class="admin-resource__editor">
         <p class="admin-resource__subtitle">{{ $t('admin.jsonHint') }}</p>
-        <textarea v-model="createBody" class="admin-resource__textarea" spellcheck="false" rows="12" />
+        <textarea v-model="createBody" :aria-label="$t('admin.jsonHint')" class="admin-resource__textarea" spellcheck="false" rows="12" />
         <p v-if="createError" class="admin-resource__error" role="alert">{{ createError }}</p>
         <div class="admin-resource__actions">
           <AppButton variant="secondary" :disabled="busy" @click="createOpen = false">{{ $t('common.cancel') }}</AppButton>
@@ -355,7 +355,7 @@ watch(() => props.config.listPath, () => { offset.value = 0; void load(); });
           @update:model-value="(value) => actionInputs[input.name] = String(value)"
         />
         <p class="admin-resource__subtitle">{{ $t('admin.jsonHint') }}</p>
-        <textarea v-model="actionBody" class="admin-resource__textarea" spellcheck="false" rows="10" />
+        <textarea v-model="actionBody" :aria-label="$t('admin.jsonHint')" class="admin-resource__textarea" spellcheck="false" rows="10" />
         <p v-if="actionError" class="admin-resource__error" role="alert">{{ actionError }}</p>
         <div class="admin-resource__actions">
           <AppButton variant="secondary" :disabled="busy" @click="actionOpen = false">{{ $t('common.cancel') }}</AppButton>
@@ -382,7 +382,7 @@ watch(() => props.config.listPath, () => { offset.value = 0; void load(); });
 .admin-resource__table thead th:first-child { border-top-left-radius: calc(var(--radius-card-m) - 1px); }
 .admin-resource__table thead th:last-child { border-top-right-radius: calc(var(--radius-card-m) - 1px); }
 .admin-resource__table thead th { position: sticky; top: var(--admin-topbar-height); z-index: 3; background: var(--card); box-shadow: inset 0 -1px 0 var(--border); }
-.admin-resource__table th, .admin-resource__table td { max-width: 240px; padding: var(--space-8) var(--space-12); border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background 120ms ease; }
+.admin-resource__table th, .admin-resource__table td { max-width: 240px; padding: var(--space-8) var(--space-12); border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: var(--theme-transition); }
 .admin-resource__table tbody tr:hover td:not(.admin-resource__cell--column) { background: var(--table-row-hover); }
 .admin-resource__table td.admin-resource__cell--column { background: var(--table-column-hover); }
 .admin-resource__table tbody tr:hover td.admin-resource__cell--column { background: var(--table-cell-hover); }

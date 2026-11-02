@@ -72,6 +72,16 @@ try {
   check(popupId && await page.locator(`[id="${popupId}"]`).getAttribute('role') === 'menu', 'Popup controls reference broke in mobile hierarchy');
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.waitForFunction(() => document.querySelectorAll('.app-menu__panel').length === 3);
+  // Keep a nested menu open across cascade/drill replacement. Its new height
+  // must be measured, including on the smallest supported viewport.
+  for (const width of [320, 393, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 852 });
+    await page.waitForFunction(() => [...document.querySelectorAll('.app-menu__panel')].every(panel => {
+      const rect = panel.getBoundingClientRect();
+      return rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth + 1 && rect.bottom <= innerHeight + 1;
+    }));
+    await bounds(page);
+  }
   await page.keyboard.press('ArrowLeft');
   check(await page.locator('[data-menu-id="design"]').evaluate(el => el === document.activeElement), 'Back did not restore parent focus');
   await page.keyboard.press('ArrowLeft'); await page.keyboard.press('Escape');

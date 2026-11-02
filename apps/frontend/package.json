@@ -18,6 +18,7 @@
     "verify:ux": "node scripts/verify-ux.mjs",
     "verify:controls": "node scripts/verify-controls.mjs",
     "verify:accessibility": "node scripts/verify-accessibility.mjs",
+    "verify:admin": "node scripts/verify-admin.mjs",
     "test:load": "node scripts/load-commercial.mjs"
   },
   "dependencies": {

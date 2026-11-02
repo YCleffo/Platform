@@ -68,7 +68,7 @@ onBeforeUnmount(hide);
   white-space: nowrap;
   pointer-events: none;
   transform: translateY(-50%);
-  transition: opacity 120ms ease, transform 120ms ease;
+  transition: opacity var(--motion-fast-duration) var(--motion-ease), transform var(--motion-fast-duration) var(--motion-ease), var(--theme-transition);
 }
 
 .app-tooltip-enter-from,

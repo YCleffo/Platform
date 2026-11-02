@@ -72,7 +72,8 @@ final readonly class ListAuditEventsAction
 
         $items = [];
         foreach ($rows as $row) {
-            $metadata = is_string($row['metadata'] ?? null) ? json_decode($row['metadata'], true) : ($row['metadata'] ?? []);
+            $rawMetadata = $row['metadata'] ?? null;
+            $metadata = is_string($rawMetadata) ? json_decode($rawMetadata, true) : ($rawMetadata ?? []);
             $items[] = [
                 'id' => (string) $row['event_id'],
                 'occurredAt' => (string) $row['occurred_at'],

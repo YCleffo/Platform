@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   ci-configuration:
-    name: Workflow and shell configuration
+    name: CI configuration
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -27,7 +27,7 @@ jobs:
           for script in scripts/ci/*.sh; do bash -n "$script"; done
 
   windows-tools:
-    name: PowerShell operator tools
+    name: Windows tools
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
@@ -49,7 +49,7 @@ jobs:
           ./scripts/ci/test-project-zip.ps1
 
   backend-qa:
-    name: Yii Backend Quality Assurance & Test Isolation
+    name: Core · quality and tests
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -203,7 +203,7 @@ jobs:
           bash ./scripts/ci/test-stop.sh
 
   control-plane-qa:
-    name: Symfony Commercial Control Plane Quality Assurance
+    name: Commercial · quality and tests
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -373,14 +373,14 @@ jobs:
         run: bash ./scripts/ci/control-test-stop.sh
 
   infrastructure-images:
-    name: Infrastructure image security inventory
+    name: Image security · ${{ matrix.plane }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         include:
-          - image: postgres:18.6-trixie@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
+          - image: platform-postgres:local
             plane: PostgreSQL
           - image: redis:8-alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
             plane: Redis
@@ -388,6 +388,9 @@ jobs:
             plane: Mailpit
     steps:
       - uses: actions/checkout@v5
+      - name: Build PostgreSQL with the patched privilege-drop helper
+        if: matrix.plane == 'PostgreSQL'
+        run: docker build -t platform-postgres:local infra/postgres
       - name: Inventory all high and critical infrastructure image vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -421,7 +424,7 @@ jobs:
           retention-days: 7
 
   cross-plane-e2e:
-    name: Strict Core to Control Plane Cross-Plane E2E
+    name: Core ↔ Commercial · E2E
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -469,7 +472,7 @@ jobs:
         run: bash ./scripts/ci/cross-plane-test-stop.sh
 
   documentation-qa:
-    name: Database diagrams and documentation consistency
+    name: Database and documentation
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -495,7 +498,7 @@ jobs:
           npm audit --audit-level=high --prefix scripts/documentation
 
   frontend-qa:
-    name: Frontend quality
+    name: Frontend · quality
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
@@ -534,7 +537,7 @@ jobs:
         run: npm run build
 
   browser-e2e:
-    name: Browser invitation and MFA E2E
+    name: Frontend · browser E2E
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -646,6 +649,7 @@ jobs:
           node scripts/verify-ux.mjs
           node scripts/verify-controls.mjs
           node scripts/verify-accessibility.mjs
+          node scripts/verify-admin.mjs
           node scripts/verify-responsive.mjs
       - name: Reset disposable Commercial fixtures before invitation flow
         run: |

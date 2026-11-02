@@ -1,45 +1,14 @@
 FROM composer/composer:2-bin AS composer
 
-# Rebuild the official FrankenPHP 1.12.7 binary with the upstream security
-# releases that are newer than the current prebuilt image. Mercure and Vulcain
-# stay enabled because they are part of the upstream binary; only dependency
-# versions change.
-FROM dunglas/frankenphp:1.12.7-builder-php8.3@sha256:ff93138a6f94e59de46d69e49f77007fe0274f04ca1ec5b70a58ebbf0c821e98 AS frankenphp-builder
-
-ENV PATH="/usr/local/go/bin:${PATH}" \
-    GOTOOLCHAIN=go1.26.10 \
-    GODEBUG=http2client=0
-
-WORKDIR /go/src/app/caddy
-
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    go get \
-        github.com/getkin/kin-openapi@v0.149.0 \
-        github.com/go-jose/go-jose/v4@v4.1.6 \
-        google.golang.org/grpc@v1.83.2 \
-        golang.org/x/crypto@v0.57.0 \
-        golang.org/x/net@v0.60.0 \
-    && go mod tidy
-
-WORKDIR /go/src/app/caddy/frankenphp
-
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    GOBIN=/usr/local/bin \
-    ../../go.sh install \
-        -trimpath \
-        -ldflags "-w -s -X 'github.com/caddyserver/caddy/v2.CustomVersion=FrankenPHP v1.12.7 PHP 8.3 Caddy' -X 'github.com/caddyserver/caddy/v2.CustomBinaryName=frankenphp' -X 'github.com/caddyserver/caddy/v2/modules/caddyhttp.ServerHeader=FrankenPHP Caddy'" \
-        -buildvcs=false
-
-
-
 # ---------------------------------------------------------------------
 # Base PHP image
 # ---------------------------------------------------------------------
-FROM dunglas/frankenphp:1.12-php8.3@sha256:d5c2c5cdc8b6e73d861cccbf26ddab6443e3dc56e82641e5d991d21133e58a5d AS base
+# FrankenPHP 1.13.4 includes the former Go dependency overrides and PHP2Shell fixes.
+FROM dunglas/frankenphp:php8.3.36@sha256:29d69af811fa99d158d0ad7f2b4ef3b8d8f591955656975f16ae56cb4f125119 AS base
 
-COPY --from=frankenphp-builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
+# Check CLI and the PHP embedded in the HTTP server; neither may regress.
+RUN php -r 'exit(PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION === 3 && PHP_VERSION_ID >= 80336 && PHP_ZTS ? 0 : 1);' \
+    && frankenphp php-cli -r 'exit(PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION === 3 && PHP_VERSION_ID >= 80336 && PHP_ZTS ? 0 : 1);'
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
