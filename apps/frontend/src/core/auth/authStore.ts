@@ -3,7 +3,7 @@ import { defineStore } from 'pinia';
 import { commercialAccount, commercialAuth } from '@/core/api';
 import { SupersededOperationError } from '@/shared/api/errors';
 import { beginSession, endSession, getAccessToken, getSessionEpoch, hasSession, sessionTokens } from './session';
-import type { CurrentUser, LoginResult, MfaChallenge, RegisterResult, SessionTokens, StatusResult } from '@/shared/types';
+import type { CurrentUser, LoginResult, MfaChallenge, RecoveryCodesResult, RegisterResult, SessionTokens, StatusResult } from '@/shared/types';
 
 export type AuthStatus = 'anonymous' | 'authenticating' | 'mfa_required' | 'authenticated' | 'signing_out';
 
@@ -69,6 +69,26 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function confirmPasswordReset(token: string, password: string): Promise<StatusResult> {
     return commercialAuth.confirmPasswordReset(token, password);
+  }
+
+  async function changePassword(currentPassword: string, password: string): Promise<StatusResult> {
+    return commercialAuth.changePassword(currentPassword, password);
+  }
+
+  async function regenerateRecoveryCodes(): Promise<RecoveryCodesResult> {
+    return commercialAuth.regenerateRecoveryCodes();
+  }
+
+  async function disableMfa(): Promise<void> {
+    return commercialAuth.disableMfa();
+  }
+
+  async function revokeSession(sessionId: string): Promise<void> {
+    return commercialAuth.revokeSession(sessionId);
+  }
+
+  async function revokeOtherSessions(): Promise<void> {
+    return commercialAuth.revokeOtherSessions();
   }
 
   async function login(email: string, password: string, signal?: AbortSignal): Promise<void> {
@@ -186,6 +206,11 @@ export const useAuthStore = defineStore('auth', () => {
     verifyEmail,
     requestPasswordReset,
     confirmPasswordReset,
+    changePassword,
+    regenerateRecoveryCodes,
+    disableMfa,
+    revokeSession,
+    revokeOtherSessions,
     login,
     verifyMfa,
     refreshUser,

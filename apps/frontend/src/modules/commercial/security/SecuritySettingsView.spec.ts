@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { createPinia } from 'pinia';
 import { commercialAuth } from '@/core/api';
 import { i18n } from '@/shared/i18n';
 import SecuritySettingsView from './SecuritySettingsView.vue';
@@ -12,6 +13,11 @@ vi.mock('@/core/api', () => ({
     beginTotpSetup: vi.fn(),
     confirmTotpSetup: vi.fn(),
     reauthenticate: vi.fn(),
+    changePassword: vi.fn(),
+    regenerateRecoveryCodes: vi.fn(),
+    disableMfa: vi.fn(),
+    revokeSession: vi.fn(),
+    revokeOtherSessions: vi.fn(),
   },
   commercialAccount: {
     me: vi.fn(),
@@ -54,13 +60,14 @@ describe('SecuritySettingsView', () => {
 
     const wrapper = mount(SecuritySettingsView, {
       attachTo: document.body,
-      global: { plugins: [i18n] },
+      global: { plugins: [i18n, createPinia()] },
     });
     try {
       await vi.waitFor(() => expect(wrapper.text()).toContain('Enabled'));
       expect(wrapper.text()).toContain('7 recovery codes remaining');
       expect(wrapper.text()).toContain('Password + authenticator');
-      expect(wrapper.text()).toContain('Active session');
+      expect(wrapper.text()).toContain('This device');
+      expect(wrapper.find('.security-view__session-list').exists()).toBe(true);
     } finally {
       wrapper.unmount();
     }
@@ -76,7 +83,7 @@ describe('SecuritySettingsView', () => {
 
     const wrapper = mount(SecuritySettingsView, {
       attachTo: document.body,
-      global: { plugins: [i18n] },
+      global: { plugins: [i18n, createPinia()] },
     });
     try {
       await vi.waitFor(() => expect(wrapper.text()).toContain('Not enabled'));
@@ -94,10 +101,10 @@ describe('SecuritySettingsView', () => {
     vi.mocked(commercialAuth.sessions).mockResolvedValue({
       items: [{ ...session, authentication_method: 'password', last_used_at: null, user_agent: null }],
     });
-    const wrapper = mount(SecuritySettingsView, { global: { plugins: [i18n] } });
+    const wrapper = mount(SecuritySettingsView, { global: { plugins: [i18n, createPinia()] } });
     try {
-      await vi.waitFor(() => expect(wrapper.find('.security-view__details').exists()).toBe(true));
-      expect(wrapper.findAll('.security-view__detail dd')[1]?.text()).toBe('—');
+      await vi.waitFor(() => expect(wrapper.find('.security-view__session-list').exists()).toBe(true));
+      expect(wrapper.text()).toContain('Unknown device');
       expect(wrapper.find('.security-view__session .app-error-state').exists()).toBe(false);
     } finally {
       wrapper.unmount();

@@ -13,6 +13,11 @@ final readonly class RuntimeEntitlementSynchronizer
         private string $controlPlaneUrl, private string $credentialReference,
         private RuntimeSecretResolver $secrets) {}
 
+    public function configured(): bool
+    {
+        return $this->controlPlaneUrl !== '' && $this->credentialReference !== '';
+    }
+
     public function sync(): int
     {
         $secret = $this->secrets->deploymentCredential($this->credentialReference);

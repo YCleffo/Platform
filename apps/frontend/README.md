@@ -7,7 +7,7 @@ npm ci
 npm run dev
 ```
 
-Dev server: `http://localhost:5173`. Proxy настраивается через `.env.example`.
+Dev server: `http://localhost:5173`. `/api/control` идёт в Commercial на 8090, `/api` — в быстрый Core `backend-fast` на 8082. Настройки proxy: `.env.local` (ignored) или `.env.example`.
 
 ```bash
 npm run check:icons

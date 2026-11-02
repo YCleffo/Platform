@@ -6,6 +6,8 @@ const widths = [320, 360, 375, 393, 430, 768, 1024, 1280, 1440];
 // No backend is required: these are static/guard states of the SPA.
 const routes = [
   { path: '/login', expected: '/login', selector: 'form' },
+  { path: '/admin/login', expected: '/admin/login', selector: 'form' },
+  { path: '/admin', expected: '/admin/login', selector: 'form' },
   { path: '/register', expected: '/register', selector: 'form' },
   { path: '/verify-email', expected: '/verify-email', selector: '.verify-view' },
   { path: '/resend-verification', expected: '/resend-verification', selector: 'form' },

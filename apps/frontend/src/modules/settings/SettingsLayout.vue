@@ -7,6 +7,7 @@
     <nav class="settings-layout__tabs" :aria-label="$t('appearance.sections')">
       <RouterLink :to="{ name: 'settings' }" active-class="" exact-active-class="settings-layout__tab--active">{{ $t('appearance.appearance') }}</RouterLink>
       <RouterLink :to="{ name: 'security' }" active-class="" exact-active-class="settings-layout__tab--active">{{ $t('nav.security') }}</RouterLink>
+      <RouterLink :to="{ name: 'privacy' }" active-class="" exact-active-class="settings-layout__tab--active">{{ $t('privacy.title') }}</RouterLink>
       <RouterLink :to="{ name: 'settings-components' }" active-class="" exact-active-class="settings-layout__tab--active">{{ $t('menus.components') }}</RouterLink>
     </nav>
     <RouterView />

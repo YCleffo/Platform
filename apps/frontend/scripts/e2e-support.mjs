@@ -118,7 +118,7 @@ export async function assertPrimaryNavigation(page, path) {
 
 export async function verifySecuritySession(page) {
   await navigateClientSide(page, '/settings/security');
-  await page.locator('.security-view__details').waitFor({ state: 'visible', timeout: 20_000 });
+  await page.locator('.security-view__session-list').waitFor({ state: 'visible', timeout: 20_000 });
   await assertPrimaryNavigation(page, '/settings/security');
   if ((await page.locator('.security-view__session .app-error-state').count()) !== 0) {
     throw new Error('Security Center rejected the session API response.');

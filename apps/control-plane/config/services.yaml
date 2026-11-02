@@ -225,6 +225,10 @@ services:
             $passwordResetUrl: '%env(CONTROL_PASSWORD_RESET_URL)%'
             $messageIdDomain: '%env(CONTROL_MESSAGE_ID_DOMAIN)%'
 
+    ControlPlane\Infrastructure\Console\ControlPreviewEmailsCommand:
+        arguments:
+            $messageIdDomain: '%env(CONTROL_MESSAGE_ID_DOMAIN)%'
+
     ControlPlane\Infrastructure\Outbox\ControlEmailOutboxDispatcher:
         arguments:
             $processors:

@@ -34,12 +34,20 @@ final readonly class SecurityEmailProcessor implements EmailEventProcessor
         $email=$this->connection->fetchOne('SELECT email FROM commercial.control_users WHERE id=? AND status=?',[$payload['user_id'],'active']); if(!is_string($email)||filter_var($email,FILTER_VALIDATE_EMAIL)===false)throw new \DomainException('No active recipient.');
         $type=(string)$row['event_type'];
         if (!in_array($type, self::EVENTS, true)) throw new \DomainException('Unsupported security email event.');
-        $subject='Platform security notice'; $text='A security setting for your Platform account changed.';
-        if($type==='control_user.password_reset_requested'){if(!is_string($payload['reset_id']??null)||!Uuid::isValid($payload['reset_id']))throw new \DomainException('Invalid reset event.');$url=$this->passwordResetUrl.(str_contains($this->passwordResetUrl,'?')?'&':'?').'token='.rawurlencode($this->tokens->passwordResetToken($payload['reset_id']));$subject='Reset your Platform password';$text="Reset your Platform password: $url";}
+        $subject='Platform security notice'; $text='A security setting for your Platform account changed.'; $body='';
+        if($type==='control_user.password_reset_requested'){
+            if(!is_string($payload['reset_id']??null)||!Uuid::isValid($payload['reset_id']))throw new \DomainException('Invalid reset event.');
+            $url=$this->passwordResetUrl.(str_contains($this->passwordResetUrl,'?')?'&':'?').'token='.rawurlencode($this->tokens->passwordResetToken($payload['reset_id']));
+            $subject='Reset your Platform password';$text="Reset your Platform password: $url";
+            $body='<p>We received a request to reset the password for your Platform account.</p>'
+                .'<p><a href="'.htmlspecialchars($url,ENT_QUOTES,'UTF-8').'">Choose a new password</a></p>'
+                .'<p>If you did not request this, you can ignore this email.</p>';
+        }
         elseif($type==='control_user.password_changed'){$subject='Your Platform password changed';$text='Your Platform password was changed. If this was not you, contact support immediately.';}
         elseif($type==='control_user.mfa_enabled'){$subject='Two-factor authentication enabled';$text='Two-factor authentication was enabled for your Platform account.';}
         elseif($type==='control_user.mfa_disabled'){$subject='Two-factor authentication disabled';$text='Two-factor authentication was disabled for your Platform account.';}
         elseif($type==='control_user.recovery_codes_regenerated'){$subject='Recovery codes regenerated';$text='Your Platform recovery codes were regenerated.';}
-        return [$email,$subject,$text,'<p>'.htmlspecialchars($text,ENT_QUOTES,'UTF-8').'</p>',(string)$row['event_id'].'@'.$this->messageIdDomain];
+        if($body===''){$body='<p>'.htmlspecialchars($text,ENT_QUOTES,'UTF-8').'</p>';}
+        return [$email,$subject,$text,ControlEmailLayout::render($subject,$body),(string)$row['event_id'].'@'.$this->messageIdDomain];
     }
 }

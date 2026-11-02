@@ -81,7 +81,11 @@ final class SchedulerRunCommand extends Command
                     }),
                 new ScheduledJob('runtime_entitlement_sync', Config::integer('CORE_ENTITLEMENT_SYNC_INTERVAL_SECONDS', 300, 1, 86400),
                     $enabled && Config::enabled('CORE_ENTITLEMENT_SYNC_ENABLED', true), 1,
-                    function (int $limit): int { $this->entitlements->sync(); return 1; }),
+                    function (int $limit): int {
+                        if (!$this->entitlements->configured()) { throw new JobSkipped('entitlement_sync_unconfigured'); }
+                        $this->entitlements->sync();
+                        return 1;
+                    }),
             ];
             (new SchedulerLoop($this->db, $jobs, static fn(string $line) => $output->writeln($line),
                 recorder: $this->status))->run();

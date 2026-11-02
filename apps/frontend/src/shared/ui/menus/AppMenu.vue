@@ -12,7 +12,8 @@ const props = withDefaults(defineProps<{
   searchable?: boolean;
   closeOnSelect?: boolean;
   initialFocus?: 'first' | 'last' | 'selected';
-}>(), { anchor: null, point: null, id: undefined, searchable: false, closeOnSelect: true, initialFocus: 'first' });
+  size?: 'm' | 's';
+}>(), { anchor: null, point: null, id: undefined, searchable: false, closeOnSelect: true, initialFocus: 'first', size: 'm' });
 const open = defineModel<boolean>({ default: false });
 const emit = defineEmits<{ select: [item: MenuItem] }>();
 const uid = useId();
@@ -93,7 +94,10 @@ function layout(): void {
   const width = window.innerWidth;
   viewport.value = width;
   const rect = props.anchor?.getBoundingClientRect();
-  panelWidth.value = Math.min(Math.max(rect?.width ?? 0, 280), 360, width - 24);
+  const anchorWidth = rect?.width ?? 0;
+  panelWidth.value = props.point
+    ? Math.min(280, width - 24)
+    : Math.min(Math.max(anchorWidth, 96), 360, width - 24);
   const elements = panels();
   const w = panelWidth.value;
   const total = elements.length * (w + 6) - 6;
@@ -230,7 +234,7 @@ onBeforeUnmount(() => { disposed = true; cleanup(); });
 <template>
   <Teleport :to="teleportTarget">
     <div v-if="open" :id="`${menuId}-layer`" ref="layer" class="app-menu" @contextmenu.prevent>
-      <section v-for="(level, index) in levels" :key="level.depth" class="app-menu__panel" :data-menu-depth="level.depth"
+      <section v-for="(level, index) in levels" :key="level.depth" class="app-menu__panel" :class="{ 'app-menu__panel--s': size === 's' }" :data-menu-depth="level.depth"
         :style="{ width: `${panelWidth}px`, left: `${positions[index]?.left ?? 12}px`, top: `${positions[index]?.top ?? 12}px` }">
         <header v-if="level.depth || searchable" class="app-menu__header" :class="{ 'app-menu__header--nested': level.depth }">
           <button v-if="level.depth" type="button" class="app-menu__back" @click="back(level.depth)"><ChevronLeft :size="18" aria-hidden="true" /><span>{{ $t('menus.back') }} <small>{{ level.label }}</small></span></button>
@@ -288,6 +292,12 @@ onBeforeUnmount(() => { disposed = true; cleanup(); });
 .app-menu__item[aria-checked="true"] { color: var(--accent-text); background: var(--accent-soft); transition: var(--theme-transition); }
 .app-menu__item:focus-visible, .app-menu__back:focus-visible { box-shadow: inset 0 0 0 2px var(--focus-border); transition: var(--theme-transition); }
 .app-menu__item[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+.app-menu__panel--s { padding: var(--space-4); border-radius: var(--radius-control-m); }
+.app-menu__panel--s .app-menu__header { padding: var(--space-2); gap: var(--space-4); }
+.app-menu__panel--s .app-menu__item, .app-menu__panel--s .app-menu__back { min-height: 30px; padding: var(--space-4) var(--space-8); gap: var(--space-6); font-size: var(--type-body-small-size); line-height: var(--type-body-small-line); }
+.app-menu__panel--s .app-menu__item svg { width: 16px; height: 16px; }
+.app-menu__panel--s .app-menu__search { padding: var(--space-4) var(--space-6); }
+.app-menu__panel--s .app-menu__search input { font-size: var(--type-body-small-size); line-height: var(--type-body-small-line); }
 .app-menu__item > svg { flex: 0 0 auto; }
 .app-menu__text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .app-menu__text small { display: block; color: var(--text-2); font-size: var(--type-body-small-size); line-height: var(--type-body-small-line); transition: var(--theme-transition); }

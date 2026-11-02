@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { Layers, Moon, Settings, Sun } from '@/shared/ui/icons';
+import { Layers, Moon, Sun } from '@/shared/ui/icons';
 import { useTheme } from '@/app/theme';
-import { useRouter } from 'vue-router';
 import { setLocale } from '@/shared/i18n';
 import AppIconButton from '@/shared/ui/actions/AppIconButton.vue';
 import SiteContextMenu from './SiteContextMenu.vue';
 
 const { locale } = useI18n();
 const { isDark, toggleTheme } = useTheme();
-const router = useRouter();
 
 function toggleLocale(): void {
   setLocale(locale.value === 'ru' ? 'en' : 'ru');
@@ -27,7 +25,6 @@ function toggleLocale(): void {
         <span class="brand__name">{{ $t('app.name') }}</span>
       </RouterLink>
       <div class="auth-layout__actions">
-        <AppIconButton :label="$t('nav.settings')" @click="router.push({ name: 'settings' })"><Settings :size="20" aria-hidden="true" /></AppIconButton>
         <AppIconButton :label="isDark ? $t('theme.light') : $t('theme.dark')" @click="toggleTheme">
           <Sun v-if="isDark" :size="20" aria-hidden="true" />
           <Moon v-else :size="20" aria-hidden="true" />

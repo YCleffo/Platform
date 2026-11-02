@@ -6,19 +6,24 @@ const model = defineModel<boolean>({ default: false });
 const attrs = useAttrs();
 const input = ref<HTMLInputElement | null>(null);
 let form: HTMLFormElement | null = null;
+let resetTimer: ReturnType<typeof setTimeout> | undefined;
 function describedBy(): string | undefined {
   return [props.description ? `${props.id}-description` : '', typeof attrs['aria-describedby'] === 'string' ? attrs['aria-describedby'] : ''].filter(Boolean).join(' ') || undefined;
 }
 function onReset(): void {
-  if (input.value !== null) {
-    model.value = input.value.defaultChecked;
-  }
+  clearTimeout(resetTimer);
+  resetTimer = setTimeout(() => {
+    if (input.value !== null) {
+      model.value = input.value.checked;
+    }
+  }, 0);
 }
 onMounted(() => {
   form = input.value?.form ?? null;
   form?.addEventListener('reset', onReset);
 });
 onBeforeUnmount(() => {
+  clearTimeout(resetTimer);
   form?.removeEventListener('reset', onReset);
   form = null;
 });

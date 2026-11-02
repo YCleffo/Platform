@@ -37,6 +37,15 @@ final class FileEmailTemplateRendererTest extends Unit
         assertSame(['displayName', 'signInUrl'], $english->variables);
     }
 
+    public function testRendersUnderscoreTemplateCodesWithBrandedLayout(): void
+    {
+        $template = $this->renderer()->render('auth.external_identity.linked', 'ru-RU', []);
+
+        assertSame('ru-RU', $template->locale);
+        assertStringContainsString('Platform', $template->htmlBody);
+        assertStringContainsString('background:#f3f5f9', $template->htmlBody);
+    }
+
     public function testNormalizesLegacyLocaleAndUsesEnglishForForeignLanguage(): void
     {
         $variables = [

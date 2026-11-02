@@ -61,15 +61,14 @@ SELECT pg_read_file('/etc/passwd');            -- ERROR
 `TRUNCATE` и `DELETE FROM public.doctrine_migration_versions` завершаются `permission denied`.
 CI gate `scripts/ci/db-role-gate.sh core|commercial` выполняет это на одноразовых БД:
 создаёт отдельную runtime-роль, проверяет `rolsuper/rolcreatedb/rolcreaterole/rolbypassrls = 0`,
+явно проверяет `has_schema_privilege`/`has_database_privilege`/`has_table_privilege`,
 разрешает чтение прикладной таблицы и требует отказа для DDL, `TRUNCATE`, удаления history
 миграций (`public.platform_migrations` в Core, `public.doctrine_migration_versions`
-в Commercial) и `pg_read_file`. Это gate для ролей, а не доказательство всех
+в Commercial) и `pg_read_file`. Каждый отказ обязан быть `SQLSTATE 42501` и выполняется
+в откатываемой транзакции; `0A000` (например, FK-ограничение), syntax/connection errors
+и неожиданный успех делают gate красным. Это gate для ролей, а не доказательство всех
 HTTP/worker flows; полный lifecycle под runtime-role остаётся обязательной
 release-проверкой.
-
-Известный пробел текущего gate: он принимает любой SQL error за отказ по правам.
-`TRUNCATE` таблицы с внешними ключами может вернуть `0A000` при наличии права;
-требуется проверка SQLSTATE `42501` и явного отсутствия привилегии. См. [аудит](../AUDIT.md).
 
 ## Ограничения
 

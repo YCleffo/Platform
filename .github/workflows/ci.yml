@@ -583,6 +583,8 @@ jobs:
         run: bash ./scripts/ci/control-test-start.sh
       - name: Reset disposable Commercial fixtures
         run: env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+      - name: Seed demo catalog for browser flows
+        run: bash ./scripts/ci/control-test-seed-catalog.sh
       - name: Start Commercial HTTP runtime and Mailpit
         run: docker compose --profile control-test up -d --wait control-plane-test mailpit-test
       - name: Start the real outbox worker
@@ -654,6 +656,12 @@ jobs:
       - name: Run browser invitation and MFA flow
         working-directory: apps/frontend
         run: node scripts/e2e-invitation-lifecycle.mjs
+      - name: Reset disposable Commercial fixtures before recovery flow
+        run: |
+          docker compose --profile control-test stop control-plane-test
+          env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+          docker compose --profile control-test up -d --wait control-plane-test
+          bash ./scripts/ci/control-email-worker-start.sh
       - name: Run browser account recovery flow
         working-directory: apps/frontend
         run: node scripts/e2e-auth-recovery.mjs

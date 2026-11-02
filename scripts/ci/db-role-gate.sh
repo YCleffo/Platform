@@ -63,7 +63,7 @@ docker compose --profile "${profile}" exec -T \
 runtime_psql() {
   docker compose --profile "${profile}" exec -T \
     -e PGPASSWORD="${runtime_password}" \
-    "${service}" psql -X -v ON_ERROR_STOP=1 \
+    "${service}" psql -X -v ON_ERROR_STOP=1 -v VERBOSITY=verbose \
     -h 127.0.0.1 -U "${runtime_role}" -d "${database}" "$@"
 }
 
@@ -74,16 +74,41 @@ if [[ "${attributes}" != "0|0|0|0" ]]; then
   exit 1
 fi
 
+schema="${denied_table%%.*}"
+check_privilege() {
+  local label="$1" expression="$2" expected="$3" actual
+  actual="$(runtime_psql -tA -c "SELECT (${expression})::text;")"
+  if [[ "${actual}" != "${expected}" ]]; then
+    echo "Privilege check failed for ${label}: expected ${expected}, got ${actual}" >&2
+    exit 1
+  fi
+  echo "Privilege ${label}: ${actual}"
+}
+
+echo "Verifying effective privileges..."
+check_privilege "schema usage" "has_schema_privilege(current_user, '${schema}', 'USAGE')" "true"
+check_privilege "schema create" "has_schema_privilege(current_user, '${schema}', 'CREATE')" "false"
+check_privilege "database create" "has_database_privilege(current_user, current_database(), 'CREATE')" "false"
+check_privilege "application select" "has_table_privilege(current_user, '${positive_table}', 'SELECT')" "true"
+check_privilege "application truncate" "has_table_privilege(current_user, '${denied_table}', 'TRUNCATE')" "false"
+check_privilege "migration delete" "has_table_privilege(current_user, '${migration_table}', 'DELETE')" "false"
+check_privilege "migration truncate" "has_table_privilege(current_user, '${migration_table}', 'TRUNCATE')" "false"
+
 echo "Verifying allowed read access..."
 runtime_psql -tA -c "SELECT 1 FROM ${positive_table} LIMIT 1;" >/dev/null
 
 expect_denied() {
-  local statement="$1"
-  if runtime_psql -c "${statement}" >/dev/null 2>&1; then
+  local statement="$1" output
+  if output="$(runtime_psql -c 'BEGIN' -c "${statement}" -c 'ROLLBACK' 2>&1)"; then
     echo "Runtime role unexpectedly allowed: ${statement}" >&2
     exit 1
   fi
-  echo "Denied as expected: ${statement}"
+  if ! grep -Eq 'ERROR:[[:space:]]+42501:' <<< "${output}"; then
+    echo "Expected SQLSTATE 42501 for '${statement}', got:" >&2
+    printf '%s\n' "${output}" >&2
+    exit 1
+  fi
+  echo "Denied with SQLSTATE 42501: ${statement}"
 }
 
 expect_denied "CREATE TABLE ${denied_table%%.*}.runtime_role_should_fail (id int);"

@@ -113,12 +113,13 @@ final class OperationalStatusTest extends TestCase
             });
         $recorder = new BackgroundJobStatusRecorder($db);
         $recorder->failed('runtime_entitlement_sync', 'job_failed');
-        $recorder->skipped('runtime_entitlement_sync', 'policy_missing');
+        $recorder->skipped('runtime_entitlement_sync', 'entitlement_sync_unconfigured');
         $recorder->succeeded('runtime_entitlement_sync', 8, 1);
         self::assertStringContainsString('consecutive_failures + 1', $writes[0][0]);
         self::assertStringNotContainsString('consecutive_failures', $writes[1][0]);
         self::assertStringContainsString('consecutive_failures = 0', $writes[2][0]);
         self::assertSame([':code' => 'runtime_entitlement_sync', ':error' => 'job_failed'], $writes[0][1]);
+        self::assertSame([':code' => 'runtime_entitlement_sync', ':result' => 'skipped'], $writes[1][1]);
     }
 
     public function testSchedulerRecordsHeartbeatAndExpectedSkipWithoutFailure(): void

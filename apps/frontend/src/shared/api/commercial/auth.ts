@@ -34,6 +34,11 @@ export interface CommercialAuthApi {
   verifyEmail(token: string): Promise<StatusResult>;
   requestPasswordReset(email: string): Promise<StatusResult>;
   confirmPasswordReset(token: string, password: string): Promise<StatusResult>;
+  changePassword(currentPassword: string, password: string): Promise<StatusResult>;
+  regenerateRecoveryCodes(): Promise<RecoveryCodesResult>;
+  disableMfa(): Promise<void>;
+  revokeSession(sessionId: string): Promise<void>;
+  revokeOtherSessions(): Promise<void>;
   login(email: string, password: string, signal?: AbortSignal): Promise<LoginResult>;
   verifyMfaLogin(
     challengeToken: string,
@@ -69,6 +74,18 @@ export function createCommercialAuthApi(http: HttpClient): CommercialAuthApi {
         { token, password },
         { validate: isPasswordChangedStatus },
       ),
+    changePassword: (currentPassword, password) =>
+      http.post<StatusResult>(
+        '/auth/password/change',
+        { current_password: currentPassword, password },
+        { validate: isPasswordChangedStatus },
+      ),
+    regenerateRecoveryCodes: () =>
+      http.post<RecoveryCodesResult>('/auth/mfa/recovery-codes/regenerate', {}, { validate: isRecoveryCodesResult }),
+    disableMfa: () => http.post<void>('/auth/mfa/disable', {}),
+    revokeSession: (sessionId) =>
+      http.delete<void>(`/auth/sessions/${encodeURIComponent(sessionId)}`),
+    revokeOtherSessions: () => http.post<void>('/auth/sessions/revoke-others', {}),
     login: (email, password, signal) =>
       http.post<LoginResult>('/auth/login', { email, password }, { validate: isLoginResult, signal }),
     verifyMfaLogin: (challengeToken, input, signal) =>

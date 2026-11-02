@@ -19,7 +19,7 @@ try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     await context.addInitScript(theme => { localStorage.setItem('platform.locale', 'en'); localStorage.setItem('platform.theme', theme); }, theme);
     const page = await context.newPage();
-    for (const path of ['/login', '/register', '/verify-email', '/resend-verification', '/forgot-password', '/reset-password', '/reset-password?token=synthetic', '/invitation', '/does-not-exist', '/settings', '/settings/components']) {
+    for (const path of ['/login', '/admin/login', '/register', '/verify-email', '/resend-verification', '/forgot-password', '/reset-password', '/reset-password?token=synthetic', '/invitation', '/does-not-exist', '/settings', '/settings/components']) {
       await page.goto(base + path, { waitUntil: 'networkidle' });
       await scan(page, `${theme} ${path}`);
     }

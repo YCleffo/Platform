@@ -76,14 +76,25 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
 
     const body = options.body === undefined ? undefined : JSON.stringify(options.body);
 
-    let response: Response;
-    try {
-      response = await fetch(url, { method, headers, body, signal: options.signal });
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        throw new RequestAbortedError();
+    let response: Response | undefined;
+    for (let attempt = 1; response === undefined; attempt += 1) {
+      try {
+        response = await fetch(url, { method, headers, body, signal: options.signal });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          throw new RequestAbortedError();
+        }
+        if (method === 'GET' && attempt === 1 && options.signal?.aborted !== true) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          continue;
+        }
+        throw new NetworkError();
       }
-      throw new NetworkError();
+      if (method === 'GET' && attempt === 1 && [502, 503, 504].includes(response.status) && options.signal?.aborted !== true) {
+        response = undefined;
+        await new Promise(resolve => setTimeout(resolve, 100));
+        continue;
+      }
     }
 
     if (response.status === 204) {

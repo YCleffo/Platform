@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { RouterLink, type RouteLocationRaw } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { Check, Tag } from '@/shared/ui/icons';
 import AppCard from '@/shared/ui/surfaces/AppCard.vue';
@@ -7,7 +8,7 @@ import { formatMoney } from '@/shared/formatting/money';
 import { planFeatureEntries } from './features';
 import type { Plan, PlanPrice } from '@/shared/types';
 
-defineProps<{ plan: Plan }>();
+defineProps<{ plan: Plan; target: RouteLocationRaw }>();
 
 const { t, locale } = useI18n();
 
@@ -54,6 +55,7 @@ function priceText(price: PlanPrice): string {
       <Tag :size="14" aria-hidden="true" />
       {{ $t('catalog.noFeatures') }}
     </p>
+    <RouterLink class="plan__cta" :to="target">{{ $t('catalog.choosePlan') }}</RouterLink>
   </AppCard>
 </template>
 
@@ -165,6 +167,8 @@ function priceText(price: PlanPrice): string {
   transition: var(--theme-transition);
 }
 
+.plan__cta { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; margin-top: var(--space-16); padding: var(--space-8) var(--space-16); border-radius: var(--radius-control-m); background: var(--accent); color: var(--color-white); font-size: var(--type-body-medium-emphasis-size); font-weight: var(--type-body-medium-emphasis-weight); text-decoration: none; transition: var(--theme-transition); }
+.plan__cta:hover { background: var(--accent-hover); text-decoration: none; }
 .plan__empty {
   display: flex;
   align-items: center;

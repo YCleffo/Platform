@@ -139,6 +139,7 @@ SQL, [$invitationId, $accountId]);
         };
         $expires = (string) $invitation['expires_at'];
         $text = "You have been invited to join $organization on Platform as $role.\n\nAccept the invitation: $url\n\nThis invitation expires on $expires. If you were not expecting it, you can ignore this email.";
+        $subject = 'Invitation to join ' . $organization . ' on Platform';
         $html = '<p>You have been invited to join <strong>' . htmlspecialchars($organization, ENT_QUOTES, 'UTF-8')
             . '</strong> on Platform as <strong>' . htmlspecialchars($role, ENT_QUOTES, 'UTF-8') . '</strong>.</p>'
             . '<p><a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Accept invitation</a></p>'
@@ -147,9 +148,9 @@ SQL, [$invitationId, $accountId]);
 
         return [
             'recipient' => $invitation['email'],
-            'subject' => 'Invitation to join ' . $organization . ' on Platform',
+            'subject' => $subject,
             'text' => $text,
-            'html' => $html,
+            'html' => ControlEmailLayout::render($subject, $html),
             'message_id' => (string) $claim['event_id'] . '@' . $this->messageIdDomain,
         ];
     }

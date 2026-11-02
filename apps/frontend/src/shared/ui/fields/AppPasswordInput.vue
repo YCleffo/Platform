@@ -13,6 +13,7 @@ interface Props {
   hint?: string;
   required?: boolean;
   disabled?: boolean;
+  size?: 'm' | 'l';
 }
 
 withDefaults(defineProps<Props>(), {
@@ -23,6 +24,7 @@ withDefaults(defineProps<Props>(), {
   hint: undefined,
   required: false,
   disabled: false,
+  size: 'l',
 });
 
 const model = defineModel<string>({ default: '' });
@@ -42,7 +44,7 @@ const visible = ref(false);
     :hint="hint"
     :required="required"
     :disabled="disabled"
-    size="l"
+    :size="size"
   >
     <template #trailing>
       <AppIconButton

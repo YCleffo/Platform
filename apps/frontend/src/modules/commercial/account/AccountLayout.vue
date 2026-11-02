@@ -32,6 +32,9 @@ const errorText = computed(() => {
 });
 const canViewMembers = computed(() => detail.value?.permissions.view_members === true);
 const canManageInvitations = computed(() => detail.value?.permissions.manage_members === true);
+const canManageBilling = computed(() => detail.value?.permissions.manage_billing === true);
+const canReadAccount = computed(() => detail.value?.permissions.read_account === true);
+const canViewAudit = computed(() => detail.value?.permissions.manage_members === true);
 
 watch(
   accountId,
@@ -114,6 +117,38 @@ function switchAccount(id: string): void {
           :to="{ name: 'account-invitations', params: { accountId: detail.id } }"
         >
           {{ $t('invitations.title') }}
+        </RouterLink>
+        <RouterLink
+          v-if="canManageBilling"
+          active-class=""
+          exact-active-class="account-layout__tab--active"
+          :to="{ name: 'account-billing', params: { accountId: detail.id } }"
+        >
+          {{ $t('billing.title') }}
+        </RouterLink>
+        <RouterLink
+          v-if="canReadAccount"
+          active-class=""
+          exact-active-class="account-layout__tab--active"
+          :to="{ name: 'account-usage', params: { accountId: detail.id } }"
+        >
+          {{ $t('usage.title') }}
+        </RouterLink>
+        <RouterLink
+          v-if="canReadAccount"
+          active-class=""
+          exact-active-class="account-layout__tab--active"
+          :to="{ name: 'account-analytics', params: { accountId: detail.id } }"
+        >
+          {{ $t('analytics.title') }}
+        </RouterLink>
+        <RouterLink
+          v-if="canViewAudit"
+          active-class=""
+          exact-active-class="account-layout__tab--active"
+          :to="{ name: 'account-audit', params: { accountId: detail.id } }"
+        >
+          {{ $t('audit.title') }}
         </RouterLink>
       </nav>
 

@@ -101,6 +101,9 @@ final class CatalogArchitectureTest extends Unit
         self::assertDirectoryExists($directory);
         $templates = [];
         foreach (glob($directory . '/*') ?: [] as $path) {
+            if (str_starts_with(basename($path), '_')) {
+                continue;
+            }
             if (!is_file($path) || preg_match('/\A(.+?)\.(subject\.txt|html|txt)\z/', basename($path), $matches) !== 1) {
                 continue;
             }

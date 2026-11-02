@@ -40,6 +40,30 @@ try {
   check(await formName.inputValue() === '' && !await page.locator('#demo-form-updates').isChecked(), 'Native reset restores the control state');
   const restored = (await page.locator('#demo-form-model').textContent())?.replace(/\s+/g, ' ').trim() ?? '';
   check(restored.includes('—') && restored.endsWith('off'), `Native reset restores the Vue state: ${restored}`);
+  await formName.fill('Audit');
+  await page.locator('#demo-form-updates').check();
+  await page.evaluate(() => {
+    const form = document.querySelector('#demo-native-form');
+    form?.addEventListener('reset', event => event.preventDefault(), { once: true });
+  });
+  await page.locator('#demo-form-reset').click();
+  await page.waitForTimeout(100);
+  check(await formName.inputValue() === 'Audit' && await page.locator('#demo-form-updates').isChecked(), 'Canceled native reset leaves the control state unchanged');
+  const canceled = (await page.locator('#demo-form-model').textContent())?.replace(/\s+/g, ' ').trim() ?? '';
+  check(canceled.includes('Audit') && canceled.endsWith('on'), `Canceled native reset leaves the Vue state unchanged: ${canceled}`);
+  await page.locator('#demo-form-reset').click();
+  await page.waitForFunction(() => document.querySelector('#demo-form-name')?.value === '');
+  check(await formName.inputValue() === '' && !await page.locator('#demo-form-updates').isChecked(), 'A later native reset still works');
+  const sortable = page.locator('#demo-sortable');
+  await sortable.waitFor();
+  const sortableBefore = await sortable.locator('.sortable__label').allTextContents();
+  await sortable.locator('.sortable__handle').first().focus();
+  await page.keyboard.press('Alt+ArrowDown');
+  await page.waitForTimeout(100);
+  const sortableAfter = await sortable.locator('.sortable__label').allTextContents();
+  check(sortableAfter[0] === sortableBefore[1] && sortableAfter[1] === sortableBefore[0], 'Sortable list reorders with Alt+ArrowDown');
+  check(await page.evaluate(() => getComputedStyle(document.querySelector('label')).userSelect) === 'none', 'Labels are protected from text selection');
+
   const control = page.locator('label[for="demo-switch"] .app-switch__control');
   const point = await control.boundingBox();
   await page.mouse.move(point.x + point.width / 2, point.y + point.height / 2); await page.mouse.down();

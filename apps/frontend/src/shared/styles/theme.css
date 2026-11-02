@@ -34,6 +34,8 @@
   --danger: var(--color-danger-500);
   --danger-soft: var(--color-danger-50);
   --danger-text: var(--color-danger-700);
+  --danger-solid: var(--color-danger-700);
+  --danger-solid-hover: var(--color-danger-800);
   --success: var(--color-success-500);
   --success-soft: var(--color-success-50);
   --success-text: var(--color-success-700);
@@ -47,6 +49,11 @@
   --backdrop: var(--color-overlay-backdrop);
   --selected-surface: var(--color-selected-surface);
   --selected-accent: var(--color-selected-accent);
+  --table-row-hover: color-mix(in srgb, var(--accent) 6%, transparent);
+  --table-column-hover: color-mix(in srgb, var(--accent) 4%, transparent);
+  --table-cell-hover: color-mix(in srgb, var(--accent) 9%, transparent);
+  --table-head-column-hover: color-mix(in srgb, var(--accent) 7%, var(--card));
+
   --disabled-text: var(--color-disabled-text);
   --disabled-border: var(--color-disabled-border);
   --disabled-surface: var(--color-disabled-surface);
@@ -84,6 +91,8 @@
   --danger: var(--color-danger-text);
   --danger-soft: var(--color-error-surface);
   --danger-text: var(--color-danger-text);
+  --danger-solid: var(--color-danger-700);
+  --danger-solid-hover: var(--color-danger-800);
   --success: var(--color-success-text);
   --success-soft: var(--color-success-surface);
   --success-text: var(--color-success-text);
@@ -97,6 +106,10 @@
   --backdrop: var(--color-overlay-backdrop);
   --selected-surface: var(--color-selected-surface);
   --selected-accent: var(--color-selected-accent);
+  --table-row-hover: color-mix(in srgb, var(--accent) 6%, transparent);
+  --table-column-hover: color-mix(in srgb, var(--accent) 4%, transparent);
+  --table-cell-hover: color-mix(in srgb, var(--accent) 9%, transparent);
+  --table-head-column-hover: color-mix(in srgb, var(--accent) 7%, var(--card));
   --disabled-text: var(--color-disabled-text);
   --disabled-border: var(--color-disabled-border);
   --disabled-surface: var(--color-disabled-surface);

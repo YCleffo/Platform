@@ -55,6 +55,39 @@ describe('http client', () => {
     expect(new Headers(retryInit.headers).get('Authorization')).toBe('Bearer access-2');
   });
 
+  it('retries one idempotent GET after a transport failure', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+      .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { client } = makeClient();
+
+    await expect(client.get<{ ok: boolean }>('/x')).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries one idempotent GET after a proxy gateway failure', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 502 }))
+      .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { client } = makeClient();
+
+    await expect(client.get<{ ok: boolean }>('/x')).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry a POST after a transport failure', async () => {
+    const fetchMock = vi.fn().mockRejectedValueOnce(new TypeError('fetch failed'));
+    vi.stubGlobal('fetch', fetchMock);
+    const { client } = makeClient();
+
+    await expect(client.post('/x', {})).rejects.toBeInstanceOf(NetworkError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('shares a single refresh across concurrent 401 responses', async () => {
     let release: (value: RefreshOutcome) => void = () => {};
     const pendingRefresh = new Promise<RefreshOutcome>((resolve) => {

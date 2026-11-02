@@ -8,7 +8,7 @@ import AppIconButton from '../actions/AppIconButton.vue';
 interface Props {
   title: string;
   description?: string;
-  size?: 's' | 'm' | 'l';
+  size?: 's' | 'm' | 'l' | 'full';
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
   persistent?: boolean;
@@ -101,7 +101,7 @@ function markEntering(element: Element): void {
 <template>
   <Teleport to="body">
     <Transition name="dialog" @before-leave="markLeaving" @before-enter="markEntering">
-    <div v-if="open" class="app-dialog" @mousedown.self="closeOnBackdrop ? requestClose() : undefined">
+    <div v-if="open" class="app-dialog" :class="{ 'app-dialog--full': size === 'full' }" @mousedown.self="closeOnBackdrop ? requestClose() : undefined">
       <div
         ref="dialogEl"
         class="app-dialog__panel"
@@ -225,5 +225,27 @@ function markEntering(element: Element): void {
   .app-dialog__body {
     padding: var(--space-16) var(--pad-modal-large) var(--pad-modal-large);
   }
+}
+
+.app-dialog.app-dialog--full {
+  padding: 0;
+  align-items: stretch;
+  width: 100vw;
+  width: 100dvw;
+}
+
+.app-dialog__panel.app-dialog__panel--full {
+  width: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: 100dvh;
+  border-radius: 0;
+  border: 0;
+  padding-bottom: 0;
+}
+
+.app-dialog__panel--full .app-dialog__body {
+  flex: 1;
+  min-height: 0;
 }
 </style>

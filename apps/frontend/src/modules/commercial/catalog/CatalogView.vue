@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { onMounted } from 'vue';
+import type { RouteLocationRaw } from 'vue-router';
+import { useAuthStore } from '@/core/auth/authStore';
+import { useAccountStore } from '@/core/account/accountStore';
+import type { Plan } from '@/shared/types';
 import { usePlanCatalog } from './usePlanCatalog';
 import PlanCard from './PlanCard.vue';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
@@ -8,6 +13,30 @@ import AppErrorState from '@/shared/ui/feedback/AppErrorState.vue';
 import AppSkeleton from '@/shared/ui/feedback/AppSkeleton.vue';
 
 const { plans, loading, errorMessage, load } = usePlanCatalog();
+const auth = useAuthStore();
+const accounts = useAccountStore();
+
+onMounted(() => {
+  if (auth.isAuthenticated && accounts.accounts.length === 0 && !accounts.loading) {
+    void accounts.loadPage(0);
+  }
+});
+
+function planTarget(plan: Plan): RouteLocationRaw {
+  if (!auth.isAuthenticated) {
+    return { name: 'login', query: { redirect: '/' } };
+  }
+  const accountId = accounts.accounts[0]?.id;
+  if (accountId === undefined) {
+    return { name: 'cabinet' };
+  }
+  const price = plan.prices[0];
+  return {
+    name: 'account-billing',
+    params: { accountId },
+    query: price === undefined ? {} : { planPrice: price.id },
+  };
+}
 </script>
 
 <template>
@@ -30,7 +59,7 @@ const { plans, loading, errorMessage, load } = usePlanCatalog();
     <AppEmptyState v-else-if="plans.length === 0" :title="$t('catalog.noPlans')" />
 
     <div v-else class="catalog__grid">
-      <PlanCard v-for="plan in plans" :key="plan.id" :plan="plan" />
+      <PlanCard v-for="plan in plans" :key="plan.id" :plan="plan" :target="planTarget(plan)" />
     </div>
   </section>
 </template>

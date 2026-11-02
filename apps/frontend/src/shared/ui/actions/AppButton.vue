@@ -31,13 +31,16 @@ const isDisabled = computed(() => props.disabled || props.loading);
     :disabled="isDisabled"
     :aria-busy="loading ? 'true' : undefined"
   >
-    <LoaderCircle v-if="loading" class="app-button__spinner" :size="18" aria-hidden="true" />
-    <slot />
+    <span class="app-button__content"><slot /></span>
+    <span v-if="loading" class="app-button__loader" aria-hidden="true">
+      <LoaderCircle class="app-button__spinner" :size="18" />
+    </span>
   </button>
 </template>
 
 <style scoped>
 .app-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -51,6 +54,27 @@ const isDisabled = computed(() => props.disabled || props.loading);
   text-align: center;
   transition:
     var(--theme-transition);
+}
+
+.app-button__content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: inherit;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-button[aria-busy='true'] .app-button__content {
+  opacity: 0;
+}
+
+.app-button__loader {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
 }
 
 .app-button--s {
@@ -132,13 +156,13 @@ const isDisabled = computed(() => props.disabled || props.loading);
 }
 
 .app-button--danger {
-  background: var(--danger);
+  background: var(--danger-solid);
   color: var(--color-white);
   transition: var(--theme-transition);
 }
 
 .app-button--danger:hover:not(:disabled) {
-  background: var(--color-danger-700);
+  background: var(--danger-solid-hover);
   transition: var(--theme-transition);
 }
 

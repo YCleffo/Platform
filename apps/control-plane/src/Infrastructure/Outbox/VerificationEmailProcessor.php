@@ -138,7 +138,12 @@ SQL, [$verificationId, $userId]);
             'recipient' => $recipient,
             'subject' => 'Verify your Platform email address',
             'text' => $text,
-            'html' => '<p>Verify your Platform email address:</p><p><a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Verify email</a></p>',
+            'html' => ControlEmailLayout::render(
+                'Verify your Platform email address',
+                '<p>Confirm your email address to finish setting up your Platform account.</p>'
+                . '<p><a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Verify email</a></p>'
+                . '<p>If you did not create this account, you can ignore this email.</p>',
+            ),
             'message_id' => (string) $claim['event_id'] . '@' . $this->messageIdDomain,
         ];
     }

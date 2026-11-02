@@ -26,6 +26,7 @@ use App\Core\Privacy\Api\PersonalDataExportAction;
 use App\Core\Privacy\Api\ProcessingInformationAction;
 use App\Core\Privacy\Api\ManagePrivacyCorrectionAction;
 use App\Core\Auth\Api\ListSessionsAction;
+use App\Core\Audit\Api\ListAuditEventsAction;
 use App\Core\Auth\Api\ActivationAction;
 use App\Core\Auth\Api\ConfirmPasswordResetAction;
 use App\Core\Auth\Api\ChangeOwnPasswordAction;
@@ -665,6 +666,11 @@ return [
         ->middleware(RequireAuthentication::class, $permission('core.rbac.manage'))
         ->action(AccountRolesAction::class)
         ->name('core/account-roles/revoke'),
+
+    Route::get('/api/core/audit-events')
+        ->middleware(RequireAuthentication::class)
+        ->action(ListAuditEventsAction::class)
+        ->name('core/audit-events/index'),
 
     Route::get('/api/core/roles')
         ->middleware(RequireAuthentication::class, $permission('core.rbac.read'))

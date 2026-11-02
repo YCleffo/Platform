@@ -26,10 +26,20 @@ Production readiness остаётся `NOT_READY`: [условия выпуск�
 
 ### Граница текущего Commercial релиза
 
-В пользовательскую границу входят catalog, аккаунты, участники, приглашения, вход/MFA и
-восстановление доступа. Checkout/subscription UI и полный Security management lifecycle
-не считаются завершёнными только из-за наличия backend endpoints: их пользовательские
-сценарии нужно явно включить в отдельный релизный этап и покрыть browser E2E.
+В пользовательскую границу входят catalog, аккаунты, участники, приглашения, вход/MFA,
+восстановление доступа, billing profile/checkout/subscription/plan changes/invoices/payments/
+payment methods, usage/entitlements, account analytics, account audit trail, privacy export
+и Security lifecycle (sessions, password, recovery codes, disable MFA). Эти страницы
+используют реальные Commercial endpoints и входят в browser E2E.
+
+Platform Core admin APIs теперь имеют отдельную admin-консоль `/admin` с собственным Core
+login/MFA, permission-gated навигацией и страницами organizations, persons, accounts,
+RBAC, modules, settings/flags, privacy operations и audit. Customer-сессия и Core admin
+сессия разделены и не переиспользуют токены друг друга.
+
+Finance plan-change compensation endpoints остаются заблокированы: они используют
+Commercial control plane, а не Core admin auth. Для них нужен отдельный Commercial
+operator permission model; открывать их через Core-сессию небезопасно.
 
 ## Следующий этап: Education
 

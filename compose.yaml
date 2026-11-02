@@ -87,6 +87,7 @@ services:
     environment: &backend_environment
       APP_ENV: ${BACKEND_APP_ENV:-dev}
       APP_DEBUG: ${BACKEND_APP_DEBUG:-true}
+      XDEBUG_MODE: ${BACKEND_XDEBUG_MODE:-off}
       CORE_SCHEDULER_ENABLED: ${CORE_SCHEDULER_ENABLED:-true}
       CORE_EMAIL_WORKER_ENABLED: ${CORE_EMAIL_WORKER_ENABLED:-true}
       CORE_SCHEDULER_HEALTH_TIMEOUT_SECONDS: ${CORE_SCHEDULER_HEALTH_TIMEOUT_SECONDS:-120}
@@ -228,6 +229,50 @@ services:
 
     networks:
       - backend_net
+  backend-fast:
+    logging: *bounded_logs
+    image: platform-backend-prod
+    build:
+      context: ./apps/backend
+      dockerfile: docker/Dockerfile
+      target: prod
+
+    restart: unless-stopped
+
+    environment:
+      <<: *backend_environment
+      APP_ENV: ${BACKEND_FAST_APP_ENV:-dev}
+      APP_DEBUG: "0"
+      CORE_SCHEDULER_ENABLED: "false"
+      CORE_EMAIL_WORKER_ENABLED: "false"
+
+    ports:
+      - "127.0.0.1:${BACKEND_FAST_PORT:-8082}:80"
+
+    volumes:
+      - ./deployment/privacy:/run/privacy:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "php",
+          "-r",
+          "exit(@file_get_contents('http://127.0.0.1/health/ready') === false ? 1 : 0);",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks: [backend_net]
+
   backend-email-worker:
     logging: *bounded_logs
     image: platform-backend:latest

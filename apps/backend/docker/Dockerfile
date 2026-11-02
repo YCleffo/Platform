@@ -102,6 +102,7 @@ RUN \
 
 USER ${USER_NAME}
 
+COPY docker/php/dev.ini /usr/local/etc/php/conf.d/zz-dev.ini
 COPY docker/dev/Caddyfile /etc/frankenphp/Caddyfile
 
 

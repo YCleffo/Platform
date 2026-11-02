@@ -21,7 +21,7 @@ final readonly class FileEmailTemplateRenderer implements TemplateRendererInterf
         string $locale,
         array $variables,
     ): EmailTemplate {
-        if (preg_match('/\A[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)*\z/', $templateCode) !== 1) {
+        if (preg_match('/\A[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*\z/', $templateCode) !== 1) {
             throw new TemplateRenderingException('Email template code is invalid.');
         }
         $resolvedLocale = $this->supportedLocales->resolve($locale);
@@ -57,10 +57,68 @@ final readonly class FileEmailTemplateRenderer implements TemplateRendererInterf
             code: $templateCode,
             locale: $canonicalLocale,
             subject: trim($this->renderBody($subjectSource, $variables, false)),
-            htmlBody: $this->renderBody($htmlSource, $variables, true),
+            htmlBody: $this->withLayout(
+                $canonicalLocale,
+                $this->renderBody($htmlSource, $variables, true),
+            ),
             textBody: $this->renderBody($textSource, $variables, false),
             variables: $required,
         );
+    }
+
+    private function withLayout(string $locale, string $html): string
+    {
+        $layoutPath = rtrim($this->templateDirectory, '/\\')
+            . DIRECTORY_SEPARATOR . $locale . DIRECTORY_SEPARATOR . '_layout.html';
+        if (!is_file($layoutPath)) {
+            return $html;
+        }
+        $layout = file_get_contents($layoutPath);
+        if ($layout === false) {
+            throw new TemplateRenderingException('Email layout cannot be read.');
+        }
+
+        $title = 'Platform';
+        if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $matches) === 1) {
+            $candidate = trim(strip_tags($matches[1]));
+            if ($candidate !== '') {
+                $title = $candidate;
+            }
+        }
+        $content = $html;
+        if (preg_match('/<body[^>]*>(.*?)<\/body>/is', $html, $matches) === 1) {
+            $content = $matches[1];
+        }
+        $content = $this->inlineStyles(trim($content));
+        $escape = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+        return strtr($layout, [
+            '{{ title }}' => $escape($title),
+            '{{ preheader }}' => $escape($title),
+            '{{ content }}' => $content,
+            '{{ locale }}' => $escape($locale),
+            '{{ year }}' => date('Y'),
+        ]);
+    }
+
+    private function inlineStyles(string $content): string
+    {
+        $content = preg_replace_callback(
+            '/<p\b([^>]*)>/i',
+            static fn(array $match): string => str_contains($match[1], 'style=')
+                ? $match[0]
+                : '<p' . $match[1] . ' style="margin:0 0 16px;color:#374151;font:400 15px/1.65 Arial,Helvetica,sans-serif;">',
+            $content,
+        ) ?? $content;
+        $content = preg_replace_callback(
+            '/<a\b([^>]*)>/i',
+            static fn(array $match): string => str_contains($match[1], 'style=')
+                ? $match[0]
+                : '<a' . $match[1] . ' style="display:inline-block;padding:12px 20px;border-radius:9px;background:#2563eb;color:#ffffff;font:700 15px/1 Arial,Helvetica,sans-serif;text-decoration:none;">',
+            $content,
+        ) ?? $content;
+
+        return $content;
     }
 
     private function hasTemplate(string $code, string $locale): bool

@@ -9,6 +9,7 @@ import AppButton from '@/shared/ui/actions/AppButton.vue';
 import AppCheckbox from '@/shared/ui/fields/AppCheckbox.vue';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppSwitch from '@/shared/ui/fields/AppSwitch.vue';
+import AppSortableList from '@/shared/ui/fields/AppSortableList.vue';
 import { LayoutGrid, Pencil, Settings } from '@/shared/ui/icons';
 import type { DropdownOption, MenuItem } from '@/shared/ui/menus/types';
 
@@ -26,6 +27,7 @@ const someExamples = computed(() => selectedExamples.value.some(Boolean) && !all
 const switchExample = ref(true);
 const formName = ref('Changed');
 const formUpdates = ref(true);
+const sortableItems = ref(['Русский', 'English', 'Deutsch', 'Español', 'Français', '日本語']);
 const languages = [ { value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' }, { value: 'de', label: 'Deutsch' }, { value: 'es', label: 'Español' }, { value: 'fr', label: 'Français' }, { value: 'ja', label: '日本語' } ];
 const options = computed<DropdownOption[]>(() => [...languages, { value: 'disabled', label: t('menus.unavailable'), disabled: true }]);
 const tree = computed<DropdownOption[]>(() => [
@@ -63,6 +65,10 @@ const contextItems = computed<MenuItem[]>(() => [
         <h3>{{ $t('controls.switches') }}</h3><p>{{ $t('controls.switchHint') }}</p>
         <AppSwitch id="demo-switch" v-model="switchExample" :label="$t('controls.switchExample')" :description="$t('controls.switchDescription')" />
         <AppSwitch id="demo-switch-disabled" :model-value="false" :label="$t('controls.unavailable')" disabled />
+      </AppCard>
+      <AppCard>
+        <h3>{{ $t('controls.sortable') }}</h3><p>{{ $t('controls.sortableHint') }}</p>
+        <AppSortableList id="demo-sortable" v-model="sortableItems" />
       </AppCard>
       <AppCard>
         <h3>{{ $t('controls.nativeForm') }}</h3><p>{{ $t('controls.nativeFormHint') }}</p>

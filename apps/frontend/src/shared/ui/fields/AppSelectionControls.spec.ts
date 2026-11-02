@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { defineComponent, nextTick } from 'vue';
+import { defineComponent, markRaw, nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import AppCheckbox from './AppCheckbox.vue';
 import AppSwitch from './AppSwitch.vue';
+
+const flushReset = () => new Promise(resolve => setTimeout(resolve, 0));
 
 describe('selection control contracts', () => {
   it('keeps mixed checkbox state native and forwards form attributes to the input', async () => {
@@ -53,10 +55,36 @@ describe('selection control contracts', () => {
 
       form.reset();
       await nextTick();
+      await flushReset();
 
       expect(wrapper.vm.value).toBe(false);
       expect(input.element.checked).toBe(false);
       expect(new FormData(form).get('motion')).toBeNull();
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
+  it.each([AppCheckbox, AppSwitch])('does not sync a canceled native reset', async component => {
+    const Host = defineComponent({
+      components: { AppCheckbox, AppSwitch },
+      data: () => ({ value: true, control: markRaw(component) }),
+      template: '<form @reset.prevent><component :is="control" id="choice" v-model="value" name="choice" label="Choice" /></form>',
+    });
+    const wrapper = mount(Host);
+    try {
+      const input = wrapper.get<HTMLInputElement>('input');
+      const form = wrapper.get('form').element as HTMLFormElement;
+
+      const reset = new Event('reset', { bubbles: true, cancelable: true });
+      form.dispatchEvent(reset);
+      expect(reset.defaultPrevented).toBe(true);
+      await nextTick();
+      await flushReset();
+
+      expect(wrapper.vm.value).toBe(true);
+      expect(input.element.checked).toBe(true);
+      expect(new FormData(form).get('choice')).toBe('on');
     } finally {
       wrapper.unmount();
     }

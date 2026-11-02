@@ -34,6 +34,7 @@ const model = defineModel<string | number>({ default: '' });
 const attrs = useAttrs();
 const input = ref<HTMLInputElement | null>(null);
 let form: HTMLFormElement | null = null;
+let resetTimer: ReturnType<typeof setTimeout> | undefined;
 
 const ariaDescribedBy = computed(() => {
   const ids: string[] = [];
@@ -48,10 +49,17 @@ const ariaDescribedBy = computed(() => {
   return ids.length > 0 ? ids.join(' ') : undefined;
 });
 
+function focusInput(): void {
+  if (!props.disabled) input.value?.focus();
+}
+
 function onReset(): void {
-  if (input.value !== null) {
-    model.value = input.value.defaultValue;
-  }
+  clearTimeout(resetTimer);
+  resetTimer = setTimeout(() => {
+    if (input.value !== null) {
+      model.value = input.value.value;
+    }
+  }, 0);
 }
 
 onMounted(() => {
@@ -60,6 +68,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  clearTimeout(resetTimer);
   form?.removeEventListener('reset', onReset);
   form = null;
 });
@@ -72,6 +81,7 @@ onBeforeUnmount(() => {
     </label>
     <div
       class="app-input__control"
+      @click="focusInput"
       :class="[
         `app-input__control--${size}`,
         { 'app-input__control--error': error, 'app-input__control--disabled': disabled },
@@ -127,21 +137,30 @@ onBeforeUnmount(() => {
 
 .app-input__control {
   display: flex;
+  cursor: text;
   align-items: center;
   gap: var(--gap-s);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-control-m);
   background: var(--surface);
+  font-family: var(--type-body-large-family), var(--font-sans);
+  font-size: var(--type-body-large-size);
+  line-height: var(--type-body-large-line);
+  font-weight: var(--type-body-large-weight);
   transition:
     var(--theme-transition);
 }
 
 .app-input__control--m {
+  height: var(--control-h-m);
+  box-sizing: border-box;
   min-height: var(--control-h-m);
   padding: var(--pad-input-m-vertical) var(--pad-input-m-horizontal);
 }
 
 .app-input__control--l {
+  height: var(--control-h-l);
+  box-sizing: border-box;
   min-height: var(--control-h-l);
   padding: var(--pad-input-l-vertical) var(--pad-input-l-horizontal);
 }
@@ -168,9 +187,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   border: none;
   background: transparent;
-  font-size: var(--type-body-large-size);
-  line-height: var(--type-body-large-line);
-  font-weight: var(--type-body-large-weight);
+  font: inherit;
   color: var(--text-1);
   outline: none;
   transition: var(--theme-transition);
@@ -181,6 +198,14 @@ onBeforeUnmount(() => {
   transition: var(--theme-transition);
 }
 
+.app-input__native:focus-visible { outline: none; box-shadow: none; }
+/* Style committed autofill values; Chromium owns the font of its suggestion preview. */
+.app-input__native:is(:autofill, :-webkit-autofill) {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface) inset !important;
+  -webkit-text-fill-color: var(--text-1);
+  caret-color: var(--text-1);
+  font: inherit !important;
+}
 .app-input__native:disabled {
   color: var(--disabled-text);
   cursor: not-allowed;

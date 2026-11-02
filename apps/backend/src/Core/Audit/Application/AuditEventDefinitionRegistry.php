@@ -18,6 +18,9 @@ final class AuditEventDefinitionRegistry
         foreach (SecurityAction::all() as $action) {
             $this->definitions[$action] = self::coreDefinition($action);
         }
+        $this->definitions['core.bootstrap.superadmin_created'] = new AuditEventDefinition(
+            'core.bootstrap.superadmin_created', ['identifierType' => 'auth_method'],
+        );
         $this->definitions['organization.created'] = new AuditEventDefinition(
             'organization.created', ['organizationId' => 'uuid', 'organizationCode' => 'code'],
         );

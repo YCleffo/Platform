@@ -65,7 +65,7 @@ SQL, [':code' => $code, ':error' => $errorCode])->execute();
     {
         $this->checkCode($code);
         if (!in_array($reason, ['disabled', 'lock_busy', 'policy_missing',
-            'privacy_policy_missing', 'automation_actor_missing'], true)) {
+            'privacy_policy_missing', 'automation_actor_missing', 'entitlement_sync_unconfigured'], true)) {
             throw new \InvalidArgumentException('Invalid job skip reason.');
         }
         $result = $reason === 'disabled' ? 'disabled' : 'skipped';

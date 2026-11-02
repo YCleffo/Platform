@@ -119,6 +119,57 @@ async function main() {
     await assertNoOverflow(page, 'members 393');
     await stableScreenshot(page, join(outDir, 'frontend04-members-393-light.png'));
 
+    // Billing and usage pages are backed by the Commercial API.
+    await page.locator('.account-layout__tabs a', { hasText: 'Billing' }).first().click();
+    await page.waitForURL(`**/accounts/${accountA}/billing`, { timeout: 20_000 });
+    await page.waitForSelector('.billing__title', { timeout: 20_000 });
+    check(await page.getByText('Billing', { exact: true }).first().isVisible(), 'billing page renders');
+    await assertNoOverflow(page, 'billing 393');
+    await stableScreenshot(page, join(outDir, 'frontend05-billing-393-light.png'));
+
+    await page.locator('.account-layout__tabs a', { hasText: 'Usage' }).first().click();
+    await page.waitForURL(`**/accounts/${accountA}/usage`, { timeout: 20_000 });
+    await page.waitForSelector('.usage__title', { timeout: 20_000 });
+    check(await page.getByText('Usage', { exact: true }).first().isVisible(), 'usage page renders');
+    await assertNoOverflow(page, 'usage 393');
+    await stableScreenshot(page, join(outDir, 'frontend05-usage-393-light.png'));
+
+    await page.locator('.account-layout__tabs a', { hasText: 'Analytics' }).first().click();
+    await page.waitForURL(`**/accounts/${accountA}/analytics`, { timeout: 20_000 });
+    await page.waitForSelector('.analytics__title', { timeout: 20_000 });
+    await page.locator('.analytics__bar').first().waitFor({ state: 'visible', timeout: 20_000 });
+    check(await page.getByText('Members', { exact: true }).first().isVisible(), 'analytics page renders');
+    check(await page.locator('.analytics__bar').count() > 0, 'analytics activity chart renders');
+    await assertNoOverflow(page, 'analytics 393');
+    await stableScreenshot(page, join(outDir, 'frontend05-analytics-393-light.png'));
+
+    await page.locator('.account-layout__tabs a', { hasText: 'Audit log' }).first().click();
+    await page.waitForURL(`**/accounts/${accountA}/audit`, { timeout: 20_000 });
+    await page.waitForSelector('.audit__title', { timeout: 20_000 });
+    await page.locator('.audit__event').first().waitFor({ state: 'visible', timeout: 20_000 });
+    check((await page.locator('.audit__event').first().innerText()).includes('commercial_account.created'), 'audit page renders account events');
+    await assertNoOverflow(page, 'audit 393');
+    await stableScreenshot(page, join(outDir, 'frontend05-audit-393-light.png'));
+
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    const accountMenu = page.getByRole('dialog', { name: 'Menu' });
+    await accountMenu.waitFor();
+    check(await accountMenu.getByRole('link', { name: 'Billing', exact: true }).isVisible(), 'mobile menu exposes billing');
+    check(await accountMenu.getByRole('link', { name: 'Usage', exact: true }).isVisible(), 'mobile menu exposes usage');
+    check(await accountMenu.getByRole('link', { name: 'Analytics', exact: true }).isVisible(), 'mobile menu exposes analytics');
+    check(await accountMenu.getByRole('link', { name: 'Audit log', exact: true }).isVisible(), 'mobile menu exposes audit');
+    await page.keyboard.press('Escape');
+
+    await navigateClientSide(page, '/settings/privacy');
+    await page.waitForSelector('.privacy__title', { timeout: 20_000 });
+    check(await page.getByText('Privacy', { exact: true }).first().isVisible(), 'privacy page renders');
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Download my data' }).click();
+    const download = await downloadPromise;
+    check((await download.suggestedFilename()).startsWith('platform-personal-data-'), 'personal data export downloads');
+    await stableScreenshot(page, join(outDir, 'frontend05-privacy-393-light.png'));
+    await navigateClientSide(page, `/accounts/${accountA}`);
+
     // Account switching.
     await page.getByRole('button', { name: 'Switch account' }).click();
     const switcher = page.locator('[role="dialog"]').filter({ hasText: 'Switch account' });
@@ -150,14 +201,22 @@ async function main() {
     await page.waitForSelector('.account-layout__name', { timeout: 20_000 });
     check((await page.locator('.account-layout__name').textContent())?.includes(nameA), 'direct URL returns to account A after re-login');
 
-    // Dark theme.
+    // Dark theme from the full-screen mobile menu.
     const themeBefore = await page.evaluate(() => document.documentElement.dataset.theme);
-    await page.locator('header button').first().click();
+    const themeMenu = page.getByRole('dialog', { name: 'Menu' });
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    await themeMenu.getByRole('button', { name: 'Dark theme' }).click();
     await page.waitForFunction((previous) => document.documentElement.dataset.theme !== previous, themeBefore);
     const themeAfter = await page.evaluate(() => document.documentElement.dataset.theme);
     check(themeAfter !== themeBefore, 'theme toggle changes data-theme');
+    await page.keyboard.press('Escape');
+    await themeMenu.waitFor({ state: 'detached', timeout: 2_000 });
     await stableScreenshot(page, join(outDir, 'frontend04-overview-393-dark.png'));
-    await page.locator('header button').first().click();
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    await themeMenu.getByRole('button', { name: 'Light theme' }).click();
+    await page.waitForFunction((previous) => document.documentElement.dataset.theme === previous, themeBefore);
+    await page.keyboard.press('Escape');
+    await themeMenu.waitFor({ state: 'detached', timeout: 2_000 });
 
     // Mobile boundary and desktop layout.
     await page.setViewportSize({ width: 320, height: 720 });

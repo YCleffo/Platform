@@ -20,7 +20,7 @@ final readonly class EmailTemplate
         public string $textBody,
         public array $variables,
     ) {
-        if (preg_match('/\A[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)*\z/', $code) !== 1) {
+        if (preg_match('/\A[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*\z/', $code) !== 1) {
             throw new InvalidArgumentException('Email template code is invalid.');
         }
         new Locale($locale);

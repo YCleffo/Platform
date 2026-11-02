@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Platform Commercial Control Plane API
-  version: 3.9.0
+  version: 3.10.0
   description: >-
     Customer-facing Commercial API. Provider secrets, request keys, raw webhooks
     and fiscal customer PII are never returned. Unknown API routes return 404
@@ -389,6 +389,25 @@ paths:
   /api/control/accounts/{accountId}/usage:
     parameters: [{$ref: '#/components/parameters/AccountId'}]
     get: {operationId: getUsage, responses: {'200': {$ref: '#/components/responses/Object'}}}
+  /api/control/accounts/{accountId}/audit-events:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    get:
+      operationId: listAccountAuditEvents
+      description: Owner/admin audit trail with cursor pagination and optional action/outcome filters.
+      parameters:
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+        - {name: cursor, in: query, schema: {type: string}}
+        - {name: action, in: query, schema: {type: string, maxLength: 160}}
+        - {name: outcome, in: query, schema: {type: string, enum: [success, failure, denied]}}
+      responses: {'200': {$ref: '#/components/responses/AuditEventPage'}}
+  /api/control/accounts/{accountId}/analytics:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    get:
+      operationId: getAccountAnalytics
+      description: Account members, billing, audit activity and usage aggregates for the selected period.
+      parameters:
+        - {name: days, in: query, schema: {type: integer, minimum: 1, maximum: 90, default: 30}}
+      responses: {'200': {$ref: '#/components/responses/AccountAnalytics'}}
   /api/control/webhooks/yookassa:
     post:
       security: []
@@ -520,6 +539,8 @@ components:
     UsageIngest: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [featureCode, delta], properties: {featureCode: {type: string}, delta: {type: integer, not: {const: 0}}}}}}}
   responses:
     Object: {description: Success, content: {application/json: {schema: {type: object}}}}
+    AuditEventPage: {description: Account audit events, content: {application/json: {schema: {$ref: '#/components/schemas/AuditEventPage'}}}}
+    AccountAnalytics: {description: Account analytics, content: {application/json: {schema: {$ref: '#/components/schemas/AccountAnalytics'}}}}
     SavedPaymentMethods: {description: Saved payment methods without provider secrets, content: {application/json: {schema: {type: object, additionalProperties: false, required: [items], properties: {items: {type: array, items: {$ref: '#/components/schemas/SavedPaymentMethod'}}}}}}}
     SavedPaymentMethod: {description: Updated saved payment method without provider secrets, content: {application/json: {schema: {$ref: '#/components/schemas/SavedPaymentMethod'}}}}
     EffectiveEntitlements: {description: Current commercial access for the account, content: {application/json: {schema: {$ref: '#/components/schemas/EffectiveEntitlements'}}}}
@@ -640,6 +661,69 @@ components:
         payment_id: {type: [string, 'null'], format: uuid}
         payment_status: {type: [string, 'null']}
     PlanChangeCancelled: {type: object, additionalProperties: false, required: [id, status], properties: {id: {type: string, format: uuid}, status: {const: cancelled}}}
+    AuditEvent:
+      type: object
+      additionalProperties: false
+      required: [id, occurred_at, actor_type, actor_id, action, resource_type, resource_id, correlation_id, outcome, metadata]
+      properties:
+        id: {type: string, format: uuid}
+        occurred_at: {type: string, format: date-time}
+        actor_type: {type: string, enum: [control_user, system]}
+        actor_id: {type: [string, 'null'], format: uuid}
+        action: {type: string}
+        resource_type: {type: string}
+        resource_id: {type: string}
+        correlation_id: {type: [string, 'null'], format: uuid}
+        outcome: {type: string, enum: [success, failure, denied]}
+        metadata: {type: object, additionalProperties: true}
+    AuditEventPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/AuditEvent'}}
+        next_cursor: {type: [string, 'null']}
+    AccountAnalytics:
+      type: object
+      additionalProperties: false
+      required: [account_id, days, generated_at, members, billing, audit, usage]
+      properties:
+        account_id: {type: string, format: uuid}
+        days: {type: integer, minimum: 1, maximum: 90}
+        generated_at: {type: string, format: date-time}
+        members:
+          type: object
+          additionalProperties: false
+          required: [total, by_role, pending_invitations]
+          properties:
+            total: {type: integer, minimum: 0}
+            by_role: {type: object, additionalProperties: {type: integer, minimum: 0}}
+            pending_invitations: {type: integer, minimum: 0}
+        billing:
+          type: object
+          additionalProperties: false
+          required: [subscription_status, billing_status, current_period_start, current_period_end, currency, mrr_minor, paid_minor, payments_count, outstanding_minor, invoices_count]
+          properties:
+            subscription_status: {type: [string, 'null']}
+            billing_status: {type: [string, 'null']}
+            current_period_start: {type: [string, 'null'], format: date-time}
+            current_period_end: {type: [string, 'null'], format: date-time}
+            currency: {type: [string, 'null']}
+            mrr_minor: {type: integer, minimum: 0}
+            paid_minor: {type: integer, minimum: 0}
+            payments_count: {type: integer, minimum: 0}
+            outstanding_minor: {type: integer, minimum: 0}
+            invoices_count: {type: integer, minimum: 0}
+        audit:
+          type: object
+          additionalProperties: false
+          required: [events, by_outcome, by_day, by_action]
+          properties:
+            events: {type: integer, minimum: 0}
+            by_outcome: {type: object, additionalProperties: {type: integer, minimum: 0}}
+            by_day: {type: array, items: {type: object, required: [date, count], properties: {date: {type: string}, count: {type: integer, minimum: 0}}}}
+            by_action: {type: array, items: {type: object, required: [action, count], properties: {action: {type: string}, count: {type: integer, minimum: 0}}}}
+        usage: {type: object, additionalProperties: true}
     Health: {type: object, additionalProperties: false, required: [status], properties: {status: {type: string, enum: [ok, not_ready]}}}
     Error: {type: object, required: [error], properties: {error: {type: object, required: [code, message], properties: {code: {type: string}, message: {type: string}}}}}
     CurrentUser:

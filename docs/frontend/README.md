@@ -32,10 +32,26 @@ Education dashboard из SVG — будущий модуль; его API ещё 
 | `/accounts/:accountId` | Overview, сведения и текущие permissions |
 | `/accounts/:accountId/members` | Список, изменение ролей, removal; защита последнего owner |
 | `/accounts/:accountId/invitations` | Создание, список, resend, revoke |
+| `/accounts/:accountId/billing` | Подписка, смена тарифа, billing profile, invoices/payments/receipts/refunds, payment methods, checkout |
+| `/accounts/:accountId/usage` | Effective entitlements и usage counters текущего периода |
+| `/accounts/:accountId/analytics` | KPI аккаунта, billing, audit activity, top actions и usage-графики за 7/30/90 дней |
+| `/accounts/:accountId/audit` | Owner/admin audit trail с фильтрами, cursor pagination и metadata |
 | `/invitation` | Публичный preview; accept/decline после входа |
-| `/settings/security` | MFA enrollment, recovery codes, sessions, step-up |
+| `/settings/security` | MFA enrollment, recovery codes, password change, все sessions и revoke, step-up |
+| `/settings/privacy` | Серверный экспорт персональных данных пользователя |
 | `/settings` | Тема, язык, размеры, отступы, анимации и тени; доступно без входа |
 | `/settings/components` | Рабочие примеры общих dropdown и контекстного меню |
+| `/admin/login` | Отдельный вход в Platform Core admin console; customer-токены не используются |
+| `/admin`, `/admin/organizations`, `/admin/persons`, `/admin/accounts`, `/admin/rbac`, `/admin/modules`, `/admin/settings`, `/admin/privacy`, `/admin/audit` | Core admin-плоскость: CRUD/lifecycle, RBAC, настройки, privacy operations и аудит |
+| `/admin/finance` | Заблокированная operator-плоскость: требует отдельного Commercial operator permission model |
+
+На мобильном (<768 px) основная навигация дополнена полноэкранным меню: focus trap,
+Escape, блокировка scroll, safe-area, крупные ссылки, account-разделы, тема/язык и вход/выход.
+Меню закрывается при переходе и возвращает фокус на trigger.
+
+Admin console имеет отдельный Core auth store и guard: `/api/auth/login`, MFA,
+`/api/auth/me` permissions. Admin routes лениво загружаются отдельными chunks. Подробнее:
+[ADMIN_CONSOLE](../operations/ADMIN_CONSOLE.md).
 
 Invitation token захватывается из `#token=…`, удаляется из адресной строки и хранится
 в памяти. Reset token приходит в `?token=…`, не пишется в storage и удаляется из URL
@@ -134,7 +150,9 @@ Disabled родителя наследуется потомками.
 `searchable` без значения или `true` принудительно включает поиск.
 Одиночная модель — строка, множественная — массив строк. Родитель с children открывает
 раздел, выбирается конечный пункт. Multiple оставляет меню открытым и переключает
-checkbox-состояния; clearable сбрасывает выбор. Внешний `<label for>` связан с id кнопки,
+checkbox-состояния; clearable сбрасывает выбор. В multiple-trigger показываются не более
+двух chips и `+N`, поэтому длинный выбор не переносится на вторую строку; полный список
+доступен в `title` и accessible name. Внешний `<label for>` связан с id кнопки,
 а обязательный `label` даёт ей доступное имя даже без внешней подписи.
 Компонент эмитит модель; сериализация формы и серверная валидация остаются у вызывающего кода.
 
@@ -204,12 +222,20 @@ smoke, локальная проверка может использовать s
 
 Полный CI browser job запускает отдельные PostgreSQL/Commercial/Mailpit, outbox worker,
 Vite и Chromium. `e2e-account-workspace.mjs` и `e2e-invitation-lifecycle.mjs` выполняют
-реальные account и invitation/MFA/membership flows; authenticated accessibility matrix
-включает Security Center, MFA setup, recovery codes и MFA challenge. `e2e-auth-recovery.mjs`
+реальные account, billing, usage, analytics, audit, privacy export и invitation/MFA/membership
+flows; authenticated accessibility matrix включает Security Center, MFA setup, recovery codes
+и MFA challenge. Полноэкранное mobile menu проверяется в `verify-menus.mjs` на 393 px:
+размер viewport, scroll lock, Escape, focus return и закрытие после навигации.
+`e2e-auth-recovery.mjs`
 проверяет standalone resend после reload, ротацию verification token, реальное письмо
 reset, подтверждение в новой вкладке, single-use/invalid/missing token и гигиену URL.
-Guard требует isolation nonce, подтверждённый сервером. Рабочие БД для этого не
-используются; после job ресурсы удаляются.
+Guard требует isolation nonce, подтверждённый сервером. Перед recovery и load CI
+сбрасывает одноразовую Commercial schema, чтобы лимиты invitation flow не давали 429.
+Vite proxy использует явный `http.Agent({ keepAlive: false })` без заголовка
+`Connection: close` (он давал ECONNRESET на быстром Core). Transport-level proxy errors
+возвращаются как 502; клиент повторяет **только один idempotent GET** после network/502
+failure. HTTP 5xx backend и POST не повторяются. Рабочие БД для этого не используются;
+после job ресурсы удаляются.
 
 ### Checkbox, switch и range
 
@@ -218,10 +244,12 @@ Guard требует isolation nonce, подтверждённый сервер�
 поддерживает `indeterminate`, `required` и `value`. Это настоящие HTML inputs: сохраняются
 Space/Tab, label click, disabled и участие в формах. `indeterminate` управляется отдельно
 от значения. Подсказка и внешний `aria-describedby` объединяются; имя берётся из label.
+`AppSortableList` — перетаскиваемый список строк (`v-model: string[]`). Ручка drag, нативный
+HTML5 drag-and-drop, клавиатурная альтернатива Alt+Arrow Up/Down, aria-label с позицией.
 `AppInput`, `AppCheckbox` и `AppSwitch` переносят нативные form-атрибуты (`name`,
 `form`, `required`, `autocomplete` и другие) на реальный control, а не на wrapper.
-Обычный `form.reset()` синхронизирует модель с `defaultValue`/`defaultChecked`.
-Известное ограничение: отменённый reset пока тоже меняет модель; см. [аудит](../AUDIT.md).
+Обычный `form.reset()` после завершения события синхронизирует модель с фактическим
+состоянием DOM, а `@reset.prevent` оставляет контрол, модель и `FormData` без изменений.
 Disabled controls не отправляются.
 
 Switch применяется для немедленного изменения настройки (например, анимаций), checkbox —
@@ -234,9 +262,9 @@ blur и отключение завершают редактирование. Dr
 Цвета используют `--theme-transition`, геометрия — `--motion-control-duration` и
 `--motion-spring-ease`; скорость и reduced motion наследуются из настроек сайта.
 
-`BASE_URL=http://127.0.0.1:5173 npm run verify:controls` проверяет 27 browser assertions:
-mouse/touch/keyboard, mixed/disabled, native form attributes/reset, release outside, Undo,
-reload, reduced motion и 320 px / 140% text. Скрипт включён в browser CI; screenshots
+`BASE_URL=http://127.0.0.1:5173 npm run verify:controls` проверяет 30 browser assertions:
+mouse/touch/keyboard, mixed/disabled, native form attributes/reset (обычный и отменённый),
+release outside, Undo, reload, reduced motion и 320 px / 140% text. Скрипт включён в browser CI; screenshots
 пишутся в игнорируемую папку `screenshots`; несколько текущих снимков доступны
 из [аудита](../AUDIT.md).
 

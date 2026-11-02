@@ -1,5 +1,6 @@
 import type { HttpClient } from '../http';
 import {
+  isCatalogReviewed,
   isCommercialAccountDetail,
   isCommercialAccountList,
   isCommercialMembershipList,
@@ -8,6 +9,7 @@ import {
 } from '../guards';
 import type {
   AccountRole,
+  CatalogReviewed,
   CommercialAccountDetail,
   CommercialAccountList,
   CommercialMembershipList,
@@ -22,6 +24,7 @@ export interface CommercialAccountApi {
   getAccount(accountId: string): Promise<CommercialAccountDetail>;
   listMemberships(accountId: string, limit?: number, offset?: number): Promise<CommercialMembershipList>;
   createAccount(payload: CreateAccountPayload, idempotencyKey: string): Promise<CreateAccountResult>;
+  reviewCatalog(accountId: string): Promise<CatalogReviewed>;
   changeMembershipRole(accountId: string, membershipId: string, role: AccountRole): Promise<void>;
   removeMembership(accountId: string, membershipId: string): Promise<void>;
 }
@@ -46,6 +49,12 @@ export function createCommercialAccountApi(http: HttpClient): CommercialAccountA
         idempotencyKey,
         validate: isCreateAccountResult,
       }),
+    reviewCatalog: (accountId) =>
+      http.post<CatalogReviewed>(
+        `/accounts/${accountId}/onboarding/catalog-reviewed`,
+        {},
+        { validate: isCatalogReviewed },
+      ),
     changeMembershipRole: (accountId, membershipId, role) =>
       http.patch<void>(`/accounts/${accountId}/memberships/${membershipId}`, { role }),
     removeMembership: (accountId, membershipId) =>

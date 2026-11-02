@@ -6,6 +6,7 @@
 
 html {
   color-scheme: light;
+  scrollbar-gutter: stable;
 }
 
 html[data-theme='dark'] {
@@ -103,4 +104,30 @@ svg {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+button,
+label,
+.app-button,
+.app-icon-button,
+.app-dropdown,
+.app-menu,
+.app-tooltip,
+.admin__link,
+.admin__brand,
+.admin__page-title,
+.admin__section-title,
+.admin-resource__table th {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+select,
+pre,
+code,
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
 }

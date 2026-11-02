@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { Building2, Layers, LayoutGrid, LogIn, LogOut, Moon, Settings, Sun } from '@/shared/ui/icons';
@@ -9,6 +9,7 @@ import { setLocale } from '@/shared/i18n';
 import AppHeader from '@/shared/ui/navigation/AppHeader.vue';
 import AppBottomNav from '@/shared/ui/navigation/AppBottomNav.vue';
 import type { BottomNavItem } from '@/shared/ui/navigation/AppBottomNav.vue';
+import AppMobileMenu from '@/shared/ui/navigation/AppMobileMenu.vue';
 import AppIconButton from '@/shared/ui/actions/AppIconButton.vue';
 import SiteContextMenu from './SiteContextMenu.vue';
 
@@ -17,6 +18,7 @@ const router = useRouter();
 const route = useRoute();
 const { t, locale } = useI18n();
 const { isDark, toggleTheme } = useTheme();
+const menuOpen = ref(false);
 
 const primaryNavigation = computed(() => typeof route.meta.primaryNavigation === 'string'
   ? route.meta.primaryNavigation : typeof route.name === 'string' ? route.name : '');
@@ -66,18 +68,21 @@ async function logout(): Promise<void> {
       </template>
 
       <template #actions>
-        <AppIconButton :label="isDark ? $t('theme.light') : $t('theme.dark')" @click="toggleTheme">
+        <AppIconButton class="app-layout__desktop-action" :label="isDark ? $t('theme.light') : $t('theme.dark')" @click="toggleTheme">
           <Sun v-if="isDark" :size="20" aria-hidden="true" />
           <Moon v-else :size="20" aria-hidden="true" />
         </AppIconButton>
-        <AppIconButton :label="`${localeLabel}: ${$t('theme.locale')}`" @click="toggleLocale">
+        <AppIconButton class="app-layout__desktop-action" :label="`${localeLabel}: ${$t('theme.locale')}`" @click="toggleLocale">
           <span class="app-layout__locale">{{ localeLabel }}</span>
         </AppIconButton>
-        <AppIconButton v-if="auth.isAuthenticated" :label="$t('nav.logout')" @click="logout">
+        <AppIconButton v-if="auth.isAuthenticated" class="app-layout__desktop-action" :label="$t('nav.logout')" @click="logout">
           <LogOut :size="20" aria-hidden="true" />
         </AppIconButton>
-        <AppIconButton v-else :label="$t('nav.login')" @click="router.push({ name: 'login' })">
+        <AppIconButton v-else class="app-layout__desktop-action" :label="$t('nav.login')" @click="router.push({ name: 'login' })">
           <LogIn :size="20" aria-hidden="true" />
+        </AppIconButton>
+        <AppIconButton class="app-layout__menu-button" :label="$t('nav.menu')" aria-haspopup="dialog" :aria-expanded="menuOpen" @click="menuOpen = true">
+          <span class="hamburger" aria-hidden="true"><span /><span /><span /></span>
         </AppIconButton>
       </template>
     </AppHeader>
@@ -87,6 +92,7 @@ async function logout(): Promise<void> {
     </main>
 
     <AppBottomNav :items="bottomItems" :active-route-name="primaryNavigation" />
+    <AppMobileMenu v-model="menuOpen" />
   </div>
   </SiteContextMenu>
 </template>
@@ -148,6 +154,28 @@ async function logout(): Promise<void> {
   letter-spacing: 0.02em;
 }
 
+.app-layout__desktop-action {
+  display: none;
+}
+
+.hamburger {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 20px;
+  height: 20px;
+}
+
+.hamburger span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: var(--theme-transition);
+}
+
 .app-layout__main {
   flex: 1;
   width: 100%;
@@ -156,6 +184,14 @@ async function logout(): Promise<void> {
 
 @media (min-width: 768px) {
   .app-layout__mobile-title {
+    display: none;
+  }
+
+  .app-layout__desktop-action {
+    display: inline-flex;
+  }
+
+  .app-layout__menu-button {
     display: none;
   }
 

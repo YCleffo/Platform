@@ -18,6 +18,7 @@ return [
     'runtime:migrations:apply' => Console\RuntimeMigrationsApplyCommand::class,
     'runtime:entitlements:sync' => Console\RuntimeEntitlementsSyncCommand::class,
     'communication:process-email' => Console\ProcessEmailOutboxCommand::class,
+    'communication:preview-emails' => Console\EmailPreviewCommand::class,
     'core:bootstrap-superadmin' => Console\BootstrapSuperadminCommand::class,
     'privacy/retention/evaluate' => Console\RetentionEvaluateCommand::class,
     'privacy/erasure/execute' => Console\ErasureExecuteCommand::class,
