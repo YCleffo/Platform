@@ -85,6 +85,7 @@ PoC на рабочих серверах не запускался. Это не 
 | Core Psalm: mixed metadata в ListAuditEventsAction | Значение выделено в переменную до проверки типа, без изменения JSON semantics |
 | Commercial PHPStan: 3 ошибки audit reader/controller | Удалено невозможное условие cursor; строковые query filters читаются через getString |
 | Database/docs: Coverage inventory drift | Перегенерирован существующий инвентарь references |
+| Следующий GitHub run: отсутствующий SVG target README | Макет design/мобайл.svg включён в Git; локальный ignored-файл больше не маскирует broken link в чистом checkout |
 | Frontend: generated tokens отличаются от JSON | danger-800 добавлен в canonical JSON, CSS сгенерирован штатно |
 | Скрытые следующие style failures | Убраны hardcoded timings, восстановлен radius token, используются общие motion/theme variables |
 | Browser: mobile drill panel ниже viewport | После смены уровней измеряется новый DOM, ResizeObserver подключается к новому panel; добавлен resize regression |
