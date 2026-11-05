@@ -186,7 +186,7 @@ jobs:
 
       - name: Upload complete Core vulnerability inventory
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: core-image-vulnerabilities-${{ github.run_id }}
           path: trivy-core.json
@@ -357,7 +357,7 @@ jobs:
 
       - name: Upload complete Commercial vulnerability inventory
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: commercial-image-vulnerabilities-${{ github.run_id }}
           path: trivy-commercial.json
@@ -418,7 +418,7 @@ jobs:
           exit-code: '1'
       - name: Upload complete infrastructure vulnerability inventory
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: infrastructure-image-vulnerabilities-${{ matrix.plane }}-${{ github.run_id }}
           path: trivy-${{ matrix.plane }}.json
@@ -662,7 +662,7 @@ jobs:
         run: npm run test:e2e:core-configuration
       - name: Upload Core browser evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: core-auth-browser-${{ github.run_id }}
           path: |
@@ -776,7 +776,7 @@ jobs:
         run: npm run test:e2e:periodic-billing
       - name: Upload periodic billing evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: billing-periodic
           path: apps/frontend/screenshots/billing-periodic-*
@@ -990,7 +990,7 @@ jobs:
         run: cp /tmp/vite-e2e.log apps/frontend/vite-e2e.log 2>/dev/null || true
       - name: Upload browser artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: browser-e2e-${{ github.run_id }}
           path: |

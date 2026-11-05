@@ -108,12 +108,13 @@ export async function navigateClientSide(page, path) {
 
 export async function assertPrimaryNavigation(page, path) {
   const expected = path.startsWith('/settings') ? '/settings' : path.startsWith('/accounts/') ? '/cabinet' : path;
-  for (const selector of ['.app-layout__nav-link--active', '.app-bottom-nav__link--active']) {
-    const active = page.locator(selector);
-    if ((await active.count()) !== 1 || (await active.getAttribute('href')) !== expected) {
-      throw new Error(`Primary navigation does not select only ${path}: ${selector}`);
-    }
-  }
+  // history.pushState updates the URL before Vue Router resolves lazy views.
+  // Wait for both navigation components, not a heading left on the previous page.
+  const selectors = ['.app-layout__nav-link--active', '.app-bottom-nav__link--active'];
+  await page.waitForFunction(({ selectors, expected }) => selectors.every(selector => {
+    const active = document.querySelectorAll(selector);
+    return active.length === 1 && active[0].getAttribute('href') === expected;
+  }), { selectors, expected });
 }
 
 export async function verifySecuritySession(page) {

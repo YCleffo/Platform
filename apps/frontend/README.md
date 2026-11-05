@@ -148,7 +148,9 @@ configuration этим не создаётся. Контракт — [core-priva
 `npm run test:e2e:core-privacy-operator` — реальный guarded Core/PG/Redis: intake/corrections,
 deadlines/blocks/termination, raw responses и Redis presence. Требования к nonce/стенду те же.
 Online heartbeat отправляется только после сохранения opt-in, из видимой вкладки с сетью;
-отключение настройки/logout прекращает отправку. Временный client ID не сохраняется в storage.
+отключение настройки/logout прекращает отправку. Client ID живёт в памяти страницы;
+только одноразовый OAuth marker временно переносит его через redirect в sessionStorage.
+После проверки state marker удаляется. Токены и PKCE verifier в storage не записываются.
 TLS dev/preview согласует HTTP/1.1 для совместимости с локальным API proxy; сертификаты
 остаются обязательными. Рабочий HTTP dev server по-прежнему использует порт 5173.
 

@@ -1,12 +1,13 @@
 import { ApiError } from '@/shared/api/errors';
 import type { CoreExternalProvider, CoreExternalStart } from '@/shared/api/core/adminAuth';
+import { coreClientHeaders, resumeCoreClientInstance } from '@/core/admin/clientInstance';
 
 const KEY = 'platform.core.mfa-recovery';
 const endpoints: Record<CoreExternalProvider, string> = {
   google: 'https://accounts.google.com/o/oauth2/v2/auth',
   telegram: 'https://oauth.telegram.org/auth',
 };
-interface Marker { provider: CoreExternalProvider; stateHash: string; expiresAt: number; purpose: 'mfa-recovery' | 'login' | 'identity-link' }
+interface Marker { provider: CoreExternalProvider; stateHash: string; expiresAt: number; clientInstanceId: string; purpose: 'mfa-recovery' | 'login' | 'identity-link' }
 const rejected = () => new ApiError(400, 'core_recovery_callback_invalid', 'Recovery must be restarted.');
 
 export function isCoreProvider(value: unknown): value is CoreExternalProvider {
@@ -23,7 +24,7 @@ async function digest(state: string): Promise<string> {
   return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-/** Persist only a one-way correlation hash, provider and expiry; never an email/proof/code/session token. */
+/** Carry correlation and the non-secret client binding; never an email/proof/code/session token. */
 export async function prepareRecoveryRedirect(provider: CoreExternalProvider, start: CoreExternalStart, purpose: Marker['purpose'] = 'mfa-recovery', storage?: Storage): Promise<string> {
   const target = requireRecoveryStorage(storage);
   const url = new URL(start.authorizationUrl);
@@ -34,7 +35,9 @@ export async function prepareRecoveryRedirect(provider: CoreExternalProvider, st
     || url.searchParams.getAll('redirect_uri').length !== 1
     || url.searchParams.get('redirect_uri') !== new URL(`/auth/callback/${provider}`, location.origin).href
     || !Number.isFinite(expiry) || expiry <= Date.now()) throw rejected();
-  const marker: Marker = { provider, stateHash: await digest(state), expiresAt: expiry, purpose };
+  const clientInstanceId = coreClientHeaders()['X-Client-Instance-ID'];
+  if (!clientInstanceId) throw rejected();
+  const marker: Marker = { provider, stateHash: await digest(state), expiresAt: expiry, clientInstanceId, purpose };
   target.setItem(KEY, JSON.stringify(marker));
   return url.href;
 }
@@ -48,6 +51,9 @@ export async function consumeRecoveryCallback(provider: unknown, state: unknown)
   if (marker?.provider !== provider || !['login', 'mfa-recovery', 'identity-link'].includes(marker.purpose) || typeof marker.stateHash !== 'string' || marker.expiresAt <= Date.now()
     || !Number.isFinite(marker.expiresAt) || marker.stateHash !== await digest(state)) throw rejected();
   if (sessionStorage.getItem(KEY) !== raw) throw rejected();
+  // Login/recovery return in a new document. Keep the server's original client
+  // binding; identity linking completes in the original window via its channel.
+  if (marker.purpose !== 'identity-link' && !resumeCoreClientInstance(marker.clientInstanceId)) throw rejected();
   sessionStorage.removeItem(KEY);
   return { provider, purpose: marker.purpose };
 }

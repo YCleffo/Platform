@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
-import { launchBrowser, navigateClientSide, stableScreenshot } from './e2e-support.mjs';
+import { assertPrimaryNavigation, launchBrowser, navigateClientSide, stableScreenshot } from './e2e-support.mjs';
 
 const base = process.env.BASE_URL ?? 'http://127.0.0.1:5173';
 const browser = await launchBrowser();
@@ -73,7 +73,7 @@ try {
     await page.locator('#admin-identifier').fill('fixture@example.test'); await page.locator('#admin-password').fill('fixture-only-password');
     await page.locator('form button[type=submit]').click();
     await page.waitForFunction(() => document.querySelector('form button[type=submit]')?.getAttribute('aria-busy') === 'true');
-    await navigateClientSide(page, '/'); await page.locator('main').waitFor();
+    await navigateClientSide(page, '/'); await assertPrimaryNavigation(page, '/');
     assert.ok(pending, 'The delayed login request did not start'); pending(); hold = false;
     await page.waitForTimeout(150); assert.equal(new URL(page.url()).pathname, '/');
     await navigateClientSide(page, '/admin'); await page.waitForURL(url => url.pathname === '/admin/login');

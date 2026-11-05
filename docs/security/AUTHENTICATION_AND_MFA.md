@@ -32,6 +32,13 @@ single-use state, purpose, provider, account/session binding для link, client
 `iss`, `aud`/`azp`, `exp`, разумный `iat`, `nonce` и обязательный `sub`. JWKS загружается только с
 фиксированного HTTPS endpoint и кешируется в Redis согласно `Cache-Control: max-age` в безопасных пределах.
 
+Frontend переносит несекретный `X-Client-Instance-ID` через full-page login/recovery redirect
+в одноразовом sessionStorage marker вместе с hash state, provider, purpose и expiry.
+Только после успешной проверки marker callback восстанавливает исходный ID и удаляет marker;
+серверная client binding остаётся обязательной. В popup для link ID не восстанавливается:
+запрос завершения делает исходная вкладка. Access/refresh tokens, raw state, code и verifier
+в этот marker не записываются. При обычной перезагрузке без OAuth marker создаётся новый ID.
+
 Google `sub` и Telegram subject — единственные внешние identity keys. Email является только snapshot:
 совпадение provider email с локальным email никогда не создаёт автоматическую привязку и не создаёт
 новый Account. Регистрация через social login выключена текущей DB policy (`allow_registration=false`).

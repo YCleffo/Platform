@@ -11,6 +11,47 @@ beforeEach(() => { sessionStorage.clear(); });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('External MFA recovery correlation', () => {
+  it.each(['mfa-recovery', 'login'] as const)('preserves the server client binding across a full-page %s redirect', async purpose => {
+    vi.resetModules();
+    const original = await import('@/core/admin/clientInstance');
+    const outbound = await import('./externalRecovery');
+    const client = original.coreClientHeaders()['X-Client-Instance-ID'];
+    await outbound.prepareRecoveryRedirect('google', start(), purpose);
+
+    vi.resetModules(); // The provider returns to a new browser document.
+    const returned = await import('@/core/admin/clientInstance');
+    const inbound = await import('./externalRecovery');
+    expect(returned.coreClientHeaders()['X-Client-Instance-ID']).not.toBe(client);
+    await expect(inbound.consumeRecoveryCallback('google', 'foreign-state')).rejects.toBeInstanceOf(Error);
+    expect(returned.coreClientHeaders()['X-Client-Instance-ID']).not.toBe(client);
+    expect(await inbound.consumeRecoveryCallback('google', state)).toEqual({ provider: 'google', purpose });
+    expect(returned.coreClientHeaders()['X-Client-Instance-ID']).toBe(client);
+    expect(sessionStorage.getItem('platform.core.mfa-recovery')).toBeNull();
+    await expect(inbound.consumeRecoveryCallback('google', state)).rejects.toBeInstanceOf(Error);
+  });
+
+  it('rejects a missing or malformed client binding without consuming the marker', async () => {
+    for (const clientInstanceId of [undefined, null, '', 'invalid']) {
+      await prepareRecoveryRedirect('google', start());
+      const marker = JSON.parse(sessionStorage.getItem('platform.core.mfa-recovery')!);
+      sessionStorage.setItem('platform.core.mfa-recovery', JSON.stringify({ ...marker, clientInstanceId }));
+      await expect(consumeRecoveryCallback('google', state)).rejects.toBeInstanceOf(Error);
+      expect(sessionStorage.getItem('platform.core.mfa-recovery')).not.toBeNull();
+    }
+  });
+
+  it('keeps the popup client separate when identity linking completes in the opener', async () => {
+    vi.resetModules();
+    const outbound = await import('./externalRecovery');
+    await outbound.prepareRecoveryRedirect('google', start(), 'identity-link');
+    vi.resetModules();
+    const popup = await import('@/core/admin/clientInstance');
+    const inbound = await import('./externalRecovery');
+    const client = popup.coreClientHeaders();
+    expect(await inbound.consumeRecoveryCallback('google', state)).toEqual({ provider: 'google', purpose: 'identity-link' });
+    expect(popup.coreClientHeaders()).toEqual(client);
+  });
+
   it.each(['google', 'telegram'] as const)('accepts one matching %s callback and persists no raw token/state', async provider => {
     await prepareRecoveryRedirect(provider, start(provider));
     expect(sessionStorage.getItem('platform.core.mfa-recovery')).not.toContain(state);

@@ -179,7 +179,7 @@ try {
   await page.waitForURL(url => url.pathname === '/admin');
   // Client-side navigation retains the cache module in this browser document.
   await page.evaluate(() => { history.pushState({}, '', '/admin/persons'); dispatchEvent(new PopStateEvent('popstate')); });
-  await page.getByText('You do not have permission for this section.', { exact: true }).waitFor();
+  await page.getByRole('status').filter({ hasText: 'No access to this section.' }).waitFor();
   assert.equal(await page.locator('table tbody tr').count(), 0);
   const denied = await context.request.get(`${API}/api/core/persons`, { headers: { Authorization: `Bearer ${(await loginApi(accounts.reader)).accessToken}` } });
   assert.equal(denied.status(), 403);
@@ -219,8 +219,14 @@ try {
   writeFileSync('screenshots/core-auth-results.json', JSON.stringify({ passed: true, states }, null, 2));
   console.log(JSON.stringify({ passed: true, states }));
 } catch (error) {
-  console.error('Core browser state:', new URL(page.url()).pathname,
-    await page.locator('h1, [role="alert"]').allTextContents(), failures);
-  await stableScreenshot(page, 'screenshots/core-auth-failure.png');
+  console.error('Core browser failure:', error);
+  try {
+    await page.waitForLoadState('domcontentloaded');
+    console.error('Core browser state:', new URL(page.url()).pathname,
+      await page.locator('h1, [role="alert"]').allTextContents(), failures);
+    await stableScreenshot(page, 'screenshots/core-auth-failure.png');
+  } catch (diagnosticError) {
+    console.error('Core browser diagnostics unavailable:', diagnosticError.message);
+  }
   throw error;
 } finally { await context.close(); await browser.close(); }

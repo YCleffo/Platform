@@ -61,8 +61,10 @@ Admin console имеет отдельный Core auth store и guard: `/api/auth
 
 Admin cache, ожидающие запросы и операции привязаны к session epoch. Logout/смена identity
 сбрасывают cache; запоздавшие HTTP/refresh/decoration/dialog результаты не попадают в новую
-сессию. External recovery хранит только hash state, provider, purpose и expiry в sessionStorage;
-callback проверяет привязку и удаляет code/state из URL. Test OAuth transport включается только
+сессию. External recovery хранит hash state, provider, purpose, expiry и несекретный client ID
+в одноразовом sessionStorage marker. После проверки state callback восстанавливает исходный
+client ID для серверной привязки login/recovery, удаляет marker и code/state из URL.
+Новая обычная страница получает новый ID. Test OAuth transport включается только
 в guarded Core test runtime; живые Google/Telegram требуют отдельной проверки credentials/redirects.
 
 Billing восстанавливает profile, draft/pending документы, историю и открытый plan change из
@@ -346,9 +348,11 @@ Passkey login использует общий `adminAuthStore.accept`, поэт�
 в успешное удаление. Переименование допускает null label, формы ограничены 160 символами.
 
 Привязка внешнего аккаунта реализована в `auth/externalLink.ts`: popup открывается сразу по клику,
-его opener обнуляется, в его sessionStorage записываются только hash state/provider/expiry/purpose.
+его opener обнуляется, в его sessionStorage записывается одноразовый OAuth marker:
+hash state/provider/expiry/purpose/client ID.
 В Core session storage не попадают токены или код. Callback очищает URL, одноразово потребляет
-marker и передаёт код через BroadcastChannel с именем из SHA256 state. Исходная вкладка
+marker и передаёт код через BroadcastChannel с именем из SHA256 state. Popup не восстанавливает
+client ID исходной вкладки: API завершения link вызывает сама исходная вкладка. Она
 принимает только совпадающие provider/state и вызывает authenticated link callback под своей
 Core session. При отмене/unmount/смене epoch закрываются канал/окно, late callback не выполняет
 новую mutation. Предусмотрены popup blocker, timeout, provider cancel, ownership conflict,
