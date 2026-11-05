@@ -3,6 +3,7 @@ import AppLayout from '@/app/layouts/AppLayout.vue';
 import AuthLayout from '@/app/layouts/AuthLayout.vue';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
+import { educationRoutes } from '@/modules/education/routes';
 
 const CatalogView = () => import('@/modules/commercial/catalog/CatalogView.vue');
 const AccountCabinetView = () => import('@/modules/commercial/account/AccountCabinetView.vue');
@@ -29,10 +30,11 @@ const AppearanceSettingsView = () => import('@/modules/settings/AppearanceSettin
 const ComponentsSettingsView = () => import('@/modules/settings/ComponentsSettingsView.vue');
 const PrivacySettingsView = () => import('@/modules/settings/PrivacySettingsView.vue');
 
-export function createAppRouter(history: RouterHistory = createWebHistory(import.meta.env.BASE_URL)) {
+export function createAppRouter(history: RouterHistory = createWebHistory(import.meta.env.BASE_URL), educationEnabled = import.meta.env.VITE_EDUCATION_ENABLED === '1') {
   const router = createRouter({
     history,
     routes: [
+      ...(educationEnabled ? educationRoutes : []),
       {
         path: '/',
         component: AppLayout,
@@ -201,6 +203,10 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
 
   router.beforeEach((to) => {
     const adminAuth = useAdminAuthStore();
+    if (to.matched.some(record => record.meta.requiresEducationAuth === true) && !adminAuth.isAuthenticated) {
+      return { name: 'education-login', query: { redirect: to.fullPath } };
+    }
+    if (to.name === 'education-login' && adminAuth.isAuthenticated) return { name: 'education-today' };
     if (to.matched.some(record => record.meta.requiresAdminAuth === true) && !adminAuth.isAuthenticated) {
       return { name: 'admin-login', query: { redirect: to.fullPath } };
     }

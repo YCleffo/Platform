@@ -531,6 +531,8 @@ jobs:
         run: npm run test:core-auth-guard
       - name: Verify typed Core workflow contracts
         run: npm run test:workbench-contracts
+      - name: Verify Education HTTP contract parity
+        run: node --test scripts/education-contract.test.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
@@ -551,6 +553,7 @@ jobs:
           node scripts/e2e-core-privacy.mjs --check-guard
           node scripts/e2e-core-privacy-operator.mjs --check-guard
           node scripts/e2e-core-configuration.mjs --check-guard
+          node scripts/e2e-education.mjs --check-guard
           node scripts/load-commercial.mjs --check-guard
       - name: Production build
         run: npm run build
@@ -660,12 +663,46 @@ jobs:
       - name: Verify Core configuration forms and public publication
         working-directory: apps/frontend
         run: npm run test:e2e:core-configuration
+      - name: Install Education and verify its PostgreSQL workflows
+        env:
+          EDUCATION_ENABLED: "1"
+        run: |
+          CI_USER_ID="$(id -u)"
+          CI_GROUP_ID="$(id -g)"
+          export CI_USER_ID CI_GROUP_ID
+          docker compose --profile test exec -T backend-test php yii education:migrate
+          docker compose --profile test exec -T backend-test php yii education:migrate
+          docker compose --profile test up -d --no-build --no-deps --wait backend-test
+          docker compose --profile test exec -T backend-test composer yii-config-rebuild
+          echo "CORE_TEST_CONTAINER=$(docker compose --profile test ps -q backend-test)" >> "$GITHUB_ENV"
+          docker compose --profile test exec -T backend-test vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Education
+          bash scripts/ci/db-role-gate.sh core
+      - name: Verify Education through real Core identities, files and browser
+        working-directory: apps/frontend
+        env:
+          VITE_EDUCATION_ENABLED: "1"
+          VITE_CORE_PROXY_TARGET: http://127.0.0.1:8081
+          VITE_COMMERCIAL_PROXY_TARGET: http://127.0.0.1:1
+          VITE_HTTPS_KEY: /tmp/e2e-core-cert/key.pem
+          VITE_HTTPS_CERT: /tmp/e2e-core-cert/cert.pem
+        run: |
+          kill "$(cat /tmp/vite-core-auth.pid)"
+          npm run build
+          node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4175 --strictPort > /tmp/vite-education.log 2>&1 &
+          echo $! > /tmp/vite-core-auth.pid
+          for _attempt in $(seq 1 60); do
+            if curl -kfsS https://127.0.0.1:4175/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -kfsS https://127.0.0.1:4175/ >/dev/null
+          npm run test:e2e:education
       - name: Upload Core browser evidence
         if: always()
         uses: actions/upload-artifact@v6
         with:
           name: core-auth-browser-${{ github.run_id }}
           path: |
+            apps/frontend/screenshots/education-real
             apps/frontend/screenshots/core-auth-*
             apps/frontend/screenshots/core-security-*
             apps/frontend/screenshots/core-config-*
@@ -678,6 +715,7 @@ jobs:
         run: |
           docker compose --profile test logs --no-color --tail 100 backend-test postgres-test mailpit-core-test
           cat /tmp/vite-core-auth.log || true
+          cat /tmp/vite-education.log || true
       - name: Remove disposable Core runtime
         if: always()
         run: |

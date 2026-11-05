@@ -38,6 +38,26 @@ afterEach(() => {
 });
 
 describe('http client', () => {
+  it('sends multipart bytes without a JSON Content-Type and keeps the refresh contract', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(unauthorized()).mockResolvedValueOnce(jsonResponse(201, { id: 'real-file' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { client } = makeClient({ refreshTokens: vi.fn(async () => refreshed('access-2', 'r2')) });
+    const form = new FormData(); form.set('file', new Blob(['actual bytes'], { type: 'text/plain' }), 'lesson.txt');
+    await expect(client.post('/files', form, { headers: { 'X-Education-Organization': 'organization' } })).resolves.toEqual({ id: 'real-file' });
+    for (const call of fetchMock.mock.calls) {
+      const options = call[1] as RequestInit;
+      expect(options.body).toBe(form); expect(new Headers(options.headers).has('Content-Type')).toBe(false);
+      expect(new Headers(options.headers).get('X-Education-Organization')).toBe('organization');
+    }
+  });
+
+  it('returns binary data while still parsing authentication errors before refresh', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(unauthorized()).mockResolvedValueOnce(new Response('file bytes', { headers: { 'Content-Type': 'text/plain' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { client } = makeClient({ refreshTokens: vi.fn(async () => refreshed('access-2', 'r2')) });
+    const blob = await client.get<Blob>('/files/id', { responseType: 'blob' });
+    expect(await blob.text()).toBe('file bytes'); expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
   it('refreshes once and retries the original request with the new token', async () => {
     const fetchMock = vi
       .fn()

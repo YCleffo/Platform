@@ -211,6 +211,19 @@ SELECT format(
 SQL
 done
 
+# Education keeps its migration ledger in its own schema, outside runtime writes.
+for schema in "${schema_list[@]}"; do
+  [[ "${schema// /}" != "education" ]] && continue
+  psql_admin -v runtime_role="${RUNTIME_ROLE}" <<'SQL'
+SELECT format('REVOKE ALL ON education.module_migrations FROM %I, PUBLIC', :'runtime_role')
+WHERE to_regclass('education.module_migrations') IS NOT NULL
+\gexec
+SELECT format('GRANT SELECT ON education.module_migrations TO %I', :'runtime_role')
+WHERE to_regclass('education.module_migrations') IS NOT NULL
+\gexec
+SQL
+done
+
 # Audit retention is a separate scheduler capability. The HTTP role cannot enable it with a GUC.
 for schema in "${schema_list[@]}"; do
   schema="$(echo "${schema}" | xargs)"

@@ -42,3 +42,12 @@ export const Tag = icon('tag');
 export const Trash2 = icon('trash');
 export const TriangleAlert = icon('alert-triangle');
 export const X = icon('close');
+
+export const Bell = icon('bell');
+export const People = icon('people');
+export const Message = icon('message');
+export const Home = icon('home');
+export const Backpack = icon('backpack');
+export const Upload = icon('upload');
+export const UserPlus = icon('user-plus');
+export const Book = icon('book');

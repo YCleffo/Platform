@@ -12,8 +12,11 @@ final class DataCategoryRegistry
     /** @var array<string, DataCategoryDefinition> */
     private array $definitions = [];
 
-    /** @param list<DataCategoryDefinition> $definitions */
-    public function __construct(array $definitions = [])
+    /**
+     * @param list<DataCategoryDefinition> $definitions
+     * @param list<DataCategoryDefinition> $additionalDefinitions
+     */
+    public function __construct(array $definitions = [], array $additionalDefinitions = [])
     {
         if ($definitions === []) {
             foreach (['identity', 'contact', 'authentication', 'security', 'device', 'network', 'approximate_location', 'preferences'] as $code) {
@@ -21,6 +24,9 @@ final class DataCategoryRegistry
             }
         }
         foreach ($definitions as $definition) {
+            $this->add($definition);
+        }
+        foreach ($additionalDefinitions as $definition) {
             $this->add($definition);
         }
     }

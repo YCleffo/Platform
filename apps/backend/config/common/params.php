@@ -65,6 +65,8 @@ if (Environment::isProd() && $totpEncryptionKey === null) {
 }
 
 return [
+    ...((getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\Education\Infrastructure\Configuration::class))
+        ? \App\Education\Infrastructure\Configuration::params() : []),
     'runtimeTrustedEntitlementKeys' => json_decode($envOr('RUNTIME_ENTITLEMENT_TRUSTED_KEYS', '{}'), true, 16, JSON_THROW_ON_ERROR),
     'runtimeControlPlaneUrl' => $envOr('CONTROL_PLANE_URL', ''),
     'runtimeDeploymentCredentialReference' => $envOr('CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF', ''),

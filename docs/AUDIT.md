@@ -1,19 +1,18 @@
 # Аудит Platform
 
-Дата: **5 ноября 2026**. Предыдущая локальная проверка: `8543cb58` и изменения,
-вошедшие в `2304c4be`. Подготовка Education ниже проверяется на `2304c4be`
-с исправлениями отдельной CI-ветки.
+Дата: **6 ноября 2026**. Education реализуется в ветке `codex/education-start-gates`.
+Предыдущая локальная проверка Platform: `8543cb58` и изменения в `2304c4be`.
 
 **Итог: NOT_READY для production.** Этот отчёт заменяет накопленную историю этапов.
 Ниже разделены свежие локальные результаты, исправления CI и ещё не подтверждённые
-условия выпуска. Зелёный GitHub Actions для исправлений подготовки пока не подтверждён.
+условия выпуска. CI подготовки подтверждён; CI реализации Education проверяется отдельно.
 
 ## Подготовка Education: текущий проход
 
 Для `2304c4be42b78126d3449d78b428dc33c221be4d` проверен реальный
 [Platform CI #21](https://github.com/YCleffo/Platform/actions/runs/42079392088).
-Запуск завершился: 11 jobs PASS, два browser jobs FAIL, поэтому условие старта
-Education не выполнено:
+Запуск завершился: 11 jobs PASS, два browser jobs FAIL. Перед началом Education
+исправлены обе причины:
 
 | Job / шаг | Причина | Локальное исправление |
 | --- | --- | --- |
@@ -28,11 +27,43 @@ Core security UI regression теперь моделирует несовпада
 Это **HTTP fixtures**, а не повторный real-backend Core security E2E.
 Документационные ссылки и `git diff --check` — PASS.
 
-Подготовлен [проект backend-решения Education](architecture/EDUCATION_BACKEND.md):
-отдельный Yii-модуль и схема `education`, Core identity, владельцы данных,
-предлагаемые read contracts и workflows шести действий из SVG. Решение не принято;
-Education runtime routes, endpoints, миграции и демонстрационные данные не добавлены.
-Для продолжения нужны отдельное backend-решение и полный зелёный CI нового SHA.
+После исправлений полный [Platform CI #22](https://github.com/YCleffo/Platform/actions/runs/42081869693)
+для `ea0dc55425395f11fe56c6c2e16b9a9cb8a83445` прошёл **13/13 jobs**.
+Пользователь отдельно принял Yii-модуль Education. Оба условия старта выполнены
+до добавления реализации.
+
+## Education: реализация и свежая локальная проверка
+
+Отдельный `App\Education`, схема и идемпотентные migrations, 33 HTTP операции с
+[OpenAPI](../contracts/openapi/education.yaml), собственные private files и inbox.
+Core identity, permissions, membership и явное назначение преподавателя обязательны.
+Commercial не хранит учебные данные. Данные появляются через реальные операции;
+production seeds отсутствуют. Env-флаги по умолчанию выключены.
+
+Frontend реализует пять разделов и шесть быстрых действий, реальные формы, занятия,
+посещаемость, материалы, переписку, уведомления и профиль. Экран 393×852 сверен
+с каноническим SVG; навигация 72px плюс safe-area, локальный Inter.
+
+| Проверка | Свежий результат |
+| --- | --- |
+| Backend Education PostgreSQL integration | 6 tests / 54 assertions PASS: scope, disabled, fresh permissions, DST, timeline, attendance, files, message cursor, subject export/correction/block |
+| Frontend unit/component | 73 files / 380 tests PASS, включая stale scope, uncertain write, HTTP FormData/blob refresh и проверки DTO |
+| Typecheck / ESLint / Prettier / styles / tokens / icons | PASS |
+| OpenAPI parity и локальные references | PASS, 33/33 runtime operations |
+| Настоящий backend browser E2E | PASS: группы, 12 учеников, занятия, посещаемость, реальные материалы и completed download с совпадающими bytes; два Core пользователя, ограничения организации/владельца, no-domain-role, профиль/avatar, disabled module |
+| RU/EN × light/dark × 393/1440 | 8 screenshots, без horizontal overflow; axe WCAG 2 A/AA и 2.1 AA — 0 нарушений |
+| Runtime DB role Education | schema USAGE и data INSERT разрешены; schema CREATE, TRUNCATE и ledger INSERT запрещены |
+| Production frontend build и preview | PASS; полный real-backend E2E повторён на production preview, upload/download 3 500 056 bytes совпадает |
+
+Проверки Education выполняются в отдельном Docker project
+`platform-education-qa-20261105`, БД `platform_test`, собственные Redis/SMTP/volumes.
+Рабочие БД не используются; одноразовые credentials и source/vendor copy находятся
+вне репозитория. Screenshots и downloaded material — игнорируемые QA artifacts.
+
+Установка и включение описаны в [Education backend](architecture/EDUCATION_BACKEND.md).
+Автоматические Education retention/erasure и legal-hold workflows не реализованы.
+Публичное production размещение и эксплуатационная приёмка не выполнялись.
+Зелёный CI #22 подтверждает базу, а не новый модуль; итоговый CI реализации нужен отдельно.
 
 ## Область и границы проверки
 

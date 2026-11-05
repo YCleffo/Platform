@@ -45,7 +45,8 @@
     "test:e2e:core-configuration": "node scripts/e2e-core-configuration.mjs",
     "verify:typography": "node scripts/verify-typography.mjs",
     "verify:workflows": "node scripts/verify-workflows.mjs",
-    "test:workbench-contracts": "node --test scripts/workbench-contracts.test.mjs"
+    "test:workbench-contracts": "node --test scripts/workbench-contracts.test.mjs",
+    "test:e2e:education": "node scripts/e2e-education.mjs"
   },
   "overrides": {
     "minimatch@>=7.0.0 <11.0.1": "11.0.1",

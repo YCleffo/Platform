@@ -1,5 +1,5 @@
 import { ApiError, ApiResponseError, SupersededOperationError } from '@/shared/api/errors';
-import { createHttpClient } from '@/shared/api/http';
+import { createHttpClient, type RequestOptions } from '@/shared/api/http';
 import { coreAdminAuth } from '@/shared/api/core/adminAuth';
 import { coreAdminSession } from '@/core/admin/session';
 import { coreClientHeaders } from '@/core/admin/clientInstance';
@@ -57,6 +57,12 @@ async function scoped<T>(action: () => Promise<T>): Promise<T> {
 }
 
 export const coreAdminHttp = {
+  request<T>(path: string, options: RequestOptions): Promise<T> {
+    return scoped(() => client.request<unknown>(path, options).then(payload => unwrap<T>(payload, path)));
+  },
+  binary(path: string, headers: Record<string, string>, signal?: AbortSignal): Promise<Blob> {
+    return scoped(() => client.get<Blob>(path, { responseType: 'blob', headers, signal, retryTransient: false }));
+  },
   document(path: string, signal?: AbortSignal): Promise<string> {
     return scoped(() => client.get<string>(path, { responseType: 'text', retryTransient: false, signal }));
   },

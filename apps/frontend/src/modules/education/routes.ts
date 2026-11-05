@@ -1,0 +1,27 @@
+import type { RouteRecordRaw } from 'vue-router';
+
+const create = () => import('./CreateView.vue');
+export const educationRoutes: RouteRecordRaw[] = [
+  { path: '/education/login', name: 'education-login', component: () => import('./EducationLoginView.vue') },
+  { path: '/education', redirect: '/today', component: () => import('./EducationLayout.vue'), meta: { requiresEducationAuth: true }, children: [
+    { path: '/today', name: 'education-today', component: () => import('./TodayView.vue'), meta: { educationTab: 'today' } },
+    { path: '/calendar', name: 'education-calendar', component: () => import('./CalendarView.vue'), meta: { educationTab: 'calendar' } },
+    { path: '/calendar/new', name: 'education-create-event', component: create, props: { kind: 'event' }, meta: { educationTab: 'calendar' } },
+    { path: '/people', name: 'education-people', component: () => import('./PeopleView.vue'), meta: { educationTab: 'people' } },
+    { path: '/messages', name: 'education-messages', component: () => import('./MessagesView.vue'), meta: { educationTab: 'messages' } },
+    { path: '/messages/new', name: 'education-create-message', component: create, props: { kind: 'message' }, meta: { educationTab: 'messages' } },
+    { path: '/messages/:id', name: 'education-thread', component: () => import('./ThreadView.vue'), meta: { educationTab: 'messages' } },
+    { path: '/more', name: 'education-more', component: () => import('./MoreView.vue'), meta: { educationTab: 'more' } },
+    { path: '/lessons/new', name: 'education-create-lesson', component: create, props: { kind: 'lesson' }, meta: { educationTab: 'calendar' } },
+    { path: '/lessons/current', name: 'education-current-lesson', component: () => import('./LessonView.vue'), props: { mode: 'current' }, meta: { educationTab: 'calendar' } },
+    { path: '/lessons/:id', name: 'education-lesson', component: () => import('./LessonView.vue'), meta: { educationTab: 'calendar' } },
+    { path: '/lessons/:id/participants', name: 'education-participants', component: () => import('./LessonView.vue'), props: { mode: 'participants' }, meta: { educationTab: 'calendar' } },
+    { path: '/lessons/:id/materials', name: 'education-lesson-materials', component: () => import('./LessonView.vue'), props: { mode: 'materials' }, meta: { educationTab: 'calendar' } },
+    { path: '/groups/new', name: 'education-create-group', component: create, props: { kind: 'group' }, meta: { educationTab: 'people' } },
+    { path: '/students/new', name: 'education-enroll-student', component: create, props: { kind: 'student' }, meta: { educationTab: 'people' } },
+    { path: '/materials', name: 'education-materials', component: () => import('./MaterialsView.vue'), meta: { educationTab: 'more' } },
+    { path: '/materials/upload', name: 'education-upload-material', component: create, props: { kind: 'material' }, meta: { educationTab: 'more' } },
+    { path: '/notifications', name: 'education-notifications', component: () => import('./NotificationsView.vue'), meta: { educationTab: 'messages' } },
+    { path: '/attention', name: 'education-attention', component: () => import('./NotificationsView.vue'), props: { attention: true }, meta: { educationTab: 'today' } },
+  ] },
+];

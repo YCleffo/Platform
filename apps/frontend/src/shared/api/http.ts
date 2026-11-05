@@ -16,7 +16,7 @@ export interface RequestOptions {
   validate?: Validator;
   /** Stateful GET responses, such as one-time privacy exports, must not be replayed. */
   retryTransient?: boolean;
-  responseType?: 'json' | 'text';
+  responseType?: 'json' | 'text' | 'blob';
 }
 
 type ReadOptions = Omit<RequestOptions, 'method' | 'body'>;
@@ -66,7 +66,8 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
     const method = options.method ?? 'GET';
     const url = buildUrl(config.baseUrl, path, options.query);
     const headers = new Headers({ Accept: 'application/json', ...config.getClientHeaders?.() });
-    if (options.body !== undefined) {
+    const multipart = options.body instanceof FormData;
+    if (options.body !== undefined && !multipart) {
       headers.set('Content-Type', 'application/json');
     }
     if (options.idempotencyKey !== undefined) {
@@ -79,7 +80,7 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
       headers.set(key, value);
     }
 
-    const body = options.body === undefined ? undefined : JSON.stringify(options.body);
+    const body = multipart ? options.body as FormData : options.body === undefined ? undefined : JSON.stringify(options.body);
 
     let response: Response | undefined;
     for (let attempt = 1; response === undefined; attempt += 1) {
@@ -109,6 +110,11 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
       return undefined as T;
     }
 
+    if (response.ok && options.responseType === 'blob') {
+      const blob = await response.blob();
+      if (options.validate !== undefined && !options.validate(blob)) throw new ApiResponseError(path);
+      return blob as T;
+    }
     const raw = await response.text();
     const payload = parseJson(raw);
 

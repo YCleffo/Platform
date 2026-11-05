@@ -89,6 +89,7 @@ services:
 
     environment: &backend_environment
       APP_ENV: ${BACKEND_APP_ENV:-dev}
+      EDUCATION_ENABLED: ${EDUCATION_ENABLED:-0}
       APP_DEBUG: ${BACKEND_APP_DEBUG:-true}
       XDEBUG_MODE: ${BACKEND_XDEBUG_MODE:-off}
       CORE_SCHEDULER_ENABLED: ${CORE_SCHEDULER_ENABLED:-true}
@@ -249,6 +250,7 @@ services:
     environment:
       <<: *backend_environment
       APP_ENV: ${BACKEND_FAST_APP_ENV:-dev}
+      EDUCATION_ENABLED: ${EDUCATION_ENABLED:-0}
       APP_DEBUG: "0"
       CORE_SCHEDULER_ENABLED: "false"
       CORE_EMAIL_WORKER_ENABLED: "false"

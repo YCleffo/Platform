@@ -114,10 +114,18 @@ describe('Core sign-in lifecycle', () => {
   it('ignores late person decoration from a previous session', async () => {
     const person = deferred<Record<string, unknown>>(); vi.mocked(coreAdminHttp.get).mockReturnValue(person.promise);
     vi.mocked(coreAdminAuth.login).mockResolvedValueOnce(tokens('a')).mockResolvedValueOnce(tokens('b'));
-    vi.mocked(coreAdminAuth.me).mockResolvedValueOnce(me('a', 'person-a')).mockResolvedValueOnce(me('b'));
+    vi.mocked(coreAdminAuth.me).mockResolvedValueOnce({ ...me('a', 'person-a'), permissions: ['core.persons.read'] }).mockResolvedValueOnce(me('b'));
     const auth = useAdminAuthStore(); await auth.login('a@example.test', 'password'); await auth.logout(); await auth.login('b@example.test', 'password');
     person.resolve({ displayName: 'Previous user' }); await Promise.resolve(); await Promise.resolve();
+    expect(coreAdminHttp.get).toHaveBeenCalledTimes(1);
     expect(auth.identity?.account.id).toBe('b'); expect(auth.displayName).toBeNull();
+  });
+
+  it('does not request the global Person API for an Education teacher without directory permission', async () => {
+    vi.mocked(coreAdminAuth.login).mockResolvedValue(tokens('teacher'));
+    vi.mocked(coreAdminAuth.me).mockResolvedValue({ ...me('teacher', 'teacher-person'), roles: ['education.teacher'] });
+    const auth = useAdminAuthStore(); await auth.login('teacher@example.test', 'password');
+    expect(auth.isAuthenticated).toBe(true); expect(coreAdminHttp.get).not.toHaveBeenCalled();
   });
 
   it('does not remove an established session when its login view unmounts', async () => {

@@ -64,4 +64,14 @@ describe('router account guard', () => {
     await router.push('/does-not-exist');
     expect(router.currentRoute.value.name).toBe('not-found');
   });
+
+  it('keeps Education absent by default and uses Core authentication when enabled', async () => {
+    const disabled = createAppRouter(createMemoryHistory(), false);
+    await disabled.push('/today'); expect(disabled.currentRoute.value.name).toBe('not-found');
+    const enabled = createAppRouter(createMemoryHistory(), true);
+    await enabled.push('/today'); expect(enabled.currentRoute.value.name).toBe('education-login');
+    expect(enabled.currentRoute.value.query.redirect).toBe('/today');
+    await enabled.push('/'); expect(enabled.currentRoute.value.name).toBe('catalog');
+    expect(enabled.getRoutes().filter(route => route.name?.toString().startsWith('education-'))).toHaveLength(20);
+  });
 });

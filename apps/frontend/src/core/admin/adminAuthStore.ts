@@ -83,7 +83,7 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
     identity.value = me;
     status.value = 'authenticated';
     challengeToken.value = null;
-    if (me.account.personId !== null) {
+    if (me.account.personId !== null && (me.roles.includes('core.superadmin') || me.permissions.includes('core.persons.read'))) {
       void coreAdminHttp.get<Record<string, unknown>>(`/core/persons/${encodeURIComponent(me.account.personId)}`)
         .then((person) => {
           if (!current(operation) || coreAdminSession.epoch() !== epoch) return;

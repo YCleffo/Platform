@@ -175,7 +175,8 @@ return [
         '__construct()' => ['definitions' => $params['consentDefinitions'] ?? []],
     ],
     DataCategoryRegistry::class => [
-        '__construct()' => ['definitions' => $params['dataCategoryDefinitions'] ?? []],
+        '__construct()' => ['definitions' => $params['dataCategoryDefinitions'] ?? [],
+            'additionalDefinitions' => $params['additionalDataCategoryDefinitions'] ?? []],
     ],
     RetentionPolicyRegistry::class => [
         '__construct()' => ['definitions' => $params['retentionPolicyDefinitions'] ?? []],

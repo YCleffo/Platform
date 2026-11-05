@@ -32,7 +32,7 @@
 | [Безопасность Commercial Control Plane](architecture/COMMERCIAL_SECURITY.md) |
 | [Communication в Core](architecture/COMMUNICATION.md) |
 | [Архитектура backend-приложения Core](architecture/CORE_BACKEND.md) |
-| [Education backend: проект решения](architecture/EDUCATION_BACKEND.md) |
+| [Education backend: границы, контракт и установка](architecture/EDUCATION_BACKEND.md) |
 | [Инварианты Core](architecture/CORE_INVARIANTS.md) |
 | [Архитектура баз данных](architecture/DATABASE.md) |
 | [События между процессами](architecture/EVENT_CONTRACTS.md) |

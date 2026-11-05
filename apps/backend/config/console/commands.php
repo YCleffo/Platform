@@ -5,6 +5,10 @@ declare(strict_types=1);
 use App\Console;
 
 return [
+    ...(class_exists(\App\Education\Console\MigrateCommand::class) ? [
+        'education:migrate' => \App\Education\Console\MigrateCommand::class,
+        'education:teacher:assign' => \App\Education\Console\AssignTeacherCommand::class,
+    ] : []),
     'scheduler:run' => Console\SchedulerRunCommand::class,
     'ops:status' => Console\OpsStatusCommand::class,
     'ops:health' => Console\OpsHealthCommand::class,

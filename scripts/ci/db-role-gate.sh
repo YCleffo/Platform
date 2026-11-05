@@ -17,6 +17,7 @@ case "${plane}" in
     admin_password="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
     database="${POSTGRES_TEST_DB:?POSTGRES_TEST_DB is required}"
     schemas="core,platform_runtime,public"
+    if [[ "${EDUCATION_ENABLED:-0}" == "1" ]]; then schemas="${schemas},education"; fi
     runtime_role="${CORE_RUNTIME_ROLE:-platform_core_runtime}"
     runtime_password="${CORE_RUNTIME_PASSWORD:?CORE_RUNTIME_PASSWORD is required}"
     maintenance_role="${CORE_MAINTENANCE_ROLE:-platform_core_maintenance}"
@@ -92,6 +93,12 @@ check_privilege() {
 }
 
 echo "Verifying effective privileges..."
+if [[ "${plane}" == "core" && "${EDUCATION_ENABLED:-0}" == "1" ]]; then
+  check_privilege "Education data insert" "has_table_privilege(current_user, 'education.groups', 'INSERT')" "true"
+  check_privilege "Education schema create" "has_schema_privilege(current_user, 'education', 'CREATE')" "false"
+  check_privilege "Education truncate" "has_table_privilege(current_user, 'education.groups', 'TRUNCATE')" "false"
+  check_privilege "Education migration insert" "has_table_privilege(current_user, 'education.module_migrations', 'INSERT')" "false"
+fi
 check_privilege "schema usage" "has_schema_privilege(current_user, '${schema}', 'USAGE')" "true"
 check_privilege "schema create" "has_schema_privilege(current_user, '${schema}', 'CREATE')" "false"
 check_privilege "database create" "has_database_privilege(current_user, current_database(), 'CREATE')" "false"
