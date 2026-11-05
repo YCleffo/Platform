@@ -78,7 +78,7 @@ final readonly class EducationService
         return ['displayName' => $profile['displayName'] ?? $this->access->personName($scope->personId),
             'avatarFileId' => $avatarId, 'personId' => $scope->personId,
             'date' => $now->format('Y-m-d'), 'now' => $now->format(DATE_ATOM),
-            'greeting' => $hour < 12 ? 'morning' : ($hour < 18 ? 'afternoon' : 'evening'),
+            'greeting' => $hour < 6 ? 'night' : ($hour < 12 ? 'morning' : ($hour < 18 ? 'afternoon' : 'evening')),
             'locale' => $scope->locale, 'timezone' => $scope->timezone, 'unreadCount' => $this->store->unreadCount($scope)];
     }
 

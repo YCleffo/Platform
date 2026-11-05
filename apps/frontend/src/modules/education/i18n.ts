@@ -3,7 +3,7 @@ import { i18n } from '@/shared/i18n';
 
 const copy = {
   today: ['Сегодня', 'Today'], calendar: ['Календарь', 'Calendar'], people: ['Люди', 'People'], messages: ['Сообщения', 'Messages'], more: ['Ещё', 'More'],
-  morning: ['Доброе утро', 'Good morning'], afternoon: ['Добрый день', 'Good afternoon'], evening: ['Добрый вечер', 'Good evening'],
+  night: ['Доброй ночи', 'Good evening'], morning: ['Доброе утро', 'Good morning'], afternoon: ['Добрый день', 'Good afternoon'], evening: ['Добрый вечер', 'Good evening'],
   notifications: ['Уведомления', 'Notifications'], profile: ['Профиль', 'Profile'], week: ['Выбор даты', 'Choose a date'],
   nextLesson: ['Следующее занятие', 'Next lesson'], noNext: ['Предстоящих занятий нет', 'No upcoming lessons'], now: ['Сейчас', 'Now'], completed: ['Завершено', 'Completed'], cancelled: ['Отменено', 'Cancelled'], scheduled: ['Запланировано', 'Scheduled'],
   openLesson: ['Открыть занятие', 'Open lesson'], participants: ['Список', 'Participants'], materials: ['Материалы', 'Materials'], allEvents: ['Все события', 'All events'], quickActions: ['Быстрые действия', 'Quick actions'], attention: ['Требует внимания', 'Needs attention'], all: ['Все', 'All'],

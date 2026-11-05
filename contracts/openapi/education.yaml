@@ -2953,6 +2953,7 @@
           "greeting": {
             "type": "string",
             "enum": [
+              "night",
               "morning",
               "afternoon",
               "evening"

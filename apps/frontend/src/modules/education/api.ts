@@ -2,7 +2,7 @@ import { coreAdminHttp } from '@/shared/api/core/adminHttp';
 import { ApiError, ApiResponseError } from '@/shared/api/errors';
 
 export interface EducationContext { organizations: { id: string; name: string }[]; personId: string; displayName: string | null; locale: string; timezone: string }
-export interface Header { displayName: string | null; avatarFileId: string | null; personId: string; date: string; now: string; greeting: 'morning' | 'afternoon' | 'evening'; locale: string; timezone: string; unreadCount: number }
+export interface Header { displayName: string | null; avatarFileId: string | null; personId: string; date: string; now: string; greeting: 'night' | 'morning' | 'afternoon' | 'evening'; locale: string; timezone: string; unreadCount: number }
 export interface Group { id: string; name: string; studentCount?: number }
 export interface Student { id: string; personId: string; name?: string; createdAt?: string }
 export interface PersonChoice { id: string; name: string; personId?: string }
@@ -31,7 +31,7 @@ const nullableText = (value: unknown): value is string | null => value === null 
 const nullableUuid = (value: unknown): value is string | null => value === null || uuid(value);
 const named = (value: unknown): value is PersonChoice => record(value) && uuid(value.id) && text(value.name);
 const contextGuard: Guard<EducationContext> = (v): v is EducationContext => record(v) && Array.isArray(v.organizations) && v.organizations.every(named) && uuid(v.personId) && nullableText(v.displayName) && locale(v.locale) && timezone(v.timezone);
-const headerGuard: Guard<Header> = (v): v is Header => record(v) && nullableText(v.displayName) && nullableUuid(v.avatarFileId) && uuid(v.personId) && date(v.date) && instant(v.now) && ['morning', 'afternoon', 'evening'].includes(String(v.greeting)) && locale(v.locale) && timezone(v.timezone) && integer(v.unreadCount);
+const headerGuard: Guard<Header> = (v): v is Header => record(v) && nullableText(v.displayName) && nullableUuid(v.avatarFileId) && uuid(v.personId) && date(v.date) && instant(v.now) && ['night', 'morning', 'afternoon', 'evening'].includes(String(v.greeting)) && locale(v.locale) && timezone(v.timezone) && integer(v.unreadCount);
 const groupGuard: Guard<Group> = (v): v is Group => named(v) && (!('studentCount' in v) || integer(v.studentCount));
 const studentGuard: Guard<Student> = (v): v is Student => record(v) && uuid(v.id) && uuid(v.personId) && (v.name === undefined || text(v.name));
 const lessonGuard: Guard<Lesson> = (v): v is Lesson => record(v) && uuid(v.id) && uuid(v.groupId) && text(v.groupName) && text(v.title) && instant(v.startsAt) && instant(v.endsAt) && text(v.location) && ['scheduled', 'completed', 'cancelled'].includes(String(v.status)) && integer(v.studentCount);
