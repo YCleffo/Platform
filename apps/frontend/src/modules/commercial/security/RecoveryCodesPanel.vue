@@ -27,9 +27,19 @@ async function copy(): Promise<void> {
   <div class="recovery">
     <p class="recovery__intro">{{ $t('security.recoveryIntro') }}</p>
     <ul class="recovery__codes">
-      <li v-for="code in codes" :key="code" class="recovery__code">{{ code }}</li>
+      <li
+        v-for="code in codes"
+        :key="code"
+        class="recovery__code"
+      >
+        {{ code }}
+      </li>
     </ul>
-    <AppButton type="button" variant="secondary" @click="copy">
+    <AppButton
+      type="button"
+      variant="secondary"
+      @click="copy"
+    >
       {{ copied ? $t('security.copied') : $t('security.copyCodes') }}
     </AppButton>
     <slot />
@@ -45,6 +55,8 @@ async function copy(): Promise<void> {
 
 .recovery__intro {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--warning-text);
   background: var(--warning-soft);
@@ -68,6 +80,8 @@ async function copy(): Promise<void> {
 .recovery__code {
   font-family: var(--font-mono);
   font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   color: var(--text-1);
   overflow-wrap: anywhere;

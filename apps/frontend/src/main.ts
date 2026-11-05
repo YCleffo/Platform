@@ -7,6 +7,7 @@ import { initTheme } from './app/theme';
 import { initAppearance } from './app/appearance';
 import { sessionEpoch, setUnauthorizedHandler } from './core/auth/session';
 import { useAuthStore } from './core/auth/authStore';
+import { coreAdminSessionEpoch } from './core/admin/session';
 import { clearToasts } from './shared/composables/useToast';
 import './shared/styles/tokens.css';
 import './shared/styles/theme.css';
@@ -34,5 +35,6 @@ setUnauthorizedHandler(() => {
 
 // Any session boundary invalidates transient notifications from the previous user.
 watch(sessionEpoch, clearToasts);
+watch(coreAdminSessionEpoch, clearToasts, { flush: 'sync' });
 
 app.mount('#app');

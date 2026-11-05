@@ -62,6 +62,21 @@ const page = (
 ): CommercialAccountList => ({ items, total, limit, offset });
 
 describe('accountStore', () => {
+  it('refreshes the current account without unmounting its form, but clears a denied refresh', async () => {
+    const store = useAccountStore();
+    vi.mocked(commercialAccount.getAccount).mockResolvedValue(detail('refresh'));
+    await store.loadAccount('refresh');
+    let finish!: (value: CommercialAccountDetail) => void;
+    vi.mocked(commercialAccount.getAccount).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const pending = store.refreshAccount('refresh');
+    expect(store.accountDetail?.id).toBe('refresh');
+    expect(store.detailLoading).toBe(false);
+    finish({ ...detail('refresh'), legal_name: 'Updated company' }); await pending;
+    expect(store.accountDetail?.legal_name).toBe('Updated company');
+    vi.mocked(commercialAccount.getAccount).mockRejectedValueOnce(new ApiError(403, 'forbidden', 'denied'));
+    await expect(store.refreshAccount('refresh')).rejects.toBeInstanceOf(ApiError);
+    expect(store.accountDetail).toBeNull();
+  });
   beforeEach(() => {
     setActivePinia(createPinia());
     endSession();

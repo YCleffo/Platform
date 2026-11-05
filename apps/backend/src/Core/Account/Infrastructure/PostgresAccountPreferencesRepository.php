@@ -30,11 +30,15 @@ final readonly class PostgresAccountPreferencesRepository implements AccountPref
         string $accountId,
         ?string $locale,
         ?string $timezone,
+        bool $writeLocale = true,
+        bool $writeTimezone = true,
     ): ?AccountInternationalPreferences {
         $row = $this->db->createCommand(
             <<<'SQL'
             UPDATE core.accounts
-            SET locale = :locale, timezone = :timezone, updated_at = now()
+            SET locale = CASE WHEN CAST(:write_locale AS boolean) THEN :locale ELSE locale END,
+                timezone = CASE WHEN CAST(:write_timezone AS boolean) THEN :timezone ELSE timezone END,
+                updated_at = now()
             WHERE id = CAST(:account_id AS uuid)
             RETURNING id::text AS account_id, locale, timezone
             SQL,
@@ -42,6 +46,8 @@ final readonly class PostgresAccountPreferencesRepository implements AccountPref
                 ':account_id' => $accountId,
                 ':locale' => $locale,
                 ':timezone' => $timezone,
+                ':write_locale' => $writeLocale,
+                ':write_timezone' => $writeTimezone,
             ],
         )->queryOne();
 

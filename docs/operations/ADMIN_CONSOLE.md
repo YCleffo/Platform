@@ -15,7 +15,7 @@ docker exec -e CORE_BOOTSTRAP_PASSWORD='<strong-local-password>' \
   --locale=ru-RU --timezone=UTC
 ```
 
-Open [http://127.0.0.1:4176/admin/login](http://127.0.0.1:4176/admin/login) while the Vite
+Open [http://localhost:5173/admin/login](http://localhost:5173/admin/login) while the Vite
 dev server is running. On the local development stack used for this implementation the
 credentials are `admin@platform.local` and the password supplied to the bootstrap command.
 
@@ -31,12 +31,15 @@ credentials are `admin@platform.local` and the password supplied to the bootstra
 - Privacy operations: data-subject requests, legal holds, erasure, incidents, representations,
   distribution consents.
 - Audit: Core audit trail, superadmin only.
-- Finance compensations: intentionally blocked. Those endpoints use the Commercial control
-  plane and need a separate Commercial operator permission model; exposing them through a
-  Core session would be unsafe.
+- Finance compensations link to `/operator`, which requires an independent Commercial
+  operator session and live server authorization. It does not reuse the customer or Core session.
 
-Create/edit/action bodies are JSON. This keeps advanced nested payloads available without
-inventing fields the backend does not accept; invalid JSON is rejected before the request.
+Directory and privacy actions use explicit field schemas, entity pickers, code lists,
+boolean switches, status-aware actions and confirmations. Update forms load existing values;
+role permission replacement loads the current permission set. Raw JSON request editors and
+unused generic operation panels have been removed. API middleware permissions are checked
+against the frontend catalog by `npm run test:workbench-contracts`.
+Results open in fullscreen dialogs; service credential secrets are cleared on close.
 All lists and actions call real `/api/core/*` endpoints. The UI does not synthesize records.
 
 ## Local performance
@@ -53,15 +56,16 @@ Core backend code, rebuild/restart the fast service:
 docker compose up -d --build --no-deps backend-fast
 ```
 
-Measured locally: Core admin endpoints ~45-60 ms instead of ~1-3 s in the dev runtime.
-The admin client caches the first page of every resource, renders cached rows immediately and
-revalidates in the background; dashboard counters fill progressively. Person names are joined
-from the cached persons list for the accounts table and shown in the top bar.
+Earlier local measurements put Core admin endpoints at roughly 45-60 ms versus 1-3 s in the
+dev runtime; these are historical measurements, not a current capacity benchmark.
+Dashboard and navigation prefetch use a Core-session-scoped cache. Workbench directory tables
+load fresh pages and keep their rows only for the current component/session lifetime.
+Permission denial clears rows and pagination totals; late responses cannot populate a new session.
 
 ## Table and navigation behaviour
 
 - Every paginated resource has a page-size dropdown (10/25/50/100) in the table footer using
-  the shared `AppDropdown`; changing it resets the offset and reloads through the cache.
+  the shared `AppDropdown`; changing it resets the offset and requests a fresh page.
   The page-size control uses the compact dropdown size (32 px high, 96 px wide). Its menu
   uses the compact item density too (30 px rows, 12 px text, 4/8 px padding). Panels match
   the trigger width (at least 96 px), open under the trigger and clamp to the viewport edge.

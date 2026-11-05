@@ -21,6 +21,8 @@ use Symfony\Component\Uid\Uuid;
 final class PaymentConcurrencyTest extends TestCase
 {
     private Connection $connection;
+    /** @var list<string> */
+    private array $providers = [];
 
     protected function setUp(): void
     {
@@ -35,6 +37,10 @@ final class PaymentConcurrencyTest extends TestCase
 
     protected function tearDown(): void
     {
+        if ($this->connection->isTransactionActive()) $this->connection->rollBack();
+        foreach ($this->providers as $id) {
+            $this->connection->executeStatement("UPDATE commercial.payment_provider_accounts SET status='disabled', updated_at=now() WHERE id=?", [$id]);
+        }
         $this->connection->close();
     }
 
@@ -46,6 +52,71 @@ final class PaymentConcurrencyTest extends TestCase
         self::assertSame([0, 0], $this->race('create_payment', $invoice, $a, 'create_payment', $invoice, $b));
         self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.payments WHERE invoice_id = ?', [$invoice]));
         self::assertSame(1, (int) $this->connection->fetchOne("SELECT count(*) FROM commercial.audit_events ae JOIN commercial.payments p ON p.id::text = ae.resource_id WHERE ae.action = 'payment.created' AND p.invoice_id = ?", [$invoice]));
+    }
+
+    public function testSavedCardRecordingDoesNotInvertPaymentBeforeAttemptLockOrder(): void
+    {
+        [$owner, $account, , $invoice] = $this->issuedFixture('saved-card-lock-order');
+        $payment = $this->creator()->create($owner, $account, $invoice, 'saved-lock-' . $account, Uuid::v7()->toRfc4122());
+        $provider = $this->provider('saved-lock');
+        $attempt = (new BeginPaymentAttempt($this->connection))->begin($payment['id'], $provider, 'bank_card', Uuid::v7()->toRfc4122());
+        $reference = 'provider-' . $attempt['attempt_id'];
+        (new BindPaymentAttemptProviderReference($this->connection))->bind($attempt['attempt_id'], $reference);
+        $reader = DriverManager::getConnection($this->connection->getParams());
+        $reader->executeStatement("SET lock_timeout='500ms'");
+        $snapshot = new \ControlPlane\Payment\Provider\ProviderPayment($reference, 'succeeded', true, 1000, 'USD', [], null,
+            new \DateTimeImmutable(), new \ControlPlane\Payment\Provider\ProviderPaymentMethod('card-' . $attempt['attempt_id'], 'bank_card', true));
+        $this->connection->beginTransaction();
+        try {
+            // Binder/settlement own the payment before the attempt. A recorder must
+            // not hold the attempt while also waiting for this payment row.
+            $this->connection->executeQuery('SELECT id FROM commercial.payments WHERE id=? FOR UPDATE', [$payment['id']]);
+            (new \ControlPlane\Payment\Application\RecordSavedPaymentMethod($reader))->record(
+                new \ControlPlane\Payment\Provider\ProviderAccount($provider, 'fixture', 'merchant', 'secret/ref'), $snapshot, $attempt['attempt_id']);
+            self::assertSame($reference, (new BindPaymentAttemptProviderReference($this->connection))->bind($attempt['attempt_id'], $reference));
+            self::assertSame(1, (int) $reader->fetchOne('SELECT count(*) FROM commercial.saved_payment_methods WHERE commercial_account_id=?', [$account]));
+        } finally {
+            $this->connection->rollBack();
+            $reader->close();
+        }
+    }
+
+    public function testReceiptApplicationLocksInvoiceBeforeForeignKeyPayment(): void
+    {
+        [$owner, $account, , $invoice] = $this->issuedFixture('receipt-lock-order', 'RUB');
+        $payment = $this->creator()->create($owner, $account, $invoice, 'receipt-lock-' . $account, Uuid::v7()->toRfc4122());
+        $attempt = (new BeginPaymentAttempt($this->connection))->begin($payment['id'], $this->yooKassaProvider('receipt-lock'), 'sbp', Uuid::v7()->toRfc4122());
+        (new BindPaymentAttemptProviderReference($this->connection))->bind($attempt['attempt_id'], 'receipt-provider-' . $attempt['attempt_id']);
+        $settlement = new SettlePayment(new ActivateSubscription($this->connection, new SubscriptionPeriodCalculator()));
+        (new \ControlPlane\Payment\Application\CompletePaymentAttempt($this->connection, $settlement,
+            new \ControlPlane\Fiscalization\Application\CreatePaymentReceiptObligation()))->complete($attempt['attempt_id'], 'succeeded', null, new \DateTimeImmutable(), Uuid::v7()->toRfc4122());
+        $receipt = $this->connection->fetchOne('SELECT id FROM commercial.receipts WHERE payment_id=?', [$payment['id']]);
+        self::assertIsString($receipt);
+        $this->connection->executeStatement("SET lock_timeout='500ms'");
+        $this->connection->beginTransaction();
+        $worker = null;
+        try {
+            $this->connection->executeQuery('SELECT id FROM commercial.invoices WHERE id=? FOR UPDATE', [$invoice]);
+            $name = 'receipt-lock-' . bin2hex(random_bytes(8));
+            $worker = $this->launch('apply_receipt_lock_order', $receipt, $name, '0');
+            $deadline = microtime(true) + 5;
+            do {
+                $this->connection->executeQuery('SELECT pg_stat_clear_snapshot()');
+                $waiting = $this->connection->fetchOne("SELECT 1 FROM pg_stat_activity WHERE application_name=? AND wait_event_type='Lock'", [$name]);
+                if ($waiting !== false) break;
+                usleep(10_000);
+            } while (microtime(true) < $deadline);
+            self::assertNotFalse($waiting, 'Receipt worker must reach the concurrent lock boundary.');
+            // Settlement owns invoice first. Fiscalization must not own payment
+            // while waiting for that invoice through its foreign-key checks.
+            $this->connection->executeQuery('SELECT id FROM commercial.payments WHERE id=? FOR UPDATE', [$payment['id']]);
+            $this->connection->commit();
+        } finally {
+            if ($this->connection->isTransactionActive()) $this->connection->rollBack();
+            $this->connection->executeStatement('RESET lock_timeout');
+            if ($worker !== null) self::assertSame(0, $this->finish($worker));
+        }
+        self::assertSame('succeeded', $this->connection->fetchOne('SELECT status FROM commercial.receipts WHERE id=?', [$receipt]));
     }
 
     public function testConcurrentSuccessSettlesOnce(): void
@@ -179,6 +250,8 @@ final class PaymentConcurrencyTest extends TestCase
         $id = $this->connection->fetchOne("INSERT INTO commercial.payment_provider_accounts (provider_code, external_account_id, secret_ref) VALUES (?, ?, ?) RETURNING id", ['race-' . $suffix . '-' . bin2hex(random_bytes(4)), 'merchant-' . $suffix, 'payments/race/' . $suffix]);
         self::assertIsString($id);
 
+        $this->providers[] = $id;
+
         return $id;
     }
 
@@ -186,6 +259,8 @@ final class PaymentConcurrencyTest extends TestCase
     {
         $id = $this->connection->fetchOne("INSERT INTO commercial.payment_provider_accounts (provider_code, external_account_id, secret_ref, receipt_mode, receipt_vat_code, receipt_payment_subject, receipt_payment_mode) VALUES ('yookassa', ?, 'env:YOOKASSA_SECRET_KEY', 'yookassa', 1, 'service', 'full_payment') RETURNING id", ['race-shop-' . $suffix . '-' . bin2hex(random_bytes(4))]);
         self::assertIsString($id);
+
+        $this->providers[] = $id;
 
         return $id;
     }

@@ -15,7 +15,10 @@ defineEmits<{
 </script>
 
 <template>
-  <ul class="members" role="list">
+  <ul
+    class="members"
+    role="list"
+  >
     <MembershipCard
       v-for="membership in memberships"
       :key="membership.id"

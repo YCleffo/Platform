@@ -63,9 +63,17 @@ function switchAccount(id: string): void {
 
 <template>
   <section class="account-layout">
-    <nav class="account-layout__breadcrumbs" :aria-label="$t('account.sections')">
+    <nav
+      class="account-layout__breadcrumbs"
+      :aria-label="$t('account.sections')"
+    >
       <RouterLink :to="{ name: 'cabinet' }">{{ $t('account.backToCabinet') }}</RouterLink>
-      <span v-if="detail" class="account-layout__crumb-current">{{ detail.display_name }}</span>
+      <span
+        v-if="detail"
+        class="account-layout__crumb-current"
+      >
+        {{ detail.display_name }}
+      </span>
     </nav>
 
     <AppSkeleton
@@ -74,8 +82,14 @@ function switchAccount(id: string): void {
       :lines="3"
     />
 
-    <AppErrorState v-else-if="store.detailError" :message="errorText">
-      <AppButton variant="secondary" @click="store.loadAccount(accountId)">
+    <AppErrorState
+      v-else-if="store.detailError"
+      :message="errorText"
+    >
+      <AppButton
+        variant="secondary"
+        @click="store.loadAccount(accountId)"
+      >
         {{ $t('common.retry') }}
       </AppButton>
     </AppErrorState>
@@ -86,7 +100,10 @@ function switchAccount(id: string): void {
           <h1 class="account-layout__name">{{ detail.display_name }}</h1>
           <p class="account-layout__code">{{ detail.code }}</p>
           <div class="account-layout__badges">
-            <AccountStatus :status="detail.status" :onboarding-state="detail.onboarding_state" />
+            <AccountStatus
+              :status="detail.status"
+              :onboarding-state="detail.onboarding_state"
+            />
             <AppBadge variant="primary">{{ $t(`cabinet.role_${detail.role}`) }}</AppBadge>
           </div>
         </div>
@@ -98,8 +115,15 @@ function switchAccount(id: string): void {
         />
       </header>
 
-      <nav class="account-layout__tabs" :aria-label="$t('account.sections')">
-        <RouterLink active-class="" exact-active-class="account-layout__tab--active" :to="{ name: 'account-overview', params: { accountId: detail.id } }">
+      <nav
+        class="account-layout__tabs"
+        :aria-label="$t('account.sections')"
+      >
+        <RouterLink
+          active-class=""
+          exact-active-class="account-layout__tab--active"
+          :to="{ name: 'account-overview', params: { accountId: detail.id } }"
+        >
           {{ $t('account.overview') }}
         </RouterLink>
         <RouterLink
@@ -172,6 +196,8 @@ function switchAccount(id: string): void {
   align-items: center;
   gap: var(--space-8);
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--text-3);
   transition: var(--theme-transition);
@@ -211,6 +237,8 @@ function switchAccount(id: string): void {
 
 .account-layout__code {
   font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   color: var(--text-3);
   font-family: var(--font-mono);
@@ -236,6 +264,7 @@ function switchAccount(id: string): void {
   padding: var(--space-12) var(--space-12);
   border-bottom: 2px solid transparent;
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--text-2);

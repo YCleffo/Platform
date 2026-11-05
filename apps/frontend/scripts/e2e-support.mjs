@@ -11,15 +11,15 @@ export async function stableScreenshot(page, path) {
   await page.screenshot({ path, animations: 'disabled' });
 }
 
-export async function launchBrowser() {
+export async function launchBrowser(options = {}) {
   for (const channel of ['chrome', 'msedge']) {
     try {
-      return await chromium.launch({ channel, headless: true });
+      return await chromium.launch({ channel, headless: true, ...options });
     } catch {
       // try next channel
     }
   }
-  return chromium.launch({ headless: true });
+  return chromium.launch({ headless: true, ...options });
 }
 
 export async function listMailMessages(mailpit) {

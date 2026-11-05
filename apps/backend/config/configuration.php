@@ -43,6 +43,7 @@ return [
             ],
         ],
         Environment::TEST => [
+            'di' => ['environments/test/di/*.php'],
             'params' => [
                 'environments/test/params.php',
             ],

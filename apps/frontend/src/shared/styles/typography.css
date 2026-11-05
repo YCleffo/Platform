@@ -7,3 +7,60 @@
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'Space Mono', ui-monospace, 'Cascadia Code', Menlo, monospace;
 }
+
+/* Browser heading defaults must never bypass the responsive design scale. */
+h1 {
+  font-family: var(--type-h1-family), var(--font-sans);
+  font-size: var(--type-h1-size);
+  line-height: var(--type-h1-line);
+  font-weight: var(--type-h1-weight);
+  letter-spacing: var(--type-h1-tracking);
+}
+
+h2 {
+  font-family: var(--type-h2-family), var(--font-sans);
+  font-size: var(--type-h2-size);
+  line-height: var(--type-h2-line);
+  font-weight: var(--type-h2-weight);
+  letter-spacing: var(--type-h2-tracking);
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--type-h3-family), var(--font-sans);
+  font-size: var(--type-h3-size);
+  line-height: var(--type-h3-line);
+  font-weight: var(--type-h3-weight);
+  letter-spacing: var(--type-h3-tracking);
+}
+
+label,
+legend {
+  font-size: var(--type-body-medium-emphasis-size);
+  line-height: var(--type-body-medium-emphasis-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
+}
+
+small {
+  font-size: var(--type-body-small-size);
+  letter-spacing: var(--type-body-small-tracking);
+  line-height: var(--type-body-small-line);
+  font-weight: var(--type-body-small-weight);
+}
+
+strong,
+b {
+  font-weight: var(--type-body-medium-emphasis-weight);
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-mono);
+  font-size: inherit;
+  line-height: inherit;
+}

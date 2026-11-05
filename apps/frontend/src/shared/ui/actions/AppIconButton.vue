@@ -39,8 +39,7 @@ defineEmits<{
   border: 1px solid transparent;
   cursor: pointer;
   color: var(--text-2);
-  transition:
-    var(--theme-transition);
+  transition: var(--theme-transition);
 }
 
 .app-icon-button--s {

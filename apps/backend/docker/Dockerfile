@@ -33,6 +33,7 @@ RUN install-php-extensions \
 # Apply Debian security fixes after compiling PHP extensions.
 RUN apt-get update \
     && apt-get upgrade -y --no-install-recommends \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge '3.0.4' \
     && rm -rf /var/lib/apt/lists/*
 
 ENV LC_ALL=C.UTF-8

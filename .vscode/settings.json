@@ -1,0 +1,7 @@
+{
+  "[vue]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "prettier.prettierPath": "./apps/frontend/node_modules/prettier"
+}

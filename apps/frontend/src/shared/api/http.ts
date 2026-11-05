@@ -14,6 +14,9 @@ export interface RequestOptions {
   signal?: AbortSignal;
   idempotencyKey?: string;
   validate?: Validator;
+  /** Stateful GET responses, such as one-time privacy exports, must not be replayed. */
+  retryTransient?: boolean;
+  responseType?: 'json' | 'text';
 }
 
 type ReadOptions = Omit<RequestOptions, 'method' | 'body'>;
@@ -35,6 +38,8 @@ export interface HttpClient {
 
 export interface HttpClientConfig {
   baseUrl: string;
+  credentials?: RequestCredentials;
+  getClientHeaders?: () => Record<string, string>;
   getAccessToken: () => string | null;
   getSessionEpoch: () => number;
   refreshTokens: (expectedEpoch: number) => Promise<RefreshOutcome>;
@@ -60,7 +65,7 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
   async function send<T>(path: string, options: RequestOptions, token: string | null): Promise<T> {
     const method = options.method ?? 'GET';
     const url = buildUrl(config.baseUrl, path, options.query);
-    const headers = new Headers({ Accept: 'application/json' });
+    const headers = new Headers({ Accept: 'application/json', ...config.getClientHeaders?.() });
     if (options.body !== undefined) {
       headers.set('Content-Type', 'application/json');
     }
@@ -79,18 +84,18 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
     let response: Response | undefined;
     for (let attempt = 1; response === undefined; attempt += 1) {
       try {
-        response = await fetch(url, { method, headers, body, signal: options.signal });
+        response = await fetch(url, { method, headers, body, signal: options.signal, credentials: config.credentials ?? 'same-origin' });
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
           throw new RequestAbortedError();
         }
-        if (method === 'GET' && attempt === 1 && options.signal?.aborted !== true) {
+        if (method === 'GET' && options.retryTransient !== false && attempt === 1 && options.signal?.aborted !== true) {
           await new Promise(resolve => setTimeout(resolve, 100));
           continue;
         }
         throw new NetworkError();
       }
-      if (method === 'GET' && attempt === 1 && [502, 503, 504].includes(response.status) && options.signal?.aborted !== true) {
+      if (method === 'GET' && options.retryTransient !== false && attempt === 1 && [502, 503, 504].includes(response.status) && options.signal?.aborted !== true) {
         response = undefined;
         await new Promise(resolve => setTimeout(resolve, 100));
         continue;
@@ -115,7 +120,7 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
       throw new ApiResponseError(path);
     }
 
-    return payload as T;
+    return (options.responseType === 'text' ? raw : payload) as T;
   }
 
   async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {

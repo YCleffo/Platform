@@ -66,7 +66,9 @@ const actionErrorText = computed(() => {
   return actionErrorMessage.value ?? t('common.unexpectedError');
 });
 
-const statusLabel = computed(() => (preview.value === null ? '' : t(`invitations.status_${preview.value.status}`)));
+const statusLabel = computed(() =>
+  preview.value === null ? '' : t(`invitations.status_${preview.value.status}`),
+);
 
 onMounted(() => {
   void load();
@@ -120,33 +122,60 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
 
 <template>
   <section class="invitation-accept">
-    <AppSkeleton v-if="loading" variant="text" :lines="3" />
+    <AppSkeleton
+      v-if="loading"
+      variant="text"
+      :lines="3"
+    />
 
-    <div v-else-if="declined" class="invitation-accept__status">
-      <span class="invitation-accept__icon" aria-hidden="true">
+    <div
+      v-else-if="declined"
+      class="invitation-accept__status"
+    >
+      <span
+        class="invitation-accept__icon"
+        aria-hidden="true"
+      >
         <CircleCheck :size="28" />
       </span>
       <h1 class="invitation-accept__title">{{ $t('invitations.declined') }}</h1>
       <RouterLink :to="{ name: 'catalog' }">{{ $t('nav.catalog') }}</RouterLink>
     </div>
 
-    <AppEmptyState v-else-if="!hasToken" :title="$t('invitations.missingToken')" :description="$t('invitations.missingTokenHint')">
+    <AppEmptyState
+      v-else-if="!hasToken"
+      :title="$t('invitations.missingToken')"
+      :description="$t('invitations.missingTokenHint')"
+    >
       <RouterLink :to="{ name: 'catalog' }">{{ $t('nav.catalog') }}</RouterLink>
     </AppEmptyState>
 
-    <AppErrorState v-else-if="error" :message="previewErrorText">
+    <AppErrorState
+      v-else-if="error"
+      :message="previewErrorText"
+    >
       <RouterLink :to="{ name: 'catalog' }">{{ $t('nav.catalog') }}</RouterLink>
     </AppErrorState>
 
-    <div v-else-if="preview" class="invitation-accept__content">
+    <div
+      v-else-if="preview"
+      class="invitation-accept__content"
+    >
       <h1 class="invitation-accept__title">{{ $t('invitations.acceptTitle') }}</h1>
       <p class="invitation-accept__intro">
-        {{ $t('invitations.acceptIntro', { organization: preview.organization_name, role: t(`cabinet.role_${preview.role}`) }) }}
+        {{
+          $t('invitations.acceptIntro', {
+            organization: preview.organization_name,
+            role: t(`cabinet.role_${preview.role}`),
+          })
+        }}
       </p>
 
       <div class="invitation-accept__details">
         <AppBadge :variant="statusVariant(preview.status)">{{ statusLabel }}</AppBadge>
-        <span class="invitation-accept__detail">{{ $t('invitations.maskedEmail', { email: preview.email }) }}</span>
+        <span class="invitation-accept__detail">
+          {{ $t('invitations.maskedEmail', { email: preview.email }) }}
+        </span>
         <span class="invitation-accept__detail">
           {{ $t('invitations.expiresAt') }} {{ formatDateTime(preview.expires_at, locale) }}
         </span>
@@ -154,10 +183,25 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
 
       <template v-if="preview.status === 'pending'">
         <template v-if="auth.isAuthenticated">
-          <p v-if="actionError" class="invitation-accept__error" role="alert">{{ actionErrorText }}</p>
+          <p
+            v-if="actionError"
+            class="invitation-accept__error"
+            role="alert"
+          >
+            {{ actionErrorText }}
+          </p>
           <div class="invitation-accept__actions">
-            <AppButton :loading="acting" @click="onAccept">{{ $t('invitations.accept') }}</AppButton>
-            <AppButton variant="secondary" :disabled="acting" @click="declineOpen = true">
+            <AppButton
+              :loading="acting"
+              @click="onAccept"
+            >
+              {{ $t('invitations.accept') }}
+            </AppButton>
+            <AppButton
+              variant="secondary"
+              :disabled="acting"
+              @click="declineOpen = true"
+            >
               {{ $t('invitations.decline') }}
             </AppButton>
           </div>
@@ -166,14 +210,20 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
           <p class="invitation-accept__intro">{{ $t('invitations.signInToAccept') }}</p>
           <div class="invitation-accept__actions">
             <AppButton @click="goToLogin">{{ $t('nav.login') }}</AppButton>
-            <RouterLink class="invitation-accept__link" :to="{ name: 'register', query: { redirect: '/invitation' } }">
+            <RouterLink
+              class="invitation-accept__link"
+              :to="{ name: 'register', query: { redirect: '/invitation' } }"
+            >
               {{ $t('invitations.registerToAccept') }}
             </RouterLink>
           </div>
         </template>
       </template>
 
-      <div v-else class="invitation-accept__status">
+      <div
+        v-else
+        class="invitation-accept__status"
+      >
         <p class="invitation-accept__intro">{{ $t(`invitations.state_${preview.status}`) }}</p>
         <RouterLink :to="{ name: 'catalog' }">{{ $t('nav.catalog') }}</RouterLink>
       </div>
@@ -187,12 +237,28 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
       size="s"
     >
       <div class="invitation-accept__decline">
-        <p v-if="actionError" class="invitation-accept__error" role="alert">{{ actionErrorText }}</p>
+        <p
+          v-if="actionError"
+          class="invitation-accept__error"
+          role="alert"
+        >
+          {{ actionErrorText }}
+        </p>
         <div class="invitation-accept__actions">
-          <AppButton type="button" variant="secondary" :disabled="acting" @click="declineOpen = false">
+          <AppButton
+            type="button"
+            variant="secondary"
+            :disabled="acting"
+            @click="declineOpen = false"
+          >
             {{ $t('common.cancel') }}
           </AppButton>
-          <AppButton type="button" variant="danger" :loading="acting" @click="onDecline">
+          <AppButton
+            type="button"
+            variant="danger"
+            :loading="acting"
+            @click="onDecline"
+          >
             {{ $t('invitations.decline') }}
           </AppButton>
         </div>
@@ -223,6 +289,8 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
 
 .invitation-accept__intro {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
   transition: var(--theme-transition);
@@ -242,6 +310,8 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
 
 .invitation-accept__detail {
   font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   color: var(--text-2);
   transition: var(--theme-transition);
@@ -256,11 +326,15 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
 
 .invitation-accept__link {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
 }
 
 .invitation-accept__error {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--danger-text);
   transition: var(--theme-transition);

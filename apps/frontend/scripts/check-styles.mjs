@@ -15,6 +15,20 @@ for (const relative of readdirSync(root, { recursive: true })) {
   for (const css of styles) {
     postcss.parse(css, { from: path }).walkDecls(decl => {
       if (decl.prop.startsWith('--')) definitions.add(decl.prop);
+      const fontFace = decl.parent.type === 'atrule' && decl.parent.name === 'font-face';
+      if (!fontFace && /^(font-size|font-weight|line-height|letter-spacing)$/.test(decl.prop)
+        && !decl.value.includes('var(') && !/^(inherit|normal|initial|unset)(?:\s*!important)?$/.test(decl.value)) {
+        // Uppercase navigation/table labels may deliberately use fixed em tracking.
+        if (decl.prop !== 'letter-spacing') problems.push(`${relative}: typography must use a design token: ${decl.toString()}`);
+      }
+      if (decl.prop === 'font-size' && /^var\(--type-[\w-]+-size\)$/.test(decl.value)
+        && decl.parent.type === 'rule' && !decl.parent.nodes.some(node => node.type === 'decl' && node.prop === 'line-height')) {
+        problems.push(`${relative}: font-size needs its own token line-height: ${decl.parent.selector}`);
+      }
+      if (decl.prop === 'font-size' && /^var\(--type-[\w-]+-size\)$/.test(decl.value)
+        && decl.parent.type === 'rule' && !decl.parent.nodes.some(node => node.type === 'decl' && node.prop === 'font-weight')) {
+        problems.push(`${relative}: font-size needs its own token weight: ${decl.parent.selector}`);
+      }
       for (const match of decl.value.matchAll(/var\(\s*(--[\w-]+)\s*([,)])/g)) {
         if (match[2] === ')') references.push({ name: match[1], file: relative });
       }
@@ -29,4 +43,4 @@ for (const relative of readdirSync(root, { recursive: true })) {
 }
 for (const { name, file } of references) if (!definitions.has(name)) problems.push(`${file}: undefined ${name}`);
 if (problems.length) { console.error([...new Set(problems)].join('\n')); process.exit(1); }
-console.log('STYLE CHECKS PASSED: defined variables, shared color transitions and centralized motion timings.');
+console.log('STYLE CHECKS PASSED: defined variables, token typography and line-heights, shared transitions and centralized motion timings.');

@@ -13,7 +13,7 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${ROOT_DIR}"
 
 echo "=== Stopping Isolated Test Infrastructure ==="
-docker compose --profile test rm --stop --force backend-production-smoke backend-test db-migrate-test postgres-test redis-test
+docker compose --profile test rm --stop --force backend-production-smoke backend-test db-migrate-test postgres-test redis-test mailpit-core-test
 
 # Remove only explicit test resources; never the runtime volumes.
 test_project="${COMPOSE_PROJECT_NAME:-platform}"

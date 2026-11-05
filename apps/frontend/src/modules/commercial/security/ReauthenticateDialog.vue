@@ -29,30 +29,34 @@ const passwordError = ref<string | null>(null);
 const codeError = ref<string | null>(null);
 let succeeded = false;
 
-watch(open, async (value) => {
-  if (value) {
-    succeeded = false;
-    password.value = '';
-    code.value = '';
-    recoveryCode.value = '';
-    mode.value = 'code';
-    submitting.value = false;
-    formError.value = null;
-    passwordError.value = null;
-    codeError.value = null;
-    mfaEnabled.value = false;
-    try {
-      const status = await commercialAuth.mfaStatus();
-      mfaEnabled.value = status.enabled;
-    } catch {
-      // Password-only reauthentication remains possible; the API is authoritative.
+watch(
+  open,
+  async (value) => {
+    if (value) {
+      succeeded = false;
+      password.value = '';
+      code.value = '';
+      recoveryCode.value = '';
+      mode.value = 'code';
+      submitting.value = false;
+      formError.value = null;
+      passwordError.value = null;
+      codeError.value = null;
+      mfaEnabled.value = false;
+      try {
+        const status = await commercialAuth.mfaStatus();
+        mfaEnabled.value = status.enabled;
+      } catch {
+        // Password-only reauthentication remains possible; the API is authoritative.
+      }
+      return;
     }
-    return;
-  }
-  if (!succeeded) {
-    emit('cancelled');
-  }
-}, { immediate: true });
+    if (!succeeded) {
+      emit('cancelled');
+    }
+  },
+  { immediate: true },
+);
 
 async function submit(): Promise<void> {
   if (submitting.value) {
@@ -113,7 +117,11 @@ async function submit(): Promise<void> {
     :description="$t('security.reauthDescription')"
     :persistent="submitting"
   >
-    <form class="reauth" novalidate @submit.prevent="submit">
+    <form
+      class="reauth"
+      novalidate
+      @submit.prevent="submit"
+    >
       <AppPasswordInput
         id="reauth-password"
         v-model="password"
@@ -124,7 +132,11 @@ async function submit(): Promise<void> {
       />
 
       <template v-if="mfaEnabled">
-        <div class="reauth__modes" role="group" :aria-label="$t('security.reauthTitle')">
+        <div
+          class="reauth__modes"
+          role="group"
+          :aria-label="$t('security.reauthTitle')"
+        >
           <AppButton
             type="button"
             :variant="mode === 'code' ? 'primary' : 'secondary'"
@@ -163,13 +175,29 @@ async function submit(): Promise<void> {
         />
       </template>
 
-      <p v-if="formError" class="reauth__error" role="alert">{{ formError }}</p>
+      <p
+        v-if="formError"
+        class="reauth__error"
+        role="alert"
+      >
+        {{ formError }}
+      </p>
 
       <div class="reauth__actions">
-        <AppButton type="button" variant="secondary" :disabled="submitting" @click="open = false">
+        <AppButton
+          type="button"
+          variant="secondary"
+          :disabled="submitting"
+          @click="open = false"
+        >
           {{ $t('common.cancel') }}
         </AppButton>
-        <AppButton type="submit" :loading="submitting">{{ $t('security.reauthButton') }}</AppButton>
+        <AppButton
+          type="submit"
+          :loading="submitting"
+        >
+          {{ $t('security.reauthButton') }}
+        </AppButton>
       </div>
     </form>
   </AppDialog>
@@ -190,6 +218,8 @@ async function submit(): Promise<void> {
 
 .reauth__error {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--danger-text);
   transition: var(--theme-transition);

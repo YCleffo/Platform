@@ -1,31 +1,56 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useAdminResourceConfigs } from './adminConfigs';
-import AdminResourceView from './AdminResourceView.vue';
-
-const configs = useAdminResourceConfigs();
-const systemConfig = computed(() => configs.value.settings!);
-const flagsConfig = computed(() => configs.value.flags!);
-const tab = ref<'settings' | 'flags'>('settings');
-const tabs = computed(() => [
-  { key: 'settings' as const, label: systemConfig.value.title },
-  { key: 'flags' as const, label: flagsConfig.value.title },
-]);
+import { computed, ref, watch } from 'vue';
+import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
+import ConfigSettingsPanel from './configuration/ConfigSettingsPanel.vue';
+import ConfigFlagsPanel from './configuration/ConfigFlagsPanel.vue';
+import ConfigPublicPanel from './configuration/ConfigPublicPanel.vue';
+import AppButton from '@/shared/ui/actions/AppButton.vue';
+import './configuration/configuration.css';
+const auth = useAdminAuthStore();
+const tab = ref('settings');
+const tabs = computed(() =>
+  [
+    {
+      key: 'settings',
+      label: 'configuration.systemSettings',
+      allowed: auth.can('core.settings.read'),
+    },
+    { key: 'flags', label: 'admin.featureFlags', allowed: auth.can('core.feature_flags.read') },
+    { key: 'public', label: 'configuration.publicConfig', allowed: auth.can('core.settings.read') },
+  ].filter((v) => v.allowed),
+);
+watch(
+  tabs,
+  (value) => {
+    if (!value.some((v) => v.key === tab.value)) tab.value = value[0]?.key ?? '';
+  },
+  { immediate: true },
+);
 </script>
-
 <template>
-  <section class="admin-tabs">
-    <nav class="admin-tabs__nav" :aria-label="$t('admin.settings')">
-      <button v-for="item in tabs" :key="item.key" type="button" :class="{ 'admin-tabs__tab--active': tab === item.key }" @click="tab = item.key">{{ item.label }}</button>
+  <section class="config-page">
+    <nav
+      class="config-tabs"
+      :aria-label="$t('admin.settings')"
+    >
+      <AppButton
+        v-for="item in tabs"
+        :key="item.key"
+        :variant="tab === item.key ? 'primary' : 'secondary'"
+        :aria-current="tab === item.key ? 'page' : undefined"
+        @click="tab = item.key"
+      >
+        {{ $t(item.label) }}
+      </AppButton>
     </nav>
-    <AdminResourceView v-if="tab === 'settings'" :config="systemConfig" />
-    <AdminResourceView v-else :config="flagsConfig" />
+    <ConfigSettingsPanel v-if="tab === 'settings'" />
+    <ConfigFlagsPanel v-else-if="tab === 'flags'" />
+    <ConfigPublicPanel v-else-if="tab === 'public'" />
+    <p
+      v-else
+      class="config-note"
+    >
+      {{ $t('configuration.noRead') }}
+    </p>
   </section>
 </template>
-
-<style scoped>
-.admin-tabs { display: grid; gap: var(--space-16); }
-.admin-tabs__nav { display: flex; flex-wrap: wrap; gap: var(--space-4); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-control-m); background: var(--surface); }
-.admin-tabs__nav button { min-height: 36px; padding: 0 var(--space-12); border-radius: var(--radius-control-s); color: var(--text-2); font-size: var(--type-body-small-emphasis-size); font-weight: var(--type-body-small-emphasis-weight); }
-.admin-tabs__nav button.admin-tabs__tab--active { background: var(--accent-soft); color: var(--accent-text); }
-</style>

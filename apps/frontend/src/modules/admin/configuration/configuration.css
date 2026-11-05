@@ -1,0 +1,86 @@
+.config-page {
+  display: grid;
+  gap: var(--space-16);
+  min-width: 0;
+}
+.config-head,
+.config-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  flex-wrap: wrap;
+}
+.config-head h2,
+.config-card h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.config-search {
+  max-width: 36rem;
+}
+.config-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  gap: var(--space-16);
+}
+.config-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-16);
+  padding: var(--space-20);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card-m);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.config-note {
+  color: var(--text-2);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.config-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--space-16);
+  margin: 0;
+}
+.config-meta dt {
+  color: var(--text-2);
+}
+.config-meta dd {
+  margin: var(--space-4) 0 0;
+  overflow-wrap: anywhere;
+}
+.config-form {
+  display: grid;
+  gap: var(--space-16);
+  min-width: 0;
+}
+.config-error {
+  color: var(--danger-text);
+  overflow-wrap: anywhere;
+}
+.config-success {
+  color: var(--text-1);
+  padding: var(--space-12);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control-m);
+}
+.config-tabs {
+  display: flex;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+}
+.config-section {
+  display: grid;
+  gap: var(--space-16);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-16);
+}
+
+.config-card > .app-button {
+  justify-self: start;
+}

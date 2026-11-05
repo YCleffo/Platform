@@ -1,0 +1,47 @@
+# Opt-in, separate disposable project. Build the normal test images first.
+services:
+  control-postgres-test:
+    image: ${COMPOSE_PROJECT_NAME:?}-postgres-clock:local
+    build:
+      context: .
+      dockerfile: infra/testing/clock.Dockerfile
+      target: clock-runtime
+      args:
+        CLOCK_BASE_IMAGE: platform-postgres:local
+        CLOCK_KIND: postgres
+    command: ["postgres"]
+    environment:
+      APP_ENV: test
+      CONTROL_TEST_ISOLATED: '1'
+      PLATFORM_TEST_CLOCK: '1'
+      CONTROL_E2E_ISOLATION_NONCE: ${E2E_ISOLATION_PROOF:?}
+    volumes:
+      - ${BILLING_TEST_CLOCK_DIRECTORY:?}:/run/platform-test-clock:ro
+  control-plane-test:
+    image: ${COMPOSE_PROJECT_NAME:?}-php-clock:local
+    build:
+      context: .
+      dockerfile: infra/testing/clock.Dockerfile
+      target: clock-runtime
+      args:
+        CLOCK_BASE_IMAGE: ${COMPOSE_PROJECT_NAME:?}-control-plane-test
+        CLOCK_KIND: php
+        CLOCK_RUNTIME_USER: www-data
+    command: ["frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile"]
+    environment:
+      PLATFORM_TEST_CLOCK: '1'
+      CONTROL_RENEWAL_LEAD_DAYS: '0'
+      CONTROL_SCHEDULER_ENABLED: 'true'
+      CONTROL_PLAN_CHANGES_INTERVAL_SECONDS: '1'
+      CONTROL_RENEWALS_INTERVAL_SECONDS: '1'
+      CONTROL_RENEWAL_COLLECTION_INTERVAL_SECONDS: '1'
+      CONTROL_DUNNING_INTERVAL_SECONDS: '1'
+      CONTROL_SUBSCRIPTIONS_INTERVAL_SECONDS: '1'
+      CONTROL_EXPIRATION_INTERVAL_SECONDS: '1'
+      CONTROL_PAYMENT_RECONCILIATION_INTERVAL_SECONDS: '1'
+      CONTROL_REFUND_RECONCILIATION_ENABLED: 'false'
+      CONTROL_RECEIPT_RECONCILIATION_INTERVAL_SECONDS: '1'
+      CONTROL_DUNNING_RETRY_DELAYS_SECONDS: '3600,21600,86400,259200'
+      CONTROL_PRIVACY_CLEANUP_ENABLED: 'false'
+    volumes:
+      - ${BILLING_TEST_CLOCK_DIRECTORY:?}:/run/platform-test-clock:ro

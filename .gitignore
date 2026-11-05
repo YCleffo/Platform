@@ -7,6 +7,10 @@
 # IDE
 .idea/
 .vscode/
+!/.vscode/
+/.vscode/*
+!/.vscode/settings.json
+!/.vscode/extensions.json
 
 # PHP / Composer
 **/vendor/

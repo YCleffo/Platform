@@ -1,3 +1,6 @@
+parameters:
+    env(CONTROL_BROWSER_PAYMENT_FIXTURE): '0'
+
 services:
     _defaults:
         autowire: true
@@ -12,3 +15,32 @@ services:
 
     ControlPlane\Account\Application\CreateCommercialAccount:
         public: true
+
+    # Present only in APP_ENV=test with dev autoload; never a production provider toggle.
+    ControlPlane\Tests\Support\BrowserProviderTransport:
+        arguments:
+            $inner: '@http_client'
+            $environment: '%kernel.environment%'
+            $isolated: '%env(bool:CONTROL_TEST_ISOLATED)%'
+            $nonce: '%control_e2e_isolation_nonce%'
+            $enabled: '%env(bool:CONTROL_BROWSER_PAYMENT_FIXTURE)%'
+
+    test.browser_provider_transport:
+        class: Symfony\Contracts\HttpClient\HttpClientInterface
+        factory: ['@ControlPlane\Tests\Support\BrowserProviderTransport', 'client']
+
+    ControlPlane\Payment\Provider\YooKassa\YooKassaGateway:
+        arguments:
+            $httpClient: '@test.browser_provider_transport'
+            $returnUrl: '%env(CONTROL_YOOKASSA_RETURN_URL)%'
+            $egress: '@ControlPlane\Privacy\ControlProviderEgressPolicy'
+
+    ControlPlane\Payment\Provider\YooKassa\YooKassaRefundGateway:
+        arguments:
+            $httpClient: '@test.browser_provider_transport'
+            $egress: '@ControlPlane\Privacy\ControlProviderEgressPolicy'
+
+    ControlPlane\Payment\Provider\YooKassa\YooKassaReceiptGateway:
+        arguments:
+            $httpClient: '@test.browser_provider_transport'
+            $egress: '@ControlPlane\Privacy\ControlProviderEgressPolicy'

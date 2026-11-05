@@ -44,7 +44,9 @@ const { submitting, message, run } = useAsyncAction(async () => {
     });
     return;
   }
-  await router.push(redirectTarget.value !== null ? { path: redirectTarget.value } : { name: 'cabinet' });
+  await router.push(
+    redirectTarget.value !== null ? { path: redirectTarget.value } : { name: 'cabinet' },
+  );
 });
 
 async function onSubmit(): Promise<void> {
@@ -56,9 +58,21 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <AppFormShell :title="$t('auth.signIn')" :subtitle="$t('auth.signInSubtitle')" :error="message">
-    <form class="auth-form" novalidate @submit.prevent="onSubmit">
-      <p v-if="route.query.reset === 'success'" class="auth-form__notice" role="status">
+  <AppFormShell
+    :title="$t('auth.signIn')"
+    :subtitle="$t('auth.signInSubtitle')"
+    :error="message"
+  >
+    <form
+      class="auth-form"
+      novalidate
+      @submit.prevent="onSubmit"
+    >
+      <p
+        v-if="route.query.reset === 'success'"
+        class="auth-form__notice"
+        role="status"
+      >
         {{ $t('auth.resetSuccess') }}
       </p>
       <AppInput
@@ -80,12 +94,22 @@ async function onSubmit(): Promise<void> {
         required
       />
       <p class="auth-form__aux">
-        <RouterLink :to="{ name: 'password-reset-request' }">{{ $t('auth.forgotPassword') }}</RouterLink>
+        <RouterLink :to="{ name: 'password-reset-request' }">
+          {{ $t('auth.forgotPassword') }}
+        </RouterLink>
       </p>
-      <AppButton type="submit" :loading="submitting" block>{{ $t('auth.signIn') }}</AppButton>
+      <AppButton
+        type="submit"
+        :loading="submitting"
+        block
+      >
+        {{ $t('auth.signIn') }}
+      </AppButton>
       <p class="auth-form__switch">
         {{ $t('auth.noAccount') }}
-        <RouterLink :to="{ name: 'register', query: redirectTarget ? { redirect: redirectTarget } : {} }">
+        <RouterLink
+          :to="{ name: 'register', query: redirectTarget ? { redirect: redirectTarget } : {} }"
+        >
           {{ $t('nav.register') }}
         </RouterLink>
       </p>
@@ -105,6 +129,7 @@ async function onSubmit(): Promise<void> {
 
 .auth-form__switch {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
@@ -114,6 +139,7 @@ async function onSubmit(): Promise<void> {
 
 .auth-form__aux {
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   text-align: end;
@@ -126,6 +152,8 @@ async function onSubmit(): Promise<void> {
   background: var(--success-soft);
   color: var(--success-text);
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   transition: var(--theme-transition);
 }

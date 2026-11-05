@@ -110,6 +110,17 @@ final class YooKassaWebhookTest extends PaymentTestCase
         self::assertTrue((bool) $method['is_default']);
         self::assertSame(1, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.saved_payment_methods WHERE commercial_account_id = ?', [$account]));
         self::assertFalse($this->connection->fetchOne("SELECT 1 FROM commercial.saved_payment_methods WHERE provider_method_reference LIKE '%saved-card-1%'") === false);
+        // A subsequent authoritative saved-method snapshot must persist false as a real
+        // PostgreSQL boolean and preserve the customer's existing default.
+        $recorder = new \ControlPlane\Payment\Application\RecordSavedPaymentMethod($this->connection);
+        $providerAccount = (new \ControlPlane\Payment\Provider\YooKassa\YooKassaProviderAccountLocator($this->connection))->active();
+        $another = new ProviderPayment($providerId, 'succeeded', true, 1000, 'RUB', [], null,
+            new \DateTimeImmutable('2026-09-26T12:00:00Z'), new ProviderPaymentMethod('saved-card-2', 'bank_card', true));
+        $recorder->record($providerAccount, $another, $attempt['attempt_id']);
+        $recorder->record($providerAccount, $another, $attempt['attempt_id']);
+        self::assertSame(2, (int) $this->connection->fetchOne('SELECT count(*) FROM commercial.saved_payment_methods WHERE commercial_account_id=?', [$account]));
+        self::assertFalse((bool) $this->connection->fetchOne("SELECT is_default FROM commercial.saved_payment_methods WHERE provider_method_reference='saved-card-2'"));
+        self::assertSame('saved-card-1', $this->connection->fetchOne('SELECT provider_method_reference FROM commercial.saved_payment_methods WHERE commercial_account_id=? AND is_default', [$account]));
         $this->expectDatabaseRejection(fn () => $this->connection->executeStatement('DELETE FROM commercial.saved_payment_methods WHERE commercial_account_id = ?', [$account]));
     }
 

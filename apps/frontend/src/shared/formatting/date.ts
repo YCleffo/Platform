@@ -1,5 +1,6 @@
 /** Display-only date formatting. API values stay ISO-8601 strings. */
-export function formatDateTime(value: string, locale?: string): string {
+export function formatDateTime(value: string | null | undefined, locale?: string): string {
+  if (value === null || value === undefined || value === '') return '—';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return '—';

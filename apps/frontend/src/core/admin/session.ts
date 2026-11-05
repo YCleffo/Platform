@@ -7,7 +7,8 @@ export interface CoreAdminTokens {
 }
 
 let tokens: CoreAdminTokens | null = null;
-let epoch = 0;
+const epoch = shallowRef(0);
+export const coreAdminSessionEpoch = readonly(epoch);
 let unauthorizedHandler: (() => void) | null = null;
 
 export const coreAdminSession = {
@@ -18,22 +19,29 @@ export const coreAdminSession = {
     return tokens?.refreshToken ?? null;
   },
   epoch(): number {
-    return epoch;
+    return epoch.value;
   },
   set(next: CoreAdminTokens): void {
     tokens = next;
-    epoch += 1;
+    epoch.value += 1;
+  },
+  rotate(next: CoreAdminTokens, expectedEpoch: number, expectedRefreshToken: string): boolean {
+    if (epoch.value !== expectedEpoch || tokens === null || tokens.refreshToken !== expectedRefreshToken
+      || tokens.sessionId !== next.sessionId) return false;
+    tokens = next;
+    return true;
   },
   clear(): void {
     tokens = null;
-    epoch += 1;
+    epoch.value += 1;
   },
   setUnauthorizedHandler(handler: () => void): void {
     unauthorizedHandler = handler;
   },
   notifyUnauthorized(): void {
     tokens = null;
-    epoch += 1;
+    epoch.value += 1;
     unauthorizedHandler?.();
   },
 };
+import { readonly, shallowRef } from 'vue';

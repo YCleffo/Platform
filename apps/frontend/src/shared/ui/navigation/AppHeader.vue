@@ -3,7 +3,10 @@ withDefaults(defineProps<{ sticky?: boolean }>(), { sticky: true });
 </script>
 
 <template>
-  <header class="app-header" :class="{ 'app-header--sticky': sticky }">
+  <header
+    class="app-header"
+    :class="{ 'app-header--sticky': sticky }"
+  >
     <div class="app-header__inner">
       <div class="app-header__leading">
         <slot name="leading" />

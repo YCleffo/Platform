@@ -51,6 +51,18 @@ final readonly class InternationalPreferencesCest
             assertNotNull($found);
             assertSame('en-US', $found->locale);
             assertSame('America/New_York', $found->timezone);
+
+            // Omitted fields cannot restore a stale value from another request.
+            $service = $container->get(UpdateAccountPreferences::class);
+            $service->update($accountId, 'ru', null, true, false);
+            $partial = $service->update($accountId, 'en', 'Asia/Yekaterinburg', false, true);
+            assertNotNull($partial);
+            assertSame('ru-RU', $partial->locale);
+            assertSame('Asia/Yekaterinburg', $partial->timezone);
+            $reset = $service->update($accountId, null, null, true, false);
+            assertNotNull($reset);
+            assertSame(null, $reset->locale);
+            assertSame('Asia/Yekaterinburg', $reset->timezone);
         } finally {
             if ($transaction->isActive()) {
                 $transaction->rollBack();

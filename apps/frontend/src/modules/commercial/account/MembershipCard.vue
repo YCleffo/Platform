@@ -30,21 +30,32 @@ const { t, locale } = useI18n();
       </span>
     </div>
     <div class="member__side">
-      <AppBadge :variant="roleVariant(membership.role)">{{ t(`cabinet.role_${membership.role}`) }}</AppBadge>
-      <div v-if="canManage || canRemove" class="member__actions">
+      <AppBadge :variant="roleVariant(membership.role)">
+        {{ t(`cabinet.role_${membership.role}`) }}
+      </AppBadge>
+      <div
+        v-if="canManage || canRemove"
+        class="member__actions"
+      >
         <AppIconButton
           v-if="canManage"
           :label="$t('account.changeRole')"
           @click="emit('change-role')"
         >
-          <Pencil :size="18" aria-hidden="true" />
+          <Pencil
+            :size="18"
+            aria-hidden="true"
+          />
         </AppIconButton>
         <AppIconButton
           v-if="canRemove"
           :label="$t('account.removeMember')"
           @click="emit('remove')"
         >
-          <Trash2 :size="18" aria-hidden="true" />
+          <Trash2
+            :size="18"
+            aria-hidden="true"
+          />
         </AppIconButton>
       </div>
     </div>
@@ -74,6 +85,7 @@ const { t, locale } = useI18n();
 
 .member__email {
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--text-1);
@@ -85,6 +97,7 @@ const { t, locale } = useI18n();
 
 .member__since {
   font-size: var(--type-body-small-size);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
   color: var(--text-3);

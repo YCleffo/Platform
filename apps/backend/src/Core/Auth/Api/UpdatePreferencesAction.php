@@ -32,6 +32,8 @@ final readonly class UpdatePreferencesAction
                 $identity->accountId,
                 $locale,
                 $timezone,
+                array_key_exists('locale', $input),
+                array_key_exists('timezone', $input),
             );
         } catch (InvalidArgumentException) {
             return $responses->error(ApiMessage::ACCOUNT_PREFERENCES_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);

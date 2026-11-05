@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import http from 'node:http';
 import { fileURLToPath, URL } from 'node:url';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv, type ProxyOptions } from 'vite';
 import vue from '@vitejs/plugin-vue';
 
 export default defineConfig(({ mode }) => {
@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
     .map((host) => host.trim())
     .filter(Boolean);
   const proxyAgent = new http.Agent({ keepAlive: false });
-  const configureProxy = (proxy: { on: (event: string, handler: (error: unknown, request: unknown, response: unknown) => void) => void }): void => {
+  const configureProxy: NonNullable<ProxyOptions['configure']> = (proxy): void => {
     proxy.on('error', (_error, _request, response) => {
       const res = response as { headersSent?: boolean; writableEnded?: boolean; writeHead?: (status: number, headers: Record<string, string>) => void; end?: (body?: string) => void };
       if (res.writeHead !== undefined && res.end !== undefined && res.headersSent !== true && res.writableEnded !== true) {
@@ -37,7 +37,14 @@ export default defineConfig(({ mode }) => {
       allowedHosts,
       https:
         httpsKey && httpsCert
-          ? { key: readFileSync(httpsKey), cert: readFileSync(httpsCert) }
+          ? {
+              key: readFileSync(httpsKey),
+              cert: readFileSync(httpsCert),
+              // The development proxy consumes HTTP/1 streams. Avoid stalled HTTP/2
+              // requests on the TLS frontend while keeping certificate checks intact.
+              ALPNCallback: ({ protocols }: { protocols: string[] }) =>
+                protocols.includes('http/1.1') ? 'http/1.1' : undefined,
+            }
           : undefined,
       proxy: {
         '/api/control': {

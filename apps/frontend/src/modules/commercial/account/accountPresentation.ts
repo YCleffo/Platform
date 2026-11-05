@@ -50,6 +50,7 @@ export function statusVariant(status: string): BadgeVariant {
 export function onboardingVariant(state: string): BadgeVariant {
   switch (state) {
     case 'ready_for_subscription':
+    case 'completed':
       return 'success';
     case 'catalog_selection_pending':
       return 'warning';

@@ -1,0 +1,860 @@
+openapi: 3.0.3
+info:
+  title: 'Platform Core configuration'
+  version: 1.0.0
+  description: 'Installed module lifecycle, system/module settings, feature flags and anonymous publication. Configuration is not a secret store. UI does not claim to evaluate effective feature availability.'
+security:
+  -
+    bearerAuth: {  }
+paths:
+  /api/public/config:
+    get:
+      summary: 'Preview the current anonymous public system values'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    required:
+                      - settings
+                    properties:
+                      settings:
+                        type: object
+                        additionalProperties: {  }
+      security: {  }
+  /api/core/modules:
+    get:
+      summary: 'List installed modules'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Module'
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.modules.read.'
+  '/api/core/modules/{code}':
+    get:
+      summary: 'Read one installed module'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    $ref: '#/components/schemas/Module'
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.modules.read.'
+    parameters:
+      -
+        in: path
+        name: code
+        required: true
+        schema:
+          type: string
+          maxLength: 100
+          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
+  '/api/core/modules/{code}/enable':
+    post:
+      summary: 'Enable an installed module'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    allOf:
+                      -
+                        $ref: '#/components/schemas/Module'
+                      -
+                        type: object
+                        required:
+                          - changed
+                        properties:
+                          changed:
+                            type: boolean
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.modules.manage.'
+    parameters:
+      -
+        in: path
+        name: code
+        required: true
+        schema:
+          type: string
+          maxLength: 100
+          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
+  '/api/core/modules/{code}/disable':
+    post:
+      summary: 'Disable an installed module'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    allOf:
+                      -
+                        $ref: '#/components/schemas/Module'
+                      -
+                        type: object
+                        required:
+                          - changed
+                        properties:
+                          changed:
+                            type: boolean
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.modules.manage.'
+    parameters:
+      -
+        in: path
+        name: code
+        required: true
+        schema:
+          type: string
+          maxLength: 100
+          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
+  /api/core/settings/system:
+    get:
+      summary: 'List configuration entries'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SystemSetting'
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.settings.read.'
+  '/api/core/settings/system/{key}':
+    get:
+      summary: 'Read the current value of one key'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    $ref: '#/components/schemas/SystemSetting'
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.settings.read.'
+    put:
+      summary: 'Atomically create or replace one configuration entry'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    $ref: '#/components/schemas/SystemSetting'
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.settings.manage.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemSettingInput'
+    delete:
+      summary: 'Remove one configuration entry'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    required:
+                      - deleted
+                      - key
+                    properties:
+                      deleted:
+                        type: boolean
+                        enum:
+                          - true
+                      key:
+                        type: string
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.settings.manage.'
+    parameters:
+      -
+        in: path
+        name: key
+        required: true
+        schema:
+          type: string
+          maxLength: 160
+          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
+  '/api/core/modules/{moduleCode}/settings':
+    get:
+      summary: 'List configuration entries'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModuleSetting'
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.settings.read.'
+    parameters:
+      -
+        in: path
+        name: moduleCode
+        required: true
+        schema:
+          type: string
+          maxLength: 100
+          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
+  '/api/core/modules/{moduleCode}/settings/{key}':
+    get:
+      summary: 'Read the current value of one key'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    $ref: '#/components/schemas/ModuleSetting'
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.settings.read.'
+    put:
+      summary: 'Atomically create or replace one configuration entry'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    $ref: '#/components/schemas/ModuleSetting'
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.settings.manage.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleSettingInput'
+    delete:
+      summary: 'Remove one configuration entry'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    required:
+                      - deleted
+                      - key
+                    properties:
+                      deleted:
+                        type: boolean
+                        enum:
+                          - true
+                      key:
+                        type: string
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.settings.manage.'
+    parameters:
+      -
+        in: path
+        name: key
+        required: true
+        schema:
+          type: string
+          maxLength: 160
+          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
+      -
+        in: path
+        name: moduleCode
+        required: true
+        schema:
+          type: string
+          maxLength: 100
+          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
+  /api/core/feature-flags:
+    get:
+      summary: 'List feature flag configurations'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Flag'
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.feature_flags.read.'
+  '/api/core/feature-flags/{code}':
+    get:
+      summary: 'Read one feature flag configuration'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    $ref: '#/components/schemas/Flag'
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.feature_flags.read.'
+    put:
+      summary: 'Atomically create or replace a feature flag configuration'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    $ref: '#/components/schemas/Flag'
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.feature_flags.manage.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlagInput'
+    delete:
+      summary: 'Remove a feature flag configuration'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - data
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - success
+                  data:
+                    type: object
+                    required:
+                      - deleted
+                      - code
+                    properties:
+                      deleted:
+                        type: boolean
+                        enum:
+                          - true
+                      code:
+                        type: string
+        401:
+          description: 'Authentication required'
+        403:
+          description: 'Permission denied'
+        404:
+          description: 'Unknown module, key or flag'
+        422:
+          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
+      description: 'Required permission: core.feature_flags.manage.'
+    parameters:
+      -
+        in: path
+        name: code
+        required: true
+        schema:
+          type: string
+          maxLength: 160
+          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Module:
+      type: object
+      required:
+        - id
+        - code
+        - name
+        - version
+        - settingsSchemaVersion
+        - enabled
+        - installedAt
+        - enabledAt
+        - disabledAt
+        - description
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+          nullable: true
+        settingsSchemaVersion:
+          type: integer
+        enabled:
+          type: boolean
+        installedAt:
+          type: string
+          format: date-time
+        enabledAt:
+          type: string
+          format: date-time
+          nullable: true
+        disabledAt:
+          type: string
+          format: date-time
+          nullable: true
+    SystemSetting:
+      type: object
+      required:
+        - id
+        - key
+        - value
+        - description
+        - createdAt
+        - updatedAt
+        - updatedByAccountId
+        - isPublic
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        value:
+          description: 'JSON value, at most 16384 encoded bytes; nested secret-like keys are forbidden.'
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        updatedByAccountId:
+          type: string
+          format: uuid
+          nullable: true
+        isPublic:
+          type: boolean
+    ModuleSetting:
+      type: object
+      required:
+        - id
+        - key
+        - value
+        - description
+        - createdAt
+        - updatedAt
+        - updatedByAccountId
+        - moduleCode
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        value:
+          description: 'JSON value, at most 16384 encoded bytes; nested secret-like keys are forbidden.'
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        updatedByAccountId:
+          type: string
+          format: uuid
+          nullable: true
+        moduleCode:
+          type: string
+    SystemSettingInput:
+      type: object
+      additionalProperties: false
+      required:
+        - value
+      properties:
+        value: {  }
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        isPublic:
+          type: boolean
+          default: false
+    ModuleSettingInput:
+      type: object
+      additionalProperties: false
+      required:
+        - value
+      properties:
+        value: {  }
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+    FlagInput:
+      type: object
+      additionalProperties: false
+      required:
+        - enabled
+        - rolloutPercent
+        - config
+      properties:
+        moduleCode:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        rolloutPercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        config:
+          oneOf:
+            -
+              type: object
+              additionalProperties: {  }
+            -
+              type: array
+              maxItems: 0
+          description: 'Object configuration; an empty object may be serialized by PHP as []. Maximum 16384 encoded bytes; secret-like keys are forbidden.'
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+    Flag:
+      type: object
+      required:
+        - id
+        - code
+        - moduleCode
+        - enabled
+        - rolloutPercent
+        - config
+        - description
+        - createdAt
+        - updatedAt
+        - updatedByAccountId
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        moduleCode:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        rolloutPercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        config:
+          oneOf:
+            -
+              type: object
+              additionalProperties: {  }
+            -
+              type: array
+              maxItems: 0
+          description: 'Object configuration; an empty object may be serialized by PHP as []. Maximum 16384 encoded bytes; secret-like keys are forbidden.'
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        updatedByAccountId:
+          type: string
+          format: uuid
+          nullable: true

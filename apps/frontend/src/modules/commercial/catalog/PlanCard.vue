@@ -24,38 +24,77 @@ function priceText(price: PlanPrice): string {
 </script>
 
 <template>
-  <AppCard padding="default" class="plan">
+  <AppCard
+    padding="default"
+    class="plan"
+  >
     <div class="plan__header">
       <h2 class="plan__name">{{ plan.name }}</h2>
       <span class="plan__version">v{{ plan.version }}</span>
     </div>
     <p class="plan__code">{{ plan.code }}</p>
 
-    <ul v-if="plan.prices.length > 0" class="plan__prices">
-      <li v-for="price in plan.prices" :key="price.id" class="plan__price">
+    <ul
+      v-if="plan.prices.length > 0"
+      class="plan__prices"
+    >
+      <li
+        v-for="price in plan.prices"
+        :key="price.id"
+        class="plan__price"
+      >
         {{ priceText(price) }}
       </li>
     </ul>
 
     <AppDivider class="plan__divider" />
 
-    <ul v-if="planFeatureEntries(plan.features).length > 0" class="plan__features">
-      <li v-for="entry in planFeatureEntries(plan.features)" :key="entry.code" class="plan__feature">
-        <span v-if="entry.kind === 'included'" class="plan__feature-check" aria-hidden="true">
+    <ul
+      v-if="planFeatureEntries(plan.features).length > 0"
+      class="plan__features"
+    >
+      <li
+        v-for="entry in planFeatureEntries(plan.features)"
+        :key="entry.code"
+        class="plan__feature"
+      >
+        <span
+          v-if="entry.kind === 'included'"
+          class="plan__feature-check"
+          aria-hidden="true"
+        >
           <Check :size="14" />
         </span>
-        <span v-else class="plan__feature-dot" aria-hidden="true"></span>
+        <span
+          v-else
+          class="plan__feature-dot"
+          aria-hidden="true"
+        ></span>
         <span class="plan__feature-label">{{ entry.label }}</span>
-        <span v-if="entry.kind === 'value' && entry.value !== ''" class="plan__feature-value">
+        <span
+          v-if="entry.kind === 'value' && entry.value !== ''"
+          class="plan__feature-value"
+        >
           {{ entry.value }}
         </span>
       </li>
     </ul>
-    <p v-else class="plan__empty">
-      <Tag :size="14" aria-hidden="true" />
+    <p
+      v-else
+      class="plan__empty"
+    >
+      <Tag
+        :size="14"
+        aria-hidden="true"
+      />
       {{ $t('catalog.noFeatures') }}
     </p>
-    <RouterLink class="plan__cta" :to="target">{{ $t('catalog.choosePlan') }}</RouterLink>
+    <RouterLink
+      class="plan__cta"
+      :to="target"
+    >
+      {{ $t('catalog.choosePlan') }}
+    </RouterLink>
   </AppCard>
 </template>
 
@@ -83,6 +122,7 @@ function priceText(price: PlanPrice): string {
 
 .plan__version {
   font-size: var(--type-body-small-size);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
   color: var(--text-3);
@@ -93,6 +133,7 @@ function priceText(price: PlanPrice): string {
 .plan__code {
   margin-top: var(--space-4);
   font-size: var(--type-body-small-size);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
   color: var(--text-3);
@@ -111,6 +152,7 @@ function priceText(price: PlanPrice): string {
   border: 1px solid var(--border);
   border-radius: var(--radius-badge-pill);
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--accent-strong);
@@ -131,6 +173,7 @@ function priceText(price: PlanPrice): string {
   align-items: center;
   gap: var(--space-8);
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
@@ -163,17 +206,37 @@ function priceText(price: PlanPrice): string {
 
 .plan__feature-value {
   color: var(--text-1);
-  font-weight: 500;
+  font-weight: var(--type-body-medium-emphasis-weight);
   transition: var(--theme-transition);
 }
 
-.plan__cta { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; margin-top: var(--space-16); padding: var(--space-8) var(--space-16); border-radius: var(--radius-control-m); background: var(--accent); color: var(--color-white); font-size: var(--type-body-medium-emphasis-size); font-weight: var(--type-body-medium-emphasis-weight); text-decoration: none; transition: var(--theme-transition); }
-.plan__cta:hover { background: var(--accent-hover); text-decoration: none; }
+.plan__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  margin-top: var(--space-16);
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-control-m);
+  background: var(--accent);
+  color: var(--color-white);
+  font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
+  line-height: var(--type-body-medium-emphasis-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
+  text-decoration: none;
+  transition: var(--theme-transition);
+}
+.plan__cta:hover {
+  background: var(--accent-hover);
+  text-decoration: none;
+}
 .plan__empty {
   display: flex;
   align-items: center;
   gap: var(--space-8);
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-3);

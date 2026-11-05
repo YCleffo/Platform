@@ -32,8 +32,15 @@ const isDisabled = computed(() => props.disabled || props.loading);
     :aria-busy="loading ? 'true' : undefined"
   >
     <span class="app-button__content"><slot /></span>
-    <span v-if="loading" class="app-button__loader" aria-hidden="true">
-      <LoaderCircle class="app-button__spinner" :size="18" />
+    <span
+      v-if="loading"
+      class="app-button__loader"
+      aria-hidden="true"
+    >
+      <LoaderCircle
+        class="app-button__spinner"
+        :size="18"
+      />
     </span>
   </button>
 </template>
@@ -52,8 +59,7 @@ const isDisabled = computed(() => props.disabled || props.loading);
   white-space: normal;
   max-width: 100%;
   text-align: center;
-  transition:
-    var(--theme-transition);
+  transition: var(--theme-transition);
 }
 
 .app-button__content {
@@ -81,6 +87,7 @@ const isDisabled = computed(() => props.disabled || props.loading);
   min-height: var(--control-h-s);
   padding: var(--pad-button-s-vertical) var(--pad-button-s-horizontal);
   font-size: var(--type-button-s-size);
+  letter-spacing: var(--type-button-s-tracking);
   line-height: var(--type-button-s-line);
   font-weight: var(--type-button-s-weight);
 }
@@ -89,6 +96,7 @@ const isDisabled = computed(() => props.disabled || props.loading);
   min-height: var(--button-height-m);
   padding: var(--pad-button-m-vertical) var(--pad-button-m-horizontal);
   font-size: var(--type-button-m-size);
+  letter-spacing: var(--type-button-m-tracking);
   line-height: var(--type-button-m-line);
   font-weight: var(--type-button-m-weight);
 }
@@ -97,8 +105,20 @@ const isDisabled = computed(() => props.disabled || props.loading);
   min-height: var(--control-h-l);
   padding: var(--pad-button-l-vertical) var(--pad-button-l-horizontal);
   font-size: var(--type-button-l-size);
+  letter-spacing: var(--type-button-l-tracking);
   line-height: var(--type-button-l-line);
   font-weight: var(--type-button-l-weight);
+}
+@media (max-width: 767px) {
+  .app-button--m {
+    min-height: var(--control-h-m);
+    padding: var(--pad-button-s-vertical) var(--pad-button-s-horizontal);
+  }
+}
+@media (max-width: 767px) and (pointer: coarse) {
+  .app-button--m {
+    min-height: var(--button-height-m);
+  }
 }
 
 .app-button--block {

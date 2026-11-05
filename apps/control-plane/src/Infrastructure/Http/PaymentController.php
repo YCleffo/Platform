@@ -40,7 +40,9 @@ final class PaymentController extends AbstractController
         }
         ApiRequest::emptyObject($request);
 
-        return new JsonResponse($this->creator->create($this->user()->id(), $accountId, $invoiceId, $key, ApiRequest::correlationId($request)), Response::HTTP_CREATED);
+        $created = $this->creator->create($this->user()->id(), $accountId, $invoiceId, $key, ApiRequest::correlationId($request));
+        if (!is_string($created['id'] ?? null)) throw new \LogicException('Created payment identity is missing.');
+        return new JsonResponse($this->reader->get($this->user()->id(), $accountId, $created['id']), Response::HTTP_CREATED);
     }
 
     #[Route('/api/control/accounts/{accountId}/payments/{paymentId}', name: 'control_payment_get', methods: ['GET'])]

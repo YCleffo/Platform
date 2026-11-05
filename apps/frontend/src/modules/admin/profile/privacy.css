@@ -1,0 +1,15 @@
+.core-privacy { display: grid; gap: var(--space-16); min-width: 0; }
+.core-privacy h2 { font-size: var(--type-h2-size); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking); line-height: var(--type-h2-line); color: var(--text-1); }
+.core-privacy h3 { font-size: var(--type-h3-size); font-weight: var(--type-h3-weight); letter-spacing: var(--type-h3-tracking); line-height: var(--type-h3-line); color: var(--text-1); overflow-wrap: anywhere; }
+.core-privacy p, .core-privacy dl { color: var(--text-2); font-size: var(--type-body-medium-size); font-weight: var(--type-body-medium-weight); letter-spacing: var(--type-body-medium-tracking); line-height: var(--type-body-medium-line); overflow-wrap: anywhere; }
+.core-privacy__head { display: flex; align-items: start; justify-content: space-between; gap: var(--space-16); flex-wrap: wrap; }
+.core-privacy__head > div:first-child { flex: 1 1 300px; min-width: 0; }
+.core-privacy__actions { display: flex; flex-wrap: wrap; gap: var(--space-8); align-items: center; }
+.core-privacy__list { display: grid; gap: var(--space-16); }
+.core-privacy .app-card { display: grid; gap: var(--space-12); align-content: start; min-width: 0; }
+.core-privacy__field { display: grid; gap: var(--space-8); min-width: 0; }
+.core-privacy label { color: var(--text-2); font-size: var(--type-body-medium-emphasis-size); font-weight: var(--type-body-medium-emphasis-weight); letter-spacing: var(--type-body-medium-emphasis-tracking); line-height: var(--type-body-medium-emphasis-line); }
+.core-privacy dl { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,240px),1fr)); gap: var(--space-16); }
+.core-privacy dt { color: var(--text-3); font-size: var(--type-body-small-size); font-weight: var(--type-body-small-weight); letter-spacing: var(--type-body-small-tracking); line-height: var(--type-body-small-line); }
+.core-privacy dd { margin: 0; }
+.core-privacy__deadlines { display: grid; gap: var(--space-12); padding: 0; list-style: none; }

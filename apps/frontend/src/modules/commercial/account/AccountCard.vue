@@ -12,16 +12,30 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <AppCard padding="default" interactive class="account">
+  <AppCard
+    padding="default"
+    interactive
+    class="account"
+  >
     <div class="account__head">
-      <span class="account__avatar" aria-hidden="true">{{ accountInitials(account) }}</span>
+      <span
+        class="account__avatar"
+        aria-hidden="true"
+      >
+        {{ accountInitials(account) }}
+      </span>
       <div class="account__identity">
         <p class="account__name">{{ account.display_name }}</p>
         <p class="account__code">{{ account.code }}</p>
       </div>
-      <AppBadge :variant="roleVariant(account.role)">{{ t(`cabinet.role_${account.role}`) }}</AppBadge>
+      <AppBadge :variant="roleVariant(account.role)">
+        {{ t(`cabinet.role_${account.role}`) }}
+      </AppBadge>
     </div>
-    <AccountStatus :status="account.status" :onboarding-state="account.onboarding_state" />
+    <AccountStatus
+      :status="account.status"
+      :onboarding-state="account.onboarding_state"
+    />
   </AppCard>
 </template>
 
@@ -47,6 +61,8 @@ const { t } = useI18n();
   background: var(--accent-soft);
   color: var(--accent-strong);
   font-size: var(--type-h2-size);
+  letter-spacing: var(--type-h2-tracking);
+  line-height: var(--type-h2-line);
   font-weight: var(--type-h2-weight);
   flex: 0 0 auto;
   transition: var(--theme-transition);
@@ -59,6 +75,7 @@ const { t } = useI18n();
 
 .account__name {
   font-size: var(--type-body-large-emphasis-size);
+  letter-spacing: var(--type-body-large-emphasis-tracking);
   line-height: var(--type-body-large-emphasis-line);
   font-weight: var(--type-body-large-emphasis-weight);
   color: var(--text-1);
@@ -70,6 +87,7 @@ const { t } = useI18n();
 
 .account__code {
   font-size: var(--type-body-small-size);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
   color: var(--text-3);

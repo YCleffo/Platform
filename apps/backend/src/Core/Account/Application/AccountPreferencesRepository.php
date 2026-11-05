@@ -12,5 +12,7 @@ interface AccountPreferencesRepository
         string $accountId,
         ?string $locale,
         ?string $timezone,
+        bool $writeLocale = true,
+        bool $writeTimezone = true,
     ): ?AccountInternationalPreferences;
 }

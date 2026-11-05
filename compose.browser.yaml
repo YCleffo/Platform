@@ -1,0 +1,7 @@
+# Only for disposable browser acceptance tests. Provider requests terminate in the
+# guarded test transport; this overlay is never included by development/production.
+services:
+  control-plane-test:
+    environment:
+      CONTROL_BROWSER_PAYMENT_FIXTURE: '1'
+      CONTROL_PRIVACY_PROVIDER_DECISIONS: '{"smtp":{"status":"allowed","country":"RU","evidence_reference":"local://browser-fixture/mailpit","purposes":["control_email_verification","control_password_reset","control_security_notification","control_account_invitation"],"data_categories":["contact_email","verification_link","reset_link","security_notification","invitation_link","organization_name"]},"yookassa":{"status":"allowed","country":"RU","evidence_reference":"local://browser-fixture/provider-transport","purposes":["payment","refund","fiscal_receipt"],"data_categories":["payment_reference","billing_contact","fiscal_details"]}}'

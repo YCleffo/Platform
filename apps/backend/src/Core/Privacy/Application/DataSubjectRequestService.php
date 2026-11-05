@@ -132,15 +132,18 @@ final readonly class DataSubjectRequestService
     }
 
     /** @return list<DataSubjectRequestView> */
-    public function listOwn(AuthenticatedIdentity $actor): array
+    public function listOwn(AuthenticatedIdentity $actor, int $limit = 100, int $offset = 0): array
     {
+        if ($limit < 1 || $limit > 100 || $offset < 0 || $offset > 100_000) {
+            throw new DomainException('Invalid privacy request pagination.');
+        }
         if ($actor->personId === null) {
             throw new DomainException('A human Account linked to a Person is required.');
         }
         $this->assertHumanActor($actor);
         $rows = $this->db->createCommand(<<<'SQL'
-            SELECT r.id::text, r.subject_person_id::text, r.request_type, r.status,
-                   r.submitted_at, r.completed_at, r.resolution_code
+            SELECT r.id::text, r.subject_person_id::text, r.legal_representation_id::text, r.request_type, r.status,
+                   r.submitted_at, r.completed_at, r.resolution_code, r.intake_channel
             FROM core.data_subject_requests r
             WHERE r.subject_person_id = CAST(:person AS uuid)
                OR (r.submitted_by_account_id = CAST(:account AS uuid) AND r.legal_representation_id IS NOT NULL
@@ -150,9 +153,9 @@ final readonly class DataSubjectRequestService
                          AND a.revoked_at IS NULL AND a.valid_from <= CAST(:now AS timestamptz)
                          AND (a.valid_until IS NULL OR a.valid_until >= CAST(:now AS timestamptz))
                          AND s.scope_code = 'privacy.request.view'))
-            ORDER BY r.submitted_at DESC, r.id DESC LIMIT 100
+            ORDER BY r.submitted_at DESC, r.id DESC LIMIT :limit OFFSET :offset
             SQL, [':person' => $actor->personId, ':account' => $actor->accountId,
-            ':now' => $this->clock->now()->format(DATE_ATOM)])->queryAll();
+            ':now' => $this->clock->now()->format(DATE_ATOM), ':limit' => $limit, ':offset' => $offset])->queryAll();
         /** @var list<array<string, mixed>> $rows */
         return $this->viewsFromRows($rows);
     }
@@ -163,8 +166,8 @@ final readonly class DataSubjectRequestService
             return null;
         }
         $sql = <<<'SQL'
-            SELECT r.id::text, r.subject_person_id::text,
-                   r.request_type, r.status, r.submitted_at, r.completed_at, r.resolution_code
+            SELECT r.id::text, r.subject_person_id::text, r.legal_representation_id::text,
+                   r.request_type, r.status, r.submitted_at, r.completed_at, r.resolution_code, r.intake_channel
             FROM core.data_subject_requests r
             WHERE r.id = CAST(:id AS uuid)
             SQL;
@@ -224,8 +227,8 @@ final readonly class DataSubjectRequestService
             'SELECT count(*) FROM core.data_subject_requests r WHERE ' . $clause, $params,
         )->queryScalar();
         $rows = $this->db->createCommand(<<<SQL
-            SELECT r.id::text, r.subject_person_id::text, r.request_type, r.status,
-                   r.submitted_at, r.completed_at, r.resolution_code
+            SELECT r.id::text, r.subject_person_id::text, r.legal_representation_id::text, r.request_type, r.status,
+                   r.submitted_at, r.completed_at, r.resolution_code, r.intake_channel
             FROM core.data_subject_requests r WHERE {$clause}
             ORDER BY r.submitted_at DESC, r.id DESC LIMIT :limit OFFSET :offset
             SQL, [...$params, ':limit' => $limit, ':offset' => $offset])->queryAll();
@@ -277,9 +280,54 @@ final readonly class DataSubjectRequestService
                 $row['completed_at'] === null ? null : new DateTimeImmutable((string) $row['completed_at']),
                 $row['resolution_code'] === null ? null : (string) $row['resolution_code'],
                 $byRequest[(string) $row['id']] ?? [],
+                ($row['legal_representation_id'] ?? null) === null ? null : (string) $row['legal_representation_id'],
+                ($row['intake_channel'] ?? null) === null ? null : (string) $row['intake_channel'],
             );
         }
         return $views;
+    }
+
+    /** @return list<array{id:string,subjectPersonId:string,subjectName:?string,validUntil:?string,scopes:list<string>}> */
+    public function ownRepresentations(AuthenticatedIdentity $actor): array
+    {
+        $this->assertHumanActor($actor);
+        $rows = $this->db->createCommand(<<<'SQL'
+            SELECT a.id::text, a.subject_person_id::text,
+                   NULLIF(trim(concat_ws(' ', p.given_name, p.family_name)), '') AS subject_name,
+                   a.valid_until, json_agg(s.scope_code ORDER BY s.scope_code)::text AS scopes
+            FROM core.legal_representations a
+            JOIN core.persons p ON p.id = a.subject_person_id
+            JOIN core.legal_representation_scopes s ON s.representation_id = a.id
+            WHERE a.representative_person_id = CAST(:person AS uuid)
+              AND a.subject_person_id <> CAST(:person AS uuid)
+              AND EXISTS (SELECT 1 FROM core.legal_representation_scopes visible
+                  WHERE visible.representation_id = a.id AND visible.scope_code IN
+                  ('privacy.request.submit', 'privacy.request.view', 'privacy.export.request',
+                   'privacy.correction.request', 'privacy.processing_restriction.request',
+                   'privacy.processing_termination.request', 'privacy.erasure.request', 'privacy.consent.withdraw'))
+              AND a.status = 'verified' AND a.revoked_at IS NULL
+              AND a.valid_from <= CAST(:now AS timestamptz)
+              AND (a.valid_until IS NULL OR a.valid_until >= CAST(:now AS timestamptz))
+            GROUP BY a.id, p.id
+            ORDER BY a.valid_until NULLS LAST, a.id
+            SQL, [':person' => $actor->personId, ':now' => $this->clock->now()->format(DATE_ATOM)])->queryAll();
+        $result = [];
+        foreach ($rows as $row) {
+            $decoded = json_decode((string) $row['scopes'], true, 32, JSON_THROW_ON_ERROR);
+            if (!is_array($decoded) || !array_is_list($decoded)) {
+                throw new DomainException('Invalid representation scopes.');
+            }
+            $scopes = [];
+            foreach ($decoded as $scope) {
+                if (!is_string($scope)) throw new DomainException('Invalid representation scope.');
+                $scopes[] = $scope;
+            }
+            $result[] = ['id' => (string) $row['id'], 'subjectPersonId' => (string) $row['subject_person_id'],
+                'subjectName' => $row['subject_name'] === null ? null : (string) $row['subject_name'],
+                'validUntil' => $row['valid_until'] === null ? null : (new DateTimeImmutable((string) $row['valid_until']))->format(DATE_ATOM),
+                'scopes' => $scopes];
+        }
+        return $result;
     }
 
 

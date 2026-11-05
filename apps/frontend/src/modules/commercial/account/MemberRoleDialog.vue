@@ -44,15 +44,44 @@ function submit(): void {
     :persistent="busy"
     size="s"
   >
-    <form class="role-form" @submit.prevent="submit">
-      <label class="role-form__label" for="member-role">{{ $t('account.selectRole') }}</label>
-      <AppDropdown id="member-role" v-model="selected" :label="$t('account.selectRole')" :options="roles" :disabled="busy" />
-      <p v-if="error" class="role-form__error" role="alert">{{ error }}</p>
+    <form
+      class="role-form"
+      @submit.prevent="submit"
+    >
+      <label
+        class="role-form__label"
+        for="member-role"
+      >
+        {{ $t('account.selectRole') }}
+      </label>
+      <AppDropdown
+        id="member-role"
+        v-model="selected"
+        :label="$t('account.selectRole')"
+        :options="roles"
+        :disabled="busy"
+      />
+      <p
+        v-if="error"
+        class="role-form__error"
+        role="alert"
+      >
+        {{ error }}
+      </p>
       <div class="role-form__actions">
-        <AppButton type="button" variant="secondary" :disabled="busy" @click="open = false">
+        <AppButton
+          type="button"
+          variant="secondary"
+          :disabled="busy"
+          @click="open = false"
+        >
           {{ $t('common.cancel') }}
         </AppButton>
-        <AppButton type="submit" :loading="busy" :disabled="!canConfirm">
+        <AppButton
+          type="submit"
+          :loading="busy"
+          :disabled="!canConfirm"
+        >
           {{ $t('common.save') }}
         </AppButton>
       </div>
@@ -69,6 +98,7 @@ function submit(): void {
 
 .role-form__label {
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--text-2);
@@ -77,6 +107,8 @@ function submit(): void {
 
 .role-form__error {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--danger-text);
   transition: var(--theme-transition);

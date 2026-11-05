@@ -60,7 +60,7 @@ function setHandle(element: Element | null, index: number): void {
       @drop.prevent="onDrop(index)"
     >
       <button
-        :ref="element => setHandle(element as Element | null, index)"
+        :ref="(element) => setHandle(element as Element | null, index)"
         type="button"
         class="sortable__handle"
         draggable="true"
@@ -70,24 +70,96 @@ function setHandle(element: Element | null, index: number): void {
         @keydown.alt.up.prevent="move(index, index - 1)"
         @keydown.alt.down.prevent="move(index, index + 1)"
       >
-        <span class="sortable__grip" aria-hidden="true"><span /><span /><span /><span /><span /><span /></span>
+        <span
+          class="sortable__grip"
+          aria-hidden="true"
+        >
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+        </span>
       </button>
       <span class="sortable__label">{{ item }}</span>
-      <span class="sortable__index" aria-hidden="true">{{ index + 1 }}</span>
+      <span
+        class="sortable__index"
+        aria-hidden="true"
+      >
+        {{ index + 1 }}
+      </span>
     </li>
   </ul>
 </template>
 
 <style scoped>
-.sortable { display: grid; gap: var(--space-4); }
-.sortable__item { display: flex; align-items: center; gap: var(--space-8); min-height: 42px; padding: var(--space-6) var(--space-8); border: 1px solid var(--border); border-radius: var(--radius-control-m); background: var(--surface); color: var(--text-1); transition: var(--theme-transition); }
-.sortable__item--dragging { opacity: .45; }
-.sortable__item--over { border-color: var(--accent); background: var(--accent-soft); }
-.sortable__handle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: 0 0 auto; border-radius: var(--radius-control-s); color: var(--text-3); cursor: grab; }
-.sortable__handle:hover { background: var(--surface-hover); color: var(--text-1); }
-.sortable__handle:active { cursor: grabbing; }
-.sortable__grip { display: grid; grid-template-columns: repeat(2, 3px); grid-template-rows: repeat(3, 3px); gap: 2px; }
-.sortable__grip span { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
-.sortable__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sortable__index { color: var(--text-3); font-size: var(--type-body-small-size); font-variant-numeric: tabular-nums; }
+.sortable {
+  display: grid;
+  gap: var(--space-4);
+}
+.sortable__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 42px;
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control-m);
+  background: var(--surface);
+  color: var(--text-1);
+  transition: var(--theme-transition);
+}
+.sortable__item--dragging {
+  opacity: 0.45;
+}
+.sortable__item--over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.sortable__handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-control-s);
+  color: var(--text-3);
+  cursor: grab;
+}
+.sortable__handle:hover {
+  background: var(--surface-hover);
+  color: var(--text-1);
+}
+.sortable__handle:active {
+  cursor: grabbing;
+}
+.sortable__grip {
+  display: grid;
+  grid-template-columns: repeat(2, 3px);
+  grid-template-rows: repeat(3, 3px);
+  gap: 2px;
+}
+.sortable__grip span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.sortable__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sortable__index {
+  color: var(--text-3);
+  font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  letter-spacing: var(--type-body-small-tracking);
+  line-height: var(--type-body-small-line);
+  font-variant-numeric: tabular-nums;
+}
 </style>

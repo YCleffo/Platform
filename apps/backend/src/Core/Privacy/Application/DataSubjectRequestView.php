@@ -18,6 +18,8 @@ final readonly class DataSubjectRequestView
         public ?DateTimeImmutable $completedAt,
         public ?string $resolutionCode,
         public array $deadlines,
+        public ?string $representationId = null,
+        public ?string $intakeChannel = null,
     ) {}
 
     /** @return array<string, mixed> */
@@ -31,6 +33,8 @@ final readonly class DataSubjectRequestView
             'submittedAt' => $this->submittedAt->format(DATE_ATOM),
             'completedAt' => $this->completedAt?->format(DATE_ATOM),
             'resolutionCode' => $this->resolutionCode,
+            'representationId' => $this->representationId,
+            'intakeChannel' => $this->intakeChannel,
             'deadlines' => array_map(static fn(DataSubjectRequestDeadlineView $deadline): array => $deadline->toArray(), $this->deadlines),
         ];
     }

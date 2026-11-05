@@ -92,6 +92,13 @@ if (str_starts_with($start, 'barrier|')) {
 }
 try {
     switch ($mode) {
+        case 'apply_receipt_lock_order':
+            $connection->executeQuery("SELECT set_config('application_name', ?, false)", [$extra]);
+            [, , $request] = (new ReceiptSnapshot())->load($connection, $value);
+            $receipt = new \ControlPlane\Payment\Provider\ProviderReceipt('lock-order-' . $value, $request->receiptType, $request->providerPaymentId,
+                'succeeded', $request->amountMinor, $request->currency, $request->items, new \DateTimeImmutable(), $request->providerRefundId);
+            (new ApplyAuthoritativeReceipt($connection))->apply($value, $receipt, $request, \Symfony\Component\Uid\Uuid::v7()->toRfc4122());
+            break;
         case 'idempotency_scoped':
             $connection->executeStatement("INSERT INTO commercial.idempotency_keys (scope, idempotency_key, request_sha256, status) VALUES (?, ?, decode(repeat('01',32),'hex'), 'completed')", [$extra, $value]);
             break;

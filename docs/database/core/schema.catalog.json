@@ -1432,7 +1432,12 @@
         }
       ],
       "policies": [],
-      "triggers": [],
+      "triggers": [
+        {
+          "name": "audit_events_identity_immutable",
+          "definition": "CREATE TRIGGER audit_events_identity_immutable BEFORE UPDATE OF id ON core.audit_events FOR EACH ROW EXECUTE FUNCTION core.reject_audit_identity_update()"
+        }
+      ],
       "force_rls": false,
       "constraints": [
         {
@@ -22038,6 +22043,11 @@
       "definition": "CREATE OR REPLACE FUNCTION core.protect_privacy_retention_decision()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n    IF TG_OP = 'DELETE' AND current_setting('app.privacy_lifecycle', true) = 'on' THEN RETURN OLD; END IF;\n    RAISE EXCEPTION 'Retention decision evidence is immutable' USING ERRCODE = 'check_violation';\nEND;\n$function$\n"
     },
     {
+      "name": "reject_audit_identity_update",
+      "schema": "core",
+      "definition": "CREATE OR REPLACE FUNCTION core.reject_audit_identity_update()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\r\nBEGIN\r\n    RAISE EXCEPTION 'Audit identity is immutable' USING ERRCODE = '42501';\r\nEND;\r\n$function$\n"
+    },
+    {
       "name": "validate_dsar_insert",
       "schema": "core",
       "definition": "CREATE OR REPLACE FUNCTION core.validate_dsar_insert()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE actor_person uuid;\nBEGIN\n    SELECT person_id INTO actor_person FROM core.accounts\n    WHERE id = NEW.submitted_by_account_id AND account_type = 'human';\n    IF actor_person IS NULL THEN\n        RAISE EXCEPTION 'Request actor must be a human Account' USING ERRCODE = 'check_violation';\n    END IF;\n    IF NEW.intake_channel IS NOT NULL THEN RETURN NEW; END IF;\n    IF actor_person <> NEW.submitted_by_person_id THEN\n        RAISE EXCEPTION 'Request actor must match human Account' USING ERRCODE = 'check_violation';\n    END IF;\n    IF NEW.legal_representation_id IS NOT NULL AND NOT EXISTS (\n        SELECT 1 FROM core.legal_representations r\n        WHERE r.id = NEW.legal_representation_id AND r.subject_person_id = NEW.subject_person_id\n          AND r.representative_person_id = NEW.submitted_by_person_id\n    ) THEN\n        RAISE EXCEPTION 'Request representation does not match subject and actor' USING ERRCODE = 'check_violation';\n    END IF;\n    RETURN NEW;\nEND; $function$\n"
@@ -22102,7 +22112,8 @@
     "030_core_privacy_operations.sql",
     "031_platform_runtime_operational_status.sql",
     "032_external_identity_mini_app_foundation.sql",
-    "033_reconcile_legacy_data_hygiene.sql"
+    "033_reconcile_legacy_data_hygiene.sql",
+    "034_core_audit_identity_immutable.sql"
   ],
   "migration_sources": [
     {
@@ -22236,6 +22247,10 @@
     {
       "path": "apps/backend/migrations/sql/033_reconcile_legacy_data_hygiene.sql",
       "sha256": "a272ce6bee1b89d404b746dd05d57b6d0bb605c0593eec540cfca81643a29e14"
+    },
+    {
+      "path": "apps/backend/migrations/sql/034_core_audit_identity_immutable.sql",
+      "sha256": "e2bafa9d43c0b2cb1e671ff8a4d8099dfc718dd1367072ba44fbcf0cc5035bf2"
     }
   ]
 }

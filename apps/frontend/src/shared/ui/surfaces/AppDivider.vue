@@ -3,7 +3,11 @@ withDefaults(defineProps<{ vertical?: boolean }>(), { vertical: false });
 </script>
 
 <template>
-  <div class="app-divider" :class="{ 'app-divider--vertical': vertical }" role="separator" />
+  <div
+    class="app-divider"
+    :class="{ 'app-divider--vertical': vertical }"
+    role="separator"
+  />
 </template>
 
 <style scoped>

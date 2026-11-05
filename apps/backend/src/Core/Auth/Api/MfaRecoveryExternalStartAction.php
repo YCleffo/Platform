@@ -14,6 +14,7 @@ use App\Core\Security\Application\RateLimiterUnavailableException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Yiisoft\Http\Status;
+use Yiisoft\Router\CurrentRoute;
 
 final readonly class MfaRecoveryExternalStartAction
 {
@@ -21,11 +22,12 @@ final readonly class MfaRecoveryExternalStartAction
         ServerRequestInterface $request,
         ExternalAuthService $external,
         ResponseFactory $responses,
+        CurrentRoute $route,
     ): ResponseInterface {
         $token = AuthInput::recoveryToken($request->getParsedBody());
         try {
             $result = $external->startRecoveryReauthentication(
-                (string) $request->getAttribute('provider'),
+                (string) $route->getArgument('provider'),
                 $token,
                 ClientContext::fromRequest($request),
             );

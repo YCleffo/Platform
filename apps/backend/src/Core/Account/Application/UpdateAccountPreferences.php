@@ -19,19 +19,21 @@ final readonly class UpdateAccountPreferences
         string $accountId,
         ?string $locale,
         ?string $timezone,
+        bool $writeLocale = true,
+        bool $writeTimezone = true,
     ): ?AccountInternationalPreferences {
         $canonicalLocale = null;
-        if ($locale !== null) {
+        if ($writeLocale && $locale !== null) {
             $supportedLocale = $this->supportedLocales->match($locale);
             if ($supportedLocale === null) {
                 throw new InvalidArgumentException('Account locale is unsupported.');
             }
             $canonicalLocale = $supportedLocale->tag;
         }
-        $ianaTimezone = $timezone === null
+        $ianaTimezone = !$writeTimezone || $timezone === null
             ? null
             : (new TimeZone($timezone))->identifier;
 
-        return $this->repository->save($accountId, $canonicalLocale, $ianaTimezone);
+        return $this->repository->save($accountId, $canonicalLocale, $ianaTimezone, $writeLocale, $writeTimezone);
     }
 }

@@ -16,18 +16,32 @@ const active = computed(() => props.activeRouteName ?? route.name);
 </script>
 
 <template>
-  <nav class="app-bottom-nav" :aria-label="$t('nav.primary')">
+  <nav
+    class="app-bottom-nav"
+    :aria-label="$t('nav.primary')"
+  >
     <ul class="app-bottom-nav__list">
-      <li v-for="item in items" :key="item.routeName" class="app-bottom-nav__item">
+      <li
+        v-for="item in items"
+        :key="item.routeName"
+        class="app-bottom-nav__item"
+      >
         <RouterLink
           class="app-bottom-nav__link"
           :class="{ 'app-bottom-nav__link--active': active === item.routeName }"
           :to="{ name: item.routeName }"
           :aria-current="active === item.routeName ? 'page' : undefined"
-          active-class="" exact-active-class=""
+          active-class=""
+          exact-active-class=""
         >
-          <span class="app-bottom-nav__icon" aria-hidden="true">
-            <component :is="item.icon" :size="22" />
+          <span
+            class="app-bottom-nav__icon"
+            aria-hidden="true"
+          >
+            <component
+              :is="item.icon"
+              :size="22"
+            />
           </span>
           <span class="app-bottom-nav__label">{{ item.label }}</span>
         </RouterLink>
@@ -91,6 +105,7 @@ const active = computed(() => props.activeRouteName ?? route.name);
 
 .app-bottom-nav__label {
   font-size: var(--type-body-caption-size);
+  letter-spacing: var(--type-body-caption-tracking);
   line-height: var(--type-body-caption-line);
   font-weight: var(--type-body-caption-weight);
 }

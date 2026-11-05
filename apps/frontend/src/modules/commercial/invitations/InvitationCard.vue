@@ -48,12 +48,27 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
         {{ t(`invitations.status_${invitation.status}`) }}
       </AppBadge>
       <AppBadge variant="neutral">{{ t(`cabinet.role_${invitation.role}`) }}</AppBadge>
-      <div v-if="canManage && invitation.status === 'pending'" class="invitation__actions">
-        <AppIconButton :label="$t('invitations.resend')" @click="emit('resend')">
-          <RotateCw :size="18" aria-hidden="true" />
+      <div
+        v-if="canManage && invitation.status === 'pending'"
+        class="invitation__actions"
+      >
+        <AppIconButton
+          :label="$t('invitations.resend')"
+          @click="emit('resend')"
+        >
+          <RotateCw
+            :size="18"
+            aria-hidden="true"
+          />
         </AppIconButton>
-        <AppIconButton :label="$t('invitations.revoke')" @click="emit('revoke')">
-          <Trash2 :size="18" aria-hidden="true" />
+        <AppIconButton
+          :label="$t('invitations.revoke')"
+          @click="emit('revoke')"
+        >
+          <Trash2
+            :size="18"
+            aria-hidden="true"
+          />
         </AppIconButton>
       </div>
     </div>
@@ -83,6 +98,7 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
 
 .invitation__email {
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--text-1);
@@ -94,6 +110,8 @@ function statusVariant(status: string): 'neutral' | 'primary' | 'success' | 'war
 
 .invitation__meta {
   font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   color: var(--text-3);
   overflow-wrap: anywhere;

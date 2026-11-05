@@ -8,7 +8,10 @@ const router = useRouter();
 
 <template>
   <section class="not-found">
-    <span class="not-found__icon" aria-hidden="true">
+    <span
+      class="not-found__icon"
+      aria-hidden="true"
+    >
       <CircleAlert :size="28" />
     </span>
     <h1 class="not-found__title">{{ $t('notFound.title') }}</h1>
@@ -53,6 +56,8 @@ const router = useRouter();
 .not-found__text {
   max-width: 360px;
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
   transition: var(--theme-transition);

@@ -14,16 +14,17 @@ use App\Core\Security\Application\RateLimiterUnavailableException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Yiisoft\Http\Status;
+use Yiisoft\Router\CurrentRoute;
 
 final readonly class ExternalLoginCallbackAction
 {
-    public function __invoke(ServerRequestInterface $request, ExternalAuthService $external, ResponseFactory $responses): ResponseInterface
+    public function __invoke(ServerRequestInterface $request, ExternalAuthService $external, ResponseFactory $responses, CurrentRoute $route): ResponseInterface
     {
         $query = $request->getQueryParams();
         $input = AuthInput::externalCallback(['state' => $query['state'] ?? null, 'code' => $query['code'] ?? null]);
         try {
             $result = $external->completeLogin(
-                (string) $request->getAttribute('provider'),
+                (string) $route->getArgument('provider'),
                 $input['state'],
                 $input['code'],
                 ClientContext::fromRequest($request),

@@ -25,12 +25,28 @@ const emit = defineEmits<{
     size="s"
   >
     <div class="remove-form">
-      <p v-if="error" class="remove-form__error" role="alert">{{ error }}</p>
+      <p
+        v-if="error"
+        class="remove-form__error"
+        role="alert"
+      >
+        {{ error }}
+      </p>
       <div class="remove-form__actions">
-        <AppButton type="button" variant="secondary" :disabled="busy" @click="open = false">
+        <AppButton
+          type="button"
+          variant="secondary"
+          :disabled="busy"
+          @click="open = false"
+        >
           {{ $t('common.cancel') }}
         </AppButton>
-        <AppButton type="button" variant="danger" :loading="busy" @click="emit('confirm')">
+        <AppButton
+          type="button"
+          variant="danger"
+          :loading="busy"
+          @click="emit('confirm')"
+        >
           {{ $t('account.confirmRemove') }}
         </AppButton>
       </div>
@@ -47,6 +63,8 @@ const emit = defineEmits<{
 
 .remove-form__error {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--danger-text);
   transition: var(--theme-transition);

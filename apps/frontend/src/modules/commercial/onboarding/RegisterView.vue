@@ -72,23 +72,44 @@ async function resend(): Promise<void> {
     centered
   >
     <template #icon>
-      <span class="register__icon" aria-hidden="true">
+      <span
+        class="register__icon"
+        aria-hidden="true"
+      >
         <MailCheck :size="28" />
       </span>
     </template>
     <div class="register__resend">
       <p class="register__hint">{{ $t('auth.resendTitle') }}</p>
-      <AppButton variant="secondary" :loading="resending" :disabled="form.values.email === ''" block @click="resend">
+      <AppButton
+        variant="secondary"
+        :loading="resending"
+        :disabled="form.values.email === ''"
+        block
+        @click="resend"
+      >
         {{ $t('auth.resend') }}
       </AppButton>
-      <RouterLink class="register__link" :to="{ name: 'login', query: redirectTarget ? { redirect: redirectTarget } : {} }">
+      <RouterLink
+        class="register__link"
+        :to="{ name: 'login', query: redirectTarget ? { redirect: redirectTarget } : {} }"
+      >
         {{ $t('nav.login') }}
       </RouterLink>
     </div>
   </AppFormShell>
 
-  <AppFormShell v-else :title="$t('auth.signUp')" :subtitle="$t('auth.signUpSubtitle')" :error="message">
-    <form class="auth-form" novalidate @submit.prevent="onSubmit">
+  <AppFormShell
+    v-else
+    :title="$t('auth.signUp')"
+    :subtitle="$t('auth.signUpSubtitle')"
+    :error="message"
+  >
+    <form
+      class="auth-form"
+      novalidate
+      @submit.prevent="onSubmit"
+    >
       <AppInput
         id="register-email"
         v-model="form.values.email"
@@ -107,10 +128,18 @@ async function resend(): Promise<void> {
         autocomplete="new-password"
         required
       />
-      <AppButton type="submit" :loading="submitting" block>{{ $t('auth.register') }}</AppButton>
+      <AppButton
+        type="submit"
+        :loading="submitting"
+        block
+      >
+        {{ $t('auth.register') }}
+      </AppButton>
       <p class="auth-form__switch">
         {{ $t('auth.haveAccount') }}
-        <RouterLink :to="{ name: 'login', query: redirectTarget ? { redirect: redirectTarget } : {} }">
+        <RouterLink
+          :to="{ name: 'login', query: redirectTarget ? { redirect: redirectTarget } : {} }"
+        >
           {{ $t('nav.login') }}
         </RouterLink>
       </p>
@@ -130,6 +159,7 @@ async function resend(): Promise<void> {
 
 .auth-form__switch {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
@@ -157,6 +187,7 @@ async function resend(): Promise<void> {
 
 .register__hint {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
@@ -166,6 +197,7 @@ async function resend(): Promise<void> {
 .register__link {
   text-align: center;
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
 }

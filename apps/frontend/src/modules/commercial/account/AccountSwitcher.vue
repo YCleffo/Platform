@@ -28,7 +28,10 @@ const open = ref(false);
         <span class="switcher__label">{{ $t('account.switchAccount') }}</span>
         <span class="switcher__value">{{ currentName }}</span>
       </span>
-      <ChevronDown :size="16" aria-hidden="true" />
+      <ChevronDown
+        :size="16"
+        aria-hidden="true"
+      />
     </button>
     <AccountSwitcherDialog
       v-model="open"
@@ -80,6 +83,8 @@ const open = ref(false);
 
 .switcher__label {
   font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   color: var(--text-3);
   transition: var(--theme-transition);
@@ -87,6 +92,7 @@ const open = ref(false);
 
 .switcher__value {
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   overflow: hidden;

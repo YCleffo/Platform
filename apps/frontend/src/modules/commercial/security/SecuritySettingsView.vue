@@ -51,11 +51,15 @@ const confirmDescription = ref('');
 const confirmLabel = ref('');
 const confirmAction = ref<null | (() => Promise<void>)>(null);
 
-const { reauthOpen: sensitiveReauthOpen, runSensitive, onReauthenticated: retryPending } = useSensitiveAction((message) => {
+const {
+  reauthOpen: sensitiveReauthOpen,
+  runSensitive,
+  onReauthenticated: retryPending,
+} = useSensitiveAction((message) => {
   toast.show(message, 'error', 7000);
 });
 
-const otherSessions = computed(() => sessions.value.filter(session => !session.current));
+const otherSessions = computed(() => sessions.value.filter((session) => !session.current));
 
 onMounted(() => {
   void loadStatus();
@@ -85,7 +89,12 @@ function onMfaEnabled(): void {
   void loadStatus();
 }
 
-function askConfirm(title: string, description: string, label: string, action: () => Promise<void>): void {
+function askConfirm(
+  title: string,
+  description: string,
+  label: string,
+  action: () => Promise<void>,
+): void {
   confirmTitle.value = title;
   confirmDescription.value = description;
   confirmLabel.value = label;
@@ -154,13 +163,18 @@ async function regenerateCodes(): Promise<void> {
 }
 
 function disableMfa(): void {
-  askConfirm(t('security.disableMfaTitle'), t('security.disableMfaText'), t('security.disableMfa'), async () => {
-    await runSensitive(async () => {
-      await auth.disableMfa();
-      toast.show(t('security.mfaDisabledToast'), 'success');
-      await Promise.all([loadStatus(), loadSessions()]);
-    });
-  });
+  askConfirm(
+    t('security.disableMfaTitle'),
+    t('security.disableMfaText'),
+    t('security.disableMfa'),
+    async () => {
+      await runSensitive(async () => {
+        await auth.disableMfa();
+        toast.show(t('security.mfaDisabledToast'), 'success');
+        await Promise.all([loadStatus(), loadSessions()]);
+      });
+    },
+  );
 }
 
 function revokeSession(session: ControlSession): void {
@@ -202,29 +216,61 @@ function revokeOtherSessions(): void {
     </header>
 
     <div class="security-view__grid">
-      <AppCard padding="default" class="security-view__card">
+      <AppCard
+        padding="default"
+        class="security-view__card"
+      >
         <h2 class="security-view__card-title">{{ $t('security.mfaTitle') }}</h2>
-        <AppSkeleton v-if="statusLoading" variant="text" :lines="2" />
-        <AppErrorState v-else-if="statusError" :message="statusError">
-          <AppButton variant="secondary" @click="loadStatus">{{ $t('common.retry') }}</AppButton>
+        <AppSkeleton
+          v-if="statusLoading"
+          variant="text"
+          :lines="2"
+        />
+        <AppErrorState
+          v-else-if="statusError"
+          :message="statusError"
+        >
+          <AppButton
+            variant="secondary"
+            @click="loadStatus"
+          >
+            {{ $t('common.retry') }}
+          </AppButton>
         </AppErrorState>
         <template v-else-if="status">
-          <AppBadge :variant="status.enabled ? 'success' : 'warning'" dot>
+          <AppBadge
+            :variant="status.enabled ? 'success' : 'warning'"
+            dot
+          >
             {{ status.enabled ? $t('security.mfaEnabled') : $t('security.mfaDisabled') }}
           </AppBadge>
           <p class="security-view__muted">{{ $t('security.mfaDescription') }}</p>
-          <p v-if="status.enabled" class="security-view__muted">
+          <p
+            v-if="status.enabled"
+            class="security-view__muted"
+          >
             {{ $t('security.recoveryRemaining', { count: status.recovery_codes_remaining }) }}
           </p>
           <div class="security-view__actions">
-            <AppButton v-if="!status.enabled" @click="setupOpen = true">
+            <AppButton
+              v-if="!status.enabled"
+              @click="setupOpen = true"
+            >
               {{ $t('security.connectMfa') }}
             </AppButton>
             <template v-else>
-              <AppButton variant="secondary" :loading="actionBusy" @click="regenerateCodes">
+              <AppButton
+                variant="secondary"
+                :loading="actionBusy"
+                @click="regenerateCodes"
+              >
                 {{ $t('security.regenerateCodes') }}
               </AppButton>
-              <AppButton variant="danger" :loading="actionBusy" @click="disableMfa">
+              <AppButton
+                variant="danger"
+                :loading="actionBusy"
+                @click="disableMfa"
+              >
                 {{ $t('security.disableMfa') }}
               </AppButton>
             </template>
@@ -232,65 +278,176 @@ function revokeOtherSessions(): void {
         </template>
       </AppCard>
 
-      <AppCard padding="default" class="security-view__card">
+      <AppCard
+        padding="default"
+        class="security-view__card"
+      >
         <h2 class="security-view__card-title">{{ $t('security.passwordTitle') }}</h2>
         <p class="security-view__muted">{{ $t('security.passwordHint') }}</p>
-        <form class="security-view__password" @submit.prevent="changePassword">
-          <AppPasswordInput id="security-current-password" v-model="passwordForm.current" :label="$t('security.currentPassword')" autocomplete="current-password" :error="passwordErrors.current ? $t(passwordErrors.current) : undefined" />
-          <AppPasswordInput id="security-new-password" v-model="passwordForm.password" :label="$t('security.newPassword')" autocomplete="new-password" :error="passwordErrors.password ? $t(passwordErrors.password) : undefined" />
-          <AppPasswordInput id="security-confirm-password" v-model="passwordForm.confirmation" :label="$t('security.confirmPassword')" autocomplete="new-password" :error="passwordErrors.confirmation ? $t(passwordErrors.confirmation) : undefined" />
-          <AppButton type="submit" :loading="actionBusy">{{ $t('security.changePassword') }}</AppButton>
+        <form
+          class="security-view__password"
+          @submit.prevent="changePassword"
+        >
+          <AppPasswordInput
+            id="security-current-password"
+            v-model="passwordForm.current"
+            :label="$t('security.currentPassword')"
+            autocomplete="current-password"
+            :error="passwordErrors.current ? $t(passwordErrors.current) : undefined"
+          />
+          <AppPasswordInput
+            id="security-new-password"
+            v-model="passwordForm.password"
+            :label="$t('security.newPassword')"
+            autocomplete="new-password"
+            :error="passwordErrors.password ? $t(passwordErrors.password) : undefined"
+          />
+          <AppPasswordInput
+            id="security-confirm-password"
+            v-model="passwordForm.confirmation"
+            :label="$t('security.confirmPassword')"
+            autocomplete="new-password"
+            :error="passwordErrors.confirmation ? $t(passwordErrors.confirmation) : undefined"
+          />
+          <AppButton
+            type="submit"
+            :loading="actionBusy"
+          >
+            {{ $t('security.changePassword') }}
+          </AppButton>
         </form>
       </AppCard>
 
-      <AppCard padding="default" class="security-view__card">
+      <AppCard
+        padding="default"
+        class="security-view__card"
+      >
         <h2 class="security-view__card-title">{{ $t('security.reauthTitle') }}</h2>
         <p class="security-view__muted">{{ $t('security.reauthDescription') }}</p>
-        <AppButton variant="secondary" @click="reauthOpen = true">
+        <AppButton
+          variant="secondary"
+          @click="reauthOpen = true"
+        >
           {{ $t('security.reauthButton') }}
         </AppButton>
       </AppCard>
 
-      <AppCard padding="default" class="security-view__card security-view__session">
+      <AppCard
+        padding="default"
+        class="security-view__card security-view__session"
+      >
         <div class="security-view__sessions-head">
           <div>
             <h2 class="security-view__card-title">{{ $t('security.sessionsTitle') }}</h2>
             <p class="security-view__muted">{{ $t('security.sessionsDescription') }}</p>
           </div>
-          <AppButton v-if="otherSessions.length > 0" size="s" variant="danger" :loading="actionBusy" @click="revokeOtherSessions">
+          <AppButton
+            v-if="otherSessions.length > 0"
+            size="s"
+            variant="danger"
+            :loading="actionBusy"
+            @click="revokeOtherSessions"
+          >
             {{ $t('security.revokeOthers') }}
           </AppButton>
         </div>
-        <AppSkeleton v-if="sessionsLoading" variant="text" :lines="3" />
-        <AppErrorState v-else-if="sessionsError" :message="sessionsError">
-          <AppButton variant="secondary" @click="loadSessions">{{ $t('common.retry') }}</AppButton>
+        <AppSkeleton
+          v-if="sessionsLoading"
+          variant="text"
+          :lines="3"
+        />
+        <AppErrorState
+          v-else-if="sessionsError"
+          :message="sessionsError"
+        >
+          <AppButton
+            variant="secondary"
+            @click="loadSessions"
+          >
+            {{ $t('common.retry') }}
+          </AppButton>
         </AppErrorState>
-        <div v-else-if="sessions.length > 0" class="security-view__session-list">
-          <div v-for="session in sessions" :key="session.id" class="security-view__session-row">
+        <div
+          v-else-if="sessions.length > 0"
+          class="security-view__session-list"
+        >
+          <div
+            v-for="session in sessions"
+            :key="session.id"
+            class="security-view__session-row"
+          >
             <div class="security-view__session-main">
               <div class="security-view__session-title">
                 <strong>{{ deviceLabel(session) }}</strong>
-                <AppBadge v-if="session.current" variant="success">{{ $t('security.currentSession') }}</AppBadge>
+                <AppBadge
+                  v-if="session.current"
+                  variant="success"
+                >
+                  {{ $t('security.currentSession') }}
+                </AppBadge>
               </div>
-              <p class="security-view__muted">{{ methodLabel(session.authentication_method) }} · {{ $t('security.issuedAt') }} {{ formatDateTime(session.issued_at, locale) }}</p>
-              <p class="security-view__muted">{{ $t('security.lastUsedAt') }}: {{ session.last_used_at ? formatDateTime(session.last_used_at, locale) : '—' }} · {{ $t('security.expiresAt') }}: {{ formatDateTime(session.expires_at, locale) }}</p>
+              <p class="security-view__muted">
+                {{ methodLabel(session.authentication_method) }} · {{ $t('security.issuedAt') }}
+                {{ formatDateTime(session.issued_at, locale) }}
+              </p>
+              <p class="security-view__muted">
+                {{ $t('security.lastUsedAt') }}:
+                {{ session.last_used_at ? formatDateTime(session.last_used_at, locale) : '—' }} ·
+                {{ $t('security.expiresAt') }}: {{ formatDateTime(session.expires_at, locale) }}
+              </p>
             </div>
-            <AppButton v-if="!session.current && session.revoked_at === null" size="s" variant="danger" :loading="actionBusy" @click="revokeSession(session)">
+            <AppButton
+              v-if="!session.current && session.revoked_at === null"
+              size="s"
+              variant="danger"
+              :loading="actionBusy"
+              @click="revokeSession(session)"
+            >
               {{ $t('security.revokeSession') }}
             </AppButton>
           </div>
         </div>
-        <p v-else class="security-view__muted">{{ $t('security.noSession') }}</p>
+        <p
+          v-else
+          class="security-view__muted"
+        >
+          {{ $t('security.noSession') }}
+        </p>
       </AppCard>
     </div>
 
-    <MfaSetupDialog v-model="setupOpen" @enabled="onMfaEnabled" />
-    <ReauthenticateDialog v-model="reauthOpen" @authenticated="onReauthenticated" />
-    <ReauthenticateDialog v-model="sensitiveReauthOpen" @authenticated="onSensitiveReauthenticated" />
-    <AppConfirmDialog v-model="confirmOpen" :title="confirmTitle" :description="confirmDescription" :confirm-label="confirmLabel" :busy="actionBusy" @confirm="confirm" />
-    <AppDialog v-model="codesOpen" :title="$t('security.recoveryCodesTitle')" :description="$t('security.recoveryCodesDescription')">
+    <MfaSetupDialog
+      v-model="setupOpen"
+      @enabled="onMfaEnabled"
+    />
+    <ReauthenticateDialog
+      v-model="reauthOpen"
+      @authenticated="onReauthenticated"
+    />
+    <ReauthenticateDialog
+      v-model="sensitiveReauthOpen"
+      @authenticated="onSensitiveReauthenticated"
+    />
+    <AppConfirmDialog
+      v-model="confirmOpen"
+      :title="confirmTitle"
+      :description="confirmDescription"
+      :confirm-label="confirmLabel"
+      :busy="actionBusy"
+      @confirm="confirm"
+    />
+    <AppDialog
+      v-model="codesOpen"
+      :title="$t('security.recoveryCodesTitle')"
+      :description="$t('security.recoveryCodesDescription')"
+    >
       <ol class="security-view__codes">
-        <li v-for="code in recoveryCodes" :key="code"><code>{{ code }}</code></li>
+        <li
+          v-for="code in recoveryCodes"
+          :key="code"
+        >
+          <code>{{ code }}</code>
+        </li>
       </ol>
       <AppButton @click="codesOpen = false">{{ $t('common.close') }}</AppButton>
     </AppDialog>
@@ -323,6 +480,8 @@ function revokeOtherSessions(): void {
 .security-view__subtitle,
 .security-view__muted {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
   transition: var(--theme-transition);
@@ -343,6 +502,7 @@ function revokeOtherSessions(): void {
 
 .security-view__card-title {
   font-size: var(--type-h3-size);
+  letter-spacing: var(--type-h3-tracking);
   line-height: var(--type-h3-line);
   font-weight: var(--type-h3-weight);
   color: var(--text-1);
@@ -412,6 +572,9 @@ function revokeOtherSessions(): void {
 .security-view__codes code {
   font-family: var(--font-mono);
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
+  line-height: var(--type-body-medium-line);
   color: var(--text-1);
 }
 

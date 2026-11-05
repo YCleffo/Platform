@@ -13,8 +13,16 @@ const { t } = useI18n();
 
 <template>
   <span class="account-status">
-    <AppBadge :variant="statusVariant(status)" dot>{{ t(`cabinet.status_${status}`) }}</AppBadge>
-    <AppBadge v-if="onboardingState" :variant="onboardingVariant(onboardingState)">
+    <AppBadge
+      :variant="statusVariant(status)"
+      dot
+    >
+      {{ t(`cabinet.status_${status}`) }}
+    </AppBadge>
+    <AppBadge
+      v-if="onboardingState"
+      :variant="onboardingVariant(onboardingState)"
+    >
       {{ t(`cabinet.onboarding_${onboardingState}`) }}
     </AppBadge>
   </span>

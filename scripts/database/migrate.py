@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 import subprocess
+from urllib.parse import quote
 from collections.abc import Sequence
 from typing import TypedDict, cast
 
@@ -96,10 +97,18 @@ def migrate(plane: str) -> None:
             )
             print("Applied " + path.name, flush=True)
     else:
+        # The HTTP container carries only the runtime login. Resolve owner credentials
+        # from the database container for this one migration process, never its workers.
+        database_config = json.loads(command(["docker", "inspect", container(service)]))[0]
+        database_env = dict(item.split("=", 1) for item in database_config["Config"]["Env"] if "=" in item)
+        owner_url = ("postgresql://" + quote(database_env["POSTGRES_USER"], safe="") + ":"
+                     + quote(database_env["POSTGRES_PASSWORD"], safe="") + "@control-postgres:5432/"
+                     + quote(database_env["POSTGRES_DB"], safe="") + "?serverVersion=18&charset=utf8")
         output = command(
             [
                 "docker",
                 "exec",
+                "-e", "CONTROL_DATABASE_URL=" + owner_url,
                 container("control-plane"),
                 "php",
                 "bin/console",

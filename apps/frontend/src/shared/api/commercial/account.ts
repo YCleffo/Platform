@@ -25,6 +25,7 @@ export interface CommercialAccountApi {
   listMemberships(accountId: string, limit?: number, offset?: number): Promise<CommercialMembershipList>;
   createAccount(payload: CreateAccountPayload, idempotencyKey: string): Promise<CreateAccountResult>;
   reviewCatalog(accountId: string): Promise<CatalogReviewed>;
+  addMembership(accountId: string, userId: string, role: AccountRole): Promise<{id:string}>;
   changeMembershipRole(accountId: string, membershipId: string, role: AccountRole): Promise<void>;
   removeMembership(accountId: string, membershipId: string): Promise<void>;
 }
@@ -57,6 +58,7 @@ export function createCommercialAccountApi(http: HttpClient): CommercialAccountA
       ),
     changeMembershipRole: (accountId, membershipId, role) =>
       http.patch<void>(`/accounts/${accountId}/memberships/${membershipId}`, { role }),
+    addMembership: (accountId, userId, role) => http.post<{id:string}>(`/accounts/${accountId}/memberships`, {user_id:userId,role}, {validate:(value):value is {id:string}=>typeof value==='object'&&value!==null&&typeof (value as {id?:unknown}).id==='string'}),
     removeMembership: (accountId, membershipId) =>
       http.delete<void>(`/accounts/${accountId}/memberships/${membershipId}`),
   };

@@ -44,7 +44,9 @@ const { submitting, message, run } = useAsyncAction(async () => {
   if (!active) {
     return;
   }
-  await router.push(redirectTarget.value !== null ? { path: redirectTarget.value } : { name: 'cabinet' });
+  await router.push(
+    redirectTarget.value !== null ? { path: redirectTarget.value } : { name: 'cabinet' },
+  );
 });
 
 onMounted(() => {
@@ -80,11 +82,18 @@ async function onSubmit(): Promise<void> {
     centered
   >
     <template #icon>
-      <span class="mfa__icon" aria-hidden="true">
+      <span
+        class="mfa__icon"
+        aria-hidden="true"
+      >
         <ShieldCheck :size="28" />
       </span>
     </template>
-    <form class="auth-form" novalidate @submit.prevent="onSubmit">
+    <form
+      class="auth-form"
+      novalidate
+      @submit.prevent="onSubmit"
+    >
       <AppInput
         id="mfa-code"
         v-model="form.values.code"
@@ -99,7 +108,13 @@ async function onSubmit(): Promise<void> {
         :label="$t('auth.mfaRecoveryCode')"
         autocomplete="off"
       />
-      <AppButton type="submit" :loading="submitting" block>{{ $t('auth.mfaSubmit') }}</AppButton>
+      <AppButton
+        type="submit"
+        :loading="submitting"
+        block
+      >
+        {{ $t('auth.mfaSubmit') }}
+      </AppButton>
     </form>
   </AppFormShell>
 </template>

@@ -11,6 +11,7 @@ use App\Core\Security\Application\RateLimiterInterface;
 use App\Core\Security\Application\SecurityAuditService;
 use App\Core\Time\Application\ClockInterface;
 use InvalidArgumentException;
+use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class Login
 {
@@ -28,6 +29,7 @@ final readonly class Login
         private RateLimiterInterface $rateLimiter,
         private AuthRateLimitPolicy $rateLimitPolicy,
         private AuthenticationFlowService $authenticationFlow,
+        private ConnectionInterface $db,
     ) {}
 
     public function execute(LoginCommand $command, ClientContext $context): AuthenticationFlowResult
@@ -92,6 +94,18 @@ final readonly class Login
             throw new InvalidCredentialsException();
         }
 
+        return $this->db->transaction(function () use ($account, $credential, $command, $context): AuthenticationFlowResult {
+            // Serialize issuance with credential rotation. Verification is deliberately outside
+            // the lock; a first factor verified before rotation must not acquire its new stamp.
+            $this->db->createCommand('SELECT id FROM core.accounts WHERE id=CAST(:id AS uuid) FOR UPDATE',
+                [':id' => $account->accountId])->queryScalar();
+            $current = $this->accounts->findSecurityState($account->accountId);
+            $currentCredential = $this->passwords->findByAccountId($account->accountId);
+            if ($current === null || !$current->allowsHumanAuthentication($this->clock->now())
+                || $current->securityStamp !== $account->securityStamp
+                || $currentCredential === null || !hash_equals($credential->passwordHash, $currentCredential->passwordHash)) {
+                throw new InvalidCredentialsException();
+            }
         if ($this->hasher->needsRehash($credential->passwordHash)) {
             $replacementHash = $this->hasher->hash($command->password);
             $algorithm = password_get_info($replacementHash)['algoName'] ?? 'argon2id';
@@ -108,5 +122,6 @@ final readonly class Login
             AuthenticationMethod::PASSWORD,
             $context,
         );
+        });
     }
 }

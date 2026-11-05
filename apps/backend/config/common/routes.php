@@ -96,6 +96,29 @@ $permission = static fn(string $code): array => [
 ];
 
 return [
+    Route::get('/api/core/privacy/work-items/representation')
+        ->defaults(['kind' => 'representation'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.representations.manage'))
+        ->action(App\Core\Privacy\Api\PrivacyWorkItemsAction::class)
+        ->name('core/privacy/work-items/representation'),
+    Route::get('/api/core/privacy/work-items/erasure')
+        ->defaults(['kind' => 'erasure'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.read'))
+        ->action(App\Core\Privacy\Api\PrivacyWorkItemsAction::class)
+        ->name('core/privacy/work-items/erasure'),
+    Route::get('/api/core/privacy/work-items/incident')
+        ->defaults(['kind' => 'incident'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.incidents.read'))
+        ->action(App\Core\Privacy\Api\PrivacyWorkItemsAction::class)
+        ->name('core/privacy/work-items/incident'),
+    Route::get('/api/core/privacy/work-items/distribution')
+        ->defaults(['kind' => 'distribution'])
+        ->middleware(RequireAuthentication::class)
+        ->action(App\Core\Privacy\Api\PrivacyWorkItemsAction::class)
+        ->name('core/privacy/work-items/distribution'),
+    Route::get('/api/health/isolation')
+        ->action(Api\IsolationHealthAction::class)
+        ->name('health/isolation'),
     Route::post('/api/m2m/runtime/entitlements/apply')
         ->action(ApplyEntitlementsAction::class)
         ->name('m2m/runtime/entitlements/apply'),
@@ -254,6 +277,12 @@ return [
         ->action(ManageRepresentationAction::class)
         ->name('core/privacy/representations/revoke'),
 
+    Route::get('/api/auth/me/privacy/representations')
+        ->defaults(['operation' => 'representations'])
+        ->middleware(RequireAuthentication::class)
+        ->action(OwnPrivacyRequestsAction::class)
+        ->name('auth/me/privacy/representations/index'),
+
     Route::post('/api/auth/me/privacy/requests')
         ->defaults(['operation' => 'submit'])
         ->middleware(RequireAuthentication::class)
@@ -283,12 +312,12 @@ return [
         ->name('auth/me/privacy/requests/processing-information'),
 
     Route::get('/api/core/privacy/requests/{id}/data')
-        ->defaults(['operator' => true])
+        ->defaults(['operator' => 'intake'])
         ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
         ->action(PersonalDataExportAction::class)
         ->name('core/privacy/requests/data'),
     Route::get('/api/core/privacy/requests/{id}/processing-information')
-        ->defaults(['operator' => true])
+        ->defaults(['operator' => 'intake'])
         ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
         ->action(ProcessingInformationAction::class)
         ->name('core/privacy/requests/processing-information'),
@@ -320,6 +349,12 @@ return [
         ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.manage'))
         ->action(ManagePrivacyRequestsAction::class)
         ->name('core/privacy/requests/intake'),
+
+    Route::get('/api/core/privacy/requests/options')
+        ->defaults(['operation' => 'options'])
+        ->middleware(RequireAuthentication::class, $permission('core.privacy.requests.read'))
+        ->action(ManagePrivacyRequestsAction::class)
+        ->name('core/privacy/requests/options'),
 
     Route::get('/api/core/privacy/requests/{id}')
         ->defaults(['operation' => 'get'])

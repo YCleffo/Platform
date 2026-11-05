@@ -19,15 +19,34 @@ defineEmits<{
 </script>
 
 <template>
-  <nav class="account-pagination" :aria-label="$t('cabinet.page', { page, pages: pageCount })">
+  <nav
+    class="account-pagination"
+    :aria-label="$t('cabinet.page', { page, pages: pageCount })"
+  >
     <span class="account-pagination__range">{{ rangeLabel }}</span>
     <div class="account-pagination__controls">
-      <AppIconButton :label="$t('cabinet.prev')" :disabled="!hasPrev" @click="$emit('prev')">
-        <ChevronLeft :size="18" aria-hidden="true" />
+      <AppIconButton
+        :label="$t('cabinet.prev')"
+        :disabled="!hasPrev"
+        @click="$emit('prev')"
+      >
+        <ChevronLeft
+          :size="18"
+          aria-hidden="true"
+        />
       </AppIconButton>
-      <span class="account-pagination__page">{{ $t('cabinet.page', { page, pages: pageCount }) }}</span>
-      <AppIconButton :label="$t('cabinet.next')" :disabled="!hasNext" @click="$emit('next')">
-        <ChevronRight :size="18" aria-hidden="true" />
+      <span class="account-pagination__page">
+        {{ $t('cabinet.page', { page, pages: pageCount }) }}
+      </span>
+      <AppIconButton
+        :label="$t('cabinet.next')"
+        :disabled="!hasNext"
+        @click="$emit('next')"
+      >
+        <ChevronRight
+          :size="18"
+          aria-hidden="true"
+        />
       </AppIconButton>
     </div>
   </nav>
@@ -45,6 +64,7 @@ defineEmits<{
 
 .account-pagination__range {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
@@ -59,6 +79,7 @@ defineEmits<{
 
 .account-pagination__page {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);

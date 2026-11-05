@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAccountStore } from '@/core/account/accountStore';
@@ -19,6 +19,11 @@ import AppButton from '@/shared/ui/actions/AppButton.vue';
 import AppEmptyState from '@/shared/ui/feedback/AppEmptyState.vue';
 import AppErrorState from '@/shared/ui/feedback/AppErrorState.vue';
 import AppSkeleton from '@/shared/ui/feedback/AppSkeleton.vue';
+import AppDialog from '@/shared/ui/overlays/AppDialog.vue';
+import AppInput from '@/shared/ui/fields/AppInput.vue';
+import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
+import AppCheckbox from '@/shared/ui/fields/AppCheckbox.vue';
+import { uuidPattern } from '@/modules/admin/workbench/form';
 
 const route = useRoute();
 const router = useRouter();
@@ -50,13 +55,33 @@ function canManageMember(member: CommercialMembership): boolean {
   return permissions.value !== null && canManageMembership(member.role, permissions.value);
 }
 
-const manageableIds = computed(() => memberships.value.filter(canManageMember).map((member) => member.id));
-const removableIds = computed(() => memberships.value.filter(canManageMember).map((member) => member.id));
+const manageableIds = computed(() =>
+  memberships.value.filter(canManageMember).map((member) => member.id),
+);
+const removableIds = computed(() =>
+  memberships.value.filter(canManageMember).map((member) => member.id),
+);
 
 const roleOpen = ref(false);
 const roleTarget = ref<CommercialMembership | null>(null);
 const removeOpen = ref(false);
 const removeTarget = ref<CommercialMembership | null>(null);
+const addOpen = ref(false);
+const addUserId = ref('');
+const addRole = ref('technical');
+const addAck = ref(false);
+const addValidation = ref('');
+const addRoles = computed(() =>
+  (permissions.value?.manage_ownership
+    ? ['owner', 'admin', 'billing', 'technical']
+    : ['admin', 'billing', 'technical']
+  ).map((value) => ({ value, label: t('cabinet.role_' + value) })),
+);
+watch(accountId, () => {
+  addOpen.value = false;
+  addUserId.value = '';
+  addAck.value = false;
+});
 
 async function onChanged(): Promise<void> {
   await loadPage(offset.value);
@@ -76,6 +101,7 @@ async function onChanged(): Promise<void> {
 
 const {
   changeRole,
+  addMember,
   remove,
   resume,
   cancel,
@@ -84,6 +110,23 @@ const {
   error: actionError,
   needsMfaEnrollment,
 } = useMembershipActions(accountId, onChanged);
+async function confirmAdd(): Promise<void> {
+  if (
+    !addAck.value ||
+    !uuidPattern.test(addUserId.value) ||
+    !addRoles.value.some((r) => r.value === addRole.value)
+  ) {
+    addValidation.value = t('workbench.invalidField');
+    return;
+  }
+  addValidation.value = '';
+  if (await addMember(addUserId.value, addRole.value as AccountRole)) {
+    addOpen.value = false;
+    addUserId.value = '';
+    addAck.value = false;
+    toast.show(t('workbench.completed'), 'success');
+  }
+}
 
 const actionErrorText = computed(() =>
   actionError.value === null ? null : resolveErrorMessage(actionError.value),
@@ -153,19 +196,52 @@ async function confirmRemove(): Promise<void> {
     <header class="members__header">
       <h2 class="members__title">{{ $t('account.membersTitle') }}</h2>
       <p class="members__subtitle">{{ $t('account.membersSubtitle') }}</p>
+      <AppButton
+        v-if="permissions?.manage_members || permissions?.manage_ownership"
+        variant="secondary"
+        @click="
+          addOpen = true;
+          addAck = false;
+          addValidation = '';
+        "
+      >
+        {{ $t('operator.addExisting') }}
+      </AppButton>
     </header>
 
-    <div v-if="needsMfaEnrollment" class="members__notice" role="alert">
+    <div
+      v-if="needsMfaEnrollment"
+      class="members__notice"
+      role="alert"
+    >
       <p>{{ $t('security.mfaRequired') }}</p>
       <RouterLink :to="{ name: 'security' }">{{ $t('security.goToSecurity') }}</RouterLink>
     </div>
 
-    <AppErrorState v-if="!canView" :message="$t('account.accessDenied')" />
-    <AppSkeleton v-else-if="loading" variant="list" :lines="4" />
-    <AppErrorState v-else-if="errorMessage" :message="errorMessage">
-      <AppButton variant="secondary" @click="loadPage(offset)">{{ $t('common.retry') }}</AppButton>
+    <AppErrorState
+      v-if="!canView"
+      :message="$t('account.accessDenied')"
+    />
+    <AppSkeleton
+      v-else-if="loading"
+      variant="list"
+      :lines="4"
+    />
+    <AppErrorState
+      v-else-if="errorMessage"
+      :message="errorMessage"
+    >
+      <AppButton
+        variant="secondary"
+        @click="loadPage(offset)"
+      >
+        {{ $t('common.retry') }}
+      </AppButton>
     </AppErrorState>
-    <AppEmptyState v-else-if="memberships.length === 0" :title="$t('account.noMembers')" />
+    <AppEmptyState
+      v-else-if="memberships.length === 0"
+      :title="$t('account.noMembers')"
+    />
     <template v-else>
       <MembershipList
         :memberships="memberships"
@@ -186,6 +262,50 @@ async function confirmRemove(): Promise<void> {
       />
     </template>
 
+    <AppDialog
+      v-model="addOpen"
+      :title="$t('operator.addExisting')"
+      :persistent="busy"
+    >
+      <form
+        class="members__direct-form"
+        @submit.prevent="confirmAdd"
+      >
+        <p>{{ $t('operator.directMembershipHint') }}</p>
+        <AppInput
+          id="membership-existing-user"
+          v-model="addUserId"
+          :label="$t('workbench.fields.user_id')"
+          required
+          :disabled="busy"
+        />
+        <AppDropdown
+          v-model="addRole"
+          :label="$t('workbench.fields.role')"
+          :options="addRoles"
+          :disabled="busy"
+        />
+        <AppCheckbox
+          id="membership-direct-ack"
+          v-model="addAck"
+          :label="$t('workbench.confirmAction')"
+          :disabled="busy"
+        />
+        <p
+          v-if="addValidation || actionErrorText"
+          role="alert"
+        >
+          {{ addValidation || actionErrorText }}
+        </p>
+        <AppButton
+          type="submit"
+          :loading="busy"
+          :disabled="!addAck"
+        >
+          {{ $t('workbench.add') }}
+        </AppButton>
+      </form>
+    </AppDialog>
     <MemberRoleDialog
       v-model="roleOpen"
       :member-email="roleTarget?.email ?? ''"
@@ -202,11 +322,19 @@ async function confirmRemove(): Promise<void> {
       :error="removeOpen ? actionErrorText : null"
       @confirm="confirmRemove"
     />
-    <ReauthenticateDialog v-model="reauthOpen" @authenticated="resume" @cancelled="cancel" />
+    <ReauthenticateDialog
+      v-model="reauthOpen"
+      @authenticated="resume"
+      @cancelled="cancel"
+    />
   </section>
 </template>
 
 <style scoped>
+.members__direct-form {
+  display: grid;
+  gap: var(--space-16);
+}
 .members {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -229,6 +357,8 @@ async function confirmRemove(): Promise<void> {
 
 .members__subtitle {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
   transition: var(--theme-transition);
@@ -245,11 +375,13 @@ async function confirmRemove(): Promise<void> {
   background: var(--warning-soft);
   color: var(--warning-text);
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   transition: var(--theme-transition);
 }
 
 .members__notice a {
-  font-weight: 500;
+  font-weight: var(--type-body-medium-emphasis-weight);
 }
 </style>

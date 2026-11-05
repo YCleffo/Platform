@@ -18,15 +18,42 @@ const items = computed<MenuItem[]>(() => [
   { id: 'settings', label: t('nav.settings'), icon: Settings },
   { id: 'catalog', label: t('nav.catalog'), icon: LayoutGrid },
   { id: 'separator', kind: 'separator', label: '' },
-  { id: 'theme', label: t('appearance.theme'), icon: theme.value === 'dark' ? Moon : Sun,
-    children: themes.map(value => ({ id: `theme:${value}`, label: t(`appearance.theme_${value}`), checked: theme.value === value, checkType: 'radio' })) },
-  { id: 'density', label: t('appearance.density'), children: densities.map(value => ({ id: `density:${value}`, label: t(`appearance.density_${value}`), checked: appearance.density === value, checkType: 'radio' })) },
+  {
+    id: 'theme',
+    label: t('appearance.theme'),
+    icon: theme.value === 'dark' ? Moon : Sun,
+    children: themes.map((value) => ({
+      id: `theme:${value}`,
+      label: t(`appearance.theme_${value}`),
+      checked: theme.value === value,
+      checkType: 'radio',
+    })),
+  },
+  {
+    id: 'density',
+    label: t('appearance.density'),
+    children: densities.map((value) => ({
+      id: `density:${value}`,
+      label: t(`appearance.density_${value}`),
+      checked: appearance.density === value,
+      checkType: 'radio',
+    })),
+  },
 ]);
 function select(item: MenuItem): void {
   if (item.id.startsWith('theme:')) setTheme(item.id.slice(6) as Theme);
-  else if (item.id.startsWith('density:')) updateAppearance({ density: item.id.slice(8) as Density });
+  else if (item.id.startsWith('density:'))
+    updateAppearance({ density: item.id.slice(8) as Density });
   else void router.push({ name: item.id });
 }
 </script>
 
-<template><AppContextMenu :items="items" :label="$t('menus.siteContext')" @select="select"><slot /></AppContextMenu></template>
+<template>
+  <AppContextMenu
+    :items="items"
+    :label="$t('menus.siteContext')"
+    @select="select"
+  >
+    <slot />
+  </AppContextMenu>
+</template>

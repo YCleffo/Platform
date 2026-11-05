@@ -46,7 +46,10 @@ async function onCreated(): Promise<void> {
         <p class="cabinet__subtitle">{{ $t('cabinet.subtitle') }}</p>
       </div>
       <AppButton @click="openCreate">
-        <Plus :size="18" aria-hidden="true" />
+        <Plus
+          :size="18"
+          aria-hidden="true"
+        />
         {{ $t('cabinet.create') }}
       </AppButton>
     </header>
@@ -70,7 +73,10 @@ async function onCreated(): Promise<void> {
       @next="store.nextPage()"
     />
 
-    <AccountCreateDialog v-model="dialogOpen" @created="onCreated" />
+    <AccountCreateDialog
+      v-model="dialogOpen"
+      @created="onCreated"
+    />
   </section>
 </template>
 
@@ -100,6 +106,7 @@ async function onCreated(): Promise<void> {
 .cabinet__subtitle {
   margin-top: var(--space-4);
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);

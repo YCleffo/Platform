@@ -19,6 +19,12 @@ RUN curl --fail --location --retry 3 \
         go build -mod=readonly -trimpath -buildvcs=false -ldflags '-d -w' -o /out/gosu .
 
 FROM postgres:18.6-trixie@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
+# CVE-2026-109518: update only the package manager; keep PostgreSQL and PGDATA
+# compatible with the pinned 18.6 base. Disable retries while bootstrapping APT.
+RUN apt-get -o Acquire::Retries=0 update \
+    && apt-get -o Acquire::Retries=0 install -y --no-install-recommends --only-upgrade apt libapt-pkg7.0 \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge '3.0.4' \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=gosu-builder --chmod=0755 /out/gosu /usr/local/bin/gosu
 RUN gosu --version \
     && test "$(gosu nobody id -u)" = "$(id -u nobody)"

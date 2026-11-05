@@ -1,32 +1,33 @@
 import { createRouter, createWebHistory, type RouterHistory } from 'vue-router';
 import AppLayout from '@/app/layouts/AppLayout.vue';
 import AuthLayout from '@/app/layouts/AuthLayout.vue';
-import CatalogView from '@/modules/commercial/catalog/CatalogView.vue';
-import AccountCabinetView from '@/modules/commercial/account/AccountCabinetView.vue';
-import AccountLayout from '@/modules/commercial/account/AccountLayout.vue';
-import AccountOverviewView from '@/modules/commercial/account/AccountOverviewView.vue';
-import AccountMembersView from '@/modules/commercial/account/AccountMembersView.vue';
-import AccountBillingView from '@/modules/commercial/billing/AccountBillingView.vue';
-import AccountUsageView from '@/modules/commercial/usage/AccountUsageView.vue';
-import AccountAnalyticsView from '@/modules/commercial/analytics/AccountAnalyticsView.vue';
-import AccountAuditView from '@/modules/commercial/audit/AccountAuditView.vue';
-import SecuritySettingsView from '@/modules/commercial/security/SecuritySettingsView.vue';
-import InvitationsView from '@/modules/commercial/invitations/InvitationsView.vue';
-import InvitationAcceptView from '@/modules/commercial/invitations/InvitationAcceptView.vue';
-import LoginView from '@/modules/commercial/auth/LoginView.vue';
-import RegisterView from '@/modules/commercial/onboarding/RegisterView.vue';
-import VerifyEmailView from '@/modules/commercial/onboarding/VerifyEmailView.vue';
-import MfaChallengeView from '@/modules/commercial/auth/MfaChallengeView.vue';
-import PasswordResetRequestView from '@/modules/commercial/auth/PasswordResetRequestView.vue';
-import PasswordResetConfirmView from '@/modules/commercial/auth/PasswordResetConfirmView.vue';
-import ResendVerificationView from '@/modules/commercial/onboarding/ResendVerificationView.vue';
-import NotFoundView from '@/app/views/NotFoundView.vue';
-import SettingsLayout from '@/modules/settings/SettingsLayout.vue';
-import AppearanceSettingsView from '@/modules/settings/AppearanceSettingsView.vue';
-import ComponentsSettingsView from '@/modules/settings/ComponentsSettingsView.vue';
-import PrivacySettingsView from '@/modules/settings/PrivacySettingsView.vue';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
+
+const CatalogView = () => import('@/modules/commercial/catalog/CatalogView.vue');
+const AccountCabinetView = () => import('@/modules/commercial/account/AccountCabinetView.vue');
+const AccountLayout = () => import('@/modules/commercial/account/AccountLayout.vue');
+const AccountOverviewView = () => import('@/modules/commercial/account/AccountOverviewView.vue');
+const AccountMembersView = () => import('@/modules/commercial/account/AccountMembersView.vue');
+const AccountBillingView = () => import('@/modules/commercial/billing/AccountBillingView.vue');
+const AccountUsageView = () => import('@/modules/commercial/usage/AccountUsageView.vue');
+const AccountAnalyticsView = () => import('@/modules/commercial/analytics/AccountAnalyticsView.vue');
+const AccountAuditView = () => import('@/modules/commercial/audit/AccountAuditView.vue');
+const SecuritySettingsView = () => import('@/modules/commercial/security/SecuritySettingsView.vue');
+const InvitationsView = () => import('@/modules/commercial/invitations/InvitationsView.vue');
+const InvitationAcceptView = () => import('@/modules/commercial/invitations/InvitationAcceptView.vue');
+const LoginView = () => import('@/modules/commercial/auth/LoginView.vue');
+const RegisterView = () => import('@/modules/commercial/onboarding/RegisterView.vue');
+const VerifyEmailView = () => import('@/modules/commercial/onboarding/VerifyEmailView.vue');
+const MfaChallengeView = () => import('@/modules/commercial/auth/MfaChallengeView.vue');
+const PasswordResetRequestView = () => import('@/modules/commercial/auth/PasswordResetRequestView.vue');
+const PasswordResetConfirmView = () => import('@/modules/commercial/auth/PasswordResetConfirmView.vue');
+const ResendVerificationView = () => import('@/modules/commercial/onboarding/ResendVerificationView.vue');
+const NotFoundView = () => import('@/app/views/NotFoundView.vue');
+const SettingsLayout = () => import('@/modules/settings/SettingsLayout.vue');
+const AppearanceSettingsView = () => import('@/modules/settings/AppearanceSettingsView.vue');
+const ComponentsSettingsView = () => import('@/modules/settings/ComponentsSettingsView.vue');
+const PrivacySettingsView = () => import('@/modules/settings/PrivacySettingsView.vue');
 
 export function createAppRouter(history: RouterHistory = createWebHistory(import.meta.env.BASE_URL)) {
   const router = createRouter({
@@ -36,6 +37,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
         path: '/',
         component: AppLayout,
         children: [
+          { path: 'operator', name: 'operator-console', component: () => import('@/modules/commercial/operator/OperatorConsole.vue') },
           { path: '', name: 'catalog', component: CatalogView },
           { path: 'cabinet', name: 'cabinet', component: AccountCabinetView, meta: { requiresAuth: true } },
           {
@@ -119,14 +121,46 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
           { path: 'persons', name: 'admin-persons', component: () => import('@/modules/admin/AdminResourcePageView.vue'), meta: { adminResource: 'persons' } },
           { path: 'accounts', name: 'admin-accounts', component: () => import('@/modules/admin/AdminResourcePageView.vue'), meta: { adminResource: 'accounts' } },
           { path: 'rbac', name: 'admin-rbac', component: () => import('@/modules/admin/AdminRbacView.vue') },
-          { path: 'modules', name: 'admin-modules', component: () => import('@/modules/admin/AdminResourcePageView.vue'), meta: { adminResource: 'modules' } },
+          { path: 'modules', name: 'admin-modules', component: () => import('@/modules/admin/AdminModulesView.vue') },
           { path: 'settings', name: 'admin-settings', component: () => import('@/modules/admin/AdminSettingsView.vue') },
+          { path: 'profile', component: () => import('@/modules/admin/profile/CoreProfileLayout.vue'), children: [
+            { path: '', name: 'admin-profile', component: () => import('@/modules/admin/profile/CorePreferencesView.vue') },
+            { path: 'consents', name: 'admin-profile-consents', component: () => import('@/modules/admin/profile/CoreConsentsView.vue') },
+            { path: 'privacy', name: 'admin-profile-privacy', component: () => import('@/modules/admin/profile/CorePrivacyRequestsView.vue') },
+            { path: 'privacy/:id', name: 'admin-profile-privacy-request', component: () => import('@/modules/admin/profile/CorePrivacyRequestView.vue') },
+          ] },
           { path: 'privacy', name: 'admin-privacy', component: () => import('@/modules/admin/AdminPrivacyView.vue') },
+          { path: 'privacy/requests/:id', name: 'admin-privacy-request', component: () => import('@/modules/admin/privacy/PrivacyOperatorRequestView.vue') },
           { path: 'audit', name: 'admin-audit', component: () => import('@/modules/admin/AdminResourcePageView.vue'), meta: { adminResource: 'audit' } },
-          { path: 'security', name: 'admin-security', component: () => import('@/modules/admin/AdminSecurityView.vue') },
+          { path: 'security', component: () => import('@/modules/admin/AdminSecurityLayout.vue'), children: [
+            { path: '', name: 'admin-security', component: () => import('@/modules/admin/AdminSecurityView.vue') },
+            { path: 'mfa', name: 'admin-security-mfa', component: () => import('@/modules/admin/AdminMfaView.vue') },
+            { path: 'sessions', name: 'admin-security-sessions', component: () => import('@/modules/admin/AdminSessionsView.vue') },
+            { path: 'passkeys', name: 'admin-security-passkeys', component: () => import('@/modules/admin/AdminPasskeysView.vue') },
+            { path: 'identities', name: 'admin-security-identities', component: () => import('@/modules/admin/AdminIdentitiesView.vue') },
+          ] },
           { path: 'finance', name: 'admin-finance', component: () => import('@/modules/admin/AdminFinanceView.vue') },
         ],
       },
+      ...[
+        { path: '/activate', name: 'core-activation', kind: 'activation' },
+        { path: '/password-reset', name: 'core-password-reset', kind: 'password' },
+        { path: '/mfa-recovery', name: 'core-mfa-recovery', kind: 'mfa' },
+      ].map(({ path, name, kind }) => ({
+        path, component: AuthLayout,
+        children: [{ path: '', name, component: () => import('@/modules/admin/auth/CoreAuthLinkView.vue'), props: { kind } }],
+      })),
+      {
+        path: '/auth/callback/:provider', component: AuthLayout,
+        children: [{ path: '', name: 'core-recovery-callback', component: () => import('@/modules/admin/auth/CoreRecoveryCallbackView.vue') }],
+      },
+      ...[
+        { path: '/admin/forgot-password', name: 'core-password-reset-request', kind: 'password' },
+        { path: '/admin/mfa-recovery', name: 'core-mfa-recovery-request', kind: 'mfa' },
+      ].map(({ path, name, kind }) => ({
+        path, component: AuthLayout,
+        children: [{ path: '', name, component: () => import('@/modules/admin/auth/CoreRecoveryRequestView.vue'), props: { kind } }],
+      })),
       {
         path: '/register',
         component: AuthLayout,

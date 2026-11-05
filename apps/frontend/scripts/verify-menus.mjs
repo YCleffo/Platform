@@ -145,7 +145,7 @@ try {
   await page.waitForTimeout(400);
   check(await page.locator('.app-menu__panel').count() === 0, 'Label click must close an open dropdown without replaying its open animation');
   await page.locator('#appearance-font-scale').focus(); await page.keyboard.press('End');
-  await page.locator('#appearance-advanced summary').click();
+  await page.locator('#appearance-advanced .app-disclosure__trigger').click();
   await page.locator('#appearance-spacing-scale').focus(); await page.keyboard.press('End');
   await page.getByRole('radio', { name: 'Spacious', exact: true }).check();
   await page.getByRole('link', { name: 'Components', exact: true }).click();

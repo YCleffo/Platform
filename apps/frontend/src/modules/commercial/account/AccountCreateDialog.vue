@@ -59,8 +59,16 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <AppDialog v-model="open" :title="$t('cabinet.createTitle')" :persistent="submitting">
-    <form class="account-create" novalidate @submit.prevent="onSubmit">
+  <AppDialog
+    v-model="open"
+    :title="$t('cabinet.createTitle')"
+    :persistent="submitting"
+  >
+    <form
+      class="account-create"
+      novalidate
+      @submit.prevent="onSubmit"
+    >
       <AppInput
         id="account-code"
         v-model="form.values.code"
@@ -85,12 +93,28 @@ async function onSubmit(): Promise<void> {
         :error="form.errors.legalName ? $t(form.errors.legalName) : undefined"
         autocomplete="off"
       />
-      <p v-if="message" class="account-create__error" role="alert">{{ message }}</p>
+      <p
+        v-if="message"
+        class="account-create__error"
+        role="alert"
+      >
+        {{ message }}
+      </p>
       <div class="account-create__actions">
-        <AppButton type="button" variant="secondary" :disabled="submitting" @click="open = false">
+        <AppButton
+          type="button"
+          variant="secondary"
+          :disabled="submitting"
+          @click="open = false"
+        >
           {{ $t('common.cancel') }}
         </AppButton>
-        <AppButton type="submit" :loading="submitting">{{ $t('cabinet.create') }}</AppButton>
+        <AppButton
+          type="submit"
+          :loading="submitting"
+        >
+          {{ $t('cabinet.create') }}
+        </AppButton>
       </div>
     </form>
   </AppDialog>
@@ -105,6 +129,7 @@ async function onSubmit(): Promise<void> {
 
 .account-create__error {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--danger-text);

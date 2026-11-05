@@ -85,6 +85,11 @@ function readStored(): Appearance {
 
 const state = reactive<Appearance>(readStored());
 const systemReduced = ref(false);
+let accountInterfacePolicy: { animations: boolean; transparency: boolean } | null = null;
+/** Session-only policy; never writes account data into browser appearance preferences. */
+export function setAccountInterfacePolicy(policy: { animations: boolean; transparency: boolean } | null): void {
+  accountInterfacePolicy = policy; apply();
+}
 let stop: (() => void) | undefined;
 const history = ref<Appearance[]>([]);
 let editSnapshot: Appearance | undefined;
@@ -100,14 +105,17 @@ function apply(): void {
   const root = document.documentElement;
   root.dataset.density = state.density;
   root.dataset.shadows = state.shadows;
-  root.dataset.motion = !state.animations || systemReduced.value ? 'reduced' : 'full';
+  const reduced = !state.animations || systemReduced.value || accountInterfacePolicy?.animations === false;
+  root.dataset.motion = reduced ? 'reduced' : 'full';
+  if (accountInterfacePolicy?.transparency === false) root.dataset.transparency = 'opaque';
+  else delete root.dataset.transparency;
   const values: Record<string, string> = {
     '--ui-density-scale': String({ compact: .85, comfortable: 1, spacious: 1.15 }[state.density]),
     '--ui-font-scale': String(state.fontScale), '--ui-spacing-scale': String(state.spacingScale),
     '--ui-radius-scale': String(state.radiusScale),
     '--ui-button-padding-x': `${state.buttonPaddingX}px`, '--ui-button-padding-y': `${state.buttonPaddingY}px`,
     '--ui-shadow-strength': String({ none: 0, subtle: .6, normal: 1, strong: 1.4 }[state.shadows]),
-    '--ui-motion-scale': String(!state.animations || systemReduced.value ? 0 : 1 / state.animationSpeed),
+    '--ui-motion-scale': String(reduced ? 0 : 1 / state.animationSpeed),
     '--ui-theme-duration': `${state.themeDuration}ms`,
   };
   for (const [key, value] of Object.entries(values)) root.style.setProperty(key, value);

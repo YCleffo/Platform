@@ -28,7 +28,7 @@ final class FileEmailTemplateRendererTest extends Unit
             'signInUrl' => 'https://example.test/sign-in',
         ]);
 
-        assertSame('Сброс пароля', $russian->subject);
+        assertSame('[Platform Core] Сброс пароля', $russian->subject);
         assertSame('ru-RU', $russian->locale);
         assertStringContainsString('Юрий', $russian->textBody);
         assertStringContainsString('a=1&amp;b=2', $russian->htmlBody);

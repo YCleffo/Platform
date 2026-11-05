@@ -46,20 +46,49 @@ function planTarget(plan: Plan): RouteLocationRaw {
       <p class="catalog__subtitle">{{ $t('catalog.subtitle') }}</p>
     </header>
 
-    <div v-if="loading" class="catalog__grid">
-      <AppCard v-for="i in 3" :key="i" padding="default">
-        <AppSkeleton variant="card" :lines="2" />
+    <div
+      v-if="loading"
+      class="catalog__grid"
+    >
+      <AppCard
+        v-for="i in 3"
+        :key="i"
+        padding="default"
+      >
+        <AppSkeleton
+          variant="card"
+          :lines="2"
+        />
       </AppCard>
     </div>
 
-    <AppErrorState v-else-if="errorMessage" :message="errorMessage">
-      <AppButton variant="secondary" @click="load">{{ $t('common.retry') }}</AppButton>
+    <AppErrorState
+      v-else-if="errorMessage"
+      :message="errorMessage"
+    >
+      <AppButton
+        variant="secondary"
+        @click="load"
+      >
+        {{ $t('common.retry') }}
+      </AppButton>
     </AppErrorState>
 
-    <AppEmptyState v-else-if="plans.length === 0" :title="$t('catalog.noPlans')" />
+    <AppEmptyState
+      v-else-if="plans.length === 0"
+      :title="$t('catalog.noPlans')"
+    />
 
-    <div v-else class="catalog__grid">
-      <PlanCard v-for="plan in plans" :key="plan.id" :plan="plan" :target="planTarget(plan)" />
+    <div
+      v-else
+      class="catalog__grid"
+    >
+      <PlanCard
+        v-for="plan in plans"
+        :key="plan.id"
+        :plan="plan"
+        :target="planTarget(plan)"
+      />
     </div>
   </section>
 </template>
@@ -86,6 +115,7 @@ function planTarget(plan: Plan): RouteLocationRaw {
 .catalog__subtitle {
   margin-top: var(--space-4);
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);

@@ -15,6 +15,8 @@ vi.mock('./adminCache', () => ({
   cachedAdminGet: vi.fn(async () => ({ items: [], total: 0 })),
 }));
 vi.mock('@/shared/api/core/adminHttp', () => ({ coreAdminHttp: {} }));
+vi.mock('@/core/admin/adminAuthStore', () => ({ useAdminAuthStore: () => ({ can: () => true }) }));
+vi.mock('@/shared/api/core/configuration', async original => ({ ...await original<typeof import('@/shared/api/core/configuration')>(), coreConfiguration: { settings: vi.fn(async () => []), flags: vi.fn(async () => []), modules: vi.fn(async () => []) } }));
 
 const wrappers: VueWrapper[] = [];
 const translations = () => createI18n({ legacy: false, locale: 'en', messages: { en, ru } });
@@ -46,16 +48,16 @@ describe('admin locale changes without remounting', () => {
     const i18n = translations();
     const wrapper = mount(AdminSettingsView, { global: { plugins: [i18n] } });
     wrappers.push(wrapper);
-    expect(wrapper.text()).toContain(en.admin.putSetting);
+    expect(wrapper.text()).toContain(en.configuration.addSetting);
     i18n.global.locale.value = 'ru';
     await nextTick();
-    expect(wrapper.text()).toContain(ru.admin.putSetting);
+    expect(wrapper.text()).toContain(ru.configuration.addSetting);
     expect(wrapper.get('nav').text()).toContain(ru.admin.featureFlags);
   });
 
   it('updates privacy tabs and advanced operation labels', async () => {
     const i18n = translations();
-    const wrapper = mount(AdminPrivacyView, { global: { plugins: [i18n] } });
+    const wrapper = mount(AdminPrivacyView, { global: { plugins: [i18n], stubs: { PrivacyOperatorRequests: true } } });
     wrappers.push(wrapper);
     await wrapper.get('nav').findAll('button')[2]!.trigger('click');
     expect(wrapper.text()).toContain(en.admin.getErasureCase);

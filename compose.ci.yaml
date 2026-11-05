@@ -143,6 +143,9 @@ services:
       CONTROL_PLANE_DEPLOYMENT_CREDENTIAL: ${CONTROL_PLANE_DEPLOYMENT_CREDENTIAL:-}
       RUNTIME_ENTITLEMENT_TRUSTED_KEYS: '${RUNTIME_ENTITLEMENT_TRUSTED_KEYS:-{}}'
       TEST_ISOLATED_RUNTIME: "1"
+      E2E_ISOLATION_PROOF: ${E2E_ISOLATION_PROOF:-}
+      CORE_AUTH_BROWSER_OIDC_FIXTURE: ${CORE_AUTH_BROWSER_OIDC_FIXTURE:-0}
+      CORE_PRIVACY_BROWSER_FIXTURE: ${CORE_PRIVACY_BROWSER_FIXTURE:-0}
       XDEBUG_MODE: "off"
 
       DB_HOST: postgres-test
@@ -184,6 +187,10 @@ services:
       AUTH_TELEGRAM_REDIRECT_URI: ${AUTH_TELEGRAM_REDIRECT_URI:-http://localhost:5173/auth/callback/telegram}
       AUTH_IDENTIFIER_HMAC_KEY: ${AUTH_IDENTIFIER_HMAC_KEY:?}
       AUTH_PUBLIC_BASE_URL: ${AUTH_PUBLIC_BASE_URL:-http://localhost:5173}
+      AUTH_WEBAUTHN_RP_ID: ${AUTH_WEBAUTHN_RP_ID:-localhost}
+      AUTH_WEBAUTHN_RP_NAME: ${AUTH_WEBAUTHN_RP_NAME:-Platform}
+      AUTH_WEBAUTHN_ORIGINS: ${AUTH_WEBAUTHN_ORIGINS:-http://localhost:5173,http://localhost:8080}
+      AUTH_WEBAUTHN_CHALLENGE_TTL_SECONDS: ${AUTH_WEBAUTHN_CHALLENGE_TTL_SECONDS:-300}
       REDIS_HOST: redis-test
       PROVISIONER_ENABLED: "false"
       PROVISIONER_MAX_ATTEMPTS: "5"
@@ -377,6 +384,13 @@ services:
     ports:
       - "127.0.0.1:${MAILPIT_TEST_UI_PORT:-8026}:8025"
     networks: [control_test_net]
+  mailpit-core-test:
+    profiles: ["test"]
+    extends:
+      service: mailpit-test
+    ports: !override
+      - "127.0.0.1:${CORE_MAILPIT_UI_PORT:-8027}:8025"
+    networks: !override [test_net]
   control-plane-test:
     profiles: ["control-test"]
     build:
@@ -488,7 +502,7 @@ services:
       CONTROL_TOKEN_SECRET: ${CONTROL_TOKEN_SECRET:?}
       CONTROL_YOOKASSA_RETURN_URL: ${CONTROL_YOOKASSA_RETURN_URL:-}
       CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS: ${CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS:-30}
-      CONTROL_DATABASE_URL: postgresql://${CONTROL_POSTGRES_USER:-platform_control}:${CONTROL_POSTGRES_PASSWORD:?}@control-postgres:5432/${CONTROL_POSTGRES_DB:-platform_commercial}?serverVersion=18&charset=utf8
+      CONTROL_DATABASE_URL: postgresql://${CONTROL_RUNTIME_ROLE:-platform_commercial_runtime}:${CONTROL_RUNTIME_PASSWORD:?}@control-postgres:5432/${CONTROL_POSTGRES_DB:-platform_commercial}?serverVersion=18&charset=utf8
       PLATFORM_BASE_DOMAIN: ${PLATFORM_BASE_DOMAIN:-platform.example}
       PROVISIONER_ENABLED: ${PROVISIONER_ENABLED:-false}
       PROVISIONER_PROVIDER: ${PROVISIONER_PROVIDER:-local-docker}

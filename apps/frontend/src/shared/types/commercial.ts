@@ -43,7 +43,7 @@ export interface CurrentUser {
 
 export type AccountRole = 'owner' | 'admin' | 'billing' | 'technical';
 export type AccountStatus = 'draft' | 'active' | 'suspended' | 'closed';
-export type OnboardingState = 'profile_required' | 'catalog_selection_pending' | 'ready_for_subscription';
+export type OnboardingState = 'profile_required' | 'catalog_selection_pending' | 'ready_for_subscription' | 'completed';
 
 export interface CommercialAccountSummary {
   id: string;
@@ -276,8 +276,8 @@ export interface Subscription {
   renewal_required: boolean;
   commercial_account_id: string;
   billing_profile_id: string;
-  current_period_start: string;
-  current_period_end: string;
+  current_period_start: string | null;
+  current_period_end: string | null;
   created_at: string;
   updated_at: string;
   items: SubscriptionItem[];
@@ -370,8 +370,8 @@ export interface Invoice {
   subscription_id: string;
   billing_profile_id: string;
   billing_reason: 'subscription_create' | 'subscription_renewal';
-  service_period_start: string;
-  service_period_end: string;
+  service_period_start: string | null;
+  service_period_end: string | null;
   status: 'issued' | 'paid' | 'void';
   currency: string;
   total_minor: number;
@@ -421,7 +421,7 @@ export interface SavedPaymentMethod {
   id: string;
   method_type: string;
   status: 'active' | 'disabled';
-  title: string;
+  title: string | null;
   card_brand: string | null;
   last4: string | null;
   expiry_month: number | null;

@@ -15,15 +15,16 @@ use App\Core\Client\Domain\ClientContext;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Yiisoft\Http\Status;
+use Yiisoft\Router\CurrentRoute;
 
 final readonly class ExternalIdentityUnlinkAction
 {
-    public function __invoke(ServerRequestInterface $request, ExternalAuthService $external, ResponseFactory $responses): ResponseInterface
+    public function __invoke(ServerRequestInterface $request, ExternalAuthService $external, ResponseFactory $responses, CurrentRoute $route): ResponseInterface
     {
         $identity = AuthenticatedIdentity::fromRequest($request);
         try {
             $external->unlink(
-                (string) $request->getAttribute('provider'),
+                (string) $route->getArgument('provider'),
                 $identity->accountId,
                 $identity->sessionId,
                 ClientContext::fromRequest($request),

@@ -22,6 +22,8 @@ docker compose exec -T backend composer yii-config-rebuild
 if ($LASTEXITCODE -ne 0) { throw 'Core configuration rebuild failed.' }
 python scripts/database/migrate.py commercial
 if ($LASTEXITCODE -ne 0) { throw 'Commercial migration failed.' }
+python scripts/database/provision-runtime-roles.py
+if ($LASTEXITCODE -ne 0) { throw 'Runtime database role provisioning failed.' }
 docker compose --profile control up -d --wait --wait-timeout 120
 if ($LASTEXITCODE -ne 0) { throw 'Runtime readiness failed; inspect compose logs.' }
 docker compose exec -T backend php yii db:check

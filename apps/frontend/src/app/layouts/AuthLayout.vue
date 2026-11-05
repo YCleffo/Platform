@@ -16,31 +16,52 @@ function toggleLocale(): void {
 
 <template>
   <SiteContextMenu>
-  <div class="auth-layout">
-    <header class="auth-layout__header">
-      <RouterLink class="brand" :to="{ name: 'catalog' }" :aria-label="$t('app.name')">
-        <span class="brand__mark" aria-hidden="true">
-          <Layers :size="18" />
-        </span>
-        <span class="brand__name">{{ $t('app.name') }}</span>
-      </RouterLink>
-      <div class="auth-layout__actions">
-        <AppIconButton :label="isDark ? $t('theme.light') : $t('theme.dark')" @click="toggleTheme">
-          <Sun v-if="isDark" :size="20" aria-hidden="true" />
-          <Moon v-else :size="20" aria-hidden="true" />
-        </AppIconButton>
-        <AppIconButton :label="`${locale === 'ru' ? 'RU' : 'EN'}: ${$t('theme.locale')}`" @click="toggleLocale">
-          <span class="auth-layout__locale">{{ locale === 'ru' ? 'RU' : 'EN' }}</span>
-        </AppIconButton>
-      </div>
-    </header>
+    <div class="auth-layout">
+      <header class="auth-layout__header">
+        <RouterLink
+          class="brand"
+          :to="{ name: 'catalog' }"
+          :aria-label="$t('app.name')"
+        >
+          <span
+            class="brand__mark"
+            aria-hidden="true"
+          >
+            <Layers :size="18" />
+          </span>
+          <span class="brand__name">{{ $t('app.name') }}</span>
+        </RouterLink>
+        <div class="auth-layout__actions">
+          <AppIconButton
+            :label="isDark ? $t('theme.light') : $t('theme.dark')"
+            @click="toggleTheme"
+          >
+            <Sun
+              v-if="isDark"
+              :size="20"
+              aria-hidden="true"
+            />
+            <Moon
+              v-else
+              :size="20"
+              aria-hidden="true"
+            />
+          </AppIconButton>
+          <AppIconButton
+            :label="`${locale === 'ru' ? 'RU' : 'EN'}: ${$t('theme.locale')}`"
+            @click="toggleLocale"
+          >
+            <span class="auth-layout__locale">{{ locale === 'ru' ? 'RU' : 'EN' }}</span>
+          </AppIconButton>
+        </div>
+      </header>
 
-    <main class="auth-layout__main">
-      <div class="auth-layout__card">
-        <RouterView />
-      </div>
-    </main>
-  </div>
+      <main class="auth-layout__main">
+        <div class="auth-layout__card">
+          <RouterView />
+        </div>
+      </main>
+    </div>
   </SiteContextMenu>
 </template>
 
@@ -86,6 +107,7 @@ function toggleLocale(): void {
 
 .brand__name {
   font-size: var(--type-h3-size);
+  letter-spacing: var(--type-h3-tracking);
   line-height: var(--type-h3-line);
   font-weight: var(--type-h3-weight);
 }
@@ -132,5 +154,9 @@ function toggleLocale(): void {
     padding: var(--space-48) var(--page-pad-x-tablet);
   }
 }
-@media (max-width: 479px) { .brand__name { display: none; } }
+@media (max-width: 479px) {
+  .brand__name {
+    display: none;
+  }
+}
 </style>

@@ -8,7 +8,12 @@ const { toasts, dismiss } = useToast();
 
 <template>
   <Teleport to="body">
-    <div class="app-toast-host" role="region" aria-live="polite" :aria-label="$t('common.notifications')">
+    <div
+      class="app-toast-host"
+      role="region"
+      aria-live="polite"
+      :aria-label="$t('common.notifications')"
+    >
       <TransitionGroup name="toast">
         <div
           v-for="toast in toasts"
@@ -17,15 +22,37 @@ const { toasts, dismiss } = useToast();
           :class="`app-toast--${toast.kind}`"
           role="status"
         >
-          <span class="app-toast__icon" aria-hidden="true">
-            <CircleAlert v-if="toast.kind === 'error'" :size="18" />
-            <TriangleAlert v-else-if="toast.kind === 'warning'" :size="18" />
-            <CircleCheck v-else-if="toast.kind === 'success'" :size="18" />
-            <Info v-else :size="18" />
+          <span
+            class="app-toast__icon"
+            aria-hidden="true"
+          >
+            <CircleAlert
+              v-if="toast.kind === 'error'"
+              :size="18"
+            />
+            <TriangleAlert
+              v-else-if="toast.kind === 'warning'"
+              :size="18"
+            />
+            <CircleCheck
+              v-else-if="toast.kind === 'success'"
+              :size="18"
+            />
+            <Info
+              v-else
+              :size="18"
+            />
           </span>
           <span class="app-toast__message">{{ toast.message }}</span>
-          <AppIconButton size="s" :label="$t('common.dismiss')" @click="dismiss(toast.id)">
-            <X :size="16" aria-hidden="true" />
+          <AppIconButton
+            size="s"
+            :label="$t('common.dismiss')"
+            @click="dismiss(toast.id)"
+          >
+            <X
+              :size="16"
+              aria-hidden="true"
+            />
           </AppIconButton>
         </div>
       </TransitionGroup>
@@ -82,6 +109,7 @@ const { toasts, dismiss } = useToast();
 .app-toast__message {
   flex: 1;
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-1);
@@ -91,7 +119,9 @@ const { toasts, dismiss } = useToast();
 .toast-enter-active,
 .toast-leave-active {
   transition:
-    var(--theme-transition), opacity var(--motion-enter-duration) var(--motion-ease), transform var(--motion-enter-duration) var(--motion-ease);
+    var(--theme-transition),
+    opacity var(--motion-enter-duration) var(--motion-ease),
+    transform var(--motion-enter-duration) var(--motion-ease);
 }
 
 .toast-enter-from,

@@ -10,6 +10,7 @@ use App\Api\Shared\OffsetPagination;
 use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Privacy\Application\DataSubjectRequestService;
 use App\Core\Privacy\Application\DataSubjectRequestFilter;
+use App\Core\Privacy\Application\ProcessingPurposeRegistry;
 use DomainException;
 use DateTimeImmutable;
 use Psr\Http\Message\ResponseInterface;
@@ -20,9 +21,15 @@ use Yiisoft\Router\CurrentRoute;
 final readonly class ManagePrivacyRequestsAction
 {
     public function __invoke(ServerRequestInterface $request, CurrentRoute $route,
-        DataSubjectRequestService $service, ResponseFactory $responses): ResponseInterface
+        DataSubjectRequestService $service, ResponseFactory $responses,
+        ProcessingPurposeRegistry $purposes): ResponseInterface
     {
         $operation = (string) $route->getArgument('operation');
+        if ($operation === 'options') {
+            $codes = $purposes->codes();
+            sort($codes, SORT_STRING);
+            return $responses->success(['purposeCodes' => $codes]);
+        }
         if ($operation === 'list') {
             $query = $request->getQueryParams();
             if (array_diff(array_keys($query), ['limit', 'offset', 'status', 'requestType', 'subjectPersonId', 'overdue']) !== []) {

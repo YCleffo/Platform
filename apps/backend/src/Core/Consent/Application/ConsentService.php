@@ -58,8 +58,15 @@ final readonly class ConsentService
     }
 
     /** @return array<string, mixed> */
-    public function grant(string $accountId, string $code, string $locale, string $requestId): array
+    public function grant(string $accountId, string $code, string $locale, string $requestId, ?string $reviewedVersion = null, ?string $reviewedSha256 = null): array
     {
+        if ($reviewedVersion !== null || $reviewedSha256 !== null) {
+            $definition = $this->definitions->get($code) ?? throw new UnknownConsentException('Unknown consent code.');
+            if ($definition->documentText === null || $reviewedVersion !== $definition->currentDocumentVersion
+                || $reviewedSha256 !== $definition->currentDocumentSha256Hex) {
+                throw new ConsentReviewMismatchException('The reviewed consent document is no longer available.');
+            }
+        }
         $personId = $this->personForAccount($accountId);
         return $this->grantForSubject($accountId, $personId, $code, $locale, $requestId);
     }

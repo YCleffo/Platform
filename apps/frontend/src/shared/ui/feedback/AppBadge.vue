@@ -13,8 +13,15 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <span class="app-badge" :class="[`app-badge--${variant}`, `app-badge--${size}`]">
-    <span v-if="dot" class="app-badge__dot" aria-hidden="true"></span>
+  <span
+    class="app-badge"
+    :class="[`app-badge--${variant}`, `app-badge--${size}`]"
+  >
+    <span
+      v-if="dot"
+      class="app-badge__dot"
+      aria-hidden="true"
+    ></span>
     <slot />
   </span>
 </template>
@@ -25,12 +32,16 @@ withDefaults(defineProps<Props>(), {
   align-items: center;
   gap: var(--gap-xs);
   border-radius: var(--radius-badge-pill);
-  white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .app-badge--s {
   padding: var(--pad-badge-compact-vertical) var(--pad-badge-compact-horizontal);
   font-size: var(--type-body-caption-size);
+  letter-spacing: var(--type-body-caption-tracking);
   line-height: var(--type-body-caption-line);
   font-weight: var(--type-body-caption-weight);
 }
@@ -38,6 +49,7 @@ withDefaults(defineProps<Props>(), {
 .app-badge--m {
   padding: var(--pad-badge-default-vertical) var(--pad-badge-default-horizontal);
   font-size: var(--type-body-small-size);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
 }
@@ -79,6 +91,7 @@ withDefaults(defineProps<Props>(), {
 }
 
 .app-badge__dot {
+  flex-shrink: 0;
   width: 6px;
   height: 6px;
   border-radius: var(--radius-circle);

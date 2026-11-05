@@ -41,12 +41,19 @@ withDefaults(defineProps<Props>(), {
 }
 
 .app-card--interactive {
-  transition:
-    var(--theme-transition);
+  transition: var(--theme-transition);
 }
 
 .app-card--interactive:hover {
   border-color: var(--border-strong);
   transition: var(--theme-transition);
+}
+@media (max-width: 767px) {
+  .app-card--default {
+    padding: var(--pad-card-compact);
+  }
+  .app-card--large {
+    padding: var(--pad-card-default);
+  }
 }
 </style>

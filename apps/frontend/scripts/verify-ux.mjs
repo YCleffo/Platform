@@ -59,14 +59,14 @@ try {
   await page.locator('#appearance-font-scale').focus(); await page.keyboard.press('End');
   await page.locator('#appearance-undo').click();
   check(await page.locator('#appearance-font-scale').inputValue() === '1', 'Keyboard edit undo failed');
-  await page.locator('#appearance-advanced summary').click();
+  await page.locator('#appearance-advanced .app-disclosure__trigger').click();
   await page.getByRole('button', { name: 'Increase Button horizontal padding', exact: true }).click();
   check(await page.locator('#appearance-button-x').inputValue() === '17', 'Advanced controls are inaccessible');
   await page.locator('#appearance-reset').click();
   await page.locator('#appearance-undo').click();
   check(await page.locator('#appearance-button-x').inputValue() === '17', 'Full reset cannot be undone');
   await page.locator('#appearance-reset').click();
-  await page.locator('#appearance-advanced summary').click();
+  await page.locator('#appearance-advanced .app-disclosure__trigger').click();
   await page.evaluate(() => scrollTo(0, 0));
   await shot(page, 'ux-settings-desktop-light', true);
   await page.getByRole('radio', { name: 'Dark', exact: true }).check();
@@ -109,7 +109,7 @@ try {
   await page.waitForFunction(() => !document.documentElement.hasAttribute('data-theme-changing'));
   await page.evaluate(() => scrollTo(0, 0)); await shot(page, 'ux-settings-mobile-ru-dark');
   await page.locator('#appearance-font-scale').scrollIntoViewIfNeeded(); await shot(page, 'ux-settings-mobile-ranges');
-  await page.locator('#appearance-advanced summary').click();
+  await page.locator('#appearance-advanced .app-disclosure__trigger').click();
   await page.locator('#appearance-button-x').scrollIntoViewIfNeeded(); await overflow(page); await shot(page, 'ux-settings-mobile-advanced');
   await page.locator('#appearance-animations').scrollIntoViewIfNeeded(); await shot(page, 'ux-settings-mobile-motion');
   await page.locator('#appearance-preset-reading').click();

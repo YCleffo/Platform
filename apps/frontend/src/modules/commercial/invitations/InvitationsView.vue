@@ -78,7 +78,11 @@ const rangeLabel = computed(() => {
   });
 });
 
-async function onCreate(payload: { email: string; role: InvitationRole; idempotencyKey: string }): Promise<void> {
+async function onCreate(payload: {
+  email: string;
+  role: InvitationRole;
+  idempotencyKey: string;
+}): Promise<void> {
   const body: CreateInvitationPayload = { email: payload.email, role: payload.role };
   const completed = await create(body, payload.idempotencyKey);
   if (completed) {
@@ -122,25 +126,56 @@ async function confirmRevoke(): Promise<void> {
         <h2 class="invitations__title">{{ $t('invitations.title') }}</h2>
         <p class="invitations__subtitle">{{ $t('invitations.subtitle') }}</p>
       </div>
-      <AppButton v-if="canManage" @click="createOpen = true">
-        <Plus :size="18" aria-hidden="true" />
+      <AppButton
+        v-if="canManage"
+        @click="createOpen = true"
+      >
+        <Plus
+          :size="18"
+          aria-hidden="true"
+        />
         {{ $t('invitations.invite') }}
       </AppButton>
     </header>
 
-    <div v-if="needsMfaEnrollment" class="invitations__notice" role="alert">
+    <div
+      v-if="needsMfaEnrollment"
+      class="invitations__notice"
+      role="alert"
+    >
       <p>{{ $t('security.mfaRequired') }}</p>
       <RouterLink :to="{ name: 'security' }">{{ $t('security.goToSecurity') }}</RouterLink>
     </div>
 
-    <AppErrorState v-if="!canManage" :message="$t('invitations.accessDenied')" />
-    <AppSkeleton v-else-if="loading" variant="list" :lines="4" />
-    <AppErrorState v-else-if="errorMessage" :message="errorMessage">
-      <AppButton variant="secondary" @click="loadPage(offset)">{{ $t('common.retry') }}</AppButton>
+    <AppErrorState
+      v-if="!canManage"
+      :message="$t('invitations.accessDenied')"
+    />
+    <AppSkeleton
+      v-else-if="loading"
+      variant="list"
+      :lines="4"
+    />
+    <AppErrorState
+      v-else-if="errorMessage"
+      :message="errorMessage"
+    >
+      <AppButton
+        variant="secondary"
+        @click="loadPage(offset)"
+      >
+        {{ $t('common.retry') }}
+      </AppButton>
     </AppErrorState>
-    <AppEmptyState v-else-if="invitations.length === 0" :title="$t('invitations.empty')" />
+    <AppEmptyState
+      v-else-if="invitations.length === 0"
+      :title="$t('invitations.empty')"
+    />
     <template v-else>
-      <ul class="invitations__list" role="list">
+      <ul
+        class="invitations__list"
+        role="list"
+      >
         <InvitationCard
           v-for="invitation in invitations"
           :key="invitation.id"
@@ -176,18 +211,38 @@ async function confirmRevoke(): Promise<void> {
       size="s"
     >
       <div class="revoke">
-        <p v-if="revokeOpen && actionErrorText" class="revoke__error" role="alert">{{ actionErrorText }}</p>
+        <p
+          v-if="revokeOpen && actionErrorText"
+          class="revoke__error"
+          role="alert"
+        >
+          {{ actionErrorText }}
+        </p>
         <div class="revoke__actions">
-          <AppButton type="button" variant="secondary" :disabled="busy" @click="revokeOpen = false">
+          <AppButton
+            type="button"
+            variant="secondary"
+            :disabled="busy"
+            @click="revokeOpen = false"
+          >
             {{ $t('common.cancel') }}
           </AppButton>
-          <AppButton type="button" variant="danger" :loading="busy" @click="confirmRevoke">
+          <AppButton
+            type="button"
+            variant="danger"
+            :loading="busy"
+            @click="confirmRevoke"
+          >
             {{ $t('invitations.revoke') }}
           </AppButton>
         </div>
       </div>
     </AppDialog>
-    <ReauthenticateDialog v-model="reauthOpen" @authenticated="resume" @cancelled="cancel" />
+    <ReauthenticateDialog
+      v-model="reauthOpen"
+      @authenticated="resume"
+      @cancelled="cancel"
+    />
   </section>
 </template>
 
@@ -218,6 +273,8 @@ async function confirmRevoke(): Promise<void> {
 .invitations__subtitle {
   margin-top: var(--space-4);
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
   transition: var(--theme-transition);
@@ -240,6 +297,8 @@ async function confirmRevoke(): Promise<void> {
   background: var(--warning-soft);
   color: var(--warning-text);
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   transition: var(--theme-transition);
 }
@@ -252,6 +311,8 @@ async function confirmRevoke(): Promise<void> {
 
 .revoke__error {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--danger-text);
   transition: var(--theme-transition);

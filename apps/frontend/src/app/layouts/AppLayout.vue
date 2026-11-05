@@ -2,11 +2,22 @@
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { Building2, Layers, LayoutGrid, LogIn, LogOut, Moon, Settings, Sun } from '@/shared/ui/icons';
+import {
+  Building2,
+  Layers,
+  LayoutGrid,
+  LogIn,
+  LogOut,
+  Moon,
+  Settings,
+  Sun,
+} from '@/shared/ui/icons';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useTheme } from '@/app/theme';
 import { setLocale } from '@/shared/i18n';
 import AppHeader from '@/shared/ui/navigation/AppHeader.vue';
+import AppBreadcrumbs from '@/shared/ui/navigation/AppBreadcrumbs.vue';
+import { breadcrumbs } from '@/shared/navigation/breadcrumbs';
 import AppBottomNav from '@/shared/ui/navigation/AppBottomNav.vue';
 import type { BottomNavItem } from '@/shared/ui/navigation/AppBottomNav.vue';
 import AppMobileMenu from '@/shared/ui/navigation/AppMobileMenu.vue';
@@ -19,10 +30,15 @@ const route = useRoute();
 const { t, locale } = useI18n();
 const { isDark, toggleTheme } = useTheme();
 const menuOpen = ref(false);
+const headerCrumbs = computed(() => breadcrumbs(route.name, route.params, (key) => t(key)));
 
-const primaryNavigation = computed(() => typeof route.meta.primaryNavigation === 'string'
-  ? route.meta.primaryNavigation : typeof route.name === 'string' ? route.name : '');
-const sectionTitle = computed(() => bottomItems.value.find((item) => item.routeName === primaryNavigation.value)?.label ?? t('app.name'));
+const primaryNavigation = computed(() =>
+  typeof route.meta.primaryNavigation === 'string'
+    ? route.meta.primaryNavigation
+    : typeof route.name === 'string'
+      ? route.name
+      : '',
+);
 
 const bottomItems = computed<BottomNavItem[]>(() => [
   { label: t('nav.catalog'), icon: LayoutGrid, routeName: 'catalog' },
@@ -44,56 +60,123 @@ async function logout(): Promise<void> {
 
 <template>
   <SiteContextMenu>
-  <div class="app-layout">
-    <AppHeader>
-      <template #leading>
-        <RouterLink class="brand" :to="{ name: 'catalog' }" :aria-label="$t('app.name')">
-          <span class="brand__mark" aria-hidden="true">
-            <Layers :size="18" />
-          </span>
-          <span class="brand__name">{{ $t('app.name') }}</span>
-        </RouterLink>
-      </template>
-
-      <template #center>
-        <span class="app-layout__mobile-title">{{ sectionTitle }}</span>
-        <nav class="app-layout__nav" :aria-label="$t('nav.primary')">
-          <RouterLink v-for="item in bottomItems" :key="item.routeName"
-            class="app-layout__nav-link" :class="{ 'app-layout__nav-link--active': primaryNavigation === item.routeName }"
-            active-class="" exact-active-class="" :to="{ name: item.routeName }"
-            :aria-current="primaryNavigation === item.routeName ? 'page' : undefined">
-            {{ item.label }}
+    <div class="app-layout">
+      <AppHeader>
+        <template #leading>
+          <RouterLink
+            class="brand"
+            :to="{ name: 'catalog' }"
+            :aria-label="$t('app.name')"
+          >
+            <span
+              class="brand__mark"
+              aria-hidden="true"
+            >
+              <Layers :size="18" />
+            </span>
+            <span class="brand__name">{{ $t('app.name') }}</span>
           </RouterLink>
-        </nav>
-      </template>
+        </template>
 
-      <template #actions>
-        <AppIconButton class="app-layout__desktop-action" :label="isDark ? $t('theme.light') : $t('theme.dark')" @click="toggleTheme">
-          <Sun v-if="isDark" :size="20" aria-hidden="true" />
-          <Moon v-else :size="20" aria-hidden="true" />
-        </AppIconButton>
-        <AppIconButton class="app-layout__desktop-action" :label="`${localeLabel}: ${$t('theme.locale')}`" @click="toggleLocale">
-          <span class="app-layout__locale">{{ localeLabel }}</span>
-        </AppIconButton>
-        <AppIconButton v-if="auth.isAuthenticated" class="app-layout__desktop-action" :label="$t('nav.logout')" @click="logout">
-          <LogOut :size="20" aria-hidden="true" />
-        </AppIconButton>
-        <AppIconButton v-else class="app-layout__desktop-action" :label="$t('nav.login')" @click="router.push({ name: 'login' })">
-          <LogIn :size="20" aria-hidden="true" />
-        </AppIconButton>
-        <AppIconButton class="app-layout__menu-button" :label="$t('nav.menu')" aria-haspopup="dialog" :aria-expanded="menuOpen" @click="menuOpen = true">
-          <span class="hamburger" aria-hidden="true"><span /><span /><span /></span>
-        </AppIconButton>
-      </template>
-    </AppHeader>
+        <template #center>
+          <AppBreadcrumbs
+            class="app-layout__mobile-title"
+            :items="headerCrumbs"
+          />
+          <nav
+            class="app-layout__nav"
+            :aria-label="$t('nav.primary')"
+          >
+            <RouterLink
+              v-for="item in bottomItems"
+              :key="item.routeName"
+              class="app-layout__nav-link"
+              :class="{ 'app-layout__nav-link--active': primaryNavigation === item.routeName }"
+              active-class=""
+              exact-active-class=""
+              :to="{ name: item.routeName }"
+              :aria-current="primaryNavigation === item.routeName ? 'page' : undefined"
+            >
+              {{ item.label }}
+            </RouterLink>
+          </nav>
+        </template>
 
-    <main class="app-layout__main">
-      <RouterView />
-    </main>
+        <template #actions>
+          <AppIconButton
+            class="app-layout__desktop-action"
+            :label="isDark ? $t('theme.light') : $t('theme.dark')"
+            @click="toggleTheme"
+          >
+            <Sun
+              v-if="isDark"
+              :size="20"
+              aria-hidden="true"
+            />
+            <Moon
+              v-else
+              :size="20"
+              aria-hidden="true"
+            />
+          </AppIconButton>
+          <AppIconButton
+            class="app-layout__desktop-action"
+            :label="`${localeLabel}: ${$t('theme.locale')}`"
+            @click="toggleLocale"
+          >
+            <span class="app-layout__locale">{{ localeLabel }}</span>
+          </AppIconButton>
+          <AppIconButton
+            v-if="auth.isAuthenticated"
+            class="app-layout__desktop-action"
+            :label="$t('nav.logout')"
+            @click="logout"
+          >
+            <LogOut
+              :size="20"
+              aria-hidden="true"
+            />
+          </AppIconButton>
+          <AppIconButton
+            v-else
+            class="app-layout__desktop-action"
+            :label="$t('nav.login')"
+            @click="router.push({ name: 'login' })"
+          >
+            <LogIn
+              :size="20"
+              aria-hidden="true"
+            />
+          </AppIconButton>
+          <AppIconButton
+            class="app-layout__menu-button"
+            :label="$t('nav.menu')"
+            aria-haspopup="dialog"
+            :aria-expanded="menuOpen"
+            @click="menuOpen = true"
+          >
+            <span
+              class="hamburger"
+              aria-hidden="true"
+            >
+              <span />
+              <span />
+              <span />
+            </span>
+          </AppIconButton>
+        </template>
+      </AppHeader>
 
-    <AppBottomNav :items="bottomItems" :active-route-name="primaryNavigation" />
-    <AppMobileMenu v-model="menuOpen" />
-  </div>
+      <main class="app-layout__main">
+        <RouterView />
+      </main>
+
+      <AppBottomNav
+        :items="bottomItems"
+        :active-route-name="primaryNavigation"
+      />
+      <AppMobileMenu v-model="menuOpen" />
+    </div>
   </SiteContextMenu>
 </template>
 
@@ -126,6 +209,7 @@ async function logout(): Promise<void> {
 
 .brand__name {
   font-size: var(--type-h3-size);
+  letter-spacing: var(--type-h3-tracking);
   line-height: var(--type-h3-line);
   font-weight: var(--type-h3-weight);
 }
@@ -136,9 +220,10 @@ async function logout(): Promise<void> {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: var(--type-h3-size);
-  line-height: var(--type-h3-line);
-  font-weight: var(--type-h3-weight);
+  font-size: var(--type-body-small-size);
+  letter-spacing: var(--type-body-small-tracking);
+  line-height: var(--type-body-small-line);
+  font-weight: var(--type-body-small-weight);
   color: var(--text-1);
   transition: var(--theme-transition);
 }
@@ -179,7 +264,8 @@ async function logout(): Promise<void> {
 .app-layout__main {
   flex: 1;
   width: 100%;
-  padding: var(--page-pad-y) var(--page-pad-x) calc(var(--bottom-nav-h) + var(--space-24) + env(safe-area-inset-bottom));
+  padding: var(--page-pad-y) var(--page-pad-x)
+    calc(var(--bottom-nav-h) + var(--space-24) + env(safe-area-inset-bottom));
 }
 
 @media (min-width: 768px) {
@@ -207,6 +293,7 @@ async function logout(): Promise<void> {
     padding: var(--space-8) var(--space-12);
     border-radius: var(--radius-control-m);
     font-size: var(--type-body-medium-emphasis-size);
+    letter-spacing: var(--type-body-medium-emphasis-tracking);
     line-height: var(--type-body-medium-emphasis-line);
     font-weight: var(--type-body-medium-emphasis-weight);
     color: var(--text-2);
@@ -230,5 +317,9 @@ async function logout(): Promise<void> {
   }
 }
 
-@media (max-width: 479px) { .brand__name { display: none; } }
+@media (max-width: 479px) {
+  .brand__name {
+    display: none;
+  }
+}
 </style>

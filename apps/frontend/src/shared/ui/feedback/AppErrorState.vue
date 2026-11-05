@@ -15,12 +15,28 @@ defineEmits<{ retry: [] }>();
 </script>
 
 <template>
-  <div class="app-error" role="alert">
+  <div
+    class="app-error"
+    role="alert"
+  >
     <div class="app-error__icon">
-      <CircleAlert :size="24" aria-hidden="true" />
+      <CircleAlert
+        :size="24"
+        aria-hidden="true"
+      />
     </div>
-    <p v-if="title" class="app-error__title">{{ title }}</p>
-    <p v-if="message" class="app-error__message">{{ message }}</p>
+    <p
+      v-if="title"
+      class="app-error__title"
+    >
+      {{ title }}
+    </p>
+    <p
+      v-if="message"
+      class="app-error__message"
+    >
+      {{ message }}
+    </p>
     <slot />
   </div>
 </template>
@@ -49,6 +65,7 @@ defineEmits<{ retry: [] }>();
 
 .app-error__title {
   font-size: var(--type-body-large-emphasis-size);
+  letter-spacing: var(--type-body-large-emphasis-tracking);
   line-height: var(--type-body-large-emphasis-line);
   font-weight: var(--type-body-large-emphasis-weight);
   color: var(--text-1);
@@ -57,6 +74,7 @@ defineEmits<{ retry: [] }>();
 
 .app-error__message {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);

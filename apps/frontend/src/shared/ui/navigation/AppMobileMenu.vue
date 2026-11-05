@@ -45,12 +45,20 @@ const panel = ref<HTMLElement | null>(null);
 const { activate, deactivate } = useFocusTrap(panel);
 let overlayActive = false;
 
-const accountId = computed(() => (typeof route.params.accountId === 'string' ? route.params.accountId : null));
+const accountId = computed(() =>
+  typeof route.params.accountId === 'string' ? route.params.accountId : null,
+);
 const detail = computed(() => accountStore.accountDetail);
 const currentRoute = computed(() => (typeof route.name === 'string' ? route.name : ''));
 const accountInitials = computed(() => {
   const name = detail.value?.display_name?.trim() ?? '';
-  return name === '' ? '•' : name.split(/\s+/).slice(0, 2).map(part => part[0]?.toUpperCase() ?? '').join('');
+  return name === ''
+    ? '•'
+    : name
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? '')
+        .join('');
 });
 
 const mainLinks = computed<MenuLink[]>(() => [
@@ -64,21 +72,56 @@ const accountLinks = computed<MenuLink[]>(() => {
     return [];
   }
   const links: MenuLink[] = [
-    { label: t('account.overview'), to: { name: 'account-overview', params: { accountId: accountId.value } }, routeName: 'account-overview', icon: LayoutGrid },
+    {
+      label: t('account.overview'),
+      to: { name: 'account-overview', params: { accountId: accountId.value } },
+      routeName: 'account-overview',
+      icon: LayoutGrid,
+    },
   ];
   if (detail.value.permissions.view_members) {
-    links.push({ label: t('account.members'), to: { name: 'account-members', params: { accountId: accountId.value } }, routeName: 'account-members', icon: Building2 });
+    links.push({
+      label: t('account.members'),
+      to: { name: 'account-members', params: { accountId: accountId.value } },
+      routeName: 'account-members',
+      icon: Building2,
+    });
   }
   if (detail.value.permissions.manage_members) {
-    links.push({ label: t('invitations.title'), to: { name: 'account-invitations', params: { accountId: accountId.value } }, routeName: 'account-invitations', icon: Eye });
+    links.push({
+      label: t('invitations.title'),
+      to: { name: 'account-invitations', params: { accountId: accountId.value } },
+      routeName: 'account-invitations',
+      icon: Eye,
+    });
   }
   if (detail.value.permissions.manage_billing) {
-    links.push({ label: t('billing.title'), to: { name: 'account-billing', params: { accountId: accountId.value } }, routeName: 'account-billing', icon: Tag });
+    links.push({
+      label: t('billing.title'),
+      to: { name: 'account-billing', params: { accountId: accountId.value } },
+      routeName: 'account-billing',
+      icon: Tag,
+    });
   }
-  links.push({ label: t('usage.title'), to: { name: 'account-usage', params: { accountId: accountId.value } }, routeName: 'account-usage', icon: Layers });
-  links.push({ label: t('analytics.title'), to: { name: 'account-analytics', params: { accountId: accountId.value } }, routeName: 'account-analytics', icon: Layers });
+  links.push({
+    label: t('usage.title'),
+    to: { name: 'account-usage', params: { accountId: accountId.value } },
+    routeName: 'account-usage',
+    icon: Layers,
+  });
+  links.push({
+    label: t('analytics.title'),
+    to: { name: 'account-analytics', params: { accountId: accountId.value } },
+    routeName: 'account-analytics',
+    icon: Layers,
+  });
   if (detail.value.permissions.manage_members) {
-    links.push({ label: t('audit.title'), to: { name: 'account-audit', params: { accountId: accountId.value } }, routeName: 'account-audit', icon: ShieldCheck });
+    links.push({
+      label: t('audit.title'),
+      to: { name: 'account-audit', params: { accountId: accountId.value } },
+      routeName: 'account-audit',
+      icon: ShieldCheck,
+    });
   }
   return links;
 });
@@ -86,8 +129,18 @@ const accountLinks = computed<MenuLink[]>(() => {
 const personalLinks = computed<MenuLink[]>(() => [
   { label: t('nav.security'), to: { name: 'security' }, routeName: 'security', icon: ShieldCheck },
   { label: t('privacy.title'), to: { name: 'privacy' }, routeName: 'privacy', icon: Eye },
-  { label: t('appearance.appearance'), to: { name: 'settings' }, routeName: 'settings', icon: Settings },
-  { label: t('menus.components'), to: { name: 'settings-components' }, routeName: 'settings-components', icon: LayoutGrid },
+  {
+    label: t('appearance.appearance'),
+    to: { name: 'settings' },
+    routeName: 'settings',
+    icon: Settings,
+  },
+  {
+    label: t('menus.components'),
+    to: { name: 'settings-components' },
+    routeName: 'settings-components',
+    icon: LayoutGrid,
+  },
 ]);
 
 const localeLabel = computed(() => (locale.value === 'ru' ? 'RU' : 'EN'));
@@ -166,15 +219,40 @@ onBeforeUnmount(deactivateOverlay);
 <template>
   <Teleport to="body">
     <Transition name="mobile-menu">
-      <div v-if="open" class="mobile-menu" role="dialog" aria-modal="true" :aria-label="$t('nav.menuTitle')">
-        <div ref="panel" class="mobile-menu__panel" tabindex="-1">
+      <div
+        v-if="open"
+        class="mobile-menu"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="$t('nav.menuTitle')"
+      >
+        <div
+          ref="panel"
+          class="mobile-menu__panel"
+          tabindex="-1"
+        >
           <header class="mobile-menu__header">
-            <RouterLink class="mobile-menu__brand" :to="{ name: 'catalog' }" :aria-label="$t('app.name')">
-              <span class="mobile-menu__mark" aria-hidden="true"><Layers :size="20" /></span>
+            <RouterLink
+              class="mobile-menu__brand"
+              :to="{ name: 'catalog' }"
+              :aria-label="$t('app.name')"
+            >
+              <span
+                class="mobile-menu__mark"
+                aria-hidden="true"
+              >
+                <Layers :size="20" />
+              </span>
               <span>{{ $t('app.name') }}</span>
             </RouterLink>
-            <AppIconButton :label="$t('common.close')" @click="close">
-              <X :size="22" aria-hidden="true" />
+            <AppIconButton
+              :label="$t('common.close')"
+              @click="close"
+            >
+              <X
+                :size="22"
+                aria-hidden="true"
+              />
             </AppIconButton>
           </header>
 
@@ -184,16 +262,27 @@ onBeforeUnmount(deactivateOverlay);
             :to="{ name: 'account-overview', params: { accountId } }"
             @click="close"
           >
-            <span class="mobile-menu__avatar" aria-hidden="true">{{ accountInitials }}</span>
+            <span
+              class="mobile-menu__avatar"
+              aria-hidden="true"
+            >
+              {{ accountInitials }}
+            </span>
             <span class="mobile-menu__account-copy">
               <strong>{{ detail.display_name }}</strong>
               <small>{{ detail.role }} · {{ detail.status }}</small>
             </span>
-            <ChevronRight :size="18" aria-hidden="true" />
+            <ChevronRight
+              :size="18"
+              aria-hidden="true"
+            />
           </RouterLink>
 
           <div class="mobile-menu__content">
-            <nav class="mobile-menu__section" :aria-label="$t('nav.main')">
+            <nav
+              class="mobile-menu__section"
+              :aria-label="$t('nav.main')"
+            >
               <p class="mobile-menu__section-title">{{ $t('nav.main') }}</p>
               <RouterLink
                 v-for="link in mainLinks"
@@ -204,13 +293,28 @@ onBeforeUnmount(deactivateOverlay);
                 :aria-current="currentRoute === link.routeName ? 'page' : undefined"
                 @click="close"
               >
-                <span class="mobile-menu__link-icon" aria-hidden="true"><component :is="link.icon" :size="20" /></span>
+                <span
+                  class="mobile-menu__link-icon"
+                  aria-hidden="true"
+                >
+                  <component
+                    :is="link.icon"
+                    :size="20"
+                  />
+                </span>
                 <span class="mobile-menu__link-label">{{ link.label }}</span>
-                <ChevronRight :size="18" aria-hidden="true" />
+                <ChevronRight
+                  :size="18"
+                  aria-hidden="true"
+                />
               </RouterLink>
             </nav>
 
-            <nav v-if="accountLinks.length > 0" class="mobile-menu__section" :aria-label="$t('nav.account')">
+            <nav
+              v-if="accountLinks.length > 0"
+              class="mobile-menu__section"
+              :aria-label="$t('nav.account')"
+            >
               <p class="mobile-menu__section-title">{{ $t('nav.account') }}</p>
               <RouterLink
                 v-for="link in accountLinks"
@@ -221,13 +325,27 @@ onBeforeUnmount(deactivateOverlay);
                 :aria-current="currentRoute === link.routeName ? 'page' : undefined"
                 @click="close"
               >
-                <span class="mobile-menu__link-icon" aria-hidden="true"><component :is="link.icon" :size="20" /></span>
+                <span
+                  class="mobile-menu__link-icon"
+                  aria-hidden="true"
+                >
+                  <component
+                    :is="link.icon"
+                    :size="20"
+                  />
+                </span>
                 <span class="mobile-menu__link-label">{{ link.label }}</span>
-                <ChevronRight :size="18" aria-hidden="true" />
+                <ChevronRight
+                  :size="18"
+                  aria-hidden="true"
+                />
               </RouterLink>
             </nav>
 
-            <nav class="mobile-menu__section" :aria-label="$t('nav.personal')">
+            <nav
+              class="mobile-menu__section"
+              :aria-label="$t('nav.personal')"
+            >
               <p class="mobile-menu__section-title">{{ $t('nav.personal') }}</p>
               <RouterLink
                 v-for="link in personalLinks"
@@ -238,21 +356,48 @@ onBeforeUnmount(deactivateOverlay);
                 :aria-current="currentRoute === link.routeName ? 'page' : undefined"
                 @click="close"
               >
-                <span class="mobile-menu__link-icon" aria-hidden="true"><component :is="link.icon" :size="20" /></span>
+                <span
+                  class="mobile-menu__link-icon"
+                  aria-hidden="true"
+                >
+                  <component
+                    :is="link.icon"
+                    :size="20"
+                  />
+                </span>
                 <span class="mobile-menu__link-label">{{ link.label }}</span>
-                <ChevronRight :size="18" aria-hidden="true" />
+                <ChevronRight
+                  :size="18"
+                  aria-hidden="true"
+                />
               </RouterLink>
             </nav>
 
             <div class="mobile-menu__section">
               <p class="mobile-menu__section-title">{{ $t('nav.preferences') }}</p>
               <div class="mobile-menu__quick">
-                <button type="button" class="mobile-menu__quick-button" @click="toggleTheme">
-                  <Sun v-if="isDark" :size="20" aria-hidden="true" />
-                  <Moon v-else :size="20" aria-hidden="true" />
+                <button
+                  type="button"
+                  class="mobile-menu__quick-button"
+                  @click="toggleTheme"
+                >
+                  <Sun
+                    v-if="isDark"
+                    :size="20"
+                    aria-hidden="true"
+                  />
+                  <Moon
+                    v-else
+                    :size="20"
+                    aria-hidden="true"
+                  />
                   <span>{{ isDark ? $t('theme.light') : $t('theme.dark') }}</span>
                 </button>
-                <button type="button" class="mobile-menu__quick-button" @click="toggleLocale">
+                <button
+                  type="button"
+                  class="mobile-menu__quick-button"
+                  @click="toggleLocale"
+                >
                   <span class="mobile-menu__locale">{{ localeLabel }}</span>
                   <span>{{ $t('theme.locale') }}</span>
                 </button>
@@ -261,12 +406,28 @@ onBeforeUnmount(deactivateOverlay);
           </div>
 
           <footer class="mobile-menu__footer">
-            <button v-if="auth.isAuthenticated" type="button" class="mobile-menu__auth" @click="logout">
-              <LogOut :size="20" aria-hidden="true" />
+            <button
+              v-if="auth.isAuthenticated"
+              type="button"
+              class="mobile-menu__auth"
+              @click="logout"
+            >
+              <LogOut
+                :size="20"
+                aria-hidden="true"
+              />
               <span>{{ $t('nav.logout') }}</span>
             </button>
-            <button v-else type="button" class="mobile-menu__auth" @click="goLogin">
-              <LogIn :size="20" aria-hidden="true" />
+            <button
+              v-else
+              type="button"
+              class="mobile-menu__auth"
+              @click="goLogin"
+            >
+              <LogIn
+                :size="20"
+                aria-hidden="true"
+              />
               <span>{{ $t('nav.login') }}</span>
             </button>
           </footer>
@@ -309,7 +470,8 @@ onBeforeUnmount(deactivateOverlay);
   flex-direction: column;
   width: 100%;
   min-height: 100dvh;
-  padding: max(var(--space-12), env(safe-area-inset-top)) var(--page-pad-x) max(var(--space-16), env(safe-area-inset-bottom));
+  padding: max(var(--space-12), env(safe-area-inset-top)) var(--page-pad-x)
+    max(var(--space-16), env(safe-area-inset-bottom));
   overflow-y: auto;
   outline: none;
 }
@@ -328,6 +490,7 @@ onBeforeUnmount(deactivateOverlay);
   align-items: center;
   gap: var(--space-8);
   font-size: var(--type-h2-size);
+  letter-spacing: var(--type-h2-tracking);
   line-height: var(--type-h2-line);
   font-weight: var(--type-h2-weight);
   color: var(--text-1);
@@ -373,6 +536,8 @@ onBeforeUnmount(deactivateOverlay);
   background: var(--accent);
   color: var(--color-white);
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
+  line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   flex: 0 0 auto;
 }
@@ -393,12 +558,15 @@ onBeforeUnmount(deactivateOverlay);
 
 .mobile-menu__account-copy strong {
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
 }
 
 .mobile-menu__account-copy small {
   font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   color: var(--text-2);
   text-transform: capitalize;
@@ -438,6 +606,7 @@ onBeforeUnmount(deactivateOverlay);
   padding: var(--space-8) var(--space-12);
   border-radius: var(--radius-control-m);
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--text-1);
@@ -489,6 +658,8 @@ onBeforeUnmount(deactivateOverlay);
   background: var(--surface);
   color: var(--text-1);
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   text-align: left;
   transition: var(--theme-transition);
@@ -509,6 +680,8 @@ onBeforeUnmount(deactivateOverlay);
   background: var(--accent-soft);
   color: var(--accent-text);
   font-size: var(--type-body-small-emphasis-size);
+  letter-spacing: var(--type-body-small-emphasis-tracking);
+  line-height: var(--type-body-small-emphasis-line);
   font-weight: var(--type-body-small-emphasis-weight);
 }
 
@@ -529,6 +702,8 @@ onBeforeUnmount(deactivateOverlay);
   background: var(--surface-hover);
   color: var(--text-1);
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
+  line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   transition: var(--theme-transition);
 }
@@ -540,12 +715,16 @@ onBeforeUnmount(deactivateOverlay);
 
 .mobile-menu-enter-active,
 .mobile-menu-leave-active {
-  transition: opacity var(--motion-enter-duration) var(--motion-ease), var(--theme-transition);
+  transition:
+    opacity var(--motion-enter-duration) var(--motion-ease),
+    var(--theme-transition);
 }
 
 .mobile-menu-enter-active .mobile-menu__panel,
 .mobile-menu-leave-active .mobile-menu__panel {
-  transition: transform var(--motion-enter-duration) var(--motion-ease), var(--theme-transition);
+  transition:
+    transform var(--motion-enter-duration) var(--motion-ease),
+    var(--theme-transition);
 }
 
 .mobile-menu-enter-from,

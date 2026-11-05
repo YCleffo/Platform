@@ -83,13 +83,28 @@ watch(accountId, load);
       <p class="usage__subtitle">{{ $t('usage.subtitle') }}</p>
     </header>
 
-    <AppSkeleton v-if="loading" variant="card" :lines="4" />
-    <AppErrorState v-else-if="errorMessage" :message="errorMessage">
-      <AppButton variant="secondary" @click="load">{{ $t('common.retry') }}</AppButton>
+    <AppSkeleton
+      v-if="loading"
+      variant="card"
+      :lines="4"
+    />
+    <AppErrorState
+      v-else-if="errorMessage"
+      :message="errorMessage"
+    >
+      <AppButton
+        variant="secondary"
+        @click="load"
+      >
+        {{ $t('common.retry') }}
+      </AppButton>
     </AppErrorState>
 
     <template v-else>
-      <AppCard v-if="usage?.subscription" class="usage__period">
+      <AppCard
+        v-if="usage?.subscription"
+        class="usage__period"
+      >
         <div>
           <p class="usage__eyebrow">{{ $t('usage.currentPeriod') }}</p>
           <p class="usage__period-value">
@@ -98,7 +113,10 @@ watch(accountId, load);
             {{ formatDateTime(usage.subscription.current_period_end, locale) }}
           </p>
         </div>
-        <RouterLink v-if="canManageBilling" :to="{ name: 'account-billing', params: { accountId } }">
+        <RouterLink
+          v-if="canManageBilling"
+          :to="{ name: 'account-billing', params: { accountId } }"
+        >
           {{ $t('usage.openBilling') }}
         </RouterLink>
       </AppCard>
@@ -106,15 +124,28 @@ watch(accountId, load);
       <AppCard v-if="counterEntries.length > 0">
         <h3 class="usage__card-title">{{ $t('usage.counters') }}</h3>
         <div class="usage__counters">
-          <div v-for="[code, counter] in counterEntries" :key="code" class="usage__counter">
+          <div
+            v-for="[code, counter] in counterEntries"
+            :key="code"
+            class="usage__counter"
+          >
             <div class="usage__counter-head">
               <span class="usage__counter-name">{{ code }}</span>
-              <span class="usage__counter-value">
-                {{ counter.used }} / {{ counter.limit }}
-              </span>
+              <span class="usage__counter-value">{{ counter.used }} / {{ counter.limit }}</span>
             </div>
-            <div class="usage__bar" role="progressbar" :aria-valuenow="counter.used" :aria-valuemin="0" :aria-valuemax="counter.limit" :aria-label="code">
-              <span class="usage__bar-fill" :class="{ 'usage__bar-fill--warn': counter.exhausted }" :style="{ width: `${counterPercent(counter)}%` }" />
+            <div
+              class="usage__bar"
+              role="progressbar"
+              :aria-valuenow="counter.used"
+              :aria-valuemin="0"
+              :aria-valuemax="counter.limit"
+              :aria-label="code"
+            >
+              <span
+                class="usage__bar-fill"
+                :class="{ 'usage__bar-fill--warn': counter.exhausted }"
+                :style="{ width: `${counterPercent(counter)}%` }"
+              />
             </div>
             <p class="usage__counter-meta">
               {{ $t('usage.remaining', { count: counter.remaining }) }}
@@ -127,7 +158,11 @@ watch(accountId, load);
       <AppCard v-if="featureEntries.length > 0">
         <h3 class="usage__card-title">{{ $t('usage.entitlements') }}</h3>
         <dl class="usage__features">
-          <div v-for="[code, value] in featureEntries" :key="code" class="usage__feature">
+          <div
+            v-for="[code, value] in featureEntries"
+            :key="code"
+            class="usage__feature"
+          >
             <dt>{{ code }}</dt>
             <dd>{{ featureValue(value) }}</dd>
           </div>
@@ -156,6 +191,7 @@ watch(accountId, load);
 
 .usage__title {
   font-size: var(--type-h2-size);
+  letter-spacing: var(--type-h2-tracking);
   line-height: var(--type-h2-line);
   font-weight: var(--type-h2-weight);
   color: var(--text-1);
@@ -164,6 +200,8 @@ watch(accountId, load);
 
 .usage__subtitle {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
   transition: var(--theme-transition);
@@ -189,6 +227,7 @@ watch(accountId, load);
 .usage__period-value {
   margin-top: var(--space-4);
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--text-1);
@@ -197,6 +236,7 @@ watch(accountId, load);
 
 .usage__card-title {
   font-size: var(--type-h3-size);
+  letter-spacing: var(--type-h3-tracking);
   line-height: var(--type-h3-line);
   font-weight: var(--type-h3-weight);
   color: var(--text-1);
@@ -214,6 +254,8 @@ watch(accountId, load);
   justify-content: space-between;
   gap: var(--space-12);
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
 }
 
@@ -240,7 +282,9 @@ watch(accountId, load);
   height: 100%;
   border-radius: inherit;
   background: var(--accent);
-  transition: width var(--motion-enter-duration) var(--motion-ease), var(--theme-transition);
+  transition:
+    width var(--motion-enter-duration) var(--motion-ease),
+    var(--theme-transition);
 }
 
 .usage__bar-fill--warn {
@@ -250,6 +294,8 @@ watch(accountId, load);
 .usage__counter-meta {
   margin-top: var(--space-4);
   font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   color: var(--text-3);
 }
@@ -267,6 +313,8 @@ watch(accountId, load);
   padding-bottom: var(--space-8);
   border-bottom: 1px solid var(--border);
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
 }
 

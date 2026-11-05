@@ -46,6 +46,11 @@
   --shadow-modal: none;
 }
 
+:root[data-transparency='opaque'] {
+  --overlay-surface: var(--card);
+  --backdrop: var(--bg);
+}
+
 html[data-motion='reduced'] *,
 html[data-motion='reduced'] *::before,
 html[data-motion='reduced'] *::after {

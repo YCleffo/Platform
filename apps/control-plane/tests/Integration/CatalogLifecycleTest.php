@@ -8,6 +8,16 @@ use ControlPlane\Catalog\Application\PlanCatalog;
 /** CAT-01/02, BILL-01/02: catalog publication is an immutable contract. */
 final class CatalogLifecycleTest extends InvoiceTestCase
 {
+    public function testPlanWithoutFeaturesHasAnObjectInTheHttpContract(): void
+    {
+        $code = 'empty-features-' . bin2hex(random_bytes(6));
+        [$id] = $this->planPrice($code);
+        $row = array_values(array_filter((new PlanCatalog($this->connection))->published(),
+            static fn(array $plan): bool => $plan['id'] === $id))[0];
+        self::assertInstanceOf(\stdClass::class, $row['features']);
+        self::assertSame('{}', json_encode($row['features'], JSON_THROW_ON_ERROR));
+    }
+
     public function testDraftIsHiddenAndPublishedCatalogPreservesPriceAndFeatureTypes(): void
     {
         $suffix = 'catalog-' . bin2hex(random_bytes(5));

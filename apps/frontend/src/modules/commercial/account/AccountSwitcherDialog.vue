@@ -61,21 +61,45 @@ function choose(accountId: string): void {
 </script>
 
 <template>
-  <AppDialog v-model="open" :title="$t('account.switchAccount')">
+  <AppDialog
+    v-model="open"
+    :title="$t('account.switchAccount')"
+  >
     <div class="picker">
       <div class="picker__current">
         <span class="picker__current-label">{{ $t('account.currentAccount') }}</span>
         <span class="picker__current-name">{{ currentName }}</span>
       </div>
 
-      <AppSkeleton v-if="loading" variant="list" :lines="3" />
-      <AppErrorState v-else-if="errorMessage" :message="errorMessage">
-        <AppButton variant="secondary" @click="loadPage(offset)">{{ $t('common.retry') }}</AppButton>
+      <AppSkeleton
+        v-if="loading"
+        variant="list"
+        :lines="3"
+      />
+      <AppErrorState
+        v-else-if="errorMessage"
+        :message="errorMessage"
+      >
+        <AppButton
+          variant="secondary"
+          @click="loadPage(offset)"
+        >
+          {{ $t('common.retry') }}
+        </AppButton>
       </AppErrorState>
-      <AppEmptyState v-else-if="accounts.length === 0" :title="$t('cabinet.noAccounts')" />
+      <AppEmptyState
+        v-else-if="accounts.length === 0"
+        :title="$t('cabinet.noAccounts')"
+      />
       <template v-else>
-        <ul class="picker__list" role="list">
-          <li v-for="account in accounts" :key="account.id">
+        <ul
+          class="picker__list"
+          role="list"
+        >
+          <li
+            v-for="account in accounts"
+            :key="account.id"
+          >
             <button
               type="button"
               class="picker__item"
@@ -119,6 +143,8 @@ function choose(accountId: string): void {
   border-radius: var(--radius-control-m);
   background: var(--surface-2);
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   transition: var(--theme-transition);
 }
@@ -130,7 +156,7 @@ function choose(accountId: string): void {
 
 .picker__current-name {
   color: var(--text-1);
-  font-weight: 500;
+  font-weight: var(--type-body-medium-emphasis-weight);
   overflow-wrap: anywhere;
   transition: var(--theme-transition);
 }
@@ -154,8 +180,7 @@ function choose(accountId: string): void {
   background: var(--surface);
   text-align: left;
   cursor: pointer;
-  transition:
-    var(--theme-transition);
+  transition: var(--theme-transition);
 }
 
 .picker__item:hover {
@@ -172,6 +197,7 @@ function choose(accountId: string): void {
 
 .picker__name {
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--text-1);
@@ -185,6 +211,8 @@ function choose(accountId: string): void {
   grid-row: 2;
   font-family: var(--font-mono);
   font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   color: var(--text-3);
   transition: var(--theme-transition);
@@ -195,6 +223,8 @@ function choose(accountId: string): void {
   grid-row: 1 / span 2;
   align-self: center;
   font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   color: var(--text-2);
   transition: var(--theme-transition);

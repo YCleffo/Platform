@@ -13,6 +13,87 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /api/control/operator/me:
+    get:
+      summary: Current authorized operator capabilities
+      description: Separate operator workspace; existing Control User authentication plus server-side operator authorization. Responses are no-store. Customer membership and Core roles do not grant these rights.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Authorized read model
+          content:
+            application/json:
+              schema:
+                type: object
+        '401': { description: Authentication required }
+        '403': { description: Operator authorization required }
+  /api/control/operator/privacy/requests:
+    get:
+      summary: Authorized privacy request directory
+      description: Separate operator workspace; existing Control User authentication plus server-side operator authorization. Responses are no-store. Customer membership and Core roles do not grant these rights.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Authorized read model
+          content:
+            application/json:
+              schema:
+                type: object
+        '401': { description: Authentication required }
+        '403': { description: Operator authorization required }
+  /api/control/operator/privacy/incidents:
+    get:
+      summary: Authorized incident directory
+      description: Separate operator workspace; existing Control User authentication plus server-side operator authorization. Responses are no-store. Customer membership and Core roles do not grant these rights.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Authorized read model
+          content:
+            application/json:
+              schema:
+                type: object
+        '401': { description: Authentication required }
+        '403': { description: Operator authorization required }
+  /api/control/operator/compensations:
+    get:
+      summary: Authorized financial compensation directory
+      description: Separate operator workspace; existing Control User authentication plus server-side operator authorization. Responses are no-store. Customer membership and Core roles do not grant these rights.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Authorized read model
+          content:
+            application/json:
+              schema:
+                type: object
+        '401': { description: Authentication required }
+        '403': { description: Operator authorization required }
   /health/live:
     get:
       security: []
@@ -35,7 +116,7 @@ paths:
       security: []
       operationId: healthIsolation
       responses:
-        '200': {description: Disposable runtime nonce proof, content: {application/json: {schema: {$ref: '#/components/schemas/Object'}}}}
+        '200': {description: Disposable runtime nonce proof, content: {application/json: {schema: {type: object, additionalProperties: false, required: [nonce], properties: {nonce: {type: string, pattern: '^[a-f0-9]{64}$'}}}}}}
         '404': {description: Isolation proof is not available, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
   /api/control/me:
     get:
@@ -227,6 +308,21 @@ paths:
     post:
       operationId: resendInvitation
       responses: {'200': {$ref: '#/components/responses/Invitation'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/control/accounts/{accountId}/billing-state:
+    parameters: [{$ref: '#/components/parameters/AccountId'}]
+    get:
+      operationId: getBillingState
+      description: Account-scoped recovery of profile, unfinished checkout and paginated financial history. Requires account.read.
+      parameters:
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+        - {name: offset, in: query, schema: {type: integer, minimum: 0, maximum: 100000, default: 0}}
+        - {name: q, in: query, schema: {type: string, maxLength: 36, pattern: '^[0-9a-fA-F-]*$'}}
+      responses:
+        '200': {description: Recovered billing state, content: {application/json: {schema: {$ref: '#/components/schemas/BillingState'}}}}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
   /api/control/accounts/{accountId}/billing-profile:
     parameters: [{$ref: '#/components/parameters/AccountId'}]
     put:
@@ -725,6 +821,45 @@ components:
             by_action: {type: array, items: {type: object, required: [action, count], properties: {action: {type: string}, count: {type: integer, minimum: 0}}}}
         usage: {type: object, additionalProperties: true}
     Health: {type: object, additionalProperties: false, required: [status], properties: {status: {type: string, enum: [ok, not_ready]}}}
+    BillingState:
+      type: object
+      required: [subscription_id, pending_invoice_id, pending_payment_id, latest_invoice_id, latest_payment_id, plan_change_id, billing_profile, history]
+      properties:
+        subscription_id: {type: [string, 'null'], format: uuid}
+        pending_invoice_id: {type: [string, 'null'], format: uuid}
+        pending_payment_id: {type: [string, 'null'], format: uuid}
+        latest_invoice_id: {type: [string, 'null'], format: uuid}
+        latest_payment_id: {type: [string, 'null'], format: uuid}
+        plan_change_id: {type: [string, 'null'], format: uuid}
+        billing_profile:
+          type: [object, 'null']
+          required: [legal_name, country_code, contact_name, contact_email, tax_identifier, address]
+          properties:
+            legal_name: {type: string}
+            country_code: {type: string}
+            contact_name: {type: [string, 'null']}
+            contact_email: {type: [string, 'null']}
+            tax_identifier: {type: [string, 'null']}
+            address: {type: object, additionalProperties: true}
+        history:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            total: {type: integer, minimum: 0}
+            limit: {type: integer, minimum: 1, maximum: 100}
+            offset: {type: integer, minimum: 0, maximum: 100000}
+            items:
+              type: array
+              items:
+                type: object
+                required: [kind, id, status, created_at, currency, amount_minor]
+                properties:
+                  kind: {type: string, enum: [invoice, payment, plan_change]}
+                  id: {type: string, format: uuid}
+                  status: {type: string}
+                  created_at: {type: string, format: date-time}
+                  currency: {type: string}
+                  amount_minor: {type: integer, minimum: 0}
     Error: {type: object, required: [error], properties: {error: {type: object, required: [code, message], properties: {code: {type: string}, message: {type: string}}}}}
     CurrentUser:
       type: object

@@ -25,6 +25,8 @@ jobs:
       - name: Parse CI shell entry points
         run: |
           for script in scripts/ci/*.sh; do bash -n "$script"; done
+      - name: Verify Compose database credential resolution
+        run: python3 -m unittest discover -s scripts/database -p 'test_*.py'
 
   windows-tools:
     name: Windows tools
@@ -68,7 +70,7 @@ jobs:
           values = {k: secrets.token_hex(32) for k in (
               'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
               'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY',
-              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD')}
+              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD', 'CORE_MAINTENANCE_PASSWORD', 'CONTROL_MAINTENANCE_PASSWORD')}
           values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
               'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
           with open(os.environ['GITHUB_ENV'], 'a') as output:
@@ -226,7 +228,7 @@ jobs:
           values = {k: secrets.token_hex(32) for k in (
               'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
               'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY',
-              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD')}
+              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD', 'CORE_MAINTENANCE_PASSWORD', 'CONTROL_MAINTENANCE_PASSWORD')}
           values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
               'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
           with open(os.environ['GITHUB_ENV'], 'a') as output:
@@ -252,7 +254,7 @@ jobs:
           composer check-platform-reqs
           composer audit
 
-      - name: Early YAML syntax gate
+      - name: YAML configuration and API contract references
         run: php ./scripts/ci/control-config-lint.php
 
       - name: Static analysis
@@ -447,7 +449,7 @@ jobs:
           values = {k: secrets.token_hex(32) for k in (
               'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
               'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY',
-              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD')}
+              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD', 'CORE_MAINTENANCE_PASSWORD', 'CONTROL_MAINTENANCE_PASSWORD')}
           values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
               'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
           with open(os.environ['GITHUB_ENV'], 'a') as output:
@@ -515,12 +517,20 @@ jobs:
         run: npm ci
       - name: Audit locked dependencies
         run: npm audit --audit-level=high
+      - name: Verify dependency cancellation and pattern amplification regressions
+        run: npm run test:security-dependencies
       - name: Verify local SVG sprite
         run: npm run check:icons
       - name: Verify design tokens are generated from the canonical source
         run: npm run check:tokens
       - name: Verify shared style variables and animation timings
         run: npm run check:styles
+      - name: Verify Vue formatting
+        run: npm run format:check
+      - name: Verify disposable Core browser guard
+        run: npm run test:core-auth-guard
+      - name: Verify typed Core workflow contracts
+        run: npm run test:workbench-contracts
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
@@ -532,15 +542,264 @@ jobs:
           node scripts/e2e-account-workspace.mjs --check-guard
           node scripts/e2e-invitation-lifecycle.mjs --check-guard
           node scripts/e2e-auth-recovery.mjs --check-guard
+          node scripts/e2e-billing-recovery.mjs --check-guard
+          node scripts/e2e-paid-billing.mjs --check-guard
+          node scripts/e2e-commercial-operators.mjs --check-guard
+          node scripts/e2e-core-security.mjs --check-guard
+          node scripts/e2e-core-profile.mjs --check-guard
+          node scripts/e2e-core-credentials.mjs --check-guard
+          node scripts/e2e-core-privacy.mjs --check-guard
+          node scripts/e2e-core-privacy-operator.mjs --check-guard
+          node scripts/e2e-core-configuration.mjs --check-guard
           node scripts/load-commercial.mjs --check-guard
       - name: Production build
         run: npm run build
+
+  core-auth-browser:
+    name: Core · account browser E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      POSTGRES_DB: platform_test
+      POSTGRES_TEST_DB: platform_test
+      POSTGRES_USER: platform_app
+      CONTROL_TEST_DB: platform_commercial_test
+      CONTROL_TEST_USER: platform_control_test
+      PLATFORM_BASE_DOMAIN: platform.example
+      SMTP_HOST: mailpit-core-test
+      AUTH_PUBLIC_BASE_URL: https://e2e.platform.test:4175
+      AUTH_WEBAUTHN_RP_ID: e2e.platform.test
+      AUTH_WEBAUTHN_ORIGINS: https://e2e.platform.test:4175
+      CORE_AUTH_BROWSER_OIDC_FIXTURE: "1"
+      CORE_PRIVACY_BROWSER_FIXTURE: "1"
+      E2E_ALLOWED_HOSTS: e2e.platform.test
+      E2E_RUNTIME: isolated-ci
+      E2E_ISOLATED_DB: "1"
+      E2E_ALLOW_MUTATIONS: "1"
+      APP_URL: https://e2e.platform.test:4175
+      CORE_API_URL: http://e2e.platform.test:8081
+      MAILPIT_URL: http://e2e.platform.test:8027
+    steps:
+      - uses: actions/checkout@v5
+      - name: Generate disposable Core secrets
+        run: |
+          python3 - <<'PY'
+          import base64, os, secrets
+          values = {k: secrets.token_hex(32) for k in (
+              'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD',
+              'CONTROL_APP_SECRET', 'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY',
+              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD', 'CORE_MAINTENANCE_PASSWORD', 'CONTROL_MAINTENANCE_PASSWORD', 'E2E_ISOLATION_PROOF', 'E2E_PASSWORD')}
+          values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
+              'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for key, value in values.items():
+                  print('::add-mask::' + value)
+                  output.write(key + '=' + value + '\n')
+          PY
+      - name: Set up Core Composer dependencies
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
+          tools: composer:v2
+      - name: Install Core dependencies
+        working-directory: apps/backend
+        run: composer install --no-interaction --prefer-dist
+      - name: Start isolated Core and SMTP runtime
+        run: |
+          echo '127.0.0.1 e2e.platform.test' | sudo tee -a /etc/hosts
+          docker compose --profile test up -d --wait mailpit-core-test
+          bash scripts/ci/test-start.sh
+          docker compose --profile test exec -d -e CORE_AUTH_BROWSER_SMTP=1 backend-test php yii communication:process-email --loop
+          echo "CORE_TEST_CONTAINER=$(docker compose --profile test ps -q backend-test)" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - name: Install browser dependencies
+        working-directory: apps/frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Start Core frontend
+        working-directory: apps/frontend
+        env:
+          VITE_CORE_PROXY_TARGET: http://127.0.0.1:8081
+          VITE_COMMERCIAL_PROXY_TARGET: http://127.0.0.1:1
+          VITE_HTTPS_KEY: /tmp/e2e-core-cert/key.pem
+          VITE_HTTPS_CERT: /tmp/e2e-core-cert/cert.pem
+        run: |
+          mkdir -p /tmp/e2e-core-cert
+          openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes -keyout /tmp/e2e-core-cert/key.pem -out /tmp/e2e-core-cert/cert.pem -subj '/CN=e2e.platform.test'
+          node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4175 --strictPort > /tmp/vite-core-auth.log 2>&1 &
+          echo $! > /tmp/vite-core-auth.pid
+          for _attempt in $(seq 1 60); do
+            if curl -kfsS https://127.0.0.1:4175/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -kfsS https://127.0.0.1:4175/ >/dev/null
+      - name: Verify Core invitation, password reset, MFA recovery and required password change
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-auth
+      - name: Verify real Core MFA and session management
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-security
+      - name: Verify real Core preferences, settings and consent lifecycle
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-profile
+      - name: Verify real passkey and external credential lifecycle
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-credentials
+      - name: Verify own and representative privacy request lifecycle
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-privacy
+      - name: Verify privacy operator workflow and presence
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-privacy-operator
+      - name: Verify Core configuration forms and public publication
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-configuration
+      - name: Upload Core browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-auth-browser-${{ github.run_id }}
+          path: |
+            apps/frontend/screenshots/core-auth-*
+            apps/frontend/screenshots/core-security-*
+            apps/frontend/screenshots/core-config-*
+            apps/frontend/screenshots/core-profile-*
+            apps/frontend/screenshots/core-credentials-*
+            apps/frontend/screenshots/core-privacy-*
+          if-no-files-found: ignore
+      - name: Diagnose Core browser failure
+        if: failure()
+        run: |
+          docker compose --profile test logs --no-color --tail 100 backend-test postgres-test mailpit-core-test
+          cat /tmp/vite-core-auth.log || true
+      - name: Remove disposable Core runtime
+        if: always()
+        run: |
+          if [[ -s /tmp/vite-core-auth.pid ]]; then kill "$(cat /tmp/vite-core-auth.pid)" 2>/dev/null || true; fi
+          rm -f /tmp/vite-core-auth.pid
+          rm -f /tmp/e2e-core-cert/key.pem /tmp/e2e-core-cert/cert.pem
+          bash scripts/ci/test-stop.sh
+
+  billing-periodic:
+    name: Billing · renewal and recovery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      COMPOSE_FILE: compose.yaml:compose.ci.yaml:compose.browser.yaml:compose.billing-clock.yaml
+      COMPOSE_PROJECT_NAME: platform-billing-ci
+      BILLING_TEST_CLOCK_DIRECTORY: /tmp/platform-billing-clock
+      POSTGRES_DB: platform_test
+      POSTGRES_TEST_DB: platform_test
+      POSTGRES_USER: platform_app
+      CONTROL_TEST_DB: platform_commercial_test
+      CONTROL_TEST_USER: platform_control_test
+      CONTROL_TEST_PORT: "8091"
+      MAILPIT_TEST_UI_PORT: "8026"
+      PLATFORM_BASE_DOMAIN: platform.example
+      CONTROL_VERIFICATION_URL: https://e2e.platform.test:4173/verify-email
+      CONTROL_PASSWORD_RESET_URL: https://e2e.platform.test:4173/reset-password
+      E2E_ALLOWED_HOSTS: e2e.platform.test
+      E2E_RUNTIME: isolated-ci
+      E2E_ISOLATED_DB: "1"
+      E2E_ALLOW_MUTATIONS: "1"
+      APP_URL: https://e2e.platform.test:4173
+      CONTROL_API_URL: http://e2e.platform.test:8091
+      MAILPIT_URL: http://e2e.platform.test:8026
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Generate isolated CI secrets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, os, secrets
+          values = {k: secrets.token_hex(32) for k in (
+              'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD',
+              'CONTROL_APP_SECRET', 'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY',
+              'E2E_ISOLATION_PROOF', 'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD',
+              'CORE_MAINTENANCE_PASSWORD', 'CONTROL_MAINTENANCE_PASSWORD')}
+          values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
+              'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
+          values['E2E_PASSWORD'] = secrets.token_urlsafe(24)
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for key, value in values.items():
+                  print('::add-mask::' + value)
+                  output.write(key + '=' + value + '\n')
+          PY
+      - name: Map disposable browser host alias
+        run: echo "127.0.0.1 e2e.platform.test" | sudo tee -a /etc/hosts
+      - name: Build and migrate isolated PHP and PostgreSQL clock runtime
+        run: bash scripts/ci/billing-clock-start.sh
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - name: Install dependencies and Chromium
+        working-directory: apps/frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Generate disposable TLS certificate
+        run: |
+          mkdir -p "$RUNNER_TEMP/billing-tls"
+          openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
+            -keyout "$RUNNER_TEMP/billing-tls/key.pem" -out "$RUNNER_TEMP/billing-tls/cert.pem" \
+            -subj "/CN=e2e.platform.test" -addext "subjectAltName=DNS:e2e.platform.test,DNS:localhost,IP:127.0.0.1"
+      - name: Build and start frontend production preview
+        working-directory: apps/frontend
+        env:
+          VITE_COMMERCIAL_PROXY_TARGET: http://127.0.0.1:8091
+          VITE_CORE_PROXY_TARGET: http://127.0.0.1:1
+          VITE_HTTPS_KEY: ${{ runner.temp }}/billing-tls/key.pem
+          VITE_HTTPS_CERT: ${{ runner.temp }}/billing-tls/cert.pem
+        run: |
+          npm run build
+          node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4173 --strictPort > /tmp/vite-billing.log 2>&1 &
+          echo $! > /tmp/vite-billing.pid
+          for _attempt in $(seq 1 60); do
+            if curl -kfsS https://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -kfsS https://127.0.0.1:4173/ >/dev/null
+      - name: Verify scheduler boundaries, retries, grace and late settlement
+        working-directory: apps/frontend
+        env:
+          NODE_EXTRA_CA_CERTS: ${{ runner.temp }}/billing-tls/cert.pem
+        run: npm run test:e2e:periodic-billing
+      - name: Upload periodic billing evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: billing-periodic
+          path: apps/frontend/screenshots/billing-periodic-*
+          if-no-files-found: ignore
+      - name: Diagnose failed billing runtime
+        if: failure()
+        run: |
+          docker compose --profile control-test logs --no-color --tail 100 control-plane-test control-postgres-test
+          cat /tmp/vite-billing.log || true
+      - name: Stop isolated billing runtime
+        if: always()
+        run: |
+          if [[ -s /tmp/vite-billing.pid ]]; then kill "$(cat /tmp/vite-billing.pid)" 2>/dev/null || true; fi
+          bash scripts/ci/control-test-stop.sh
+          rm -f "$BILLING_TEST_CLOCK_DIRECTORY/time" "$RUNNER_TEMP/billing-tls/key.pem" "$RUNNER_TEMP/billing-tls/cert.pem"
 
   browser-e2e:
     name: Frontend · browser E2E
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
+      COMPOSE_FILE: compose.yaml:compose.ci.yaml:compose.browser.yaml
+      COMPOSE_PROJECT_NAME: platform-browser-ci
       POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
       POSTGRES_USER: platform_app
@@ -569,7 +828,8 @@ jobs:
           import base64, os, secrets
           values = {k: secrets.token_hex(32) for k in (
               'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
-              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY', 'E2E_ISOLATION_PROOF')}
+              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY', 'E2E_ISOLATION_PROOF',
+              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD', 'CORE_MAINTENANCE_PASSWORD', 'CONTROL_MAINTENANCE_PASSWORD')}
           values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
               'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
           values['E2E_PASSWORD'] = secrets.token_urlsafe(24)
@@ -650,6 +910,17 @@ jobs:
           node scripts/verify-controls.mjs
           node scripts/verify-accessibility.mjs
           node scripts/verify-admin.mjs
+          node scripts/verify-billing.mjs
+          node scripts/verify-core-auth.mjs
+          node scripts/verify-core-security.mjs
+          node scripts/verify-core-profile.mjs
+          node scripts/verify-core-credentials.mjs
+          node scripts/verify-core-privacy.mjs
+          node scripts/verify-core-privacy-operator.mjs
+          node scripts/verify-core-configuration.mjs
+          node scripts/verify-typography.mjs
+          node scripts/verify-workflows.mjs
+          node scripts/verify-mobile-components.mjs
           node scripts/verify-responsive.mjs
       - name: Reset disposable Commercial fixtures before invitation flow
         run: |
@@ -669,6 +940,33 @@ jobs:
       - name: Run browser account recovery flow
         working-directory: apps/frontend
         run: node scripts/e2e-auth-recovery.mjs
+      - name: Reset disposable Commercial fixtures before billing flow
+        run: |
+          docker compose --profile control-test stop control-plane-test
+          env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+          docker compose --profile control-test up -d --wait control-plane-test
+          bash ./scripts/ci/control-email-worker-start.sh
+      - name: Verify real zero-price billing, MFA and cancellation
+        working-directory: apps/frontend
+        run: npm run test:e2e:billing
+      - name: Reset disposable fixtures before paid billing
+        run: |
+          docker compose --profile control-test stop control-plane-test
+          env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+          docker compose --profile control-test up -d --wait control-plane-test
+          bash ./scripts/ci/control-email-worker-start.sh
+      - name: Verify paid billing through real gateways with synthetic provider wire
+        working-directory: apps/frontend
+        run: npm run test:e2e:paid-billing
+      - name: Reset disposable fixtures before independent operator workflows
+        run: |
+          docker compose --profile control-test stop control-plane-test
+          env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+          docker compose --profile control-test up -d --wait control-plane-test
+          bash ./scripts/ci/control-email-worker-start.sh
+      - name: Verify two real operators, MFA, finance and privacy evidence
+        working-directory: apps/frontend
+        run: npm run test:e2e:operators
       - name: Reset isolated fixtures before load without disabling registration limits
         run: |
           docker compose --profile control-test stop control-plane-test

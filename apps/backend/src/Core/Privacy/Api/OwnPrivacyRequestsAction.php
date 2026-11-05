@@ -22,6 +22,9 @@ final readonly class OwnPrivacyRequestsAction
         $actor = AuthenticatedIdentity::fromRequest($request);
         $operation = (string) $route->getArgument('operation');
         try {
+            if ($operation === 'representations') {
+                return $responses->success(['items' => $service->ownRepresentations($actor)]);
+            }
             if ($operation === 'submit') {
                 $input = $request->getParsedBody();
                 if (!is_array($input) || !PrivacyRequestInput::keys($input, ['requestType'])) {
@@ -51,7 +54,13 @@ final readonly class OwnPrivacyRequestsAction
                 return $responses->success(['id' => $id])->withStatus(Status::CREATED);
             }
             if ($operation === 'list') {
-                return $responses->success(array_map(static fn($view): array => $view->toArray(), $service->listOwn($actor)));
+                $query = $request->getQueryParams();
+                $limit = filter_var($query['limit'] ?? 100, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
+                $offset = filter_var($query['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 100_000]]);
+                if (!is_int($limit) || !is_int($offset)) {
+                    return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
+                }
+                return $responses->success(array_map(static fn($view): array => $view->toArray(), $service->listOwn($actor, $limit, $offset)));
             }
             if ($operation === 'get') {
                 $id = (string) $route->getArgument('id');

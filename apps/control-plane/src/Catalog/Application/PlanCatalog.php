@@ -25,7 +25,8 @@ SQL);
         return array_map(static function (array $row): array {
             $row['version'] = (int) $row['version'];
             $row['prices'] = json_decode((string) $row['prices'], true, 512, JSON_THROW_ON_ERROR);
-            $row['features'] = json_decode((string) $row['features'], true, 512, JSON_THROW_ON_ERROR);
+            $features = json_decode((string) $row['features'], true, 512, JSON_THROW_ON_ERROR);
+            $row['features'] = $features === [] ? new \stdClass() : $features;
 
             return $row;
         }, $rows);

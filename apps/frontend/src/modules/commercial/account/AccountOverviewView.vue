@@ -8,7 +8,10 @@ const store = useAccountStore();
 </script>
 
 <template>
-  <div v-if="store.accountDetail" class="overview">
+  <div
+    v-if="store.accountDetail"
+    class="overview"
+  >
     <AppCard padding="default">
       <h2 class="overview__title">{{ $t('account.details') }}</h2>
       <AccountDetailsPanel :account="store.accountDetail" />
@@ -33,6 +36,7 @@ const store = useAccountStore();
 .overview__title {
   margin-bottom: var(--space-12);
   font-size: var(--type-h3-size);
+  letter-spacing: var(--type-h3-tracking);
   line-height: var(--type-h3-line);
   font-weight: var(--type-h3-weight);
   color: var(--text-1);

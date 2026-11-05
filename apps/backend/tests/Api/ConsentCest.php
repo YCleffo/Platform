@@ -48,6 +48,16 @@ final readonly class ConsentCest
         $I->seeResponseCodeIs(HttpCode::OK);
         $first = json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data'];
         assertTrue($first['current']);
+        $I->sendPOST('/api/auth/me/consents/test.processing', [
+            'document_version' => 'outdated', 'document_sha256' => str_repeat('a', 64),
+        ]);
+        $I->seeResponseCodeIs(HttpCode::CONFLICT);
+        $I->sendPOST('/api/auth/me/consents/test.processing', [
+            'document_version' => $data['definitions'][0]['current_document_version'],
+            'document_sha256' => $data['definitions'][0]['current_document_sha256'],
+        ]);
+        $I->seeResponseCodeIs(HttpCode::OK);
+        assertSame($first['id'], json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data']['id']);
         $I->sendPOST('/api/auth/me/consents/test.processing', []);
         $I->seeResponseCodeIs(HttpCode::OK);
         assertSame($first['id'], json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data']['id']);

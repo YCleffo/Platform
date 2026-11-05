@@ -9,7 +9,7 @@ DBML служит представлением для диаграммы, а н�
 
 | Схема | Таблицы | Столбцы | FK | CHECK | Индексы | Пользовательские triggers |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `core` | 50 | 561 | 86 | 195 | 161 | 18 |
+| `core` | 50 | 561 | 86 | 195 | 161 | 19 |
 | `platform_runtime` | 3 | 36 | 1 | 18 | 7 | 2 |
 | `commercial` | 61 | 615 | 97 | 272 | 176 | 53 |
 
@@ -129,7 +129,7 @@ Append-only business/security audit: who changed what and when. NOT technical te
 
 - `fk_audit_events_actor`: `FOREIGN KEY (actor_account_id) REFERENCES core.accounts(id) ON DELETE SET NULL`.
 
-CHECK: 1; индексов: 7; пользовательских triggers: 0.
+CHECK: 1; индексов: 7; пользовательских triggers: 1.
 
 ## core.auth_challenges
 

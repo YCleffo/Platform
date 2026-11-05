@@ -72,7 +72,7 @@ try {
   await settled(page);
   check(await page.locator('.app-skeleton').first().evaluate(el => getComputedStyle(el).animationName === 'none'), 'Animations were not disabled');
   await range(page, 'appearance-font-scale', 1.4);
-  await page.locator('#appearance-advanced summary').click();
+  await page.locator('#appearance-advanced .app-disclosure__trigger').click();
   await range(page, 'appearance-spacing-scale', 1.25);
   await range(page, 'appearance-button-x', 32);
   await range(page, 'appearance-button-y', 16);

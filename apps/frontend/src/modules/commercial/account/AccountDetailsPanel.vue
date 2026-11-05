@@ -14,7 +14,10 @@ const { t, locale } = useI18n();
       <dt class="details__label">{{ $t('account.code') }}</dt>
       <dd class="details__value details__value--mono">{{ account.code }}</dd>
     </div>
-    <div v-if="account.legal_name" class="details__row">
+    <div
+      v-if="account.legal_name"
+      class="details__row"
+    >
       <dt class="details__label">{{ $t('account.legalName') }}</dt>
       <dd class="details__value">{{ account.legal_name }}</dd>
     </div>
@@ -54,6 +57,7 @@ const { t, locale } = useI18n();
 
 .details__label {
   font-size: var(--type-body-small-size);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-emphasis-weight);
   color: var(--text-3);
@@ -63,6 +67,8 @@ const { t, locale } = useI18n();
 .details__value {
   margin: 0;
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--text-1);
   overflow-wrap: anywhere;

@@ -110,7 +110,7 @@
   --color-link-hover: #B8CCFF;
   --color-link-visited: #A5B4FC;
 
-  --color-hover-primary: #5B86FF;
+  --color-hover-primary: #3868ED;
   --color-pressed-primary: #1B52E6;
   --color-disabled-text: #667085;
   --color-disabled-border: #273449;
@@ -247,7 +247,7 @@
   --type-h2-weight: 600;
   --type-h2-tracking: -0.0025em;
   --type-h3-family: "Inter";
-  --type-h3-size: calc(16px * var(--ui-font-scale, 1));
+  --type-h3-size: calc(15px * var(--ui-font-scale, 1));
   --type-h3-line: calc(20px * var(--ui-font-scale, 1));
   --type-h3-weight: 600;
   --type-h3-tracking: 0;
@@ -262,13 +262,13 @@
   --type-body-large-emphasis-weight: 500;
   --type-body-large-emphasis-tracking: 0;
   --type-body-medium-family: "Inter";
-  --type-body-medium-size: calc(14px * var(--ui-font-scale, 1));
-  --type-body-medium-line: calc(20px * var(--ui-font-scale, 1));
+  --type-body-medium-size: calc(13px * var(--ui-font-scale, 1));
+  --type-body-medium-line: calc(18px * var(--ui-font-scale, 1));
   --type-body-medium-weight: 400;
   --type-body-medium-tracking: 0;
   --type-body-medium-emphasis-family: "Inter";
-  --type-body-medium-emphasis-size: calc(14px * var(--ui-font-scale, 1));
-  --type-body-medium-emphasis-line: calc(20px * var(--ui-font-scale, 1));
+  --type-body-medium-emphasis-size: calc(13px * var(--ui-font-scale, 1));
+  --type-body-medium-emphasis-line: calc(18px * var(--ui-font-scale, 1));
   --type-body-medium-emphasis-weight: 500;
   --type-body-medium-emphasis-tracking: 0;
   --type-body-small-family: "Inter";
@@ -297,8 +297,8 @@
   --type-button-s-weight: 500;
   --type-button-s-tracking: 0;
   --type-button-m-family: "Inter";
-  --type-button-m-size: calc(14px * var(--ui-font-scale, 1));
-  --type-button-m-line: calc(20px * var(--ui-font-scale, 1));
+  --type-button-m-size: calc(12px * var(--ui-font-scale, 1));
+  --type-button-m-line: calc(16px * var(--ui-font-scale, 1));
   --type-button-m-weight: 500;
   --type-button-m-tracking: 0;
   --type-button-l-family: "Inter";

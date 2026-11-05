@@ -42,6 +42,8 @@ await context.route('**/api/**', async route => {
     };
   } else if (path === '/api/auth/logout') {
     return route.fulfill({ status: 204 });
+  } else if (['/api/core/modules','/api/core/settings/system','/api/core/feature-flags'].includes(path)) {
+    data = [];
   } else if (path === '/api/core/roles') {
     if (holdRefresh) await new Promise(resolve => { releaseRefresh = resolve; });
     data = { items: [role], pagination: { total: 1, limit: 25, offset: 0 } };
@@ -98,7 +100,7 @@ try {
 
   const before = await buttonGeometry();
   holdRefresh = true;
-  await page.getByRole('button', { name: 'Try again', exact: true }).click();
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
   await page.waitForFunction(() =>
     document.querySelector('.admin-resource__head button[aria-busy="true"]') !== null);
   const pending = await buttonGeometry();
@@ -135,9 +137,9 @@ try {
   const failures = [];
   if (states.some(state => state.overflow)) failures.push('Horizontal overflow in admin pages');
   if (errors.length) failures.push(...errors);
-  if (!['Account roles', 'Assign role', 'Revoke role', 'Create', 'Try again']
+  if (!['Account roles', 'Assign role', 'Revoke role', 'Create', 'Refresh']
     .every(label => labels.includes(label))) failures.push('Untranslated EN RBAC actions');
-  if (!['Роли учётной записи', 'Назначить роль', 'Отозвать роль', 'Создать', 'Повторить']
+  if (!['Роли учётной записи', 'Назначить роль', 'Отозвать роль', 'Создать', 'Обновить']
     .every(label => russianLabels.includes(label))) failures.push('Untranslated RU RBAC actions');
   if (!result.buttonGeometryStable) failures.push('Refresh changes action button geometry');
   if (modal === null || Math.abs(modal.x) > 1 || Math.abs(modal.y) > 1
@@ -146,7 +148,7 @@ try {
   }
   if (result.createDialogViolations.length) failures.push('Create dialog has accessibility violations');
   if (failures.length) throw new Error(failures.join('; '));
-  console.log('ADMIN INTERFACE PASSED: 33 fixture states, EN/RU actions, stable refresh buttons, fullscreen JSON, accessible create dialog.');
+  console.log('ADMIN INTERFACE PASSED: 33 fixture states, EN/RU actions, stable refresh buttons, fullscreen result, accessible create dialog.');
 } finally {
   releaseRefresh?.();
   await browser.close();

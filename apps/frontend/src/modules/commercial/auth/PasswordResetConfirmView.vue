@@ -50,15 +50,26 @@ async function onSubmit(): Promise<void> {
     centered
   >
     <template #icon>
-      <span class="reset-view__icon reset-view__icon--error" aria-hidden="true">
+      <span
+        class="reset-view__icon reset-view__icon--error"
+        aria-hidden="true"
+      >
         <CircleAlert :size="28" />
       </span>
     </template>
     <div class="reset-view__actions">
-      <RouterLink class="reset-view__link" :to="{ name: 'password-reset-request' }">
+      <RouterLink
+        class="reset-view__link"
+        :to="{ name: 'password-reset-request' }"
+      >
         {{ $t('auth.requestNewLink') }}
       </RouterLink>
-      <RouterLink class="reset-view__link" :to="{ name: 'login' }">{{ $t('nav.login') }}</RouterLink>
+      <RouterLink
+        class="reset-view__link"
+        :to="{ name: 'login' }"
+      >
+        {{ $t('nav.login') }}
+      </RouterLink>
     </div>
   </AppFormShell>
 
@@ -68,7 +79,11 @@ async function onSubmit(): Promise<void> {
     :subtitle="$t('auth.resetSubtitle')"
     :error="message"
   >
-    <form class="auth-form" novalidate @submit.prevent="onSubmit">
+    <form
+      class="auth-form"
+      novalidate
+      @submit.prevent="onSubmit"
+    >
       <AppPasswordInput
         id="reset-password"
         v-model="form.values.password"
@@ -85,9 +100,17 @@ async function onSubmit(): Promise<void> {
         autocomplete="new-password"
         required
       />
-      <AppButton type="submit" :loading="submitting" block>{{ $t('auth.resetSubmit') }}</AppButton>
+      <AppButton
+        type="submit"
+        :loading="submitting"
+        block
+      >
+        {{ $t('auth.resetSubmit') }}
+      </AppButton>
       <p class="auth-form__switch">
-        <RouterLink :to="{ name: 'password-reset-request' }">{{ $t('auth.requestNewLink') }}</RouterLink>
+        <RouterLink :to="{ name: 'password-reset-request' }">
+          {{ $t('auth.requestNewLink') }}
+        </RouterLink>
       </p>
     </form>
   </AppFormShell>
@@ -103,6 +126,7 @@ async function onSubmit(): Promise<void> {
 .auth-form__switch,
 .reset-view__link {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);

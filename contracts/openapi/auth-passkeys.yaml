@@ -1,698 +1,302 @@
 openapi: 3.1.0
 info:
-  title: Platform Passkey / WebAuthn API
-  version: 1.0.0
+  title: Platform Core WebAuthn and External Credentials API
+  version: 1.1.0
   description: >
-    API contract for W3C WebAuthn Level 3 Passkey ceremonies and credential lifecycle management
-    in Platform Core. Covers registration ceremony, discoverable authentication ceremony,
-    first-factor completion, MFA step-up flow, and credential self-service management.
-
+    Self-service credentials for Core accounts. WebAuthn requires user verification,
+    discoverable credentials and a configured RP/origin. External linking is bound to
+    the initiating account/session, state and PKCE. The SPA callback relays a one-time
+    provider code to the original authenticated window; no Core tokens go to the popup.
 paths:
   /api/auth/passkeys/registration/start:
     post:
-      summary: Start passkey registration ceremony
-      description: >
-        Generates WebAuthn PublicKeyCredentialCreationOptions for the authenticated account.
-        Requires active session and recent reauthentication.
-        Binds ceremony challenge to current session and client context.
       operationId: startPasskeyRegistration
-      tags:
-        - Passkeys Registration
-      security:
-        - BearerAuth: []
+      security: [{ BearerAuth: [] }]
       responses:
         '200':
-          description: Registration creation options generated successfully
+          description: Fresh session-bound registration options
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - success
-                  - data
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    $ref: '#/components/schemas/PublicKeyCredentialCreationOptions'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Recent reauthentication required
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                success: false
-                error:
-                  code: auth.recent_required
-                  message: Recent reauthentication is required.
-
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/CreationOptions' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RecentRequired' }
   /api/auth/passkeys/registration/complete:
     post:
-      summary: Complete passkey registration ceremony
-      description: >
-        Validates the WebAuthn attestation response against the stored challenge,
-        enforces session/client binding, normalizes transports, extracts AAGUID and backup flags,
-        and atomically registers the passkey. Payload must not exceed 32 KiB.
       operationId: completePasskeyRegistration
-      tags:
-        - Passkeys Registration
-      security:
-        - BearerAuth: []
+      security: [{ BearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PasskeyRegistrationCompleteRequest'
+              type: object
+              required: [credential]
+              properties:
+                credential: { type: object, required: [id, rawId, type, response] }
+                label: { type: [string, 'null'], maxLength: 160 }
       responses:
         '201':
-          description: Passkey registered successfully
+          description: Registered credential; private key is never sent to the server
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - success
-                  - data
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    $ref: '#/components/schemas/PasskeySummary'
-        '400':
-          description: Invalid WebAuthn response or ceremony error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                success: false
-                error:
-                  code: auth.passkey.invalid
-                  message: Invalid passkey ceremony payload.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Recent reauthentication required
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: Credential ID already registered
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                success: false
-                error:
-                  code: auth.passkey.conflict
-                  message: Passkey credential already registered.
-        '413':
-          $ref: '#/components/responses/PayloadTooLarge'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
-
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/PasskeyCreated' }
+        '400': { description: 'auth.passkey.invalid: invalid/expired/replayed attestation, UV, RP or origin' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RecentRequired' }
+        '409': { description: 'auth.passkey.conflict: credential already registered' }
+        '413': { description: Request exceeds 32768 bytes }
+        '422': { description: Invalid credential input or label }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { description: Security limiter unavailable; fail closed }
   /api/auth/passkeys/authentication/start:
     post:
-      summary: Start passkey authentication ceremony
-      description: >
-        Generates WebAuthn PublicKeyCredentialRequestOptions for discoverable login (resident keys).
-        Public endpoint protected by fail-closed IP rate limits.
       operationId: startPasskeyAuthentication
-      tags:
-        - Passkeys Authentication
       responses:
         '200':
-          description: Authentication request options generated successfully
+          description: Discoverable authentication, no account identifier required
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - success
-                  - data
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    $ref: '#/components/schemas/PublicKeyCredentialRequestOptions'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
-
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/RequestOptions' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { description: Security limiter unavailable; fail closed }
   /api/auth/passkeys/authentication/complete:
     post:
-      summary: Complete passkey authentication ceremony
-      description: >
-        Verifies the WebAuthn assertion response, atomically consumes challenge via CAS,
-        verifies counter / anomaly for hardware keys, and completes first factor authentication.
-        If account has TOTP MFA active, returns mfa_required with challenge token.
-        Payload must not exceed 32 KiB.
       operationId: completePasskeyAuthentication
-      tags:
-        - Passkeys Authentication
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PasskeyAuthenticationCompleteRequest'
+              type: object
+              required: [credential]
+              properties:
+                credential: { type: object, required: [id, rawId, type, response] }
       responses:
         '200':
-          description: First factor verified; either session issued or MFA challenge returned
+          description: Same authentication continuation as password/external login
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/AuthenticationSuccessResult'
-                  - $ref: '#/components/schemas/MfaRequiredResult'
-        '401':
-          description: Invalid passkey credentials, signature mismatch, or counter anomaly
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                success: false
-                error:
-                  code: auth.invalid_credentials
-                  message: Invalid credentials.
-        '413':
-          $ref: '#/components/responses/PayloadTooLarge'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
-
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/AuthenticationResult' }
+        '401': { description: 'Invalid/expired assertion, wrong origin/RP/UV/user handle or revoked credential' }
+        '413': { description: Request exceeds 32768 bytes }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { description: Security limiter unavailable; fail closed }
   /api/auth/me/passkeys:
     get:
-      summary: List registered passkeys
-      description: Returns all active (non-revoked) passkeys registered for the authenticated account.
-      operationId: listPasskeys
-      tags:
-        - Passkeys Management
-      security:
-        - BearerAuth: []
+      operationId: listOwnPasskeys
+      security: [{ BearerAuth: [] }]
       responses:
         '200':
-          description: List of registered passkeys
+          description: Active credentials of the authenticated account only
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - success
-                  - data
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: object
-                    required:
-                      - items
-                    properties:
-                      items:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/PasskeySummary'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties:
+                      data:
+                        type: object
+                        required: [items]
+                        properties:
+                          items: { type: array, items: { $ref: '#/components/schemas/PasskeySummary' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /api/auth/me/passkeys/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
     patch:
-      summary: Rename passkey label
-      description: Updates the user-visible label of a registered passkey.
-      operationId: renamePasskey
-      tags:
-        - Passkeys Management
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Passkey UUID
-          schema:
-            type: string
-            format: uuid
+      operationId: renameOwnPasskey
+      security: [{ BearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PasskeyRenameRequest'
+              type: object
+              additionalProperties: false
+              properties:
+                label: { type: [string, 'null'], maxLength: 160 }
       responses:
-        '200':
-          description: Passkey label updated
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - success
-                  - data
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    $ref: '#/components/schemas/PasskeySummary'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/PasskeyNotFound'
-
+        '200': { description: 'Success envelope with PasskeySummary; null removes the label' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: Credential missing or belongs to another account }
+        '422': { description: Invalid label }
     delete:
-      summary: Revoke passkey
-      description: >
-        Revokes a registered passkey. Requires recent reauthentication.
-        Enforces last-authentication-method invariant: fails with 409 Conflict
-        if revoking this passkey would leave the account with zero usable login methods.
-      operationId: revokePasskey
-      tags:
-        - Passkeys Management
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Passkey UUID
-          schema:
-            type: string
-            format: uuid
+      operationId: revokeOwnPasskey
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: 'Success envelope with data.status=revoked; history retained' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RecentRequired' }
+        '404': { description: Credential missing or belongs to another account }
+        '409': { $ref: '#/components/responses/LastMethod' }
+  /api/auth/providers:
+    get:
+      operationId: listEnabledExternalProviders
       responses:
         '200':
-          description: Passkey revoked
+          description: >
+            Success envelope with data.items containing code, displayName, loginEnabled.
+            An enabled provider with loginEnabled=false may still be linked.
+  /api/auth/me/identities:
+    get:
+      operationId: listOwnExternalIdentities
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Safe linked identities; no subject, claims or OAuth tokens
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - success
-                  - data
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: object
-                    required:
-                      - status
-                    properties:
-                      status:
-                        type: string
-                        example: revoked
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Recent reauthentication required
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          $ref: '#/components/responses/PasskeyNotFound'
-        '409':
-          description: Cannot revoke the last usable authentication method
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                success: false
-                error:
-                  code: auth.identity.last_method
-                  message: Cannot remove the last usable authentication method.
-
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties:
+                      data:
+                        type: object
+                        required: [items]
+                        properties:
+                          items: { type: array, items: { $ref: '#/components/schemas/ExternalIdentity' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/auth/me/identities/{provider}/link/start:
+    parameters:
+      - { $ref: '#/components/parameters/Provider' }
+    post:
+      operationId: startOwnExternalIdentityLink
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 'Success envelope with data.authorizationUrl and data.expiresAt'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RecentRequired' }
+        '404': { description: Provider unavailable }
+        '409': { description: 'auth.identity.conflict: provider already linked' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { description: Security limiter unavailable; fail closed }
+  /api/auth/me/identities/{provider}/link/callback:
+    parameters:
+      - { $ref: '#/components/parameters/Provider' }
+      - { name: state, in: query, required: true, schema: { type: string } }
+      - { name: code, in: query, required: true, schema: { type: string } }
+    get:
+      operationId: completeOwnExternalIdentityLink
+      description: Called by the original authenticated SPA window after its provider popup callback.
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Success envelope with ExternalIdentity }
+        '401': { description: 'Invalid authentication, state, callback, PKCE or provider proof' }
+        '403': { $ref: '#/components/responses/RecentRequired' }
+        '409': { description: 'auth.identity.conflict: provider identity already belongs to another account' }
+        '503': { description: Security limiter unavailable; fail closed }
+  /api/auth/me/identities/{provider}:
+    parameters:
+      - { $ref: '#/components/parameters/Provider' }
+    delete:
+      operationId: unlinkOwnExternalIdentity
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: 'Success envelope with data.status=unlinked' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RecentRequired' }
+        '404': { description: 'auth.provider.not_linked' }
+        '409': { $ref: '#/components/responses/LastMethod' }
 components:
   securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
+    BearerAuth: { type: http, scheme: bearer }
+  parameters:
+    Provider: { name: provider, in: path, required: true, schema: { type: string, enum: [google, telegram] } }
   schemas:
-    ErrorResponse:
+    Success:
       type: object
-      required:
-        - success
-        - error
+      required: [status, data]
       properties:
-        success:
-          type: boolean
-          example: false
-        error:
-          type: object
-          required:
-            - code
-            - message
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-
-    PublicKeyCredentialCreationOptions:
+        status: { const: success }
+        data: {}
+    CreationOptions:
       type: object
-      required:
-        - challenge
-        - rp
-        - user
-        - pubKeyCredParams
-        - timeout
-        - attestation
-        - authenticatorSelection
+      required: [rp, user, challenge, pubKeyCredParams, timeout, authenticatorSelection, attestation, excludeCredentials]
       properties:
-        challenge:
-          type: string
-          description: Base64url-encoded random challenge (32 bytes)
-        rp:
-          type: object
-          required:
-            - id
-            - name
-          properties:
-            id:
-              type: string
-              example: localhost
-            name:
-              type: string
-              example: Platform
-        user:
-          type: object
-          required:
-            - id
-            - name
-            - displayName
-          properties:
-            id:
-              type: string
-              description: Base64url-encoded HMAC-derived user handle (32 bytes)
-            name:
-              type: string
-            displayName:
-              type: string
-        pubKeyCredParams:
-          type: array
-          items:
-            type: object
-            required:
-              - type
-              - alg
-            properties:
-              type:
-                type: string
-                example: public-key
-              alg:
-                type: integer
-                example: -7
-        timeout:
-          type: integer
-          example: 60000
-        attestation:
-          type: string
-          example: none
+        rp: { type: object, required: [id, name] }
+        user: { type: object, required: [id, name, displayName] }
+        challenge: { type: string, description: Base64url-encoded bytes }
+        pubKeyCredParams: { type: array, items: { type: object, required: [type, alg] } }
+        timeout: { type: integer }
         authenticatorSelection:
           type: object
-          required:
-            - residentKey
-            - userVerification
           properties:
-            residentKey:
-              type: string
-              example: required
-            requireResidentKey:
-              type: boolean
-              example: true
-            userVerification:
-              type: string
-              example: required
-
-    PublicKeyCredentialRequestOptions:
+            residentKey: { const: required }
+            requireResidentKey: { const: true }
+            userVerification: { const: required }
+        attestation: { const: none }
+        excludeCredentials: { type: array, items: { type: object, required: [type, id] } }
+    RequestOptions:
       type: object
-      required:
-        - challenge
-        - rpId
-        - timeout
-        - userVerification
+      required: [challenge, rpId, timeout, userVerification, allowCredentials]
       properties:
-        challenge:
-          type: string
-          description: Base64url-encoded random challenge (32 bytes)
-        rpId:
-          type: string
-          example: localhost
-        timeout:
-          type: integer
-          example: 60000
-        userVerification:
-          type: string
-          example: required
-        allowCredentials:
-          type: array
-          items:
-            type: object
-
-    PasskeyRegistrationCompleteRequest:
+        challenge: { type: string }
+        rpId: { type: string }
+        timeout: { type: integer }
+        userVerification: { const: required }
+        allowCredentials: { type: array, maxItems: 0 }
+    PasskeyCreated:
       type: object
-      required:
-        - responseJson
+      required: [id, label, createdAt, transports, backupEligible, backupState]
       properties:
-        responseJson:
-          type: string
-          description: JSON-serialized WebAuthn PublicKeyCredential creation response (max 32 KiB)
-        label:
-          type: string
-          maxLength: 100
-          description: Optional user-defined label for the passkey
-          example: MacBook Touch ID
-
-    PasskeyAuthenticationCompleteRequest:
-      type: object
-      required:
-        - responseJson
-      properties:
-        responseJson:
-          type: string
-          description: JSON-serialized WebAuthn PublicKeyCredential assertion response (max 32 KiB)
-
-    PasskeyRenameRequest:
-      type: object
-      required:
-        - label
-      properties:
-        label:
-          type: string
-          maxLength: 100
-          description: New label for the passkey
-          example: YubiKey 5C
-
+        id: { type: string, format: uuid }
+        label: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        lastUsedAt: { type: [string, 'null'], format: date-time }
+        transports: { type: array, items: { type: string } }
+        backupEligible: { type: boolean }
+        backupState: { type: boolean }
     PasskeySummary:
-      type: object
-      required:
-        - id
-        - label
-        - createdAt
-        - transports
-        - backupEligible
-        - backupState
-      properties:
-        id:
-          type: string
-          format: uuid
-        label:
-          type: string
-          nullable: true
-          example: Primary Key
-        createdAt:
-          type: string
-          format: date-time
-        lastUsedAt:
-          type: string
-          format: date-time
-          nullable: true
-        transports:
-          type: array
-          items:
-            type: string
-          example: ["internal"]
-        backupEligible:
-          type: boolean
-          example: true
-        backupState:
-          type: boolean
-          example: true
-
-    AuthenticationSuccessResult:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          type: object
-          required:
-            - status
-            - session
-            - account
-            - tokens
+      allOf:
+        - { $ref: '#/components/schemas/PasskeyCreated' }
+        - required: [lastUsedAt]
+    AuthenticationResult:
+      oneOf:
+        - type: object
+          required: [status, accessToken, refreshToken, accessExpiresAt, sessionExpiresAt, sessionId]
           properties:
-            status:
-              type: string
-              example: authenticated
-            session:
-              type: object
-              required:
-                - id
-                - expiresAt
-              properties:
-                id:
-                  type: string
-                  format: uuid
-                expiresAt:
-                  type: string
-                  format: date-time
-            account:
-              type: object
-              required:
-                - id
-                - status
-              properties:
-                id:
-                  type: string
-                  format: uuid
-                status:
-                  type: string
-                  example: active
-            tokens:
-              type: object
-              required:
-                - accessToken
-                - tokenType
-                - expiresIn
-              properties:
-                accessToken:
-                  type: string
-                tokenType:
-                  type: string
-                  example: Bearer
-                expiresIn:
-                  type: integer
-                  example: 900
-                refreshToken:
-                  type: string
-                  nullable: true
-
-    MfaRequiredResult:
-      type: object
-      required:
-        - success
-        - data
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          type: object
-          required:
-            - status
-            - challengeId
-            - mfaToken
-            - availableMethods
+            status: { const: authenticated }
+            accessToken: { type: string }
+            refreshToken: { type: string }
+            accessExpiresAt: { type: string, format: date-time }
+            sessionExpiresAt: { type: string, format: date-time }
+            sessionId: { type: string, format: uuid }
+        - type: object
+          required: [status, challengeToken]
           properties:
-            status:
-              type: string
-              example: mfa_required
-            challengeId:
-              type: string
-              format: uuid
-            mfaToken:
-              type: string
-            availableMethods:
-              type: array
-              items:
-                type: string
-              example: ["totp"]
-
+            status: { enum: [mfa_required, password_change_required] }
+            challengeToken: { type: string }
+            allowedFactors: { type: array, items: { type: string } }
+    ExternalIdentity:
+      type: object
+      required: [provider, email, emailVerified, displayName, avatarUrl, linkedAt, lastLoginAt]
+      properties:
+        provider: { type: string, enum: [google, telegram] }
+        email: { type: [string, 'null'] }
+        emailVerified: { type: boolean }
+        displayName: { type: [string, 'null'] }
+        avatarUrl: { type: [string, 'null'] }
+        linkedAt: { type: string, format: date-time }
+        lastLoginAt: { type: [string, 'null'], format: date-time }
   responses:
-    Unauthorized:
-      description: Missing or invalid authentication token
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            success: false
-            error:
-              code: auth.required
-              message: Authentication required.
-
-    PayloadTooLarge:
-      description: Request payload exceeds maximum allowed size (32 KiB)
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            success: false
-            error:
-              code: http.payload_too_large
-              message: Payload too large.
-
-    TooManyRequests:
-      description: Rate limit exceeded
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            success: false
-            error:
-              code: auth.rate_limited
-              message: Too many requests. Please try again later.
-
-    ServiceUnavailable:
-      description: Security rate-limiter infrastructure unavailable (fail-closed)
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            success: false
-            error:
-              code: auth.login_unavailable
-              message: Authentication service is temporarily unavailable.
-
-    PasskeyNotFound:
-      description: Passkey not found or does not belong to the authenticated account
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            success: false
-            error:
-              code: auth.passkey.not_found
-              message: Passkey not found.
+    Unauthorized: { description: Authentication required }
+    RecentRequired: { description: 'auth.recent_required: explicitly sign in again before retrying' }
+    LastMethod: { description: 'auth.identity.last_method: keep at least one usable sign-in method' }
+    RateLimited: { description: 'auth.rate_limited: do not retry the native ceremony automatically' }

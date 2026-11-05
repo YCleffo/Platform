@@ -1,4 +1,5 @@
 import type { HttpClient } from '@/shared/api/http';
+import { isBillingState, type BillingState } from './billingState';
 import type {
   AutoRenewalDisabled,
   BillingProfilePayload,
@@ -41,6 +42,7 @@ import {
 } from '../guards';
 
 export interface CommercialBillingApi {
+  state(accountId: string, limit?: number, offset?: number, query?: string): Promise<BillingState>;
   saveBillingProfile(accountId: string, payload: BillingProfilePayload): Promise<BillingProfileResult>;
   entitlements(accountId: string): Promise<EffectiveEntitlements>;
   createSubscription(accountId: string, planPriceId: string, quantity: number, idempotencyKey: string): Promise<SubscriptionCreated>;
@@ -68,6 +70,9 @@ const accountBase = (accountId: string) => `/accounts/${encodeURIComponent(accou
 
 export function createCommercialBillingApi(http: HttpClient): CommercialBillingApi {
   return {
+    state: (accountId, limit = 25, offset = 0, query = '') => http.get<BillingState>(`${accountBase(accountId)}/billing-state`, {
+      query: { limit, offset, q: query }, validate: isBillingState,
+    }),
     saveBillingProfile: (accountId, payload) =>
     http.put<BillingProfileResult>(`${accountBase(accountId)}/billing-profile`, payload, { validate: isBillingProfileResult }),
   entitlements: (accountId) =>

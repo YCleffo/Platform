@@ -38,14 +38,14 @@ final readonly class SecurityEmailProcessor implements EmailEventProcessor
         if($type==='control_user.password_reset_requested'){
             if(!is_string($payload['reset_id']??null)||!Uuid::isValid($payload['reset_id']))throw new \DomainException('Invalid reset event.');
             $url=$this->passwordResetUrl.(str_contains($this->passwordResetUrl,'?')?'&':'?').'token='.rawurlencode($this->tokens->passwordResetToken($payload['reset_id']));
-            $subject='Reset your Platform password';$text="Reset your Platform password: $url";
-            $body='<p>We received a request to reset the password for your Platform account.</p>'
+            $subject='[Platform Cabinet] Reset your password';$text="[Platform Cabinet] Reset your password: $url";
+            $body='<p>We received a request to reset the password for your Platform customer account.</p>'
                 .'<p><a href="'.htmlspecialchars($url,ENT_QUOTES,'UTF-8').'">Choose a new password</a></p>'
                 .'<p>If you did not request this, you can ignore this email.</p>';
         }
-        elseif($type==='control_user.password_changed'){$subject='Your Platform password changed';$text='Your Platform password was changed. If this was not you, contact support immediately.';}
-        elseif($type==='control_user.mfa_enabled'){$subject='Two-factor authentication enabled';$text='Two-factor authentication was enabled for your Platform account.';}
-        elseif($type==='control_user.mfa_disabled'){$subject='Two-factor authentication disabled';$text='Two-factor authentication was disabled for your Platform account.';}
+        elseif($type==='control_user.password_changed'){$subject='[Platform Cabinet] Your password changed';$text='Your Platform customer account password was changed. If this was not you, contact support immediately.';}
+        elseif($type==='control_user.mfa_enabled'){$subject='Two-factor authentication enabled';$text='Two-factor authentication was enabled for your Platform customer account.';}
+        elseif($type==='control_user.mfa_disabled'){$subject='Two-factor authentication disabled';$text='Two-factor authentication was disabled for your Platform customer account.';}
         elseif($type==='control_user.recovery_codes_regenerated'){$subject='Recovery codes regenerated';$text='Your Platform recovery codes were regenerated.';}
         if($body===''){$body='<p>'.htmlspecialchars($text,ENT_QUOTES,'UTF-8').'</p>';}
         return [$email,$subject,$text,ControlEmailLayout::render($subject,$body),(string)$row['event_id'].'@'.$this->messageIdDomain];

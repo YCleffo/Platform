@@ -23,7 +23,9 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const roles: InvitationRole[] = ['admin', 'billing', 'technical'];
-const roleOptions = computed(() => roles.map(value => ({ value, label: t(`cabinet.role_${value}`) })));
+const roleOptions = computed(() =>
+  roles.map((value) => ({ value, label: t(`cabinet.role_${value}`) })),
+);
 const role = ref<InvitationRole>('admin');
 const idempotencyKey = ref('');
 
@@ -34,13 +36,17 @@ const form = useForm({
   },
 });
 
-watch(open, (value) => {
-  if (value) {
-    form.reset();
-    role.value = 'admin';
-    idempotencyKey.value = createIdempotencyKey();
-  }
-}, { immediate: true });
+watch(
+  open,
+  (value) => {
+    if (value) {
+      form.reset();
+      role.value = 'admin';
+      idempotencyKey.value = createIdempotencyKey();
+    }
+  },
+  { immediate: true },
+);
 
 function submit(): void {
   if (props.busy || !form.validate()) {
@@ -62,7 +68,11 @@ function submit(): void {
     :persistent="busy"
     size="s"
   >
-    <form class="invite-form" novalidate @submit.prevent="submit">
+    <form
+      class="invite-form"
+      novalidate
+      @submit.prevent="submit"
+    >
       <AppInput
         id="invitation-email"
         v-model="form.values.email"
@@ -73,15 +83,42 @@ function submit(): void {
         required
       />
       <div class="invite-form__role">
-        <label class="invite-form__label" for="invitation-role">{{ $t('invitations.role') }}</label>
-        <AppDropdown id="invitation-role" v-model="role" :label="$t('invitations.role')" :options="roleOptions" :disabled="busy" />
+        <label
+          class="invite-form__label"
+          for="invitation-role"
+        >
+          {{ $t('invitations.role') }}
+        </label>
+        <AppDropdown
+          id="invitation-role"
+          v-model="role"
+          :label="$t('invitations.role')"
+          :options="roleOptions"
+          :disabled="busy"
+        />
       </div>
-      <p v-if="error" class="invite-form__error" role="alert">{{ error }}</p>
+      <p
+        v-if="error"
+        class="invite-form__error"
+        role="alert"
+      >
+        {{ error }}
+      </p>
       <div class="invite-form__actions">
-        <AppButton type="button" variant="secondary" :disabled="busy" @click="open = false">
+        <AppButton
+          type="button"
+          variant="secondary"
+          :disabled="busy"
+          @click="open = false"
+        >
           {{ $t('common.cancel') }}
         </AppButton>
-        <AppButton type="submit" :loading="busy">{{ $t('invitations.send') }}</AppButton>
+        <AppButton
+          type="submit"
+          :loading="busy"
+        >
+          {{ $t('invitations.send') }}
+        </AppButton>
       </div>
     </form>
   </AppDialog>
@@ -101,6 +138,7 @@ function submit(): void {
 
 .invite-form__label {
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   color: var(--text-2);
@@ -109,6 +147,8 @@ function submit(): void {
 
 .invite-form__error {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--danger-text);
   transition: var(--theme-transition);

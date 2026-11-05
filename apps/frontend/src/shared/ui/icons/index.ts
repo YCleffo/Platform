@@ -15,6 +15,8 @@ export { AppIcon };
 export const Building2 = icon('building');
 export const Check = icon('check');
 export const ChevronDown = icon('chevron-down');
+export const Calendar = icon('calendar');
+export const Clock = icon('clock');
 export const ChevronLeft = icon('chevron-left');
 export const ChevronRight = icon('chevron-right');
 export const CircleAlert = icon('alert-circle');

@@ -18,11 +18,28 @@ withDefaults(defineProps<Props>(), {
 <template>
   <div class="app-empty">
     <div class="app-empty__icon">
-      <component :is="icon ?? Inbox" :size="24" aria-hidden="true" />
+      <component
+        :is="icon ?? Inbox"
+        :size="24"
+        aria-hidden="true"
+      />
     </div>
-    <p v-if="title" class="app-empty__title">{{ title }}</p>
-    <p v-if="description" class="app-empty__description">{{ description }}</p>
-    <div v-if="$slots.default" class="app-empty__action">
+    <p
+      v-if="title"
+      class="app-empty__title"
+    >
+      {{ title }}
+    </p>
+    <p
+      v-if="description"
+      class="app-empty__description"
+    >
+      {{ description }}
+    </p>
+    <div
+      v-if="$slots.default"
+      class="app-empty__action"
+    >
       <slot />
     </div>
   </div>
@@ -52,6 +69,7 @@ withDefaults(defineProps<Props>(), {
 
 .app-empty__title {
   font-size: var(--type-body-large-emphasis-size);
+  letter-spacing: var(--type-body-large-emphasis-tracking);
   line-height: var(--type-body-large-emphasis-line);
   font-weight: var(--type-body-large-emphasis-weight);
   color: var(--text-1);
@@ -60,6 +78,7 @@ withDefaults(defineProps<Props>(), {
 
 .app-empty__description {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);

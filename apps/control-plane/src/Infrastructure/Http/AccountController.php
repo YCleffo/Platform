@@ -11,6 +11,7 @@ use ControlPlane\Account\Application\ListAccountMemberships;
 use ControlPlane\Account\Application\ListCommercialAccounts;
 use ControlPlane\Account\Application\MembershipService;
 use ControlPlane\Account\Authorization\AccountAuthorization;
+use ControlPlane\Billing\Application\GetBillingState;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
 use ControlPlane\Identity\Security\DatabaseRateLimiter;
 use ControlPlane\Identity\Application\AuthSecurityService;
@@ -35,6 +36,7 @@ final class AccountController extends AbstractController
         private readonly AccountAuthorization $authorization,
         private readonly DatabaseRateLimiter $rateLimiter,
         private readonly AuthSecurityService $authSecurity,
+        private readonly GetBillingState $billingState,
     ) {
     }
 
@@ -139,5 +141,16 @@ final class AccountController extends AbstractController
         }
 
         return $user;
+    }
+
+    #[Route('/{accountId}/billing-state', name: 'billing_state', methods: ['GET'])]
+    public function billingState(string $accountId, Request $request): JsonResponse
+    {
+        $query = $request->query->all();
+        $limit = $query['limit'] ?? '25';
+        $offset = $query['offset'] ?? '0';
+        if (!is_string($limit) || preg_match('/\A[1-9][0-9]*\z/D', $limit) !== 1
+            || !is_string($offset) || preg_match('/\A(?:0|[1-9][0-9]*)\z/D', $offset) !== 1) throw new \InvalidArgumentException('Invalid pagination.');
+        return new JsonResponse($this->billingState->get($this->user()->id(), $accountId, (int) $limit, (int) $offset, $request->query->getString('q')));
     }
 }

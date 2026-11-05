@@ -19,6 +19,10 @@ final readonly class ApplyAuthoritativeReceipt
         $this->validate($provider, $expected);
 
         return $this->connection->transactional(function (Connection $connection) use ($receiptId, $provider, $correlationId): bool {
+            // Receipt updates can recheck payment/invoice foreign keys. Acquire
+            // the invoice first, matching settlement, before owning the receipt
+            // or a payment key-share lock during those checks.
+            $connection->executeQuery('SELECT id FROM commercial.invoices WHERE id = (SELECT invoice_id FROM commercial.receipts WHERE id = ?) FOR KEY SHARE', [$receiptId]);
             $row = $connection->fetchAssociative('SELECT id, commercial_account_id, receipt_type, external_receipt_id, status FROM commercial.receipts WHERE id = ? FOR UPDATE', [$receiptId]);
             if ($row === false) {
                 throw new \DomainException('Receipt was not found.');

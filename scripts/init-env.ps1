@@ -19,7 +19,7 @@ function New-Secret([switch]$Base64) {
     return -join ($Bytes | ForEach-Object { $_.ToString('x2') })
 }
 $Changed = New-Object 'System.Collections.Generic.List[string]'
-foreach ($Key in @('POSTGRES_PASSWORD','CONTROL_POSTGRES_PASSWORD','CONTROL_APP_SECRET','CONTROL_TOKEN_SECRET','DEVICE_FINGERPRINT_KEY','AUTH_IDENTIFIER_HMAC_KEY')) {
+foreach ($Key in @('POSTGRES_PASSWORD','CONTROL_POSTGRES_PASSWORD','CONTROL_APP_SECRET','CONTROL_TOKEN_SECRET','DEVICE_FINGERPRINT_KEY','AUTH_IDENTIFIER_HMAC_KEY','CORE_RUNTIME_PASSWORD','CONTROL_RUNTIME_PASSWORD','CORE_MAINTENANCE_PASSWORD','CONTROL_MAINTENANCE_PASSWORD')) {
     if (-not $Values.ContainsKey($Key) -or [string]::IsNullOrWhiteSpace($Values[$Key])) {
         $Values[$Key] = New-Secret
         $Changed.Add($Key)
@@ -34,11 +34,11 @@ foreach ($Key in @('AUTH_TOTP_ENCRYPTION_KEY','CONTROL_TOTP_ENCRYPTION_KEY')) {
 $Derived = @{
     DB_HOST = 'postgres'; DB_PORT = '5432'
     DB_NAME = $(if ($Values.ContainsKey('POSTGRES_DB')) { $Values['POSTGRES_DB'] } else { 'platform' })
-    DB_USER = $(if ($Values.ContainsKey('POSTGRES_USER')) { $Values['POSTGRES_USER'] } else { 'platform_app' })
-    DB_PASSWORD = $Values['POSTGRES_PASSWORD']
+    DB_USER = $(if ($Values.ContainsKey('CORE_RUNTIME_ROLE')) { $Values['CORE_RUNTIME_ROLE'] } else { 'platform_core_runtime' })
+    DB_PASSWORD = $Values['CORE_RUNTIME_PASSWORD']
 }
 foreach ($Key in $Derived.Keys) {
-    if (-not $Values.ContainsKey($Key) -or [string]::IsNullOrWhiteSpace($Values[$Key])) { $Values[$Key] = $Derived[$Key] }
+    if ($Key -in @('DB_USER','DB_PASSWORD') -or -not $Values.ContainsKey($Key) -or [string]::IsNullOrWhiteSpace($Values[$Key])) { $Values[$Key] = $Derived[$Key] }
 }
 # Local backup and disposable test services are not part of the runtime.
 $Values['BACKUP_ENABLED'] = 'false'

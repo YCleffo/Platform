@@ -41,11 +41,19 @@ async function onSubmit(): Promise<void> {
     centered
   >
     <template #icon>
-      <span class="resend-view__icon" aria-hidden="true">
+      <span
+        class="resend-view__icon"
+        aria-hidden="true"
+      >
         <MailCheck :size="28" />
       </span>
     </template>
-    <RouterLink class="resend-view__link" :to="{ name: 'login' }">{{ $t('nav.login') }}</RouterLink>
+    <RouterLink
+      class="resend-view__link"
+      :to="{ name: 'login' }"
+    >
+      {{ $t('nav.login') }}
+    </RouterLink>
   </AppFormShell>
 
   <AppFormShell
@@ -54,7 +62,11 @@ async function onSubmit(): Promise<void> {
     :subtitle="$t('auth.resendPageSubtitle')"
     :error="message"
   >
-    <form class="auth-form" novalidate @submit.prevent="onSubmit">
+    <form
+      class="auth-form"
+      novalidate
+      @submit.prevent="onSubmit"
+    >
       <AppInput
         id="resend-email"
         v-model="form.values.email"
@@ -65,7 +77,13 @@ async function onSubmit(): Promise<void> {
         inputmode="email"
         required
       />
-      <AppButton type="submit" :loading="submitting" block>{{ $t('auth.resendPageSubmit') }}</AppButton>
+      <AppButton
+        type="submit"
+        :loading="submitting"
+        block
+      >
+        {{ $t('auth.resendPageSubmit') }}
+      </AppButton>
       <p class="auth-form__switch">
         <RouterLink :to="{ name: 'login' }">{{ $t('nav.login') }}</RouterLink>
       </p>
@@ -83,6 +101,7 @@ async function onSubmit(): Promise<void> {
 .auth-form__switch,
 .resend-view__link {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);

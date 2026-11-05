@@ -11,17 +11,36 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <div class="app-skeleton" :class="`app-skeleton--${variant}`" aria-hidden="true">
+  <div
+    class="app-skeleton"
+    :class="`app-skeleton--${variant}`"
+    aria-hidden="true"
+  >
     <template v-if="variant === 'text'">
-      <span v-for="i in lines" :key="i" class="app-skeleton__line" :style="{ width: `${95 - (i % 3) * 18}%` }" />
+      <span
+        v-for="i in lines"
+        :key="i"
+        class="app-skeleton__line"
+        :style="{ width: `${95 - (i % 3) * 18}%` }"
+      />
     </template>
     <template v-else-if="variant === 'card'">
       <span class="app-skeleton__block app-skeleton__block--tall" />
-      <span class="app-skeleton__line" style="width: 60%" />
-      <span class="app-skeleton__line" style="width: 40%" />
+      <span
+        class="app-skeleton__line"
+        style="width: 60%"
+      />
+      <span
+        class="app-skeleton__line"
+        style="width: 40%"
+      />
     </template>
     <template v-else>
-      <span v-for="i in lines" :key="i" class="app-skeleton__row" />
+      <span
+        v-for="i in lines"
+        :key="i"
+        class="app-skeleton__row"
+      />
     </template>
   </div>
 </template>

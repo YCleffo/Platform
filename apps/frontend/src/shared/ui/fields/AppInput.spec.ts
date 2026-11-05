@@ -6,6 +6,17 @@ import AppInput from './AppInput.vue';
 const flushReset = () => new Promise(resolve => setTimeout(resolve, 0));
 
 describe('AppInput', () => {
+  it('applies layout class/style to the field while keeping native attributes on the input', () => {
+    const wrapper = mount(AppInput, {
+      props: { id: 'search', modelValue: '' },
+      attrs: { class: 'search-width', style: 'max-width: 30rem', name: 'search', inputmode: 'text' },
+    });
+    expect(wrapper.get('.app-input').classes()).toContain('search-width');
+    expect(wrapper.get('.app-input').attributes('style')).toContain('max-width: 30rem');
+    expect(wrapper.get('input').classes()).not.toContain('search-width');
+    expect(wrapper.get('input').attributes('name')).toBe('search');
+    expect(wrapper.get('input').attributes('inputmode')).toBe('text');
+  });
   it('associates the label and error with the control', () => {
     const wrapper = mount(AppInput, {
       props: { id: 'email', label: 'Email', error: 'Required', modelValue: '' },

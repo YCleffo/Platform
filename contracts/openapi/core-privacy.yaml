@@ -1,0 +1,621 @@
+openapi: 3.1.0
+info:
+  title: Platform Core privacy workflows and presence
+  version: 1.1.0
+  description: >
+    Human-account self-service. An active verified representation is checked on every
+    representative operation. Operator management endpoints use a separate permission boundary.
+    Response GETs issue execution evidence and complete the request: they are stateful,
+    one-time operations and MUST NOT be replayed after a transient/network failure.
+security: [{ BearerAuth: [] }]
+paths:
+  /api/core/privacy/work-items/representation:
+    get:
+      summary: Minimal representation directory for authorized workflow selectors
+      description: Returns id, name and status only. Distribution records are restricted to the current person or grants made by this account. Other kinds require their respective Core read/manage permission.
+      responses:
+        '200':
+          description: Core success envelope containing items and total
+          content:
+            application/json:
+              schema: { type: object }
+        '401': { description: Authentication required }
+        '403': { description: Permission required }
+  /api/core/privacy/work-items/erasure:
+    get:
+      summary: Minimal erasure directory for authorized workflow selectors
+      description: Returns id, name and status only. Distribution records are restricted to the current person or grants made by this account. Other kinds require their respective Core read/manage permission.
+      responses:
+        '200':
+          description: Core success envelope containing items and total
+          content:
+            application/json:
+              schema: { type: object }
+        '401': { description: Authentication required }
+        '403': { description: Permission required }
+  /api/core/privacy/work-items/incident:
+    get:
+      summary: Minimal incident directory for authorized workflow selectors
+      description: Returns id, name and status only. Distribution records are restricted to the current person or grants made by this account. Other kinds require their respective Core read/manage permission.
+      responses:
+        '200':
+          description: Core success envelope containing items and total
+          content:
+            application/json:
+              schema: { type: object }
+        '401': { description: Authentication required }
+        '403': { description: Permission required }
+  /api/core/privacy/work-items/distribution:
+    get:
+      summary: Minimal distribution directory for authorized workflow selectors
+      description: Returns id, name and status only. Distribution records are restricted to the current person or grants made by this account. Other kinds require their respective Core read/manage permission.
+      responses:
+        '200':
+          description: Core success envelope containing items and total
+          content:
+            application/json:
+              schema: { type: object }
+        '401': { description: Authentication required }
+        '403': { description: Permission required }
+  /api/auth/me/privacy/representations:
+    get:
+      operationId: listOwnPrivacyRepresentations
+      description: >
+        Only verified, currently valid, non-revoked authorities for the authenticated
+        Person with privacy request scopes. No evidence, proof references or unrelated
+        person lookup. Client availability is advisory; authorization is rechecked on use.
+      responses:
+        '200':
+          description: Safe active authorities
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties:
+                      data:
+                        type: object
+                        required: [items]
+                        properties:
+                          items: { type: array, items: { $ref: '#/components/schemas/Representation' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { description: A human account linked to its Person is required }
+  /api/auth/me/privacy/requests:
+    get:
+      operationId: listOwnPrivacyRequests
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 100 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, maximum: 100000, default: 0 } }
+      description: >
+        Newest submittedAt/id first. The legacy data array shape is retained. Includes
+        the current subject's requests and requests submitted by this account under
+        a still-active authority with privacy.request.view. No total-count claim.
+      responses:
+        '200':
+          description: Page of visible requests
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/PrivacyRequest' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { description: Invalid pagination or ineligible profile }
+    post:
+      operationId: submitOwnPrivacyRequest
+      description: Subject and submitting identity come from the authenticated account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [requestType]
+              properties:
+                requestType: { $ref: '#/components/schemas/RequestType' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { description: Invalid request or ineligible profile }
+  /api/auth/me/privacy/requests/{id}:
+    parameters:
+      - { $ref: '#/components/parameters/RequestId' }
+    get:
+      operationId: getVisibleOwnPrivacyRequest
+      responses:
+        '200':
+          description: Visible request with current deadlines
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties:
+                      data: { $ref: '#/components/schemas/PrivacyRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/Unavailable' }
+  /api/auth/me/privacy/requests/{id}/data:
+    parameters:
+      - { $ref: '#/components/parameters/RequestId' }
+    get:
+      operationId: issueOwnPersonalData
+      description: >
+        Only access/export in_progress for the current subject. Returns raw JSON,
+        records its exact SHA256/byte size and completes the request atomically.
+        No repeat download from the server after completion. Preserve original UTF-8
+        bytes when saving; do not unwrap or pretty-print the downloadable document.
+      responses:
+        '200': { $ref: '#/components/responses/PersonalData' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/Unavailable' }
+        '413': { description: Personal data export exceeds its configured safety limit }
+  /api/auth/me/privacy/requests/{id}/processing-information:
+    parameters:
+      - { $ref: '#/components/parameters/RequestId' }
+    get:
+      operationId: issueOwnProcessingInformation
+      description: >
+        Only processing_information in_progress for the current subject. Fails closed
+        when operator identity, processing metadata or purpose coverage is incomplete.
+        Issuing the response records execution evidence and completes the request.
+      responses:
+        '200': { $ref: '#/components/responses/ProcessingInformation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/Unavailable' }
+  /api/auth/me/privacy/representations/{representationId}/requests:
+    parameters:
+      - { $ref: '#/components/parameters/RepresentationId' }
+    post:
+      operationId: submitRepresentativePrivacyRequest
+      description: >
+        Requires the request-type scope on the selected verified authority. Subject and
+        representative must match it exactly. Submit-only authority need not grant view.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [subjectPersonId, requestType]
+              properties:
+                subjectPersonId: { type: string, format: uuid }
+                requestType: { $ref: '#/components/schemas/RequestType' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { description: Invalid subject/type/authority/scope or ineligible profile }
+  /api/auth/me/privacy/representations/{representationId}/requests/{id}/data:
+    parameters:
+      - { $ref: '#/components/parameters/RepresentationId' }
+      - { $ref: '#/components/parameters/RequestId' }
+    get:
+      operationId: issueRepresentativePersonalData
+      description: >
+        Same one-time behavior as own data. Requires this request's original authority,
+        privacy.request.view and privacy.data.access or privacy.data.export. Authority
+        validity/revocation and the current representative are checked transactionally.
+      responses:
+        '200': { $ref: '#/components/responses/PersonalData' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/Unavailable' }
+        '413': { description: Personal data export exceeds its configured safety limit }
+  /api/auth/me/privacy/representations/{representationId}/requests/{id}/processing-information:
+    parameters:
+      - { $ref: '#/components/parameters/RepresentationId' }
+      - { $ref: '#/components/parameters/RequestId' }
+    get:
+      operationId: issueRepresentativeProcessingInformation
+      description: Requires this request's active authority with view and privacy.processing_information.response scopes.
+      responses:
+        '200': { $ref: '#/components/responses/ProcessingInformation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/Unavailable' }
+  /api/auth/me/presence/heartbeat:
+    post:
+      operationId: heartbeatOwnPresence
+      description: >
+        Authenticated Core presence in Redis with a 90-second default TTL. The browser
+        sends only after saved show_online_status opt-in, while visible and online.
+        Visibility to other users remains subject to PresenceVisibilityPolicy and module relationships.
+        unknown means Redis did not confirm the write. This is not session validity evidence.
+      parameters:
+        - { name: X-Client-Instance-ID, in: header, schema: { type: string, format: uuid }, description: Ephemeral per-page identity also sent on logout; never an account identifier }
+      responses:
+        '200':
+          description: Heartbeat outcome
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties:
+                      data: { type: object, required: [status], properties: { status: { enum: [online, unknown] } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/core/privacy/requests/options:
+    get:
+      operationId: getOperatorPrivacyRequestOptions
+      x-required-permission: core.privacy.requests.read
+      description: Registered purpose codes only, sorted. No person, evidence, secret or full policy definitions.
+      responses:
+        '200':
+          description: Scope selection metadata
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties:
+                      data: { type: object, required: [purposeCodes], properties: { purposeCodes: { type: array, items: { type: string } } } }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+  /api/core/privacy/requests:
+    get:
+      operationId: listOperatorPrivacyRequests
+      x-required-permission: core.privacy.requests.read
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/RequestStatus' } }
+        - { name: requestType, in: query, schema: { $ref: '#/components/schemas/RequestType' } }
+        - { name: subjectPersonId, in: query, schema: { type: string, format: uuid } }
+        - { name: overdue, in: query, schema: { type: string, enum: ['true', 'false'] } }
+      responses:
+        '200':
+          description: Server-filtered page with total; request DTO uses submittedAt, not receivedAt/dueAt aliases
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties:
+                      data:
+                        type: object
+                        required: [items, pagination]
+                        properties:
+                          items: { type: array, items: { $ref: '#/components/schemas/PrivacyRequest' } }
+                          pagination: { type: object, required: [limit, offset, total], properties: { limit: { type: integer }, offset: { type: integer }, total: { type: integer } } }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+        '422': { $ref: '#/components/responses/OperatorInvalid' }
+  /api/core/privacy/requests/intake:
+    post:
+      operationId: intakeOperatorPrivacyRequest
+      x-required-permission: core.privacy.requests.manage
+      description: >
+        Verified offline intake by a human operator. Identity/representative evidence are
+        existing references, never document contents. receivedAt must not be in the future.
+        No automatic POST replay after an uncertain result; review the request list first.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [subjectPersonId, requestType, receivedAt, identityVerificationCode, identityEvidenceReference, sourceChannel]
+              properties:
+                subjectPersonId: { type: string, format: uuid }
+                requestType: { $ref: '#/components/schemas/RequestType' }
+                receivedAt: { $ref: '#/components/schemas/SecondTimestamp' }
+                identityVerificationCode: { $ref: '#/components/schemas/MachineCode' }
+                identityEvidenceReference: { $ref: '#/components/schemas/EvidenceReference' }
+                representativeVerificationReference: { $ref: '#/components/schemas/EvidenceReference' }
+                sourceChannel: { enum: [paper, email, signed_electronic_document] }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+        '422': { $ref: '#/components/responses/OperatorInvalid' }
+  /api/core/privacy/requests/{id}:
+    parameters: [{ $ref: '#/components/parameters/RequestId' }]
+    get:
+      operationId: getOperatorPrivacyRequest
+      x-required-permission: core.privacy.requests.read
+      responses:
+        '200':
+          description: Operator-visible request
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties: { data: { $ref: '#/components/schemas/PrivacyRequest' } }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+        '404': { $ref: '#/components/responses/Unavailable' }
+  /api/core/privacy/requests/{id}/transition:
+    parameters: [{ $ref: '#/components/parameters/RequestId' }]
+    post:
+      operationId: transitionOperatorPrivacyRequest
+      x-required-permission: core.privacy.requests.manage
+      description: >
+        submitted -> identity_verification/in_review/cancelled;
+        identity_verification -> in_review/cancelled; in_review -> in_progress/cancelled.
+        Cancellation requires reasonCode. completed/partially_completed/rejected are
+        never manual transitions: the service requires execution evidence.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [toStatus], additionalProperties: false, properties: { toStatus: { $ref: '#/components/schemas/RequestStatus' }, reasonCode: { $ref: '#/components/schemas/MachineCode' } } }
+      responses:
+        '200': { description: 'Success data: id and authoritative status' }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+        '422': { $ref: '#/components/responses/OperatorInvalid' }
+  /api/core/privacy/requests/{id}/deadlines/{deadlineCode}/extend:
+    parameters:
+      - { $ref: '#/components/parameters/RequestId' }
+      - { name: deadlineCode, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: extendOperatorPrivacyDeadline
+      x-required-permission: core.privacy.requests.manage
+      description: One permitted extension, server-calculated working-day date; satisfied/closed/already extended deadlines are rejected.
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200': { description: 'Success data: id, deadlineCode and extendedDueAt' }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+        '422': { $ref: '#/components/responses/OperatorInvalid' }
+  /api/core/privacy/requests/{id}/correction-evidence:
+    parameters: [{ $ref: '#/components/parameters/RequestId' }]
+    post:
+      operationId: confirmOperatorCorrectionEvidence
+      x-required-permission: core.privacy.requests.manage
+      description: Empty object body. For correction in_review/in_progress; starts confirmed_correction deadline once. Success data confirmed=false means it already existed.
+      requestBody: { $ref: '#/components/requestBodies/Empty' }
+      responses:
+        '200': { description: 'Success data: confirmed boolean' }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+        '422': { $ref: '#/components/responses/OperatorInvalid' }
+  /api/core/privacy/requests/{id}/corrections:
+    parameters: [{ $ref: '#/components/parameters/RequestId' }]
+    post:
+      operationId: applyOperatorPrivacyCorrection
+      x-required-permission: core.privacy.requests.manage
+      description: >
+        correction/in_progress with confirmed evidence only. Resources must belong to the request subject.
+        core.person accepts givenName/familyName/middleName/displayName/birthDate; optional fields may be null.
+        core.person_contact accepts value/label/isPrimary, label nullable. One to ten changed fields,
+        maximum serialized command 16384 bytes. The completed execution closes the request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, required: [contributorCode, resourceId, changes], properties: { contributorCode: { $ref: '#/components/schemas/MachineCode' }, resourceId: { type: string, format: uuid }, changes: { type: object, minProperties: 1, maxProperties: 10, additionalProperties: true } } }
+      responses:
+        '200': { $ref: '#/components/responses/OperatorExecution' }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+        '422': { $ref: '#/components/responses/OperatorInvalid' }
+  /api/core/privacy/requests/{id}/blocks:
+    parameters: [{ $ref: '#/components/parameters/RequestId' }]
+    get:
+      operationId: listOperatorRequestBlocks
+      x-required-permission: core.privacy.requests.read
+      description: Active blocks for this request only; not a complete subject restriction inventory. Snake-case block DTO is preserved.
+      responses:
+        '200':
+          description: Active request-scoped restrictions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Success' }
+                  - properties: { data: { type: array, items: { $ref: '#/components/schemas/ProcessingBlock' } } }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+    post:
+      operationId: createOperatorRequestBlock
+      x-required-permission: core.privacy.requests.manage
+      description: >
+        subject scope forbids purpose/resource fields. purpose scope requires a registered purposeCode.
+        resource scope requires resourceType/resourceId. expiresAt must be in the future.
+        Creation is idempotent for an identical active restriction key, and does not delete records.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [scopeType, reasonCode]
+              properties:
+                scopeType: { enum: [subject, purpose, resource] }
+                reasonCode: { $ref: '#/components/schemas/MachineCode' }
+                purposeCode: { $ref: '#/components/schemas/MachineCode' }
+                resourceType: { $ref: '#/components/schemas/MachineCode' }
+                resourceId: { type: string, format: uuid }
+                expiresAt: { $ref: '#/components/schemas/SecondTimestamp' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+        '422': { $ref: '#/components/responses/OperatorInvalid' }
+  /api/core/privacy/blocks/{id}/release:
+    parameters: [{ $ref: '#/components/parameters/RequestId' }]
+    post:
+      operationId: releaseOperatorPrivacyBlock
+      x-required-permission: core.privacy.requests.manage
+      requestBody: { $ref: '#/components/requestBodies/Reason' }
+      responses:
+        '200': { description: 'Success data: id, released=true, changed boolean. Does not release other blocks.' }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+        '404': { $ref: '#/components/responses/Unavailable' }
+  /api/core/privacy/requests/{id}/processing-termination/execute:
+    parameters: [{ $ref: '#/components/parameters/RequestId' }]
+    post:
+      operationId: executeOperatorProcessingTermination
+      x-required-permission: core.privacy.requests.manage
+      description: >
+        Evaluates registered retention candidates, lawful bases and restriction contributors;
+        executes only supported restriction effects. Never deletes stored data. Incomplete
+        coverage/unknown basis fails closed. The outcome can be completed or partially_completed.
+      requestBody: { $ref: '#/components/requestBodies/Empty' }
+      responses:
+        '200': { description: 'Success data: status and executionId. Repeating a completed execution returns its existing evidence.' }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+        '422': { $ref: '#/components/responses/OperatorInvalid' }
+  /api/core/privacy/requests/{id}/data:
+    parameters: [{ $ref: '#/components/parameters/RequestId' }]
+    get:
+      operationId: issueOperatorPersonalData
+      x-required-permission: core.privacy.requests.manage
+      description: Only a request with verified offline intake_channel; online requests must be delivered to the subject or authorized representative. Same raw one-time semantics; do not replay after a lost/transient response.
+      responses:
+        '200': { $ref: '#/components/responses/PersonalData' }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+        '404': { $ref: '#/components/responses/Unavailable' }
+        '413': { description: Export safety limit exceeded }
+  /api/core/privacy/requests/{id}/processing-information:
+    parameters: [{ $ref: '#/components/parameters/RequestId' }]
+    get:
+      operationId: issueOperatorProcessingInformation
+      x-required-permission: core.privacy.requests.manage
+      description: Verified offline intake only. One-time raw response; complete operator identity, role, purpose disclosure and contributor coverage are required.
+      responses:
+        '200': { $ref: '#/components/responses/ProcessingInformation' }
+        '403': { $ref: '#/components/responses/OperatorForbidden' }
+        '404': { $ref: '#/components/responses/Unavailable' }
+components:
+  requestBodies:
+    Reason:
+      required: true
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: false, required: [reasonCode], properties: { reasonCode: { $ref: '#/components/schemas/MachineCode' } } }
+    Empty:
+      required: true
+      content:
+        application/json:
+          schema: { type: object, maxProperties: 0 }
+  securitySchemes:
+    BearerAuth: { type: http, scheme: bearer }
+  parameters:
+    RequestId: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    RepresentationId: { name: representationId, in: path, required: true, schema: { type: string, format: uuid } }
+  schemas:
+    MachineCode: { type: string, maxLength: 120, pattern: '^[a-z0-9]+([._-][a-z0-9]+)*$' }
+    SecondTimestamp: { type: string, format: date-time, pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$', description: Core rejects fractional seconds; normalize browser dates before sending }
+    EvidenceReference: { type: string, maxLength: 500, pattern: '^(vault|document|case|paper|email|signed)://[^\s]+$' }
+    RequestStatus: { enum: [submitted, identity_verification, in_review, in_progress, completed, partially_completed, rejected, cancelled] }
+    ProcessingBlock:
+      type: object
+      required: [id, scope_type, purpose_code, resource_type, resource_id, reason_code, source_request_id, started_at, expires_at]
+      properties:
+        id: { type: string, format: uuid }
+        scope_type: { enum: [subject, purpose, resource] }
+        purpose_code: { type: [string, 'null'] }
+        resource_type: { type: [string, 'null'] }
+        resource_id: { type: [string, 'null'], format: uuid }
+        reason_code: { type: string }
+        source_request_id: { type: string, format: uuid }
+        started_at: { type: string, format: date-time }
+        expires_at: { type: [string, 'null'], format: date-time }
+    Success:
+      type: object
+      required: [status, data]
+      properties:
+        status: { const: success }
+        data: {}
+    RequestType:
+      type: string
+      enum: [access, export, processing_information, correction, restriction, processing_termination, erasure, consent_withdrawal]
+    Representation:
+      type: object
+      additionalProperties: false
+      required: [id, subjectPersonId, subjectName, validUntil, scopes]
+      properties:
+        id: { type: string, format: uuid }
+        subjectPersonId: { type: string, format: uuid }
+        subjectName: { type: [string, 'null'] }
+        validUntil: { type: [string, 'null'], format: date-time }
+        scopes: { type: array, items: { type: string } }
+    PrivacyRequest:
+      type: object
+      required: [id, subjectPersonId, representationId, intakeChannel, requestType, status, submittedAt, completedAt, resolutionCode, deadlines]
+      properties:
+        id: { type: string, format: uuid }
+        subjectPersonId: { type: string, format: uuid }
+        representationId: { type: [string, 'null'], format: uuid }
+        intakeChannel: { type: [string, 'null'], enum: [paper, email, signed_electronic_document, null], description: Null for online self/representative submissions; no proof references are exposed }
+        requestType: { $ref: '#/components/schemas/RequestType' }
+        status: { type: string, enum: [submitted, identity_verification, in_review, in_progress, completed, partially_completed, rejected, cancelled] }
+        submittedAt: { type: string, format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        resolutionCode: { type: [string, 'null'] }
+        deadlines: { type: array, items: { $ref: '#/components/schemas/Deadline' } }
+    Deadline:
+      type: object
+      required: [code, triggeredAt, calendarType, dueAt, extendedDueAt, effectiveDueAt, satisfiedAt, overdue]
+      properties:
+        code: { type: string }
+        triggeredAt: { type: string, format: date-time }
+        calendarType: { type: string }
+        dueAt: { type: string, format: date-time }
+        extendedDueAt: { type: [string, 'null'], format: date-time }
+        effectiveDueAt: { type: string, format: date-time }
+        satisfiedAt: { type: [string, 'null'], format: date-time }
+        overdue: { type: boolean }
+    PersonalDataSection:
+      type: object
+      required: [contributorCode, dataCategories, records]
+      properties:
+        contributorCode: { type: string }
+        dataCategories: { type: array, items: { type: string } }
+        records: { type: array, items: { type: object } }
+    PersonalDataDocument:
+      type: object
+      required: [schemaVersion, generatedAt, subjectPersonId, sections]
+      properties:
+        schemaVersion: { const: '1' }
+        generatedAt: { type: string, format: date-time }
+        subjectPersonId: { type: string, format: uuid }
+        sections: { type: array, items: { $ref: '#/components/schemas/PersonalDataSection' } }
+    ProcessingInformationDocument:
+      type: object
+      required: [schemaVersion, subjectPersonId, processed, operator, actualPersonalData, purposes]
+      properties:
+        schemaVersion: { const: privacy.processing_information.v1 }
+        subjectPersonId: { type: string, format: uuid }
+        processed: { type: boolean }
+        operator: { type: object, required: [name, address] }
+        actualPersonalData: { type: array, items: { $ref: '#/components/schemas/PersonalDataSection' } }
+        purposes: { type: array, items: { type: object } }
+  responses:
+    OperatorForbidden: { description: Missing the operation's Core privacy read/manage permission }
+    OperatorInvalid: { description: 'Input, state, evidence, scope or configured execution coverage rejected; no success should be inferred' }
+    OperatorExecution:
+      description: Authoritative execution reference
+      content:
+        application/json:
+          schema:
+            allOf:
+              - { $ref: '#/components/schemas/Success' }
+              - properties:
+                  data: { type: object, required: [executionId], properties: { executionId: { type: string, format: uuid } } }
+    Created:
+      description: Accepted for review; no immediate erasure/restriction is implied
+      content:
+        application/json:
+          schema:
+            allOf:
+              - { $ref: '#/components/schemas/Success' }
+              - properties:
+                  data:
+                    type: object
+                    required: [id]
+                    properties:
+                      id: { type: string, format: uuid }
+    PersonalData:
+      description: Raw UTF-8 JSON document; no success envelope
+      headers:
+        Cache-Control: { schema: { const: no-store } }
+        X-Content-Type-Options: { schema: { const: nosniff } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PersonalDataDocument' }
+    ProcessingInformation:
+      description: Raw UTF-8 JSON document; no success envelope
+      headers:
+        Cache-Control: { schema: { const: no-store } }
+        X-Content-Type-Options: { schema: { const: nosniff } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ProcessingInformationDocument' }
+    Unauthorized: { description: Core authentication is required }
+    Unavailable: { description: Not found or unavailable due to scope/state/type/authority/coverage; does not reveal another subject's existence }

@@ -114,6 +114,26 @@ export const useAccountStore = defineStore('account', () => {
     }
   }
 
+  /** Refresh the current account after a mutation without unmounting its in-flight form. */
+  async function refreshAccount(id: string): Promise<void> {
+    if (selectedAccountId.value !== id || accountDetail.value?.id !== id) return loadAccount(id);
+    const epoch = getSessionEpoch();
+    const token = ++detailToken;
+    try {
+      const detail = await commercialAccount.getAccount(id);
+      if (token === detailToken && epoch === getSessionEpoch() && selectedAccountId.value === id) {
+        accountDetail.value = detail;
+        detailError.value = null;
+      }
+    } catch (err) {
+      if (token === detailToken && epoch === getSessionEpoch() && selectedAccountId.value === id) {
+        accountDetail.value = null;
+        detailError.value = err;
+      }
+      throw err;
+    }
+  }
+
   function invalidateAccount(id?: string): void {
     if (id !== undefined && selectedAccountId.value !== id) {
       return;
@@ -159,6 +179,7 @@ export const useAccountStore = defineStore('account', () => {
     detailErrorMessage,
     loadPage,
     loadAccount,
+    refreshAccount,
     invalidateAccount,
     clearAccountContext,
     clear,

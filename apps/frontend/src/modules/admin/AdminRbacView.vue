@@ -15,17 +15,57 @@ const tabs = computed(() => [
 
 <template>
   <section class="admin-tabs">
-    <nav class="admin-tabs__nav" :aria-label="$t('admin.rbac')">
-      <button v-for="item in tabs" :key="item.key" type="button" :class="{ 'admin-tabs__tab--active': tab === item.key }" @click="tab = item.key">{{ item.label }}</button>
+    <nav
+      class="admin-tabs__nav"
+      :aria-label="$t('admin.rbac')"
+    >
+      <button
+        v-for="item in tabs"
+        :key="item.key"
+        type="button"
+        :class="{ 'admin-tabs__tab--active': tab === item.key }"
+        @click="tab = item.key"
+      >
+        {{ item.label }}
+      </button>
     </nav>
-    <AdminResourceView v-if="tab === 'roles'" :config="rolesConfig" />
-    <AdminResourceView v-else :config="permissionsConfig" />
+    <AdminResourceView
+      v-if="tab === 'roles'"
+      :config="rolesConfig"
+    />
+    <AdminResourceView
+      v-else
+      :config="permissionsConfig"
+    />
   </section>
 </template>
 
 <style scoped>
-.admin-tabs { display: grid; gap: var(--space-16); }
-.admin-tabs__nav { display: flex; flex-wrap: wrap; gap: var(--space-4); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-control-m); background: var(--surface); }
-.admin-tabs__nav button { min-height: 36px; padding: 0 var(--space-12); border-radius: var(--radius-control-s); color: var(--text-2); font-size: var(--type-body-small-emphasis-size); font-weight: var(--type-body-small-emphasis-weight); }
-.admin-tabs__nav button.admin-tabs__tab--active { background: var(--accent-soft); color: var(--accent-text); }
+.admin-tabs {
+  display: grid;
+  gap: var(--space-16);
+}
+.admin-tabs__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control-m);
+  background: var(--surface);
+}
+.admin-tabs__nav button {
+  min-height: 36px;
+  padding: 0 var(--space-12);
+  border-radius: var(--radius-control-s);
+  color: var(--text-2);
+  font-size: var(--type-body-small-emphasis-size);
+  letter-spacing: var(--type-body-small-emphasis-tracking);
+  line-height: var(--type-body-small-emphasis-line);
+  font-weight: var(--type-body-small-emphasis-weight);
+}
+.admin-tabs__nav button.admin-tabs__tab--active {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
 </style>

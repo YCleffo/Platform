@@ -19,6 +19,8 @@ case "${plane}" in
     schemas="core,platform_runtime,public"
     runtime_role="${CORE_RUNTIME_ROLE:-platform_core_runtime}"
     runtime_password="${CORE_RUNTIME_PASSWORD:?CORE_RUNTIME_PASSWORD is required}"
+    maintenance_role="${CORE_MAINTENANCE_ROLE:-platform_core_maintenance}"
+    maintenance_password="${CORE_MAINTENANCE_PASSWORD:?CORE_MAINTENANCE_PASSWORD is required}"
     positive_table="core.accounts"
     denied_table="core.accounts"
     migration_table="public.platform_migrations"
@@ -32,6 +34,8 @@ case "${plane}" in
     schemas="commercial,public"
     runtime_role="${CONTROL_RUNTIME_ROLE:-platform_commercial_runtime}"
     runtime_password="${CONTROL_RUNTIME_PASSWORD:?CONTROL_RUNTIME_PASSWORD is required}"
+    maintenance_role="${CONTROL_MAINTENANCE_ROLE:-platform_commercial_maintenance}"
+    maintenance_password="${CONTROL_MAINTENANCE_PASSWORD:?CONTROL_MAINTENANCE_PASSWORD is required}"
     positive_table="commercial.commercial_accounts"
     denied_table="commercial.commercial_accounts"
     migration_table="public.doctrine_migration_versions"
@@ -57,6 +61,8 @@ docker compose --profile "${profile}" exec -T \
   -e SCHEMAS="${schemas}" \
   -e RUNTIME_ROLE="${runtime_role}" \
   -e RUNTIME_PASSWORD="${runtime_password}" \
+  -e MAINTENANCE_ROLE="${maintenance_role}" \
+  -e MAINTENANCE_PASSWORD="${maintenance_password}" \
   -e MIGRATION_ROLE="${admin_user}" \
   "${service}" bash -s < scripts/operations/provision-db-role.sh
 
@@ -116,5 +122,20 @@ expect_denied "TRUNCATE ${denied_table};"
 expect_denied "ALTER TABLE ${denied_table} ADD COLUMN runtime_role_should_fail int;"
 expect_denied "DELETE FROM ${migration_table};"
 expect_denied "SELECT pg_read_file('/etc/passwd');"
+expect_denied "SET LOCAL app.privacy_lifecycle = 'on'; DELETE FROM ${schema}.audit_events WHERE false;"
+expect_denied "UPDATE ${schema}.audit_events SET id=DEFAULT WHERE false;"
+expect_denied "CREATE TABLE public.runtime_role_should_fail(id int);"
+expect_denied "SET ROLE ${admin_user};"
+expect_denied "SET ROLE ${maintenance_role};"
+expect_denied "CREATE ROLE runtime_role_should_fail;"
+check_privilege "audit insert" "has_table_privilege(current_user, '${schema}.audit_events', 'INSERT')" "true"
+check_privilege "audit delete" "has_table_privilege(current_user, '${schema}.audit_events', 'DELETE')" "false"
+check_privilege "audit any column update" "has_any_column_privilege(current_user, '${schema}.audit_events', 'UPDATE')" "false"
+docker compose --profile "${profile}" exec -T -e PGPASSWORD="${maintenance_password}" "${service}" \
+  psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U "${maintenance_role}" -d "${database}" \
+  -c "BEGIN; SELECT id FROM ${schema}.audit_events WHERE false FOR UPDATE SKIP LOCKED; SET LOCAL app.privacy_lifecycle='on'; DELETE FROM ${schema}.audit_events WHERE false; ROLLBACK;"
+docker compose --profile "${profile}" exec -T -e PGPASSWORD="${maintenance_password}" "${service}" \
+  psql -X -v ON_ERROR_STOP=1 -v schema="${schema}" -h 127.0.0.1 -U "${maintenance_role}" -d "${database}" \
+  < scripts/ci/db-maintenance-probe.sql
 
 echo "${plane} least-privilege role gate PASS."

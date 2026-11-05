@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: Platform User Settings / Privacy API
-  version: 1.0.0
-  description: Authenticated self-service contract for schema version 1 account settings.
+  version: 2.0.0
+  description: Authenticated self-service contract for schema version 2 account settings, preferences and consents.
 
 paths:
   /api/auth/me/settings:
@@ -40,8 +40,6 @@ paths:
                 value:
                   privacy:
                     show_online_status: false
-                    profile_visibility:
-                      students: false
               reset:
                 value:
                   privacy:
@@ -61,6 +59,113 @@ paths:
           description: Payload exceeds 32768 bytes.
         '422':
           description: Unknown path, invalid type, empty patch, or malformed nested object.
+
+  /api/auth/me/preferences:
+    patch:
+      operationId: patchOwnInternationalPreferences
+      summary: Save language and IANA time zone for the current account
+      description: Omitted fields are preserved atomically; explicit null restores service defaults.
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              additionalProperties: false
+              properties:
+                locale: { type: [string, 'null'], examples: [ru-RU, en-US] }
+                timezone: { type: [string, 'null'], examples: [UTC, Asia/Yekaterinburg] }
+      responses:
+        '200':
+          description: Canonical preferences after the update
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, data]
+                properties:
+                  status: { const: success }
+                  data:
+                    type: object
+                    required: [locale, timezone]
+                    properties:
+                      locale: { type: [string, 'null'] }
+                      timezone: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { description: Invalid or unsupported language/time zone }
+  /api/auth/me/consents:
+    get:
+      operationId: getOwnConsents
+      summary: Read published consent definitions and the latest record per code
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Definitions may be empty; an unavailable full text is null
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, data]
+                properties:
+                  status: { const: success }
+                  data:
+                    type: object
+                    required: [definitions, consents]
+                    properties:
+                      definitions: { type: array, items: { $ref: '#/components/schemas/ConsentDefinition' } }
+                      consents: { type: array, items: { $ref: '#/components/schemas/ConsentRecord' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { description: The account has no human Person }
+  /api/auth/me/consents/{code}:
+    parameters:
+      - { name: code, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: grantOwnConsent
+      summary: Record consent to the registered document
+      description: >
+        Browser clients supply the reviewed version and hash. They cannot override server
+        document metadata; mismatches or unavailable full text produce 409. Empty bodies
+        remain supported for existing internal clients.
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - { type: object, maxProperties: 0 }
+                - type: object
+                  additionalProperties: false
+                  required: [document_version, document_sha256]
+                  properties:
+                    document_version: { type: string, minLength: 1 }
+                    document_sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+      responses:
+        '200':
+          description: Existing matching or newly recorded current consent
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, data]
+                properties:
+                  status: { const: success }
+                  data: { $ref: '#/components/schemas/ConsentRecord' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: Unknown consent code }
+        '409': { description: Reviewed document changed or is unavailable }
+        '422': { description: Invalid input or ineligible account }
+    delete:
+      operationId: withdrawOwnConsent
+      summary: Withdraw the active consent when the definition permits it
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Consent withdrawn; the record remains in history }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: No active consent }
+        '422': { description: Withdrawal not permitted or ineligible account }
 
 components:
   securitySchemes:
@@ -82,7 +187,7 @@ components:
               $ref: '#/components/schemas/EffectiveSettings'
             schema_version:
               type: integer
-              const: 1
+              const: 2
     EffectiveSettings:
       type: object
       additionalProperties: false
@@ -138,33 +243,45 @@ components:
     PrivacySettings:
       type: object
       additionalProperties: false
-      required: [show_online_status, profile_visibility]
+      required: [show_online_status]
       properties:
-        show_online_status: { type: boolean, default: true }
-        profile_visibility:
-          $ref: '#/components/schemas/ProfileVisibility'
+        show_online_status: { type: boolean, default: false }
     PrivacySettingsPatch:
       type: object
       minProperties: 1
       additionalProperties: false
       properties:
         show_online_status: { type: [boolean, 'null'] }
-        profile_visibility:
-          type: object
-          minProperties: 1
-          additionalProperties: false
-          properties:
-            students: { type: [boolean, 'null'] }
-            parents: { type: [boolean, 'null'] }
-            colleagues: { type: [boolean, 'null'] }
-    ProfileVisibility:
+    ConsentDefinition:
       type: object
-      additionalProperties: false
-      required: [students, parents, colleagues]
+      required: [code, purpose_code, current_document_version, current_document_sha256, withdrawable, representative_allowed, document]
       properties:
-        students: { type: boolean, default: true }
-        parents: { type: boolean, default: true }
-        colleagues: { type: boolean, default: true }
+        code: { type: string }
+        purpose_code: { type: string }
+        current_document_version: { type: string }
+        current_document_sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+        withdrawable: { type: boolean }
+        representative_allowed: { type: boolean }
+        document:
+          type: [object, 'null']
+          required: [title, text]
+          properties:
+            title: { type: string }
+            text: { type: string, description: Plain text whose UTF-8 SHA-256 matches the registered document hash }
+    ConsentRecord:
+      type: object
+      required: [id, consent_code, purpose_code, document_version, document_sha256, locale, source, granted_at, withdrawn_at, current]
+      properties:
+        id: { type: string, format: uuid }
+        consent_code: { type: string }
+        purpose_code: { type: string }
+        document_version: { type: string }
+        document_sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+        locale: { type: string }
+        source: { type: string }
+        granted_at: { type: string }
+        withdrawn_at: { type: [string, 'null'] }
+        current: { type: boolean }
   responses:
     Unauthorized:
       description: Missing, invalid, expired, or revoked authentication session.

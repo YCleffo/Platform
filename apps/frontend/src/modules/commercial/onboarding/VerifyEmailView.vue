@@ -34,34 +34,73 @@ onMounted(async () => {
 
 <template>
   <section class="verify-view">
-    <div v-if="state === 'loading'" class="verify-view__state" role="status" aria-live="polite">
+    <div
+      v-if="state === 'loading'"
+      class="verify-view__state"
+      role="status"
+      aria-live="polite"
+    >
       <span class="verify-view__icon verify-view__icon--loading">
-        <LoaderCircle :size="28" class="verify-view__spin" aria-hidden="true" />
+        <LoaderCircle
+          :size="28"
+          class="verify-view__spin"
+          aria-hidden="true"
+        />
       </span>
       <h1 class="verify-view__title">{{ $t('auth.verifyTitle') }}</h1>
       <p class="verify-view__text">{{ $t('auth.verifyIntro') }}</p>
     </div>
 
-    <div v-else-if="state === 'success'" class="verify-view__state">
+    <div
+      v-else-if="state === 'success'"
+      class="verify-view__state"
+    >
       <span class="verify-view__icon verify-view__icon--success">
-        <CircleCheck :size="28" aria-hidden="true" />
+        <CircleCheck
+          :size="28"
+          aria-hidden="true"
+        />
       </span>
       <h1 class="verify-view__title">{{ $t('auth.verifySuccess') }}</h1>
       <p class="verify-view__text">{{ $t('auth.verifySuccessText') }}</p>
-      <AppButton block @click="router.push({ name: 'login' })">{{ $t('nav.login') }}</AppButton>
+      <AppButton
+        block
+        @click="router.push({ name: 'login' })"
+      >
+        {{ $t('nav.login') }}
+      </AppButton>
     </div>
 
-    <div v-else class="verify-view__state">
+    <div
+      v-else
+      class="verify-view__state"
+    >
       <span class="verify-view__icon verify-view__icon--error">
-        <CircleAlert :size="28" aria-hidden="true" />
+        <CircleAlert
+          :size="28"
+          aria-hidden="true"
+        />
       </span>
       <h1 class="verify-view__title">{{ $t('auth.verifyFailed') }}</h1>
-      <p class="verify-view__text" role="alert">{{ errorMessage }}</p>
+      <p
+        class="verify-view__text"
+        role="alert"
+      >
+        {{ errorMessage }}
+      </p>
       <div class="verify-view__actions">
-        <RouterLink class="verify-view__link" :to="{ name: 'resend-verification' }">
+        <RouterLink
+          class="verify-view__link"
+          :to="{ name: 'resend-verification' }"
+        >
           {{ $t('auth.resend') }}
         </RouterLink>
-        <RouterLink class="verify-view__link" :to="{ name: 'login' }">{{ $t('nav.login') }}</RouterLink>
+        <RouterLink
+          class="verify-view__link"
+          :to="{ name: 'login' }"
+        >
+          {{ $t('nav.login') }}
+        </RouterLink>
       </div>
     </div>
   </section>
@@ -119,6 +158,7 @@ onMounted(async () => {
 
 .verify-view__text {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
@@ -134,6 +174,7 @@ onMounted(async () => {
 
 .verify-view__link {
   font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
 }

@@ -12,6 +12,12 @@ const config = computed(() => configs.value[key.value]);
 </script>
 
 <template>
-  <AdminResourceView v-if="config" :config="config" />
-  <AppErrorState v-else :message="$t('admin.unknownResource')" />
+  <AdminResourceView
+    v-if="config"
+    :config="config"
+  />
+  <AppErrorState
+    v-else
+    :message="$t('admin.unknownResource')"
+  />
 </template>

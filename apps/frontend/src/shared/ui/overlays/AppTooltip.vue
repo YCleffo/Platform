@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
 
-const props = withDefaults(defineProps<{ content: string; disabled?: boolean }>(), { disabled: false });
+const props = withDefaults(defineProps<{ content: string; disabled?: boolean }>(), {
+  disabled: false,
+});
 const trigger = ref<HTMLElement | null>(null);
 const visible = ref(false);
 const position = ref({ left: 0, top: 0 });
@@ -42,7 +44,14 @@ onBeforeUnmount(hide);
   </span>
   <Teleport to="body">
     <Transition name="app-tooltip">
-      <span v-if="visible" class="app-tooltip__bubble" role="tooltip" :style="style">{{ content }}</span>
+      <span
+        v-if="visible"
+        class="app-tooltip__bubble"
+        role="tooltip"
+        :style="style"
+      >
+        {{ content }}
+      </span>
     </Transition>
   </Teleport>
 </template>
@@ -64,11 +73,16 @@ onBeforeUnmount(hide);
   color: var(--text-1);
   box-shadow: var(--shadow-soft);
   font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
   white-space: nowrap;
   pointer-events: none;
   transform: translateY(-50%);
-  transition: opacity var(--motion-fast-duration) var(--motion-ease), transform var(--motion-fast-duration) var(--motion-ease), var(--theme-transition);
+  transition:
+    opacity var(--motion-fast-duration) var(--motion-ease),
+    transform var(--motion-fast-duration) var(--motion-ease),
+    var(--theme-transition);
 }
 
 .app-tooltip-enter-from,

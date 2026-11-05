@@ -65,6 +65,7 @@ try {
   check(await page.evaluate(() => getComputedStyle(document.querySelector('label')).userSelect) === 'none', 'Labels are protected from text selection');
 
   const control = page.locator('label[for="demo-switch"] .app-switch__control');
+  await control.scrollIntoViewIfNeeded();
   const point = await control.boundingBox();
   await page.mouse.move(point.x + point.width / 2, point.y + point.height / 2); await page.mouse.down();
   await page.waitForFunction(() => parseFloat(getComputedStyle(document.querySelector('#demo-switch + .app-switch__track .app-switch__thumb')).width) > 27);
@@ -102,7 +103,7 @@ try {
   check(await page.locator('.app-switch__thumb').first().evaluate(element => getComputedStyle(element).transitionDuration.split(',').every(value => parseFloat(value) === 0)), 'Reduced motion removes switch transitions');
   check(await page.locator('#appearance-speed').isDisabled(), 'OS reduced motion keeps dependent settings disabled');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.locator('#appearance-advanced summary').click();
+  await page.locator('#appearance-advanced .app-disclosure__trigger').click();
   await page.screenshot({ path: 'screenshots/controls-settings-light.png', fullPage: true, animations: 'disabled' });
   await page.getByLabel('Dark', { exact: true }).check();
   await page.waitForFunction(() => !document.documentElement.hasAttribute('data-theme-changing'));

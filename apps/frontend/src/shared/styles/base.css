@@ -22,9 +22,11 @@ body {
 body {
   min-height: 100vh;
   min-height: 100dvh;
-  font-family: var(--type-body-large-family), var(--font-sans);
-  font-size: var(--type-body-large-size);
-  line-height: var(--type-body-large-line);
+  font-family: var(--type-body-medium-family), var(--font-sans);
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   color: var(--text-1);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -36,6 +38,8 @@ h1,
 h2,
 h3,
 h4,
+h5,
+h6,
 p,
 figure,
 blockquote,

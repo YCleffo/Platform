@@ -74,7 +74,7 @@ final class ControlPreviewEmailsCommand extends Command
             [
                 'Verify your Platform email address',
                 "Verify your Platform email address: $verifyUrl",
-                '<p>Confirm your email address to finish setting up your Platform account.</p>'
+                '<p>Confirm your email address to finish setting up your Platform customer account.</p>'
                 . '<p><a href="' . htmlspecialchars($verifyUrl, ENT_QUOTES, 'UTF-8') . '">Verify email</a></p>'
                 . '<p>If you did not create this account, you can ignore this email.</p>',
                 'control_email_verification',
@@ -90,32 +90,32 @@ final class ControlPreviewEmailsCommand extends Command
                 ['contact_email', 'invitation_link', 'organization_name'],
             ],
             [
-                'Reset your Platform password',
-                "Reset your Platform password: $resetUrl",
-                '<p>We received a request to reset the password for your Platform account.</p>'
+                '[Platform Cabinet] Reset your password',
+                "[Platform Cabinet] Reset your password: $resetUrl",
+                '<p>We received a request to reset the password for your Platform customer account.</p>'
                 . '<p><a href="' . htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8') . '">Choose a new password</a></p>'
                 . '<p>If you did not request this, you can ignore this email.</p>',
                 'control_email_verification',
                 ['contact_email', 'verification_link'],
             ],
             [
-                'Your Platform password changed',
-                'Your Platform password was changed. If this was not you, contact support immediately.',
-                '<p>Your Platform password was changed. If this was not you, contact support immediately.</p>',
+                '[Platform Cabinet] Your password changed',
+                'Your Platform customer account password was changed. If this was not you, contact support immediately.',
+                '<p>Your Platform customer account password was changed. If this was not you, contact support immediately.</p>',
                 'control_email_verification',
                 ['contact_email', 'verification_link'],
             ],
             [
                 'Two-factor authentication enabled',
-                'Two-factor authentication was enabled for your Platform account.',
-                '<p>Two-factor authentication was enabled for your Platform account.</p>',
+                'Two-factor authentication was enabled for your Platform customer account.',
+                '<p>Two-factor authentication was enabled for your Platform customer account.</p>',
                 'control_email_verification',
                 ['contact_email', 'verification_link'],
             ],
             [
                 'Two-factor authentication disabled',
-                'Two-factor authentication was disabled for your Platform account.',
-                '<p>Two-factor authentication was disabled for your Platform account.</p>',
+                'Two-factor authentication was disabled for your Platform customer account.',
+                '<p>Two-factor authentication was disabled for your Platform customer account.</p>',
                 'control_email_verification',
                 ['contact_email', 'verification_link'],
             ],

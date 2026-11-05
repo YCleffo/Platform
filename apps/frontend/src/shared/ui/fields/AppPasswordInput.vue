@@ -52,8 +52,16 @@ const visible = ref(false);
         :label="visible ? $t('common.hidePassword') : $t('common.showPassword')"
         @click="visible = !visible"
       >
-        <EyeOff v-if="visible" :size="18" aria-hidden="true" />
-        <Eye v-else :size="18" aria-hidden="true" />
+        <EyeOff
+          v-if="visible"
+          :size="18"
+          aria-hidden="true"
+        />
+        <Eye
+          v-else
+          :size="18"
+          aria-hidden="true"
+        />
       </AppIconButton>
     </template>
   </AppInput>

@@ -20,6 +20,7 @@ return [
     'communication:process-email' => Console\ProcessEmailOutboxCommand::class,
     'communication:preview-emails' => Console\EmailPreviewCommand::class,
     'core:bootstrap-superadmin' => Console\BootstrapSuperadminCommand::class,
+    'core:rotate-password' => Console\RotateAccountPasswordCommand::class,
     'privacy/retention/evaluate' => Console\RetentionEvaluateCommand::class,
     'privacy/erasure/execute' => Console\ErasureExecuteCommand::class,
     'privacy/compliance/check' => Console\PrivacyComplianceCheckCommand::class,

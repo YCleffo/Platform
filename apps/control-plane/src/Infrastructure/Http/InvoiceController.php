@@ -30,13 +30,14 @@ final class InvoiceController extends AbstractController
         }
         ApiRequest::emptyObject($request);
 
-        return new JsonResponse($this->issuer->issue(
+        $issued = $this->issuer->issue(
             $this->user()->id(),
             $accountId,
             $subscriptionId,
             $key,
             ApiRequest::correlationId($request),
-        ), Response::HTTP_CREATED);
+        );
+        return new JsonResponse($this->reader->get($this->user()->id(), $accountId, $issued['id']), Response::HTTP_CREATED);
     }
 
     #[Route('/api/control/accounts/{accountId}/invoices/{invoiceId}', name: 'control_invoice_get', methods: ['GET'])]

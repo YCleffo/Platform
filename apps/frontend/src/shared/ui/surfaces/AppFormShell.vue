@@ -14,13 +14,30 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <section class="app-form-shell" :class="{ 'app-form-shell--centered': centered }">
-    <div v-if="$slots.icon" class="app-form-shell__icon">
+  <section
+    class="app-form-shell"
+    :class="{ 'app-form-shell--centered': centered }"
+  >
+    <div
+      v-if="$slots.icon"
+      class="app-form-shell__icon"
+    >
       <slot name="icon" />
     </div>
     <h1 class="app-form-shell__title">{{ title }}</h1>
-    <p v-if="subtitle" class="app-form-shell__subtitle">{{ subtitle }}</p>
-    <p v-if="error" class="app-form-shell__error" role="alert">{{ error }}</p>
+    <p
+      v-if="subtitle"
+      class="app-form-shell__subtitle"
+    >
+      {{ subtitle }}
+    </p>
+    <p
+      v-if="error"
+      class="app-form-shell__error"
+      role="alert"
+    >
+      {{ error }}
+    </p>
     <div class="app-form-shell__body">
       <slot />
     </div>
@@ -56,6 +73,7 @@ withDefaults(defineProps<Props>(), {
 
 .app-form-shell__subtitle {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
@@ -64,6 +82,7 @@ withDefaults(defineProps<Props>(), {
 
 .app-form-shell__error {
   font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--danger-text);

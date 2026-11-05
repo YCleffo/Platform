@@ -17,7 +17,11 @@ const summary = computed(() => {
   }
   return Object.entries(exported.value.data).map(([key, value]) => ({
     key,
-    size: Array.isArray(value) ? value.length : value !== null && typeof value === 'object' ? Object.keys(value).length : 1,
+    size: Array.isArray(value)
+      ? value.length
+      : value !== null && typeof value === 'object'
+        ? Object.keys(value).length
+        : 1,
   }));
 });
 
@@ -52,9 +56,20 @@ const { submitting, message, run } = useAsyncAction(async () => {
           <h3>{{ $t('privacy.exportTitle') }}</h3>
           <p>{{ $t('privacy.exportDescription') }}</p>
         </div>
-        <AppButton :loading="submitting" @click="run">{{ $t('privacy.download') }}</AppButton>
+        <AppButton
+          :loading="submitting"
+          @click="run"
+        >
+          {{ $t('privacy.download') }}
+        </AppButton>
       </div>
-      <p v-if="message" class="privacy__error" role="alert">{{ message }}</p>
+      <p
+        v-if="message"
+        class="privacy__error"
+        role="alert"
+      >
+        {{ message }}
+      </p>
     </AppCard>
 
     <AppCard v-if="exported">
@@ -63,7 +78,11 @@ const { submitting, message, run } = useAsyncAction(async () => {
         {{ $t('privacy.exportedMeta', { version: exported.schema_version }) }}
       </p>
       <dl class="privacy__summary">
-        <div v-for="item in summary" :key="item.key" class="privacy__summary-row">
+        <div
+          v-for="item in summary"
+          :key="item.key"
+          class="privacy__summary-row"
+        >
           <dt>{{ item.key }}</dt>
           <dd>{{ $t('privacy.items', { count: item.size }) }}</dd>
         </div>
@@ -85,6 +104,7 @@ const { submitting, message, run } = useAsyncAction(async () => {
 
 .privacy__title {
   font-size: var(--type-h2-size);
+  letter-spacing: var(--type-h2-tracking);
   line-height: var(--type-h2-line);
   font-weight: var(--type-h2-weight);
   color: var(--text-1);
@@ -94,6 +114,8 @@ const { submitting, message, run } = useAsyncAction(async () => {
 .privacy__subtitle {
   max-width: 720px;
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
   transition: var(--theme-transition);
@@ -115,6 +137,7 @@ const { submitting, message, run } = useAsyncAction(async () => {
 
 .privacy__copy h3 {
   font-size: var(--type-h3-size);
+  letter-spacing: var(--type-h3-tracking);
   line-height: var(--type-h3-line);
   font-weight: var(--type-h3-weight);
   color: var(--text-1);
@@ -124,6 +147,8 @@ const { submitting, message, run } = useAsyncAction(async () => {
 .privacy__meta,
 .privacy__summary {
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
   color: var(--text-2);
   transition: var(--theme-transition);
@@ -133,6 +158,8 @@ const { submitting, message, run } = useAsyncAction(async () => {
   margin-top: var(--space-12);
   color: var(--danger);
   font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
 }
 
