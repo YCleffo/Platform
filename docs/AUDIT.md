@@ -1,11 +1,38 @@
 # Аудит Platform
 
-Дата: **5 ноября 2026**. Проверяемая база: `8543cb58` и незакоммиченные изменения
-текущего рабочего дерева. Коммиты и push не выполнялись.
+Дата: **5 ноября 2026**. Предыдущая локальная проверка: `8543cb58` и изменения,
+вошедшие в `2304c4be`. Подготовка Education ниже проверяется на `2304c4be`
+с исправлениями отдельной CI-ветки.
 
 **Итог: NOT_READY для production.** Этот отчёт заменяет накопленную историю этапов.
 Ниже разделены свежие локальные результаты, исправления CI и ещё не подтверждённые
-условия выпуска. GitHub Actions для нового дерева не запускался.
+условия выпуска. Зелёный GitHub Actions для исправлений подготовки пока не подтверждён.
+
+## Подготовка Education: текущий проход
+
+Для `2304c4be42b78126d3449d78b428dc33c221be4d` проверен реальный
+[Platform CI #21](https://github.com/YCleffo/Platform/actions/runs/42079392088).
+Запуск завершился: 11 jobs PASS, два browser jobs FAIL, поэтому условие старта
+Education не выполнено:
+
+| Job / шаг | Причина | Локальное исправление |
+| --- | --- | --- |
+| Core account browser E2E / real MFA and session management | После UI-отзыва `second.accessToken` получал 200 вместо ожидаемого 401. E2E выбирал строку по индексу из отдельного API-чтения; сортировка по `last_seen_at` меняется при активности | Строка выбирается по `data-session-id`; проверки отозванного и оставшегося токенов сохранены |
+| Frontend browser E2E / appearance step | Appearance прошёл, затем `verify-menus.mjs` измерил панель за нижней границей при resize: y=595, height=261 для высоты 852. После завершения раскладки y=579 | `bounds` ожидает размещения панелей в viewport, затем сохраняет прежние проверки геометрии и overflow; постоянный выход за границы остаётся ошибкой |
+
+Свежая локальная проверка этих изменений: typecheck, ESLint, Prettier,
+Vitest **70 files / 364 tests**, production build — PASS. На production preview
+прошли `verify-menus.mjs`, `verify-appearance.mjs`, `verify-core-security.mjs`.
+Core security UI regression теперь моделирует несовпадающий порядок двух чтений
+и проверяет точный DELETE ID, сохранение другой сессии и current session.
+Это **HTTP fixtures**, а не повторный real-backend Core security E2E.
+Документационные ссылки и `git diff --check` — PASS.
+
+Подготовлен [проект backend-решения Education](architecture/EDUCATION_BACKEND.md):
+отдельный Yii-модуль и схема `education`, Core identity, владельцы данных,
+предлагаемые read contracts и workflows шести действий из SVG. Решение не принято;
+Education runtime routes, endpoints, миграции и демонстрационные данные не добавлены.
+Для продолжения нужны отдельное backend-решение и полный зелёный CI нового SHA.
 
 ## Область и границы проверки
 

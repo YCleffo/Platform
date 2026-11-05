@@ -15,7 +15,7 @@ const now = '2026-11-03T00:00:00Z';
 const session = (id, current) => ({ id, current, clientType: 'web', deviceName: current ? 'Current browser' : 'Another laptop',
   browser: { name: 'Chrome', version: null }, os: { name: 'Windows', version: null }, ipAddress: '192.0.2.20',
   approximateLocation: { countryCode: 'RU', region: null, city: null, approximate: true }, createdAt: now, lastSeenAt: now, expiresAt: '2099-01-01T00:00:00Z' });
-let sessions = [session('current', true), session('other', false)]; let enabled = false; let recent = false; let invalidCode = false; let remaining = 0;
+let sessions = [session('current', true), session('other', false), session('untouched', false)]; let enabled = false; let recent = false; let invalidCode = false; let remaining = 0;
 await context.route('**/api/**', async route => {
   const request = route.request(); const path = new URL(request.url()).pathname; if (!path.startsWith('/api/')) return route.continue();
   let data = { items: [], pagination: { total: 0, limit: 25, offset: 0 } };
@@ -26,7 +26,9 @@ await context.route('**/api/**', async route => {
   else if (path === '/api/auth/mfa') data = { totpEnabled: enabled, verifiedAt: enabled ? now : null, recoveryCodesRemaining: remaining };
   else if (path === '/api/auth/sessions') data = sessions;
   else if (path.startsWith('/api/auth/sessions/') && request.method() !== 'GET') {
-    mutations.push({ path, method: request.method() }); sessions = sessions.filter(item => item.current); data = { revokedCount: 1 };
+    mutations.push({ path, method: request.method() });
+    sessions = sessions.filter(item => path.endsWith('/revoke-others') ? item.current : item.id !== path.split('/').at(-1));
+    data = { revokedCount: 1 };
   } else if (path.startsWith('/api/auth/mfa/') && request.method() !== 'GET') {
     if (recent) return respond(403, { status: 'error', error: { code: 'auth.recent_required', message: 'recent authentication required' } });
     if (invalidCode && path !== '/api/auth/mfa/totp/setup') return respond(400, { status: 'error', error: { code: 'auth.mfa.invalid', message: 'invalid code' } });
@@ -44,14 +46,23 @@ async function inspect(label) {
 }
 try {
   await page.goto(base + '/admin/login'); await page.locator('#admin-identifier').fill('synthetic@example.test'); await page.locator('#admin-password').fill('Synthetic-fixture-password'); await page.locator('form button[type=submit]').click(); await page.waitForURL(url => url.pathname === '/admin');
-  await navigateClientSide(page, '/admin/security/sessions'); await page.getByText('Another laptop', { exact: true }).waitFor();
-  assert.equal(await page.locator('.core-sessions__item').count(), 2); assert.equal(await page.locator('.core-sessions__item button').count(), 1);
+  await navigateClientSide(page, '/admin/security/sessions'); await page.locator('.core-sessions__item[data-session-id="other"]').waitFor();
+  assert.equal(await page.locator('.core-sessions__item').count(), 3); assert.equal(await page.locator('.core-sessions__item button').count(), 2);
   await inspect('sessions desktop; current device cannot be revoked');
-  await page.locator('.core-sessions__item button').click(); await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click(); assert.equal(mutations.length, 0);
-  await page.locator('.core-sessions__item button').click(); await page.getByRole('dialog').getByRole('button', { name: 'Revoke', exact: true }).click(); await page.getByText('Session revoked.', { exact: true }).waitFor(); assert.equal(await page.locator('.core-sessions__item').count(), 1);
-  states.push('session confirmation cancel and revoke use exact Core endpoint');
+  const targetSession = page.locator('.core-sessions__item[data-session-id="other"]');
+  await targetSession.getByRole('button', { name: 'Revoke', exact: true }).click(); await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click(); assert.equal(mutations.length, 0);
+  // Activity can reorder a separate API read without reordering the rendered list.
+  sessions = [sessions[2], sessions[0], sessions[1]];
+  const reread = await page.evaluate(async () => (await (await fetch('/api/auth/sessions')).json()).data);
+  assert.equal(reread.findIndex(item => item.id === 'other'), 2);
+  assert.equal(await page.locator('.core-sessions__item').nth(1).getAttribute('data-session-id'), 'other');
+  await targetSession.getByRole('button', { name: 'Revoke', exact: true }).click(); await page.getByRole('dialog').getByRole('button', { name: 'Revoke', exact: true }).click(); await page.getByText('Session revoked.', { exact: true }).waitFor();
+  await targetSession.waitFor({ state: 'detached' });
+  assert.equal(await page.locator('.core-sessions__item').count(), 2);
+  assert.equal(await page.locator('.core-sessions__item[data-session-id="untouched"]').count(), 1);
+  assert.deepEqual(mutations.at(-1), { path: '/api/auth/sessions/other', method: 'DELETE' });
+  states.push('session confirmation cancel and exact-ID revoke survive a differently ordered API read; unrelated session remains');
   await stableScreenshot(page, 'screenshots/core-security-sessions-desktop.png');
-  sessions.push(session('other-two', false));
   await navigateClientSide(page, '/admin/security'); await page.locator('#admin-current-password').waitFor();
   await navigateClientSide(page, '/admin/security/sessions'); await page.getByText('Another laptop', { exact: true }).waitFor();
   for (const width of [320, 393, 768]) { await page.setViewportSize({ width, height: 1000 }); await inspect('sessions width ' + width); }

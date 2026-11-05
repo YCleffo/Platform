@@ -138,6 +138,7 @@ onMounted(load);
         v-for="item in sessions"
         :key="item.id"
         class="core-sessions__item"
+        :data-session-id="item.id"
       >
         <div class="core-sessions__head">
           <strong>{{ device(item) }}</strong>

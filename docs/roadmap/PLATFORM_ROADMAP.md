@@ -60,6 +60,9 @@ CI и отдельного решения о backend Education. До этого 
 
 ### Условия старта Education
 
+Подготовлен [проект решения о backend Education](../architecture/EDUCATION_BACKEND.md).
+Статус — не утверждён; runtime routes и API этим документом не добавляются.
+
 1. Зелёный полный CI, включая `browser-e2e`.
 2. Создан Education backend с отдельной схемой/владельцем данных и OpenAPI.
 3. Для каждого блока выше есть реальный endpoint и тест.

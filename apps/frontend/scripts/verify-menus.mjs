@@ -8,6 +8,15 @@ let activePage;
 const check = (value, message) => { if (!value) throw new Error(message); };
 mkdirSync('screenshots', { recursive: true });
 async function bounds(page) {
+  // Resize and drill/cascade replacement schedule layout on the next frame.
+  // Measure the positioned panels, including their entrance animation.
+  await page.waitForFunction(() => {
+    const panels = [...document.querySelectorAll('.app-menu__panel')];
+    return panels.length > 0 && panels.every(panel => {
+      const rect = panel.getBoundingClientRect();
+      return rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth + 1 && rect.bottom <= innerHeight + 1;
+    });
+  });
   for (const panel of await page.locator('.app-menu__panel').all()) {
     const box = await panel.boundingBox();
     const size = page.viewportSize();

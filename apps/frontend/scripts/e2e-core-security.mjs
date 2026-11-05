@@ -59,8 +59,9 @@ try {
   await login(); const second = await request('/auth/login', { method: 'POST', token: null, body: { identifierType: 'email', identifier: actor.email, password: actor.password } });
   const third = await request('/auth/login', { method: 'POST', token: null, body: { identifierType: 'email', identifier: actor.email, password: actor.password } });
   await navigateClientSide(page, '/admin/security/sessions'); await page.locator('.core-sessions__item').nth(2).waitFor();
-  const list = await request('/auth/sessions'); const target = list.findIndex(item => item.id === second.sessionId); assert.ok(target >= 0);
-  await page.locator('.core-sessions__item').nth(target).getByRole('button', { name: 'Revoke', exact: true }).click();
+  // last_seen_at changes between reads, so API and rendered row positions can differ.
+  const targetSession = page.locator(`.core-sessions__item[data-session-id="${second.sessionId}"]`);
+  await targetSession.getByRole('button', { name: 'Revoke', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Revoke', exact: true }).click(); await page.getByText('Session revoked.', { exact: true }).waitFor();
   await request('/auth/me', { token: second.accessToken, status: 401 }); await request('/auth/me', { token: third.accessToken });
   await page.getByRole('button', { name: 'Revoke other sessions', exact: true }).click(); await page.getByRole('dialog').getByRole('button', { name: 'Revoke', exact: true }).click();
