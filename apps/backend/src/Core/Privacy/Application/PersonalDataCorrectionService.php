@@ -12,18 +12,22 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class PersonalDataCorrectionService
 {
-    public function __construct(private ConnectionInterface $db,
+    public function __construct(
+        private ConnectionInterface $db,
         private PersonalDataCorrectionContributorRegistry $contributors,
-        private DataSubjectRequestExecutionService $executions) {}
+        private DataSubjectRequestExecutionService $executions,
+    ) {}
 
     public function confirmEvidence(AuthenticatedIdentity $actor, string $requestId): bool
     {
         return $this->executions->confirmCorrectionEvidence($actor, $requestId);
     }
 
-    public function correct(AuthenticatedIdentity $actor, string $requestId,
-        CorrectionCommand $command): string
-    {
+    public function correct(
+        AuthenticatedIdentity $actor,
+        string $requestId,
+        CorrectionCommand $command,
+    ): string {
         MachineCode::assert($command->contributorCode);
         if (preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/Di', $command->resourceId) !== 1
             || $command->changes === [] || count($command->changes) > 10) {
@@ -58,8 +62,14 @@ final readonly class PersonalDataCorrectionService
                 || !in_array($result->resourceType, $contributor->supportedResourceTypes(), true)) {
                 throw new DomainException('Correction result is invalid.');
             }
-            return $this->executions->recordCorrectionCompleted($actor, $requestId,
-                $contributor->code(), $result->resourceType, $result->resourceId, $result->changedPaths);
+            return $this->executions->recordCorrectionCompleted(
+                $actor,
+                $requestId,
+                $contributor->code(),
+                $result->resourceType,
+                $result->resourceId,
+                $result->changedPaths,
+            );
         });
     }
 }

@@ -20,10 +20,14 @@ FROM platform_runtime.entitlement_documents
 WHERE installation_id = CAST(:id AS uuid) AND status = 'applied'
 ORDER BY sequence DESC LIMIT 1
 SQL, [':id' => $installationId])->queryOne();
-        if (!is_array($row)) { return null; }
+        if (!is_array($row)) {
+            return null;
+        }
         $canonical = is_string($row['canonical_base64']) ? base64_decode($row['canonical_base64'], true) : false;
         $signature = hex2bin((string) $row['signature_hex']);
-        if (!is_string($canonical) || !is_string($signature)) { return null; }
+        if (!is_string($canonical) || !is_string($signature)) {
+            return null;
+        }
         return ['id' => $row['id'], 'sequence' => (int) $row['sequence'],
             'documentVersion' => (int) $row['document_version'], 'canonicalDocument' => $canonical,
             'signature' => $signature, 'keyId' => $row['signing_key_id'],

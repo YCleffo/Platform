@@ -38,11 +38,16 @@ final readonly class DataSubjectRequestService
         return $this->submit($actor, $subjectPersonId, $representationId, $type);
     }
 
-    public function intake(AuthenticatedIdentity $operator, string $subjectPersonId, string $type,
-        DateTimeImmutable $receivedAt, string $identityVerificationCode,
-        string $identityEvidenceReference, ?string $representativeVerificationReference,
-        string $sourceChannel): string
-    {
+    public function intake(
+        AuthenticatedIdentity $operator,
+        string $subjectPersonId,
+        string $type,
+        DateTimeImmutable $receivedAt,
+        string $identityVerificationCode,
+        string $identityEvidenceReference,
+        ?string $representativeVerificationReference,
+        string $sourceChannel,
+    ): string {
         $definition = $this->types->get($type);
         MachineCode::assert($identityVerificationCode);
         if (!in_array($sourceChannel, ['paper', 'email', 'signed_electronic_document'], true)
@@ -52,9 +57,17 @@ final readonly class DataSubjectRequestService
                 && !self::evidenceReference($representativeVerificationReference))) {
             throw new DomainException('Invalid offline request intake.');
         }
-        return $this->db->transaction(function () use ($operator, $subjectPersonId, $type, $definition,
-            $receivedAt, $identityVerificationCode, $identityEvidenceReference,
-            $representativeVerificationReference, $sourceChannel): string {
+        return $this->db->transaction(function () use (
+            $operator,
+            $subjectPersonId,
+            $type,
+            $definition,
+            $receivedAt,
+            $identityVerificationCode,
+            $identityEvidenceReference,
+            $representativeVerificationReference,
+            $sourceChannel
+        ): string {
             $this->assertHumanActor($operator);
             $id = $this->db->createCommand(<<<'SQL'
                 INSERT INTO core.data_subject_requests
@@ -118,7 +131,9 @@ final readonly class DataSubjectRequestService
 
     private function createDeadline(string $id, ?string $deadlineCode, DateTimeImmutable $receivedAt): void
     {
-        if ($deadlineCode === null) { return; }
+        if ($deadlineCode === null) {
+            return;
+        }
         $rule = $this->deadlines->definition($deadlineCode);
         $due = $this->deadlines->dueAt($rule['calendarType'], $rule['amount'], $receivedAt);
         $this->db->createCommand(<<<'SQL'
@@ -224,7 +239,8 @@ final readonly class DataSubjectRequestService
         }
         $clause = implode(' AND ', $where);
         $total = (int) $this->db->createCommand(
-            'SELECT count(*) FROM core.data_subject_requests r WHERE ' . $clause, $params,
+            'SELECT count(*) FROM core.data_subject_requests r WHERE ' . $clause,
+            $params,
         )->queryScalar();
         $rows = $this->db->createCommand(<<<SQL
             SELECT r.id::text, r.subject_person_id::text, r.legal_representation_id::text, r.request_type, r.status,
@@ -267,16 +283,23 @@ final readonly class DataSubjectRequestService
             $extended = $deadline['extended_due_at'] === null ? null : new DateTimeImmutable((string) $deadline['extended_due_at']);
             $satisfied = $deadline['satisfied_at'] === null ? null : new DateTimeImmutable((string) $deadline['satisfied_at']);
             $byRequest[(string) $deadline['request_id']][] = new DataSubjectRequestDeadlineView(
-                (string) $deadline['deadline_code'], new DateTimeImmutable((string) $deadline['triggered_at']),
-                (string) $deadline['calendar_type'], $due, $extended, $satisfied,
+                (string) $deadline['deadline_code'],
+                new DateTimeImmutable((string) $deadline['triggered_at']),
+                (string) $deadline['calendar_type'],
+                $due,
+                $extended,
+                $satisfied,
                 $this->deadlines->isOverdue($now, $extended ?? $due, $satisfied),
             );
         }
         $views = [];
         foreach ($rows as $row) {
             $views[] = new DataSubjectRequestView(
-                (string) $row['id'], (string) $row['subject_person_id'], (string) $row['request_type'],
-                (string) $row['status'], new DateTimeImmutable((string) $row['submitted_at']),
+                (string) $row['id'],
+                (string) $row['subject_person_id'],
+                (string) $row['request_type'],
+                (string) $row['status'],
+                new DateTimeImmutable((string) $row['submitted_at']),
                 $row['completed_at'] === null ? null : new DateTimeImmutable((string) $row['completed_at']),
                 $row['resolution_code'] === null ? null : (string) $row['resolution_code'],
                 $byRequest[(string) $row['id']] ?? [],
@@ -319,7 +342,9 @@ final readonly class DataSubjectRequestService
             }
             $scopes = [];
             foreach ($decoded as $scope) {
-                if (!is_string($scope)) throw new DomainException('Invalid representation scope.');
+                if (!is_string($scope)) {
+                    throw new DomainException('Invalid representation scope.');
+                }
                 $scopes[] = $scope;
             }
             $result[] = ['id' => (string) $row['id'], 'subjectPersonId' => (string) $row['subject_person_id'],
@@ -361,8 +386,12 @@ final readonly class DataSubjectRequestService
                 SQL, [':status' => $to, ':terminal' => false,
                 ':now' => $now->format(DATE_ATOM), ':reason' => $reasonCode, ':id' => $id])->execute();
             $this->event($id, 'status_changed', $from, $to, $actor, $reasonCode, $now);
-            $this->record($actor, $to === 'cancelled' ? 'privacy.request.cancelled' : 'privacy.request.status_changed',
-                $id, array_filter(['fromStatus' => $from, 'toStatus' => $to, 'reasonCode' => $reasonCode]));
+            $this->record(
+                $actor,
+                $to === 'cancelled' ? 'privacy.request.cancelled' : 'privacy.request.status_changed',
+                $id,
+                array_filter(['fromStatus' => $from, 'toStatus' => $to, 'reasonCode' => $reasonCode]),
+            );
         });
     }
 
@@ -392,8 +421,12 @@ final readonly class DataSubjectRequestService
                 SQL, [':now' => $now->format(DATE_ATOM), ':due' => $extended->format(DATE_ATOM),
                 ':reason' => $reasonCode, ':id' => $id, ':code' => $deadlineCode])->execute();
             $this->event($id, 'deadline_extended', null, null, $actor, $reasonCode, $now);
-            $this->record($actor, 'privacy.request.deadline_extended', $id,
-                ['deadlineCode' => $deadlineCode, 'reasonCode' => $reasonCode]);
+            $this->record(
+                $actor,
+                'privacy.request.deadline_extended',
+                $id,
+                ['deadlineCode' => $deadlineCode, 'reasonCode' => $reasonCode],
+            );
             return $extended;
         });
     }
@@ -423,7 +456,13 @@ final readonly class DataSubjectRequestService
     /** @param array<string, string> $metadata */
     private function record(AuthenticatedIdentity $actor, string $action, string $id, array $metadata): void
     {
-        $this->audit->record(new WriteAuditEventCommand('account', $actor->accountId, $action,
-            resourceType: 'core.data_subject_request', resourceId: $id, metadata: $metadata));
+        $this->audit->record(new WriteAuditEventCommand(
+            'account',
+            $actor->accountId,
+            $action,
+            resourceType: 'core.data_subject_request',
+            resourceId: $id,
+            metadata: $metadata,
+        ));
     }
 }

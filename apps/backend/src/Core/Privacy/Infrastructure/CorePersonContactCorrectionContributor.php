@@ -15,19 +15,33 @@ final readonly class CorePersonContactCorrectionContributor implements PersonalD
 {
     public function __construct(private UpdatePersonContact $contacts) {}
 
-    public function code(): string { return 'core.person_contact'; }
+    public function code(): string
+    {
+        return 'core.person_contact';
+    }
 
-    public function supportedResourceTypes(): array { return ['core.person_contact']; }
+    public function supportedResourceTypes(): array
+    {
+        return ['core.person_contact'];
+    }
 
     public function apply(CorrectionContext $context, CorrectionCommand $command): CorrectionResult
     {
         if ($command->contributorCode !== $this->code()
-            || $this->contacts->execute($context->subjectPersonId, $command->resourceId,
-                $command->changes) === null) {
+            || $this->contacts->execute(
+                $context->subjectPersonId,
+                $command->resourceId,
+                $command->changes,
+            ) === null) {
             throw new DomainException('Contact cannot be corrected for subject.');
         }
-        return new CorrectionResult('core.person_contact', $command->resourceId,
-            array_map(static fn(string $field): string => strtolower((string) preg_replace('/[A-Z]/', '_$0', $field)),
-                array_keys($command->changes)));
+        return new CorrectionResult(
+            'core.person_contact',
+            $command->resourceId,
+            array_map(
+                static fn(string $field): string => strtolower((string) preg_replace('/[A-Z]/', '_$0', $field)),
+                array_keys($command->changes),
+            ),
+        );
     }
 }

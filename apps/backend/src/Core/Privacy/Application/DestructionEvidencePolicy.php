@@ -46,8 +46,11 @@ final readonly class DestructionEvidencePolicy
     public function retainUntil(DateTimeImmutable $executedAt): DateTimeImmutable
     {
         $configuration = $this->configured();
-        $due = $this->calendar->dueAt($configuration['unit'],
-            $configuration['duration'], $executedAt);
+        $due = $this->calendar->dueAt(
+            $configuration['unit'],
+            $configuration['duration'],
+            $executedAt,
+        );
         if ($due < $executedAt->modify('+3 years')) {
             throw new DomainException('Destruction evidence retention is shorter than three years.');
         }

@@ -75,8 +75,12 @@ final readonly class AccountSettingsService
             SELECT person_id::text FROM core.accounts
             WHERE id = CAST(:id AS uuid) AND account_type = 'human'
             SQL, [':id' => $accountId])->queryScalar();
-        if (is_string($subject) && !$this->privacy->allowed($subject,
-            'core.account_settings', $accountId, 'preferences')) {
+        if (is_string($subject) && !$this->privacy->allowed(
+            $subject,
+            'core.account_settings',
+            $accountId,
+            'preferences',
+        )) {
             throw new DomainException('Account settings processing is restricted.');
         }
     }

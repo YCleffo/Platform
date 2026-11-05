@@ -26,9 +26,11 @@ final readonly class PersonalDataExportService
         return $this->export($actor, $requestId, null);
     }
 
-    public function exportRepresentative(AuthenticatedIdentity $actor, string $requestId,
-        string $representationId): PersonalDataExportResult
-    {
+    public function exportRepresentative(
+        AuthenticatedIdentity $actor,
+        string $requestId,
+        string $representationId,
+    ): PersonalDataExportResult {
         return $this->export($actor, $requestId, $representationId);
     }
 
@@ -37,9 +39,12 @@ final readonly class PersonalDataExportService
         return $this->export($actor, $requestId, null, true);
     }
 
-    private function export(AuthenticatedIdentity $actor, string $requestId,
-        ?string $representationId, bool $operatorIntake = false): PersonalDataExportResult
-    {
+    private function export(
+        AuthenticatedIdentity $actor,
+        string $requestId,
+        ?string $representationId,
+        bool $operatorIntake = false,
+    ): PersonalDataExportResult {
         $authorized = false;
         try {
             $isolation = $this->db->getTransaction() === null ? TransactionInterface::REPEATABLE_READ : null;
@@ -73,17 +78,36 @@ final readonly class PersonalDataExportService
                     if ($subject === $actor->personId || $row['legal_representation_id'] !== $representationId) {
                         throw new DomainException('Personal data response is unavailable.');
                     }
-                    $this->authority->assertActiveForAction($representationId, $subject,
-                        $actor->personId, 'privacy.request.view');
-                    $this->authority->assertActiveForAction($representationId, $subject,
-                        $actor->personId, $row['request_type'] === 'access' ? 'privacy.data.access' : 'privacy.data.export');
+                    $this->authority->assertActiveForAction(
+                        $representationId,
+                        $subject,
+                        $actor->personId,
+                        'privacy.request.view',
+                    );
+                    $this->authority->assertActiveForAction(
+                        $representationId,
+                        $subject,
+                        $actor->personId,
+                        $row['request_type'] === 'access' ? 'privacy.data.access' : 'privacy.data.export',
+                    );
                 }
                 $authorized = true;
-                $context = new PersonalDataExportContext($subject, $requestId, $actor->personId,
-                    $actor->accountId, $representationId, $this->clock->now());
+                $context = new PersonalDataExportContext(
+                    $subject,
+                    $requestId,
+                    $actor->personId,
+                    $actor->accountId,
+                    $representationId,
+                    $this->clock->now(),
+                );
                 $result = $this->exporter->export($context);
-                $this->executions->recordExportIssued($actor, $requestId,
-                    $result->schemaVersion, $result->sha256, $result->sizeBytes);
+                $this->executions->recordExportIssued(
+                    $actor,
+                    $requestId,
+                    $result->schemaVersion,
+                    $result->sha256,
+                    $result->sizeBytes,
+                );
                 return $result;
             }, $isolation);
         } catch (PersonalDataExportLimitException $exception) {

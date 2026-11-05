@@ -18,14 +18,16 @@ final readonly class CorePrivacyContributorCoverage
         'core.organization_membership' => 'identity',
     ];
 
-    public function __construct(private ProcessingPurposeRegistry $purposes,
+    public function __construct(
+        private ProcessingPurposeRegistry $purposes,
         private RetentionPolicyRegistry $policies,
         private RetentionCandidateContributorRegistry $candidates,
         private LawfulProcessingBasisContributorRegistry $bases,
         private RetentionDependencyContributorRegistry $dependencies,
         private ProcessingRestrictionContributorRegistry $restrictions,
         private PersonalDataErasureHandlerRegistry $handlers,
-        private ?ConnectionInterface $db = null) {}
+        private ?ConnectionInterface $db = null,
+    ) {}
 
     /** @return list<string> Machine codes only; no subject data. */
     public function missing(bool $destructive): array
@@ -38,11 +40,17 @@ final readonly class CorePrivacyContributorCoverage
             /** @var \App\Core\Privacy\Domain\ProcessingPurposeDefinition $purpose */
             $policy = $this->policies->get($purpose->retentionPolicyCode);
             if ($policy?->action === 'anonymize'
-                && in_array('identity', $purpose->dataCategories, true)) { $rootPurpose = true; }
+                && in_array('identity', $purpose->dataCategories, true)) {
+                $rootPurpose = true;
+            }
             foreach (self::RESOURCE_CATEGORIES as $resourceType => $category) {
-                if (!in_array($category, $purpose->dataCategories, true)) { continue; }
+                if (!in_array($category, $purpose->dataCategories, true)) {
+                    continue;
+                }
                 $root = in_array($resourceType, ['core.person', 'core.human_account'], true);
-                if (($policy?->action === 'anonymize') !== $root) { continue; }
+                if (($policy?->action === 'anonymize') !== $root) {
+                    continue;
+                }
                 $resourceCovered[$resourceType] = true;
                 $prefix = $purposeCode . ':' . $resourceType . ':';
                 if (!$this->candidates->coversResourcePurpose($resourceType, $purposeCode)) {
@@ -90,7 +98,9 @@ final readonly class CorePrivacyContributorCoverage
     /** @param list<RetentionCandidate> $candidates @return list<string> */
     public function missingForSubject(string $subjectPersonId, array $candidates): array
     {
-        if ($this->db === null) { return ['coverage_unavailable']; }
+        if ($this->db === null) {
+            return ['coverage_unavailable'];
+        }
         $rows = $this->db->createCommand(<<<'SQL'
             SELECT 'core.person' AS resource_type, p.id::text AS resource_id
                 FROM core.persons p WHERE p.id = CAST(:subject AS uuid)
@@ -113,7 +123,10 @@ final readonly class CorePrivacyContributorCoverage
             $type = (string) $row['resource_type'];
             $key = $type . ':' . (string) $row['resource_id'];
             $group = $byResource[$key] ?? [];
-            if ($group === []) { $missing[] = $type . ':retention'; continue; }
+            if ($group === []) {
+                $missing[] = $type . ':retention';
+                continue;
+            }
             $action = in_array($type, ['core.person', 'core.human_account'], true)
                 ? 'anonymize' : 'delete';
             if ($this->handlers->forAction($type, $action) === null) {

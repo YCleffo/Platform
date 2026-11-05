@@ -14,12 +14,15 @@ final readonly class ProcessingInformationDefinition
      * @param list<string> $sourceCodes
      * @param list<string> $complianceMethodCodes
      */
-    public function __construct(public string $purposeCode, public array $methodCodes,
-        public array $sourceCodes, public string $rightsProcedureReference,
+    public function __construct(
+        public string $purposeCode,
+        public array $methodCodes,
+        public array $sourceCodes,
+        public string $rightsProcedureReference,
         public array $complianceMethodCodes,
         public string $rightsProcedureText = '',
-        public array $complianceMethodDescriptions = [])
-    {
+        public array $complianceMethodDescriptions = [],
+    ) {
         MachineCode::assert($purposeCode);
         foreach ([...$methodCodes, ...$sourceCodes, ...$complianceMethodCodes] as $code) {
             MachineCode::assert($code);

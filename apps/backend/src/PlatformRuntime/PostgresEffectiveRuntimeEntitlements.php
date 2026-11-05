@@ -9,14 +9,18 @@ use DateTimeZone;
 
 final readonly class PostgresEffectiveRuntimeEntitlements implements EffectiveRuntimeEntitlements
 {
-    public function __construct(private InstallationRepository $installations,
+    public function __construct(
+        private InstallationRepository $installations,
         private EntitlementDocumentRepository $documents,
-        private EntitlementSignatureVerifier $verifier) {}
+        private EntitlementSignatureVerifier $verifier,
+    ) {}
 
     public function forInstallation(string $installationId): array
     {
         $installation = $this->installations->find($installationId);
-        if ($installation === null || $installation['status'] !== 'active') { return []; }
+        if ($installation === null || $installation['status'] !== 'active') {
+            return [];
+        }
         $row = $this->documents->latestForInstallation($installationId);
         /** @var array{sequence: int, canonicalDocument: string, signature: string, keyId: string}|null $row */
         if ($row === null || $row['sequence'] !== (int) $installation['current_entitlement_sequence']
@@ -27,7 +31,9 @@ final readonly class PostgresEffectiveRuntimeEntitlements implements EffectiveRu
             $document = EntitlementDocumentV1::parse($row['canonicalDocument']);
             $document->assertCurrentlyValid(new DateTimeImmutable('now', new DateTimeZone('UTC')));
             if ($document->installationId !== $installationId || $document->sequence !== $row['sequence']
-                || $document->deploymentStatus !== 'active') { return []; }
+                || $document->deploymentStatus !== 'active') {
+                return [];
+            }
             return get_object_vars($document->features);
         } catch (\Throwable) {
             return [];

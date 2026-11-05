@@ -17,9 +17,12 @@ use Yiisoft\Router\CurrentRoute;
 
 final readonly class ManagePrivacyCorrectionAction
 {
-    public function __invoke(ServerRequestInterface $request, CurrentRoute $route,
-        PersonalDataCorrectionService $service, ResponseFactory $responses): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        CurrentRoute $route,
+        PersonalDataCorrectionService $service,
+        ResponseFactory $responses,
+    ): ResponseInterface {
         $id = (string) $route->getArgument('id');
         if (!PrivacyRequestInput::uuid($id)) {
             return $responses->notFound();
@@ -34,8 +37,10 @@ final readonly class ManagePrivacyCorrectionAction
             if ($operation === 'confirm' && $input === []) {
                 return $responses->success(['confirmed' => $service->confirmEvidence($actor, $id)]);
             }
-            if ($operation === 'correct' && PrivacyRequestInput::keys($input,
-                ['contributorCode', 'resourceId', 'changes'])) {
+            if ($operation === 'correct' && PrivacyRequestInput::keys(
+                $input,
+                ['contributorCode', 'resourceId', 'changes'],
+            )) {
                 $code = $input['contributorCode'] ?? null;
                 $resource = $input['resourceId'] ?? null;
                 $changes = $input['changes'] ?? null;
@@ -48,8 +53,11 @@ final readonly class ManagePrivacyCorrectionAction
                         }
                     }
                     /** @var array<string, mixed> $changes */
-                    $executionId = $service->correct($actor, $id,
-                        new CorrectionCommand($code, $resource, $changes));
+                    $executionId = $service->correct(
+                        $actor,
+                        $id,
+                        new CorrectionCommand($code, $resource, $changes),
+                    );
                     return $responses->success(['executionId' => $executionId]);
                 }
             }

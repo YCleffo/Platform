@@ -19,9 +19,11 @@ final readonly class EmailRequest
         public array $variables,
     ) {}
 
-    public static function fromEvent(OutboxEvent $event, SupportedLocales $supportedLocales,
-        ?AuthenticationPayloadCipher $cipher = null): self
-    {
+    public static function fromEvent(
+        OutboxEvent $event,
+        SupportedLocales $supportedLocales,
+        ?AuthenticationPayloadCipher $cipher = null,
+    ): self {
         $payload = $event->payload;
         if (($payload['schemaVersion'] ?? null) !== 1) {
             throw new EmailEventPayloadException('Unsupported email payload schemaVersion.');
@@ -76,7 +78,9 @@ final readonly class EmailRequest
             }
             try {
                 $variables['actionUrl'] = $cipher->decrypt(
-                    $variables['actionUrlCiphertext'], $variables['actionUrlKeyVersion']);
+                    $variables['actionUrlCiphertext'],
+                    $variables['actionUrlKeyVersion'],
+                );
             } catch (\RuntimeException $exception) {
                 throw new EmailEventPayloadException('Encrypted action URL cannot be read.', previous: $exception);
             }

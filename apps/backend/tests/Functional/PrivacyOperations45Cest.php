@@ -33,12 +33,27 @@ final readonly class PrivacyOperations45Cest
             $subject = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('Offline', 'Subject') RETURNING id::text")->queryScalar();
             $operatorPerson = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('Privacy', 'Operator') RETURNING id::text")->queryScalar();
             $operatorAccount = (string) $db->createCommand("INSERT INTO core.accounts (person_id, account_type, status) VALUES (CAST(:id AS uuid), 'human', 'active') RETURNING id::text", [':id' => $operatorPerson])->queryScalar();
-            $actor = new AuthenticatedIdentity($operatorAccount, $operatorPerson,
-                '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee', ['core.superadmin'], [], null, null);
+            $actor = new AuthenticatedIdentity(
+                $operatorAccount,
+                $operatorPerson,
+                '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee',
+                ['core.superadmin'],
+                [],
+                null,
+                null,
+            );
             $service = $container->get(DataSubjectRequestService::class);
             $received = new DateTimeImmutable('2026-09-28T10:00:00Z');
-            $id = $service->intake($actor, $subject, 'access', $received, 'identity_verified',
-                'document://privacy-case-45', null, 'paper');
+            $id = $service->intake(
+                $actor,
+                $subject,
+                'access',
+                $received,
+                'identity_verified',
+                'document://privacy-case-45',
+                null,
+                'paper',
+            );
             assertSame('submitted', $service->getVisible($actor, $id, true)?->status);
             $row = $db->createCommand('SELECT submitted_by_person_id, intake_channel, identity_evidence_reference FROM core.data_subject_requests WHERE id = CAST(:id AS uuid)', [':id' => $id])->queryOne();
             assertSame(null, $row['submitted_by_person_id']);
@@ -65,18 +80,45 @@ final readonly class PrivacyOperations45Cest
             $subject = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('Imported', 'Subject') RETURNING id::text")->queryScalar();
             $operatorPerson = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('Privacy', 'Operator') RETURNING id::text")->queryScalar();
             $operatorAccount = (string) $db->createCommand("INSERT INTO core.accounts (person_id, account_type, status) VALUES (CAST(:id AS uuid), 'human', 'active') RETURNING id::text", [':id' => $operatorPerson])->queryScalar();
-            $actor = new AuthenticatedIdentity($operatorAccount, $operatorPerson,
-                '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee', ['core.superadmin'], [], null, null);
-            $notices = new PrivacyCollectionNoticeService($db, $container->get(ClockInterface::class),
-                $container->get(ProcessingPurposeRegistry::class), $container->get(DataCategoryRegistry::class));
+            $actor = new AuthenticatedIdentity(
+                $operatorAccount,
+                $operatorPerson,
+                '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee',
+                ['core.superadmin'],
+                [],
+                null,
+                null,
+            );
+            $notices = new PrivacyCollectionNoticeService(
+                $db,
+                $container->get(ClockInterface::class),
+                $container->get(ProcessingPurposeRegistry::class),
+                $container->get(DataCategoryRegistry::class),
+            );
             $collected = new DateTimeImmutable('2026-09-28T10:00:00Z');
-            $required = $notices->record($actor, $subject, 'test.processing', ['identity'],
-                'external_import', $collected, true, null);
+            $required = $notices->record(
+                $actor,
+                $subject,
+                'test.processing',
+                ['identity'],
+                'external_import',
+                $collected,
+                true,
+                null,
+            );
             assertFalse($notices->complete($required));
             $notices->issue($required, 'urn:notice:delivery-45');
             assertTrue($notices->complete($required));
-            $exempt = $notices->record($actor, $subject, 'test.processing', ['identity'],
-                'external_import', $collected, false, 'statutory_exemption');
+            $exempt = $notices->record(
+                $actor,
+                $subject,
+                'test.processing',
+                ['identity'],
+                'external_import',
+                $collected,
+                false,
+                'statutory_exemption',
+            );
             assertTrue($notices->complete($exempt));
         } finally {
             $transaction->rollBack();

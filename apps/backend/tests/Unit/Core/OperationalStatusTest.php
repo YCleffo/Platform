@@ -26,7 +26,9 @@ final class OperationalStatusTest extends TestCase
             $schema = $this->createMock(CommandInterface::class);
             $schema->method('queryScalar')->willReturn(true);
             $heartbeat = $this->createMock(CommandInterface::class);
-            $heartbeat->method('queryScalar')->willReturnCallback(static function () use (&$age): int { return $age; });
+            $heartbeat->method('queryScalar')->willReturnCallback(static function () use (&$age): int {
+                return $age;
+            });
             $db = $this->createMock(ConnectionInterface::class);
             $db->method('createCommand')->willReturnCallback(static function (?string $sql) use ($schema, $heartbeat): CommandInterface {
                 return str_contains($sql ?? '', 'to_regclass') ? $schema : $heartbeat;
@@ -66,12 +68,16 @@ final class OperationalStatusTest extends TestCase
             $db = $this->createMock(ConnectionInterface::class);
             $db->method('createCommand')->willReturnCallback(
                 function (?string $sql, array $params = []) use (&$ages, $schema): CommandInterface {
-                    if (str_contains($sql ?? '', 'to_regclass')) { return $schema; }
+                    if (str_contains($sql ?? '', 'to_regclass')) {
+                        return $schema;
+                    }
                     $heartbeat = $this->createMock(CommandInterface::class);
                     $heartbeat->method('queryScalar')->willReturnCallback(
-                        static fn() => $ages[$params[':code']] ?? null);
+                        static fn() => $ages[$params[':code']] ?? null,
+                    );
                     return $heartbeat;
-                });
+                },
+            );
             $redis = $this->createMock(ClientInterface::class);
             $redis->method('__call')->willReturnCallback(static function () use (&$redisReply): string {
                 return $redisReply;
@@ -110,7 +116,8 @@ final class OperationalStatusTest extends TestCase
             static function (?string $sql, array $params = []) use (&$writes, $command): CommandInterface {
                 $writes[] = [$sql, $params];
                 return $command;
-            });
+            },
+        );
         $recorder = new BackgroundJobStatusRecorder($db);
         $recorder->failed('runtime_entitlement_sync', 'job_failed');
         $recorder->skipped('runtime_entitlement_sync', 'entitlement_sync_unconfigured');
@@ -135,11 +142,17 @@ final class OperationalStatusTest extends TestCase
                     $writes[] = [$sql, $params];
                 }
                 return $command;
-            });
+            },
+        );
         $loop = new SchedulerLoop($db, [
             new ScheduledJob('successful', 10, true, 1, static fn(): int => 1),
-            new ScheduledJob('skipped_job', 10, true, 1,
-                static fn(): int => throw new JobSkipped('policy_missing')),
+            new ScheduledJob(
+                'skipped_job',
+                10,
+                true,
+                1,
+                static fn(): int => throw new JobSkipped('policy_missing'),
+            ),
         ], static fn(string $line) => null, recorder: new BackgroundJobStatusRecorder($db));
         $loop->tick(1000.0);
         $loop->tick(1001.0);
@@ -165,12 +178,18 @@ final class OperationalStatusTest extends TestCase
         $db = $this->createMock(ConnectionInterface::class);
         $db->method('createCommand')->willReturnCallback(
             static function (?string $sql) use ($rows, $backlog, $entitlement): CommandInterface {
-                if (str_contains($sql ?? '', 'core.outbox_events')) { return $backlog; }
-                if (str_contains($sql ?? '', 'platform_runtime.installations i')) { return $entitlement; }
+                if (str_contains($sql ?? '', 'core.outbox_events')) {
+                    return $backlog;
+                }
+                if (str_contains($sql ?? '', 'platform_runtime.installations i')) {
+                    return $entitlement;
+                }
                 return $rows;
-            });
+            },
+        );
         $tester = new \Symfony\Component\Console\Tester\CommandTester(
-            new OpsStatusCommand(new OperationalStatus($db, $this->createMock(ClientInterface::class))));
+            new OpsStatusCommand(new OperationalStatus($db, $this->createMock(ClientInterface::class))),
+        );
         self::assertSame(0, $tester->execute([]));
         $output = $tester->getDisplay();
         self::assertStringContainsString('runtime_entitlement_sync', $output);

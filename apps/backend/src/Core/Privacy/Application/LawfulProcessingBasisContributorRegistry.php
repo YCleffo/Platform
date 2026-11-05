@@ -61,7 +61,9 @@ final readonly class LawfulProcessingBasisContributorRegistry
     public function supports(string $purposeCode, string $resourceType): bool
     {
         foreach ($this->contributors as $contributor) {
-            if ($contributor->supports($purposeCode, $resourceType)) { return true; }
+            if ($contributor->supports($purposeCode, $resourceType)) {
+                return true;
+            }
         }
         return false;
     }

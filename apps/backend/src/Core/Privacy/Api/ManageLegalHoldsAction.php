@@ -17,9 +17,12 @@ use Yiisoft\Router\CurrentRoute;
 
 final readonly class ManageLegalHoldsAction
 {
-    public function __invoke(ServerRequestInterface $request, CurrentRoute $route,
-        LegalHoldService $holds, ResponseFactory $responses): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        CurrentRoute $route,
+        LegalHoldService $holds,
+        ResponseFactory $responses,
+    ): ResponseInterface {
         $operation = (string) $route->getArgument('operation');
         $actor = AuthenticatedIdentity::fromRequest($request);
         $id = (string) $route->getArgument('id');
@@ -75,10 +78,18 @@ final readonly class ManageLegalHoldsAction
         }
         /** @var array{scopeType: string, reasonCode: string, subjectPersonId?: string, purposeCode?: string, resourceType?: string, resourceId?: string, sourceType?: string, sourceReference?: string, expiresAt?: string} $input */
         try {
-            $createdId = $holds->create($actor, $input['subjectPersonId'] ?? null, $input['scopeType'],
-                $input['purposeCode'] ?? null, $input['resourceType'] ?? null, $input['resourceId'] ?? null,
-                $input['reasonCode'], $input['sourceType'] ?? null, $input['sourceReference'] ?? null,
-                isset($input['expiresAt']) ? new DateTimeImmutable($input['expiresAt']) : null);
+            $createdId = $holds->create(
+                $actor,
+                $input['subjectPersonId'] ?? null,
+                $input['scopeType'],
+                $input['purposeCode'] ?? null,
+                $input['resourceType'] ?? null,
+                $input['resourceId'] ?? null,
+                $input['reasonCode'],
+                $input['sourceType'] ?? null,
+                $input['sourceReference'] ?? null,
+                isset($input['expiresAt']) ? new DateTimeImmutable($input['expiresAt']) : null,
+            );
             return $responses->success(['id' => $createdId])->withStatus(Status::CREATED);
         } catch (DomainException) {
             return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);

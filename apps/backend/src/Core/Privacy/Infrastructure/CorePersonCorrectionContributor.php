@@ -17,9 +17,15 @@ final readonly class CorePersonCorrectionContributor implements PersonalDataCorr
 {
     public function __construct(private UpdatePerson $persons) {}
 
-    public function code(): string { return 'core.person'; }
+    public function code(): string
+    {
+        return 'core.person';
+    }
 
-    public function supportedResourceTypes(): array { return ['core.person']; }
+    public function supportedResourceTypes(): array
+    {
+        return ['core.person'];
+    }
 
     public function apply(CorrectionContext $context, CorrectionCommand $command): CorrectionResult
     {

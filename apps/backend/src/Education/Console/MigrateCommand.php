@@ -11,7 +11,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 final class MigrateCommand extends Command
 {
-    public function __construct(private readonly MigrationRunner $migrations) { parent::__construct('education:migrate'); }
+    public function __construct(private readonly MigrationRunner $migrations)
+    {
+        parent::__construct('education:migrate');
+    }
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->migrations->apply();

@@ -21,9 +21,9 @@ try {
     if (width < 768) {
       const sizes = await page.locator('.components-view__temporal').evaluate((card) => {
         const c = getComputedStyle(card); const button = card.querySelector('.app-disclosure__trigger');
-        return { font: parseFloat(c.fontSize), padding: parseFloat(c.paddingLeft), button: parseFloat(getComputedStyle(button).fontSize), touchHeight: button.getBoundingClientRect().height };
+        return { font: parseFloat(c.fontSize), family: c.fontFamily, padding: parseFloat(c.paddingLeft), button: parseFloat(getComputedStyle(button).fontSize), touchHeight: button.getBoundingClientRect().height };
       });
-      assert.equal(sizes.font, 13); assert.equal(sizes.padding, 16); assert.ok(sizes.button <= 13.1); assert.ok(sizes.touchHeight >= 44);
+      assert.equal(sizes.font, 13); assert.match(sizes.family, /Inter/); assert.match(sizes.family, /system-ui/); assert.equal(sizes.padding, 16); assert.ok(sizes.button <= 13.1); assert.ok(sizes.touchHeight >= 44);
     }
     const dateControl = page.locator('#demo-date').locator('..');
     await dateControl.locator('.temporal-trigger').click();

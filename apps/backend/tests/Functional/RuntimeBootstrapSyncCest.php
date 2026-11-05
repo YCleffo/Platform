@@ -39,9 +39,12 @@ final readonly class RuntimeBootstrapSyncCest
             assertSame($id, $bootstrap->initialize($identity));
             foreach ([['installationId' => (string) $db->createCommand('SELECT uuidv7()::text')->queryScalar()],
                 ['mode' => 'dedicated'], ['environment' => 'production'], ['releaseId' => 'other-release']] as $change) {
-                try { $bootstrap->initialize(array_replace($identity, $change));
+                try {
+                    $bootstrap->initialize(array_replace($identity, $change));
                     throw new \RuntimeException('Mismatched bootstrap identity was accepted.');
-                } catch (DomainException) { assertTrue(true); }
+                } catch (DomainException) {
+                    assertTrue(true);
+                }
             }
             assertSame('provisioned', $db->createCommand('SELECT status::text FROM platform_runtime.installations')->queryScalar());
 
@@ -50,15 +53,17 @@ final readonly class RuntimeBootstrapSyncCest
             $keys = new TrustedEntitlementKeyRegistry(['test-bootstrap-key' => [
                 'publicKeyBase64' => base64_encode(sodium_crypto_sign_publickey($pair)), 'status' => 'trusted',
             ]]);
-            $document = json_encode(['documentVersion' => 1, 'sequence' => 1, 'installationId' => $id,
-                'issuedAt' => gmdate('Y-m-d\TH:i:s\Z', time() - 10),
-                'validFrom' => gmdate('Y-m-d\TH:i:s\Z', time() - 10),
-                'validUntil' => gmdate('Y-m-d\TH:i:s\Z', time() + 3600),
-                'deploymentStatus' => 'active', 'features' => (object) ['bootstrap.module' => true]],
-                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+            $document = json_encode(
+                ['documentVersion' => 1, 'sequence' => 1, 'installationId' => $id,
+                    'issuedAt' => gmdate('Y-m-d\TH:i:s\Z', time() - 10),
+                    'validFrom' => gmdate('Y-m-d\TH:i:s\Z', time() - 10),
+                    'validUntil' => gmdate('Y-m-d\TH:i:s\Z', time() + 3600),
+                    'deploymentStatus' => 'active', 'features' => (object) ['bootstrap.module' => true]],
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION,
+            );
             $response = ['documentBase64' => base64_encode($document),
                 'signatureBase64' => base64_encode(str_repeat('x', 64)), 'keyId' => 'test-bootstrap-key'];
-            $puller = new class($response) implements DeploymentEntitlementPuller {
+            $puller = new class ($response) implements DeploymentEntitlementPuller {
                 public function __construct(public array $response) {}
                 public function pull(string $url, string $authorization): array
                 {
@@ -70,22 +75,33 @@ final readonly class RuntimeBootstrapSyncCest
             };
             $credential = '00000000-0000-4000-8000-000000000001.' . str_repeat('a', 43);
             putenv('TEST_BOOTSTRAP_CREDENTIAL=' . $credential);
-            $sync = new RuntimeEntitlementSynchronizer(new PostgresInstallationRepository($db),
+            $sync = new RuntimeEntitlementSynchronizer(
+                new PostgresInstallationRepository($db),
                 new PostgresEntitlementApplier($db, new SodiumEntitlementSignatureVerifier($keys)),
-                $puller, 'https://control.example', 'env:TEST_BOOTSTRAP_CREDENTIAL',
-                new \App\PlatformRuntime\RuntimeSecretResolver());
-            try { $sync->sync(); throw new \RuntimeException('Invalid signature was accepted.'); }
-            catch (DomainException) { assertSame('provisioned', $db->createCommand(
-                'SELECT status::text FROM platform_runtime.installations')->queryScalar()); }
+                $puller,
+                'https://control.example',
+                'env:TEST_BOOTSTRAP_CREDENTIAL',
+                new \App\PlatformRuntime\RuntimeSecretResolver(),
+            );
+            try {
+                $sync->sync();
+                throw new \RuntimeException('Invalid signature was accepted.');
+            } catch (DomainException) {
+                assertSame('provisioned', $db->createCommand(
+                    'SELECT status::text FROM platform_runtime.installations',
+                )->queryScalar());
+            }
             $puller->response['signatureBase64'] = base64_encode(sodium_crypto_sign_detached($document, $secret));
-            $reporter = new class($db) implements DeploymentStatusReporter {
+            $reporter = new class ($db) implements DeploymentStatusReporter {
                 public array $readySequences = [];
                 public array $failureCodes = [];
                 public function __construct(private ConnectionInterface $db) {}
                 public function ready(int $entitlementSequence): string
                 {
                     if ($this->db->createCommand('SELECT status::text FROM platform_runtime.installations')->queryScalar()
-                        !== 'active') { throw new DomainException('Ready preceded entitlement application.'); }
+                        !== 'active') {
+                        throw new DomainException('Ready preceded entitlement application.');
+                    }
                     $this->readySequences[] = $entitlementSequence;
                     return 'ready';
                 }
@@ -94,30 +110,43 @@ final readonly class RuntimeBootstrapSyncCest
                     $this->failureCodes[] = $machineErrorCode;
                 }
             };
-            $activation = new RuntimeActivationService($bootstrap, $sync, $reporter,
-                $container->get(OperationalStatus::class));
+            $activation = new RuntimeActivationService(
+                $bootstrap,
+                $sync,
+                $reporter,
+                $container->get(OperationalStatus::class),
+            );
             $db->createCommand("INSERT INTO platform_runtime.background_job_status
                 (job_code, heartbeat_at) VALUES ('__scheduler__', clock_timestamp()),
                 ('backend_email_worker', clock_timestamp())
                 ON CONFLICT (job_code) DO UPDATE SET heartbeat_at = EXCLUDED.heartbeat_at")->execute();
-            assertSame(['installationId' => $id, 'entitlementSequence' => 1, 'status' => 'ready'],
-                $activation->activate($identity));
+            assertSame(
+                ['installationId' => $id, 'entitlementSequence' => 1, 'status' => 'ready'],
+                $activation->activate($identity),
+            );
             assertSame([1], $reporter->readySequences);
             assertSame(1, $sync->sync());
             assertSame('active', $db->createCommand('SELECT status::text FROM platform_runtime.installations')->queryScalar());
             $db->createCommand("DELETE FROM platform_runtime.background_job_status
                 WHERE job_code = 'backend_email_worker'")->execute();
             putenv('RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS=1');
-            try { $activation->activate($identity); throw new \RuntimeException('Missing worker reported ready.'); }
-            catch (DomainException $e) { assertSame('runtime.background_workers_not_ready', $e->getMessage()); }
+            try {
+                $activation->activate($identity);
+                throw new \RuntimeException('Missing worker reported ready.');
+            } catch (DomainException $e) {
+                assertSame('runtime.background_workers_not_ready', $e->getMessage());
+            }
             assertSame(['runtime.background_workers_not_ready'], $reporter->failureCodes);
             assertSame([1], $reporter->readySequences);
             putenv('RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS');
             $puller->response['signatureBase64'] = base64_encode(str_repeat('x', 64));
-            try { $activation->activate($identity);
-                throw new \RuntimeException('Invalid signature activated runtime.'); }
-            catch (DomainException) { assertSame(['runtime.background_workers_not_ready',
-                'runtime.entitlement_sync_failed'], $reporter->failureCodes); }
+            try {
+                $activation->activate($identity);
+                throw new \RuntimeException('Invalid signature activated runtime.');
+            } catch (DomainException) {
+                assertSame(['runtime.background_workers_not_ready',
+                    'runtime.entitlement_sync_failed'], $reporter->failureCodes);
+            }
             assertSame([1], $reporter->readySequences);
             assertSame('active', $db->createCommand('SELECT status::text FROM platform_runtime.installations')->queryScalar());
         } finally {

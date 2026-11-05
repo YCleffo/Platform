@@ -16,9 +16,12 @@ use Yiisoft\Router\CurrentRoute;
 
 final readonly class OwnPrivacyRequestsAction
 {
-    public function __invoke(ServerRequestInterface $request, CurrentRoute $route,
-        DataSubjectRequestService $service, ResponseFactory $responses): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        CurrentRoute $route,
+        DataSubjectRequestService $service,
+        ResponseFactory $responses,
+    ): ResponseInterface {
         $actor = AuthenticatedIdentity::fromRequest($request);
         $operation = (string) $route->getArgument('operation');
         try {

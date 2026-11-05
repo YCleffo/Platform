@@ -11,16 +11,26 @@ use stdClass;
 
 final readonly class EntitlementDocumentV1
 {
-    public function __construct(public int $sequence, public string $installationId,
-        public DateTimeImmutable $issuedAt, public DateTimeImmutable $validFrom,
-        public ?DateTimeImmutable $validUntil, public string $deploymentStatus,
-        public stdClass $features) {}
+    public function __construct(
+        public int $sequence,
+        public string $installationId,
+        public DateTimeImmutable $issuedAt,
+        public DateTimeImmutable $validFrom,
+        public ?DateTimeImmutable $validUntil,
+        public string $deploymentStatus,
+        public stdClass $features,
+    ) {}
 
     public static function parse(string $canonical): self
     {
-        if (strlen($canonical) > 1048576) { throw new DomainException('Entitlement document exceeds size limit.'); }
-        try { $object = json_decode($canonical, false, 64, JSON_THROW_ON_ERROR); }
-        catch (\JsonException) { throw new DomainException('Invalid entitlement JSON.'); }
+        if (strlen($canonical) > 1048576) {
+            throw new DomainException('Entitlement document exceeds size limit.');
+        }
+        try {
+            $object = json_decode($canonical, false, 64, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new DomainException('Invalid entitlement JSON.');
+        }
         if (!$object instanceof stdClass || array_keys(get_object_vars($object)) !== [
             'documentVersion', 'sequence', 'installationId', 'issuedAt', 'validFrom',
             'validUntil', 'deploymentStatus', 'features']) {
@@ -43,11 +53,18 @@ final readonly class EntitlementDocumentV1
             'validFrom' => $object->validFrom, 'validUntil' => $object->validUntil,
             'deploymentStatus' => $object->deploymentStatus, 'features' => $features,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
-        if (!hash_equals($expected, $canonical)) { throw new DomainException('Entitlement document is not canonical.'); }
-        return new self($object->sequence, $object->installationId,
-            self::timestamp($object->issuedAt), self::timestamp($object->validFrom),
+        if (!hash_equals($expected, $canonical)) {
+            throw new DomainException('Entitlement document is not canonical.');
+        }
+        return new self(
+            $object->sequence,
+            $object->installationId,
+            self::timestamp($object->issuedAt),
+            self::timestamp($object->validFrom),
             $object->validUntil === null ? null : self::timestamp($object->validUntil),
-            $object->deploymentStatus, $features);
+            $object->deploymentStatus,
+            $features,
+        );
     }
 
     public function assertCurrentlyValid(DateTimeImmutable $now): void
@@ -91,11 +108,15 @@ final readonly class EntitlementDocumentV1
         if ($value instanceof stdClass) {
             $values = get_object_vars($value);
             ksort($values, SORT_STRING);
-            foreach ($values as $key => $child) { $values[$key] = self::canonicalValue($child); }
+            foreach ($values as $key => $child) {
+                $values[$key] = self::canonicalValue($child);
+            }
             return (object) $values;
         }
         if (is_array($value)) {
-            foreach ($value as $key => $child) { $value[$key] = self::canonicalValue($child); }
+            foreach ($value as $key => $child) {
+                $value[$key] = self::canonicalValue($child);
+            }
         }
         return $value;
     }

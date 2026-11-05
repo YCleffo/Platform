@@ -34,7 +34,9 @@ SQL, [':code' => $code])->execute();
     public function succeeded(string $code, int $durationMs, int $processed): void
     {
         $this->checkCode($code);
-        if ($durationMs < 0 || $processed < 0) { throw new \InvalidArgumentException('Invalid job result.'); }
+        if ($durationMs < 0 || $processed < 0) {
+            throw new \InvalidArgumentException('Invalid job result.');
+        }
         $this->db->createCommand(<<<'SQL'
 INSERT INTO platform_runtime.background_job_status
     (job_code, last_succeeded_at, last_duration_ms, last_processed_count, last_result)

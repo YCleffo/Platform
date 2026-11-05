@@ -8,6 +8,7 @@ x-logging: &bounded_logs
 
 services:
   postgres:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-postgres
     logging: *bounded_logs
     image: platform-postgres:local
     pull_policy: build
@@ -38,6 +39,7 @@ services:
       - backend_net
 
   redis:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-redis
     logging: *bounded_logs
     image: redis:8-alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
     restart: unless-stopped
@@ -65,6 +67,7 @@ services:
       - backend_net
 
   mailpit:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-mailpit
     logging: *bounded_logs
     image: axllent/mailpit:v1.33.0@sha256:9b3a463be15354c0f0eba91697d80e3e0d8a5623ef0e627cacc836bc17fd5231
     restart: unless-stopped
@@ -78,6 +81,7 @@ services:
       - control_net
 
   backend:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-backend
     logging: *bounded_logs
     image: platform-backend:latest
     build:
@@ -238,6 +242,7 @@ services:
     networks:
       - backend_net
   backend-fast:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-backend-fast
     logging: *bounded_logs
     image: platform-backend-prod
     build:
@@ -283,6 +288,7 @@ services:
     networks: [backend_net]
 
   backend-email-worker:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-backend-email-worker
     logging: *bounded_logs
     image: platform-backend:latest
     build:
@@ -309,6 +315,7 @@ services:
         condition: service_healthy
     networks: [backend_net]
   backend-scheduler:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-backend-scheduler
     logging: *bounded_logs
     image: platform-backend:latest
     build:
@@ -355,6 +362,7 @@ services:
     networks: [backend_net]
 
   control-postgres:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-control-postgres
     logging: *bounded_logs
     profiles: ["control"]
     image: platform-postgres:local
@@ -377,6 +385,7 @@ services:
       retries: 20
     networks: [control_net]
   control-plane:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-control-plane
     logging: *bounded_logs
     image: platform-control-plane:latest
     profiles: ["control"]
@@ -445,6 +454,7 @@ services:
       retries: 20
     networks: [control_net]
   control-scheduler:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-control-scheduler
     logging: *bounded_logs
     image: platform-control-plane:latest
     profiles: ["control"]
@@ -492,6 +502,7 @@ services:
         condition: service_healthy
     networks: [control_net]
   control-outbox-worker:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-control-outbox-worker
     logging: *bounded_logs
     image: platform-control-plane:latest
     profiles: ["control"]

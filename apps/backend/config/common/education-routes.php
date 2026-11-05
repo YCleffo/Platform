@@ -24,8 +24,10 @@ $definitions = [
 ];
 $routes = [];
 foreach ($definitions as [$method, $path, $operation]) {
-    $route = match ($method) { 'GET' => Route::get('/api/education' . $path),
-        'POST' => Route::post('/api/education' . $path), 'PUT' => Route::put('/api/education' . $path) };
+    $route = match ($method) {
+        'GET' => Route::get('/api/education' . $path),
+        'POST' => Route::post('/api/education' . $path), 'PUT' => Route::put('/api/education' . $path),
+    };
     $routes[] = $route->defaults(['operation' => $operation])->middleware(PrivateResponse::class, RequireAuthentication::class)
         ->action(EducationAction::class)->name('education/' . $operation);
 }

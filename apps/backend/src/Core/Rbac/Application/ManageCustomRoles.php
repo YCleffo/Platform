@@ -27,19 +27,19 @@ final readonly class ManageCustomRoles
         self::validate($code, $name, $description);
         try {
             return $this->db->transaction(function () use ($actor, $code, $name, $description, $context): RoleView {
-            $this->authorize($actor);
-            if ($this->db->createCommand('SELECT 1 FROM core.roles WHERE code = :code', [':code' => $code])->queryScalar()) {
-                throw new ConflictException('Role code already exists.');
-            }
-            $id = $this->db->createCommand(<<<'SQL'
+                $this->authorize($actor);
+                if ($this->db->createCommand('SELECT 1 FROM core.roles WHERE code = :code', [':code' => $code])->queryScalar()) {
+                    throw new ConflictException('Role code already exists.');
+                }
+                $id = $this->db->createCommand(<<<'SQL'
                 INSERT INTO core.roles (code, name, description, is_system, is_protected)
                 VALUES (:code, :name, :description, false, false) RETURNING id::text
                 SQL, [':code' => $code, ':name' => $name, ':description' => $description])->queryScalar();
-            if (!is_string($id)) {
-                throw new \LogicException('Created role identity is unavailable.');
-            }
-            $this->audit($actor, $id, SecurityAction::ROLE_CREATED, $context);
-            return $this->roles->findById($id) ?? throw new \LogicException('Created role is unavailable.');
+                if (!is_string($id)) {
+                    throw new \LogicException('Created role identity is unavailable.');
+                }
+                $this->audit($actor, $id, SecurityAction::ROLE_CREATED, $context);
+                return $this->roles->findById($id) ?? throw new \LogicException('Created role is unavailable.');
             });
         } catch (IntegrityException $exception) {
             throw new ConflictException('Role code already exists.', previous: $exception);
@@ -50,19 +50,19 @@ final readonly class ManageCustomRoles
     {
         try {
             return $this->db->transaction(function () use ($actor, $id, $code, $name, $description, $context): ?RoleView {
-            $this->authorize($actor);
-            $row = $this->lock($id);
-            if ($row === null) {
-                return null;
-            }
-            self::assertMutable($row);
-            self::validate($code, $name, $description);
-            $this->db->createCommand(<<<'SQL'
+                $this->authorize($actor);
+                $row = $this->lock($id);
+                if ($row === null) {
+                    return null;
+                }
+                self::assertMutable($row);
+                self::validate($code, $name, $description);
+                $this->db->createCommand(<<<'SQL'
                 UPDATE core.roles SET code = :code, name = :name, description = :description, updated_at = now()
                 WHERE id = CAST(:id AS uuid)
                 SQL, [':id' => $id, ':code' => $code, ':name' => $name, ':description' => $description])->execute();
-            $this->audit($actor, $id, SecurityAction::ROLE_UPDATED, $context);
-            return $this->roles->findById($id);
+                $this->audit($actor, $id, SecurityAction::ROLE_UPDATED, $context);
+                return $this->roles->findById($id);
             });
         } catch (IntegrityException $exception) {
             throw new ConflictException('Role code already exists.', previous: $exception);

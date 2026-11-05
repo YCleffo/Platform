@@ -11,8 +11,11 @@ use InvalidArgumentException;
 
 final readonly class UpdatePersonContact
 {
-    public function __construct(private PersonContactRepository $contacts,
-        private ContactNormalizer $normalizer, private PrivacyResourceUsePolicy $privacy) {}
+    public function __construct(
+        private PersonContactRepository $contacts,
+        private ContactNormalizer $normalizer,
+        private PrivacyResourceUsePolicy $privacy,
+    ) {}
 
     /** @param array<string, mixed> $changes */
     public function execute(string $personId, string $contactId, array $changes): ?PersonContactView
@@ -49,7 +52,15 @@ final readonly class UpdatePersonContact
         } catch (InvalidArgumentException) {
             throw new DomainException('Invalid contact correction value.');
         }
-        return $this->contacts->updateOwned($personId, $contactId, is_string($value) ? $value : null, $normalized,
-            $valueProvided, $label, $labelProvided, is_bool($isPrimary) ? $isPrimary : null);
+        return $this->contacts->updateOwned(
+            $personId,
+            $contactId,
+            is_string($value) ? $value : null,
+            $normalized,
+            $valueProvided,
+            $label,
+            $labelProvided,
+            is_bool($isPrimary) ? $isPrimary : null,
+        );
     }
 }

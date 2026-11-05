@@ -1,5 +1,5 @@
 html:has(.education-shell), html:has(.education-login) { scrollbar-gutter: auto; }
-.education-shell, .education-login { --edu-accent-surface: var(--accent-soft-2); --edu-navigation-layer: 100; color: var(--text-1); background: var(--bg); min-height: 100dvh; font-family: var(--type-body-medium-family), sans-serif; }
+.education-shell, .education-login { --edu-accent-surface: var(--accent-soft-2); --edu-navigation-layer: 100; color: var(--text-1); background: var(--bg); min-height: 100dvh; font-family: var(--type-body-medium-family), var(--font-sans); }
 [data-theme="dark"] :is(.education-shell, .education-login) { --edu-accent-surface: var(--accent-soft); }
 .edu-main { max-width: 1100px; margin: 0 auto; padding: 18px 18px calc(90px + env(safe-area-inset-bottom)); }
 .education-shell h1, .education-login h1 { font-size: var(--type-h2-size); font-weight: var(--type-h2-weight); line-height: var(--type-h2-line); letter-spacing: var(--type-h2-tracking); }

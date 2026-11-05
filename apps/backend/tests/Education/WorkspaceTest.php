@@ -52,7 +52,10 @@ final class WorkspaceTest extends TestCase
         $this->access = $container->get(EducationAccess::class);
         $this->files = $container->get(FileStore::class);
         $clock = new class implements ClockInterface {
-            public function now(): DateTimeImmutable { return new DateTimeImmutable('2026-03-08T14:00:00Z'); }
+            public function now(): DateTimeImmutable
+            {
+                return new DateTimeImmutable('2026-03-08T14:00:00Z');
+            }
         };
         $this->service = new EducationService($this->store, $this->access, $clock, $this->files, $container->get(Mutation::class));
         $this->organization = (string) $this->db->createCommand("INSERT INTO core.organizations(code,name)
@@ -63,27 +66,34 @@ final class WorkspaceTest extends TestCase
 
     protected function tearDown(): void
     {
-        foreach ($this->storedFiles as $key) $this->files->remove($key);
+        foreach ($this->storedFiles as $key) {
+            $this->files->remove($key);
+        }
         $this->transaction->rollBack();
     }
 
     public function testOrganizationDomainRoleAndCurrentPermissionsAreAllRequired(): void
     {
         self::assertCount(1, $this->access->context($this->actor)['organizations']);
-        $other = $this->teacher('Other'); $otherScope = $this->access->scope($other, $this->organization, 'education.access');
+        $other = $this->teacher('Other');
+        $otherScope = $this->access->scope($other, $this->organization, 'education.access');
         $group = $this->service->write('create_group', $this->scope, ['name' => 'Private class']);
         self::assertNull($this->store->group($otherScope, $group['id']));
         $this->assertError(404, fn() => $this->service->read('group', $otherScope, [], $group['id']));
         $this->assertError(403, fn() => $this->access->scope($this->actor, $this->id(), 'education.access'));
         $this->db->createCommand('DELETE FROM education.teachers WHERE account_id=CAST(:id AS uuid)', [':id' => $other->accountId])->execute();
         $this->assertError(403, fn() => $this->access->scope($other, $this->organization, 'education.access'));
-        $this->db->createCommand("UPDATE core.organization_memberships SET status='left',left_at=now()
+        $this->db->createCommand(
+            "UPDATE core.organization_memberships SET status='left',left_at=now()
             WHERE organization_id=CAST(:org AS uuid) AND person_id=CAST(:person AS uuid)",
-            [':org' => $this->organization, ':person' => $this->actor->personId])->execute();
+            [':org' => $this->organization, ':person' => $this->actor->personId],
+        )->execute();
         $this->assertError(403, fn() => $this->access->scope($this->actor, $this->organization, 'education.access'));
-        $this->db->createCommand("UPDATE core.organization_memberships SET status='active',left_at=NULL
+        $this->db->createCommand(
+            "UPDATE core.organization_memberships SET status='active',left_at=NULL
             WHERE organization_id=CAST(:org AS uuid) AND person_id=CAST(:person AS uuid)",
-            [':org' => $this->organization, ':person' => $this->actor->personId])->execute();
+            [':org' => $this->organization, ':person' => $this->actor->personId],
+        )->execute();
         $this->db->createCommand('DELETE FROM core.account_roles WHERE account_id=CAST(:id AS uuid)', [':id' => $this->actor->accountId])->execute();
         $this->assertError(403, fn() => $this->access->scope($this->actor, $this->organization, 'education.access'));
         $this->db->createCommand("UPDATE core.modules SET enabled=false,disabled_at=now() WHERE code='education'")->execute();
@@ -96,7 +106,8 @@ final class WorkspaceTest extends TestCase
         self::assertNull($this->service->read('next', $this->scope, []));
         self::assertSame([], $this->service->read('attention', $this->scope, [])['items']);
         $group = $this->service->write('create_group', $this->scope, ['name' => 'Python']);
-        $studentPerson = $this->person('Student'); $this->member($studentPerson);
+        $studentPerson = $this->person('Student');
+        $this->member($studentPerson);
         $student = $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $studentPerson]);
         $outside = $this->person('Outside');
         $this->assertError(403, fn() => $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $outside]));
@@ -114,9 +125,12 @@ final class WorkspaceTest extends TestCase
         self::assertSame(1, $this->service->read('attention', $this->scope, [])['items'][0]['absentCount']);
         self::assertSame('Student Test', $this->service->read('participants', $this->scope, [], $current['id'])['items'][0]['name']);
         self::assertSame([], $this->service->read('timeline', $this->scope, ['date' => '2026-03-09'])['items']);
-        $audit = $this->db->createCommand("SELECT metadata::text FROM core.audit_events WHERE action='education.create_group' AND resource_id=:id",
-            [':id' => $group['id']])->queryScalar();
-        self::assertIsString($audit); self::assertStringNotContainsString('Python', $audit);
+        $audit = $this->db->createCommand(
+            "SELECT metadata::text FROM core.audit_events WHERE action='education.create_group' AND resource_id=:id",
+            [':id' => $group['id']],
+        )->queryScalar();
+        self::assertIsString($audit);
+        self::assertStringNotContainsString('Python', $audit);
     }
 
     public function testLocalDateRangesRespectBothDstTransitionsAndRejectInvalidInput(): void
@@ -130,16 +144,21 @@ final class WorkspaceTest extends TestCase
         $this->assertError(422, fn() => Input::instant('2026-03-08T09:00:00'));
         $this->assertError(422, fn() => $this->service->write('create_group', $this->scope, ['name' => 'Test', 'ownerAccountId' => $this->id()]));
         $registry = new DataCategoryRegistry(additionalDefinitions: [new DataCategoryDefinition('education')]);
-        self::assertNotNull($registry->get('identity')); self::assertNotNull($registry->get('education'));
+        self::assertNotNull($registry->get('identity'));
+        self::assertNotNull($registry->get('education'));
     }
 
     public function testMessagesAreRealAndOnlyThreadMembersCanReadThem(): void
     {
-        $recipient = $this->teacher('Recipient'); $outside = $this->teacher('Outside');
+        $recipient = $this->teacher('Recipient');
+        $outside = $this->teacher('Outside');
         $recipientScope = $this->access->scope($recipient, $this->organization, 'education.messages.use');
         $outsideScope = $this->access->scope($outside, $this->organization, 'education.messages.use');
-        $thread = $this->service->write('start_thread', $this->scope,
-            ['recipientPersonId' => $recipient->personId, 'subject' => 'Class time', 'body' => 'Can we meet at ten?']);
+        $thread = $this->service->write(
+            'start_thread',
+            $this->scope,
+            ['recipientPersonId' => $recipient->personId, 'subject' => 'Class time', 'body' => 'Can we meet at ten?'],
+        );
         self::assertSame(1, $this->service->read('header', $recipientScope, [])['unreadCount']);
         self::assertSame('Can we meet at ten?', $this->service->read('messages', $recipientScope, [], $thread['id'])['items'][0]['body']);
         $this->assertError(404, fn() => $this->service->read('messages', $outsideScope, [], $thread['id']));
@@ -161,16 +180,23 @@ final class WorkspaceTest extends TestCase
         $bytes = "%PDF-1.4\nEducation integration test\n%%EOF\n";
         $upload = new UploadedFile((new StreamFactory())->createStream($bytes), strlen($bytes), UPLOAD_ERR_OK, 'lesson.pdf', 'text/html');
         $file = $this->service->upload($this->scope, $upload, null, false);
-        $row = $this->store->file($this->scope, $file['id']); $this->storedFiles[] = $row['storageKey'];
+        $row = $this->store->file($this->scope, $file['id']);
+        $this->storedFiles[] = $row['storageKey'];
         self::assertSame('application/pdf', $file['mime']);
         $download = $this->service->download($this->scope, $file['id']);
-        self::assertSame($bytes, file_get_contents($download['path'])); self::assertSame(hash('sha256', $bytes), $download['sha256']);
-        $other = $this->teacher('Other'); $otherScope = $this->access->scope($other, $this->organization, 'education.files.manage');
+        self::assertSame($bytes, file_get_contents($download['path']));
+        self::assertSame(hash('sha256', $bytes), $download['sha256']);
+        $other = $this->teacher('Other');
+        $otherScope = $this->access->scope($other, $this->organization, 'education.files.manage');
         $this->assertError(404, fn() => $this->service->download($otherScope, $file['id']));
         $this->assertError(422, fn() => $this->service->write('save_profile', $this->scope, ['displayName' => 'Teacher', 'avatarFileId' => $file['id']]));
         $html = '<html><script>alert(1)</script></html>';
-        $this->assertError(422, fn() => $this->service->upload($this->scope,
-            new UploadedFile((new StreamFactory())->createStream($html), strlen($html), UPLOAD_ERR_OK, 'safe.pdf', 'application/pdf'), null, false));
+        $this->assertError(422, fn() => $this->service->upload(
+            $this->scope,
+            new UploadedFile((new StreamFactory())->createStream($html), strlen($html), UPLOAD_ERR_OK, 'safe.pdf', 'application/pdf'),
+            null,
+            false,
+        ));
         $this->service->write('save_profile', $this->scope, ['displayName' => 'My real profile alias', 'avatarFileId' => null]);
         self::assertSame('My real profile alias', $this->service->read('header', $this->scope, [])['displayName']);
     }
@@ -184,9 +210,16 @@ final class WorkspaceTest extends TestCase
         $profile = $this->store->profile($this->scope);
         $export = new \App\Education\Infrastructure\PersonalDataContributor($this->db);
         $section = $export->collect(new \App\Core\Privacy\Application\PersonalDataExportContext(
-            $this->scope->personId, $this->id(), $this->scope->personId, $this->scope->accountId, null, new DateTimeImmutable()));
+            $this->scope->personId,
+            $this->id(),
+            $this->scope->personId,
+            $this->scope->accountId,
+            null,
+            new DateTimeImmutable(),
+        ));
         $profiles = array_values(array_filter($section->records, static fn(array $row): bool => $row['type'] === 'profile'));
-        self::assertCount(1, $profiles); self::assertSame('Own alias', $profiles[0]['displayName']);
+        self::assertCount(1, $profiles);
+        self::assertSame('Own alias', $profiles[0]['displayName']);
         $correction = new \App\Education\Infrastructure\ProfileCorrection($this->db);
         $command = new \App\Core\Privacy\Application\CorrectionCommand('education.profile', $profile['id'], ['displayName' => 'Corrected']);
         $correction->apply(new \App\Core\Privacy\Application\CorrectionContext($this->id(), $this->scope->personId), $command);
@@ -194,16 +227,21 @@ final class WorkspaceTest extends TestCase
         try {
             $correction->apply(new \App\Core\Privacy\Application\CorrectionContext($this->id(), $otherScope->personId), $command);
             self::fail('Another subject corrected a private profile.');
-        } catch (\DomainException) { self::assertSame('Corrected', $this->store->profile($this->scope)['displayName']); }
-        $this->db->createCommand("INSERT INTO core.privacy_processing_blocks(subject_person_id,scope_type,resource_type,resource_id,reason_code,created_by_account_id,started_at)
+        } catch (\DomainException) {
+            self::assertSame('Corrected', $this->store->profile($this->scope)['displayName']);
+        }
+        $this->db->createCommand(
+            "INSERT INTO core.privacy_processing_blocks(subject_person_id,scope_type,resource_type,resource_id,reason_code,created_by_account_id,started_at)
             VALUES(CAST(:person AS uuid),'resource','education.profile',CAST(:resource AS uuid),'subject_request',CAST(:actor AS uuid),now()-interval '1 minute')",
-            [':person' => $this->scope->personId, ':resource' => $profile['id'], ':actor' => $this->scope->accountId])->execute();
+            [':person' => $this->scope->personId, ':resource' => $profile['id'], ':actor' => $this->scope->accountId],
+        )->execute();
         $this->assertError(403, fn() => $this->service->read('header', $this->scope, []));
     }
 
     private function teacher(string $name): AuthenticatedIdentity
     {
-        $person = $this->person($name); $this->member($person);
+        $person = $this->person($name);
+        $this->member($person);
         $account = (string) $this->db->createCommand("INSERT INTO core.accounts(person_id,account_type,status,label)
             VALUES(CAST(:person AS uuid),'human','active',:label) RETURNING id::text", [':person' => $person, ':label' => $name])->queryScalar();
         $this->db->createCommand("INSERT INTO core.account_roles(account_id,role_id)
@@ -219,15 +257,24 @@ final class WorkspaceTest extends TestCase
 
     private function member(string $person): void
     {
-        $this->db->createCommand('INSERT INTO core.organization_memberships(organization_id,person_id) VALUES(CAST(:org AS uuid),CAST(:person AS uuid))',
-            [':org' => $this->organization, ':person' => $person])->execute();
+        $this->db->createCommand(
+            'INSERT INTO core.organization_memberships(organization_id,person_id) VALUES(CAST(:org AS uuid),CAST(:person AS uuid))',
+            [':org' => $this->organization, ':person' => $person],
+        )->execute();
     }
 
-    private function id(): string { return (string) $this->db->createCommand('SELECT uuidv7()::text')->queryScalar(); }
+    private function id(): string
+    {
+        return (string) $this->db->createCommand('SELECT uuidv7()::text')->queryScalar();
+    }
 
     private function assertError(int $status, callable $action): void
     {
-        try { $action(); self::fail('Expected Education request rejection.'); }
-        catch (EducationError $error) { self::assertSame($status, $error->status); }
+        try {
+            $action();
+            self::fail('Expected Education request rejection.');
+        } catch (EducationError $error) {
+            self::assertSame($status, $error->status);
+        }
     }
 }

@@ -38,8 +38,17 @@ final readonly class PrivacyFoundationCest
                 [':id' => $actor],
             )->queryScalar();
             $identity = new AuthenticatedIdentity($account, $actor, '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee', ['core.superadmin'], [], null, null);
-            $declare = static fn (string $from, ?string $until, array $scopes): string => $representations->declare(
-                $identity, $subject, $actor, 'legal_guardian', $from, $until, 'test_proof', 'fixture:evidence', null, $scopes,
+            $declare = static fn(string $from, ?string $until, array $scopes): string => $representations->declare(
+                $identity,
+                $subject,
+                $actor,
+                'legal_guardian',
+                $from,
+                $until,
+                'test_proof',
+                'fixture:evidence',
+                null,
+                $scopes,
             );
             $grantOnly = $declare('2020-01-01T00:00:00Z', null, ['privacy.consent.grant']);
             assertTrue($representations->verify($identity, $grantOnly));

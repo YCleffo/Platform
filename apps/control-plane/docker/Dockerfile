@@ -47,7 +47,7 @@ WORKDIR /app
 COPY composer.json composer.lock /app/
 
 RUN --mount=type=cache,target=/tmp/cache \
-    composer install \
+    COMPOSER_CACHE_DIR=/tmp/cache composer install \
         --no-dev \
         --no-progress \
         --no-interaction \
@@ -61,7 +61,7 @@ COPY migrations /app/migrations
 COPY public /app/public
 COPY src /app/src
 
-RUN composer dump-autoload --no-dev --classmap-authoritative --no-interaction
+RUN COMPOSER_CACHE_DIR=/tmp/cache composer dump-autoload --no-dev --classmap-authoritative --no-interaction
 
 # ---------------------------------------------------------------------
 # Production image
@@ -99,7 +99,7 @@ FROM base AS test
 COPY --from=composer /composer /usr/bin/composer
 COPY composer.json composer.lock /app/
 RUN --mount=type=cache,target=/tmp/cache \
-    composer install --no-progress --no-interaction --prefer-dist --no-scripts
+    COMPOSER_CACHE_DIR=/tmp/cache composer install --no-progress --no-interaction --prefer-dist --no-scripts
 COPY . /app
 RUN mkdir -p /app/var/cache /app/var/log \
     && chown -R www-data:www-data /app/var \

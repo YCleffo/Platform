@@ -46,7 +46,9 @@ final readonly class RetentionDependencyContributorRegistry
     public function supports(string $resourceType): bool
     {
         foreach ($this->contributors as $contributor) {
-            if ($contributor->supports($resourceType)) { return true; }
+            if ($contributor->supports($resourceType)) {
+                return true;
+            }
         }
         return false;
     }

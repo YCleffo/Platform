@@ -15,17 +15,24 @@ use Yiisoft\Http\Status;
 
 final readonly class ApplyEntitlementsAction
 {
-    public function __invoke(ServerRequestInterface $request, ServiceCredentialService $credentials,
-        ServiceScopePolicy $scopes, PostgresInstallationRepository $installations,
-        EntitlementApplier $applier, ResponseFactory $responses): ResponseInterface
-    {
-        $identity = $credentials->authenticate($request->getHeaderLine('Authorization'),
-            (string) ($request->getServerParams()['REMOTE_ADDR'] ?? 'unknown'));
+    public function __invoke(
+        ServerRequestInterface $request,
+        ServiceCredentialService $credentials,
+        ServiceScopePolicy $scopes,
+        PostgresInstallationRepository $installations,
+        EntitlementApplier $applier,
+        ResponseFactory $responses,
+    ): ResponseInterface {
+        $identity = $credentials->authenticate(
+            $request->getHeaderLine('Authorization'),
+            (string) ($request->getServerParams()['REMOTE_ADDR'] ?? 'unknown'),
+        );
         if ($identity === null) {
             return $responses->error(ApiMessage::AUTH_REQUIRED, httpCode: Status::UNAUTHORIZED);
         }
-        try { $scopes->requireScope($identity, 'runtime.entitlements.apply'); }
-        catch (DomainException) {
+        try {
+            $scopes->requireScope($identity, 'runtime.entitlements.apply');
+        } catch (DomainException) {
             return $responses->error(ApiMessage::AUTH_PERMISSION_DENIED, httpCode: Status::FORBIDDEN);
         }
         if (strlen((string) $request->getBody()) > 1500000

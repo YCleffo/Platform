@@ -18,7 +18,9 @@ final readonly class HttpDeploymentEntitlementPuller implements DeploymentEntitl
         }
         $url = rtrim($controlPlaneUrl, '/') . '/api/m2m/entitlements/latest';
         $handle = curl_init($url);
-        if ($handle === false) { throw new DomainException('Entitlement transport unavailable.'); }
+        if ($handle === false) {
+            throw new DomainException('Entitlement transport unavailable.');
+        }
         $response = '';
         curl_setopt_array($handle, [
             CURLOPT_HTTPHEADER => ['Authorization: ' . $authorization, 'Accept: application/json'],
@@ -26,7 +28,9 @@ final readonly class HttpDeploymentEntitlementPuller implements DeploymentEntitl
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT => 15,
             CURLOPT_WRITEFUNCTION => static function (\CurlHandle $curl, string $chunk) use (&$response): int {
-                if (strlen($response) + strlen($chunk) > 1500000) { return 0; }
+                if (strlen($response) + strlen($chunk) > 1500000) {
+                    return 0;
+                }
                 $response .= $chunk;
                 return strlen($chunk);
             },
@@ -36,7 +40,9 @@ final readonly class HttpDeploymentEntitlementPuller implements DeploymentEntitl
                 throw new DomainException('Control Plane entitlement pull failed.');
             }
             $decoded = json_decode($response, true, 8, JSON_THROW_ON_ERROR);
-            if (!is_array($decoded)) { throw new DomainException('Invalid entitlement response.'); }
+            if (!is_array($decoded)) {
+                throw new DomainException('Invalid entitlement response.');
+            }
             /** @var array<string, mixed> $decoded */
             return $decoded;
         } catch (\JsonException) {

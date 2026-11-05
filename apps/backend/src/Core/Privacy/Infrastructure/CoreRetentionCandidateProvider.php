@@ -15,8 +15,12 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 final readonly class CoreRetentionCandidateProvider implements IteratorAggregate
 {
     /** @param iterable<RetentionCandidateContributor> $moduleContributors */
-    public function __construct(private ConnectionInterface $db, private ProcessingPurposeRegistry $purposes,
-        private RetentionPolicyRegistry $policies, private iterable $moduleContributors = []) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private ProcessingPurposeRegistry $purposes,
+        private RetentionPolicyRegistry $policies,
+        private iterable $moduleContributors = [],
+    ) {}
 
     public function getIterator(): Traversable
     {

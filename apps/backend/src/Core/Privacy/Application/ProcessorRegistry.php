@@ -24,7 +24,13 @@ final readonly class ProcessorRegistry
         $this->definitions = $indexed;
     }
 
-    public function get(string $code): ?ProcessorDefinition { return $this->definitions[$code] ?? null; }
+    public function get(string $code): ?ProcessorDefinition
+    {
+        return $this->definitions[$code] ?? null;
+    }
     /** @return list<ProcessorDefinition> */
-    public function all(): array { return array_values($this->definitions); }
+    public function all(): array
+    {
+        return array_values($this->definitions);
+    }
 }

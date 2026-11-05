@@ -94,19 +94,19 @@ def decode_catalog(content: str) -> Catalog:
     """Decode the internal SQL contract; JSON itself carries no Python types."""
     value: object = json.loads(content)
     if not isinstance(value, dict):
-        raise ValueError("PostgreSQL catalog must be a JSON object.")
+        raise TypeError("PostgreSQL catalog must be a JSON object.")
     catalog = cast(Catalog, value)
     for field in ("schemas", "enums", "tables", "views", "functions"):
         if not isinstance(catalog.get(field), list):
-            raise ValueError(f"PostgreSQL catalog field {field!r} must be an array.")
+            raise TypeError(f"PostgreSQL catalog field {field!r} must be an array.")
     return catalog
 
 
 def decode_migration_history(content: str) -> list[str]:
     value: object = json.loads(content)
     if not isinstance(value, list):
-        raise ValueError("Migration history must be a JSON array.")
+        raise TypeError("Migration history must be a JSON array.")
     items = cast(list[object], value)
     if not all(isinstance(item, str) for item in items):
-        raise ValueError("Migration history entries must be strings.")
+        raise TypeError("Migration history entries must be strings.")
     return cast(list[str], items)

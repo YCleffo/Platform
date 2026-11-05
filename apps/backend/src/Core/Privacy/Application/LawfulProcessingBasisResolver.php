@@ -9,9 +9,11 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class LawfulProcessingBasisResolver
 {
-    public function __construct(private ProcessingPurposeRegistry $purposes,
+    public function __construct(
+        private ProcessingPurposeRegistry $purposes,
         private LawfulProcessingBasisContributorRegistry $contributors,
-        private ConnectionInterface $db) {}
+        private ConnectionInterface $db,
+    ) {}
 
     public function resolve(RetentionCandidate $candidate): string
     {
@@ -29,7 +31,7 @@ final readonly class LawfulProcessingBasisResolver
                   AND legacy_record = false AND withdrawn_at IS NULL
                 LIMIT 1
                 SQL, [':subject' => $candidate->subjectPersonId,
-                    ':purpose' => $candidate->purposeCode])->queryScalar();
+                ':purpose' => $candidate->purposeCode])->queryScalar();
         } catch (\Throwable) {
             return 'unknown';
         }

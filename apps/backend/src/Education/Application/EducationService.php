@@ -11,8 +11,13 @@ use Psr\Http\Message\UploadedFileInterface;
 
 final readonly class EducationService
 {
-    public function __construct(private EducationStore $store, private EducationAccess $access,
-        private ClockInterface $clock, private FileStore $files, private Mutation $mutations) {}
+    public function __construct(
+        private EducationStore $store,
+        private EducationAccess $access,
+        private ClockInterface $clock,
+        private FileStore $files,
+        private Mutation $mutations,
+    ) {}
 
     /**
      * @param array<array-key,mixed> $query
@@ -71,9 +76,13 @@ final readonly class EducationService
     private function header(Scope $scope, DateTimeImmutable $now): array
     {
         $profile = $this->store->profile($scope);
-        if ($profile !== null) $this->access->assertResource($scope, 'profile', (string) $profile['id']);
+        if ($profile !== null) {
+            $this->access->assertResource($scope, 'profile', (string) $profile['id']);
+        }
         $avatarId = isset($profile['avatarFileId']) && is_string($profile['avatarFileId']) ? $profile['avatarFileId'] : null;
-        if ($avatarId !== null && $this->store->file($scope, $avatarId) === null) $avatarId = null;
+        if ($avatarId !== null && $this->store->file($scope, $avatarId) === null) {
+            $avatarId = null;
+        }
         $hour = (int) $now->format('G');
         return ['displayName' => $profile['displayName'] ?? $this->access->personName($scope->personId),
             'avatarFileId' => $avatarId, 'personId' => $scope->personId,
@@ -88,11 +97,14 @@ final readonly class EducationService
      */
     private function schedule(Scope $scope, array $query): array
     {
-        $from = Input::date($query['from'] ?? null); $to = Input::date($query['to'] ?? null);
+        $from = Input::date($query['from'] ?? null);
+        $to = Input::date($query['to'] ?? null);
         [$start, $end] = Input::range($from, $to, $scope->timezone);
         $lessons = $this->store->lessons($scope, $start, $end);
         $events = $this->store->events($scope, $start, $end);
-        if (count($lessons) > 500 || count($events) > 500) throw new EducationError(422, 'range_too_large');
+        if (count($lessons) > 500 || count($events) > 500) {
+            throw new EducationError(422, 'range_too_large');
+        }
         $lessons = array_values(array_filter($lessons, fn(array $row): bool => $this->access->resourceAllowed($scope->personId, 'lesson', (string) $row['id'])
             && $this->access->resourceAllowed($scope->personId, 'group', (string) $row['groupId'])));
         $events = array_values(array_filter($events, fn(array $row): bool => $this->access->resourceAllowed($scope->personId, 'event', (string) $row['id'])));
@@ -142,7 +154,9 @@ final readonly class EducationService
     {
         $this->lesson($scope, $id);
         $items = $this->store->participants($scope, $id);
-        if (count($items) > 500) throw new EducationError(422, 'group_too_large');
+        if (count($items) > 500) {
+            throw new EducationError(422, 'group_too_large');
+        }
         return ['items' => $this->namedPeople($scope, $items)];
     }
 
@@ -159,7 +173,9 @@ final readonly class EducationService
         $date = $now->modify('-1 day')->format('Y-m-d');
         [$from, $to] = Input::range($date, $date, $scope->timezone);
         $items = $this->store->attention($scope, $from, $to);
-        if (count($items) > 500) throw new EducationError(422, 'range_too_large');
+        if (count($items) > 500) {
+            throw new EducationError(422, 'range_too_large');
+        }
         return ['date' => $date, 'items' => array_values(array_filter($items, fn(array $row): bool =>
             $this->access->resourceAllowed($scope->personId, 'lesson', (string) $row['id'])))];
     }
@@ -173,10 +189,16 @@ final readonly class EducationService
         $visible = [];
         foreach ($items as $item) {
             $personId = (string) $item['personId'];
-            if (!$this->access->member($personId, $scope->organizationId)) continue;
-            if (isset($item['id']) && !$this->access->resourceAllowed($personId, 'student', (string) $item['id'])) continue;
+            if (!$this->access->member($personId, $scope->organizationId)) {
+                continue;
+            }
+            if (isset($item['id']) && !$this->access->resourceAllowed($personId, 'student', (string) $item['id'])) {
+                continue;
+            }
             $name = $this->access->personName($personId);
-            if ($name !== null) $visible[] = [...$item, 'name' => $name];
+            if ($name !== null) {
+                $visible[] = [...$item, 'name' => $name];
+            }
         }
         return $visible;
     }
@@ -196,7 +218,9 @@ final readonly class EducationService
     private function colleagues(Scope $scope): array
     {
         $items = $this->store->colleagues($scope);
-        if (count($items) > 500) throw new EducationError(422, 'directory_too_large');
+        if (count($items) > 500) {
+            throw new EducationError(422, 'directory_too_large');
+        }
         return array_map(static fn(array $row): array => [...$row, 'id' => $row['personId']], $this->namedPeople($scope, $items));
     }
 
@@ -208,7 +232,9 @@ final readonly class EducationService
         foreach ($items as &$message) {
             $sender = (string) $message['senderPersonId'];
             $message['senderName'] = $this->access->member($sender, $scope->organizationId) ? $this->access->personName($sender) : null;
-            if ($message['senderName'] === null || !$this->access->resourceAllowed($sender, 'message', (string) $message['id'])) $message['body'] = null;
+            if ($message['senderName'] === null || !$this->access->resourceAllowed($sender, 'message', (string) $message['id'])) {
+                $message['body'] = null;
+            }
         }
         unset($message);
         $page = self::page($items, $offset);
@@ -233,9 +259,12 @@ final readonly class EducationService
     private function enrollStudent(Scope $scope, array $input): array
     {
         self::only($input, ['personId', 'groupId']);
-        $person = Input::uuid($input['personId'] ?? null); $group = Input::uuid($input['groupId'] ?? null);
+        $person = Input::uuid($input['personId'] ?? null);
+        $group = Input::uuid($input['groupId'] ?? null);
         $this->group($scope, $group);
-        if (!$this->access->member($person, $scope->organizationId)) throw new EducationError(403, 'person_outside_organization');
+        if (!$this->access->member($person, $scope->organizationId)) {
+            throw new EducationError(403, 'person_outside_organization');
+        }
         return $this->store->enrollStudent($scope, $person, $group);
     }
 
@@ -261,7 +290,9 @@ final readonly class EducationService
         self::only($input, ['title', 'kind', 'startsAt', 'endsAt', 'location']);
         $values = self::eventValues($input);
         $kind = Input::text($input['kind'] ?? null, 20);
-        if (!in_array($kind, ['meeting', 'birthday', 'other'], true)) throw new EducationError(422, 'invalid_input');
+        if (!in_array($kind, ['meeting', 'birthday', 'other'], true)) {
+            throw new EducationError(422, 'invalid_input');
+        }
         return $this->store->createEvent($scope, [...$values, 'kind' => $kind]);
     }
 
@@ -271,9 +302,12 @@ final readonly class EducationService
      */
     private static function eventValues(array $input): array
     {
-        $start = Input::instant($input['startsAt'] ?? null); $end = Input::instant($input['endsAt'] ?? null);
+        $start = Input::instant($input['startsAt'] ?? null);
+        $end = Input::instant($input['endsAt'] ?? null);
         $seconds = (new DateTimeImmutable($end))->getTimestamp() - (new DateTimeImmutable($start))->getTimestamp();
-        if ($seconds <= 0 || $seconds > 86400) throw new EducationError(422, 'invalid_time');
+        if ($seconds <= 0 || $seconds > 86400) {
+            throw new EducationError(422, 'invalid_time');
+        }
         return ['title' => Input::text($input['title'] ?? null, 160), 'startsAt' => $start, 'endsAt' => $end,
             'location' => Input::text($input['location'] ?? '', 240, false)];
     }
@@ -285,12 +319,17 @@ final readonly class EducationService
     private function attendance(Scope $scope, string $id, string $studentId, array $input): array
     {
         self::only($input, ['status']);
-        $status = Input::text($input['status'] ?? null, 12); $lesson = $this->lesson($scope, $id);
+        $status = Input::text($input['status'] ?? null, 12);
+        $lesson = $this->lesson($scope, $id);
         $visible = $this->participants($scope, $id);
         /** @var list<array<string,mixed>> $participants */
         $participants = $visible['items'];
-        if (!in_array($studentId, array_column($participants, 'id'), true)) throw new EducationError(404, 'not_found');
-        if (!in_array($status, ['present', 'absent', 'pending'], true)) throw new EducationError(422, 'invalid_input');
+        if (!in_array($studentId, array_column($participants, 'id'), true)) {
+            throw new EducationError(404, 'not_found');
+        }
+        if (!in_array($status, ['present', 'absent', 'pending'], true)) {
+            throw new EducationError(422, 'invalid_input');
+        }
         if ($lesson['status'] === 'cancelled' || new DateTimeImmutable((string) $lesson['startsAt']) > $this->clock->now()) {
             throw new EducationError(409, 'lesson_not_started');
         }
@@ -306,11 +345,17 @@ final readonly class EducationService
     {
         self::only($input, ['displayName', 'avatarFileId']);
         $profile = $this->store->profile($scope);
-        if ($profile !== null) $this->access->assertResource($scope, 'profile', (string) $profile['id']);
-        if (!array_key_exists('displayName', $input) || !array_key_exists('avatarFileId', $input)) throw new EducationError(422, 'invalid_input');
+        if ($profile !== null) {
+            $this->access->assertResource($scope, 'profile', (string) $profile['id']);
+        }
+        if (!array_key_exists('displayName', $input) || !array_key_exists('avatarFileId', $input)) {
+            throw new EducationError(422, 'invalid_input');
+        }
         $name = ($input['displayName'] ?? null) === null ? null : Input::text($input['displayName'], 160);
         $avatar = ($input['avatarFileId'] ?? null) === null ? null : Input::uuid($input['avatarFileId']);
-        if ($avatar !== null && ($this->store->file($scope, $avatar)['purpose'] ?? null) !== 'avatar') throw new EducationError(422, 'invalid_avatar');
+        if ($avatar !== null && ($this->store->file($scope, $avatar)['purpose'] ?? null) !== 'avatar') {
+            throw new EducationError(422, 'invalid_avatar');
+        }
         $this->store->saveProfile($scope, $name, $avatar);
         return $this->header($scope, $this->clock->now()->setTimezone(new DateTimeZone($scope->timezone)));
     }
@@ -324,7 +369,9 @@ final readonly class EducationService
         self::only($input, ['recipientPersonId', 'subject', 'body']);
         $recipient = Input::uuid($input['recipientPersonId'] ?? null);
         $allowed = array_column($this->colleagues($scope), 'personId');
-        if (!in_array($recipient, $allowed, true)) throw new EducationError(403, 'recipient_unavailable');
+        if (!in_array($recipient, $allowed, true)) {
+            throw new EducationError(403, 'recipient_unavailable');
+        }
         return $this->store->startThread($scope, $recipient, Input::text($input['subject'] ?? null, 160), Input::text($input['body'] ?? null, 5000));
     }
 
@@ -337,9 +384,15 @@ final readonly class EducationService
         self::only($input, ['body']);
         $this->access->assertResource($scope, 'thread', $id);
         $peers = $this->store->threadPeers($scope, $id);
-        if ($peers === []) throw new EducationError(404, 'not_found');
+        if ($peers === []) {
+            throw new EducationError(404, 'not_found');
+        }
         $allowed = array_column($this->colleagues($scope), 'personId');
-        foreach ($peers as $peer) if (!in_array($peer, $allowed, true)) throw new EducationError(403, 'recipient_unavailable');
+        foreach ($peers as $peer) {
+            if (!in_array($peer, $allowed, true)) {
+                throw new EducationError(403, 'recipient_unavailable');
+            }
+        }
         return $this->store->sendMessage($scope, $id, Input::text($input['body'] ?? null, 5000));
     }
 
@@ -372,19 +425,30 @@ final readonly class EducationService
     }
 
     /** @return array<string,mixed> */
-    private function readNotification(Scope $scope, string $id): array { $this->store->readNotification($scope, $id); return ['updated' => true]; }
+    private function readNotification(Scope $scope, string $id): array
+    {
+        $this->store->readNotification($scope, $id);
+        return ['updated' => true];
+    }
 
     /** @return array<string,mixed> */
     public function upload(Scope $scope, UploadedFileInterface $upload, ?string $lessonId, bool $avatar): array
     {
-        if ($lessonId !== null) $this->lesson($scope, Input::uuid($lessonId));
-        if ($avatar && $lessonId !== null) throw new EducationError(422, 'invalid_file');
+        if ($lessonId !== null) {
+            $this->lesson($scope, Input::uuid($lessonId));
+        }
+        if ($avatar && $lessonId !== null) {
+            throw new EducationError(422, 'invalid_file');
+        }
         $file = $this->files->store($upload, $avatar);
         try {
             return $this->mutations->run($scope, 'upload_file', fn(): array =>
                 $this->store->createFile($scope, ['lessonId' => $lessonId, 'name' => $file->name, 'mime' => $file->mime,
                     'purpose' => $avatar ? 'avatar' : 'material', 'sizeBytes' => $file->size, 'sha256' => $file->sha256, 'storageKey' => $file->key]));
-        } catch (\Throwable $error) { $this->files->remove($file->key); throw $error; }
+        } catch (\Throwable $error) {
+            $this->files->remove($file->key);
+            throw $error;
+        }
     }
 
     /** @return array{path:string,name:string,mime:string,size:int,sha256:string} */
@@ -393,7 +457,9 @@ final readonly class EducationService
         $file = $this->store->file($scope, Input::uuid($id)) ?? throw new EducationError(404, 'not_found');
         $this->access->assertResource($scope, 'file', $id);
         $lessonId = $file['lessonId'] ?? null;
-        if (is_string($lessonId)) $this->lesson($scope, $lessonId);
+        if (is_string($lessonId)) {
+            $this->lesson($scope, $lessonId);
+        }
         $path = $this->files->path((string) $file['storageKey']);
         if (filesize($path) !== (int) $file['sizeBytes'] || hash_file('sha256', $path) !== $file['sha256']) {
             throw new EducationError(503, 'file_integrity_failed');
@@ -419,8 +485,10 @@ final readonly class EducationService
     private function resourcePage(Scope $scope, array $items, int $offset, string $type): array
     {
         $page = self::page($items, $offset);
-        $page['items'] = array_values(array_filter(array_slice($items, 0, 50),
-            fn(array $row): bool => $this->access->resourceAllowed($scope->personId, $type, (string) $row['id'])));
+        $page['items'] = array_values(array_filter(
+            array_slice($items, 0, 50),
+            fn(array $row): bool => $this->access->resourceAllowed($scope->personId, $type, (string) $row['id']),
+        ));
         return $page;
     }
 
@@ -430,6 +498,8 @@ final readonly class EducationService
      */
     private static function only(array $input, array $keys): void
     {
-        if (array_diff(array_keys($input), $keys) !== []) throw new EducationError(422, 'invalid_input');
+        if (array_diff(array_keys($input), $keys) !== []) {
+            throw new EducationError(422, 'invalid_input');
+        }
     }
 }

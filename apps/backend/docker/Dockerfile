@@ -88,10 +88,11 @@ WORKDIR /app
 COPY . /app
 
 RUN --mount=type=cache,target=/tmp/cache \
-    composer install \
+    COMPOSER_CACHE_DIR=/tmp/cache composer install \
     --no-dev \
     --no-progress \
     --no-interaction \
+    --prefer-dist \
     --classmap-authoritative \
     && rm composer.lock composer.json
 

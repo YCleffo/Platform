@@ -16,9 +16,12 @@ use Yiisoft\Router\CurrentRoute;
 
 final readonly class ExecuteProcessingTerminationAction
 {
-    public function __invoke(ServerRequestInterface $request, CurrentRoute $route,
-        ProcessingTerminationService $termination, ResponseFactory $responses): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        CurrentRoute $route,
+        ProcessingTerminationService $termination,
+        ResponseFactory $responses,
+    ): ResponseInterface {
         $id = (string) $route->getArgument('id');
         $body = $request->getParsedBody() ?? [];
         if (!PrivacyRequestInput::uuid($id) || ($body !== [] && !PrivacyRequestInput::keys($body, []))) {

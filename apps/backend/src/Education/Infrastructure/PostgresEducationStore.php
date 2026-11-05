@@ -21,25 +21,31 @@ final readonly class PostgresEducationStore implements EducationStore
 
     public function teacherOrganizations(string $accountId, string $personId): array
     {
-        $rows = $this->all('SELECT organization_id::text AS id FROM education.teachers
+        $rows = $this->all(
+            'SELECT organization_id::text AS id FROM education.teachers
             WHERE account_id=CAST(:account AS uuid) AND person_id=CAST(:person AS uuid) ORDER BY organization_id',
-            [':account' => $accountId, ':person' => $personId]);
+            [':account' => $accountId, ':person' => $personId],
+        );
         return array_map(static fn(array $row): string => (string) $row['id'], $rows);
     }
 
     public function teacherExists(Scope $scope): bool
     {
-        return $this->one('SELECT id::text FROM education.teachers WHERE organization_id=CAST(:org AS uuid)
+        return $this->one(
+            'SELECT id::text FROM education.teachers WHERE organization_id=CAST(:org AS uuid)
             AND account_id=CAST(:actor AS uuid) AND person_id=CAST(:person AS uuid)',
-            [...self::owner($scope), ':person' => $scope->personId]) !== null;
+            [...self::owner($scope), ':person' => $scope->personId],
+        ) !== null;
     }
 
     public function grantTeacher(string $organizationId, string $accountId, string $personId): void
     {
-        $this->db->createCommand('INSERT INTO education.teachers(organization_id,account_id,person_id)
+        $this->db->createCommand(
+            'INSERT INTO education.teachers(organization_id,account_id,person_id)
             VALUES(CAST(:org AS uuid),CAST(:account AS uuid),CAST(:person AS uuid))
             ON CONFLICT(organization_id,account_id) DO NOTHING',
-            [':org' => $organizationId, ':account' => $accountId, ':person' => $personId])->execute();
+            [':org' => $organizationId, ':account' => $accountId, ':person' => $personId],
+        )->execute();
     }
 
     public function groups(Scope $scope, int $offset): array
@@ -57,27 +63,35 @@ final readonly class PostgresEducationStore implements EducationStore
 
     public function createGroup(Scope $scope, string $name): array
     {
-        return $this->required('INSERT INTO education.groups(organization_id,owner_account_id,owner_person_id,name)
+        return $this->required(
+            'INSERT INTO education.groups(organization_id,owner_account_id,owner_person_id,name)
             VALUES(CAST(:org AS uuid),CAST(:actor AS uuid),CAST(:person AS uuid),:name) RETURNING id::text,name',
-            [...self::owner($scope), ':person' => $scope->personId, ':name' => $name]);
+            [...self::owner($scope), ':person' => $scope->personId, ':name' => $name],
+        );
     }
 
     public function students(Scope $scope, int $offset): array
     {
-        return $this->all('SELECT s.id::text,s.person_id::text AS "personId",s.created_at::text AS "createdAt"
+        return $this->all(
+            'SELECT s.id::text,s.person_id::text AS "personId",s.created_at::text AS "createdAt"
             FROM education.students s WHERE ' . self::where('s') . ' ORDER BY s.created_at,s.id LIMIT 51 OFFSET :offset',
-            [...self::owner($scope), ':offset' => $offset]);
+            [...self::owner($scope), ':offset' => $offset],
+        );
     }
 
     public function enrollStudent(Scope $scope, string $personId, string $groupId): array
     {
         return $this->db->transaction(function () use ($scope, $personId, $groupId): array {
-            if ($this->group($scope, $groupId) === null) throw new EducationError(404, 'not_found');
-            $student = $this->required('INSERT INTO education.students(organization_id,owner_account_id,person_id)
+            if ($this->group($scope, $groupId) === null) {
+                throw new EducationError(404, 'not_found');
+            }
+            $student = $this->required(
+                'INSERT INTO education.students(organization_id,owner_account_id,person_id)
                 VALUES(CAST(:org AS uuid),CAST(:actor AS uuid),CAST(:person AS uuid))
                 ON CONFLICT(organization_id,owner_account_id,person_id) DO UPDATE SET person_id=EXCLUDED.person_id
                 RETURNING id::text,person_id::text AS "personId"',
-                [...self::owner($scope), ':person' => $personId]);
+                [...self::owner($scope), ':person' => $personId],
+            );
             $params = [...self::owner($scope), ':student' => (string) $student['id'], ':group' => $groupId];
             $this->db->createCommand('INSERT INTO education.group_students(group_id,student_id,organization_id,owner_account_id)
                 VALUES(CAST(:group AS uuid),CAST(:student AS uuid),CAST(:org AS uuid),CAST(:actor AS uuid)) ON CONFLICT DO NOTHING', $params)->execute();
@@ -91,9 +105,11 @@ final readonly class PostgresEducationStore implements EducationStore
 
     public function lessons(Scope $scope, string $from, string $to): array
     {
-        return $this->all(self::LESSON . self::where('l') . ' AND l.starts_at>=CAST(:from AS timestamptz)
+        return $this->all(
+            self::LESSON . self::where('l') . ' AND l.starts_at>=CAST(:from AS timestamptz)
             AND l.starts_at<CAST(:to AS timestamptz) ORDER BY l.starts_at,l.id LIMIT 501',
-            [...self::owner($scope), ':from' => $from, ':to' => $to]);
+            [...self::owner($scope), ':from' => $from, ':to' => $to],
+        );
     }
 
     public function lesson(Scope $scope, string $id): ?array
@@ -103,24 +119,30 @@ final readonly class PostgresEducationStore implements EducationStore
 
     public function nextLesson(Scope $scope, string $now, bool $currentOnly): ?array
     {
-        return $this->one(self::LESSON . self::where('l') . " AND l.status='scheduled' AND l.ends_at>CAST(:now AS timestamptz)"
+        return $this->one(
+            self::LESSON . self::where('l') . " AND l.status='scheduled' AND l.ends_at>CAST(:now AS timestamptz)"
             . ($currentOnly ? ' AND l.starts_at<=CAST(:now AS timestamptz)' : '') . ' ORDER BY l.starts_at,l.id LIMIT 1',
-            [...self::owner($scope), ':now' => $now]);
+            [...self::owner($scope), ':now' => $now],
+        );
     }
 
     public function createLesson(Scope $scope, array $values): array
     {
         return $this->db->transaction(function () use ($scope, $values): array {
-            if ($this->group($scope, $values['groupId']) === null) throw new EducationError(404, 'not_found');
+            if ($this->group($scope, $values['groupId']) === null) {
+                throw new EducationError(404, 'not_found');
+            }
             $row = $this->required('INSERT INTO education.lessons(organization_id,owner_account_id,owner_person_id,group_id,title,starts_at,ends_at,location)
                 VALUES(CAST(:org AS uuid),CAST(:actor AS uuid),CAST(:person AS uuid),CAST(:group AS uuid),:title,CAST(:start AS timestamptz),CAST(:end AS timestamptz),:location)
                 RETURNING id::text', [...self::owner($scope), ':person' => $scope->personId, ':group' => $values['groupId'],
                 ':title' => $values['title'], ':start' => $values['startsAt'], ':end' => $values['endsAt'], ':location' => $values['location']]);
             $id = (string) $row['id'];
-            $this->db->createCommand('INSERT INTO education.attendance(lesson_id,student_id,organization_id,owner_account_id)
+            $this->db->createCommand(
+                'INSERT INTO education.attendance(lesson_id,student_id,organization_id,owner_account_id)
                 SELECT CAST(:id AS uuid),student_id,organization_id,owner_account_id FROM education.group_students
                 WHERE group_id=CAST(:group AS uuid) AND organization_id=CAST(:org AS uuid) AND owner_account_id=CAST(:actor AS uuid)',
-                [...self::owner($scope), ':id' => $id, ':group' => $values['groupId']])->execute();
+                [...self::owner($scope), ':id' => $id, ':group' => $values['groupId']],
+            )->execute();
             return $this->lesson($scope, $id) ?? throw new EducationError(409, 'write_not_confirmed');
         });
     }
@@ -134,26 +156,32 @@ final readonly class PostgresEducationStore implements EducationStore
 
     public function markAttendance(Scope $scope, string $lessonId, string $studentId, string $status): void
     {
-        $this->required('UPDATE education.attendance a SET status=:status,updated_at=now() WHERE ' . self::where('a') . '
+        $this->required(
+            'UPDATE education.attendance a SET status=:status,updated_at=now() WHERE ' . self::where('a') . '
             AND lesson_id=CAST(:lesson AS uuid) AND student_id=CAST(:student AS uuid) RETURNING student_id::text AS id',
-            [...self::owner($scope), ':lesson' => $lessonId, ':student' => $studentId, ':status' => $status]);
+            [...self::owner($scope), ':lesson' => $lessonId, ':student' => $studentId, ':status' => $status],
+        );
     }
 
     public function events(Scope $scope, string $from, string $to): array
     {
-        return $this->all('SELECT e.id::text,e.title,e.kind,e.location,e.starts_at::text AS "startsAt",e.ends_at::text AS "endsAt"
+        return $this->all(
+            'SELECT e.id::text,e.title,e.kind,e.location,e.starts_at::text AS "startsAt",e.ends_at::text AS "endsAt"
             FROM education.events e WHERE ' . self::where('e') . ' AND starts_at>=CAST(:from AS timestamptz)
             AND starts_at<CAST(:to AS timestamptz) ORDER BY starts_at,id LIMIT 501',
-            [...self::owner($scope), ':from' => $from, ':to' => $to]);
+            [...self::owner($scope), ':from' => $from, ':to' => $to],
+        );
     }
 
     public function createEvent(Scope $scope, array $values): array
     {
-        return $this->required('INSERT INTO education.events(organization_id,owner_account_id,owner_person_id,title,kind,location,starts_at,ends_at)
+        return $this->required(
+            'INSERT INTO education.events(organization_id,owner_account_id,owner_person_id,title,kind,location,starts_at,ends_at)
             VALUES(CAST(:org AS uuid),CAST(:actor AS uuid),CAST(:person AS uuid),:title,:kind,:location,CAST(:start AS timestamptz),CAST(:end AS timestamptz))
             RETURNING id::text,title,kind,location,starts_at::text AS "startsAt",ends_at::text AS "endsAt"',
             [...self::owner($scope), ':person' => $scope->personId, ':title' => $values['title'], ':kind' => $values['kind'],
-                ':location' => $values['location'], ':start' => $values['startsAt'], ':end' => $values['endsAt']]);
+                ':location' => $values['location'], ':start' => $values['startsAt'], ':end' => $values['endsAt']],
+        );
     }
 
     public function files(Scope $scope, ?string $lessonId, int $offset): array
@@ -161,7 +189,7 @@ final readonly class PostgresEducationStore implements EducationStore
         return $this->all('SELECT f.id::text,f.lesson_id::text AS "lessonId",f.name,f.mime,f.size_bytes AS "sizeBytes",f.created_at::text AS "createdAt"
             FROM education.files f WHERE ' . self::where('f') . " AND f.purpose='material'" . ($lessonId === null ? '' : ' AND lesson_id=CAST(:lesson AS uuid)') . '
             ORDER BY f.created_at,f.id LIMIT 51 OFFSET :offset', [...self::owner($scope), ':offset' => $offset,
-                ...($lessonId === null ? [] : [':lesson' => $lessonId])]);
+            ...($lessonId === null ? [] : [':lesson' => $lessonId])]);
     }
 
     public function file(Scope $scope, string $id): ?array
@@ -175,23 +203,27 @@ final readonly class PostgresEducationStore implements EducationStore
         return $this->required('INSERT INTO education.files(organization_id,owner_account_id,owner_person_id,lesson_id,name,mime,purpose,size_bytes,sha256,storage_key)
             VALUES(CAST(:org AS uuid),CAST(:actor AS uuid),CAST(:person AS uuid),CAST(:lesson AS uuid),:name,:mime,:purpose,:size,:hash,CAST(:key AS uuid))
             RETURNING id::text,name,mime,size_bytes AS "sizeBytes"', [...self::owner($scope), ':person' => $scope->personId,
-                ':lesson' => $values['lessonId'], ':name' => $values['name'], ':mime' => $values['mime'], ':purpose' => $values['purpose'],
-                ':size' => $values['sizeBytes'], ':hash' => $values['sha256'], ':key' => $values['storageKey']]);
+            ':lesson' => $values['lessonId'], ':name' => $values['name'], ':mime' => $values['mime'], ':purpose' => $values['purpose'],
+            ':size' => $values['sizeBytes'], ':hash' => $values['sha256'], ':key' => $values['storageKey']]);
     }
 
     public function profile(Scope $scope): ?array
     {
-        return $this->one('SELECT id::text,display_name AS "displayName",avatar_file_id::text AS "avatarFileId"
+        return $this->one(
+            'SELECT id::text,display_name AS "displayName",avatar_file_id::text AS "avatarFileId"
             FROM education.profiles WHERE account_id=CAST(:actor AS uuid) AND person_id=CAST(:person AS uuid)',
-            [':actor' => $scope->accountId, ':person' => $scope->personId]);
+            [':actor' => $scope->accountId, ':person' => $scope->personId],
+        );
     }
 
     public function saveProfile(Scope $scope, ?string $displayName, ?string $avatarFileId): void
     {
-        $this->db->createCommand('INSERT INTO education.profiles(account_id,person_id,display_name,avatar_file_id)
+        $this->db->createCommand(
+            'INSERT INTO education.profiles(account_id,person_id,display_name,avatar_file_id)
             VALUES(CAST(:actor AS uuid),CAST(:person AS uuid),:name,CAST(:file AS uuid))
             ON CONFLICT(account_id) DO UPDATE SET display_name=EXCLUDED.display_name,avatar_file_id=EXCLUDED.avatar_file_id',
-            [':actor' => $scope->accountId, ':person' => $scope->personId, ':name' => $displayName, ':file' => $avatarFileId])->execute();
+            [':actor' => $scope->accountId, ':person' => $scope->personId, ':name' => $displayName, ':file' => $avatarFileId],
+        )->execute();
     }
 
     public function colleagues(Scope $scope): array
@@ -212,9 +244,11 @@ final readonly class PostgresEducationStore implements EducationStore
 
     public function thread(Scope $scope, string $id): ?array
     {
-        return $this->one('SELECT t.id::text,t.subject FROM education.threads t JOIN education.thread_members tm ON tm.thread_id=t.id
+        return $this->one(
+            'SELECT t.id::text,t.subject FROM education.threads t JOIN education.thread_members tm ON tm.thread_id=t.id
             WHERE t.organization_id=CAST(:org AS uuid) AND tm.person_id=CAST(:person AS uuid) AND t.id=CAST(:id AS uuid)',
-            [...self::recipient($scope), ':id' => $id]);
+            [...self::recipient($scope), ':id' => $id],
+        );
     }
 
     public function messages(Scope $scope, string $threadId, int $offset): array
@@ -227,11 +261,13 @@ final readonly class PostgresEducationStore implements EducationStore
 
     public function threadPeers(Scope $scope, string $id): array
     {
-        $rows = $this->all('SELECT peer.person_id::text AS id FROM education.thread_members peer
+        $rows = $this->all(
+            'SELECT peer.person_id::text AS id FROM education.thread_members peer
             JOIN education.thread_members self ON self.thread_id=peer.thread_id
             WHERE peer.organization_id=CAST(:org AS uuid) AND self.person_id=CAST(:person AS uuid)
             AND peer.person_id<>CAST(:person AS uuid) AND peer.thread_id=CAST(:id AS uuid) ORDER BY peer.person_id',
-            [...self::recipient($scope), ':id' => $id]);
+            [...self::recipient($scope), ':id' => $id],
+        );
         return array_map(static fn(array $row): string => (string) $row['id'], $rows);
     }
 
@@ -242,9 +278,11 @@ final readonly class PostgresEducationStore implements EducationStore
                 VALUES(CAST(:org AS uuid),:subject) RETURNING id::text,subject', [':org' => $scope->organizationId, ':subject' => $subject]);
             $id = (string) $thread['id'];
             foreach ([$scope->personId, $recipientPersonId] as $personId) {
-                $this->db->createCommand('INSERT INTO education.thread_members(thread_id,organization_id,person_id)
+                $this->db->createCommand(
+                    'INSERT INTO education.thread_members(thread_id,organization_id,person_id)
                     VALUES(CAST(:id AS uuid),CAST(:org AS uuid),CAST(:person AS uuid))',
-                    [':id' => $id, ':org' => $scope->organizationId, ':person' => $personId])->execute();
+                    [':id' => $id, ':org' => $scope->organizationId, ':person' => $personId],
+                )->execute();
             }
             $this->sendMessage($scope, $id, $body);
             return $thread;
@@ -254,7 +292,9 @@ final readonly class PostgresEducationStore implements EducationStore
     public function sendMessage(Scope $scope, string $threadId, string $body): array
     {
         return $this->db->transaction(function () use ($scope, $threadId, $body): array {
-            if ($this->thread($scope, $threadId) === null) throw new EducationError(404, 'not_found');
+            if ($this->thread($scope, $threadId) === null) {
+                throw new EducationError(404, 'not_found');
+            }
             $params = [...self::recipient($scope), ':thread' => $threadId];
             $message = $this->required('INSERT INTO education.messages(thread_id,organization_id,sender_person_id,body)
                 VALUES(CAST(:thread AS uuid),CAST(:org AS uuid),CAST(:person AS uuid),:body)
@@ -287,10 +327,12 @@ final readonly class PostgresEducationStore implements EducationStore
 
     public function notifications(Scope $scope, int $offset): array
     {
-        return $this->all('SELECT n.id::text,n.thread_id::text AS "threadId",t.subject,n.created_at::text AS "createdAt",n.read_at::text AS "readAt"
+        return $this->all(
+            'SELECT n.id::text,n.thread_id::text AS "threadId",t.subject,n.created_at::text AS "createdAt",n.read_at::text AS "readAt"
             FROM education.notifications n JOIN education.threads t ON t.id=n.thread_id WHERE n.organization_id=CAST(:org AS uuid)
             AND n.person_id=CAST(:person AS uuid) ORDER BY n.created_at DESC,n.id LIMIT 51 OFFSET :offset',
-            [...self::recipient($scope), ':offset' => $offset]);
+            [...self::recipient($scope), ':offset' => $offset],
+        );
     }
 
     public function unreadCount(Scope $scope): int
@@ -301,18 +343,22 @@ final readonly class PostgresEducationStore implements EducationStore
 
     public function readNotification(Scope $scope, string $id): void
     {
-        $this->required('UPDATE education.notifications SET read_at=COALESCE(read_at,now())
+        $this->required(
+            'UPDATE education.notifications SET read_at=COALESCE(read_at,now())
             WHERE organization_id=CAST(:org AS uuid) AND person_id=CAST(:person AS uuid) AND id=CAST(:id AS uuid) RETURNING id::text',
-            [...self::recipient($scope), ':id' => $id]);
+            [...self::recipient($scope), ':id' => $id],
+        );
     }
 
     public function attention(Scope $scope, string $from, string $to): array
     {
-        return $this->all('SELECT l.id::text,l.title,count(*) AS "absentCount" FROM education.lessons l
+        return $this->all(
+            'SELECT l.id::text,l.title,count(*) AS "absentCount" FROM education.lessons l
             JOIN education.attendance a ON a.lesson_id=l.id WHERE ' . self::where('l') . " AND a.status='absent'
             AND l.status<>'cancelled' AND l.starts_at>=CAST(:from AS timestamptz) AND l.starts_at<CAST(:to AS timestamptz)
             GROUP BY l.id,l.title,l.starts_at ORDER BY l.starts_at,l.id LIMIT 501",
-            [...self::owner($scope), ':from' => $from, ':to' => $to]);
+            [...self::owner($scope), ':from' => $from, ':to' => $to],
+        );
     }
 
     private static function where(string $alias): string
@@ -321,9 +367,15 @@ final readonly class PostgresEducationStore implements EducationStore
     }
 
     /** @return array{':org':string,':actor':string} */
-    private static function owner(Scope $scope): array { return [':org' => $scope->organizationId, ':actor' => $scope->accountId]; }
+    private static function owner(Scope $scope): array
+    {
+        return [':org' => $scope->organizationId, ':actor' => $scope->accountId];
+    }
     /** @return array{':org':string,':person':string} */
-    private static function recipient(Scope $scope): array { return [':org' => $scope->organizationId, ':person' => $scope->personId]; }
+    private static function recipient(Scope $scope): array
+    {
+        return [':org' => $scope->organizationId, ':person' => $scope->personId];
+    }
 
     /**
      * @param array<non-empty-string,string|int|null> $params
@@ -363,8 +415,12 @@ final readonly class PostgresEducationStore implements EducationStore
     private static function normalize(array $row): array
     {
         foreach ($row as $key => $value) {
-            if (str_ends_with($key, 'At') && is_string($value)) $row[$key] = (new DateTimeImmutable($value))->format('Y-m-d\TH:i:s.uP');
-            if (str_ends_with($key, 'Count') || $key === 'sizeBytes') $row[$key] = (int) $value;
+            if (str_ends_with($key, 'At') && is_string($value)) {
+                $row[$key] = (new DateTimeImmutable($value))->format('Y-m-d\TH:i:s.uP');
+            }
+            if (str_ends_with($key, 'Count') || $key === 'sizeBytes') {
+                $row[$key] = (int) $value;
+            }
         }
         return $row;
     }

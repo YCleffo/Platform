@@ -56,21 +56,27 @@ final readonly class PrivacyProductionContributorsCest
 {
     public function withdrawnConsentDoesNotEraseWhileAnotherPurposeRemainsActive(FunctionalTester $tester): void
     {
-        $container = (new HttpApplicationRunner(rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv()))->getContainer();
+        $container = (new HttpApplicationRunner(
+            rootPath: dirname(__DIR__, 2),
+            environment: Environment::appEnv(),
+        ))->getContainer();
         $db = $container->get(ConnectionInterface::class);
         $transaction = $db->beginTransaction();
         try {
             $subject = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name)
                 VALUES ('Basis', 'Contributor') RETURNING id::text")->queryScalar();
-            $account = (string) $db->createCommand("INSERT INTO core.accounts (person_id, account_type, status)
+            $account = (string) $db->createCommand(
+                "INSERT INTO core.accounts (person_id, account_type, status)
                 VALUES (CAST(:subject AS uuid), 'human', 'active') RETURNING id::text",
-                [':subject' => $subject])->queryScalar();
-            $contact = (string) $db->createCommand("INSERT INTO core.person_contacts
+                [':subject' => $subject],
+            )->queryScalar();
+            $contact = (string) $db->createCommand(
+                "INSERT INTO core.person_contacts
                 (person_id, contact_type, value, normalized_value)
                 VALUES (CAST(:subject AS uuid), 'email', 'basis-contributor@example.test',
                     'basis-contributor@example.test') RETURNING id::text",
-                [':subject' => $subject])->queryScalar();
+                [':subject' => $subject],
+            )->queryScalar();
             foreach ([['test.basis_a', true], ['test.basis_b', true], ['test.basis_b', false]] as [$purpose, $withdrawn]) {
                 $db->createCommand(<<<'SQL'
                     INSERT INTO core.privacy_consents (granted_by_account_id, subject_person_id,
@@ -81,27 +87,61 @@ final readonly class PrivacyProductionContributorsCest
                         now() - interval '2 days',
                         CASE WHEN :withdrawn THEN now() - interval '1 day' ELSE NULL END)
                     SQL, [':account' => $account, ':subject' => $subject, ':purpose' => $purpose,
-                        ':withdrawn' => $withdrawn])->execute();
+                    ':withdrawn' => $withdrawn])->execute();
             }
             $policies = new RetentionPolicyRegistry([new RetentionPolicyDefinition(
-                'test.basis_policy', 'withdrawal', null, 'delete', durationUnit: 'event_only')]);
+                'test.basis_policy',
+                'withdrawal',
+                null,
+                'delete',
+                durationUnit: 'event_only',
+            )]);
             $purposes = new ProcessingPurposeRegistry([
-                new ProcessingPurposeDefinition('test.basis_a', 'consent', true, false,
-                    ['identity'], ['person'], 'test.basis_policy', 'operator'),
-                new ProcessingPurposeDefinition('test.basis_b', 'consent', true, false,
-                    ['identity'], ['person'], 'test.basis_policy', 'operator'),
+                new ProcessingPurposeDefinition(
+                    'test.basis_a',
+                    'consent',
+                    true,
+                    false,
+                    ['identity'],
+                    ['person'],
+                    'test.basis_policy',
+                    'operator',
+                ),
+                new ProcessingPurposeDefinition(
+                    'test.basis_b',
+                    'consent',
+                    true,
+                    false,
+                    ['identity'],
+                    ['person'],
+                    'test.basis_policy',
+                    'operator',
+                ),
             ], $container->get(DataCategoryRegistry::class), $policies);
-            $candidates = (new CoreResourceRetentionCandidateContributor($db, $purposes,
-                $policies, 'core.person_contact'))->candidates(10, $subject);
+            $candidates = (new CoreResourceRetentionCandidateContributor(
+                $db,
+                $purposes,
+                $policies,
+                'core.person_contact',
+            ))->candidates(10, $subject);
             assertSame(2, count($candidates));
             assertSame($contact, $candidates[0]->resourceId);
-            $basis = new LawfulProcessingBasisResolver($purposes,
-                new LawfulProcessingBasisContributorRegistry([new CoreResourceBasisContributor($purposes)]), $db);
+            $basis = new LawfulProcessingBasisResolver(
+                $purposes,
+                new LawfulProcessingBasisContributorRegistry([new CoreResourceBasisContributor($purposes)]),
+                $db,
+            );
             assertSame('inactive', $basis->resolve($candidates[0]));
             assertSame('active', $basis->resolve($candidates[1]));
-            $evaluator = new RetentionEvaluator($purposes, $policies,
-                $container->get(PrivacyDeadlinePolicy::class), $container->get(LegalHoldService::class),
-                $basis, new RetentionDependencyContributorRegistry(), $container->get(ClockInterface::class));
+            $evaluator = new RetentionEvaluator(
+                $purposes,
+                $policies,
+                $container->get(PrivacyDeadlinePolicy::class),
+                $container->get(LegalHoldService::class),
+                $basis,
+                new RetentionDependencyContributorRegistry(),
+                $container->get(ClockInterface::class),
+            );
             assertSame('eligible_delete', $evaluator->evaluate($candidates[0])->code);
             assertSame('blocked_by_active_basis', $evaluator->evaluate($candidates[1])->code);
             assertSame('retain', $evaluator->aggregate([
@@ -113,29 +153,51 @@ final readonly class PrivacyProductionContributorsCest
 
     public function exitedMembershipRunsRealErasureHandlerAndEvidence(FunctionalTester $tester): void
     {
-        $container = (new HttpApplicationRunner(rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv()))->getContainer();
+        $container = (new HttpApplicationRunner(
+            rootPath: dirname(__DIR__, 2),
+            environment: Environment::appEnv(),
+        ))->getContainer();
         $db = $container->get(ConnectionInterface::class);
         $transaction = $db->beginTransaction();
         try {
             $subject = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name)
                 VALUES ('Erasure', 'Contributor') RETURNING id::text")->queryScalar();
-            $account = (string) $db->createCommand("INSERT INTO core.accounts (person_id, account_type, status)
+            $account = (string) $db->createCommand(
+                "INSERT INTO core.accounts (person_id, account_type, status)
                 VALUES (CAST(:subject AS uuid), 'human', 'active') RETURNING id::text",
-                [':subject' => $subject])->queryScalar();
+                [':subject' => $subject],
+            )->queryScalar();
             $organization = (string) $db->createCommand("INSERT INTO core.organizations (code, name)
                 VALUES ('privacy-erasure-contributor', 'Privacy erasure') RETURNING id::text")->queryScalar();
-            $membership = (string) $db->createCommand("INSERT INTO core.organization_memberships
+            $membership = (string) $db->createCommand(
+                "INSERT INTO core.organization_memberships
                 (organization_id, person_id, status, left_at)
                 VALUES (CAST(:organization AS uuid), CAST(:subject AS uuid), 'left', now()) RETURNING id::text",
-                [':organization' => $organization, ':subject' => $subject])->queryScalar();
+                [':organization' => $organization, ':subject' => $subject],
+            )->queryScalar();
             $policies = new RetentionPolicyRegistry([new RetentionPolicyDefinition(
-                'test.membership_exit', 'relationship_end', null, 'delete', durationUnit: 'event_only')]);
+                'test.membership_exit',
+                'relationship_end',
+                null,
+                'delete',
+                durationUnit: 'event_only',
+            )]);
             $purposes = new ProcessingPurposeRegistry([new ProcessingPurposeDefinition(
-                'test.membership_exit', 'consent', true, false, ['identity'], ['person'],
-                'test.membership_exit', 'operator')], $container->get(DataCategoryRegistry::class), $policies);
-            $contributor = new CoreResourceRetentionCandidateContributor($db, $purposes,
-                $policies, 'core.organization_membership');
+                'test.membership_exit',
+                'consent',
+                true,
+                false,
+                ['identity'],
+                ['person'],
+                'test.membership_exit',
+                'operator',
+            )], $container->get(DataCategoryRegistry::class), $policies);
+            $contributor = new CoreResourceRetentionCandidateContributor(
+                $db,
+                $purposes,
+                $policies,
+                'core.organization_membership',
+            );
             $candidates = new RetentionCandidateContributorRegistry([$contributor]);
             $candidate = $candidates->collect(10, $subject)[0];
             assertSame($membership, $candidate->resourceId);
@@ -143,38 +205,84 @@ final readonly class PrivacyProductionContributorsCest
             $clock = $container->get(ClockInterface::class);
             $audit = $container->get(AuditService::class);
             $unknownPurposes = new ProcessingPurposeRegistry([new ProcessingPurposeDefinition(
-                'test.unknown_basis', 'contract', false, false, ['identity'], ['person'],
-                'test.membership_exit', 'operator')], $container->get(DataCategoryRegistry::class), $policies);
-            $unknownCandidate = (new CoreResourceRetentionCandidateContributor($db, $unknownPurposes,
-                $policies, 'core.organization_membership'))->candidates(10, $subject)[0];
-            $unknownBasis = new LawfulProcessingBasisResolver($unknownPurposes,
-                new LawfulProcessingBasisContributorRegistry([new CoreResourceBasisContributor($unknownPurposes)]), $db);
-            $unknownEvaluator = new RetentionEvaluator($unknownPurposes, $policies,
-                $container->get(PrivacyDeadlinePolicy::class), $container->get(LegalHoldService::class),
-                $unknownBasis, new RetentionDependencyContributorRegistry([new CoreResourceDependencyContributor($db)]),
-                $clock);
+                'test.unknown_basis',
+                'contract',
+                false,
+                false,
+                ['identity'],
+                ['person'],
+                'test.membership_exit',
+                'operator',
+            )], $container->get(DataCategoryRegistry::class), $policies);
+            $unknownCandidate = (new CoreResourceRetentionCandidateContributor(
+                $db,
+                $unknownPurposes,
+                $policies,
+                'core.organization_membership',
+            ))->candidates(10, $subject)[0];
+            $unknownBasis = new LawfulProcessingBasisResolver(
+                $unknownPurposes,
+                new LawfulProcessingBasisContributorRegistry([new CoreResourceBasisContributor($unknownPurposes)]),
+                $db,
+            );
+            $unknownEvaluator = new RetentionEvaluator(
+                $unknownPurposes,
+                $policies,
+                $container->get(PrivacyDeadlinePolicy::class),
+                $container->get(LegalHoldService::class),
+                $unknownBasis,
+                new RetentionDependencyContributorRegistry([new CoreResourceDependencyContributor($db)]),
+                $clock,
+            );
             assertSame('blocked_by_unknown_basis', $unknownEvaluator->evaluate($unknownCandidate)->code);
-            $basis = new LawfulProcessingBasisResolver($purposes,
-                new LawfulProcessingBasisContributorRegistry([new CoreResourceBasisContributor($purposes)]), $db);
-            $evaluator = new RetentionEvaluator($purposes, $policies,
-                $container->get(PrivacyDeadlinePolicy::class), $container->get(LegalHoldService::class),
-                $basis, new RetentionDependencyContributorRegistry([new CoreResourceDependencyContributor($db)]),
-                $clock);
+            $basis = new LawfulProcessingBasisResolver(
+                $purposes,
+                new LawfulProcessingBasisContributorRegistry([new CoreResourceBasisContributor($purposes)]),
+                $db,
+            );
+            $evaluator = new RetentionEvaluator(
+                $purposes,
+                $policies,
+                $container->get(PrivacyDeadlinePolicy::class),
+                $container->get(LegalHoldService::class),
+                $basis,
+                new RetentionDependencyContributorRegistry([new CoreResourceDependencyContributor($db)]),
+                $clock,
+            );
             assertSame('eligible_delete', $evaluator->evaluate($candidate)->code);
             $decisions = new RetentionDecisionService($db, $evaluator, $clock, $audit);
             $handlers = $container->get(PersonalDataErasureHandlerRegistry::class);
             $cases = new ErasureCaseService($db, $clock, $candidates, $purposes, $decisions, $handlers, $audit);
-            $actor = new AuthenticatedIdentity($account, $subject,
-                '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee', ['core.superadmin'], [], null, null);
+            $actor = new AuthenticatedIdentity(
+                $account,
+                $subject,
+                '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee',
+                ['core.superadmin'],
+                [],
+                null,
+                null,
+            );
             $caseId = $cases->create($actor, $subject, 'verified_erasure');
-            $legalPackages = new LegalDestructionPackageService($db, $purposes,
+            $legalPackages = new LegalDestructionPackageService(
+                $db,
+                $purposes,
                 ['name' => 'Test operator', 'address' => 'Test address'],
                 ['informationSystemName' => 'Core', 'informationSystemCode' => 'core',
-                    'destructionMethod' => 'transactional_delete']);
-            $executor = new ErasureExecutor($db, $clock, $candidates, $purposes, $decisions,
-                $handlers, $container->get(DestructionEvidencePolicy::class),
-                new ErasureCaseStateMachine(), $audit,
-                $container->get(ErasureRequestCompletionService::class), $legalPackages);
+                    'destructionMethod' => 'transactional_delete'],
+            );
+            $executor = new ErasureExecutor(
+                $db,
+                $clock,
+                $candidates,
+                $purposes,
+                $decisions,
+                $handlers,
+                $container->get(DestructionEvidencePolicy::class),
+                new ErasureCaseStateMachine(),
+                $audit,
+                $container->get(ErasureRequestCompletionService::class),
+                $legalPackages,
+            );
             assertSame('completed', $executor->executeBatch($actor, $caseId)['status']);
             assertSame(0, (int) $db->createCommand("SELECT count(*) FROM core.organization_memberships
                 WHERE id = CAST(:id AS uuid)", [':id' => $membership])->queryScalar());
@@ -187,21 +295,27 @@ final readonly class PrivacyProductionContributorsCest
 
     public function realContributorsRestrictUseAndCompleteTermination(FunctionalTester $tester): void
     {
-        $container = (new HttpApplicationRunner(rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv()))->getContainer();
+        $container = (new HttpApplicationRunner(
+            rootPath: dirname(__DIR__, 2),
+            environment: Environment::appEnv(),
+        ))->getContainer();
         $db = $container->get(ConnectionInterface::class);
         $transaction = $db->beginTransaction();
         try {
             $subject = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name)
                 VALUES ('Privacy', 'Contributor') RETURNING id::text")->queryScalar();
-            $account = (string) $db->createCommand("INSERT INTO core.accounts (person_id, account_type, status)
+            $account = (string) $db->createCommand(
+                "INSERT INTO core.accounts (person_id, account_type, status)
                 VALUES (CAST(:subject AS uuid), 'human', 'active') RETURNING id::text",
-                [':subject' => $subject])->queryScalar();
-            $contact = (string) $db->createCommand("INSERT INTO core.person_contacts
+                [':subject' => $subject],
+            )->queryScalar();
+            $contact = (string) $db->createCommand(
+                "INSERT INTO core.person_contacts
                 (person_id, contact_type, value, normalized_value)
                 VALUES (CAST(:subject AS uuid), 'email', 'privacy-contributor@example.test',
                     'privacy-contributor@example.test') RETURNING id::text",
-                [':subject' => $subject])->queryScalar();
+                [':subject' => $subject],
+            )->queryScalar();
             $db->createCommand("INSERT INTO core.account_settings (account_id, settings)
                 VALUES (CAST(:account AS uuid), '{}'::jsonb)", [':account' => $account])->execute();
             $organization = (string) $db->createCommand("INSERT INTO core.organizations (code, name)
@@ -215,15 +329,32 @@ final readonly class PrivacyProductionContributorsCest
             assertTrue(in_array('core.person_contact', $resources, true));
             assertTrue(in_array('core.organization_membership', $resources, true));
             $settingsPolicy = new RetentionPolicyRegistry([
-                new RetentionPolicyDefinition('test.settings', 'withdrawal', null, 'delete',
-                    durationUnit: 'event_only'),
+                new RetentionPolicyDefinition(
+                    'test.settings',
+                    'withdrawal',
+                    null,
+                    'delete',
+                    durationUnit: 'event_only',
+                ),
             ]);
             $settingsPurpose = new ProcessingPurposeRegistry([
-                new ProcessingPurposeDefinition('test.settings', 'consent', true, false,
-                    ['preferences'], ['person'], 'test.settings', 'operator'),
+                new ProcessingPurposeDefinition(
+                    'test.settings',
+                    'consent',
+                    true,
+                    false,
+                    ['preferences'],
+                    ['person'],
+                    'test.settings',
+                    'operator',
+                ),
             ], $container->get(DataCategoryRegistry::class), $settingsPolicy);
-            $settingsContributor = new CoreResourceRetentionCandidateContributor($db,
-                $settingsPurpose, $settingsPolicy, 'core.account_settings');
+            $settingsContributor = new CoreResourceRetentionCandidateContributor(
+                $db,
+                $settingsPurpose,
+                $settingsPolicy,
+                'core.account_settings',
+            );
             $settingsCandidates = $settingsContributor->candidates(10, $subject);
             assertSame('core.account_settings', $settingsCandidates[0]->resourceType);
             assertSame($account, $settingsCandidates[0]->resourceId);
@@ -249,11 +380,25 @@ final readonly class PrivacyProductionContributorsCest
             assertSame(1, $command->execute([]));
             assertTrue(str_contains($command->getDisplay(), 'missingContributor: '));
 
-            $actor = new AuthenticatedIdentity($account, $subject,
-                '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee', ['core.superadmin'], [], null, null);
+            $actor = new AuthenticatedIdentity(
+                $account,
+                $subject,
+                '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee',
+                ['core.superadmin'],
+                [],
+                null,
+                null,
+            );
             $blocks = $container->get(ProcessingBlockService::class);
-            $settingsBlock = $blocks->createBlock($actor, $subject, 'resource', null,
-                'core.account_settings', $account, 'subject_request');
+            $settingsBlock = $blocks->createBlock(
+                $actor,
+                $subject,
+                'resource',
+                null,
+                'core.account_settings',
+                $account,
+                'subject_request',
+            );
             try {
                 $container->get(AccountSettingsService::class)->get($account);
                 throw new \RuntimeException('Blocked account settings were returned.');

@@ -54,8 +54,15 @@ final readonly class PersonalDataExporter
         if ($size > $this->maxTotalBytes) {
             throw new PersonalDataExportLimitException('Export exceeds total size limit.');
         }
-        return new PersonalDataExportResult(self::SCHEMA_VERSION, $document['generatedAt'],
-            $context->subjectPersonId, $sections, $json, hash('sha256', $json), $size);
+        return new PersonalDataExportResult(
+            self::SCHEMA_VERSION,
+            $document['generatedAt'],
+            $context->subjectPersonId,
+            $sections,
+            $json,
+            hash('sha256', $json),
+            $size,
+        );
     }
 
     private function validate(mixed $value, int $depth): void

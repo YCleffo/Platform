@@ -115,12 +115,26 @@ final readonly class PostgresPersonContactRepository implements PersonContactRep
         }
     }
 
-    public function updateOwned(string $personId, string $contactId, ?string $value,
-        ?string $normalizedValue, bool $valueProvided, ?string $label, bool $labelProvided,
-        ?bool $isPrimary): ?PersonContactView
-    {
-        return $this->db->transaction(function (ConnectionInterface $db) use ($personId, $contactId,
-            $value, $normalizedValue, $valueProvided, $label, $labelProvided, $isPrimary): ?PersonContactView {
+    public function updateOwned(
+        string $personId,
+        string $contactId,
+        ?string $value,
+        ?string $normalizedValue,
+        bool $valueProvided,
+        ?string $label,
+        bool $labelProvided,
+        ?bool $isPrimary,
+    ): ?PersonContactView {
+        return $this->db->transaction(function (ConnectionInterface $db) use (
+            $personId,
+            $contactId,
+            $value,
+            $normalizedValue,
+            $valueProvided,
+            $label,
+            $labelProvided,
+            $isPrimary
+        ): ?PersonContactView {
             $row = $db->createCommand(<<<'SQL'
                 SELECT contact_type::text FROM core.person_contacts
                 WHERE id = CAST(:id AS uuid) AND person_id = CAST(:person AS uuid) FOR UPDATE
@@ -153,10 +167,12 @@ final readonly class PostgresPersonContactRepository implements PersonContactRep
                 $assignments[] = 'is_primary = :primary';
                 $params[':primary'] = $isPrimary;
             }
-            $updated = $db->createCommand('UPDATE core.person_contacts SET ' . implode(', ', $assignments)
+            $updated = $db->createCommand(
+                'UPDATE core.person_contacts SET ' . implode(', ', $assignments)
                 . ' WHERE id = CAST(:id AS uuid) AND person_id = CAST(:person AS uuid) RETURNING '
                 . substr(self::SELECT_COLUMNS, strlen('SELECT')),
-                $params)->queryOne();
+                $params,
+            )->queryOne();
             return is_array($updated) ? self::map($updated) : null;
         });
     }

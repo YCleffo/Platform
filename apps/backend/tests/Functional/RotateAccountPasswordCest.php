@@ -13,6 +13,7 @@ use App\Core\Auth\Application\TotpSecretCipher;
 use App\Core\Client\Application\ClientContextResolver;
 use App\Tests\Support\ApiTester;
 use HttpSoft\Message\ServerRequest;
+
 use function PHPUnit\Framework\assertSame;
 use function PHPUnit\Framework\assertNotSame;
 use function PHPUnit\Framework\assertNull;
@@ -23,9 +24,13 @@ final readonly class RotateAccountPasswordCest
 {
     public function rotationRevokesSessionsAndAllChallengesPreservingIdentityRolesAndMfa(): void
     {
-        $container = ApiTester::getTestContainer(); $db = ApiTester::getDb(); $tx = $db->beginTransaction();
+        $container = ApiTester::getTestContainer();
+        $db = ApiTester::getDb();
+        $tx = $db->beginTransaction();
         try {
-            $hasher = $container->get(PasswordHasherInterface::class); $old = 'Old operator fixture password'; $new = 'New operator fixture password';
+            $hasher = $container->get(PasswordHasherInterface::class);
+            $old = 'Old operator fixture password';
+            $new = 'New operator fixture password';
             $person = $db->createCommand("INSERT INTO core.persons(given_name,family_name) VALUES('Rotation','Fixture') RETURNING id::text")->queryScalar();
             $id = $db->createCommand("INSERT INTO core.accounts(person_id,account_type,status) VALUES(CAST(:person AS uuid),'human','active') RETURNING id::text", [':person' => $person])->queryScalar();
             $email = 'rotation-' . bin2hex(random_bytes(8)) . '@example.test';
@@ -36,12 +41,15 @@ final readonly class RotateAccountPasswordCest
             $db->createCommand("INSERT INTO core.auth_sessions(account_id,session_token_hash,security_stamp,authentication_method,client_type,access_expires_at,expires_at) SELECT id,decode(:hash,'hex'),security_stamp,'password','api-test',now()+interval '1 hour',now()+interval '1 day' FROM core.accounts WHERE id=CAST(:id AS uuid)", [':id' => $id, ':hash' => hash('sha256', random_bytes(32))])->execute();
             $encrypted = $container->get(TotpSecretCipher::class)->encrypt(random_bytes(20));
             $db->createCommand("INSERT INTO core.auth_totp_factors(account_id,label,secret_encrypted,algorithm,digits,period_seconds,verified_at,secret_key_version) VALUES(CAST(:id AS uuid),'Keep MFA',decode(:secret,'hex'),'sha1',6,30,now(),:version)", [':id' => $id, ':secret' => $encrypted->ciphertextHex, ':version' => $encrypted->keyVersion])->execute();
-            $challenges = $container->get(AuthChallengeRepository::class); $tokens = $container->get(OpaqueTokenService::class); $token = $tokens->issue();
+            $challenges = $container->get(AuthChallengeRepository::class);
+            $tokens = $container->get(OpaqueTokenService::class);
+            $token = $tokens->issue();
             $challenges->storeChallenge(new CreateAuthChallengeCommand($id, 'mfa_recovery_reauth_pending', $token->hashHex, null, ['purpose' => 'mfa_recovery_reauth_pending'], 3, gmdate('Y-m-d\TH:i:s\Z', time() + 300)));
             $context = $container->get(ClientContextResolver::class)->resolve(new ServerRequest(serverParams: ['REMOTE_ADDR' => '127.0.0.1'], headers: ['User-Agent' => 'Operator rotation test']));
             $container->get(RotateAccountPassword::class)->execute($id, $new, $context);
             $hash = $db->createCommand('SELECT password_hash FROM core.auth_password_credentials WHERE account_id=CAST(:id AS uuid)', [':id' => $id])->queryScalar();
-            assertTrue($hasher->verify($new, $hash)); assertFalse($hasher->verify($old, $hash));
+            assertTrue($hasher->verify($new, $hash));
+            assertFalse($hasher->verify($old, $hash));
             assertNotSame($stamp, $db->createCommand('SELECT security_stamp::text FROM core.accounts WHERE id=CAST(:id AS uuid)', [':id' => $id])->queryScalar());
             assertSame(0, (int) $db->createCommand('SELECT count(*) FROM core.auth_sessions WHERE account_id=CAST(:id AS uuid) AND revoked_at IS NULL', [':id' => $id])->queryScalar());
             assertNull($challenges->findActiveBySecretHashHex($token->hashHex));
@@ -51,16 +59,27 @@ final readonly class RotateAccountPasswordCest
             // Deterministic interleaving: rotate after the old password verifies,
             // before Login may issue a session or an MFA challenge.
             foreach ([true, false] as $mfa) {
-                if (!$mfa) $db->createCommand('UPDATE core.auth_totp_factors SET revoked_at=now() WHERE account_id=CAST(:id AS uuid)', [':id' => $id])->execute();
+                if (!$mfa) {
+                    $db->createCommand('UPDATE core.auth_totp_factors SET revoked_at=now() WHERE account_id=CAST(:id AS uuid)', [':id' => $id])->execute();
+                }
                 $next = $new . '-rotated';
                 $rotate = fn() => $container->get(RotateAccountPassword::class)->execute($id, $next, $context);
-                $interleaved = new class($hasher, $rotate) implements PasswordHasherInterface {
+                $interleaved = new class ($hasher, $rotate) implements PasswordHasherInterface {
                     public function __construct(private PasswordHasherInterface $base, private \Closure $rotate) {}
-                    public function hash(string $password): string { return $this->base->hash($password); }
-                    public function needsRehash(string $hash): bool { return $this->base->needsRehash($hash); }
-                    public function verify(string $password, string $hash): bool {
+                    public function hash(string $password): string
+                    {
+                        return $this->base->hash($password);
+                    }
+                    public function needsRehash(string $hash): bool
+                    {
+                        return $this->base->needsRehash($hash);
+                    }
+                    public function verify(string $password, string $hash): bool
+                    {
                         $valid = $this->base->verify($password, $hash);
-                        if ($valid) ($this->rotate)();
+                        if ($valid) {
+                            ($this->rotate)();
+                        }
                         return $valid;
                     }
                 };
@@ -72,13 +91,18 @@ final readonly class RotateAccountPasswordCest
                 }
                 $login = new \App\Core\Auth\Application\Login(...$arguments);
                 $rejected = false;
-                try { $login->execute(new \App\Core\Auth\Application\LoginCommand('email', $email, $new), $context); }
-                catch (\App\Core\Auth\Application\InvalidCredentialsException) { $rejected = true; }
+                try {
+                    $login->execute(new \App\Core\Auth\Application\LoginCommand('email', $email, $new), $context);
+                } catch (\App\Core\Auth\Application\InvalidCredentialsException) {
+                    $rejected = true;
+                }
                 assertTrue($rejected, 'An old verified first factor survived rotation');
                 assertSame(0, (int) $db->createCommand('SELECT count(*) FROM core.auth_sessions WHERE account_id=CAST(:id AS uuid) AND revoked_at IS NULL', [':id' => $id])->queryScalar());
                 assertSame(0, (int) $db->createCommand('SELECT count(*) FROM core.auth_challenges WHERE account_id=CAST(:id AS uuid) AND consumed_at IS NULL AND cancelled_at IS NULL', [':id' => $id])->queryScalar());
                 $new = $next;
             }
-        } finally { $tx->rollBack(); }
+        } finally {
+            $tx->rollBack();
+        }
     }
 }

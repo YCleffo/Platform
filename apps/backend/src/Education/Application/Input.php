@@ -21,7 +21,9 @@ final class Input
 
     public static function uuid(mixed $value): string
     {
-        if (!is_string($value) || !Uuid::isValid($value)) throw new EducationError(422, 'invalid_id');
+        if (!is_string($value) || !Uuid::isValid($value)) {
+            throw new EducationError(422, 'invalid_id');
+        }
         return strtolower($value);
     }
 
@@ -31,7 +33,9 @@ final class Input
             throw new EducationError(422, 'invalid_date');
         }
         $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value, new DateTimeZone('UTC'));
-        if ($date === false || $date->format('Y-m-d') !== $value) throw new EducationError(422, 'invalid_date');
+        if ($date === false || $date->format('Y-m-d') !== $value) {
+            throw new EducationError(422, 'invalid_date');
+        }
         return $value;
     }
 
@@ -40,9 +44,14 @@ final class Input
         if (!is_string($value) || preg_match('/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?(?:Z|[+-]\d\d:\d\d)$/D', $value) !== 1) {
             throw new EducationError(422, 'invalid_time');
         }
-        try { $date = new DateTimeImmutable($value); }
-        catch (\Exception) { throw new EducationError(422, 'invalid_time'); }
-        if (DateTimeImmutable::getLastErrors() !== false) throw new EducationError(422, 'invalid_time');
+        try {
+            $date = new DateTimeImmutable($value);
+        } catch (\Exception) {
+            throw new EducationError(422, 'invalid_time');
+        }
+        if (DateTimeImmutable::getLastErrors() !== false) {
+            throw new EducationError(422, 'invalid_time');
+        }
         return $date->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
     }
 
@@ -52,18 +61,25 @@ final class Input
      */
     public static function range(string $from, string $to, string $timezone): array
     {
-        self::date($from); self::date($to);
+        self::date($from);
+        self::date($to);
         $zone = new DateTimeZone($timezone);
         $start = new DateTimeImmutable($from . ' 00:00:00', $zone);
         $last = new DateTimeImmutable($to . ' 00:00:00', $zone);
-        if ($last < $start || $start->diff($last)->days > 30) throw new EducationError(422, 'invalid_range');
+        if ($last < $start || $start->diff($last)->days > 30) {
+            throw new EducationError(422, 'invalid_range');
+        }
         return [$start->format(DATE_ATOM), $last->modify('+1 day')->format(DATE_ATOM)];
     }
 
     public static function page(mixed $value): int
     {
-        if ($value === null) return 0;
-        if (!is_string($value) || preg_match('/^\d{1,7}$/D', $value) !== 1) throw new EducationError(422, 'invalid_page');
+        if ($value === null) {
+            return 0;
+        }
+        if (!is_string($value) || preg_match('/^\d{1,7}$/D', $value) !== 1) {
+            throw new EducationError(422, 'invalid_page');
+        }
         return (int) $value;
     }
 }

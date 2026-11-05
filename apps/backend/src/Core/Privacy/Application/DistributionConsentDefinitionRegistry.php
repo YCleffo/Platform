@@ -30,5 +30,8 @@ final readonly class DistributionConsentDefinitionRegistry
     }
 
     /** @return list<DistributionConsentDefinition> */
-    public function all(): array { return array_values($this->byPurpose); }
+    public function all(): array
+    {
+        return array_values($this->byPurpose);
+    }
 }

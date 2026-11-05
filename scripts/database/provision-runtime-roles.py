@@ -3,7 +3,8 @@ import json
 import subprocess
 from collections.abc import Mapping
 from typing import TypedDict
-from urllib.parse import urlsplit, unquote
+from urllib.parse import unquote, urlsplit
+
 from migrate import ROOT, container
 
 
@@ -46,7 +47,12 @@ def provision(plane: str, services: Mapping[str, ComposeService]) -> None:
     for key, value in env.items():
         command.extend(['-e', key + '=' + value])
     command.extend([name, 'bash', '-s'])
-    result = subprocess.run(command, input=(ROOT / 'scripts/operations/provision-db-role.sh').read_bytes().replace(b'\r\n', b'\n'), capture_output=True)
+    result = subprocess.run(
+        command,
+        input=(ROOT / 'scripts/operations/provision-db-role.sh').read_bytes().replace(b'\r\n', b'\n'),
+        capture_output=True,
+        check=False,
+    )
     if result.returncode:
         raise RuntimeError('Role provisioning failed; credentials and SQL diagnostics are suppressed')
     print(plane + ': runtime and scheduler roles provisioned; migration owner preserved')
@@ -54,8 +60,12 @@ def provision(plane: str, services: Mapping[str, ComposeService]) -> None:
 
 if __name__ == '__main__':
     # Never print config: it contains the resolved private credentials.
-    result = subprocess.run(['docker', 'compose', '--profile', 'control', 'config', '--format', 'json'],
-                            cwd=ROOT, capture_output=True)
+    result = subprocess.run(
+        ['docker', 'compose', '--profile', 'control', 'config', '--format', 'json'],
+        cwd=ROOT,
+        capture_output=True,
+        check=False,
+    )
     if result.returncode:
         raise RuntimeError('Compose configuration failed; private diagnostics are suppressed')
     services = json.loads(result.stdout)['services']

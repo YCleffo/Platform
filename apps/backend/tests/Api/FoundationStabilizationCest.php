@@ -12,8 +12,14 @@ use function PHPUnit\Framework\assertSame;
 
 final readonly class FoundationStabilizationCest
 {
-    public function _before(ApiTester $I): void { $I->cleanupCoreTestFixtures(); }
-    public function _after(ApiTester $I): void { $I->cleanupCoreTestFixtures(); }
+    public function _before(ApiTester $I): void
+    {
+        $I->cleanupCoreTestFixtures();
+    }
+    public function _after(ApiTester $I): void
+    {
+        $I->cleanupCoreTestFixtures();
+    }
 
     public function legacyServiceAndSystemSessionsCannotAuthenticate(ApiTester $I): void
     {
@@ -46,10 +52,14 @@ final readonly class FoundationStabilizationCest
     {
         $fixture = $I->havePasswordAccount();
         $db = ApiTester::getDb();
-        $personId = (string) $db->createCommand('SELECT person_id::text FROM core.accounts WHERE id = CAST(:id AS uuid)',
-            [':id' => $fixture['accountId']])->queryScalar();
-        $oldStamp = (string) $db->createCommand('SELECT security_stamp::text FROM core.accounts WHERE id = CAST(:id AS uuid)',
-            [':id' => $fixture['accountId']])->queryScalar();
+        $personId = (string) $db->createCommand(
+            'SELECT person_id::text FROM core.accounts WHERE id = CAST(:id AS uuid)',
+            [':id' => $fixture['accountId']],
+        )->queryScalar();
+        $oldStamp = (string) $db->createCommand(
+            'SELECT security_stamp::text FROM core.accounts WHERE id = CAST(:id AS uuid)',
+            [':id' => $fixture['accountId']],
+        )->queryScalar();
         $I->haveHttpHeader('Content-Type', 'application/json');
         $I->sendPOST('/api/auth/login', [
             'identifierType' => 'email', 'identifier' => $fixture['email'], 'password' => $fixture['password'],
@@ -59,12 +69,16 @@ final readonly class FoundationStabilizationCest
         $I->amAuthenticatedSuperadmin();
         $I->sendPOST('/api/core/persons/' . $personId . '/archive');
         $I->seeResponseCodeIs(HttpCode::OK);
-        $state = $db->createCommand('SELECT status::text, security_stamp::text FROM core.accounts WHERE id = CAST(:id AS uuid)',
-            [':id' => $fixture['accountId']])->queryOne();
+        $state = $db->createCommand(
+            'SELECT status::text, security_stamp::text FROM core.accounts WHERE id = CAST(:id AS uuid)',
+            [':id' => $fixture['accountId']],
+        )->queryOne();
         assertSame('archived', $state['status']);
         assertNotSame($oldStamp, $state['security_stamp']);
-        assertSame(0, (int) $db->createCommand('SELECT count(*) FROM core.auth_sessions WHERE account_id = CAST(:id AS uuid) AND revoked_at IS NULL',
-            [':id' => $fixture['accountId']])->queryScalar());
+        assertSame(0, (int) $db->createCommand(
+            'SELECT count(*) FROM core.auth_sessions WHERE account_id = CAST(:id AS uuid) AND revoked_at IS NULL',
+            [':id' => $fixture['accountId']],
+        )->queryScalar());
         $I->haveHttpHeader('Authorization', 'Bearer ' . $tokens['accessToken']);
         $I->sendGET('/api/auth/me');
         $I->seeResponseCodeIs(HttpCode::UNAUTHORIZED);

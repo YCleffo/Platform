@@ -15,13 +15,19 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class RetentionDecisionService
 {
-    public function __construct(private ConnectionInterface $db, private RetentionEvaluator $evaluator,
-        private ClockInterface $clock, private AuditService $audit) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private RetentionEvaluator $evaluator,
+        private ClockInterface $clock,
+        private AuditService $audit,
+    ) {}
 
     /** @param list<RetentionCandidate> $candidates @return array{decisions:list<RetentionDecision>,aggregate:string} */
-    public function evaluateResource(array $candidates, ?AuthenticatedIdentity $actor = null,
-        ?string $sourceRequestId = null): array
-    {
+    public function evaluateResource(
+        array $candidates,
+        ?AuthenticatedIdentity $actor = null,
+        ?string $sourceRequestId = null,
+    ): array {
         if ($candidates === []) {
             return ['decisions' => [], 'aggregate' => 'retain'];
         }
@@ -33,8 +39,10 @@ final readonly class RetentionDecisionService
             }
         }
         return $this->db->transaction(function () use ($candidates, $first, $actor, $sourceRequestId): array {
-            $this->db->createCommand('SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))',
-                [':key' => implode(':', [$first->subjectPersonId, $first->resourceType, $first->resourceId])])->queryScalar();
+            $this->db->createCommand(
+                'SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))',
+                [':key' => implode(':', [$first->subjectPersonId, $first->resourceType, $first->resourceId])],
+            )->queryScalar();
             $decisions = array_map($this->evaluator->evaluate(...), $candidates);
             $aggregate = $this->evaluator->aggregate($decisions);
             foreach ($decisions as $decision) {
@@ -84,9 +92,14 @@ final readonly class RetentionDecisionService
             'policyCode' => $candidate->retentionPolicyCode, 'decisionCode' => $decision->code];
         foreach (['privacy.retention.evaluated', ...(is_array($previous)
             && $previous['decision_code'] !== $decision->code ? ['privacy.retention.decision_changed'] : [])] as $action) {
-            $this->audit->record(new WriteAuditEventCommand($actor === null ? 'system' : 'account',
-                $actor?->accountId, $action, resourceType: 'core.privacy_retention_decision',
-                resourceId: $id, metadata: $metadata));
+            $this->audit->record(new WriteAuditEventCommand(
+                $actor === null ? 'system' : 'account',
+                $actor?->accountId,
+                $action,
+                resourceType: 'core.privacy_retention_decision',
+                resourceId: $id,
+                metadata: $metadata,
+            ));
         }
     }
 }

@@ -23,8 +23,14 @@ final readonly class ListPersonContacts
             return null;
         }
 
-        return array_values(array_filter($this->contacts->findByPersonId($personId),
-            fn(PersonContactView $contact): bool => $this->privacy->allowed($personId,
-                'core.person_contact', $contact->id, 'identity')));
+        return array_values(array_filter(
+            $this->contacts->findByPersonId($personId),
+            fn(PersonContactView $contact): bool => $this->privacy->allowed(
+                $personId,
+                'core.person_contact',
+                $contact->id,
+                'identity',
+            ),
+        ));
     }
 }

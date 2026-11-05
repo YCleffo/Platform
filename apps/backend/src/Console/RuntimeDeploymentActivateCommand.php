@@ -13,7 +13,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'runtime:deployment:activate', description: 'Initialize runtime, sync entitlement and report ready')]
 final class RuntimeDeploymentActivateCommand extends Command
 {
-    public function __construct(private readonly RuntimeActivationService $activation) { parent::__construct(); }
+    public function __construct(private readonly RuntimeActivationService $activation)
+    {
+        parent::__construct();
+    }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {

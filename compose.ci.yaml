@@ -34,6 +34,7 @@ services:
   # FrankenPHP + Yii3.
   # ----------------------------------------------------------------
   postgres-test:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-postgres-test
     profiles: ["test"]
     image: platform-postgres:local
     pull_policy: build
@@ -63,6 +64,7 @@ services:
     networks:
       - test_net
   redis-test:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-redis-test
     profiles: ["test"]
     image: redis:8-alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
     restart: unless-stopped
@@ -119,6 +121,7 @@ services:
     networks:
       - test_net
   backend-test:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-backend-test
     profiles: ["test"]
     build:
       context: ./apps/backend
@@ -263,6 +266,7 @@ services:
       - test_net
 
   backend-production-smoke:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-backend-production-smoke
     profiles: ["test"]
     extends:
       service: backend-test
@@ -315,6 +319,7 @@ services:
         condition: service_healthy
     networks: [control_net]
   backup-worker:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-backup-worker
     profiles: ["backup"]
     build:
       context: ./infra/backup
@@ -360,6 +365,7 @@ services:
       start_period: 10m
     networks: [backend_net, control_net, backup_net]
   control-postgres-test:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-control-postgres-test
     profiles: ["control-test"]
     image: platform-postgres:local
     pull_policy: build
@@ -379,6 +385,7 @@ services:
       retries: 20
     networks: [control_test_net]
   mailpit-test:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-mailpit-test
     profiles: ["control-test"]
     image: axllent/mailpit:v1.33.0@sha256:9b3a463be15354c0f0eba91697d80e3e0d8a5623ef0e627cacc836bc17fd5231
     restart: "no"
@@ -386,6 +393,7 @@ services:
       - "127.0.0.1:${MAILPIT_TEST_UI_PORT:-8026}:8025"
     networks: [control_test_net]
   mailpit-core-test:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-mailpit-core-test
     profiles: ["test"]
     extends:
       service: mailpit-test
@@ -393,6 +401,7 @@ services:
       - "127.0.0.1:${CORE_MAILPIT_UI_PORT:-8027}:8025"
     networks: !override [test_net]
   control-plane-test:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-control-plane-test
     profiles: ["control-test"]
     build:
       context: ./apps/control-plane
@@ -458,6 +467,7 @@ services:
       - "127.0.0.1:${CONTROL_TEST_PORT:-8091}:8000"
     networks: [control_test_net, test_net]
   control-production-smoke:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-control-production-smoke
     profiles: ["control-test"]
     extends:
       service: control-plane-test
@@ -472,6 +482,7 @@ services:
       SMOKE_URL: http://127.0.0.1:8000
 
   cross-plane-test:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-cross-plane-test
     profiles: ["control-test"]
     extends:
       service: control-plane-test
@@ -490,6 +501,7 @@ services:
     entrypoint: ["true"]
     restart: "no"
   provisioner-worker:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-provisioner-worker
     profiles: ["provisioner"]
     image: platform-provisioner-worker:local
     build:

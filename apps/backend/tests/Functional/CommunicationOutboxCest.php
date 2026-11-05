@@ -123,17 +123,21 @@ final readonly class CommunicationOutboxCest
             for ($attempt = 0; $attempt < 3; ++$attempt) {
                 $processor->process('communication-dead-' . $event->id);
                 if ($attempt < 2) {
-                    $db->createCommand('UPDATE core.outbox_events SET available_at = now() WHERE id = :id',
-                        [':id' => $event->id])->execute();
+                    $db->createCommand(
+                        'UPDATE core.outbox_events SET available_at = now() WHERE id = :id',
+                        [':id' => $event->id],
+                    )->execute();
                 }
             }
             assertSame('dead', $this->status($db, $event->id));
             assertSame('{}', (string) $db->createCommand(
                 'SELECT payload::text FROM core.outbox_events WHERE id = :id',
-                [':id' => $event->id])->queryScalar());
+                [':id' => $event->id],
+            )->queryScalar());
             assertSame('{}', (string) $db->createCommand(
                 'SELECT headers::text FROM core.outbox_events WHERE id = :id',
-                [':id' => $event->id])->queryScalar());
+                [':id' => $event->id],
+            )->queryScalar());
         } finally {
             if ($transaction->isActive()) {
                 $transaction->rollBack();

@@ -11,20 +11,27 @@ use InvalidArgumentException;
 final readonly class CrossBorderTransferDefinition
 {
     /** @param list<string> $dataCategories */
-    public function __construct(public string $providerCode, public string $country,
-        public string $purposeCode, public array $dataCategories,
-        public string $notificationStatus, public bool $allowed,
-        public ?string $evidenceReference, public DateTimeImmutable $activeFrom,
+    public function __construct(
+        public string $providerCode,
+        public string $country,
+        public string $purposeCode,
+        public array $dataCategories,
+        public string $notificationStatus,
+        public bool $allowed,
+        public ?string $evidenceReference,
+        public DateTimeImmutable $activeFrom,
         public ?DateTimeImmutable $activeUntil = null,
         public ?string $adequacyStatus = null,
         public ?DateTimeImmutable $notificationSubmittedAt = null,
         public ?string $notificationEvidenceReference = null,
         public ?DateTimeImmutable $regulatorReviewUntil = null,
-        public string $regulatorDecision = 'pending')
-    {
+        public string $regulatorDecision = 'pending',
+    ) {
         MachineCode::assert($providerCode);
         MachineCode::assert($purposeCode);
-        foreach ($dataCategories as $category) { MachineCode::assert($category); }
+        foreach ($dataCategories as $category) {
+            MachineCode::assert($category);
+        }
         if (preg_match('/^[A-Z]{2}$/D', $country) !== 1 || $dataCategories === []
             || !in_array($notificationStatus, ['unknown', 'pending', 'notified', 'not_required'], true)
             || ($allowed && $notificationStatus === 'notified' && trim((string) $evidenceReference) === '')

@@ -13,8 +13,12 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class ErasureRequestCompletionService
 {
-    public function __construct(private ConnectionInterface $db, private ClockInterface $clock,
-        private DataSubjectRequestStateMachine $states, private AuditService $audit) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private ClockInterface $clock,
+        private DataSubjectRequestStateMachine $states,
+        private AuditService $audit,
+    ) {}
 
     /** @param array{status:string,completed:int,blocked:int,failed:int,pending:int} $summary */
     public function completeIfReady(AuthenticatedIdentity $actor, string $caseId, array $summary): ?string
@@ -74,8 +78,8 @@ final readonly class ErasureRequestCompletionService
                     CAST(:now AS timestamptz), CAST(:now AS timestamptz), CAST(:case AS uuid),
                     :completed, :blocked, :failed) RETURNING id::text
                 SQL, [':request' => $requestId, ':actor' => $actor->accountId, ':now' => $now,
-                    ':case' => $caseId, ':completed' => $summary['completed'],
-                    ':blocked' => $summary['blocked'], ':failed' => $summary['failed']])->queryScalar();
+                ':case' => $caseId, ':completed' => $summary['completed'],
+                ':blocked' => $summary['blocked'], ':failed' => $summary['failed']])->queryScalar();
             if (!is_string($id)) {
                 throw new DomainException('Erasure execution evidence could not be stored.');
             }
@@ -92,19 +96,24 @@ final readonly class ErasureRequestCompletionService
                     resolution_code = :resolution, updated_at = CAST(:now AS timestamptz)
                 WHERE id = CAST(:request AS uuid)
                 SQL, [':status' => $status, ':now' => $now,
-                    ':resolution' => $status === 'completed' ? 'executed' : 'partially_executed',
-                    ':request' => $requestId])->execute();
+                ':resolution' => $status === 'completed' ? 'executed' : 'partially_executed',
+                ':request' => $requestId])->execute();
             $this->db->createCommand(<<<'SQL'
                 INSERT INTO core.data_subject_request_events
                     (request_id, event_code, from_status, to_status, actor_account_id, occurred_at)
                 VALUES (CAST(:request AS uuid), :event, 'in_progress', :status,
                     CAST(:actor AS uuid), CAST(:now AS timestamptz))
                 SQL, [':request' => $requestId, ':event' => $status, ':status' => $status,
-                    ':actor' => $actor->accountId, ':now' => $now])->execute();
-            $this->audit->record(new WriteAuditEventCommand('account', $actor->accountId,
-                'privacy.request.execution_completed', resourceType: 'core.data_subject_request',
-                resourceId: $requestId, metadata: ['fromStatus' => 'in_progress', 'toStatus' => $status,
-                    'executionCode' => 'data_erasure']));
+                ':actor' => $actor->accountId, ':now' => $now])->execute();
+            $this->audit->record(new WriteAuditEventCommand(
+                'account',
+                $actor->accountId,
+                'privacy.request.execution_completed',
+                resourceType: 'core.data_subject_request',
+                resourceId: $requestId,
+                metadata: ['fromStatus' => 'in_progress', 'toStatus' => $status,
+                    'executionCode' => 'data_erasure'],
+            ));
             return $id;
         });
     }

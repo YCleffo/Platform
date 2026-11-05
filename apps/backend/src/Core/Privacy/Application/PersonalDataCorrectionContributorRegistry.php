@@ -36,5 +36,8 @@ final readonly class PersonalDataCorrectionContributorRegistry
         return $this->contributors[$code] ?? throw new DomainException('Unknown correction contributor.');
     }
 
-    public function available(): bool { return $this->contributors !== []; }
+    public function available(): bool
+    {
+        return $this->contributors !== [];
+    }
 }

@@ -9,7 +9,8 @@ use DomainException;
 /** Availability follows registered, executable contributor paths. */
 final readonly class PrivacyRequestExecutionCapabilityRegistry
 {
-    public function __construct(private PersonalDataContributorRegistry $exportContributors,
+    public function __construct(
+        private PersonalDataContributorRegistry $exportContributors,
         private PersonalDataCorrectionContributorRegistry $correctionContributors,
         private ProcessingRestrictionContributorRegistry $restrictionContributors,
         private DataSubjectRequestTypeRegistry $types,
@@ -18,7 +19,8 @@ final readonly class PrivacyRequestExecutionCapabilityRegistry
         private ?PersonalDataErasureHandlerRegistry $erasureHandlers = null,
         private ?DestructionEvidencePolicy $destructionEvidence = null,
         private ?ProcessingInformationRegistry $processingInformation = null,
-        private ?CorePrivacyContributorCoverage $coverage = null) {}
+        private ?CorePrivacyContributorCoverage $coverage = null,
+    ) {}
 
     public function available(string $requestType): bool
     {

@@ -13,15 +13,25 @@ final readonly class CorePersonAnonymizationHandler implements PersonalDataErasu
 {
     public function __construct(private ConnectionInterface $db) {}
 
-    public function code(): string { return 'core.person.anonymize'; }
-    public function resourceType(): string { return 'core.person'; }
-    public function supportsAction(string $action): bool { return $action === 'anonymize'; }
+    public function code(): string
+    {
+        return 'core.person.anonymize';
+    }
+    public function resourceType(): string
+    {
+        return 'core.person';
+    }
+    public function supportsAction(string $action): bool
+    {
+        return $action === 'anonymize';
+    }
 
     public function owns(string $subjectPersonId, string $resourceId): bool
     {
         $found = $this->db->createCommand(
             'SELECT 1 FROM core.persons WHERE id = CAST(:id AS uuid) FOR UPDATE',
-            [':id' => $resourceId])->queryScalar();
+            [':id' => $resourceId],
+        )->queryScalar();
         return $subjectPersonId === $resourceId && $found !== false && $found !== null;
     }
 
@@ -51,7 +61,9 @@ final readonly class CorePersonAnonymizationHandler implements PersonalDataErasu
         if (!$this->dependenciesClear($resourceId)) {
             throw new DomainException('Person identity dependencies remain.');
         }
-        if (is_array($current) && self::tombstoned($current)) { return 'anonymized'; }
+        if (is_array($current) && self::tombstoned($current)) {
+            return 'anonymized';
+        }
         $this->db->createCommand(<<<'SQL'
             UPDATE core.persons SET status = 'archived', archived_at = COALESCE(archived_at, now()),
                 given_name = 'Anonymized', family_name = 'Person', middle_name = NULL,
@@ -63,7 +75,9 @@ final readonly class CorePersonAnonymizationHandler implements PersonalDataErasu
 
     private function dependenciesClear(?string $resourceId): bool
     {
-        if ($resourceId === null) { return false; }
+        if ($resourceId === null) {
+            return false;
+        }
         $dependencies = $this->db->createCommand(<<<'SQL'
             SELECT EXISTS(SELECT 1 FROM core.person_contacts WHERE person_id = CAST(:id AS uuid))
                 OR EXISTS(SELECT 1 FROM core.organization_memberships WHERE person_id = CAST(:id AS uuid))

@@ -42,9 +42,11 @@ final readonly class PostgresServiceCredentialRepository implements ServiceCrede
 
     public function listFor(string $accountId): array
     {
-        $rows = $this->db->createCommand('SELECT ' . self::COLUMNS
+        $rows = $this->db->createCommand(
+            'SELECT ' . self::COLUMNS
             . ' FROM core.service_credentials WHERE account_id = CAST(:account AS uuid) ORDER BY created_at DESC, id DESC LIMIT 1000',
-            [':account' => $accountId])->queryAll();
+            [':account' => $accountId],
+        )->queryAll();
         /** @var list<array<string, mixed>> $rows */
         return array_map(self::map(...), $rows);
     }
@@ -80,18 +82,22 @@ final readonly class PostgresServiceCredentialRepository implements ServiceCrede
 
     public function revoke(string $accountId, string $credentialId): ?array
     {
-        $row = $this->db->createCommand('SELECT ' . self::COLUMNS
+        $row = $this->db->createCommand(
+            'SELECT ' . self::COLUMNS
             . ' FROM core.service_credentials WHERE credential_id = CAST(:id AS uuid) '
             . 'AND account_id = CAST(:account AS uuid) FOR UPDATE',
-            [':id' => $credentialId, ':account' => $accountId])->queryOne();
+            [':id' => $credentialId, ':account' => $accountId],
+        )->queryOne();
         if (!is_array($row)) {
             return null;
         }
         $changed = $row['status'] === 'active';
         if ($changed) {
-            $row = $this->db->createCommand('UPDATE core.service_credentials SET status = \'revoked\', revoked_at = now() '
+            $row = $this->db->createCommand(
+                'UPDATE core.service_credentials SET status = \'revoked\', revoked_at = now() '
                 . 'WHERE credential_id = CAST(:id AS uuid) RETURNING ' . self::COLUMNS,
-                [':id' => $credentialId])->queryOne();
+                [':id' => $credentialId],
+            )->queryOne();
         }
         /** @var array<string, mixed> $row */
         return [...self::map($row), 'changed' => $changed];

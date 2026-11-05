@@ -13,8 +13,14 @@ final readonly class OrganizationMembershipPersonalDataContributor implements Pe
 {
     public function __construct(private ConnectionInterface $db) {}
 
-    public function code(): string { return 'core.organization_membership'; }
-    public function categories(): array { return ['identity']; }
+    public function code(): string
+    {
+        return 'core.organization_membership';
+    }
+    public function categories(): array
+    {
+        return ['identity'];
+    }
 
     public function collect(PersonalDataExportContext $context): PersonalDataSection
     {

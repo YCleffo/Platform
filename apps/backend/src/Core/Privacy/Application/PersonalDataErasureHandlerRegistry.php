@@ -41,5 +41,8 @@ final readonly class PersonalDataErasureHandlerRegistry
         return $found;
     }
 
-    public function available(): bool { return $this->handlers !== []; }
+    public function available(): bool
+    {
+        return $this->handlers !== [];
+    }
 }

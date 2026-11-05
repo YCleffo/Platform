@@ -23,7 +23,9 @@ final class CoreBrowserMailConfigurationTest extends TestCase
 
     protected function tearDown(): void
     {
-        foreach ($this->saved as $key => $value) putenv($value === false ? $key : $key . '=' . $value);
+        foreach ($this->saved as $key => $value) {
+            putenv($value === false ? $key : $key . '=' . $value);
+        }
     }
 
     public function testExplicitIsolatedMailpitCoversSecurityAndCommunication(): void
@@ -46,7 +48,9 @@ final class CoreBrowserMailConfigurationTest extends TestCase
     {
         foreach (['APP_ENV' => 'prod', 'TEST_ISOLATED_RUNTIME' => '0', 'DB_NAME' => 'platform',
             'REDIS_HOST' => 'redis', 'E2E_ISOLATION_PROOF' => 'short', 'SMTP_HOST' => 'smtp.example.com',
-            'SMTP_PORT' => '587', 'SMTP_ENCRYPTION' => 'tls'] as $key => $value) yield $key => [$key, $value];
+            'SMTP_PORT' => '587', 'SMTP_ENCRYPTION' => 'tls'] as $key => $value) {
+            yield $key => [$key, $value];
+        }
     }
 
     /** @dataProvider unsafeRuntime */

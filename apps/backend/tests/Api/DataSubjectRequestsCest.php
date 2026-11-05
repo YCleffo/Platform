@@ -112,7 +112,9 @@ final readonly class DataSubjectRequestsCest
     {
         $I->sendGET('/api/auth/me/privacy/representations');
         $I->seeResponseCodeIs(HttpCode::UNAUTHORIZED);
-        $owner = $I->havePasswordAccount(); $subject = $I->havePasswordAccount(); $other = $I->havePasswordAccount();
+        $owner = $I->havePasswordAccount();
+        $subject = $I->havePasswordAccount();
+        $other = $I->havePasswordAccount();
         $db = ApiTester::getDb();
         $person = static fn(string $id): string => (string) $db->createCommand('SELECT person_id::text FROM core.accounts WHERE id=CAST(:id AS uuid)', [':id' => $id])->queryScalar();
         $validId = '';
@@ -144,13 +146,16 @@ final readonly class DataSubjectRequestsCest
                     WHERE id=CAST(:id AS uuid)
                     SQL, [':status' => $status, ':actor' => $owner['accountId'], ':id' => $id])->execute();
             }
-            if ($mode === 'valid') $validId = $id;
+            if ($mode === 'valid') {
+                $validId = $id;
+            }
         }
         $I->amAuthenticatedAccount($owner['accountId']);
         $I->sendGET('/api/auth/me/privacy/representations');
         $I->seeResponseCodeIs(HttpCode::OK);
         $items = json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data']['items'];
-        assertSame(1, count($items)); assertSame($validId, $items[0]['id']);
+        assertSame(1, count($items));
+        assertSame($validId, $items[0]['id']);
         assertSame(['id', 'subjectPersonId', 'subjectName', 'validUntil', 'scopes'], array_keys($items[0]));
         $I->sendPOST('/api/auth/me/privacy/representations/' . $validId . '/requests', ['subjectPersonId' => $person($subject['accountId']), 'requestType' => 'access']);
         $I->seeResponseCodeIs(HttpCode::CREATED);
@@ -160,9 +165,11 @@ final readonly class DataSubjectRequestsCest
         $I->amAuthenticatedSuperadmin();
         $I->sendPOST('/api/core/privacy/representations/' . $validId . '/revoke', ['reasonCode' => 'fixture_revocation']);
         $I->seeResponseCodeIs(HttpCode::OK);
-        $I->amAuthenticatedAccount($owner['accountId']); $I->sendGET('/api/auth/me/privacy/representations');
+        $I->amAuthenticatedAccount($owner['accountId']);
+        $I->sendGET('/api/auth/me/privacy/representations');
         assertSame([], json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data']['items']);
-        $I->sendGET('/api/auth/me/privacy/requests/' . $requestId); $I->seeResponseCodeIs(HttpCode::NOT_FOUND);
+        $I->sendGET('/api/auth/me/privacy/requests/' . $requestId);
+        $I->seeResponseCodeIs(HttpCode::NOT_FOUND);
     }
 
     public function selfAndManagementBoundaries(ApiTester $I): void
@@ -233,18 +240,24 @@ final readonly class DataSubjectRequestsCest
         $I->sendPOST('/api/core/privacy/representations/' . $authority . '/verify', []);
         $I->seeResponseCodeIs(HttpCode::OK);
         $I->amAuthenticatedAccount($repAccount);
-        $I->sendPOST('/api/auth/me/privacy/representations/' . $authority . '/requests',
-            ['subjectPersonId' => $subject, 'requestType' => 'erasure']);
+        $I->sendPOST(
+            '/api/auth/me/privacy/representations/' . $authority . '/requests',
+            ['subjectPersonId' => $subject, 'requestType' => 'erasure'],
+        );
         $I->seeResponseCodeIs(HttpCode::UNPROCESSABLE_ENTITY);
-        $I->sendPOST('/api/auth/me/privacy/representations/' . $authority . '/requests',
-            ['subjectPersonId' => $subject, 'requestType' => 'access']);
+        $I->sendPOST(
+            '/api/auth/me/privacy/representations/' . $authority . '/requests',
+            ['subjectPersonId' => $subject, 'requestType' => 'access'],
+        );
         $I->seeResponseCodeIs(HttpCode::CREATED);
         $requestId = json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data']['id'];
         $I->sendGET('/api/auth/me/privacy/requests/' . $requestId);
         $I->seeResponseCodeIs(HttpCode::OK);
         $I->amAuthenticatedSuperadmin();
-        $I->sendPOST('/api/core/privacy/requests/' . $requestId . '/blocks',
-            ['scopeType' => 'subject', 'reasonCode' => 'accuracy_review']);
+        $I->sendPOST(
+            '/api/core/privacy/requests/' . $requestId . '/blocks',
+            ['scopeType' => 'subject', 'reasonCode' => 'accuracy_review'],
+        );
         $I->seeResponseCodeIs(HttpCode::CREATED);
         $blockId = json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data']['id'];
         $I->sendGET('/api/core/privacy/requests/' . $requestId . '/blocks');

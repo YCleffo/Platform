@@ -25,7 +25,8 @@ final class HealthActionsTest extends TestCase
             static function (mixed $data) use (&$payloads, $response): ResponseInterface {
                 $payloads[] = $data;
                 return $response;
-            });
+            },
+        );
         self::assertSame($response, (new LiveHealthAction())($factory));
         $db = $this->createMock(ConnectionInterface::class);
         $db->method('createCommand')->willThrowException(new \RuntimeException('private DB path'));

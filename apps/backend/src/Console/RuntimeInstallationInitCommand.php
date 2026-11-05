@@ -14,7 +14,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'runtime:installation:init', description: 'Initialize the local installation from server configuration')]
 final class RuntimeInstallationInitCommand extends Command
 {
-    public function __construct(private readonly RuntimeInstallationBootstrap $bootstrap) { parent::__construct(); }
+    public function __construct(private readonly RuntimeInstallationBootstrap $bootstrap)
+    {
+        parent::__construct();
+    }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {

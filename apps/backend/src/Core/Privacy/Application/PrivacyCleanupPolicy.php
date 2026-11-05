@@ -14,7 +14,9 @@ final readonly class PrivacyCleanupPolicy
 
     public function days(string $category): ?int
     {
-        if ($category === 'destruction_evidence') { return null; }
+        if ($category === 'destruction_evidence') {
+            return null;
+        }
         $key = match ($category) {
             'audit' => 'auditDays',
             'outbox' => 'outboxDays', 'inbox' => 'inboxDays',
@@ -24,7 +26,9 @@ final readonly class PrivacyCleanupPolicy
             default => throw new DomainException('Unknown privacy cleanup category.'),
         };
         $value = $this->configuration[$key] ?? null;
-        if ($value === null || $value === '') { return null; }
+        if ($value === null || $value === '') {
+            return null;
+        }
         if (is_string($value) && preg_match('/^[1-9][0-9]{0,5}$/D', $value) === 1) {
             $value = (int) $value;
         }

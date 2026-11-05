@@ -12,10 +12,22 @@ final readonly class CoreAccountSettingsErasureHandler implements PersonalDataEr
 {
     public function __construct(private ConnectionInterface $db) {}
 
-    public function code(): string { return 'core.account_settings.delete'; }
-    public function resourceType(): string { return 'core.account_settings'; }
-    public function supportsAction(string $action): bool { return $action === 'delete'; }
-    public function reconcile(string $itemId): ?string { return null; }
+    public function code(): string
+    {
+        return 'core.account_settings.delete';
+    }
+    public function resourceType(): string
+    {
+        return 'core.account_settings';
+    }
+    public function supportsAction(string $action): bool
+    {
+        return $action === 'delete';
+    }
+    public function reconcile(string $itemId): ?string
+    {
+        return null;
+    }
 
     public function owns(string $subjectPersonId, string $resourceId): bool
     {

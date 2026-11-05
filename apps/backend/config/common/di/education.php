@@ -11,7 +11,9 @@ use App\Education\Infrastructure\PostgresMutation;
 use App\Education\Infrastructure\PrivateFileStore;
 
 $root = dirname(__DIR__, 3);
-if (!class_exists(PostgresEducationStore::class)) return [];
+if (!class_exists(PostgresEducationStore::class)) {
+    return [];
+}
 return [
     EducationStore::class => ['class' => PostgresEducationStore::class],
     FileStore::class => ['class' => PrivateFileStore::class, '__construct()' => [

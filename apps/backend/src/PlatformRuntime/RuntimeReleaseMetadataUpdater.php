@@ -23,6 +23,8 @@ UPDATE platform_runtime.installations SET release_id=:release, application_versi
     release_channel=CAST(:channel AS platform_runtime.release_channel), updated_at=now()
 WHERE singleton_key=1
 SQL, [':release' => $releaseId, ':version' => $version, ':channel' => $channel])->execute();
-        if ($count !== 1) { throw new DomainException('Local installation is unavailable.'); }
+        if ($count !== 1) {
+            throw new DomainException('Local installation is unavailable.');
+        }
     }
 }

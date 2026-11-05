@@ -24,11 +24,13 @@ final class EmailWorkerStatusTest extends TestCase
     {
         $outbox = $this->createMock(OutboxRepository::class);
         $outbox->method('claimPendingByTypes')->willReturn([]);
-        $processor = new EmailOutboxProcessor($outbox,
+        $processor = new EmailOutboxProcessor(
+            $outbox,
             $this->createMock(TemplateRendererInterface::class),
             $this->createMock(EmailSenderInterface::class),
             new EmailOutboxPolicy(30, 3, 5, 60, 'platform.example'),
-            new SupportedLocales(new LocaleNormalizer(), ['en-US'], 'en-US'));
+            new SupportedLocales(new LocaleNormalizer(), ['en-US'], 'en-US'),
+        );
         $writes = [];
         $command = $this->createMock(CommandInterface::class);
         $command->method('execute')->willReturn(1);
@@ -37,9 +39,12 @@ final class EmailWorkerStatusTest extends TestCase
             static function (?string $sql, array $params = []) use (&$writes, $command): CommandInterface {
                 $writes[] = [$sql, $params];
                 return $command;
-            });
-        $tester = new CommandTester(new ProcessEmailOutboxCommand($processor,
-            new BackgroundJobStatusRecorder($db)));
+            },
+        );
+        $tester = new CommandTester(new ProcessEmailOutboxCommand(
+            $processor,
+            new BackgroundJobStatusRecorder($db),
+        ));
         self::assertSame(0, $tester->execute([]));
         self::assertCount(2, $writes);
         self::assertStringContainsString("last_result = 'started'", $writes[0][0]);

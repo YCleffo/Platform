@@ -16,9 +16,12 @@ use Yiisoft\Router\CurrentRoute;
 
 final readonly class ManageDistributionConsentAction
 {
-    public function __invoke(ServerRequestInterface $request, CurrentRoute $route,
-        DistributionConsentService $consents, ResponseFactory $responses): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        CurrentRoute $route,
+        DistributionConsentService $consents,
+        ResponseFactory $responses,
+    ): ResponseInterface {
         $operation = (string) $route->getArgument('operation');
         $actor = AuthenticatedIdentity::fromRequest($request);
         try {
@@ -49,10 +52,16 @@ final readonly class ManageDistributionConsentAction
                 return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
             }
             /** @var array{subjectPersonId: string, purposeCode: string, categoryCodes: list<string>, fieldCodes: list<string>, conditionCodes: list<string>, restrictionCodes: list<string>, representationId?: string} $body */
-            $id = $consents->grant($actor, $body['subjectPersonId'], $body['purposeCode'],
-                $body['categoryCodes'], $body['fieldCodes'], $body['conditionCodes'],
+            $id = $consents->grant(
+                $actor,
+                $body['subjectPersonId'],
+                $body['purposeCode'],
+                $body['categoryCodes'],
+                $body['fieldCodes'],
+                $body['conditionCodes'],
                 $body['restrictionCodes'],
-                $body['representationId'] ?? null);
+                $body['representationId'] ?? null,
+            );
             return $responses->success(['id' => $id])->withStatus(Status::CREATED);
         } catch (DomainException) {
             return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);

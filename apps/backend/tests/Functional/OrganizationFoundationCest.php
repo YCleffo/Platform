@@ -47,12 +47,18 @@ final readonly class OrganizationFoundationCest
             $policy->assertPersonBelongsToOrganization($person, $organization);
             $repository = $container->get(OrganizationRepository::class);
             assertTrue($repository->activeMember($person, $organization));
-            assertSame(OrganizationRepository::class,
-                (new \ReflectionMethod(OrganizationContext::class, '__construct'))->getParameters()[0]->getType()->getName());
-            assertSame(OrganizationRepository::class,
-                (new \ReflectionMethod(OrganizationService::class, '__construct'))->getParameters()[0]->getType()->getName());
-            assertSame(OrganizationService::class,
-                (new \ReflectionMethod(OrganizationAction::class, '__invoke'))->getParameters()[2]->getType()->getName());
+            assertSame(
+                OrganizationRepository::class,
+                (new \ReflectionMethod(OrganizationContext::class, '__construct'))->getParameters()[0]->getType()->getName(),
+            );
+            assertSame(
+                OrganizationRepository::class,
+                (new \ReflectionMethod(OrganizationService::class, '__construct'))->getParameters()[0]->getType()->getName(),
+            );
+            assertSame(
+                OrganizationService::class,
+                (new \ReflectionMethod(OrganizationAction::class, '__invoke'))->getParameters()[2]->getType()->getName(),
+            );
             try {
                 $policy->assertPersonBelongsToOrganization($outside, $organization);
                 throw new \RuntimeException('Outside person was accepted.');
@@ -62,15 +68,23 @@ final readonly class OrganizationFoundationCest
 
             $contributor = new OrganizationMembershipPersonalDataContributor($db);
             $context = static fn(string $subject): PersonalDataExportContext =>
-                new PersonalDataExportContext($subject, $membership, $subject, $membership,
-                    null, new DateTimeImmutable('2026-09-29T10:00:00Z'));
+                new PersonalDataExportContext(
+                    $subject,
+                    $membership,
+                    $subject,
+                    $membership,
+                    null,
+                    new DateTimeImmutable('2026-09-29T10:00:00Z'),
+                );
             $section = $contributor->collect($context($person));
             assertCount(1, $section->records);
             assertSame($organization, $section->records[0]['organizationId']);
             assertCount(0, $contributor->collect($context($outside))->records);
 
-            $db->createCommand("UPDATE core.persons SET status = 'archived', archived_at = now() WHERE id = CAST(:id AS uuid)",
-                [':id' => $person])->execute();
+            $db->createCommand(
+                "UPDATE core.persons SET status = 'archived', archived_at = now() WHERE id = CAST(:id AS uuid)",
+                [':id' => $person],
+            )->execute();
             assertFalse($repository->activeMember($person, $organization));
             $identity = new AuthenticatedIdentity($membership, $person, $membership, [], [], null, null);
             try {

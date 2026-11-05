@@ -10,8 +10,12 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 /** Selects retryable cases; ErasureExecutor owns item transactions and domain decisions. */
 final readonly class PendingErasureProcessor
 {
-    public function __construct(private ConnectionInterface $db, private ErasureExecutor $executor,
-        private DestructionEvidencePolicy $evidence, private LegalDestructionPackageService $legal) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private ErasureExecutor $executor,
+        private DestructionEvidencePolicy $evidence,
+        private LegalDestructionPackageService $legal,
+    ) {}
 
     public function assertActor(string $accountId): void
     {
@@ -38,7 +42,9 @@ final readonly class PendingErasureProcessor
             throw new \InvalidArgumentException('Invalid erasure batch limit.');
         }
         $this->assertActor($accountId);
-        if (!$this->policyReady()) { return 0; }
+        if (!$this->policyReady()) {
+            return 0;
+        }
         $cases = $this->db->createCommand(<<<'SQL'
             SELECT c.id::text FROM core.privacy_erasure_cases c
             WHERE c.status IN ('planned', 'in_progress', 'failed', 'partially_completed')
@@ -52,13 +58,17 @@ final readonly class PendingErasureProcessor
             $caseId = (string) $case['id'];
             $key = 'privacy.erasure.execute:' . $caseId;
             $locked = in_array($this->db->createCommand(
-                'SELECT pg_try_advisory_lock(hashtextextended(:key, 0))', [':key' => $key]
+                'SELECT pg_try_advisory_lock(hashtextextended(:key, 0))',
+                [':key' => $key],
             )->queryScalar(), [true, 't', '1', 1], true);
-            if (!$locked) { continue; }
+            if (!$locked) {
+                continue;
+            }
             try {
                 $status = $this->db->createCommand(
                     'SELECT status FROM core.privacy_erasure_cases WHERE id = CAST(:id AS uuid)',
-                    [':id' => $caseId])->queryScalar();
+                    [':id' => $caseId],
+                )->queryScalar();
                 if (!in_array($status, ['planned', 'in_progress', 'failed', 'partially_completed'], true)) {
                     continue;
                 }
@@ -67,7 +77,8 @@ final readonly class PendingErasureProcessor
                 ++$processed;
             } finally {
                 $this->db->createCommand(
-                    'SELECT pg_advisory_unlock(hashtextextended(:key, 0))', [':key' => $key]
+                    'SELECT pg_advisory_unlock(hashtextextended(:key, 0))',
+                    [':key' => $key],
                 )->queryScalar();
             }
         }

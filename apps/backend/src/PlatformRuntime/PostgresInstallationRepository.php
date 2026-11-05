@@ -23,7 +23,9 @@ SQL, [':id' => $installationId])->queryOne();
     public function localId(): string
     {
         $id = $this->db->createCommand('SELECT id::text FROM platform_runtime.installations WHERE singleton_key = 1')->queryScalar();
-        if (!is_string($id)) { throw new DomainException('Local installation is unavailable.'); }
+        if (!is_string($id)) {
+            throw new DomainException('Local installation is unavailable.');
+        }
         return $id;
     }
 }

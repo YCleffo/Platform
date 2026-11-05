@@ -15,7 +15,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'privacy/erasure/execute', description: 'Execute one bounded erasure case batch.')]
 final class ErasureExecuteCommand extends Command
 {
-    public function __construct(private readonly ErasureExecutor $executor) { parent::__construct(); }
+    public function __construct(private readonly ErasureExecutor $executor)
+    {
+        parent::__construct();
+    }
 
     protected function configure(): void
     {

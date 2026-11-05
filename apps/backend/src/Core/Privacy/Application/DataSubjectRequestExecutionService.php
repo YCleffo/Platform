@@ -50,15 +50,23 @@ final readonly class DataSubjectRequestExecutionService
                 SQL, [':id' => $requestId, ':now' => $now->format(DATE_ATOM),
                 ':calendar' => $rule['calendarType'], ':due' => $due->format(DATE_ATOM)])->execute();
             $this->event($requestId, 'correction_evidence_confirmed', null, null, $actor, $now);
-            $this->audit($actor, 'privacy.request.correction_confirmed', $requestId,
-                ['deadlineCode' => 'confirmed_correction']);
+            $this->audit(
+                $actor,
+                'privacy.request.correction_confirmed',
+                $requestId,
+                ['deadlineCode' => 'confirmed_correction'],
+            );
             return true;
         });
     }
 
-    public function recordExportIssued(AuthenticatedIdentity $actor, string $requestId,
-        string $schemaVersion, string $sha256, int $sizeBytes): string
-    {
+    public function recordExportIssued(
+        AuthenticatedIdentity $actor,
+        string $requestId,
+        string $schemaVersion,
+        string $sha256,
+        int $sizeBytes,
+    ): string {
         if (preg_match('/^[a-f0-9]{64}$/D', $sha256) !== 1 || $sizeBytes < 0
             || strlen($schemaVersion) > 40 || $schemaVersion === '') {
             throw new DomainException('Invalid export evidence.');
@@ -72,8 +80,16 @@ final readonly class DataSubjectRequestExecutionService
             }
             $code = $type === 'access' ? 'access_response' : 'portable_export';
             $now = $this->clock->now();
-            $id = $this->insertExecution($requestId, $code, 'completed', $actor, $now,
-                schemaVersion: $schemaVersion, sha256: $sha256, sizeBytes: $sizeBytes);
+            $id = $this->insertExecution(
+                $requestId,
+                $code,
+                'completed',
+                $actor,
+                $now,
+                schemaVersion: $schemaVersion,
+                sha256: $sha256,
+                sizeBytes: $sizeBytes,
+            );
             if ($type === 'access') {
                 $this->satisfyDeadline($requestId, 'access_response', $id, $now);
             }
@@ -96,15 +112,22 @@ final readonly class DataSubjectRequestExecutionService
             $code = $type === 'access' ? 'access_response' : 'portable_export';
             $now = $this->clock->now();
             $id = $this->insertExecution($requestId, $code, 'failed', $actor, $now, errorCode: $errorCode);
-            $this->audit($actor, 'privacy.request.execution_failed', $requestId,
-                ['executionCode' => $code, 'reasonCode' => $errorCode]);
+            $this->audit(
+                $actor,
+                'privacy.request.execution_failed',
+                $requestId,
+                ['executionCode' => $code, 'reasonCode' => $errorCode],
+            );
             return $id;
         });
     }
 
-    public function recordProcessingInformationIssued(AuthenticatedIdentity $actor,
-        string $requestId, string $sha256, int $sizeBytes): string
-    {
+    public function recordProcessingInformationIssued(
+        AuthenticatedIdentity $actor,
+        string $requestId,
+        string $sha256,
+        int $sizeBytes,
+    ): string {
         if (preg_match('/^[a-f0-9]{64}$/D', $sha256) !== 1 || $sizeBytes < 0) {
             throw new DomainException('Invalid processing information evidence.');
         }
@@ -115,9 +138,16 @@ final readonly class DataSubjectRequestExecutionService
                 throw new DomainException('Processing information request is not in progress.');
             }
             $now = $this->clock->now();
-            $id = $this->insertExecution($requestId, 'processing_information_response',
-                'completed', $actor, $now, schemaVersion: 'privacy.processing_information.v1',
-                sha256: $sha256, sizeBytes: $sizeBytes);
+            $id = $this->insertExecution(
+                $requestId,
+                'processing_information_response',
+                'completed',
+                $actor,
+                $now,
+                schemaVersion: 'privacy.processing_information.v1',
+                sha256: $sha256,
+                sizeBytes: $sizeBytes,
+            );
             $this->satisfyDeadline($requestId, 'processing_information_response', $id, $now);
             $this->complete($actor, $requestId, $request, $now);
             return $id;
@@ -125,9 +155,14 @@ final readonly class DataSubjectRequestExecutionService
     }
 
     /** @param list<string> $changedPaths */
-    public function recordCorrectionCompleted(AuthenticatedIdentity $actor, string $requestId,
-        string $contributorCode, string $resourceType, string $resourceId, array $changedPaths): string
-    {
+    public function recordCorrectionCompleted(
+        AuthenticatedIdentity $actor,
+        string $requestId,
+        string $contributorCode,
+        string $resourceType,
+        string $resourceId,
+        array $changedPaths,
+    ): string {
         MachineCode::assert($contributorCode);
         MachineCode::assert($resourceType);
         if ($changedPaths === [] || count($changedPaths) > 32) {
@@ -143,14 +178,26 @@ final readonly class DataSubjectRequestExecutionService
                 throw new DomainException('Correction is not in progress.');
             }
             $now = $this->clock->now();
-            $id = $this->insertExecution($requestId, 'data_correction', 'completed', $actor, $now,
-                contributorCode: $contributorCode, resourceType: $resourceType,
-                resourceId: $resourceId, changedPaths: $changedPaths);
+            $id = $this->insertExecution(
+                $requestId,
+                'data_correction',
+                'completed',
+                $actor,
+                $now,
+                contributorCode: $contributorCode,
+                resourceType: $resourceType,
+                resourceId: $resourceId,
+                changedPaths: $changedPaths,
+            );
             $this->satisfyDeadline($requestId, 'confirmed_correction', $id, $now);
             $this->complete($actor, $requestId, $request, $now);
-            $this->audit($actor, 'privacy.data.correction.completed', $requestId,
+            $this->audit(
+                $actor,
+                'privacy.data.correction.completed',
+                $requestId,
                 ['executionCode' => 'data_correction', 'contributorCode' => $contributorCode,
-                 'resourceType' => $resourceType, 'changedPaths' => $changedPaths]);
+                    'resourceType' => $resourceType, 'changedPaths' => $changedPaths],
+            );
             return $id;
         });
     }
@@ -169,12 +216,21 @@ final readonly class DataSubjectRequestExecutionService
     }
 
     /** @param list<string>|null $changedPaths */
-    private function insertExecution(string $requestId, string $code, string $status,
-        AuthenticatedIdentity $actor, DateTimeImmutable $now, ?string $schemaVersion = null,
-        ?string $sha256 = null, ?int $sizeBytes = null, ?string $errorCode = null,
-        ?string $contributorCode = null, ?string $resourceType = null, ?string $resourceId = null,
-        ?array $changedPaths = null): string
-    {
+    private function insertExecution(
+        string $requestId,
+        string $code,
+        string $status,
+        AuthenticatedIdentity $actor,
+        DateTimeImmutable $now,
+        ?string $schemaVersion = null,
+        ?string $sha256 = null,
+        ?int $sizeBytes = null,
+        ?string $errorCode = null,
+        ?string $contributorCode = null,
+        ?string $resourceType = null,
+        ?string $resourceId = null,
+        ?array $changedPaths = null,
+    ): string {
         $id = $this->db->createCommand(<<<'SQL'
             INSERT INTO core.data_subject_request_executions
                 (request_id, execution_code, status, actor_account_id, contributor_code,
@@ -224,13 +280,22 @@ final readonly class DataSubjectRequestExecutionService
             WHERE id = CAST(:id AS uuid)
             SQL, [':id' => $requestId, ':now' => $now->format(DATE_ATOM)])->execute();
         $this->event($requestId, 'completed', $from, 'completed', $actor, $now);
-        $this->audit($actor, 'privacy.request.execution_completed', $requestId,
-            ['fromStatus' => $from, 'toStatus' => 'completed']);
+        $this->audit(
+            $actor,
+            'privacy.request.execution_completed',
+            $requestId,
+            ['fromStatus' => $from, 'toStatus' => 'completed'],
+        );
     }
 
-    private function event(string $requestId, string $code, ?string $from, ?string $to,
-        AuthenticatedIdentity $actor, DateTimeImmutable $now): void
-    {
+    private function event(
+        string $requestId,
+        string $code,
+        ?string $from,
+        ?string $to,
+        AuthenticatedIdentity $actor,
+        DateTimeImmutable $now,
+    ): void {
         $this->db->createCommand(<<<'SQL'
             INSERT INTO core.data_subject_request_events
                 (request_id, event_code, from_status, to_status, actor_account_id, occurred_at)
@@ -243,7 +308,13 @@ final readonly class DataSubjectRequestExecutionService
     /** @param array<string, mixed> $metadata */
     private function audit(AuthenticatedIdentity $actor, string $action, string $requestId, array $metadata): void
     {
-        $this->audit->record(new WriteAuditEventCommand('account', $actor->accountId,
-            $action, resourceType: 'core.data_subject_request', resourceId: $requestId, metadata: $metadata));
+        $this->audit->record(new WriteAuditEventCommand(
+            'account',
+            $actor->accountId,
+            $action,
+            resourceType: 'core.data_subject_request',
+            resourceId: $requestId,
+            metadata: $metadata,
+        ));
     }
 }

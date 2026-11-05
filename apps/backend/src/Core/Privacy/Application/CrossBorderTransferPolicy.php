@@ -10,14 +10,19 @@ use DomainException;
 /** Every external egress must name a registered active provider and covered data. */
 final readonly class CrossBorderTransferPolicy
 {
-    public function __construct(private ProcessorRegistry $processors,
+    public function __construct(
+        private ProcessorRegistry $processors,
         private DataRecipientRegistry $recipients,
-        private CrossBorderTransferRegistry $transfers, private ClockInterface $clock) {}
+        private CrossBorderTransferRegistry $transfers,
+        private ClockInterface $clock,
+    ) {}
 
     /** @param list<string> $dataCategories */
-    public function assertEgressAllowed(string $providerCode, string $purposeCode,
-        array $dataCategories): void
-    {
+    public function assertEgressAllowed(
+        string $providerCode,
+        string $purposeCode,
+        array $dataCategories,
+    ): void {
         $now = $this->clock->now();
         $provider = $this->processors->get($providerCode) ?? $this->recipients->get($providerCode);
         if ($provider === null || !$provider->activeAt($now)

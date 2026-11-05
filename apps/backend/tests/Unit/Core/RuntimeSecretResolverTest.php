@@ -17,7 +17,9 @@ final class RuntimeSecretResolverTest extends TestCase
         try {
             self::assertSame($secret, (new RuntimeSecretResolver())
                 ->deploymentCredential('env:TEST_RUNTIME_SECRET'));
-        } finally { putenv('TEST_RUNTIME_SECRET'); }
+        } finally {
+            putenv('TEST_RUNTIME_SECRET');
+        }
         $this->expectException(\DomainException::class);
         (new RuntimeSecretResolver())->deploymentCredential('env:TEST_RUNTIME_SECRET');
     }
@@ -30,8 +32,11 @@ final class RuntimeSecretResolverTest extends TestCase
 
     public function testStatusReporterAcceptsOnlyPredefinedMachineCodes(): void
     {
-        $reporter = new HttpDeploymentStatusReporter(new RuntimeSecretResolver(),
-            'https://control.example', 'env:TEST_RUNTIME_SECRET');
+        $reporter = new HttpDeploymentStatusReporter(
+            new RuntimeSecretResolver(),
+            'https://control.example',
+            'env:TEST_RUNTIME_SECRET',
+        );
         $this->expectException(\DomainException::class);
         $reporter->failed('Stack trace: secret');
     }

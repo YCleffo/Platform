@@ -31,9 +31,11 @@ final readonly class ProcessingRestrictionContributorRegistry
     /** @return list<ProcessingRestrictionContributor> */
     public function forScope(string $scopeType, ?string $purposeCode, ?string $resourceType): array
     {
-        return array_values(array_filter($this->contributors,
+        return array_values(array_filter(
+            $this->contributors,
             static fn(ProcessingRestrictionContributor $contributor): bool =>
-                $contributor->supports($scopeType, $purposeCode, $resourceType)));
+                $contributor->supports($scopeType, $purposeCode, $resourceType),
+        ));
     }
 
     public function available(): bool

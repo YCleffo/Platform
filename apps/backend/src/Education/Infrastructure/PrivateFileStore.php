@@ -18,7 +18,9 @@ final readonly class PrivateFileStore implements FileStore
     {
         $name = Input::text(basename(str_replace('\\', '/', $upload->getClientFilename() ?? 'file')), 240);
         $limit = $avatar ? 2 * 1024 * 1024 : 10 * 1024 * 1024;
-        if ($upload->getError() !== UPLOAD_ERR_OK || ($upload->getSize() ?? 0) > $limit) throw new EducationError(422, 'invalid_file');
+        if ($upload->getError() !== UPLOAD_ERR_OK || ($upload->getSize() ?? 0) > $limit) {
+            throw new EducationError(422, 'invalid_file');
+        }
         if (!is_dir($this->directory) && !mkdir($this->directory, 0700, true) && !is_dir($this->directory)) {
             throw new EducationError(503, 'file_store_unavailable');
         }
@@ -27,18 +29,28 @@ final readonly class PrivateFileStore implements FileStore
         $path = $this->directory . DIRECTORY_SEPARATOR . $key;
         $stream = $upload->getStream();
         $target = fopen($path, 'xb');
-        if ($target === false) throw new EducationError(503, 'file_store_unavailable');
+        if ($target === false) {
+            throw new EducationError(503, 'file_store_unavailable');
+        }
         $size = 0;
         try {
-            if ($stream->isSeekable()) $stream->rewind();
+            if ($stream->isSeekable()) {
+                $stream->rewind();
+            }
             while (!$stream->eof()) {
                 $chunk = $stream->read(65536);
                 $size += strlen($chunk);
-                if ($size > $limit) throw new EducationError(422, 'invalid_file');
-                if (fwrite($target, $chunk) !== strlen($chunk)) throw new EducationError(503, 'file_store_unavailable');
+                if ($size > $limit) {
+                    throw new EducationError(422, 'invalid_file');
+                }
+                if (fwrite($target, $chunk) !== strlen($chunk)) {
+                    throw new EducationError(503, 'file_store_unavailable');
+                }
             }
         } catch (\Throwable $error) {
-            fclose($target); unlink($path); throw $error;
+            fclose($target);
+            unlink($path);
+            throw $error;
         }
         fclose($target);
         chmod($path, 0600);
@@ -46,14 +58,21 @@ final readonly class PrivateFileStore implements FileStore
         $allowed = $avatar ? ['image/png', 'image/jpeg', 'image/webp']
             : ['image/png', 'image/jpeg', 'image/webp', 'application/pdf', 'text/plain'];
         if ($size === 0 || !is_string($mime) || !in_array($mime, $allowed, true)) {
-            unlink($path); throw new EducationError(422, 'invalid_file');
+            unlink($path);
+            throw new EducationError(422, 'invalid_file');
         }
         if ($avatar) {
             $image = getimagesize($path);
-            if ($image === false || $image[0] * $image[1] > 20000000) { unlink($path); throw new EducationError(422, 'invalid_file'); }
+            if ($image === false || $image[0] * $image[1] > 20000000) {
+                unlink($path);
+                throw new EducationError(422, 'invalid_file');
+            }
         }
         $hash = hash_file('sha256', $path);
-        if ($hash === false) { unlink($path); throw new EducationError(503, 'file_store_unavailable'); }
+        if ($hash === false) {
+            unlink($path);
+            throw new EducationError(503, 'file_store_unavailable');
+        }
         return new StoredFile($key, $name, $mime, $size, $hash);
     }
 
@@ -61,7 +80,9 @@ final readonly class PrivateFileStore implements FileStore
     {
         Input::uuid($key);
         $path = $this->directory . DIRECTORY_SEPARATOR . $key;
-        if (!is_file($path) || is_link($path)) throw new EducationError(404, 'file_not_found');
+        if (!is_file($path) || is_link($path)) {
+            throw new EducationError(404, 'file_not_found');
+        }
         return $path;
     }
 
@@ -69,6 +90,8 @@ final readonly class PrivateFileStore implements FileStore
     {
         Input::uuid($key);
         $path = $this->directory . DIRECTORY_SEPARATOR . $key;
-        if (is_file($path) && !unlink($path)) throw new EducationError(503, 'file_store_unavailable');
+        if (is_file($path) && !unlink($path)) {
+            throw new EducationError(503, 'file_store_unavailable');
+        }
     }
 }

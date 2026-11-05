@@ -44,13 +44,22 @@ final readonly class DataSubjectRequestsCest
             $self = new AuthenticatedIdentity($account, $subject, '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee', [], ['core.privacy.representations.manage'], null, null);
             $rep = new AuthenticatedIdentity($repAccount, $representative, '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee', [], [], null, null);
             $clock = new class implements ClockInterface {
-                public function now(): DateTimeImmutable { return new DateTimeImmutable('2026-09-25T10:00:00Z'); }
+                public function now(): DateTimeImmutable
+                {
+                    return new DateTimeImmutable('2026-09-25T10:00:00Z');
+                }
             };
             $calendar = new ConfiguredBusinessCalendar('2026-01-01', '2027-12-31', [6, 7], ['2026-09-28']);
             $audit = $container->get(AuditService::class);
-            $service = new DataSubjectRequestService($db, $clock, new PrivacyDeadlinePolicy($calendar),
-                new DataSubjectRequestTypeRegistry(), new DataSubjectRequestStateMachine(),
-                $container->get(RepresentativeAuthorityPolicy::class), $audit);
+            $service = new DataSubjectRequestService(
+                $db,
+                $clock,
+                new PrivacyDeadlinePolicy($calendar),
+                new DataSubjectRequestTypeRegistry(),
+                new DataSubjectRequestStateMachine(),
+                $container->get(RepresentativeAuthorityPolicy::class),
+                $audit,
+            );
             $blocks = new ProcessingBlockService($db, $clock, $container->get(ProcessingPurposeRegistry::class), $audit);
             $id = $service->submitSelf($self, 'access');
             $db->createCommand(<<<'SQL'
@@ -69,7 +78,9 @@ final readonly class DataSubjectRequestsCest
             try {
                 $service->extendDeadline($self, $id, 'access_response', 'complex_review');
                 \PHPUnit\Framework\Assert::fail('Second extension was accepted.');
-            } catch (DomainException) { assertTrue(true); }
+            } catch (DomainException) {
+                assertTrue(true);
+            }
             $service->transition($self, $id, 'in_review', null);
             $service->transition($self, $id, 'in_progress', null);
             $page = $service->listManagement(1, 0, new DataSubjectRequestFilter('in_progress', 'access', $subject));
@@ -77,20 +88,40 @@ final readonly class DataSubjectRequestsCest
             assertSame($id, $page->items[0]->id);
             assertSame(0, count($service->listManagement(1, 1, new DataSubjectRequestFilter('in_progress', 'access', $subject))->items));
             $lateClock = new class implements ClockInterface {
-                public function now(): DateTimeImmutable { return new DateTimeImmutable('2026-10-20T10:00:00Z'); }
+                public function now(): DateTimeImmutable
+                {
+                    return new DateTimeImmutable('2026-10-20T10:00:00Z');
+                }
             };
-            $lateService = new DataSubjectRequestService($db, $lateClock, new PrivacyDeadlinePolicy($calendar),
-                new DataSubjectRequestTypeRegistry(), new DataSubjectRequestStateMachine(),
-                $container->get(RepresentativeAuthorityPolicy::class), $audit);
+            $lateService = new DataSubjectRequestService(
+                $db,
+                $lateClock,
+                new PrivacyDeadlinePolicy($calendar),
+                new DataSubjectRequestTypeRegistry(),
+                new DataSubjectRequestStateMachine(),
+                $container->get(RepresentativeAuthorityPolicy::class),
+                $audit,
+            );
             assertSame(1, $lateService->listManagement(10, 0, new DataSubjectRequestFilter(overdue: true))->total);
             assertSame(0, $lateService->listManagement(10, 0, new DataSubjectRequestFilter(overdue: false))->total);
             try {
                 $service->transition($self, $id, 'completed', null);
                 \PHPUnit\Framework\Assert::fail('Unsupported completion was accepted.');
-            } catch (DomainException) { assertTrue(true); }
-            $representation = $container->get(LegalRepresentationService::class)->declare($self, $subject,
-                $representative, 'legal_guardian', '2020-01-01T00:00:00Z', null, 'test_proof',
-                'fixture:dsar', null, ['privacy.request.submit', 'privacy.request.view']);
+            } catch (DomainException) {
+                assertTrue(true);
+            }
+            $representation = $container->get(LegalRepresentationService::class)->declare(
+                $self,
+                $subject,
+                $representative,
+                'legal_guardian',
+                '2020-01-01T00:00:00Z',
+                null,
+                'test_proof',
+                'fixture:dsar',
+                null,
+                ['privacy.request.submit', 'privacy.request.view'],
+            );
             $container->get(LegalRepresentationService::class)->verify($self, $representation);
             $repId = $service->submitForSubject($rep, $subject, $representation, 'processing_information');
             assertSame($repId, $service->getVisible($rep, $repId)?->id);
@@ -107,12 +138,28 @@ final readonly class DataSubjectRequestsCest
             assertTrue($blocks->isBlocked($subject));
             assertTrue($blocks->releaseBlock($self, $blockB, 'review_complete'));
             assertFalse($blocks->isBlocked($subject));
-            $purposeBlock = $blocks->createBlock($self, $subject, 'purpose', 'test.processing', null, null,
-                'lawfulness_review', $id);
+            $purposeBlock = $blocks->createBlock(
+                $self,
+                $subject,
+                'purpose',
+                'test.processing',
+                null,
+                null,
+                'lawfulness_review',
+                $id,
+            );
             assertTrue($blocks->isBlocked($subject, 'test.processing'));
             assertFalse($blocks->isBlocked($subject, 'test.required'));
-            $resourceBlock = $blocks->createBlock($self, $subject, 'resource', null, 'core.person', $subject,
-                'accuracy_review', $id);
+            $resourceBlock = $blocks->createBlock(
+                $self,
+                $subject,
+                'resource',
+                null,
+                'core.person',
+                $subject,
+                'accuracy_review',
+                $id,
+            );
             assertTrue($blocks->isBlocked($subject, null, 'core.person', $subject));
             assertFalse($blocks->isBlocked($subject, null, 'core.person', $representative));
             foreach ([
@@ -123,7 +170,9 @@ final readonly class DataSubjectRequestsCest
                 try {
                     $invalid();
                     \PHPUnit\Framework\Assert::fail('Invalid processing block was accepted.');
-                } catch (DomainException) { assertTrue(true); }
+                } catch (DomainException) {
+                    assertTrue(true);
+                }
             }
             $db->createCommand(<<<'SQL'
                 INSERT INTO core.privacy_processing_blocks

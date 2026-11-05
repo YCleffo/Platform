@@ -58,8 +58,11 @@ final readonly class VerifiedExternalIdentityService
             // The existing storage also supports legacy OIDC profile snapshots.
             // Mini-app identities persist only the verified stable subject.
             try {
-                $identity = $this->identities->link($accountId, $provider->id,
-                    new ExternalIdentityProfile($verified->externalUserId, null, false, null, null, []));
+                $identity = $this->identities->link(
+                    $accountId,
+                    $provider->id,
+                    new ExternalIdentityProfile($verified->externalUserId, null, false, null, null, []),
+                );
             } catch (ConflictException $exception) {
                 // The unique index is authoritative under concurrent linking. A
                 // second caller that requested the same owner observes success.

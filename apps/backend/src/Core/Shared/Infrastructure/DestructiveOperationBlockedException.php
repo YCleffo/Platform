@@ -6,6 +6,4 @@ namespace App\Core\Shared\Infrastructure;
 
 use RuntimeException;
 
-final class DestructiveOperationBlockedException extends RuntimeException
-{
-}
+final class DestructiveOperationBlockedException extends RuntimeException {}

@@ -46,9 +46,18 @@ final class AccountSecurityStateTest extends TestCase
             );
         }
         self::assertFalse((new AccountSecurityState(
-            accountId: 'account', personId: null, accountType: 'human', status: 'active',
-            securityStamp: 'stamp', lockedUntil: null, locale: null, timezone: null,
-            disabledAt: null, archivedAt: null, personStatus: null, personArchivedAt: null,
+            accountId: 'account',
+            personId: null,
+            accountType: 'human',
+            status: 'active',
+            securityStamp: 'stamp',
+            lockedUntil: null,
+            locale: null,
+            timezone: null,
+            disabledAt: null,
+            archivedAt: null,
+            personStatus: null,
+            personArchivedAt: null,
         ))->allowsHumanAuthentication(new DateTimeImmutable('2026-09-21T00:00:00Z')));
     }
 }

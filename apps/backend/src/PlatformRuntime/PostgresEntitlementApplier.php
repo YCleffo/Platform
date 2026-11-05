@@ -11,8 +11,10 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class PostgresEntitlementApplier implements EntitlementApplier
 {
-    public function __construct(private ConnectionInterface $db,
-        private EntitlementSignatureVerifier $verifier) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private EntitlementSignatureVerifier $verifier,
+    ) {}
 
     public function apply(string $installationId, string $canonicalDocument, string $signature, string $keyId): void
     {
@@ -35,7 +37,12 @@ SQL, [':id' => $installationId])->queryOne();
             $current = (int) $installation['current_entitlement_sequence'];
             if ($document->sequence <= $current) {
                 if ($document->sequence === $current && $this->isExactReplay(
-                    $installationId, $document->sequence, $canonicalDocument, $signature, $keyId)) {
+                    $installationId,
+                    $document->sequence,
+                    $canonicalDocument,
+                    $signature,
+                    $keyId,
+                )) {
                     return;
                 }
                 throw new DomainException('Stale entitlement sequence.');
@@ -67,9 +74,13 @@ SQL, [':status' => $document->deploymentStatus, ':installation' => $installation
         });
     }
 
-    private function isExactReplay(string $installationId, int $sequence, string $canonical,
-        string $signature, string $keyId): bool
-    {
+    private function isExactReplay(
+        string $installationId,
+        int $sequence,
+        string $canonical,
+        string $signature,
+        string $keyId,
+    ): bool {
         $row = $this->db->createCommand(<<<'SQL'
 SELECT payload->>'canonicalDocumentBase64' AS canonical_base64,
        encode(signature, 'hex') AS signature_hex, signing_key_id, status::text

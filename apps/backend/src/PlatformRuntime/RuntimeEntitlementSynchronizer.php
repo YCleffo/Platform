@@ -8,10 +8,14 @@ use DomainException;
 
 final readonly class RuntimeEntitlementSynchronizer
 {
-    public function __construct(private InstallationRepository $installations,
-        private EntitlementApplier $applier, private DeploymentEntitlementPuller $puller,
-        private string $controlPlaneUrl, private string $credentialReference,
-        private RuntimeSecretResolver $secrets) {}
+    public function __construct(
+        private InstallationRepository $installations,
+        private EntitlementApplier $applier,
+        private DeploymentEntitlementPuller $puller,
+        private string $controlPlaneUrl,
+        private string $credentialReference,
+        private RuntimeSecretResolver $secrets,
+    ) {}
 
     public function configured(): bool
     {
@@ -35,7 +39,9 @@ final readonly class RuntimeEntitlementSynchronizer
         }
         $this->applier->apply($id, $canonical, $signature, $envelope['keyId']);
         $installation = $this->installations->find($id);
-        if ($installation === null) { throw new DomainException('Local installation is unavailable.'); }
+        if ($installation === null) {
+            throw new DomainException('Local installation is unavailable.');
+        }
         return (int) $installation['current_entitlement_sequence'];
     }
 }

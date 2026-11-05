@@ -45,10 +45,16 @@ if (getenv('CORE_AUTH_BROWSER_SMTP') === '1') {
         throw new RuntimeException('Core browser SMTP requires the nonce-bound isolated Mailpit runtime.');
     }
     $params['privacyProcessorDefinitions'] = [new ProcessorDefinition(
-        code: 'smtp', nameReference: 'test://core-auth/mailpit', role: 'operator',
-        purposes: ['communication_email', 'security_email'], dataCategories: ['contact', 'message_content'],
-        country: 'RU', contractReference: 'test://core-auth/mailpit',
-        securityRequirementsConfirmed: true, localizationCompatible: true, activeFrom: new DateTimeImmutable('@0'),
+        code: 'smtp',
+        nameReference: 'test://core-auth/mailpit',
+        role: 'operator',
+        purposes: ['communication_email', 'security_email'],
+        dataCategories: ['contact', 'message_content'],
+        country: 'RU',
+        contractReference: 'test://core-auth/mailpit',
+        securityRequirementsConfirmed: true,
+        localizationCompatible: true,
+        activeFrom: new DateTimeImmutable('@0'),
     )];
 }
 
@@ -64,7 +70,16 @@ if (getenv('CORE_PRIVACY_BROWSER_FIXTURE') === '1') {
     $params['privacyOperatorIdentity'] = ['name' => 'Synthetic browser fixture operator', 'address' => 'Synthetic test address'];
     $params['privacyProcessingRoleDefinitions'] = array_map(
         static fn(string $purpose): \App\Core\Privacy\Application\ProcessingRoleDefinition => new \App\Core\Privacy\Application\ProcessingRoleDefinition(
-            $purpose, 'operator', 'test://privacy/operator', null, ['identity'], ['collect', 'store'], true, true, 'erase_after_retention'),
+            $purpose,
+            'operator',
+            'test://privacy/operator',
+            null,
+            ['identity'],
+            ['collect', 'store'],
+            true,
+            true,
+            'erase_after_retention',
+        ),
         ['test.processing', 'test.required'],
     );
 }

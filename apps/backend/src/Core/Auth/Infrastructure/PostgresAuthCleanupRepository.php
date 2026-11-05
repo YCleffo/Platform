@@ -32,8 +32,10 @@ final readonly class PostgresAuthCleanupRepository implements AuthCleanupReposit
             SQL, [':id' => $accountId])->execute();
         foreach (['auth_sessions', 'auth_recovery_codes', 'auth_totp_factors', 'auth_passkeys',
             'auth_external_identities', 'auth_password_credentials', 'auth_identifiers'] as $table) {
-            $this->db->createCommand("DELETE FROM core.{$table} WHERE account_id = CAST(:id AS uuid)",
-                [':id' => $accountId])->execute();
+            $this->db->createCommand(
+                "DELETE FROM core.{$table} WHERE account_id = CAST(:id AS uuid)",
+                [':id' => $accountId],
+            )->execute();
         }
     }
 

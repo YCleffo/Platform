@@ -12,14 +12,21 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 /** Operator console only: reset the credential and revoke every old session/challenge, preserving MFA. */
 final readonly class RotateAccountPassword
 {
-    public function __construct(private ConnectionInterface $db, private AuthChallengeRepository $challenges,
-        private OpaqueTokenService $tokens, private CompletePasswordReset $reset,
-        private PasswordCredentialRepository $passwords, private PasswordHasherInterface $hasher,
-        private ClockInterface $clock) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private AuthChallengeRepository $challenges,
+        private OpaqueTokenService $tokens,
+        private CompletePasswordReset $reset,
+        private PasswordCredentialRepository $passwords,
+        private PasswordHasherInterface $hasher,
+        private ClockInterface $clock,
+    ) {}
 
     public function execute(string $accountId, #[\SensitiveParameter] string $password, ClientContext $context): void
     {
-        if (mb_strlen($password) < 12 || mb_strlen($password) > 1024) throw new DomainException('Invalid password length.');
+        if (mb_strlen($password) < 12 || mb_strlen($password) > 1024) {
+            throw new DomainException('Invalid password length.');
+        }
         $this->db->transaction(function () use ($accountId, $password, $context): void {
             $account = $this->db->createCommand("SELECT id FROM core.accounts WHERE id=CAST(:id AS uuid) AND account_type='human' AND status='active' FOR UPDATE", [':id' => $accountId])->queryScalar();
             $credential = $this->passwords->findByAccountId($accountId);
@@ -30,11 +37,17 @@ final readonly class RotateAccountPassword
             }
             $token = $this->tokens->issue();
             $this->challenges->storeChallenge(new CreateAuthChallengeCommand(
-                accountId: $accountId, challengeType: 'password_reset', secretHashHex: $token->hashHex,
-                targetNormalized: $email, payload: ['purpose' => 'password_reset'], maxAttempts: 1,
+                accountId: $accountId,
+                challengeType: 'password_reset',
+                secretHashHex: $token->hashHex,
+                targetNormalized: $email,
+                payload: ['purpose' => 'password_reset'],
+                maxAttempts: 1,
                 expiresAt: $this->clock->now()->modify('+5 minutes')->format('Y-m-d\TH:i:s\Z'),
             ));
-            if (!$this->reset->execute($token->raw, $password, $context)) throw new DomainException('Password rotation was rejected.');
+            if (!$this->reset->execute($token->raw, $password, $context)) {
+                throw new DomainException('Password rotation was rejected.');
+            }
             $this->challenges->cancelAllForAccount($accountId);
         });
     }

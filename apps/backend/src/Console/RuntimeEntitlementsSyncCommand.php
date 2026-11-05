@@ -14,7 +14,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'runtime:entitlements:sync', description: 'Pull and apply the signed deployment entitlement')]
 final class RuntimeEntitlementsSyncCommand extends Command
 {
-    public function __construct(private readonly RuntimeEntitlementSynchronizer $synchronizer) { parent::__construct(); }
+    public function __construct(private readonly RuntimeEntitlementSynchronizer $synchronizer)
+    {
+        parent::__construct();
+    }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {

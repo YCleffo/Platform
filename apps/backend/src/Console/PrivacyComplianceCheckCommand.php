@@ -14,7 +14,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'privacy/compliance/check', description: 'Read-only technical privacy readiness check.')]
 final class PrivacyComplianceCheckCommand extends Command
 {
-    public function __construct(private readonly ComplianceReadinessChecker $checker) { parent::__construct(); }
+    public function __construct(private readonly ComplianceReadinessChecker $checker)
+    {
+        parent::__construct();
+    }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {

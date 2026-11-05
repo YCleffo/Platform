@@ -8,6 +8,9 @@ namespace App\Core\Privacy\Application;
 final readonly class CorrectionCommand
 {
     /** @param array<string, mixed> $changes */
-    public function __construct(public string $contributorCode, public string $resourceId,
-        public array $changes) {}
+    public function __construct(
+        public string $contributorCode,
+        public string $resourceId,
+        public array $changes,
+    ) {}
 }

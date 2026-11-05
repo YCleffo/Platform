@@ -43,7 +43,10 @@ final readonly class ServiceCredentialService
     }
 
     /** @return list<array<string, mixed>> */
-    public function listFor(string $accountId): array { return $this->credentials->listFor($accountId); }
+    public function listFor(string $accountId): array
+    {
+        return $this->credentials->listFor($accountId);
+    }
 
     /** @return array{credential: array<string, mixed>, secret: string}|null */
     public function rotate(string $accountId, string $credentialId, string $actorAccountId): ?array
@@ -116,8 +119,11 @@ final readonly class ServiceCredentialService
     private function record(string $action, array $record, string $actorAccountId): void
     {
         $this->audit->write(new WriteAuditEventCommand(
-            actorType: 'account', actorAccountId: $actorAccountId, action: $action,
-            resourceType: 'core.service_credential', resourceId: $record['credentialId'],
+            actorType: 'account',
+            actorAccountId: $actorAccountId,
+            action: $action,
+            resourceType: 'core.service_credential',
+            resourceId: $record['credentialId'],
             metadata: ['accountId' => $record['accountId'], 'scopes' => $record['scopes']],
         ));
     }

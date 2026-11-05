@@ -19,19 +19,23 @@ final class AuditEventDefinitionRegistry
             $this->definitions[$action] = self::coreDefinition($action);
         }
         $this->definitions['core.bootstrap.superadmin_created'] = new AuditEventDefinition(
-            'core.bootstrap.superadmin_created', ['identifierType' => 'auth_method'],
+            'core.bootstrap.superadmin_created',
+            ['identifierType' => 'auth_method'],
         );
         $this->definitions['organization.created'] = new AuditEventDefinition(
-            'organization.created', ['organizationId' => 'uuid', 'organizationCode' => 'code'],
+            'organization.created',
+            ['organizationId' => 'uuid', 'organizationCode' => 'code'],
         );
         foreach (['organization_membership.added', 'organization_membership.left'] as $action) {
             $this->definitions[$action] = new AuditEventDefinition(
-                $action, ['organizationId' => 'uuid', 'personId' => 'uuid'],
+                $action,
+                ['organizationId' => 'uuid', 'personId' => 'uuid'],
             );
         }
         foreach (['service_credential.created', 'service_credential.rotated', 'service_credential.revoked'] as $action) {
             $this->definitions[$action] = new AuditEventDefinition(
-                $action, ['accountId' => 'uuid', 'scopes' => 'code_list'],
+                $action,
+                ['accountId' => 'uuid', 'scopes' => 'code_list'],
             );
         }
         foreach ($additionalDefinitions as $definition) {
@@ -61,16 +65,16 @@ final class AuditEventDefinitionRegistry
                 'privacy.erasure.failed', 'privacy.erasure.completed',
                 'privacy.identity.account_anonymized', 'privacy.identity.person_anonymized'
                     => new AuditEventDefinition($action, [
-                    'requestType' => 'code', 'fromStatus' => 'code', 'toStatus' => 'code',
-                    'deadlineCode' => 'code', 'reasonCode' => 'code',
-                    'scopeType' => 'code', 'purposeCode' => 'code',
-                    'executionCode' => 'code', 'contributorCode' => 'code',
-                    'resourceType' => 'code', 'changedPaths' => 'path_list',
-                    'policyCode' => 'code', 'decisionCode' => 'code',
-                    'action' => 'code', 'result' => 'code',
-                    'caseId' => 'uuid',
-                    'stoppedPurposeCodes' => 'code_list', 'retainedPurposeCodes' => 'code_list',
-                ], [], []),
+                        'requestType' => 'code', 'fromStatus' => 'code', 'toStatus' => 'code',
+                        'deadlineCode' => 'code', 'reasonCode' => 'code',
+                        'scopeType' => 'code', 'purposeCode' => 'code',
+                        'executionCode' => 'code', 'contributorCode' => 'code',
+                        'resourceType' => 'code', 'changedPaths' => 'path_list',
+                        'policyCode' => 'code', 'decisionCode' => 'code',
+                        'action' => 'code', 'result' => 'code',
+                        'caseId' => 'uuid',
+                        'stoppedPurposeCodes' => 'code_list', 'retainedPurposeCodes' => 'code_list',
+                    ], [], []),
                 default => $this->definitions[$action] ?? null,
             };
         }

@@ -29,5 +29,8 @@ final readonly class ProcessingRoleRegistry
         return $this->definitions[$purposeCode] ?? null;
     }
 
-    public function all(): array { return array_values($this->definitions); }
+    public function all(): array
+    {
+        return array_values($this->definitions);
+    }
 }

@@ -14,8 +14,11 @@ use Traversable;
 final readonly class CorePersonalDataCorrectionContributorProvider implements IteratorAggregate
 {
     /** @param iterable<PersonalDataCorrectionContributor> $moduleContributors */
-    public function __construct(private UpdatePerson $persons, private UpdatePersonContact $contacts,
-        private iterable $moduleContributors = []) {}
+    public function __construct(
+        private UpdatePerson $persons,
+        private UpdatePersonContact $contacts,
+        private iterable $moduleContributors = [],
+    ) {}
 
     /** @return Traversable<int, PersonalDataCorrectionContributor> */
     public function getIterator(): Traversable

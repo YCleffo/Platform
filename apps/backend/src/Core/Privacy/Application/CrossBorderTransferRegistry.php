@@ -25,9 +25,11 @@ final readonly class CrossBorderTransferRegistry
         $this->definitions = array_values($indexed);
     }
 
-    public function find(string $providerCode, string $country,
-        string $purposeCode): ?CrossBorderTransferDefinition
-    {
+    public function find(
+        string $providerCode,
+        string $country,
+        string $purposeCode,
+    ): ?CrossBorderTransferDefinition {
         foreach ($this->definitions as $definition) {
             if ($definition->providerCode === $providerCode && $definition->country === $country
                 && $definition->purposeCode === $purposeCode) {
@@ -37,5 +39,8 @@ final readonly class CrossBorderTransferRegistry
         return null;
     }
 
-    public function all(): array { return $this->definitions; }
+    public function all(): array
+    {
+        return $this->definitions;
+    }
 }

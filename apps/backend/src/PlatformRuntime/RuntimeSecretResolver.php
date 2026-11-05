@@ -22,7 +22,8 @@ final readonly class RuntimeSecretResolver
             $secret = getenv($match[1]);
         }
         if (!is_string($secret) || preg_match(
-            '/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\.[A-Za-z0-9_-]{43}\z/iD', $secret
+            '/\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\.[A-Za-z0-9_-]{43}\z/iD',
+            $secret,
         ) !== 1) {
             throw new \DomainException('Deployment credential is unavailable.');
         }

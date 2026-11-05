@@ -16,9 +16,12 @@ use Yiisoft\Router\CurrentRoute;
 
 final readonly class ManagePrivacyIncidentAction
 {
-    public function __invoke(ServerRequestInterface $request, CurrentRoute $route,
-        PrivacyIncidentService $incidents, ResponseFactory $responses): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        CurrentRoute $route,
+        PrivacyIncidentService $incidents,
+        ResponseFactory $responses,
+    ): ResponseInterface {
         $operation = (string) $route->getArgument('operation');
         $id = (string) $route->getArgument('id');
         if ($operation !== 'detect' && !PrivacyRequestInput::uuid($id)) {
@@ -49,8 +52,14 @@ final readonly class ManagePrivacyIncidentAction
                 /** @var array{incidentType: string, reasonCode: string, categoryCodes: list<string>, estimatedSubjects?: int, subjectPersonIds?: list<string>} $body */
                 $categories = $body['categoryCodes'];
                 $subjects = $body['subjectPersonIds'] ?? [];
-                $newId = $incidents->detect($actor, $body['incidentType'], $body['reasonCode'],
-                    $categories, $body['estimatedSubjects'] ?? null, $subjects);
+                $newId = $incidents->detect(
+                    $actor,
+                    $body['incidentType'],
+                    $body['reasonCode'],
+                    $categories,
+                    $body['estimatedSubjects'] ?? null,
+                    $subjects,
+                );
                 return $responses->success(['id' => $newId])->withStatus(Status::CREATED);
             }
             if ($operation === 'transition') {

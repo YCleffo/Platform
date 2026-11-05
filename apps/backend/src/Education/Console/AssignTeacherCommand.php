@@ -18,20 +18,30 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 final class AssignTeacherCommand extends Command
 {
-    public function __construct(private readonly GetAccount $accounts, private readonly OrganizationRepository $organizations,
-        private readonly PermissionService $permissions, private readonly EducationStore $store, private readonly Mutation $mutations)
-    { parent::__construct('education:teacher:assign'); }
+    public function __construct(
+        private readonly GetAccount $accounts,
+        private readonly OrganizationRepository $organizations,
+        private readonly PermissionService $permissions,
+        private readonly EducationStore $store,
+        private readonly Mutation $mutations,
+    ) {
+        parent::__construct('education:teacher:assign');
+    }
 
     protected function configure(): void
     {
-        foreach (['actor', 'account', 'organization'] as $name) $this->addOption($name, null, InputOption::VALUE_REQUIRED);
+        foreach (['actor', 'account', 'organization'] as $name) {
+            $this->addOption($name, null, InputOption::VALUE_REQUIRED);
+        }
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $actorId = Input::uuid($input->getOption('actor')); $accountId = Input::uuid($input->getOption('account'));
+        $actorId = Input::uuid($input->getOption('actor'));
+        $accountId = Input::uuid($input->getOption('account'));
         $organizationId = Input::uuid($input->getOption('organization'));
-        $actor = $this->accounts->execute($actorId); $account = $this->accounts->execute($accountId);
+        $actor = $this->accounts->execute($actorId);
+        $account = $this->accounts->execute($accountId);
         if ($actor === null || $actor->personId === null || $actor->status !== 'active'
             || !$this->permissions->hasPermission($actorId, 'core.rbac.manage') || $account === null
             || $account->accountType !== 'human' || $account->personId === null || $account->status !== 'active'

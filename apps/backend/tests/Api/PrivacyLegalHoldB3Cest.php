@@ -68,10 +68,19 @@ final readonly class PrivacyLegalHoldB3Cest
     {
         $db = ApiTester::getDb();
         $subject = (string) $db->createCommand("INSERT INTO core.persons (given_name, family_name) VALUES ('B3', 'Request') RETURNING id::text")->queryScalar();
-        $account = (string) $db->createCommand("INSERT INTO core.accounts (person_id, account_type, status) VALUES (CAST(:subject AS uuid), 'human', 'active') RETURNING id::text",
-            [':subject' => $subject])->queryScalar();
-        $actor = new AuthenticatedIdentity($account, $subject, '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee',
-            ['core.superadmin'], [], null, null);
+        $account = (string) $db->createCommand(
+            "INSERT INTO core.accounts (person_id, account_type, status) VALUES (CAST(:subject AS uuid), 'human', 'active') RETURNING id::text",
+            [':subject' => $subject],
+        )->queryScalar();
+        $actor = new AuthenticatedIdentity(
+            $account,
+            $subject,
+            '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee',
+            ['core.superadmin'],
+            [],
+            null,
+            null,
+        );
         $requests = ApiTester::getTestContainer()->get(DataSubjectRequestService::class);
         $id = $requests->submitSelf($actor, 'processing_termination');
         $requests->transition($actor, $id, 'in_review', null);

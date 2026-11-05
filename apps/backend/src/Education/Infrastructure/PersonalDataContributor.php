@@ -13,8 +13,14 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 final readonly class PersonalDataContributor implements Contributor
 {
     public function __construct(private ConnectionInterface $db) {}
-    public function code(): string { return 'education.workspace'; }
-    public function categories(): array { return ['education']; }
+    public function code(): string
+    {
+        return 'education.workspace';
+    }
+    public function categories(): array
+    {
+        return ['education'];
+    }
 
     public function collect(PersonalDataExportContext $context): PersonalDataSection
     {
@@ -41,9 +47,13 @@ final readonly class PersonalDataContributor implements Contributor
         $records = [];
         foreach ($queries as $type => $sql) {
             $rows = $this->db->createCommand($sql . ' LIMIT 1001', [':subject' => $context->subjectPersonId])->queryAll();
-            if (count($rows) > 1000) throw new DomainException('Education export requires a dedicated large-export workflow.');
+            if (count($rows) > 1000) {
+                throw new DomainException('Education export requires a dedicated large-export workflow.');
+            }
             /** @var list<array<string,mixed>> $rows */
-            foreach ($rows as $row) $records[] = ['type' => $type, ...$row];
+            foreach ($rows as $row) {
+                $records[] = ['type' => $type, ...$row];
+            }
         }
         return new PersonalDataSection($this->code(), $this->categories(), $records);
     }

@@ -43,8 +43,9 @@ async function launch() {
 }
 
 const browser = await launch();
+const widthConcurrency = Math.max(1, Number.parseInt(process.env.RESPONSIVE_CONCURRENCY ?? '3', 10) || 3);
 
-for (const width of widths) {
+async function verifyWidth(width) {
   const context = await browser.newContext({ viewport: { width, height: 800 } });
   await context.addInitScript(() => {
     localStorage.setItem('platform.theme', 'light');
@@ -95,6 +96,21 @@ for (const width of widths) {
   }
   await context.close();
 }
+
+async function mapLimit(items, limit, worker) {
+  const queue = [...items];
+  await Promise.all(
+    Array.from({ length: Math.min(limit, queue.length) }, async () => {
+      for (;;) {
+        const item = queue.shift();
+        if (item === undefined) return;
+        await worker(item);
+      }
+    }),
+  );
+}
+
+await mapLimit(widths, widthConcurrency, verifyWidth);
 
 // Theme + keyboard + localization checks (mobile reference width).
 {

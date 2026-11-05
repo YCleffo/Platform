@@ -10,13 +10,14 @@ use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Privacy\Domain\RetentionDecision;
 use App\Core\Time\Application\ClockInterface;
 use DomainException;
-use DateTimeImmutable;
 use Yiisoft\Db\Connection\ConnectionInterface;
 
 /** Core handlers execute in the item transaction; module handlers must reconcile by item ID. */
 final readonly class ErasureExecutor
 {
-    public function __construct(private ConnectionInterface $db, private ClockInterface $clock,
+    public function __construct(
+        private ConnectionInterface $db,
+        private ClockInterface $clock,
         private RetentionCandidateContributorRegistry $candidates,
         private ProcessingPurposeRegistry $purposes,
         private RetentionDecisionService $decisions,
@@ -25,7 +26,8 @@ final readonly class ErasureExecutor
         private ErasureCaseStateMachine $states,
         private AuditService $audit,
         private ErasureRequestCompletionService $requests,
-        private ?LegalDestructionPackageService $legalPackages = null) {}
+        private ?LegalDestructionPackageService $legalPackages = null,
+    ) {}
 
     /** @return array{status:string,completed:int,blocked:int,failed:int,pending:int} */
     public function executeBatch(AuthenticatedIdentity $actor, string $caseId, int $limit = 25): array
@@ -36,8 +38,10 @@ final readonly class ErasureExecutor
         $key = 'privacy.erasure.execute:' . $caseId;
         $this->db->createCommand('SELECT pg_advisory_lock(hashtextextended(:key, 0))', [':key' => $key])->queryScalar();
         try {
-            $case = $this->db->createCommand('SELECT id::text, status FROM core.privacy_erasure_cases WHERE id = CAST(:id AS uuid)',
-                [':id' => $caseId])->queryOne();
+            $case = $this->db->createCommand(
+                'SELECT id::text, status FROM core.privacy_erasure_cases WHERE id = CAST(:id AS uuid)',
+                [':id' => $caseId],
+            )->queryOne();
             if (!is_array($case)) {
                 throw new DomainException('Erasure case not found.');
             }
@@ -86,8 +90,10 @@ final readonly class ErasureExecutor
                 return;
             }
             $subject = (string) $case['subject_person_id'];
-            $this->db->createCommand('SELECT id FROM core.persons WHERE id = CAST(:id AS uuid) FOR UPDATE',
-                [':id' => $subject])->queryScalar();
+            $this->db->createCommand(
+                'SELECT id FROM core.persons WHERE id = CAST(:id AS uuid) FOR UPDATE',
+                [':id' => $subject],
+            )->queryScalar();
             if ($this->legalPackages !== null && !$this->legalPackages->available()) {
                 $this->block($actor, $itemId, 'legal_evidence_config_missing', (string) $item['resource_type']);
                 return;
@@ -150,13 +156,20 @@ final readonly class ErasureExecutor
                 $this->block($actor, $itemId, 'candidate_missing', (string) $item['resource_type']);
                 return;
             }
-            $evaluated = $this->decisions->evaluateResource($group, $actor,
-                $case['source_request_id'] === null ? null : (string) $case['source_request_id']);
+            $evaluated = $this->decisions->evaluateResource(
+                $group,
+                $actor,
+                $case['source_request_id'] === null ? null : (string) $case['source_request_id'],
+            );
             /** @var array{aggregate: string, decisions: list<\App\Core\Privacy\Domain\RetentionDecision>} $evaluated */
             $action = ErasureCaseService::actionFor($evaluated['aggregate']);
             if ($action === null) {
-                $this->block($actor, $itemId, self::retentionReason($evaluated['decisions']),
-                    (string) $item['resource_type']);
+                $this->block(
+                    $actor,
+                    $itemId,
+                    self::retentionReason($evaluated['decisions']),
+                    (string) $item['resource_type'],
+                );
                 return;
             }
             $policy = ErasureCaseService::policyFor($group, $evaluated['decisions'], $evaluated['aggregate']);
@@ -185,9 +198,14 @@ final readonly class ErasureExecutor
         });
     }
 
-    private function finishItem(AuthenticatedIdentity $actor, string $caseId, string $itemId,
-        array $item, string $result, ?string $subjectName): void
-    {
+    private function finishItem(
+        AuthenticatedIdentity $actor,
+        string $caseId,
+        string $itemId,
+        array $item,
+        string $result,
+        ?string $subjectName,
+    ): void {
         $expected = match ($item['planned_action']) {
             'delete' => 'deleted', 'anonymize' => 'anonymized',
             'pseudonymize' => 'pseudonymized', 'custom' => 'custom_completed',
@@ -202,16 +220,25 @@ final readonly class ErasureExecutor
             default => null,
         };
         if ($identityAction !== null) {
-            $this->audit->record(new WriteAuditEventCommand('account', $actor->accountId,
-                $identityAction, resourceType: (string) $item['resource_type'],
+            $this->audit->record(new WriteAuditEventCommand(
+                'account',
+                $actor->accountId,
+                $identityAction,
+                resourceType: (string) $item['resource_type'],
                 resourceId: (string) $item['resource_id'],
-                metadata: ['caseId' => $caseId, 'action' => 'anonymize', 'result' => $result]));
+                metadata: ['caseId' => $caseId, 'action' => 'anonymize', 'result' => $result],
+            ));
         }
         $now = $this->clock->now();
-        $receipt = $this->audit->record(new WriteAuditEventCommand('account', $actor->accountId,
-            'privacy.erasure.item_completed', resourceType: 'core.privacy_erasure_item',
-            resourceId: $itemId, metadata: ['resourceType' => $item['resource_type'],
-                'policyCode' => $item['policy_code'], 'action' => $item['planned_action'], 'result' => $result]));
+        $receipt = $this->audit->record(new WriteAuditEventCommand(
+            'account',
+            $actor->accountId,
+            'privacy.erasure.item_completed',
+            resourceType: 'core.privacy_erasure_item',
+            resourceId: $itemId,
+            metadata: ['resourceType' => $item['resource_type'],
+                'policyCode' => $item['policy_code'], 'action' => $item['planned_action'], 'result' => $result],
+        ));
         $evidenceId = $this->db->createCommand(<<<'SQL'
             INSERT INTO core.privacy_destruction_evidence
                 (case_id, item_id, resource_type, resource_reference_hash, policy_code,
@@ -222,23 +249,37 @@ final readonly class ErasureExecutor
                 CAST(:now AS timestamptz), CAST(:actor AS uuid), CAST(:event AS uuid))
             RETURNING id::text
             SQL, [':case' => $caseId, ':item' => $itemId, ':type' => $item['resource_type'],
-                ':hash' => $this->evidencePolicy->referenceHash((string) $item['resource_type'],
-                    (string) $item['resource_id']), ':policy' => $item['policy_code'],
-                ':evidence_policy' => $this->evidencePolicy->code(),
-                ':retain_until' => $this->evidencePolicy->retainUntil($now)->format(DATE_ATOM),
-                ':action' => $item['planned_action'], ':result' => $result,
-                ':now' => $now->format(DATE_ATOM), ':actor' => $actor->accountId,
-                ':event' => $receipt->eventId])->queryScalar();
+            ':hash' => $this->evidencePolicy->referenceHash(
+                (string) $item['resource_type'],
+                (string) $item['resource_id'],
+            ), ':policy' => $item['policy_code'],
+            ':evidence_policy' => $this->evidencePolicy->code(),
+            ':retain_until' => $this->evidencePolicy->retainUntil($now)->format(DATE_ATOM),
+            ':action' => $item['planned_action'], ':result' => $result,
+            ':now' => $now->format(DATE_ATOM), ':actor' => $actor->accountId,
+            ':event' => $receipt->eventId])->queryScalar();
         if ($this->legalPackages !== null) {
             if (!is_string($evidenceId) || $subjectName === null) {
                 throw new DomainException('Legal destruction evidence was not recorded.');
             }
-            $subjectId = $this->db->createCommand('SELECT subject_person_id::text FROM core.privacy_erasure_cases WHERE id = CAST(:id AS uuid)',
-                [':id' => $caseId])->queryScalar();
-            if (!is_string($subjectId)) { throw new DomainException('Erasure subject unavailable.'); }
-            $this->legalPackages->record($evidenceId, $caseId, $itemId, $subjectId, $subjectName,
-                $actor->accountId, $receipt->eventId, $now,
-                $this->evidencePolicy->retainUntil($now));
+            $subjectId = $this->db->createCommand(
+                'SELECT subject_person_id::text FROM core.privacy_erasure_cases WHERE id = CAST(:id AS uuid)',
+                [':id' => $caseId],
+            )->queryScalar();
+            if (!is_string($subjectId)) {
+                throw new DomainException('Erasure subject unavailable.');
+            }
+            $this->legalPackages->record(
+                $evidenceId,
+                $caseId,
+                $itemId,
+                $subjectId,
+                $subjectName,
+                $actor->accountId,
+                $receipt->eventId,
+                $now,
+                $this->evidencePolicy->retainUntil($now),
+            );
         }
         $this->db->createCommand(<<<'SQL'
             UPDATE core.privacy_erasure_items SET status = 'completed', completed_at = CAST(:now AS timestamptz),
@@ -246,16 +287,23 @@ final readonly class ErasureExecutor
             SQL, [':id' => $itemId, ':now' => $now->format(DATE_ATOM)])->execute();
     }
 
-    private function block(AuthenticatedIdentity $actor, string $itemId, string $reason,
-        string $resourceType): void
-    {
+    private function block(
+        AuthenticatedIdentity $actor,
+        string $itemId,
+        string $reason,
+        string $resourceType,
+    ): void {
         $this->db->createCommand(<<<'SQL'
             UPDATE core.privacy_erasure_items SET status = 'blocked', failure_code = :reason,
                 updated_at = CAST(:now AS timestamptz) WHERE id = CAST(:id AS uuid)
             SQL, [':id' => $itemId, ':reason' => $reason,
-                ':now' => $this->clock->now()->format(DATE_ATOM)])->execute();
-        $this->audit($actor, 'privacy.erasure.item_blocked', $itemId,
-            ['reasonCode' => $reason, 'resourceType' => $resourceType]);
+            ':now' => $this->clock->now()->format(DATE_ATOM)])->execute();
+        $this->audit(
+            $actor,
+            'privacy.erasure.item_blocked',
+            $itemId,
+            ['reasonCode' => $reason, 'resourceType' => $resourceType],
+        );
     }
 
     private function markFailed(AuthenticatedIdentity $actor, string $caseId, string $itemId): void
@@ -281,8 +329,10 @@ final readonly class ErasureExecutor
     private function refreshCase(AuthenticatedIdentity $actor, string $caseId): array
     {
         return $this->db->transaction(function () use ($actor, $caseId): array {
-            $case = $this->db->createCommand('SELECT status, started_at FROM core.privacy_erasure_cases WHERE id = CAST(:id AS uuid) FOR UPDATE',
-                [':id' => $caseId])->queryOne();
+            $case = $this->db->createCommand(
+                'SELECT status, started_at FROM core.privacy_erasure_cases WHERE id = CAST(:id AS uuid) FOR UPDATE',
+                [':id' => $caseId],
+            )->queryOne();
             if (!is_array($case)) {
                 throw new DomainException('Erasure case not found.');
             }
@@ -297,7 +347,7 @@ final readonly class ErasureExecutor
                     completed_at = CASE WHEN :is_complete THEN CAST(:completed_now AS timestamptz) ELSE NULL END,
                     updated_at = CAST(:now AS timestamptz) WHERE id = CAST(:id AS uuid)
                 SQL, [':status' => $status, ':is_complete' => $status === 'completed',
-                    ':completed_now' => $now, ':now' => $now, ':id' => $caseId])->execute();
+                ':completed_now' => $now, ':now' => $now, ':id' => $caseId])->execute();
             if ($status === 'completed' && $case['status'] !== 'completed') {
                 $this->audit($actor, 'privacy.erasure.completed', $caseId, []);
             }
@@ -308,8 +358,10 @@ final readonly class ErasureExecutor
     /** @return array{status:string,completed:int,blocked:int,failed:int,pending:int} */
     private function summary(string $caseId): array
     {
-        $status = $this->db->createCommand('SELECT status FROM core.privacy_erasure_cases WHERE id = CAST(:id AS uuid)',
-            [':id' => $caseId])->queryScalar();
+        $status = $this->db->createCommand(
+            'SELECT status FROM core.privacy_erasure_cases WHERE id = CAST(:id AS uuid)',
+            [':id' => $caseId],
+        )->queryScalar();
         if (!is_string($status)) {
             throw new DomainException('Erasure case not found.');
         }
@@ -350,7 +402,13 @@ final readonly class ErasureExecutor
     /** @param array<string, mixed> $metadata */
     private function audit(AuthenticatedIdentity $actor, string $action, string $id, array $metadata): void
     {
-        $this->audit->record(new WriteAuditEventCommand('account', $actor->accountId, $action,
-            resourceType: 'core.privacy_erasure', resourceId: $id, metadata: $metadata));
+        $this->audit->record(new WriteAuditEventCommand(
+            'account',
+            $actor->accountId,
+            $action,
+            resourceType: 'core.privacy_erasure',
+            resourceId: $id,
+            metadata: $metadata,
+        ));
     }
 }

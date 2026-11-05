@@ -23,17 +23,25 @@ SELECT to_regclass('core.accounts') IS NOT NULL
    AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL
    AND to_regclass('platform_runtime.background_job_status') IS NOT NULL
 SQL)->queryScalar();
-            if (!in_array($schema, [true, 't', '1', 1], true)) { return false; }
-            if ((string) $this->redis->ping() !== 'PONG') { return false; }
+            if (!in_array($schema, [true, 't', '1', 1], true)) {
+                return false;
+            }
+            if ((string) $this->redis->ping() !== 'PONG') {
+                return false;
+            }
             return $this->componentHealthy('backend-scheduler')
                 && $this->componentHealthy('backend-email-worker');
-        } catch (\Throwable) { return false; }
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function componentHealthy(string $component): bool
     {
         [$code, $enabled, $timeout] = $this->component($component);
-        if (!$enabled) { return true; }
+        if (!$enabled) {
+            return true;
+        }
         $age = $this->db->createCommand(<<<'SQL'
 SELECT EXTRACT(EPOCH FROM (clock_timestamp() - heartbeat_at))::integer
 FROM platform_runtime.background_job_status WHERE job_code = :code

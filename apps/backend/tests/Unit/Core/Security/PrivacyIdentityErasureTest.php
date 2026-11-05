@@ -20,16 +20,42 @@ final class PrivacyIdentityErasureTest extends TestCase
     {
         $db = $this->createMock(ConnectionInterface::class);
         $policies = new RetentionPolicyRegistry([
-            new RetentionPolicyDefinition('test.delete', 'withdrawal', null, 'delete',
-                durationUnit: 'event_only'),
-            new RetentionPolicyDefinition('test.anonymize', 'withdrawal', null, 'anonymize',
-                durationUnit: 'event_only'),
+            new RetentionPolicyDefinition(
+                'test.delete',
+                'withdrawal',
+                null,
+                'delete',
+                durationUnit: 'event_only',
+            ),
+            new RetentionPolicyDefinition(
+                'test.anonymize',
+                'withdrawal',
+                null,
+                'anonymize',
+                durationUnit: 'event_only',
+            ),
         ]);
         $purposes = new ProcessingPurposeRegistry([
-            new ProcessingPurposeDefinition('test.delete', 'consent', true, false,
-                ['identity'], ['person'], 'test.delete', 'operator'),
-            new ProcessingPurposeDefinition('test.anonymize', 'consent', true, false,
-                ['identity'], ['person'], 'test.anonymize', 'operator'),
+            new ProcessingPurposeDefinition(
+                'test.delete',
+                'consent',
+                true,
+                false,
+                ['identity'],
+                ['person'],
+                'test.delete',
+                'operator',
+            ),
+            new ProcessingPurposeDefinition(
+                'test.anonymize',
+                'consent',
+                true,
+                false,
+                ['identity'],
+                ['person'],
+                'test.anonymize',
+                'operator',
+            ),
         ], new DataCategoryRegistry(), $policies);
         foreach (['core.person', 'core.human_account'] as $type) {
             $contributor = new CoreResourceRetentionCandidateContributor($db, $purposes, $policies, $type);

@@ -38,13 +38,17 @@ final readonly class PersonalDataCorrectionCest
             try {
                 $corrections->correct($actor, $id, new CorrectionCommand('core.person', $subject, ['givenName' => 'After']));
                 \PHPUnit\Framework\Assert::fail('Correction completed without confirmed evidence.');
-            } catch (DomainException) { assertTrue(true); }
+            } catch (DomainException) {
+                assertTrue(true);
+            }
             assertTrue($corrections->confirmEvidence($actor, $id));
             assertSame(false, $corrections->confirmEvidence($actor, $id));
             try {
                 $corrections->correct($actor, $id, new CorrectionCommand('core.person', $other, ['givenName' => 'Wrong']));
                 \PHPUnit\Framework\Assert::fail('Other person was corrected.');
-            } catch (DomainException) { assertTrue(true); }
+            } catch (DomainException) {
+                assertTrue(true);
+            }
             foreach ([
                 new CorrectionCommand('unknown.contributor', $subject, ['givenName' => 'Wrong']),
                 new CorrectionCommand('core.person', $subject, ['id' => $other]),
@@ -54,10 +58,15 @@ final readonly class PersonalDataCorrectionCest
                 try {
                     $corrections->correct($actor, $id, $invalid);
                     \PHPUnit\Framework\Assert::fail('Invalid correction was accepted.');
-                } catch (DomainException) { assertTrue(true); }
+                } catch (DomainException) {
+                    assertTrue(true);
+                }
             }
-            $execution = $corrections->correct($actor, $id,
-                new CorrectionCommand('core.person', $subject, ['givenName' => 'After']));
+            $execution = $corrections->correct(
+                $actor,
+                $id,
+                new CorrectionCommand('core.person', $subject, ['givenName' => 'After']),
+            );
             assertSame('After', $db->createCommand('SELECT given_name FROM core.persons WHERE id = CAST(:id AS uuid)', [':id' => $subject])->queryScalar());
             assertSame('Other', $db->createCommand('SELECT given_name FROM core.persons WHERE id = CAST(:id AS uuid)', [':id' => $other])->queryScalar());
             assertSame('completed', $requests->getVisible($actor, $id)?->status);
@@ -82,10 +91,15 @@ final readonly class PersonalDataCorrectionCest
                 try {
                     $corrections->correct($actor, $contactRequest, $invalid);
                     \PHPUnit\Framework\Assert::fail('Invalid contact correction was accepted.');
-                } catch (DomainException) { assertTrue(true); }
+                } catch (DomainException) {
+                    assertTrue(true);
+                }
             }
-            $corrections->correct($actor, $contactRequest,
-                new CorrectionCommand('core.person_contact', $contact, ['value' => 'After@Example.Test', 'isPrimary' => true]));
+            $corrections->correct(
+                $actor,
+                $contactRequest,
+                new CorrectionCommand('core.person_contact', $contact, ['value' => 'After@Example.Test', 'isPrimary' => true]),
+            );
             $row = $db->createCommand('SELECT value, normalized_value, is_primary FROM core.person_contacts WHERE id = CAST(:id AS uuid)', [':id' => $contact])->queryOne();
             assertSame('After@Example.Test', $row['value']);
             assertSame('after@example.test', $row['normalized_value']);

@@ -14,14 +14,22 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 /** Technical incident workflow; external notifications are recorded, never sent here. */
 final readonly class PrivacyIncidentService
 {
-    public function __construct(private ConnectionInterface $db, private ClockInterface $clock,
-        private DataCategoryRegistry $categories) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private ClockInterface $clock,
+        private DataCategoryRegistry $categories,
+    ) {}
 
     /** @param list<string> $categoryCodes @param list<string> $subjectPersonIds */
-    public function detect(AuthenticatedIdentity $actor, string $incidentType, string $reasonCode,
-        array $categoryCodes, ?int $estimatedSubjects, array $subjectPersonIds = [],
-        ?DateTimeImmutable $detectedAt = null): string
-    {
+    public function detect(
+        AuthenticatedIdentity $actor,
+        string $incidentType,
+        string $reasonCode,
+        array $categoryCodes,
+        ?int $estimatedSubjects,
+        array $subjectPersonIds = [],
+        ?DateTimeImmutable $detectedAt = null,
+    ): string {
         MachineCode::assert($incidentType);
         MachineCode::assert($reasonCode);
         if ($categoryCodes === [] || count($categoryCodes) > 32 || count($subjectPersonIds) > 1000
@@ -38,8 +46,15 @@ final readonly class PrivacyIncidentService
         if ($detected > $this->clock->now()) {
             throw new DomainException('Incident detection time cannot be future.');
         }
-        return $this->db->transaction(function () use ($actor, $incidentType, $reasonCode,
-            $categoryCodes, $estimatedSubjects, $subjectPersonIds, $detected): string {
+        return $this->db->transaction(function () use (
+            $actor,
+            $incidentType,
+            $reasonCode,
+            $categoryCodes,
+            $estimatedSubjects,
+            $subjectPersonIds,
+            $detected
+        ): string {
             $now = $this->clock->now()->format(DATE_ATOM);
             $id = $this->db->createCommand(<<<'SQL'
                 INSERT INTO core.privacy_incidents
@@ -51,10 +66,10 @@ final readonly class PrivacyIncidentService
                     :estimated, :reason, CAST(:actor AS uuid), CAST(:now AS timestamptz),
                     CAST(:now AS timestamptz)) RETURNING id::text
                 SQL, [':type' => $incidentType, ':detected' => $detected->format(DATE_ATOM),
-                    ':initial' => $detected->modify('+24 hours')->format(DATE_ATOM),
-                    ':investigation' => $detected->modify('+72 hours')->format(DATE_ATOM),
-                    ':estimated' => $estimatedSubjects, ':reason' => $reasonCode,
-                    ':actor' => $actor->accountId, ':now' => $now])->queryScalar();
+                ':initial' => $detected->modify('+24 hours')->format(DATE_ATOM),
+                ':investigation' => $detected->modify('+72 hours')->format(DATE_ATOM),
+                ':estimated' => $estimatedSubjects, ':reason' => $reasonCode,
+                ':actor' => $actor->accountId, ':now' => $now])->queryScalar();
             foreach (array_unique($categoryCodes) as $code) {
                 $this->db->createCommand(<<<'SQL'
                     INSERT INTO core.privacy_incident_categories (incident_id, category_code)
@@ -72,9 +87,12 @@ final readonly class PrivacyIncidentService
         });
     }
 
-    public function transition(AuthenticatedIdentity $actor, string $incidentId,
-        string $to, string $reasonCode): void
-    {
+    public function transition(
+        AuthenticatedIdentity $actor,
+        string $incidentId,
+        string $to,
+        string $reasonCode,
+    ): void {
         MachineCode::assert($reasonCode);
         $this->db->transaction(function () use ($actor, $incidentId, $to, $reasonCode): void {
             $row = $this->db->createCommand(<<<'SQL'
@@ -90,15 +108,18 @@ final readonly class PrivacyIncidentService
                     containment_status = :containment, updated_at = CAST(:now AS timestamptz)
                 WHERE id = CAST(:id AS uuid)
                 SQL, [':status' => $to,
-                    ':containment' => $to === 'contained' || $to === 'resolved' ? 'contained' : 'in_progress',
-                    ':now' => $this->clock->now()->format(DATE_ATOM), ':id' => $incidentId])->execute();
+                ':containment' => $to === 'contained' || $to === 'resolved' ? 'contained' : 'in_progress',
+                ':now' => $this->clock->now()->format(DATE_ATOM), ':id' => $incidentId])->execute();
             $this->event($incidentId, $actor, 'status_changed', (string) $row['status'], $to, $reasonCode);
         });
     }
 
-    public function recordExternalNotification(AuthenticatedIdentity $actor, string $incidentId,
-        string $kind, string $referenceCode): void
-    {
+    public function recordExternalNotification(
+        AuthenticatedIdentity $actor,
+        string $incidentId,
+        string $kind,
+        string $referenceCode,
+    ): void {
         MachineCode::assert($referenceCode);
         if (!in_array($kind, ['initial', 'investigation'], true)) {
             throw new DomainException('Invalid notification kind.');
@@ -119,9 +140,15 @@ final readonly class PrivacyIncidentService
                     updated_at = CAST(:now AS timestamptz)
                 WHERE id = CAST(:id AS uuid)
                 SQL, [':now' => $this->clock->now()->format(DATE_ATOM),
-                    ':reference' => $referenceCode, ':id' => $incidentId])->execute();
-            $this->event($incidentId, $actor, $kind . '_notification_recorded',
-                (string) $row['status'], (string) $row['status'], null);
+                ':reference' => $referenceCode, ':id' => $incidentId])->execute();
+            $this->event(
+                $incidentId,
+                $actor,
+                $kind . '_notification_recorded',
+                (string) $row['status'],
+                (string) $row['status'],
+                null,
+            );
         });
     }
 
@@ -154,9 +181,14 @@ final readonly class PrivacyIncidentService
         return $row;
     }
 
-    private function event(string $incidentId, AuthenticatedIdentity $actor, string $eventCode,
-        ?string $from, ?string $to, ?string $reason): void
-    {
+    private function event(
+        string $incidentId,
+        AuthenticatedIdentity $actor,
+        string $eventCode,
+        ?string $from,
+        ?string $to,
+        ?string $reason,
+    ): void {
         $this->db->createCommand(<<<'SQL'
             INSERT INTO core.privacy_incident_events
                 (incident_id, event_code, from_status, to_status, reason_code,
@@ -164,7 +196,7 @@ final readonly class PrivacyIncidentService
             VALUES (CAST(:id AS uuid), :event, :from, :to, :reason,
                 CAST(:actor AS uuid), CAST(:now AS timestamptz))
             SQL, [':id' => $incidentId, ':event' => $eventCode, ':from' => $from,
-                ':to' => $to, ':reason' => $reason, ':actor' => $actor->accountId,
-                ':now' => $this->clock->now()->format(DATE_ATOM)])->execute();
+            ':to' => $to, ':reason' => $reason, ':actor' => $actor->accountId,
+            ':now' => $this->clock->now()->format(DATE_ATOM)])->execute();
     }
 }

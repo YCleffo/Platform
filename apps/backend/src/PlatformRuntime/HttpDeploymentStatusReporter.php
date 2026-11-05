@@ -6,12 +6,17 @@ namespace App\PlatformRuntime;
 
 final readonly class HttpDeploymentStatusReporter implements DeploymentStatusReporter
 {
-    public function __construct(private RuntimeSecretResolver $secrets,
-        private string $controlPlaneUrl, private string $credentialReference) {}
+    public function __construct(
+        private RuntimeSecretResolver $secrets,
+        private string $controlPlaneUrl,
+        private string $credentialReference,
+    ) {}
 
     public function ready(int $entitlementSequence): string
     {
-        if ($entitlementSequence < 1) { throw new \DomainException('Invalid entitlement sequence.'); }
+        if ($entitlementSequence < 1) {
+            throw new \DomainException('Invalid entitlement sequence.');
+        }
         $response = $this->send(['status' => 'ready', 'entitlementSequence' => $entitlementSequence]);
         if (!in_array($response['status'] ?? null, ['ready', 'already_ready'], true)) {
             throw new \DomainException('Deployment status response is invalid.');
@@ -42,7 +47,9 @@ final readonly class HttpDeploymentStatusReporter implements DeploymentStatusRep
         }
         $secret = $this->secrets->deploymentCredential($this->credentialReference);
         $handle = curl_init(rtrim($this->controlPlaneUrl, '/') . '/api/m2m/deployment/status');
-        if ($handle === false) { throw new \DomainException('Deployment status transport unavailable.'); }
+        if ($handle === false) {
+            throw new \DomainException('Deployment status transport unavailable.');
+        }
         $response = '';
         curl_setopt_array($handle, [
             CURLOPT_POST => true,
@@ -53,7 +60,9 @@ final readonly class HttpDeploymentStatusReporter implements DeploymentStatusRep
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT => 15,
             CURLOPT_WRITEFUNCTION => static function (\CurlHandle $curl, string $chunk) use (&$response): int {
-                if (strlen($response) + strlen($chunk) > 4096) { return 0; }
+                if (strlen($response) + strlen($chunk) > 4096) {
+                    return 0;
+                }
                 $response .= $chunk;
                 return strlen($chunk);
             },
@@ -63,7 +72,9 @@ final readonly class HttpDeploymentStatusReporter implements DeploymentStatusRep
                 throw new \DomainException('Deployment status report failed.');
             }
             $decoded = json_decode($response, true, 8, JSON_THROW_ON_ERROR);
-            if (!is_array($decoded)) { throw new \DomainException('Deployment status response is invalid.'); }
+            if (!is_array($decoded)) {
+                throw new \DomainException('Deployment status response is invalid.');
+            }
             /** @var array<string, mixed> $decoded */
             return $decoded;
         } catch (\JsonException) {

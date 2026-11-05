@@ -13,8 +13,12 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 final readonly class LegalDestructionPackageService
 {
     /** @param array<string, mixed> $operator @param array<string, mixed> $configuration */
-    public function __construct(private ConnectionInterface $db, private ProcessingPurposeRegistry $purposes,
-        private array $operator = [], private array $configuration = []) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private ProcessingPurposeRegistry $purposes,
+        private array $operator = [],
+        private array $configuration = [],
+    ) {}
 
     public function available(): bool
     {
@@ -34,7 +38,9 @@ final readonly class LegalDestructionPackageService
             /** @var string $systemCode */
             $systemCode = $this->configuration['informationSystemCode'];
             MachineCode::assert($systemCode);
-        } catch (\Throwable) { return false; }
+        } catch (\Throwable) {
+            return false;
+        }
         $processorName = $this->configuration['processorName'] ?? null;
         $processorAddress = $this->configuration['processorAddress'] ?? null;
         $hasProcessorName = is_string($processorName) && trim($processorName) !== '';
@@ -48,7 +54,9 @@ final readonly class LegalDestructionPackageService
             SELECT subject_name FROM core.privacy_legal_destruction_packages
             WHERE case_id = CAST(:case AS uuid) ORDER BY created_at LIMIT 1
             SQL, [':case' => $caseId])->queryScalar();
-        if (is_string($previous) && $previous !== '') { return $previous; }
+        if (is_string($previous) && $previous !== '') {
+            return $previous;
+        }
         $name = $this->db->createCommand(<<<'SQL'
             SELECT concat_ws(' ', family_name, given_name, middle_name) FROM core.persons
             WHERE id = CAST(:subject AS uuid)
@@ -59,20 +67,37 @@ final readonly class LegalDestructionPackageService
         return $name;
     }
 
-    public function record(string $evidenceId, string $caseId, string $itemId, string $subjectPersonId,
-        string $subjectName, string $executorAccountId, string $journalEventId,
-        DateTimeImmutable $destroyedAt, DateTimeImmutable $retainUntil): void
-    {
-        if (!$this->available()) { throw new DomainException('Legal destruction package configuration is incomplete.'); }
-        $case = $this->db->createCommand('SELECT reason_code FROM core.privacy_erasure_cases WHERE id = CAST(:id AS uuid)',
-            [':id' => $caseId])->queryOne();
-        if (!is_array($case)) { throw new DomainException('Erasure case unavailable.'); }
-        $rows = $this->db->createCommand('SELECT purpose_code FROM core.privacy_erasure_item_purposes WHERE item_id = CAST(:id AS uuid)',
-            [':id' => $itemId])->queryAll();
+    public function record(
+        string $evidenceId,
+        string $caseId,
+        string $itemId,
+        string $subjectPersonId,
+        string $subjectName,
+        string $executorAccountId,
+        string $journalEventId,
+        DateTimeImmutable $destroyedAt,
+        DateTimeImmutable $retainUntil,
+    ): void {
+        if (!$this->available()) {
+            throw new DomainException('Legal destruction package configuration is incomplete.');
+        }
+        $case = $this->db->createCommand(
+            'SELECT reason_code FROM core.privacy_erasure_cases WHERE id = CAST(:id AS uuid)',
+            [':id' => $caseId],
+        )->queryOne();
+        if (!is_array($case)) {
+            throw new DomainException('Erasure case unavailable.');
+        }
+        $rows = $this->db->createCommand(
+            'SELECT purpose_code FROM core.privacy_erasure_item_purposes WHERE item_id = CAST(:id AS uuid)',
+            [':id' => $itemId],
+        )->queryAll();
         $categories = [];
         foreach ($rows as $row) {
             $purpose = $this->purposes->get((string) $row['purpose_code']);
-            if ($purpose === null) { throw new DomainException('Erasure purpose is unavailable.'); }
+            if ($purpose === null) {
+                throw new DomainException('Erasure purpose is unavailable.');
+            }
             if ($purpose->processingRole === 'processor_by_instruction'
                 && trim((string) ($this->configuration['processorName'] ?? '')) === '') {
                 throw new DomainException('Processor identity is required for legal destruction evidence.');
@@ -80,7 +105,9 @@ final readonly class LegalDestructionPackageService
             $categories = [...$categories, ...$purpose->dataCategories];
         }
         $categories = array_values(array_unique($categories));
-        if ($categories === []) { throw new DomainException('Destroyed data categories are unavailable.'); }
+        if ($categories === []) {
+            throw new DomainException('Destroyed data categories are unavailable.');
+        }
         $this->db->createCommand(<<<'SQL'
             INSERT INTO core.privacy_legal_destruction_packages
                 (evidence_id, case_id, subject_person_id, subject_name, operator_name, operator_address,
@@ -107,9 +134,13 @@ final readonly class LegalDestructionPackageService
             ':journal' => $journalEventId, ':retain' => $retainUntil->format(DATE_ATOM)])->execute();
     }
 
-    public function attest(string $caseId, string $evidenceId, string $actorAccountId,
-        string $signedDocumentReference, string $signatureReference): void
-    {
+    public function attest(
+        string $caseId,
+        string $evidenceId,
+        string $actorAccountId,
+        string $signedDocumentReference,
+        string $signatureReference,
+    ): void {
         foreach ([$signedDocumentReference, $signatureReference] as $reference) {
             if (!str_starts_with($reference, 'urn:') || strlen($reference) > 500) {
                 throw new DomainException('Signed destruction evidence reference is invalid.');
@@ -124,6 +155,8 @@ final readonly class LegalDestructionPackageService
             ON CONFLICT (package_id) DO NOTHING
             SQL, [':document' => $signedDocumentReference, ':signature' => $signatureReference,
             ':actor' => $actorAccountId, ':evidence' => $evidenceId, ':case' => $caseId])->execute();
-        if ($inserted !== 1) { throw new DomainException('Unsigned legal package not found or already attested.'); }
+        if ($inserted !== 1) {
+            throw new DomainException('Unsigned legal package not found or already attested.');
+        }
     }
 }

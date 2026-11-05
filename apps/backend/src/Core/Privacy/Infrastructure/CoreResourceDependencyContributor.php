@@ -13,17 +13,25 @@ final readonly class CoreResourceDependencyContributor implements RetentionDepen
 {
     public function __construct(private ConnectionInterface $db) {}
 
-    public function code(): string { return 'core.resource_dependency'; }
+    public function code(): string
+    {
+        return 'core.resource_dependency';
+    }
 
     public function supports(string $resourceType): bool
     {
-        return in_array($resourceType,
-            ['core.organization_membership', 'core.human_account', 'core.person'], true);
+        return in_array(
+            $resourceType,
+            ['core.organization_membership', 'core.human_account', 'core.person'],
+            true,
+        );
     }
 
     public function resolved(RetentionCandidate $candidate): bool
     {
-        if (!$this->supports($candidate->resourceType)) { return false; }
+        if (!$this->supports($candidate->resourceType)) {
+            return false;
+        }
         $sql = match ($candidate->resourceType) {
             'core.organization_membership' => <<<'SQL'
                 SELECT m.status = 'left' FROM core.organization_memberships m

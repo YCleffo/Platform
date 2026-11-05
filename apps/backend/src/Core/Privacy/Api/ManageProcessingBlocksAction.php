@@ -18,10 +18,13 @@ use Yiisoft\Router\CurrentRoute;
 
 final readonly class ManageProcessingBlocksAction
 {
-    public function __invoke(ServerRequestInterface $request, CurrentRoute $route,
-        DataSubjectRequestService $requests, ProcessingBlockService $blocks,
-        ResponseFactory $responses): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        CurrentRoute $route,
+        DataSubjectRequestService $requests,
+        ProcessingBlockService $blocks,
+        ResponseFactory $responses,
+    ): ResponseInterface {
         $operation = (string) $route->getArgument('operation');
         $actor = AuthenticatedIdentity::fromRequest($request);
         if ($operation === 'release') {
@@ -52,12 +55,16 @@ final readonly class ManageProcessingBlocksAction
         }
         $subject = $requestRow->subjectPersonId;
         if ($operation === 'list') {
-            return $responses->success(array_values(array_filter($blocks->listActiveForSubject($subject),
-                static fn(array $row): bool => $row['source_request_id'] === $requestId)));
+            return $responses->success(array_values(array_filter(
+                $blocks->listActiveForSubject($subject),
+                static fn(array $row): bool => $row['source_request_id'] === $requestId,
+            )));
         }
         $input = $request->getParsedBody();
-        if (!is_array($input) || !PrivacyRequestInput::keys($input,
-            ['scopeType', 'purposeCode', 'resourceType', 'resourceId', 'reasonCode', 'expiresAt'])) {
+        if (!is_array($input) || !PrivacyRequestInput::keys(
+            $input,
+            ['scopeType', 'purposeCode', 'resourceType', 'resourceId', 'reasonCode', 'expiresAt'],
+        )) {
             return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
         }
         $scope = $input['scopeType'] ?? null;
@@ -75,9 +82,17 @@ final readonly class ManageProcessingBlocksAction
             return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);
         }
         try {
-            $id = $blocks->createBlock($actor, $subject, $scope, $purpose,
-                $resourceType, $resourceId, $reason,
-                $requestId, $expires !== null ? new DateTimeImmutable($expires) : null);
+            $id = $blocks->createBlock(
+                $actor,
+                $subject,
+                $scope,
+                $purpose,
+                $resourceType,
+                $resourceId,
+                $reason,
+                $requestId,
+                $expires !== null ? new DateTimeImmutable($expires) : null,
+            );
             return $responses->success(['id' => $id])->withStatus(Status::CREATED);
         } catch (DomainException) {
             return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: Status::UNPROCESSABLE_ENTITY);

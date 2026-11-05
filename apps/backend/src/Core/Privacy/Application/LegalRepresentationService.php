@@ -13,8 +13,12 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class LegalRepresentationService
 {
-    public function __construct(private ConnectionInterface $db, private AuditService $audit,
-        private RepresentationScopeRegistry $scopes, private ClockInterface $clock) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private AuditService $audit,
+        private RepresentationScopeRegistry $scopes,
+        private ClockInterface $clock,
+    ) {}
 
     /** @param list<string> $scopeCodes */
     public function declare(
@@ -143,8 +147,11 @@ final readonly class LegalRepresentationService
     private function record(AuthenticatedIdentity $actor, string $action, string $id): void
     {
         $this->audit->record(new WriteAuditEventCommand(
-            actorType: 'account', actorAccountId: $actor->accountId,
-            action: $action, resourceType: 'core.legal_representation', resourceId: $id,
+            actorType: 'account',
+            actorAccountId: $actor->accountId,
+            action: $action,
+            resourceType: 'core.legal_representation',
+            resourceId: $id,
         ));
     }
 }

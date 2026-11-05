@@ -16,10 +16,14 @@ use Yiisoft\Router\CurrentRoute;
 
 final readonly class ProcessingInformationAction
 {
-    public function __invoke(ServerRequestInterface $request, CurrentRoute $route,
-        ProcessingInformationService $service, ResponseFactoryInterface $psrResponses,
-        StreamFactoryInterface $streams, ResponseFactory $responses): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        CurrentRoute $route,
+        ProcessingInformationService $service,
+        ResponseFactoryInterface $psrResponses,
+        StreamFactoryInterface $streams,
+        ResponseFactory $responses,
+    ): ResponseInterface {
         $id = (string) $route->getArgument('id');
         $representationId = $route->getArgument('representationId');
         if (!PrivacyRequestInput::uuid($id)
@@ -28,8 +32,12 @@ final readonly class ProcessingInformationAction
         }
         try {
             $operator = $route->getArgument('operator');
-            $json = $service->issue(AuthenticatedIdentity::fromRequest($request),
-                $id, $representationId, $operator === 'intake');
+            $json = $service->issue(
+                AuthenticatedIdentity::fromRequest($request),
+                $id,
+                $representationId,
+                $operator === 'intake',
+            );
             return $psrResponses->createResponse(200)
                 ->withHeader('Content-Type', 'application/json; charset=utf-8')
                 ->withHeader('Cache-Control', 'no-store')

@@ -17,11 +17,13 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 final readonly class CoreErasureHandlerProvider implements IteratorAggregate
 {
     /** @param iterable<PersonalDataErasureHandler> $moduleHandlers */
-    public function __construct(private ConnectionInterface $db,
+    public function __construct(
+        private ConnectionInterface $db,
         private iterable $moduleHandlers = [],
         private ?AccountLifecycleRepository $accounts = null,
         private ?AuthCleanupRepository $auth = null,
-        private ?RoleRepository $roles = null) {}
+        private ?RoleRepository $roles = null,
+    ) {}
 
     /** @return Traversable<int, PersonalDataErasureHandler> */
     public function getIterator(): Traversable

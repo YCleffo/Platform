@@ -35,9 +35,11 @@ if ($command === 'seed') {
         ])->queryScalar();
         if ($kind !== 'activation') {
             $db->createCommand("INSERT INTO core.auth_identifiers (account_id, identifier_type, value, normalized_value, is_primary, can_login, can_recover, verified_at) VALUES (CAST(:id AS uuid), 'email', :email, :email, true, true, true, now())", [':id' => $id, ':email' => $email])->execute();
-            if (!str_starts_with($kind, 'external')) $db->createCommand("INSERT INTO core.auth_password_credentials (account_id, password_hash, password_algorithm, must_change_password) VALUES (CAST(:id AS uuid), :hash, 'argon2id', :forced)", [
-                ':id' => $id, ':hash' => password_hash($password, PASSWORD_ARGON2ID), ':forced' => in_array($kind, ['forced', 'forcedMfa'], true),
-            ])->execute();
+            if (!str_starts_with($kind, 'external')) {
+                $db->createCommand("INSERT INTO core.auth_password_credentials (account_id, password_hash, password_algorithm, must_change_password) VALUES (CAST(:id AS uuid), :hash, 'argon2id', :forced)", [
+                    ':id' => $id, ':hash' => password_hash($password, PASSWORD_ARGON2ID), ':forced' => in_array($kind, ['forced', 'forcedMfa'], true),
+                ])->execute();
+            }
         }
         $fixture = ['id' => $id, 'email' => $email, 'password' => $password];
         if (in_array($kind, ['operator', 'mfa', 'forcedMfa', 'externalGoogle', 'externalTelegram'], true)) {
@@ -48,7 +50,9 @@ if ($command === 'seed') {
             $codes = new RecoveryCodeService();
             $fixture['recoveryCodes'] = $codes->generate($kind === 'operator' ? 2 : 1);
             $fixture['recoveryCode'] = $fixture['recoveryCodes'][0];
-            foreach ($fixture['recoveryCodes'] as $code) $db->createCommand("INSERT INTO core.auth_recovery_codes (account_id, code_hash) VALUES (CAST(:id AS uuid), decode(:hash, 'hex'))", [':id' => $id, ':hash' => $codes->hashHex($code)])->execute();
+            foreach ($fixture['recoveryCodes'] as $code) {
+                $db->createCommand("INSERT INTO core.auth_recovery_codes (account_id, code_hash) VALUES (CAST(:id AS uuid), decode(:hash, 'hex'))", [':id' => $id, ':hash' => $codes->hashHex($code)])->execute();
+            }
         }
         if ($kind === 'operator') {
             $db->createCommand("INSERT INTO core.account_roles (account_id, role_id) SELECT CAST(:id AS uuid), id FROM core.roles WHERE code = 'core.superadmin'", [':id' => $id])->execute();
@@ -56,8 +60,11 @@ if ($command === 'seed') {
         if (str_starts_with($kind, 'external')) {
             $provider = $kind === 'externalGoogle' ? 'google' : 'telegram';
             $providerId = $db->createCommand('UPDATE core.auth_providers SET enabled=true,allow_login=true WHERE code=:code RETURNING id::text', [':code' => $provider])->queryScalar();
-            $container->get(\App\Core\Auth\Application\ExternalIdentityRepository::class)->link($id, $providerId,
-                new \App\Core\Auth\Application\ExternalIdentityProfile('browser-subject-' . $id, null, false, 'Isolated fixture', null, []));
+            $container->get(\App\Core\Auth\Application\ExternalIdentityRepository::class)->link(
+                $id,
+                $providerId,
+                new \App\Core\Auth\Application\ExternalIdentityProfile('browser-subject-' . $id, null, false, 'Isolated fixture', null, []),
+            );
         }
         if ($kind === 'reader') {
             $role = $db->createCommand("INSERT INTO core.roles(code,name) VALUES(:code,'Limited browser reader') RETURNING id::text", [':code' => 'browser.reader.' . bin2hex(random_bytes(6))])->queryScalar();
@@ -69,12 +76,18 @@ if ($command === 'seed') {
     echo json_encode($result, JSON_THROW_ON_ERROR);
 } elseif (str_starts_with($email, 'core-e2e-') && str_ends_with($email, '@example.test')) {
     $id = $db->createCommand('SELECT account_id::text FROM core.auth_identifiers WHERE normalized_value = :email', [':email' => $email])->queryScalar();
-    if (!is_string($id)) throw new RuntimeException('Unknown browser fixture.');
+    if (!is_string($id)) {
+        throw new RuntimeException('Unknown browser fixture.');
+    }
     if ($command === 'privacy-prepare') {
         $operatorEmail = $argv[3] ?? '';
-        if (!str_starts_with($operatorEmail, 'core-e2e-operator-') || !str_ends_with($operatorEmail, '@example.test')) throw new RuntimeException('A browser operator fixture is required.');
+        if (!str_starts_with($operatorEmail, 'core-e2e-operator-') || !str_ends_with($operatorEmail, '@example.test')) {
+            throw new RuntimeException('A browser operator fixture is required.');
+        }
         $operator = $db->createCommand('SELECT a.id::text, a.person_id::text FROM core.accounts a JOIN core.auth_identifiers i ON i.account_id=a.id WHERE i.normalized_value=:email', [':email' => $operatorEmail])->queryOne();
-        if (!is_array($operator)) throw new RuntimeException('Unknown browser operator fixture.');
+        if (!is_array($operator)) {
+            throw new RuntimeException('Unknown browser operator fixture.');
+        }
         $person = (string) $db->createCommand('SELECT person_id::text FROM core.accounts WHERE id=CAST(:id AS uuid)', [':id' => $id])->queryScalar();
         $db->createCommand("UPDATE core.persons SET given_name='PrivacyOwn', family_name='BrowserFixture' WHERE id=CAST(:person AS uuid)", [':person' => $person])->execute();
         $child = (string) $db->createCommand("INSERT INTO core.persons(given_name,family_name) VALUES('PrivacyChild','BrowserFixture') RETURNING id::text")->queryScalar();
@@ -84,9 +97,18 @@ if ($command === 'seed') {
         }
         $actor = new \App\Core\Auth\Application\AuthenticatedIdentity((string) $operator['id'], (string) $operator['person_id'], 'browser-cli-fixture', ['core.superadmin'], [], null, null);
         $representations = $container->get(\App\Core\Privacy\Application\LegalRepresentationService::class);
-        $authority = $representations->declare($actor, $child, $person, 'legal_guardian', '2020-01-01T00:00:00Z', null,
-            'fixture', 'vault://private-browser-proof', null,
-            ['privacy.request.submit', 'privacy.request.view', 'privacy.export.request', 'privacy.data.access', 'privacy.data.export', 'privacy.processing_information.response']);
+        $authority = $representations->declare(
+            $actor,
+            $child,
+            $person,
+            'legal_guardian',
+            '2020-01-01T00:00:00Z',
+            null,
+            'fixture',
+            'vault://private-browser-proof',
+            null,
+            ['privacy.request.submit', 'privacy.request.view', 'privacy.export.request', 'privacy.data.access', 'privacy.data.export', 'privacy.processing_information.response'],
+        );
         $representations->verify($actor, $authority);
         echo json_encode(['subjectPersonId' => $person, 'childPersonId' => $child, 'representationId' => $authority], JSON_THROW_ON_ERROR);
     } elseif ($command === 'operator-state') {
@@ -101,7 +123,9 @@ if ($command === 'seed') {
         try {
             $visible = $container->get(\App\Core\Presence\Application\PresenceVisibilityPolicy::class)->visibleState($id);
         } catch (\DomainException $error) {
-            if ($error->getMessage() !== 'Account settings processing is restricted.') throw $error;
+            if ($error->getMessage() !== 'Account settings processing is restricted.') {
+                throw $error;
+            }
             $visible = 'restricted';
         }
         echo json_encode(['requests' => $requests, 'executions' => $executions, 'blocks' => $blocks, 'contacts' => $contacts, 'profile' => $profile,
@@ -115,22 +139,33 @@ if ($command === 'seed') {
     } elseif ($command === 'provider-code' || $command === 'link-code') {
         $provider = $argv[3] ?? '';
         $subject = $db->createCommand('SELECT e.provider_subject FROM core.auth_external_identities e JOIN core.auth_providers p ON p.id=e.provider_id WHERE e.account_id=CAST(:id AS uuid) AND p.code=:provider', [':id' => $id, ':provider' => $provider])->queryScalar();
-        if (!is_string($subject) && $command === 'link-code' && in_array($provider, ['google', 'telegram'], true)) $subject = 'browser-subject-' . $id;
-        if (!is_string($subject)) throw new RuntimeException('No fixture provider identity.');
+        if (!is_string($subject) && $command === 'link-code' && in_array($provider, ['google', 'telegram'], true)) {
+            $subject = 'browser-subject-' . $id;
+        }
+        if (!is_string($subject)) {
+            throw new RuntimeException('No fixture provider identity.');
+        }
         $code = bin2hex(random_bytes(32));
-        $container->get(\Predis\ClientInterface::class)->setex('platform:core:e2e:oidc:' . hash('sha256', $code), 300,
-            json_encode(['provider' => $provider, 'subject' => $subject, 'nonce' => $argv[4] ?? '', 'codeChallenge' => $argv[5] ?? ''], JSON_THROW_ON_ERROR));
+        $container->get(\Predis\ClientInterface::class)->setex(
+            'platform:core:e2e:oidc:' . hash('sha256', $code),
+            300,
+            json_encode(['provider' => $provider, 'subject' => $subject, 'nonce' => $argv[4] ?? '', 'codeChallenge' => $argv[5] ?? ''], JSON_THROW_ON_ERROR),
+        );
         echo json_encode(['code' => $code], JSON_THROW_ON_ERROR);
     } elseif ($command === 'expire') {
         $db->createCommand("UPDATE core.auth_challenges SET expires_at = now() - interval '1 second' WHERE account_id = CAST(:id AS uuid) AND consumed_at IS NULL", [':id' => $id])->execute();
         echo '{"expired":true}';
     } elseif ($command === 'configuration-prepare') {
-        if (!str_starts_with($email, 'core-e2e-operator-')) throw new RuntimeException('A browser operator fixture is required.');
+        if (!str_starts_with($email, 'core-e2e-operator-')) {
+            throw new RuntimeException('A browser operator fixture is required.');
+        }
         $code = 'test.configuration.browser';
         $db->createCommand("INSERT INTO core.modules (code,name,version,settings_schema_version,enabled,disabled_at) VALUES (:code,'Configuration browser module','1.0.0',1,false,now()) ON CONFLICT (code) DO NOTHING", [':code' => $code])->execute();
         echo json_encode(['moduleCode' => $code], JSON_THROW_ON_ERROR);
     } elseif ($command === 'configuration-state') {
-        if (!str_starts_with($email, 'core-e2e-operator-')) throw new RuntimeException('A browser operator fixture is required.');
+        if (!str_starts_with($email, 'core-e2e-operator-')) {
+            throw new RuntimeException('A browser operator fixture is required.');
+        }
         $module = $db->createCommand("SELECT code,enabled FROM core.modules WHERE code='test.configuration.browser'")->queryOne();
         $system = $db->createCommand("SELECT setting_key AS key,value::text,is_public FROM core.system_settings WHERE setting_key LIKE 'test.configuration.browser.%' ORDER BY setting_key")->queryAll();
         $settings = $db->createCommand("SELECT setting_key AS key,value::text FROM core.module_settings WHERE module_id=(SELECT id FROM core.modules WHERE code='test.configuration.browser') ORDER BY setting_key")->queryAll();
@@ -147,7 +182,9 @@ if ($command === 'seed') {
         echo json_encode(['preferences' => $preferences, 'settings' => is_array($settings) ? $settings : null, 'consents' => $consents], JSON_THROW_ON_ERROR);
     } elseif ($command === 'remove-password') {
         $active = $db->createCommand('SELECT count(*) FROM core.auth_passkeys WHERE account_id=CAST(:id AS uuid) AND revoked_at IS NULL', [':id' => $id])->queryScalar();
-        if ((int) $active < 1) throw new RuntimeException('A fixture passkey is required before removing its password.');
+        if ((int) $active < 1) {
+            throw new RuntimeException('A fixture passkey is required before removing its password.');
+        }
         $db->createCommand('DELETE FROM core.auth_password_credentials WHERE account_id=CAST(:id AS uuid)', [':id' => $id])->execute();
         echo '{"removed":true}';
     } elseif ($command === 'age-session') {
@@ -156,5 +193,9 @@ if ($command === 'seed') {
     } elseif ($command === 'state') {
         $row = $db->createCommand("SELECT (SELECT count(*) FROM core.auth_sessions WHERE account_id = CAST(:id AS uuid) AND revoked_at IS NULL) AS sessions, (SELECT count(*) FROM core.auth_totp_factors WHERE account_id = CAST(:id AS uuid) AND verified_at IS NOT NULL AND revoked_at IS NULL) AS factors, (SELECT count(*) FROM core.auth_recovery_codes WHERE account_id = CAST(:id AS uuid) AND revoked_at IS NULL AND used_at IS NULL) AS codes", [':id' => $id])->queryOne();
         echo json_encode($row, JSON_THROW_ON_ERROR);
-    } else throw new RuntimeException('Unknown fixture command.');
-} else throw new RuntimeException('A browser fixture email is required.');
+    } else {
+        throw new RuntimeException('Unknown fixture command.');
+    }
+} else {
+    throw new RuntimeException('A browser fixture email is required.');
+}

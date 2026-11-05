@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Api;
 
 use App\Tests\Support\ApiTester;
+
 use function PHPUnit\Framework\assertSame;
 
 final class PrivacyWorkItemsCest
@@ -14,7 +15,10 @@ final class PrivacyWorkItemsCest
         $I->cleanupCoreTestFixtures();
         $I->haveHttpHeader('Content-Type', 'application/json');
     }
-    public function _after(ApiTester $I): void { $I->cleanupCoreTestFixtures(); }
+    public function _after(ApiTester $I): void
+    {
+        $I->cleanupCoreTestFixtures();
+    }
 
     public function directoriesRequireTheirOwnPermissionAndReturnMinimalMetadata(ApiTester $I): void
     {
@@ -38,7 +42,9 @@ final class PrivacyWorkItemsCest
             $I->sendGET('/api/core/privacy/work-items/' . $kind . '?limit=10&offset=0');
             $I->seeResponseCodeIs(200);
             $data = json_decode($I->grabResponse(), true, flags: JSON_THROW_ON_ERROR)['data'];
-            foreach ($data['items'] as $row) assertSame(['id', 'name', 'status'], array_keys($row));
+            foreach ($data['items'] as $row) {
+                assertSame(['id', 'name', 'status'], array_keys($row));
+            }
         }
     }
 }

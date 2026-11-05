@@ -1,8 +1,8 @@
 """Check local Markdown file/image targets in project documentation."""
 
-from pathlib import Path
 import re
 import urllib.parse
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 files = [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]

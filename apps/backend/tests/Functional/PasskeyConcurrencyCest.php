@@ -9,7 +9,6 @@ use App\Core\Auth\Application\CredentialMutationGuard;
 use App\Core\Auth\Application\ExternalAuthService;
 use App\Core\Auth\Application\ExternalIdentityProfile;
 use App\Core\Auth\Application\ExternalIdentityRepository;
-use App\Core\Auth\Application\InvalidCredentialsException;
 use App\Core\Auth\Application\LastAuthenticationMethodException;
 use App\Core\Auth\Application\PasskeyRepository;
 use App\Core\Auth\Application\PasskeyService;
@@ -19,7 +18,6 @@ use App\Environment;
 use App\Tests\Support\FunctionalTester;
 use App\Tests\Support\WebAuthnTestAuthenticator;
 use HttpSoft\Message\ServerRequest;
-use InvalidArgumentException;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Yii\Runner\Http\HttpApplicationRunner;
 use PHPUnit\Framework\Assert;
@@ -326,9 +324,15 @@ final readonly class PasskeyConcurrencyCest
     }
 
     /** Two PHP processes, separate DB sessions and an observed lock wait before release. */
-    private function race(ConnectionInterface $db, string $operation, string $challenge, string $response,
-        string $account, string $session, \App\Core\Client\Domain\ClientContext $context): void
-    {
+    private function race(
+        ConnectionInterface $db,
+        string $operation,
+        string $challenge,
+        string $response,
+        string $account,
+        string $session,
+        \App\Core\Client\Domain\ClientContext $context,
+    ): void {
         \App\Core\Shared\Infrastructure\TestRuntimeGuard::assertDestructiveOperationsAllowed($db);
         $workers = [];
         $transaction = $db->beginTransaction();
@@ -340,8 +344,11 @@ final readonly class PasskeyConcurrencyCest
             assertTrue(is_string($id), 'The contested challenge must exist.');
             $pids = [];
             for ($i = 0; $i < 2; ++$i) {
-                $process = proc_open([PHP_BINARY, dirname(__DIR__) . '/Support/passkey-race-worker.php'],
-                    [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes);
+                $process = proc_open(
+                    [PHP_BINARY, dirname(__DIR__) . '/Support/passkey-race-worker.php'],
+                    [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']],
+                    $pipes,
+                );
                 assertTrue(is_resource($process));
                 $workers[] = [$process, $pipes];
                 stream_set_timeout($pipes[1], 20);
@@ -354,7 +361,10 @@ final readonly class PasskeyConcurrencyCest
                 $pids[] = (int) $matches[1];
             }
             assertTrue($pids[0] !== $pids[1], 'Workers must use independent database connections.');
-            foreach ($workers as [, $pipes]) { fwrite($pipes[0], "GO\n"); fflush($pipes[0]); }
+            foreach ($workers as [, $pipes]) {
+                fwrite($pipes[0], "GO\n");
+                fflush($pipes[0]);
+            }
             $deadline = microtime(true) + 10;
             $waiting = 0;
             do {
@@ -363,7 +373,9 @@ final readonly class PasskeyConcurrencyCest
                     "SELECT count(*) FROM pg_stat_activity WHERE pid IN (CAST(:a AS integer),CAST(:b AS integer)) AND wait_event_type='Lock'",
                     [':a' => $pids[0], ':b' => $pids[1]],
                 )->queryScalar();
-                if ($waiting === 2) { break; }
+                if ($waiting === 2) {
+                    break;
+                }
                 usleep(20_000);
             } while (microtime(true) < $deadline);
             assertSame(2, $waiting, 'Both requests must reach database lock contention before release.');
@@ -381,11 +393,21 @@ final readonly class PasskeyConcurrencyCest
             sort($results);
             assertSame(['rejected', 'won'], $results);
         } finally {
-            if ($transaction->isActive()) { $transaction->rollBack(); }
+            if ($transaction->isActive()) {
+                $transaction->rollBack();
+            }
             foreach ($workers as [$process, $pipes]) {
-                if (is_resource($process)) { proc_terminate($process, 9); }
-                foreach ($pipes as $pipe) { if (is_resource($pipe)) { fclose($pipe); } }
-                if (is_resource($process)) { proc_close($process); }
+                if (is_resource($process)) {
+                    proc_terminate($process, 9);
+                }
+                foreach ($pipes as $pipe) {
+                    if (is_resource($pipe)) {
+                        fclose($pipe);
+                    }
+                }
+                if (is_resource($process)) {
+                    proc_close($process);
+                }
             }
         }
     }

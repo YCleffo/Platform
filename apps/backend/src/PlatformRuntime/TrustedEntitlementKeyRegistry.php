@@ -22,7 +22,9 @@ final readonly class TrustedEntitlementKeyRegistry
     public function trustedPublicKey(string $keyId): ?string
     {
         $definition = $this->keys[$keyId] ?? null;
-        if ($definition === null || $definition['status'] !== 'trusted') { return null; }
+        if ($definition === null || $definition['status'] !== 'trusted') {
+            return null;
+        }
         $bytes = base64_decode($definition['publicKeyBase64'], true);
         return is_string($bytes) ? $bytes : null;
     }

@@ -57,7 +57,8 @@ final readonly class ProcessingBlockService implements ProcessingBlockPolicy
                 throw new DomainException('Block expiration must follow creation.');
             }
             $subject = $this->db->createCommand(
-                'SELECT id FROM core.persons WHERE id = CAST(:id AS uuid) FOR SHARE', [':id' => $subjectPersonId],
+                'SELECT id FROM core.persons WHERE id = CAST(:id AS uuid) FOR SHARE',
+                [':id' => $subjectPersonId],
             )->queryScalar();
             if ($subject === false || $subject === null) {
                 throw new DomainException('Subject not found.');
@@ -72,9 +73,11 @@ final readonly class ProcessingBlockService implements ProcessingBlockPolicy
                     throw new DomainException('Source request does not belong to subject.');
                 }
             }
-            $this->db->createCommand('SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))',
+            $this->db->createCommand(
+                'SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))',
                 [':key' => implode(':', [$subjectPersonId, $scopeType, $purposeCode ?? '', $resourceType ?? '',
-                    $resourceId ?? '', $sourceRequestId ?? '', $reasonCode])])->queryScalar();
+                    $resourceId ?? '', $sourceRequestId ?? '', $reasonCode])],
+            )->queryScalar();
             $existing = $this->db->createCommand(<<<'SQL'
                 SELECT id::text FROM core.privacy_processing_blocks
                 WHERE subject_person_id = CAST(:subject AS uuid) AND scope_type = :scope
@@ -105,8 +108,12 @@ final readonly class ProcessingBlockService implements ProcessingBlockPolicy
             if (!is_string($id)) {
                 throw new DomainException('Block could not be saved.');
             }
-            $this->record($actor, 'privacy.processing_block.created', $id,
-                array_filter(['scopeType' => $scopeType, 'purposeCode' => $purposeCode, 'reasonCode' => $reasonCode]));
+            $this->record(
+                $actor,
+                'privacy.processing_block.created',
+                $id,
+                array_filter(['scopeType' => $scopeType, 'purposeCode' => $purposeCode, 'reasonCode' => $reasonCode]),
+            );
             return $id;
         });
     }
@@ -131,8 +138,12 @@ final readonly class ProcessingBlockService implements ProcessingBlockPolicy
                     release_reason_code = :reason WHERE id = CAST(:id AS uuid)
                 SQL, [':now' => $this->clock->now()->format(DATE_ATOM), ':actor' => $actor->accountId,
                 ':reason' => $reasonCode, ':id' => $id])->execute();
-            $this->record($actor, 'privacy.processing_block.released', $id,
-                array_filter(['scopeType' => (string) $row['scope_type'], 'purposeCode' => $row['purpose_code'], 'reasonCode' => $reasonCode]));
+            $this->record(
+                $actor,
+                'privacy.processing_block.released',
+                $id,
+                array_filter(['scopeType' => (string) $row['scope_type'], 'purposeCode' => $row['purpose_code'], 'reasonCode' => $reasonCode]),
+            );
             return true;
         });
     }
@@ -173,7 +184,13 @@ final readonly class ProcessingBlockService implements ProcessingBlockPolicy
     /** @param array<string, mixed> $metadata */
     private function record(AuthenticatedIdentity $actor, string $action, string $id, array $metadata): void
     {
-        $this->audit->record(new WriteAuditEventCommand('account', $actor->accountId, $action,
-            resourceType: 'core.privacy_processing_block', resourceId: $id, metadata: $metadata));
+        $this->audit->record(new WriteAuditEventCommand(
+            'account',
+            $actor->accountId,
+            $action,
+            resourceType: 'core.privacy_processing_block',
+            resourceId: $id,
+            metadata: $metadata,
+        ));
     }
 }

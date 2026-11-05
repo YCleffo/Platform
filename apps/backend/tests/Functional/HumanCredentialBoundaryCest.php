@@ -42,7 +42,7 @@ final readonly class HumanCredentialBoundaryCest
                         VALUES (CAST(:account AS uuid), :type, decode(:hash, 'hex'), :email,
                             now() + interval '1 hour')
                         SQL, [':account' => $account, ':type' => $challengeType,
-                            ':hash' => hash('sha256', $type . $challengeType), ':email' => $email])->execute();
+                        ':hash' => hash('sha256', $type . $challengeType), ':email' => $email])->execute();
                 }
                 assertNull($credentials->findPrimaryEmail($account));
                 assertNull($credentials->findRecoverableEmail($email));

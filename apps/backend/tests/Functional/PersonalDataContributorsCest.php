@@ -71,8 +71,14 @@ final readonly class PersonalDataContributorsCest
                 $contributors[] = new CorePersonalDataContributor($db, $code);
             }
             $export = (new PersonalDataExporter(new PersonalDataContributorRegistry($contributors)))
-                ->export(new PersonalDataExportContext($subject, 'request', $subject, $account, null,
-                    new DateTimeImmutable('2026-09-29T10:00:00Z')));
+                ->export(new PersonalDataExportContext(
+                    $subject,
+                    'request',
+                    $subject,
+                    $account,
+                    null,
+                    new DateTimeImmutable('2026-09-29T10:00:00Z'),
+                ));
             assertSame(9, count($export->sections));
             foreach ($export->sections as $section) {
                 assertTrue($section->records !== []);

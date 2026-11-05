@@ -19,16 +19,20 @@ final readonly class SmtpEmailSender implements EmailSenderInterface
 {
     private MailerInterface $mailer;
 
-    public function __construct(private SmtpConfiguration $configuration,
-        private CrossBorderTransferPolicy $egressPolicy)
-    {
+    public function __construct(
+        private SmtpConfiguration $configuration,
+        private CrossBorderTransferPolicy $egressPolicy,
+    ) {
         $this->mailer = new Mailer(Transport::fromDsn($configuration->dsn()));
     }
 
     public function send(EmailMessage $message): EmailDeliveryResult
     {
-        $this->egressPolicy->assertEgressAllowed('smtp', $message->privacyPurposeCode,
-            ['contact', 'message_content']);
+        $this->egressPolicy->assertEgressAllowed(
+            'smtp',
+            $message->privacyPurposeCode,
+            ['contact', 'message_content'],
+        );
         $email = (new Email())
             ->from(new Address(
                 $this->configuration->fromAddress,

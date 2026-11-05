@@ -38,8 +38,11 @@ final class DatabaseEnvironmentTest extends Unit
         } finally {
             foreach ($keys as $key) {
                 putenv($process[$key] === false ? $key : $key . '=' . $process[$key]);
-                if ($local[$key] === null) { unset($_ENV[$key]); }
-                else { $_ENV[$key] = $local[$key]; }
+                if ($local[$key] === null) {
+                    unset($_ENV[$key]);
+                } else {
+                    $_ENV[$key] = $local[$key];
+                }
             }
         }
     }

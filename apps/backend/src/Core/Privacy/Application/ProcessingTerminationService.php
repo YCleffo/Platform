@@ -14,14 +14,18 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 /** Executes only restriction effects; retention decisions never destroy data. */
 final readonly class ProcessingTerminationService
 {
-    public function __construct(private ConnectionInterface $db, private ClockInterface $clock,
+    public function __construct(
+        private ConnectionInterface $db,
+        private ClockInterface $clock,
         private RetentionCandidateContributorRegistry $candidates,
-        private RetentionDecisionService $decisions, private LawfulProcessingBasisResolver $bases,
+        private RetentionDecisionService $decisions,
+        private LawfulProcessingBasisResolver $bases,
         private ProcessingBlockService $blocks,
         private ProcessingRestrictionContributorRegistry $restrictions,
         private DataSubjectRequestStateMachine $states,
         private AuditService $audit,
-        private ProcessingPurposeRegistry $purposes) {}
+        private ProcessingPurposeRegistry $purposes,
+    ) {}
 
     /** @return array{status:string,executionId:string} */
     public function execute(AuthenticatedIdentity $actor, string $requestId): array
@@ -98,8 +102,16 @@ final readonly class ProcessingTerminationService
                 if ($contributors === []) {
                     throw new DomainException('Processing restriction contributor missing.');
                 }
-                $blockId = $this->blocks->createBlock($actor, $subject, 'purpose', $purposeCode,
-                    null, null, 'processing_termination', $requestId);
+                $blockId = $this->blocks->createBlock(
+                    $actor,
+                    $subject,
+                    'purpose',
+                    $purposeCode,
+                    null,
+                    null,
+                    'processing_termination',
+                    $requestId,
+                );
                 foreach ($contributors as $contributor) {
                     $contributor->applyRestriction($blockId, $subject);
                 }
@@ -110,8 +122,13 @@ final readonly class ProcessingTerminationService
             sort($stoppedCodes);
             sort($retainedCodes);
             sort($reasonCodes);
-            return $this->db->transaction(function () use ($actor, $requestId, $stoppedCodes,
-                $retainedCodes, $reasonCodes): array {
+            return $this->db->transaction(function () use (
+                $actor,
+                $requestId,
+                $stoppedCodes,
+                $retainedCodes,
+                $reasonCodes
+            ): array {
                 $row = $this->db->createCommand(<<<'SQL'
                     SELECT status FROM core.data_subject_requests WHERE id = CAST(:id AS uuid) FOR UPDATE
                     SQL, [':id' => $requestId])->queryOne();
@@ -129,9 +146,9 @@ final readonly class ProcessingTerminationService
                         CAST(:now AS timestamptz), CAST(:now AS timestamptz),
                         CAST(:stopped AS text[]), CAST(:retained AS text[]), CAST(:reasons AS text[])) RETURNING id::text
                     SQL, [':request' => $requestId, ':actor' => $actor->accountId, ':now' => $now,
-                        ':stopped' => '{' . implode(',', $stoppedCodes) . '}',
-                        ':retained' => '{' . implode(',', $retainedCodes) . '}',
-                        ':reasons' => '{' . implode(',', $reasonCodes) . '}'])->queryScalar();
+                    ':stopped' => '{' . implode(',', $stoppedCodes) . '}',
+                    ':retained' => '{' . implode(',', $retainedCodes) . '}',
+                    ':reasons' => '{' . implode(',', $reasonCodes) . '}'])->queryScalar();
                 if (!is_string($id)) {
                     throw new DomainException('Termination execution evidence could not be saved.');
                 }
@@ -148,29 +165,46 @@ final readonly class ProcessingTerminationService
                         resolution_code = :resolution, updated_at = CAST(:now AS timestamptz)
                     WHERE id = CAST(:request AS uuid)
                     SQL, [':status' => $status, ':now' => $now, ':resolution' => $status === 'completed'
-                        ? 'executed' : 'partially_executed', ':request' => $requestId])->execute();
+                    ? 'executed' : 'partially_executed', ':request' => $requestId])->execute();
                 $this->db->createCommand(<<<'SQL'
                     INSERT INTO core.data_subject_request_events
                         (request_id, event_code, from_status, to_status, actor_account_id, occurred_at)
                     VALUES (CAST(:request AS uuid), :event, 'in_progress', :status,
                         CAST(:actor AS uuid), CAST(:now AS timestamptz))
                     SQL, [':request' => $requestId, ':event' => $status, ':status' => $status,
-                        ':actor' => $actor->accountId, ':now' => $now])->execute();
-                $this->recordAudit($actor, 'privacy.processing_termination.' . $status, $requestId,
-                    ['stoppedPurposeCodes' => $stoppedCodes, 'retainedPurposeCodes' => $retainedCodes]);
+                    ':actor' => $actor->accountId, ':now' => $now])->execute();
+                $this->recordAudit(
+                    $actor,
+                    'privacy.processing_termination.' . $status,
+                    $requestId,
+                    ['stoppedPurposeCodes' => $stoppedCodes, 'retainedPurposeCodes' => $retainedCodes],
+                );
                 return ['status' => $status, 'executionId' => $id];
             });
         } catch (\Throwable $error) {
-            $this->recordAudit($actor, 'privacy.processing_termination.failed', $requestId,
-                ['reasonCode' => 'execution_failed']);
+            $this->recordAudit(
+                $actor,
+                'privacy.processing_termination.failed',
+                $requestId,
+                ['reasonCode' => 'execution_failed'],
+            );
             throw $error;
         }
     }
 
-    private function recordAudit(AuthenticatedIdentity $actor, string $action, string $requestId,
-        array $metadata = []): void
-    {
-        $this->audit->record(new WriteAuditEventCommand('account', $actor->accountId, $action,
-            resourceType: 'core.data_subject_request', resourceId: $requestId, metadata: $metadata));
+    private function recordAudit(
+        AuthenticatedIdentity $actor,
+        string $action,
+        string $requestId,
+        array $metadata = [],
+    ): void {
+        $this->audit->record(new WriteAuditEventCommand(
+            'account',
+            $actor->accountId,
+            $action,
+            resourceType: 'core.data_subject_request',
+            resourceId: $requestId,
+            metadata: $metadata,
+        ));
     }
 }

@@ -15,10 +15,15 @@ final readonly class DistributionConsentDefinition
      * @param list<string> $allowedConditions
      * @param list<string> $allowedRestrictions
      */
-    public function __construct(public string $purposeCode, public string $documentVersion,
-        public string $documentSha256, public array $allowedCategories, public array $allowedFields,
-        public array $allowedConditions = [], public array $allowedRestrictions = [])
-    {
+    public function __construct(
+        public string $purposeCode,
+        public string $documentVersion,
+        public string $documentSha256,
+        public array $allowedCategories,
+        public array $allowedFields,
+        public array $allowedConditions = [],
+        public array $allowedRestrictions = [],
+    ) {
         MachineCode::assert($purposeCode);
         foreach ([...$allowedCategories, ...$allowedFields, ...$allowedConditions, ...$allowedRestrictions] as $code) {
             MachineCode::assert($code);

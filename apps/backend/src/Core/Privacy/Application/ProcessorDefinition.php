@@ -14,15 +14,25 @@ readonly class ProcessorDefinition
      * @param list<string> $purposes
      * @param list<string> $dataCategories
      */
-    public function __construct(public string $code, public string $nameReference,
-        public string $role, public array $purposes, public array $dataCategories,
-        public string $country, public string $contractReference,
-        public bool $securityRequirementsConfirmed, public bool $localizationCompatible,
-        public DateTimeImmutable $activeFrom, public ?DateTimeImmutable $activeUntil = null,
-        public ?string $name = null, public ?string $address = null)
-    {
+    public function __construct(
+        public string $code,
+        public string $nameReference,
+        public string $role,
+        public array $purposes,
+        public array $dataCategories,
+        public string $country,
+        public string $contractReference,
+        public bool $securityRequirementsConfirmed,
+        public bool $localizationCompatible,
+        public DateTimeImmutable $activeFrom,
+        public ?DateTimeImmutable $activeUntil = null,
+        public ?string $name = null,
+        public ?string $address = null,
+    ) {
         MachineCode::assert($code);
-        foreach ([...$purposes, ...$dataCategories] as $value) { MachineCode::assert($value); }
+        foreach ([...$purposes, ...$dataCategories] as $value) {
+            MachineCode::assert($value);
+        }
         if (!in_array($role, ['operator', 'processor_by_instruction', 'recipient'], true)
             || $purposes === [] || $dataCategories === []
             || trim($nameReference) === '' || trim($contractReference) === ''

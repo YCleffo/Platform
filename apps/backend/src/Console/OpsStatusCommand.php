@@ -14,7 +14,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'ops:status', description: 'Show safe local operational status')]
 final class OpsStatusCommand extends Command
 {
-    public function __construct(private readonly OperationalStatus $status) { parent::__construct(); }
+    public function __construct(private readonly OperationalStatus $status)
+    {
+        parent::__construct();
+    }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {

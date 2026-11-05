@@ -19,16 +19,21 @@ use Symfony\Component\Console\Question\Question;
 final class RotateAccountPasswordCommand extends Command
 {
     public function __construct(private readonly RotateAccountPassword $rotation, private readonly ClientContextResolver $contexts)
-    { parent::__construct(); }
+    {
+        parent::__construct();
+    }
 
     protected function configure(): void
-    { $this->addOption('account-id', null, InputOption::VALUE_REQUIRED, 'Existing Core human account UUID'); }
+    {
+        $this->addOption('account-id', null, InputOption::VALUE_REQUIRED, 'Existing Core human account UUID');
+    }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $id = $input->getOption('account-id');
         if (!is_string($id) || !\App\Api\Shared\Uuid::isValid($id)) {
-            $output->writeln('<error>A valid --account-id is required.</error>'); return Command::INVALID;
+            $output->writeln('<error>A valid --account-id is required.</error>');
+            return Command::INVALID;
         }
         $password = getenv('CORE_ROTATED_PASSWORD');
         if ((!is_string($password) || $password === '') && $input->isInteractive()) {
@@ -39,13 +44,15 @@ final class RotateAccountPasswordCommand extends Command
             }
         }
         if (!is_string($password) || $password === '') {
-            $output->writeln('<error>Supply CORE_ROTATED_PASSWORD or use the hidden interactive prompt.</error>'); return Command::INVALID;
+            $output->writeln('<error>Supply CORE_ROTATED_PASSWORD or use the hidden interactive prompt.</error>');
+            return Command::INVALID;
         }
         try {
             $context = $this->contexts->resolve(new ServerRequest(serverParams: ['REMOTE_ADDR' => '127.0.0.1'], headers: ['User-Agent' => 'Platform operator credential rotation']));
             $this->rotation->execute($id, $password, $context);
         } catch (\Throwable) {
-            $output->writeln('<error>Password rotation failed; no secret values are printed.</error>'); return Command::FAILURE;
+            $output->writeln('<error>Password rotation failed; no secret values are printed.</error>');
+            return Command::FAILURE;
         }
         $output->writeln('Password rotated; old sessions and challenges revoked; MFA preserved.');
         return Command::SUCCESS;

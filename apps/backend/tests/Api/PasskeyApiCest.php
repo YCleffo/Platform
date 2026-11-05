@@ -7,6 +7,7 @@ namespace App\Tests\Api;
 use App\Tests\Support\ApiTester;
 use App\Tests\Support\WebAuthnTestAuthenticator;
 use Codeception\Util\HttpCode;
+
 use function json_decode;
 use function PHPUnit\Framework\assertArrayHasKey;
 use function PHPUnit\Framework\assertArrayNotHasKey;

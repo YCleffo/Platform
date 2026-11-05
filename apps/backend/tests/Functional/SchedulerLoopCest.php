@@ -18,8 +18,10 @@ final class SchedulerLoopCest
 {
     public function dueAndFailureIsolation(FunctionalTester $tester): void
     {
-        $db = (new HttpApplicationRunner(rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv()))->getContainer()->get(ConnectionInterface::class);
+        $db = (new HttpApplicationRunner(
+            rootPath: dirname(__DIR__, 2),
+            environment: Environment::appEnv(),
+        ))->getContainer()->get(ConnectionInterface::class);
         $calls = [];
         $logs = [];
         $loop = new SchedulerLoop($db, [
@@ -35,7 +37,9 @@ final class SchedulerLoopCest
                 $calls[] = ['disabled'];
                 return 1;
             }),
-        ], static function (string $line) use (&$logs): void { $logs[] = $line; });
+        ], static function (string $line) use (&$logs): void {
+            $logs[] = $line;
+        });
         $loop->tick(1000.0);
         $loop->tick(1005.0);
         assertSame([['first', 3], ['second', 4]], $calls);
@@ -49,19 +53,38 @@ final class SchedulerLoopCest
 
     public function advisoryLockSkipsOtherSessionAndReleases(FunctionalTester $tester): void
     {
-        $db = (new HttpApplicationRunner(rootPath: dirname(__DIR__, 2),
-            environment: Environment::appEnv()))->getContainer()->get(ConnectionInterface::class);
-        $pdo = new PDO(sprintf('pgsql:host=%s;port=%s;dbname=%s', getenv('DB_HOST'),
-            getenv('DB_PORT'), getenv('DB_NAME')), getenv('DB_USER'), getenv('DB_PASSWORD'));
+        $db = (new HttpApplicationRunner(
+            rootPath: dirname(__DIR__, 2),
+            environment: Environment::appEnv(),
+        ))->getContainer()->get(ConnectionInterface::class);
+        $pdo = new PDO(sprintf(
+            'pgsql:host=%s;port=%s;dbname=%s',
+            getenv('DB_HOST'),
+            getenv('DB_PORT'),
+            getenv('DB_NAME'),
+        ), getenv('DB_USER'), getenv('DB_PASSWORD'));
         $key = 'scheduler:core:lock_test';
         $statement = $pdo->prepare('SELECT pg_try_advisory_lock(hashtextextended(?, 0))');
         $statement->execute([$key]);
         assertSame(true, $statement->fetchColumn());
         $calls = 0;
         $logs = [];
-        $loop = new SchedulerLoop($db, [new ScheduledJob('lock_test', 1, true, 1,
-            function () use (&$calls): int { ++$calls; return 1; })],
-            static function (string $line) use (&$logs): void { $logs[] = $line; });
+        $loop = new SchedulerLoop(
+            $db,
+            [new ScheduledJob(
+                'lock_test',
+                1,
+                true,
+                1,
+                function () use (&$calls): int {
+                    ++$calls;
+                    return 1;
+                },
+            )],
+            static function (string $line) use (&$logs): void {
+                $logs[] = $line;
+            },
+        );
         try {
             $loop->tick(1000.0);
             assertSame(0, $calls);

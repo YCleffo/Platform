@@ -26,13 +26,20 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 #[AsCommand(name: 'scheduler:run', description: 'Run bounded Core background jobs continuously')]
 final class SchedulerRunCommand extends Command
 {
-    public function __construct(private readonly ConnectionInterface $db,
-        private readonly AuthCleanupRepository $auth, private readonly AuthCleanupPolicy $authPolicy,
-        private readonly RetentionBatchEvaluator $retention, private readonly PendingErasureProcessor $erasure,
-        private readonly PrivacyCleanupService $cleanup, private readonly PrivacyCleanupPolicy $cleanupPolicy,
+    public function __construct(
+        private readonly ConnectionInterface $db,
+        private readonly AuthCleanupRepository $auth,
+        private readonly AuthCleanupPolicy $authPolicy,
+        private readonly RetentionBatchEvaluator $retention,
+        private readonly PendingErasureProcessor $erasure,
+        private readonly PrivacyCleanupService $cleanup,
+        private readonly PrivacyCleanupPolicy $cleanupPolicy,
         private readonly DestructionEvidencePolicy $evidencePolicy,
         private readonly RuntimeEntitlementSynchronizer $entitlements,
-        private readonly BackgroundJobStatusRecorder $status) { parent::__construct(); }
+        private readonly BackgroundJobStatusRecorder $status,
+    ) {
+        parent::__construct();
+    }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
@@ -46,49 +53,88 @@ final class SchedulerRunCommand extends Command
             $erasureEnabled = Config::enabled('CORE_PRIVACY_ERASURE_ENABLED', false);
             $cleanupEnabled = Config::enabled('CORE_PRIVACY_CLEANUP_ENABLED', false);
             $actorId = getenv('PRIVACY_AUTOMATION_ACCOUNT_ID') ?: '';
-            if ($enabled && $erasureEnabled && $actorId !== '') { $this->erasure->assertActor($actorId); }
+            if ($enabled && $erasureEnabled && $actorId !== '') {
+                $this->erasure->assertActor($actorId);
+            }
             $categories = PrivacyCleanupService::categories();
             $categoryIndex = 0;
             $jobs = [
-                new ScheduledJob('auth_cleanup', Config::integer('CORE_AUTH_CLEANUP_INTERVAL_SECONDS', 3600, 1, 86400),
-                    $enabled && Config::enabled('CORE_AUTH_CLEANUP_ENABLED', true), $authLimit,
+                new ScheduledJob(
+                    'auth_cleanup',
+                    Config::integer('CORE_AUTH_CLEANUP_INTERVAL_SECONDS', 3600, 1, 86400),
+                    $enabled && Config::enabled('CORE_AUTH_CLEANUP_ENABLED', true),
+                    $authLimit,
                     function (int $limit): int {
-                        $policy = new AuthCleanupPolicy($this->authPolicy->challengeRetentionDays,
-                            $this->authPolicy->recoveryCodeRetentionDays, min($limit, $this->authPolicy->batchSize),
-                            $this->authPolicy->serviceCredentialRetentionDays);
+                        $policy = new AuthCleanupPolicy(
+                            $this->authPolicy->challengeRetentionDays,
+                            $this->authPolicy->recoveryCodeRetentionDays,
+                            min($limit, $this->authPolicy->batchSize),
+                            $this->authPolicy->serviceCredentialRetentionDays,
+                        );
                         return $this->auth->cleanup($policy)->total();
-                    }),
-                new ScheduledJob('privacy_retention_evaluate', Config::integer('CORE_PRIVACY_RETENTION_INTERVAL_SECONDS', 3600, 1, 86400),
-                    $enabled && Config::enabled('CORE_PRIVACY_RETENTION_ENABLED', true), $retentionLimit,
-                    fn(int $limit): int => $this->retention->evaluate($limit)['candidates']),
-                new ScheduledJob('privacy_erasure_execute', Config::integer('CORE_PRIVACY_ERASURE_INTERVAL_SECONDS', 300, 1, 86400),
-                    $enabled && $erasureEnabled, $erasureCases,
+                    },
+                ),
+                new ScheduledJob(
+                    'privacy_retention_evaluate',
+                    Config::integer('CORE_PRIVACY_RETENTION_INTERVAL_SECONDS', 3600, 1, 86400),
+                    $enabled && Config::enabled('CORE_PRIVACY_RETENTION_ENABLED', true),
+                    $retentionLimit,
+                    fn(int $limit): int => $this->retention->evaluate($limit)['candidates'],
+                ),
+                new ScheduledJob(
+                    'privacy_erasure_execute',
+                    Config::integer('CORE_PRIVACY_ERASURE_INTERVAL_SECONDS', 300, 1, 86400),
+                    $enabled && $erasureEnabled,
+                    $erasureCases,
                     function (int $limit) use ($actorId, $erasureItems): int {
-                        if ($actorId === '') { throw new JobSkipped('automation_actor_missing'); }
-                        if (!$this->erasure->policyReady()) { throw new JobSkipped('privacy_policy_missing'); }
+                        if ($actorId === '') {
+                            throw new JobSkipped('automation_actor_missing');
+                        }
+                        if (!$this->erasure->policyReady()) {
+                            throw new JobSkipped('privacy_policy_missing');
+                        }
                         return $this->erasure->process($actorId, $limit, $erasureItems);
-                    }),
-                new ScheduledJob('privacy_cleanup', Config::integer('CORE_PRIVACY_CLEANUP_INTERVAL_SECONDS', 3600, 1, 86400),
-                    $enabled && $cleanupEnabled, $cleanupLimit,
+                    },
+                ),
+                new ScheduledJob(
+                    'privacy_cleanup',
+                    Config::integer('CORE_PRIVACY_CLEANUP_INTERVAL_SECONDS', 3600, 1, 86400),
+                    $enabled && $cleanupEnabled,
+                    $cleanupLimit,
                     function (int $limit) use ($categories, &$categoryIndex): int {
                         for ($i = 0; $i < count($categories); ++$i) {
                             $category = $categories[$categoryIndex++ % count($categories)];
-                            if ($category === 'destruction_evidence' && !$this->evidencePolicy->available()) { continue; }
-                            if ($category !== 'destruction_evidence' && $this->cleanupPolicy->days($category) === null) { continue; }
+                            if ($category === 'destruction_evidence' && !$this->evidencePolicy->available()) {
+                                continue;
+                            }
+                            if ($category !== 'destruction_evidence' && $this->cleanupPolicy->days($category) === null) {
+                                continue;
+                            }
                             return $this->cleanup->execute($category, $limit, false)['deleted'];
                         }
                         throw new JobSkipped('privacy_policy_missing');
-                    }),
-                new ScheduledJob('runtime_entitlement_sync', Config::integer('CORE_ENTITLEMENT_SYNC_INTERVAL_SECONDS', 300, 1, 86400),
-                    $enabled && Config::enabled('CORE_ENTITLEMENT_SYNC_ENABLED', true), 1,
+                    },
+                ),
+                new ScheduledJob(
+                    'runtime_entitlement_sync',
+                    Config::integer('CORE_ENTITLEMENT_SYNC_INTERVAL_SECONDS', 300, 1, 86400),
+                    $enabled && Config::enabled('CORE_ENTITLEMENT_SYNC_ENABLED', true),
+                    1,
                     function (int $limit): int {
-                        if (!$this->entitlements->configured()) { throw new JobSkipped('entitlement_sync_unconfigured'); }
+                        if (!$this->entitlements->configured()) {
+                            throw new JobSkipped('entitlement_sync_unconfigured');
+                        }
                         $this->entitlements->sync();
                         return 1;
-                    }),
+                    },
+                ),
             ];
-            (new SchedulerLoop($this->db, $jobs, static fn(string $line) => $output->writeln($line),
-                recorder: $this->status))->run();
+            (new SchedulerLoop(
+                $this->db,
+                $jobs,
+                static fn(string $line) => $output->writeln($line),
+                recorder: $this->status,
+            ))->run();
             return Command::SUCCESS;
         } catch (\Throwable) {
             $output->writeln('Scheduler startup failed.');

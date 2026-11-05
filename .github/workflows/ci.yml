@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      profile:
+        description: Full acceptance CI or fast feedback CI
+        type: choice
+        options: [full, fast]
+        default: full
 
 env:
   COMPOSE_FILE: compose.yaml:compose.ci.yaml
@@ -20,13 +26,29 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
       - name: Validate workflow expressions and embedded shell scripts
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.11 -color
-      - name: Parse CI shell entry points
+      - name: Parse CI shell and Node entry points
         run: |
           for script in scripts/ci/*.sh; do bash -n "$script"; done
+          node --check scripts/ci/run-verify-suite.mjs
+          node --check apps/frontend/scripts/verify-responsive.mjs
+          python3 -m py_compile scripts/ci/summarize-image-scan.py
       - name: Verify Compose database credential resolution
         run: python3 -m unittest discover -s scripts/database -p 'test_*.py'
+      - name: Verify pinned Playwright container matches the locked browser package
+        run: |
+          locked=$(python3 -c "import json; print(json.load(open('apps/frontend/package-lock.json'))['packages']['node_modules/playwright']['version'])")
+          image=$(grep -o 'playwright:v[0-9][0-9.]*-noble' scripts/ci/playwright-run.sh | head -n 1 | sed 's/.*playwright:v//; s/-noble//')
+          test -n "$locked"
+          test "$locked" = "$image" || {
+            echo "Playwright package $locked does not match the pinned container image v$image." >&2
+            exit 1
+          }
+          echo "Playwright package and browser container are both $locked."
 
   windows-tools:
     name: Windows tools
@@ -50,8 +72,131 @@ jobs:
           if (@(Get-Command git -All -CommandType Application).Count -lt 2) { throw 'Multiple Git paths were not exercised.' }
           ./scripts/ci/test-project-zip.ps1
 
+  backend-fast:
+    name: Core · fast feedback
+    if: github.event_name == 'workflow_dispatch' && inputs.profile == 'fast'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/backend
+    env:
+      APP_ENV: test
+      POSTGRES_DB: platform_test
+      POSTGRES_TEST_DB: platform_test
+      POSTGRES_USER: platform_app
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5433"
+      DB_NAME: platform_test
+      DB_USER: platform_app
+      REDIS_HOST: redis-test
+      REDIS_PORT: "6380"
+      TEST_ISOLATED_RUNTIME: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - name: Generate isolated CI secrets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, os, secrets
+          values = {k: secrets.token_hex(32) for k in (
+              'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
+              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY',
+              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD', 'CORE_MAINTENANCE_PASSWORD', 'CONTROL_MAINTENANCE_PASSWORD')}
+          values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
+              'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for key, value in values.items():
+                  print('::add-mask::' + value)
+                  output.write(key + '=' + value + '\n')
+          PY
+      - name: Map isolated service hostnames
+        run: echo "127.0.0.1 redis-test" | sudo tee -a /etc/hosts
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
+          tools: composer:v2
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/composer
+            ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('apps/backend/composer.lock', 'apps/control-plane/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+      - name: Validate, install and audit locked dependencies
+        run: |
+          composer validate --strict
+          composer install --no-interaction --prefer-dist
+          composer check-platform-reqs
+          composer audit
+      - name: Run Psalm static analysis
+        run: ./vendor/bin/psalm --no-cache
+      - name: Verify PHP coding style
+        run: php ./vendor/bin/php-cs-fixer fix --dry-run --diff --using-cache=no
+      - name: Start isolated database and cache
+        working-directory: .
+        run: |
+          docker compose --profile test up -d --wait postgres-test redis-test
+          docker compose --profile test run --rm db-migrate-test
+      - name: Build Codeception actors
+        run: ./vendor/bin/codecept build
+      - name: Run Unit suite with deterministic seed
+        run: |
+          export DB_PASSWORD="$POSTGRES_PASSWORD"
+          ./vendor/bin/codecept run Unit --seed 2120741368
+      - name: Stop isolated database and cache
+        if: always()
+        working-directory: .
+        run: bash ./scripts/ci/test-stop.sh
+
+  control-fast:
+    name: Commercial · fast feedback
+    if: github.event_name == 'workflow_dispatch' && inputs.profile == 'fast'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/control-plane
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
+          tools: composer:v2
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/composer
+            ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('apps/backend/composer.lock', 'apps/control-plane/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+      - name: Validate, install and audit locked dependencies
+        run: |
+          composer validate --strict
+          composer install --no-interaction --prefer-dist
+          composer check-platform-reqs
+          composer audit
+      - name: YAML configuration and API contract references
+        working-directory: .
+        run: php ./scripts/ci/control-config-lint.php
+      - name: Static analysis
+        env:
+          APP_ENV: test
+          APP_DEBUG: "0"
+          CONTROL_DATABASE_URL: postgresql://unused:unused@control-postgres-test:5432/platform_commercial_test
+        run: |
+          composer install --no-interaction --prefer-dist --no-scripts --working-dir=../backend
+          composer analyse
+
   backend-qa:
     name: Core · quality and tests
+    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -87,6 +232,14 @@ jobs:
           php-version: "8.3"
           extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
           tools: composer:v2
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/composer
+            ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('apps/backend/composer.lock', 'apps/control-plane/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
 
       - name: Validate Composer Metadata
         working-directory: apps/backend
@@ -109,6 +262,10 @@ jobs:
         run: |
           ./vendor/bin/psalm --no-cache
 
+      - name: Verify PHP Coding Style
+        working-directory: apps/backend
+        run: php ./vendor/bin/php-cs-fixer fix --dry-run --diff --using-cache=no
+
       - name: Start Isolated Test Infrastructure
         run: |
           bash ./scripts/ci/test-start.sh
@@ -123,25 +280,21 @@ jobs:
           ready=$(docker compose --profile test exec -T postgres-test psql -U "${POSTGRES_USER}" -d "${POSTGRES_TEST_DB}" -tA -c "SELECT to_regclass('platform_runtime.installations') IS NOT NULL AND to_regclass('platform_runtime.entitlement_documents') IS NOT NULL;")
           test "$ready" = "t"
 
-      - name: Run Unit Suite on Isolated Runtime
+      - name: Run Unit Suite on Isolated Runtime with Seed 2120741368
         run: |
-          docker compose --profile test exec -T backend-test composer test:unit
+          docker compose --profile test exec -T backend-test vendor/bin/codecept run Unit --seed 2120741368
 
-      - name: Run Console Suite on Isolated Runtime
+      - name: Run Console Suite on Isolated Runtime with Seed 2120741368
         run: |
-          docker compose --profile test exec -T backend-test composer test:console
+          docker compose --profile test exec -T backend-test vendor/bin/codecept run Console --seed 2120741368
 
-      - name: Run Functional Suite on Isolated Runtime
+      - name: Run Functional Suite on Isolated Runtime with Seed 2120741368
         run: |
-          docker compose --profile test exec -T backend-test composer test:functional
+          docker compose --profile test exec -T backend-test vendor/bin/codecept run Functional --seed 2120741368
 
-      - name: Run API Suite on Isolated Runtime
+      - name: Run API Suite on Isolated Runtime with Seed 2120741368
         run: |
-          docker compose --profile test exec -T backend-test composer test:api
-
-      - name: Run Full Deterministic Suite with Seed 2120741368
-        run: |
-          docker compose --profile test exec -T backend-test vendor/bin/codecept run --seed 2120741368
+          docker compose --profile test exec -T backend-test vendor/bin/codecept run Api --seed 2120741368
 
       - name: Verify stateless Core application restart with durable PostgreSQL
         run: bash ./scripts/ci/core-app-restart-test.sh
@@ -170,19 +323,8 @@ jobs:
           ignore-unfixed: false
           exit-code: '0'
 
-      - name: Summarize all Core image findings
-        run: python3 scripts/ci/summarize-image-scan.py trivy-core.json --plane Core
-
-      - name: Enforce zero fixable high and critical Core image vulnerabilities
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          version: v0.69.3
-          image-ref: platform-core:ci
-          scanners: vuln
-          format: table
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: '1'
+      - name: Summarize and enforce zero fixable high and critical Core image vulnerabilities
+        run: python3 scripts/ci/summarize-image-scan.py trivy-core.json --plane Core --fail-on-fixable
 
       - name: Upload complete Core vulnerability inventory
         if: always()
@@ -206,6 +348,7 @@ jobs:
 
   control-plane-qa:
     name: Commercial · quality and tests
+    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -245,6 +388,14 @@ jobs:
           php-version: "8.3"
           extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
           tools: composer:v2
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/composer
+            ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('apps/backend/composer.lock', 'apps/control-plane/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
 
       - name: Validate and install locked dependencies
         working-directory: apps/control-plane
@@ -341,19 +492,8 @@ jobs:
           ignore-unfixed: false
           exit-code: '0'
 
-      - name: Summarize all Commercial image findings
-        run: python3 scripts/ci/summarize-image-scan.py trivy-commercial.json --plane Commercial
-
-      - name: Enforce zero fixable high and critical Commercial image vulnerabilities
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          version: v0.69.3
-          image-ref: platform-control-plane:ci
-          scanners: vuln
-          format: table
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: '1'
+      - name: Summarize and enforce zero fixable high and critical Commercial image vulnerabilities
+        run: python3 scripts/ci/summarize-image-scan.py trivy-commercial.json --plane Commercial --fail-on-fixable
 
       - name: Upload complete Commercial vulnerability inventory
         if: always()
@@ -376,6 +516,7 @@ jobs:
 
   infrastructure-images:
     name: Image security · ${{ matrix.plane }}
+    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
@@ -404,18 +545,8 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: false
           exit-code: '0'
-      - name: Summarize infrastructure image findings
-        run: python3 scripts/ci/summarize-image-scan.py trivy-${{ matrix.plane }}.json --plane ${{ matrix.plane }}
-      - name: Enforce zero fixable high and critical infrastructure image vulnerabilities
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          version: v0.69.3
-          image-ref: ${{ matrix.image }}
-          scanners: vuln
-          format: table
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: '1'
+      - name: Summarize and enforce zero fixable high and critical infrastructure image vulnerabilities
+        run: python3 scripts/ci/summarize-image-scan.py trivy-${{ matrix.plane }}.json --plane ${{ matrix.plane }} --fail-on-fixable
       - name: Upload complete infrastructure vulnerability inventory
         if: always()
         uses: actions/upload-artifact@v6
@@ -427,6 +558,7 @@ jobs:
 
   cross-plane-e2e:
     name: Core ↔ Commercial · E2E
+    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -485,6 +617,8 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+          cache: npm
+          cache-dependency-path: scripts/documentation/package-lock.json
       - name: Verify migration-bound metadata and generated references
         run: |
           python scripts/database/export_schema.py --plane core --from-snapshot --check
@@ -557,9 +691,28 @@ jobs:
           node scripts/load-commercial.mjs --check-guard
       - name: Production build
         run: npm run build
+      - name: Verify appearance, accessibility, core and commercial UI in parallel
+        if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
+        env:
+          BASE_URL: http://127.0.0.1:4174
+          VERIFY_CONCURRENCY: "4"
+          RESPONSIVE_CONCURRENCY: "3"
+          PLAYWRIGHT_DOCKER_NETWORK: bridge
+        run: bash ../../scripts/ci/playwright-run.sh bash ../../scripts/ci/verify-browser-suite.sh
+      - name: Upload browser verification evidence
+        if: always() && (github.event_name != 'workflow_dispatch' || inputs.profile != 'fast')
+        uses: actions/upload-artifact@v6
+        with:
+          name: frontend-browser-verification-${{ github.run_id }}
+          path: apps/frontend/screenshots
+          if-no-files-found: ignore
+      - name: Diagnose failed preview
+        if: failure() && (github.event_name != 'workflow_dispatch' || inputs.profile != 'fast')
+        run: cat screenshots/vite-verify.log || true
 
   core-auth-browser:
     name: Core · account browser E2E
+    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -605,6 +758,14 @@ jobs:
           php-version: "8.3"
           extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
           tools: composer:v2
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/composer
+            ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('apps/backend/composer.lock', 'apps/control-plane/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
       - name: Install Core dependencies
         working-directory: apps/backend
         run: composer install --no-interaction --prefer-dist
@@ -620,11 +781,9 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
-      - name: Install browser dependencies
+      - name: Install frontend dependencies
         working-directory: apps/frontend
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
+        run: npm ci
       - name: Start Core frontend
         working-directory: apps/frontend
         env:
@@ -643,26 +802,19 @@ jobs:
           done
           curl -kfsS https://127.0.0.1:4175/ >/dev/null
       - name: Verify Core invitation, password reset, MFA recovery and required password change
-        working-directory: apps/frontend
-        run: npm run test:e2e:core-auth
+        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-auth
       - name: Verify real Core MFA and session management
-        working-directory: apps/frontend
-        run: npm run test:e2e:core-security
+        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-security
       - name: Verify real Core preferences, settings and consent lifecycle
-        working-directory: apps/frontend
-        run: npm run test:e2e:core-profile
+        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-profile
       - name: Verify real passkey and external credential lifecycle
-        working-directory: apps/frontend
-        run: npm run test:e2e:core-credentials
+        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-credentials
       - name: Verify own and representative privacy request lifecycle
-        working-directory: apps/frontend
-        run: npm run test:e2e:core-privacy
+        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-privacy
       - name: Verify privacy operator workflow and presence
-        working-directory: apps/frontend
-        run: npm run test:e2e:core-privacy-operator
+        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-privacy-operator
       - name: Verify Core configuration forms and public publication
-        working-directory: apps/frontend
-        run: npm run test:e2e:core-configuration
+        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-configuration
       - name: Install Education and verify its PostgreSQL workflows
         env:
           EDUCATION_ENABLED: "1"
@@ -695,7 +847,7 @@ jobs:
             sleep 1
           done
           curl -kfsS https://127.0.0.1:4175/ >/dev/null
-          npm run test:e2e:education
+          bash ../../scripts/ci/playwright-run.sh npm run test:e2e:education
       - name: Upload Core browser evidence
         if: always()
         uses: actions/upload-artifact@v6
@@ -726,6 +878,7 @@ jobs:
 
   billing-periodic:
     name: Billing · renewal and recovery
+    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -780,11 +933,9 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
-      - name: Install dependencies and Chromium
+      - name: Install frontend dependencies
         working-directory: apps/frontend
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
+        run: npm ci
       - name: Generate disposable TLS certificate
         run: |
           mkdir -p "$RUNNER_TEMP/billing-tls"
@@ -808,10 +959,9 @@ jobs:
           done
           curl -kfsS https://127.0.0.1:4173/ >/dev/null
       - name: Verify scheduler boundaries, retries, grace and late settlement
-        working-directory: apps/frontend
         env:
           NODE_EXTRA_CA_CERTS: ${{ runner.temp }}/billing-tls/cert.pem
-        run: npm run test:e2e:periodic-billing
+        run: bash scripts/ci/playwright-run.sh npm run test:e2e:periodic-billing
       - name: Upload periodic billing evidence
         if: always()
         uses: actions/upload-artifact@v6
@@ -833,6 +983,7 @@ jobs:
 
   browser-e2e:
     name: Frontend · browser E2E
+    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -896,11 +1047,9 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
-      - name: Install frontend dependencies and Chromium
+      - name: Install frontend dependencies
         working-directory: apps/frontend
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
+        run: npm ci
       - name: Generate disposable frontend TLS certificate
         run: |
           mkdir -p /tmp/e2e-cert
@@ -924,42 +1073,7 @@ jobs:
           curl -fsS 'http://127.0.0.1:8026/api/v1/messages?limit=1'
           curl -kfsS https://127.0.0.1:4173/ >/dev/null
       - name: Run browser account workspace flow
-        working-directory: apps/frontend
-        run: node scripts/e2e-account-workspace.mjs
-      - name: Start production preview for appearance verification
-        working-directory: apps/frontend
-        run: |
-          npm run build
-          node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4174 --strictPort > /tmp/vite-appearance.log 2>&1 &
-          echo $! > /tmp/vite-appearance.pid
-          for _attempt in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:4174/settings >/dev/null; then break; fi
-            sleep 1
-          done
-          curl -fsS http://127.0.0.1:4174/settings >/dev/null
-      - name: Verify appearance settings and synchronized motion
-        working-directory: apps/frontend
-        env:
-          BASE_URL: http://127.0.0.1:4174
-        run: |
-          node scripts/verify-appearance.mjs
-          node scripts/verify-menus.mjs
-          node scripts/verify-ux.mjs
-          node scripts/verify-controls.mjs
-          node scripts/verify-accessibility.mjs
-          node scripts/verify-admin.mjs
-          node scripts/verify-billing.mjs
-          node scripts/verify-core-auth.mjs
-          node scripts/verify-core-security.mjs
-          node scripts/verify-core-profile.mjs
-          node scripts/verify-core-credentials.mjs
-          node scripts/verify-core-privacy.mjs
-          node scripts/verify-core-privacy-operator.mjs
-          node scripts/verify-core-configuration.mjs
-          node scripts/verify-typography.mjs
-          node scripts/verify-workflows.mjs
-          node scripts/verify-mobile-components.mjs
-          node scripts/verify-responsive.mjs
+        run: bash scripts/ci/playwright-run.sh node scripts/e2e-account-workspace.mjs
       - name: Reset disposable Commercial fixtures before invitation flow
         run: |
           docker compose --profile control-test stop control-plane-test
@@ -967,8 +1081,7 @@ jobs:
           docker compose --profile control-test up -d --wait control-plane-test
           bash ./scripts/ci/control-email-worker-start.sh
       - name: Run browser invitation and MFA flow
-        working-directory: apps/frontend
-        run: node scripts/e2e-invitation-lifecycle.mjs
+        run: bash scripts/ci/playwright-run.sh node scripts/e2e-invitation-lifecycle.mjs
       - name: Reset disposable Commercial fixtures before recovery flow
         run: |
           docker compose --profile control-test stop control-plane-test
@@ -976,8 +1089,7 @@ jobs:
           docker compose --profile control-test up -d --wait control-plane-test
           bash ./scripts/ci/control-email-worker-start.sh
       - name: Run browser account recovery flow
-        working-directory: apps/frontend
-        run: node scripts/e2e-auth-recovery.mjs
+        run: bash scripts/ci/playwright-run.sh node scripts/e2e-auth-recovery.mjs
       - name: Reset disposable Commercial fixtures before billing flow
         run: |
           docker compose --profile control-test stop control-plane-test
@@ -985,8 +1097,7 @@ jobs:
           docker compose --profile control-test up -d --wait control-plane-test
           bash ./scripts/ci/control-email-worker-start.sh
       - name: Verify real zero-price billing, MFA and cancellation
-        working-directory: apps/frontend
-        run: npm run test:e2e:billing
+        run: bash scripts/ci/playwright-run.sh npm run test:e2e:billing
       - name: Reset disposable fixtures before paid billing
         run: |
           docker compose --profile control-test stop control-plane-test
@@ -994,8 +1105,7 @@ jobs:
           docker compose --profile control-test up -d --wait control-plane-test
           bash ./scripts/ci/control-email-worker-start.sh
       - name: Verify paid billing through real gateways with synthetic provider wire
-        working-directory: apps/frontend
-        run: npm run test:e2e:paid-billing
+        run: bash scripts/ci/playwright-run.sh npm run test:e2e:paid-billing
       - name: Reset disposable fixtures before independent operator workflows
         run: |
           docker compose --profile control-test stop control-plane-test
@@ -1003,8 +1113,7 @@ jobs:
           docker compose --profile control-test up -d --wait control-plane-test
           bash ./scripts/ci/control-email-worker-start.sh
       - name: Verify two real operators, MFA, finance and privacy evidence
-        working-directory: apps/frontend
-        run: npm run test:e2e:operators
+        run: bash scripts/ci/playwright-run.sh npm run test:e2e:operators
       - name: Reset isolated fixtures before load without disabling registration limits
         run: |
           docker compose --profile control-test stop control-plane-test
@@ -1045,7 +1154,5 @@ jobs:
         if: always()
         run: |
           if [[ -s /tmp/vite-e2e.pid ]]; then kill "$(cat /tmp/vite-e2e.pid)" 2>/dev/null || true; fi
-          if [[ -s /tmp/vite-appearance.pid ]]; then kill "$(cat /tmp/vite-appearance.pid)" 2>/dev/null || true; fi
-          rm -f /tmp/vite-appearance.pid
           rm -f /tmp/vite-e2e.pid /tmp/e2e-cert/key.pem /tmp/e2e-cert/cert.pem
           bash ./scripts/ci/control-test-stop.sh

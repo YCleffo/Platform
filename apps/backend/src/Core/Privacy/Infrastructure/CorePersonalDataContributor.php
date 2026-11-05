@@ -27,7 +27,10 @@ final readonly class CorePersonalDataContributor implements PersonalDataContribu
             'core.consent', 'core.representation', 'core.requests', 'core.processing_blocks'];
     }
 
-    public function code(): string { return $this->section; }
+    public function code(): string
+    {
+        return $this->section;
+    }
 
     public function categories(): array
     {

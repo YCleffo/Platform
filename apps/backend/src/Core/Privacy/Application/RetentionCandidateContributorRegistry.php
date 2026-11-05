@@ -65,7 +65,9 @@ final readonly class RetentionCandidateContributorRegistry
                     && $contributor->supportsPurpose($purposeCode)) {
                     return true;
                 }
-            } catch (\Throwable) { return false; }
+            } catch (\Throwable) {
+                return false;
+            }
         }
         return false;
     }

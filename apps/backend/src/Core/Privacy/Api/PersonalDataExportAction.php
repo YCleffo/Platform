@@ -18,10 +18,14 @@ use Yiisoft\Router\CurrentRoute;
 
 final readonly class PersonalDataExportAction
 {
-    public function __invoke(ServerRequestInterface $request, CurrentRoute $route,
-        PersonalDataExportService $service, ResponseFactoryInterface $psrResponses,
-        StreamFactoryInterface $streams, ResponseFactory $responses): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        CurrentRoute $route,
+        PersonalDataExportService $service,
+        ResponseFactoryInterface $psrResponses,
+        StreamFactoryInterface $streams,
+        ResponseFactory $responses,
+    ): ResponseInterface {
         $id = (string) $route->getArgument('id');
         $representationId = $route->getArgument('representationId');
         if (!PrivacyRequestInput::uuid($id)

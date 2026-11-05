@@ -35,7 +35,9 @@ final readonly class IsolationHealthCest
                 putenv($previous === false ? $key : $key . '=' . $previous);
             }
         } finally {
-            foreach ($saved as $key => $value) putenv($value === false ? $key : $key . '=' . $value);
+            foreach ($saved as $key => $value) {
+                putenv($value === false ? $key : $key . '=' . $value);
+            }
         }
     }
 }

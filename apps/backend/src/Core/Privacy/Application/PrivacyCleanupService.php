@@ -17,11 +17,17 @@ final readonly class PrivacyCleanupService
         'destruction_evidence',
     ];
 
-    public function __construct(private ConnectionInterface $db, private ClockInterface $clock,
-        private PrivacyCleanupPolicy $policy) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private ClockInterface $clock,
+        private PrivacyCleanupPolicy $policy,
+    ) {}
 
     /** @return list<string> */
-    public static function categories(): array { return self::CATEGORIES; }
+    public static function categories(): array
+    {
+        return self::CATEGORIES;
+    }
 
     /** @return array{category:string,selected:int,deleted:int,dryRun:bool} */
     public function execute(string $category, int $limit = 100, bool $dryRun = true): array
@@ -41,7 +47,9 @@ final readonly class PrivacyCleanupService
         $select = "SELECT e.id FROM core.{$table} e WHERE {$where} ORDER BY e.id LIMIT CAST(:limit AS integer)";
         if ($dryRun) {
             $selected = (int) $this->db->createCommand(
-                "SELECT count(*) FROM ({$select}) eligible", $params)->queryScalar();
+                "SELECT count(*) FROM ({$select}) eligible",
+                $params,
+            )->queryScalar();
             return ['category' => $category, 'selected' => $selected,
                 'deleted' => 0, 'dryRun' => true];
         }

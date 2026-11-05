@@ -97,8 +97,10 @@ final readonly class Login
         return $this->db->transaction(function () use ($account, $credential, $command, $context): AuthenticationFlowResult {
             // Serialize issuance with credential rotation. Verification is deliberately outside
             // the lock; a first factor verified before rotation must not acquire its new stamp.
-            $this->db->createCommand('SELECT id FROM core.accounts WHERE id=CAST(:id AS uuid) FOR UPDATE',
-                [':id' => $account->accountId])->queryScalar();
+            $this->db->createCommand(
+                'SELECT id FROM core.accounts WHERE id=CAST(:id AS uuid) FOR UPDATE',
+                [':id' => $account->accountId],
+            )->queryScalar();
             $current = $this->accounts->findSecurityState($account->accountId);
             $currentCredential = $this->passwords->findByAccountId($account->accountId);
             if ($current === null || !$current->allowsHumanAuthentication($this->clock->now())
@@ -106,22 +108,22 @@ final readonly class Login
                 || $currentCredential === null || !hash_equals($credential->passwordHash, $currentCredential->passwordHash)) {
                 throw new InvalidCredentialsException();
             }
-        if ($this->hasher->needsRehash($credential->passwordHash)) {
-            $replacementHash = $this->hasher->hash($command->password);
-            $algorithm = password_get_info($replacementHash)['algoName'] ?? 'argon2id';
-            $this->passwords->saveHash(
-                $account->accountId,
-                $replacementHash,
-                is_string($algorithm) ? $algorithm : 'argon2id',
-                $credential->mustChangePassword,
-            );
-        }
+            if ($this->hasher->needsRehash($credential->passwordHash)) {
+                $replacementHash = $this->hasher->hash($command->password);
+                $algorithm = password_get_info($replacementHash)['algoName'] ?? 'argon2id';
+                $this->passwords->saveHash(
+                    $account->accountId,
+                    $replacementHash,
+                    is_string($algorithm) ? $algorithm : 'argon2id',
+                    $credential->mustChangePassword,
+                );
+            }
 
-        return $this->authenticationFlow->completeFirstFactor(
-            $account->accountId,
-            AuthenticationMethod::PASSWORD,
-            $context,
-        );
+            return $this->authenticationFlow->completeFirstFactor(
+                $account->accountId,
+                AuthenticationMethod::PASSWORD,
+                $context,
+            );
         });
     }
 }

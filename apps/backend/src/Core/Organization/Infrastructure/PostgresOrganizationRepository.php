@@ -13,8 +13,10 @@ use DomainException;
 
 final readonly class PostgresOrganizationRepository implements OrganizationRepository
 {
-    public function __construct(private ConnectionInterface $db,
-        private PrivacyResourceUsePolicy $privacy) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private PrivacyResourceUsePolicy $privacy,
+    ) {}
 
     /** @return list<Organization> */
     public function listFor(?string $personId): array
@@ -33,8 +35,10 @@ final readonly class PostgresOrganizationRepository implements OrganizationRepos
             SQL, [':person' => $personId])->queryAll();
         /** @var list<array<string, mixed>> $rows */
         $organizations = array_map(self::organization(...), $rows);
-        return $personId === null ? $organizations : array_values(array_filter($organizations,
-            fn(Organization $organization): bool => $this->activeMember($personId, $organization->id)));
+        return $personId === null ? $organizations : array_values(array_filter(
+            $organizations,
+            fn(Organization $organization): bool => $this->activeMember($personId, $organization->id),
+        ));
     }
 
     public function create(string $code, string $name): ?Organization
@@ -70,8 +74,12 @@ final readonly class PostgresOrganizationRepository implements OrganizationRepos
             WHERE person_id = CAST(:person AS uuid) AND organization_id = CAST(:organization AS uuid)
                 AND status = 'active' LIMIT 1
             SQL, [':person' => $personId, ':organization' => $organizationId])->queryScalar();
-        if (is_string($membershipId) && !$this->privacy->allowed($personId,
-            'core.organization_membership', $membershipId, 'identity')) {
+        if (is_string($membershipId) && !$this->privacy->allowed(
+            $personId,
+            'core.organization_membership',
+            $membershipId,
+            'identity',
+        )) {
             return false;
         }
         return (bool) $this->db->createCommand(<<<'SQL'
@@ -95,15 +103,25 @@ final readonly class PostgresOrganizationRepository implements OrganizationRepos
             ORDER BY joined_at, id LIMIT 1000
             SQL, [':organization' => $organizationId])->queryAll();
         /** @var list<array<string, mixed>> $rows */
-        return array_values(array_filter(array_map(self::membership(...), $rows),
+        return array_values(array_filter(
+            array_map(self::membership(...), $rows),
             fn(OrganizationMembership $membership): bool => $this->privacy->allowed(
-                $membership->personId, 'core.organization_membership', $membership->id, 'identity')));
+                $membership->personId,
+                'core.organization_membership',
+                $membership->id,
+                'identity',
+            ),
+        ));
     }
 
     public function addMember(string $organizationId, string $personId): ?OrganizationMembership
     {
-        if (!$this->privacy->allowed($personId, 'core.organization_membership',
-            $organizationId, 'identity')) {
+        if (!$this->privacy->allowed(
+            $personId,
+            'core.organization_membership',
+            $organizationId,
+            'identity',
+        )) {
             throw new DomainException('Organization membership processing is restricted.');
         }
         $row = $this->db->createCommand(<<<'SQL'
@@ -133,17 +151,29 @@ final readonly class PostgresOrganizationRepository implements OrganizationRepos
     /** @param array<string, mixed> $row */
     private static function organization(array $row): Organization
     {
-        return new Organization((string) $row['id'], (string) $row['code'], (string) $row['name'],
-            (string) $row['status'], (string) $row['created_at'], (string) $row['updated_at'],
-            $row['archived_at'] === null ? null : (string) $row['archived_at']);
+        return new Organization(
+            (string) $row['id'],
+            (string) $row['code'],
+            (string) $row['name'],
+            (string) $row['status'],
+            (string) $row['created_at'],
+            (string) $row['updated_at'],
+            $row['archived_at'] === null ? null : (string) $row['archived_at'],
+        );
     }
 
     /** @param array<string, mixed> $row */
     private static function membership(array $row): OrganizationMembership
     {
-        return new OrganizationMembership((string) $row['id'], (string) $row['organization_id'],
-            (string) $row['person_id'], (string) $row['status'], (string) $row['joined_at'],
+        return new OrganizationMembership(
+            (string) $row['id'],
+            (string) $row['organization_id'],
+            (string) $row['person_id'],
+            (string) $row['status'],
+            (string) $row['joined_at'],
             $row['left_at'] === null ? null : (string) $row['left_at'],
-            (string) $row['created_at'], (string) $row['updated_at']);
+            (string) $row['created_at'],
+            (string) $row['updated_at'],
+        );
     }
 }

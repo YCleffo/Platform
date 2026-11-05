@@ -19,8 +19,14 @@ final class PersonalDataExporterTest extends TestCase
     {
         $a = $this->contributor('core.a', [['z' => 'value', 'a' => 1]]);
         $b = $this->contributor('core.b', []);
-        $context = new PersonalDataExportContext('person', 'request', 'person', 'account', null,
-            new DateTimeImmutable('2026-09-29T10:00:00Z'));
+        $context = new PersonalDataExportContext(
+            'person',
+            'request',
+            'person',
+            'account',
+            null,
+            new DateTimeImmutable('2026-09-29T10:00:00Z'),
+        );
         $first = (new PersonalDataExporter(new PersonalDataContributorRegistry([$b, $a])))->export($context);
         $second = (new PersonalDataExporter(new PersonalDataContributorRegistry([$a, $b])))->export($context);
         self::assertSame($first->sha256, $second->sha256);
@@ -40,11 +46,17 @@ final class PersonalDataExporterTest extends TestCase
     /** @param list<array<string, mixed>> $records */
     private function contributor(string $code, array $records): PersonalDataContributor
     {
-        return new class($code, $records) implements PersonalDataContributor {
+        return new class ($code, $records) implements PersonalDataContributor {
             /** @param list<array<string, mixed>> $records */
             public function __construct(private string $code, private array $records) {}
-            public function code(): string { return $this->code; }
-            public function categories(): array { return ['identity']; }
+            public function code(): string
+            {
+                return $this->code;
+            }
+            public function categories(): array
+            {
+                return ['identity'];
+            }
             public function collect(PersonalDataExportContext $context): PersonalDataSection
             {
                 return new PersonalDataSection($this->code, $this->categories(), $this->records);

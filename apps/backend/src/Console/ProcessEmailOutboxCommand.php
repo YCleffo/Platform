@@ -18,9 +18,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 )]
 final class ProcessEmailOutboxCommand extends Command
 {
-    public function __construct(private readonly EmailOutboxProcessor $processor,
-        private readonly BackgroundJobStatusRecorder $status)
-    {
+    public function __construct(
+        private readonly EmailOutboxProcessor $processor,
+        private readonly BackgroundJobStatusRecorder $status,
+    ) {
         parent::__construct();
     }
 
@@ -50,25 +51,40 @@ final class ProcessEmailOutboxCommand extends Command
             try {
                 $this->status->started('backend_email_worker');
                 $report = $this->processor->process($worker, $limit);
-                $this->status->succeeded('backend_email_worker',
-                    max(0, (int) ((microtime(true) - $started) * 1000)), $report->claimed);
+                $this->status->succeeded(
+                    'backend_email_worker',
+                    max(0, (int) ((microtime(true) - $started) * 1000)),
+                    $report->claimed,
+                );
                 $output->writeln(sprintf(
                     'claimed=%d sent=%d retrying=%d dead=%d state_conflicts=%d',
-                    $report->claimed, $report->sent, $report->retrying, $report->dead, $report->stateConflicts,
+                    $report->claimed,
+                    $report->sent,
+                    $report->retrying,
+                    $report->dead,
+                    $report->stateConflicts,
                 ));
             } catch (\Throwable) {
-                try { $this->status->failed('backend_email_worker', 'email_batch_failed'); }
-                catch (\Throwable) { /* The worker still follows its existing bounded retry path. */ }
+                try {
+                    $this->status->failed('backend_email_worker', 'email_batch_failed');
+                } catch (\Throwable) { /* The worker still follows its existing bounded retry path. */
+                }
                 $output->writeln('Core email worker batch failed.');
-                if (!$input->getOption('loop')) { return Command::FAILURE; }
+                if (!$input->getOption('loop')) {
+                    return Command::FAILURE;
+                }
                 sleep(5);
                 continue;
             }
-            if (!isset($report)) { continue; }
+            if (!isset($report)) {
+                continue;
+            }
             if (!$input->getOption('loop')) {
                 return $report->stateConflicts === 0 ? Command::SUCCESS : Command::FAILURE;
             }
-            if ($report->claimed === 0) { sleep(5); }
+            if ($report->claimed === 0) {
+                sleep(5);
+            }
         } while (true);
     }
 }

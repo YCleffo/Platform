@@ -2,11 +2,11 @@
 
 import argparse
 import json
-from pathlib import Path
 import subprocess
-from urllib.parse import quote
 from collections.abc import Sequence
+from pathlib import Path
 from typing import TypedDict, cast
+from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[2]
 

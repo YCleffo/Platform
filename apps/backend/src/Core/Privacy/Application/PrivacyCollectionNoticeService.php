@@ -13,17 +13,29 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class PrivacyCollectionNoticeService
 {
-    public function __construct(private ConnectionInterface $db, private ClockInterface $clock,
-        private ProcessingPurposeRegistry $purposes, private DataCategoryRegistry $categories) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private ClockInterface $clock,
+        private ProcessingPurposeRegistry $purposes,
+        private DataCategoryRegistry $categories,
+    ) {}
 
     /** @param list<string> $categoryCodes */
-    public function record(AuthenticatedIdentity $operator, string $subjectPersonId, string $purposeCode,
-        array $categoryCodes, string $sourceCode, DateTimeImmutable $collectedAt,
-        bool $noticeRequired, ?string $exemptionCode): string
-    {
+    public function record(
+        AuthenticatedIdentity $operator,
+        string $subjectPersonId,
+        string $purposeCode,
+        array $categoryCodes,
+        string $sourceCode,
+        DateTimeImmutable $collectedAt,
+        bool $noticeRequired,
+        ?string $exemptionCode,
+    ): string {
         MachineCode::assert($purposeCode);
         MachineCode::assert($sourceCode);
-        if ($exemptionCode !== null) { MachineCode::assert($exemptionCode); }
+        if ($exemptionCode !== null) {
+            MachineCode::assert($exemptionCode);
+        }
         $purpose = $this->purposes->get($purposeCode);
         if ($purpose === null || $categoryCodes === [] || count($categoryCodes) > 32
             || count($categoryCodes) !== count(array_unique($categoryCodes))
@@ -61,7 +73,9 @@ final readonly class PrivacyCollectionNoticeService
             WHERE id = CAST(:id AS uuid) AND notice_required AND notice_issued_at IS NULL
             SQL, [':id' => $id, ':now' => $this->clock->now()->format(DATE_ATOM),
             ':evidence' => $evidenceReference])->execute();
-        if ($changed !== 1) { throw new DomainException('Notice cannot be issued.'); }
+        if ($changed !== 1) {
+            throw new DomainException('Notice cannot be issued.');
+        }
     }
 
     public function complete(string $id): bool
@@ -70,7 +84,9 @@ final readonly class PrivacyCollectionNoticeService
             SELECT notice_required, exemption_code, notice_issued_at, notice_evidence_reference
             FROM core.privacy_collection_notices WHERE id = CAST(:id AS uuid)
             SQL, [':id' => $id])->queryOne();
-        if (!is_array($row)) { throw new DomainException('Collection notice not found.'); }
+        if (!is_array($row)) {
+            throw new DomainException('Collection notice not found.');
+        }
         return in_array($row['notice_required'], [false, 'f', 0], true)
             ? $row['exemption_code'] !== null
             : $row['notice_issued_at'] !== null && $row['notice_evidence_reference'] !== null;

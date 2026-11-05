@@ -83,7 +83,9 @@ final class PrivacyDeploymentConfigLoader
                 if ($identity !== null && isset($seen[$identity])) {
                     throw new RuntimeException("Invalid configuration path {$key}[{$index}]: duplicate code {$identity}.");
                 }
-                if ($identity !== null) { $seen[$identity] = true; }
+                if ($identity !== null) {
+                    $seen[$identity] = true;
+                }
                 $result[$key][] = $object;
             }
         }
@@ -108,9 +110,15 @@ final class PrivacyDeploymentConfigLoader
             }
         }
         /** @var array{coverageFrom: string, coverageUntil: string, weekends: list<int>, nonWorkingDates: list<string>, workingOverrideDates: list<string>, sourceReference: string|null, verifiedAt: string|null} $calendar */
-        new ConfiguredBusinessCalendar($calendar['coverageFrom'], $calendar['coverageUntil'],
-            $calendar['weekends'], $calendar['nonWorkingDates'], $calendar['workingOverrideDates'],
-            $calendar['sourceReference'], $calendar['verifiedAt']);
+        new ConfiguredBusinessCalendar(
+            $calendar['coverageFrom'],
+            $calendar['coverageUntil'],
+            $calendar['weekends'],
+            $calendar['nonWorkingDates'],
+            $calendar['workingOverrideDates'],
+            $calendar['sourceReference'],
+            $calendar['verifiedAt'],
+        );
         $registeredPurposes = $result['privacyOperatorNotification']['registeredPurposes'] ?? null;
         if (!is_bool($result['privacyOperatorNotification']['required'] ?? null)
             || !is_array($registeredPurposes)
@@ -118,7 +126,9 @@ final class PrivacyDeploymentConfigLoader
             throw new RuntimeException('Invalid operator notification format.');
         }
         $codes = static fn(array $objects, string $property): array => array_map(
-            static fn(object $object): string => (string) $object->$property, $objects);
+            static fn(object $object): string => (string) $object->$property,
+            $objects,
+        );
         $purposes = $codes($result['processingPurposeDefinitions'], 'code');
         $categories = $codes($result['dataCategoryDefinitions'], 'code');
         $subjects = $codes($result['subjectCategoryDefinitions'], 'code');
@@ -130,8 +140,11 @@ final class PrivacyDeploymentConfigLoader
             if (trim($purpose->description) === '') {
                 throw new RuntimeException("Invalid configuration path {$path}.description: purpose description is required.");
             }
-            if ($purpose->legalBasisCode === '' || !in_array($purpose->legalBasisCode,
-                ['consent', 'contract', 'legal_obligation', 'vital_interests', 'public_task', 'legitimate_interests'], true)) {
+            if ($purpose->legalBasisCode === '' || !in_array(
+                $purpose->legalBasisCode,
+                ['consent', 'contract', 'legal_obligation', 'vital_interests', 'public_task', 'legitimate_interests'],
+                true,
+            )) {
                 throw new RuntimeException("Invalid configuration path {$path}.legalBasisCode: unsupported legal basis.");
             }
             if (array_diff($purpose->dataCategories, $categories) !== []) {
@@ -173,9 +186,9 @@ final class PrivacyDeploymentConfigLoader
             }
         }
         foreach ($result['consentDefinitions'] as $index => $definition) {
-                if (!in_array($definition->purposeCode, $purposes, true)) {
-                    throw new RuntimeException("Invalid configuration path consentDefinitions[{$index}].purposeCode: unknown purpose.");
-                }
+            if (!in_array($definition->purposeCode, $purposes, true)) {
+                throw new RuntimeException("Invalid configuration path consentDefinitions[{$index}].purposeCode: unknown purpose.");
+            }
         }
         foreach ($result['privacyDistributionConsentDefinitions'] as $index => $definition) {
             if (!in_array($definition->purposeCode, $purposes, true)) {
@@ -225,7 +238,9 @@ final class PrivacyDeploymentConfigLoader
     private static function assertNoPlaceholders(mixed $value, string $path = 'root'): void
     {
         if (is_array($value)) {
-            foreach ($value as $key => $child) { self::assertNoPlaceholders($child, $path . '.' . $key); }
+            foreach ($value as $key => $child) {
+                self::assertNoPlaceholders($child, $path . '.' . $key);
+            }
             return;
         }
         if (is_string($value) && preg_match('/(?:TODO|CHANGE_ME|REPLACE_ME|EXAMPLE_ONLY|<[^>]+>|^$)/i', trim($value)) === 1) {

@@ -22,8 +22,12 @@ final readonly class CreatePersonContact
         if ($person === null || $person->status === 'archived') {
             return null;
         }
-        if (!$this->privacy->allowed($command->personId, 'core.person_contact',
-            $command->personId, 'identity')) {
+        if (!$this->privacy->allowed(
+            $command->personId,
+            'core.person_contact',
+            $command->personId,
+            'identity',
+        )) {
             throw new DomainException('Person contact processing is restricted.');
         }
 

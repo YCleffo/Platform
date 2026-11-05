@@ -14,13 +14,25 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 /** Uses the existing lifecycle and Auth cleanup boundary; machine accounts are excluded. */
 final readonly class CoreHumanAccountAnonymizationHandler implements PersonalDataErasureHandler
 {
-    public function __construct(private ConnectionInterface $db,
-        private AccountLifecycleRepository $lifecycle, private AuthCleanupRepository $auth,
-        private RoleRepository $roles) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private AccountLifecycleRepository $lifecycle,
+        private AuthCleanupRepository $auth,
+        private RoleRepository $roles,
+    ) {}
 
-    public function code(): string { return 'core.human_account.anonymize'; }
-    public function resourceType(): string { return 'core.human_account'; }
-    public function supportsAction(string $action): bool { return $action === 'anonymize'; }
+    public function code(): string
+    {
+        return 'core.human_account.anonymize';
+    }
+    public function resourceType(): string
+    {
+        return 'core.human_account';
+    }
+    public function supportsAction(string $action): bool
+    {
+        return $action === 'anonymize';
+    }
 
     public function owns(string $subjectPersonId, string $resourceId): bool
     {
@@ -56,14 +68,18 @@ final readonly class CoreHumanAccountAnonymizationHandler implements PersonalDat
             SQL, [':id' => $resourceId])->queryOne();
         $settings = $this->db->createCommand(
             'SELECT 1 FROM core.account_settings WHERE account_id = CAST(:id AS uuid)',
-            [':id' => $resourceId])->queryScalar();
+            [':id' => $resourceId],
+        )->queryScalar();
         if ($settings !== false && $settings !== null) {
             throw new DomainException('Account settings erasure dependency remains.');
         }
-        if (is_array($current) && $this->tombstoned($current)) { return 'anonymized'; }
+        if (is_array($current) && $this->tombstoned($current)) {
+            return 'anonymized';
+        }
         $status = $this->db->createCommand(
             'SELECT status::text FROM core.accounts WHERE id = CAST(:id AS uuid) FOR UPDATE',
-            [':id' => $resourceId])->queryScalar();
+            [':id' => $resourceId],
+        )->queryScalar();
         if ($status !== 'archived') {
             // RBAC repository enforces the final usable superadmin guard before access is removed.
             foreach ($this->roles->findByAccountId($resourceId) as $role) {
@@ -91,9 +107,13 @@ final readonly class CoreHumanAccountAnonymizationHandler implements PersonalDat
         }
         foreach (['auth_identifiers', 'auth_password_credentials', 'auth_sessions', 'auth_totp_factors',
             'auth_recovery_codes', 'auth_passkeys', 'auth_external_identities', 'auth_challenges'] as $table) {
-            $found = $this->db->createCommand("SELECT 1 FROM core.{$table} WHERE account_id = CAST(:id AS uuid) LIMIT 1",
-                [':id' => $row['id']])->queryScalar();
-            if ($found !== false && $found !== null) { return false; }
+            $found = $this->db->createCommand(
+                "SELECT 1 FROM core.{$table} WHERE account_id = CAST(:id AS uuid) LIMIT 1",
+                [':id' => $row['id']],
+            )->queryScalar();
+            if ($found !== false && $found !== null) {
+                return false;
+            }
         }
         return true;
     }

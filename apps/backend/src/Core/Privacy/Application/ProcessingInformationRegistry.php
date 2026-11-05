@@ -33,7 +33,9 @@ final readonly class ProcessingInformationRegistry
     public function coversAll(array $purposeCodes): bool
     {
         foreach ($purposeCodes as $code) {
-            if (!isset($this->definitions[$code])) { return false; }
+            if (!isset($this->definitions[$code])) {
+                return false;
+            }
         }
         return $purposeCodes !== [];
     }

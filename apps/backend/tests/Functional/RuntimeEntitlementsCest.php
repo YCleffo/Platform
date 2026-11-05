@@ -39,59 +39,92 @@ final readonly class RuntimeEntitlementsCest
             ]);
             $verifier = new SodiumEntitlementSignatureVerifier($keys);
             $applier = new PostgresEntitlementApplier($db, $verifier);
-            $effective = new PostgresEffectiveRuntimeEntitlements(new PostgresInstallationRepository($db),
-                new PostgresEntitlementDocumentRepository($db), $verifier);
+            $effective = new PostgresEffectiveRuntimeEntitlements(
+                new PostgresInstallationRepository($db),
+                new PostgresEntitlementDocumentRepository($db),
+                $verifier,
+            );
             $active = $this->document($installation, 1, 'active', (object) ['module.crm' => true]);
             $signature = sodium_crypto_sign_detached($active, $secret);
             $applier->apply($installation, $active, $signature, 'test-key');
             $applier->apply($installation, $active, $signature, 'test-key');
             assertSame(['module.crm' => true], $effective->forInstallation($installation));
-            assertSame(1, (int) $db->createCommand('SELECT current_entitlement_sequence FROM platform_runtime.installations WHERE id = CAST(:id AS uuid)',
-                [':id' => $installation])->queryScalar());
+            assertSame(1, (int) $db->createCommand(
+                'SELECT current_entitlement_sequence FROM platform_runtime.installations WHERE id = CAST(:id AS uuid)',
+                [':id' => $installation],
+            )->queryScalar());
 
             $this->reject(static fn() => $applier->apply($installation, $active . ' ', $signature, 'test-key'));
             $this->reject(static fn() => $applier->apply($installation, $active, $signature, 'revoked-key'));
             $this->reject(static fn() => $applier->apply($installation, $active, $signature, 'unknown-key'));
             $otherInstallation = (string) $db->createCommand('SELECT uuidv7()::text')->queryScalar();
             $foreign = $this->document($otherInstallation, 2, 'active', (object) ['module.crm' => true]);
-            $this->reject(static fn() => $applier->apply($installation, $foreign,
-                sodium_crypto_sign_detached($foreign, $secret), 'test-key'));
+            $this->reject(static fn() => $applier->apply(
+                $installation,
+                $foreign,
+                sodium_crypto_sign_detached($foreign, $secret),
+                'test-key',
+            ));
             $expired = $this->document($installation, 2, 'active', (object) ['module.crm' => true], -10);
-            $this->reject(static fn() => $applier->apply($installation, $expired,
-                sodium_crypto_sign_detached($expired, $secret), 'test-key'));
+            $this->reject(static fn() => $applier->apply(
+                $installation,
+                $expired,
+                sodium_crypto_sign_detached($expired, $secret),
+                'test-key',
+            ));
             $future = $this->document($installation, 2, 'active', (object) ['module.crm' => true], 3600);
-            $this->reject(static fn() => $applier->apply($installation, $future,
-                sodium_crypto_sign_detached($future, $secret), 'test-key'));
-            $this->reject(fn() => $applier->apply($installation, $this->document($installation, 1, 'suspended', new \stdClass()),
-                sodium_crypto_sign_detached($this->document($installation, 1, 'suspended', new \stdClass()), $secret), 'test-key'));
+            $this->reject(static fn() => $applier->apply(
+                $installation,
+                $future,
+                sodium_crypto_sign_detached($future, $secret),
+                'test-key',
+            ));
+            $this->reject(fn() => $applier->apply(
+                $installation,
+                $this->document($installation, 1, 'suspended', new \stdClass()),
+                sodium_crypto_sign_detached($this->document($installation, 1, 'suspended', new \stdClass()), $secret),
+                'test-key',
+            ));
 
             $suspended = $this->document($installation, 2, 'suspended', new \stdClass());
             $applier->apply($installation, $suspended, sodium_crypto_sign_detached($suspended, $secret), 'test-key');
             assertSame([], $effective->forInstallation($installation));
-            assertSame(2, (int) $db->createCommand('SELECT current_entitlement_sequence FROM platform_runtime.installations WHERE id = CAST(:id AS uuid)',
-                [':id' => $installation])->queryScalar());
+            assertSame(2, (int) $db->createCommand(
+                'SELECT current_entitlement_sequence FROM platform_runtime.installations WHERE id = CAST(:id AS uuid)',
+                [':id' => $installation],
+            )->queryScalar());
             $this->reject(static fn() => $applier->apply($installation, $active, $signature, 'test-key'));
         } finally {
             $transaction->rollBack();
         }
     }
 
-    private function document(string $installation, int $sequence, string $status, \stdClass $features,
-        ?int $validUntilOffset = null): string
-    {
+    private function document(
+        string $installation,
+        int $sequence,
+        string $status,
+        \stdClass $features,
+        ?int $validUntilOffset = null,
+    ): string {
         $issued = gmdate('Y-m-d\TH:i:s\Z', time() - 3600);
-        return json_encode(['documentVersion' => 1, 'sequence' => $sequence, 'installationId' => $installation,
-            'issuedAt' => $issued,
-            'validFrom' => gmdate('Y-m-d\TH:i:s\Z', time() + ($validUntilOffset === 3600 ? 60 : -3600)),
-            'validUntil' => gmdate('Y-m-d\TH:i:s\Z', time() + ($validUntilOffset ?? 3600)),
-            'deploymentStatus' => $status, 'features' => $features],
-            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+        return json_encode(
+            ['documentVersion' => 1, 'sequence' => $sequence, 'installationId' => $installation,
+                'issuedAt' => $issued,
+                'validFrom' => gmdate('Y-m-d\TH:i:s\Z', time() + ($validUntilOffset === 3600 ? 60 : -3600)),
+                'validUntil' => gmdate('Y-m-d\TH:i:s\Z', time() + ($validUntilOffset ?? 3600)),
+                'deploymentStatus' => $status, 'features' => $features],
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION,
+        );
     }
 
     private function reject(\Closure $operation): void
     {
-        try { $operation(); }
-        catch (DomainException) { assertTrue(true); return; }
+        try {
+            $operation();
+        } catch (DomainException) {
+            assertTrue(true);
+            return;
+        }
         throw new \RuntimeException('Invalid entitlement document was accepted.');
     }
 }

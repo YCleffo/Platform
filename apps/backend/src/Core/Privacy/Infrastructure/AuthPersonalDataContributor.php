@@ -14,9 +14,15 @@ final readonly class AuthPersonalDataContributor implements PersonalDataContribu
 {
     public function __construct(private ConnectionInterface $db) {}
 
-    public function code(): string { return 'core.auth'; }
+    public function code(): string
+    {
+        return 'core.auth';
+    }
 
-    public function categories(): array { return ['authentication']; }
+    public function categories(): array
+    {
+        return ['authentication'];
+    }
 
     public function collect(PersonalDataExportContext $context): PersonalDataSection
     {

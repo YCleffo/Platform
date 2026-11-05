@@ -8,7 +8,7 @@ const sources = join(directory, 'svg');
 const symbols = readdirSync(sources).filter((file) => file.endsWith('.svg')).sort().map((file) => {
   const id = file.slice(0, -4);
   if (!/^[a-z][a-z0-9-]*$/.test(id)) throw new Error(`Invalid icon name: ${file}`);
-  const source = readFileSync(join(sources, file), 'utf8').trim();
+  const source = readFileSync(join(sources, file), 'utf8').replace(/\r\n/g, '\n').trim();
   const match = /^<svg\b([^>]*)>([\s\S]*)<\/svg>$/.exec(source);
   if (match === null || !/viewBox="0 0 24 24"/.test(match[1])) throw new Error(`Invalid SVG: ${file}`);
   if (/<(?:script|foreignObject|style|image)\b|\bon[a-z]+\s*=|\bhref\s*=|\bid\s*=|url\s*\(/i.test(source)) {

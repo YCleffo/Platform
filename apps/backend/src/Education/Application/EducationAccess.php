@@ -14,13 +14,20 @@ use DateTimeZone;
 
 final readonly class EducationAccess
 {
-    public function __construct(private EducationStore $store, private ModuleRepository $modules,
-        private OrganizationRepository $organizations, private GetPerson $persons,
-        private PermissionService $permissions, private PrivacyResourceUsePolicy $privacy) {}
+    public function __construct(
+        private EducationStore $store,
+        private ModuleRepository $modules,
+        private OrganizationRepository $organizations,
+        private GetPerson $persons,
+        private PermissionService $permissions,
+        private PrivacyResourceUsePolicy $privacy,
+    ) {}
 
     public function assertAvailable(AuthenticatedIdentity $identity): string
     {
-        if ($this->modules->findByCode('education')?->enabled !== true) throw new EducationError(404, 'module_unavailable');
+        if ($this->modules->findByCode('education')?->enabled !== true) {
+            throw new EducationError(404, 'module_unavailable');
+        }
         $personId = $identity->personId;
         if ($personId === null || !$this->organizations->activePerson($personId)
             || !$this->permissions->hasPermission($identity->accountId, 'education.access')) {
@@ -53,21 +60,34 @@ final readonly class EducationAccess
         $personId = $this->assertAvailable($identity);
         Input::uuid($organizationId);
         if (!$this->permissions->hasPermission($identity->accountId, $permission)
-            || !$this->organizations->activeMember($personId, $organizationId)) throw new EducationError(403, 'access_denied');
+            || !$this->organizations->activeMember($personId, $organizationId)) {
+            throw new EducationError(403, 'access_denied');
+        }
         $timezone = $identity->timezone ?? 'UTC';
-        if ($timezone === '') throw new EducationError(422, 'invalid_timezone');
-        try { new DateTimeZone($timezone); }
-        catch (\Exception) { throw new EducationError(422, 'invalid_timezone'); }
+        if ($timezone === '') {
+            throw new EducationError(422, 'invalid_timezone');
+        }
+        try {
+            new DateTimeZone($timezone);
+        } catch (\Exception) {
+            throw new EducationError(422, 'invalid_timezone');
+        }
         $scope = new Scope($organizationId, $identity->accountId, $personId, $identity->locale ?? 'ru-RU', $timezone);
-        if (!$this->store->teacherExists($scope)) throw new EducationError(403, 'access_denied');
+        if (!$this->store->teacherExists($scope)) {
+            throw new EducationError(403, 'access_denied');
+        }
         return $scope;
     }
 
     public function personName(string $personId): ?string
     {
-        if (!$this->privacy->allowed($personId, 'education.person', $personId, 'education')) return null;
+        if (!$this->privacy->allowed($personId, 'education.person', $personId, 'education')) {
+            return null;
+        }
         $person = $this->persons->execute($personId);
-        if ($person === null || $person->status !== 'active') return null;
+        if ($person === null || $person->status !== 'active') {
+            return null;
+        }
         return $person->displayName ?: trim($person->givenName . ' ' . $person->familyName);
     }
 
@@ -84,7 +104,9 @@ final readonly class EducationAccess
 
     public function assertResource(Scope $scope, string $type, string $id): void
     {
-        if (!$this->resourceAllowed($scope->personId, $type, $id)) throw new EducationError(403, 'processing_restricted');
+        if (!$this->resourceAllowed($scope->personId, $type, $id)) {
+            throw new EducationError(403, 'processing_restricted');
+        }
     }
 
     /** @return list<array{id:string,name:string}> */
@@ -92,9 +114,13 @@ final readonly class EducationAccess
     {
         $items = [];
         foreach ($this->organizations->members($scope->organizationId) as $membership) {
-            if ($membership->status !== 'active' || !$this->member($membership->personId, $scope->organizationId)) continue;
+            if ($membership->status !== 'active' || !$this->member($membership->personId, $scope->organizationId)) {
+                continue;
+            }
             $name = $this->personName($membership->personId);
-            if ($name !== null) $items[] = ['id' => $membership->personId, 'name' => $name];
+            if ($name !== null) {
+                $items[] = ['id' => $membership->personId, 'name' => $name];
+            }
         }
         return $items;
     }

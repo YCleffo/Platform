@@ -27,7 +27,7 @@ final readonly class ConsentService
     {
         $personId = $this->personForAccount($accountId);
         $definitions = array_map(
-            fn (ConsentDefinition $definition): array => $definition->toArray(
+            fn(ConsentDefinition $definition): array => $definition->toArray(
                 $this->purposes->get($definition->purposeCode)?->representativeAllowed ?? false,
             ),
             $this->definitions->all(),
@@ -229,8 +229,11 @@ final readonly class ConsentService
     private function record(string $accountId, string $action, string $id): void
     {
         $this->audit->record(new WriteAuditEventCommand(
-            actorType: 'account', actorAccountId: $accountId,
-            action: $action, resourceType: 'core.privacy_consent', resourceId: $id,
+            actorType: 'account',
+            actorAccountId: $accountId,
+            action: $action,
+            resourceType: 'core.privacy_consent',
+            resourceId: $id,
         ));
     }
 }

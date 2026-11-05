@@ -7,7 +7,9 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 
 WORKDIR /src/gosu
-RUN curl --fail --location --retry 3 \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    curl --fail --location --retry 3 \
         https://codeload.github.com/tianon/gosu/tar.gz/6456aaa0f3c854d199d0f037f068eb97515b7513 \
         --output /tmp/gosu.tar.gz \
     && echo '33d7537d588ea49458b9509bcf4554bdf5ceacc66da71e5caa1058ea3b689c3b  /tmp/gosu.tar.gz' | sha256sum --check - \

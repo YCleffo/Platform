@@ -13,13 +13,16 @@ final readonly class CoreResourceBasisContributor implements LawfulProcessingBas
 {
     public function __construct(private ProcessingPurposeRegistry $purposes) {}
 
-    public function code(): string { return 'core.resource_basis'; }
+    public function code(): string
+    {
+        return 'core.resource_basis';
+    }
 
     public function supports(string $purposeCode, string $resourceType): bool
     {
         $category = match ($resourceType) {
             'core.person', 'core.human_account', 'core.person_contact',
-                'core.organization_membership' => 'identity',
+            'core.organization_membership' => 'identity',
             'core.account_settings' => 'preferences',
             default => null,
         };

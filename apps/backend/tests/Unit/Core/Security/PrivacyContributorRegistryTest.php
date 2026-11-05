@@ -22,22 +22,39 @@ final class PrivacyContributorRegistryTest extends TestCase
     public function testCorrectionAndRestrictionRegistriesRejectDuplicates(): void
     {
         $contributor = new class implements PersonalDataCorrectionContributor {
-            public function code(): string { return 'test.correction'; }
-            public function supportedResourceTypes(): array { return ['test.resource']; }
+            public function code(): string
+            {
+                return 'test.correction';
+            }
+            public function supportedResourceTypes(): array
+            {
+                return ['test.resource'];
+            }
             public function apply(CorrectionContext $context, CorrectionCommand $command): CorrectionResult
-            { return new CorrectionResult('test.resource', $command->resourceId, ['value']); }
+            {
+                return new CorrectionResult('test.resource', $command->resourceId, ['value']);
+            }
         };
-        self::assertSame($contributor,
-            (new PersonalDataCorrectionContributorRegistry([$contributor]))->get('test.correction'));
+        self::assertSame(
+            $contributor,
+            (new PersonalDataCorrectionContributorRegistry([$contributor]))->get('test.correction'),
+        );
         try {
             new PersonalDataCorrectionContributorRegistry([$contributor, $contributor]);
             self::fail('Duplicate correction contributor was accepted.');
-        } catch (DomainException) { self::assertTrue(true); }
+        } catch (DomainException) {
+            self::assertTrue(true);
+        }
 
         $restriction = new class implements ProcessingRestrictionContributor {
-            public function code(): string { return 'test.restriction'; }
+            public function code(): string
+            {
+                return 'test.restriction';
+            }
             public function supports(string $scopeType, ?string $purposeCode, ?string $resourceType): bool
-            { return $scopeType === 'subject'; }
+            {
+                return $scopeType === 'subject';
+            }
             public function applyRestriction(string $blockId, string $subjectPersonId): void {}
             public function releaseRestriction(string $blockId, string $subjectPersonId): void {}
         };

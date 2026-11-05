@@ -19,17 +19,28 @@ final class RuntimeMigrationArtifactTest extends TestCase
         $db = $this->createMock(ConnectionInterface::class);
         $db->method('createCommand')->willReturnCallback(function (?string $sql) use (&$writes): CommandInterface {
             $command = $this->createMock(CommandInterface::class);
-            $command->method('execute')->willReturnCallback(static function () use (&$writes): int { ++$writes; return 1; });
-            if (str_contains($sql ?? '', 'to_regclass')) { $command->method('queryScalar')->willReturn('platform_migrations'); }
+            $command->method('execute')->willReturnCallback(static function () use (&$writes): int {
+                ++$writes;
+                return 1;
+            });
+            if (str_contains($sql ?? '', 'to_regclass')) {
+                $command->method('queryScalar')->willReturn('platform_migrations');
+            }
             if (str_contains($sql ?? '', 'SELECT migration_name')) {
                 $command->method('queryColumn')->willReturn(['001_initial.sql', '002_removed.sql']);
             }
             return $command;
         });
         try {
-            try { (new RuntimeMigrationArtifact($db))->apply($directory); self::fail('Invalid history was applied.'); }
-            catch (DomainException) { self::assertSame(0, $writes); }
-        } finally { $this->removeDirectory($directory); }
+            try {
+                (new RuntimeMigrationArtifact($db))->apply($directory);
+                self::fail('Invalid history was applied.');
+            } catch (DomainException) {
+                self::assertSame(0, $writes);
+            }
+        } finally {
+            $this->removeDirectory($directory);
+        }
     }
 
     public function testValidAppliedHistoryAndNewTargetMigrationAreAllowed(): void
@@ -38,14 +49,22 @@ final class RuntimeMigrationArtifactTest extends TestCase
         $db = $this->createMock(ConnectionInterface::class);
         $db->method('createCommand')->willReturnCallback(function (?string $sql): CommandInterface {
             $command = $this->createMock(CommandInterface::class);
-            if (str_contains($sql ?? '', 'to_regclass')) { $command->method('queryScalar')->willReturn('platform_migrations'); }
-            if (str_contains($sql ?? '', 'SELECT migration_name')) { $command->method('queryColumn')->willReturn(['001_applied.sql']); }
+            if (str_contains($sql ?? '', 'to_regclass')) {
+                $command->method('queryScalar')->willReturn('platform_migrations');
+            }
+            if (str_contains($sql ?? '', 'SELECT migration_name')) {
+                $command->method('queryColumn')->willReturn(['001_applied.sql']);
+            }
             return $command;
         });
         try {
-            self::assertSame(['001_applied.sql', '002_new.sql'],
-                (new RuntimeMigrationArtifact($db))->validateHistory($directory));
-        } finally { $this->removeDirectory($directory); }
+            self::assertSame(
+                ['001_applied.sql', '002_new.sql'],
+                (new RuntimeMigrationArtifact($db))->validateHistory($directory),
+            );
+        } finally {
+            $this->removeDirectory($directory);
+        }
     }
 
     public function testEmptyArtifactFailsClosed(): void
@@ -55,13 +74,16 @@ final class RuntimeMigrationArtifactTest extends TestCase
         try {
             $this->expectException(DomainException::class);
             (new RuntimeMigrationArtifact($db))->validateHistory($directory);
-        } finally { $this->removeDirectory($directory); }
+        } finally {
+            $this->removeDirectory($directory);
+        }
     }
 
     public function testApplyIsSortedMonotonicAndIdempotent(): void
     {
         $directory = $this->directory(['002_second.sql' => 'SELECT 2', '001_first.sql' => 'SELECT 1']);
-        $applied = []; $executed = [];
+        $applied = [];
+        $executed = [];
         $db = $this->createMock(ConnectionInterface::class);
         $db->method('transaction')->willReturnCallback(static fn(callable $callback): mixed => $callback());
         $db->method('createCommand')->willReturnCallback(
@@ -75,22 +97,27 @@ final class RuntimeMigrationArtifactTest extends TestCase
                     $command->method('queryScalar')->willReturnCallback(static fn(): int|false => isset($applied[$params[':name']]) ? 1 : false);
                 } elseif (str_contains($sql ?? '', 'INSERT INTO public.platform_migrations')) {
                     $command->method('execute')->willReturnCallback(static function () use (&$applied, $params): int {
-                        $applied[$params[':name']] = true; return 1;
+                        $applied[$params[':name']] = true;
+                        return 1;
                     });
                 } elseif (!str_contains($sql ?? '', 'CREATE TABLE')) {
                     $command->method('execute')->willReturnCallback(static function () use (&$executed, $sql): int {
-                        $executed[] = trim((string)$sql); return 1;
+                        $executed[] = trim((string) $sql);
+                        return 1;
                     });
                 }
                 return $command;
-            });
+            },
+        );
         try {
             $artifact = new RuntimeMigrationArtifact($db);
             $artifact->apply($directory);
             $artifact->apply($directory);
             self::assertSame(['SELECT 1', 'SELECT 2'], $executed);
             self::assertSame(['001_first.sql', '002_second.sql'], array_keys($applied));
-        } finally { $this->removeDirectory($directory); }
+        } finally {
+            $this->removeDirectory($directory);
+        }
     }
 
     /** @param array<string,string> $files */
@@ -98,13 +125,17 @@ final class RuntimeMigrationArtifactTest extends TestCase
     {
         $directory = sys_get_temp_dir() . '/runtime-migrations-' . bin2hex(random_bytes(6));
         mkdir($directory, 0700, true);
-        foreach ($files as $name => $contents) { file_put_contents($directory . '/' . $name, $contents); }
+        foreach ($files as $name => $contents) {
+            file_put_contents($directory . '/' . $name, $contents);
+        }
         return $directory;
     }
 
     private function removeDirectory(string $directory): void
     {
-        foreach (glob($directory . '/*') ?: [] as $file) { @unlink($file); }
+        foreach (glob($directory . '/*') ?: [] as $file) {
+            @unlink($file);
+        }
         @rmdir($directory);
     }
 }

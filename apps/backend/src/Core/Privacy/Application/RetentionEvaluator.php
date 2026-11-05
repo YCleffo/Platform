@@ -10,11 +10,15 @@ use App\Core\Time\Application\ClockInterface;
 
 final readonly class RetentionEvaluator
 {
-    public function __construct(private ProcessingPurposeRegistry $purposes,
-        private RetentionPolicyRegistry $policies, private PrivacyDeadlinePolicy $deadlines,
-        private LegalHoldService $holds, private LawfulProcessingBasisResolver $bases,
+    public function __construct(
+        private ProcessingPurposeRegistry $purposes,
+        private RetentionPolicyRegistry $policies,
+        private PrivacyDeadlinePolicy $deadlines,
+        private LegalHoldService $holds,
+        private LawfulProcessingBasisResolver $bases,
         private RetentionDependencyContributorRegistry $dependencies,
-        private ClockInterface $clock) {}
+        private ClockInterface $clock,
+    ) {}
 
     public function evaluate(RetentionCandidate $candidate): RetentionDecision
     {

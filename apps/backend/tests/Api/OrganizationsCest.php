@@ -6,6 +6,7 @@ namespace App\Tests\Api;
 
 use App\Tests\Support\ApiTester;
 use Codeception\Util\HttpCode;
+
 use function PHPUnit\Framework\assertCount;
 use function PHPUnit\Framework\assertSame;
 use function PHPUnit\Framework\assertStringNotContainsString;
@@ -110,8 +111,10 @@ final readonly class OrganizationsCest
             ORDER BY id
             SQL)->queryAll();
         assertCount(3, $rows);
-        assertSame(['organization.created', 'organization_membership.added', 'organization_membership.left'],
-            array_column($rows, 'action'));
+        assertSame(
+            ['organization.created', 'organization_membership.added', 'organization_membership.left'],
+            array_column($rows, 'action'),
+        );
         foreach ($rows as $row) {
             assertStringNotContainsString('name', $row['metadata']);
             assertStringNotContainsString('email', $row['metadata']);

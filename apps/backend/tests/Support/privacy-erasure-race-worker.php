@@ -41,34 +41,78 @@ $policies = new RetentionPolicyRegistry([
     new RetentionPolicyDefinition('b4.race', 'purpose_completed', null, 'delete', durationUnit: 'event_only'),
 ]);
 $purposes = new ProcessingPurposeRegistry([
-    new ProcessingPurposeDefinition('b4.race', 'consent', true, false,
-        ['identity'], ['person'], 'b4.race', 'operator'),
+    new ProcessingPurposeDefinition(
+        'b4.race',
+        'consent',
+        true,
+        false,
+        ['identity'],
+        ['person'],
+        'b4.race',
+        'operator',
+    ),
 ], $container->get(DataCategoryRegistry::class), $policies);
 $candidates = new RetentionCandidateContributorRegistry([
-    new class($subject, $contact) implements RetentionCandidateContributor {
+    new class ($subject, $contact) implements RetentionCandidateContributor {
         public function __construct(private string $subject, private string $contact) {}
-        public function code(): string { return 'b4.race'; }
-        public function supportsPurpose(string $purposeCode): bool { return $purposeCode === 'b4.race'; }
-        public function candidates(int $limit, ?string $subjectPersonId = null): iterable {
+        public function code(): string
+        {
+            return 'b4.race';
+        }
+        public function supportsPurpose(string $purposeCode): bool
+        {
+            return $purposeCode === 'b4.race';
+        }
+        public function candidates(int $limit, ?string $subjectPersonId = null): iterable
+        {
             if ($subjectPersonId === $this->subject) {
-                yield new RetentionCandidate($this->subject, 'core.person_contact', $this->contact,
-                    'b4.race', 'b4.race', 'purpose_completed',
-                    new DateTimeImmutable('2026-01-01T00:00:00Z'), 'b4.race');
+                yield new RetentionCandidate(
+                    $this->subject,
+                    'core.person_contact',
+                    $this->contact,
+                    'b4.race',
+                    'b4.race',
+                    'purpose_completed',
+                    new DateTimeImmutable('2026-01-01T00:00:00Z'),
+                    'b4.race',
+                );
             }
         }
     },
 ]);
 $basis = new LawfulProcessingBasisResolver($purposes, new LawfulProcessingBasisContributorRegistry(), $db);
-$evaluator = new RetentionEvaluator($purposes, $policies, $container->get(PrivacyDeadlinePolicy::class),
-    $container->get(LegalHoldService::class), $basis,
-    new RetentionDependencyContributorRegistry(), $clock);
+$evaluator = new RetentionEvaluator(
+    $purposes,
+    $policies,
+    $container->get(PrivacyDeadlinePolicy::class),
+    $container->get(LegalHoldService::class),
+    $basis,
+    new RetentionDependencyContributorRegistry(),
+    $clock,
+);
 $decisions = new RetentionDecisionService($db, $evaluator, $clock, $audit);
 $handlers = new PersonalDataErasureHandlerRegistry([new CorePersonContactErasureHandler($db)]);
-$executor = new ErasureExecutor($db, $clock, $candidates, $purposes, $decisions, $handlers,
-    $container->get(DestructionEvidencePolicy::class), new ErasureCaseStateMachine(), $audit,
-    $container->get(ErasureRequestCompletionService::class));
-$actor = new AuthenticatedIdentity($account, $subject,
-    '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee', ['core.superadmin'], [], null, null);
+$executor = new ErasureExecutor(
+    $db,
+    $clock,
+    $candidates,
+    $purposes,
+    $decisions,
+    $handlers,
+    $container->get(DestructionEvidencePolicy::class),
+    new ErasureCaseStateMachine(),
+    $audit,
+    $container->get(ErasureRequestCompletionService::class),
+);
+$actor = new AuthenticatedIdentity(
+    $account,
+    $subject,
+    '018f2892-aaaa-7aaa-8aaa-eeeeeeeeeeee',
+    ['core.superadmin'],
+    [],
+    null,
+    null,
+);
 try {
     echo json_encode($executor->executeBatch($actor, $caseId), JSON_THROW_ON_ERROR), "\n";
 } catch (Throwable) {

@@ -15,8 +15,12 @@ final class DestructionEvidencePolicyTest extends TestCase
     public function testShortDestructionEvidencePolicyIsUnavailable(): void
     {
         $calendar = new PrivacyDeadlinePolicy(new class implements BusinessCalendarInterface {
-            public function isWorkingDay(DateTimeImmutable $date): bool { return true; }
-            public function addWorkingDays(DateTimeImmutable $from, int $days): DateTimeImmutable {
+            public function isWorkingDay(DateTimeImmutable $date): bool
+            {
+                return true;
+            }
+            public function addWorkingDays(DateTimeImmutable $from, int $days): DateTimeImmutable
+            {
                 return $from->modify('+' . $days . ' days');
             }
         });

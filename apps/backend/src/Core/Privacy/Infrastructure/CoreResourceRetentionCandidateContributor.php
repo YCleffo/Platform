@@ -23,21 +23,32 @@ final readonly class CoreResourceRetentionCandidateContributor implements Retent
         'core.human_account' => 'identity',
     ];
 
-    public function __construct(private ConnectionInterface $db, private ProcessingPurposeRegistry $purposes,
-        private RetentionPolicyRegistry $policies, private string $resourceType)
-    {
+    public function __construct(
+        private ConnectionInterface $db,
+        private ProcessingPurposeRegistry $purposes,
+        private RetentionPolicyRegistry $policies,
+        private string $resourceType,
+    ) {
         if (!isset(self::CATEGORIES[$resourceType])) {
             throw new DomainException('Unsupported Core retention resource.');
         }
     }
 
-    public function code(): string { return $this->resourceType . '.retention'; }
-    public function resourceType(): string { return $this->resourceType; }
+    public function code(): string
+    {
+        return $this->resourceType . '.retention';
+    }
+    public function resourceType(): string
+    {
+        return $this->resourceType;
+    }
 
     public function supportsPurpose(string $purposeCode): bool
     {
         $purpose = $this->purposes->get($purposeCode);
-        if ($purpose === null) { return false; }
+        if ($purpose === null) {
+            return false;
+        }
         $policy = $this->policies->get($purpose->retentionPolicyCode);
         $root = in_array($this->resourceType, ['core.person', 'core.human_account'], true);
         return $policy !== null && ($root ? $policy->action === 'anonymize'
@@ -47,7 +58,9 @@ final readonly class CoreResourceRetentionCandidateContributor implements Retent
 
     public function candidates(int $limit, ?string $subjectPersonId = null): iterable
     {
-        if ($limit < 1) { return []; }
+        if ($limit < 1) {
+            return [];
+        }
         $sql = match ($this->resourceType) {
             'core.person_contact' => <<<'SQL'
                 SELECT c.id::text AS resource_id, c.person_id::text AS subject_id,
@@ -87,16 +100,22 @@ final readonly class CoreResourceRetentionCandidateContributor implements Retent
                 ORDER BY a.id LIMIT :limit
                 SQL,
         };
-        $rows = $this->db->createCommand($sql,
-            [':subject' => $subjectPersonId, ':limit' => $limit])->queryAll();
+        $rows = $this->db->createCommand(
+            $sql,
+            [':subject' => $subjectPersonId, ':limit' => $limit],
+        )->queryAll();
         $result = [];
         foreach ($rows as $row) {
             foreach ($this->purposes->codes() as $purposeCode) {
-                if (!$this->supportsPurpose($purposeCode)) { continue; }
+                if (!$this->supportsPurpose($purposeCode)) {
+                    continue;
+                }
                 $purpose = $this->purposes->get($purposeCode);
                 /** @var \App\Core\Privacy\Domain\ProcessingPurposeDefinition $purpose */
                 $policy = $this->policies->get($purpose->retentionPolicyCode);
-                if ($policy === null) { continue; }
+                if ($policy === null) {
+                    continue;
+                }
                 $triggeredAt = null;
                 if ($policy->trigger === 'withdrawal') {
                     $withdrawn = $this->db->createCommand(<<<'SQL'
@@ -112,10 +131,19 @@ final readonly class CoreResourceRetentionCandidateContributor implements Retent
                         && $policy->trigger === 'person_archived')) {
                     $triggeredAt = is_string($row['lifecycle_at']) ? new DateTimeImmutable($row['lifecycle_at']) : null;
                 }
-                $result[] = new RetentionCandidate((string) $row['subject_id'], $this->resourceType,
-                    (string) $row['resource_id'], $purposeCode, $policy->code, $policy->trigger,
-                    $triggeredAt, $this->code());
-                if (count($result) === $limit) { return $result; }
+                $result[] = new RetentionCandidate(
+                    (string) $row['subject_id'],
+                    $this->resourceType,
+                    (string) $row['resource_id'],
+                    $purposeCode,
+                    $policy->code,
+                    $policy->trigger,
+                    $triggeredAt,
+                    $this->code(),
+                );
+                if (count($result) === $limit) {
+                    return $result;
+                }
             }
         }
         return $result;

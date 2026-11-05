@@ -10,26 +10,33 @@ use App\Core\Privacy\Infrastructure\ConfiguredBusinessCalendar;
 final readonly class ComplianceReadinessChecker
 {
     /** @param array<string, mixed> $securityReferences @param array<string, mixed> $incidentDeadlines */
-    public function __construct(private ProcessingPurposeRegistry $purposes,
+    public function __construct(
+        private ProcessingPurposeRegistry $purposes,
         private RetentionPolicyRegistry $retention,
         private DestructionEvidencePolicy $destructionEvidence,
-        private ProcessorRegistry $processors, private DataRecipientRegistry $recipients,
+        private ProcessorRegistry $processors,
+        private DataRecipientRegistry $recipients,
         private CrossBorderTransferRegistry $transfers,
-        private ProcessingRoleRegistry $roles, private DataResidencyEvidence $residency,
+        private ProcessingRoleRegistry $roles,
+        private DataResidencyEvidence $residency,
         private ProcessingInformationRegistry $processingInformation,
-        private array $securityReferences = [], private array $incidentDeadlines = [],
+        private array $securityReferences = [],
+        private array $incidentDeadlines = [],
         private ?BusinessCalendarInterface $calendar = null,
         private array $operatorNotification = [],
         private array $operatorIdentity = [],
         private ?DistributionConsentDefinitionRegistry $distributionDefinitions = null,
         private ?LegalDestructionPackageService $legalPackages = null,
-        private ?CorePrivacyContributorCoverage $coverage = null) {}
+        private ?CorePrivacyContributorCoverage $coverage = null,
+    ) {}
 
     /** @return array{result:string,missingRequirements:list<string>,missingContributor:list<string>} */
     public function check(bool $productionRequired): array
     {
         $missing = [];
-        if ($this->purposes->codes() === []) { $missing[] = 'purposes'; }
+        if ($this->purposes->codes() === []) {
+            $missing[] = 'purposes';
+        }
         foreach ($this->purposes->codes() as $code) {
             $purpose = $this->purposes->get($code);
             if ($purpose === null || $purpose->legalBasisCode === '') {
@@ -46,8 +53,12 @@ final readonly class ComplianceReadinessChecker
                 $missing[] = 'processing_information';
             }
         }
-        if ($this->retention->all() === []) { $missing[] = 'retention'; }
-        if (!$this->destructionEvidence->available()) { $missing[] = 'destruction_evidence_3_years'; }
+        if ($this->retention->all() === []) {
+            $missing[] = 'retention';
+        }
+        if (!$this->destructionEvidence->available()) {
+            $missing[] = 'destruction_evidence_3_years';
+        }
         if ($this->processors->all() === [] && $this->recipients->all() === []) {
             $missing[] = 'processors_recipients';
         }
@@ -84,8 +95,12 @@ final readonly class ComplianceReadinessChecker
                     || trim((string) ($this->operatorNotification['databaseLocationReference'] ?? '')) === '')) {
                 $missing[] = 'rkn_notification_evidence';
             }
-            if (!$this->residency->complete()) { $missing[] = 'residency_evidence'; }
-            if (!$this->legalPackages?->available()) { $missing[] = 'legal_destruction_package'; }
+            if (!$this->residency->complete()) {
+                $missing[] = 'residency_evidence';
+            }
+            if (!$this->legalPackages?->available()) {
+                $missing[] = 'legal_destruction_package';
+            }
             if (trim((string) ($this->operatorIdentity['name'] ?? '')) === ''
                 || trim((string) ($this->operatorIdentity['address'] ?? '')) === '') {
                 $missing[] = 'operator_identity';

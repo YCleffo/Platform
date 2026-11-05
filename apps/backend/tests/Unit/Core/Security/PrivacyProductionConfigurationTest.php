@@ -128,7 +128,10 @@ final class PrivacyProductionConfigurationTest extends TestCase
     {
         $path = tempnam(sys_get_temp_dir(), 'privacy-production-');
         file_put_contents($path, json_encode($configuration, JSON_THROW_ON_ERROR));
-        try { return (new PrivacyDeploymentConfigLoader())->load($path); }
-        finally { unlink($path); }
+        try {
+            return (new PrivacyDeploymentConfigLoader())->load($path);
+        } finally {
+            unlink($path);
+        }
     }
 }

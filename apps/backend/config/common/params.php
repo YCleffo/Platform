@@ -98,7 +98,9 @@ return [
                     throw new \RuntimeException('Database password file is unavailable.');
                 }
                 $value = trim((string) file_get_contents($databasePasswordFile));
-                if ($value === '') { throw new \RuntimeException('Database password file is empty.'); }
+                if ($value === '') {
+                    throw new \RuntimeException('Database password file is empty.');
+                }
                 return $value;
             })()
             : $env('DB_PASSWORD'),

@@ -26,19 +26,29 @@ final class PrivacyReadinessTest extends TestCase
     public function testMissingResidencyFailsProductionReadiness(): void
     {
         $calendar = new PrivacyDeadlinePolicy(new class implements BusinessCalendarInterface {
-            public function isWorkingDay(DateTimeImmutable $date): bool { return true; }
-            public function addWorkingDays(DateTimeImmutable $from, int $days): DateTimeImmutable {
+            public function isWorkingDay(DateTimeImmutable $date): bool
+            {
+                return true;
+            }
+            public function addWorkingDays(DateTimeImmutable $from, int $days): DateTimeImmutable
+            {
                 return $from->modify('+' . $days . ' days');
             }
         });
         $retention = new RetentionPolicyRegistry();
         $checker = new ComplianceReadinessChecker(
             new ProcessingPurposeRegistry([], new DataCategoryRegistry(), $retention),
-            $retention, new DestructionEvidencePolicy($calendar),
-            new ProcessorRegistry(), new DataRecipientRegistry(),
-            new CrossBorderTransferRegistry(), new ProcessingRoleRegistry(),
-            new DataResidencyEvidence(), new ProcessingInformationRegistry(),
-            [], ['initialHours' => 24, 'investigationHours' => 72]);
+            $retention,
+            new DestructionEvidencePolicy($calendar),
+            new ProcessorRegistry(),
+            new DataRecipientRegistry(),
+            new CrossBorderTransferRegistry(),
+            new ProcessingRoleRegistry(),
+            new DataResidencyEvidence(),
+            new ProcessingInformationRegistry(),
+            [],
+            ['initialHours' => 24, 'investigationHours' => 72],
+        );
         $result = $checker->check(true);
         self::assertSame('FAIL', $result['result']);
         self::assertContains('residency_evidence', $result['missingRequirements']);
@@ -54,11 +64,19 @@ final class PrivacyReadinessTest extends TestCase
 
     public function testExpiredProductionCalendarCoverageFails(): void
     {
-        $calendar = new ConfiguredBusinessCalendar('2026-01-01', '2026-09-30',
-            sourceReference: 'urn:calendar:approved', verifiedAt: '2026-09-01T00:00:00Z');
+        $calendar = new ConfiguredBusinessCalendar(
+            '2026-01-01',
+            '2026-09-30',
+            sourceReference: 'urn:calendar:approved',
+            verifiedAt: '2026-09-01T00:00:00Z',
+        );
         self::assertFalse($calendar->coversCurrentPeriod(new DateTimeImmutable('2026-09-30T10:00:00Z')));
-        self::assertTrue((new ConfiguredBusinessCalendar('2026-01-01', '2026-12-31',
-            sourceReference: 'urn:calendar:approved', verifiedAt: '2026-09-01T00:00:00Z'))
+        self::assertTrue((new ConfiguredBusinessCalendar(
+            '2026-01-01',
+            '2026-12-31',
+            sourceReference: 'urn:calendar:approved',
+            verifiedAt: '2026-09-01T00:00:00Z',
+        ))
             ->coversCurrentPeriod(new DateTimeImmutable('2026-09-30T10:00:00Z')));
     }
 }

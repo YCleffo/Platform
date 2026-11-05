@@ -17,18 +17,29 @@ final readonly class OrganizationService
     ) {}
 
     /** @return list<Organization> */
-    public function listFor(?string $personId): array { return $this->organizations->listFor($personId); }
+    public function listFor(?string $personId): array
+    {
+        return $this->organizations->listFor($personId);
+    }
 
     /** @return list<OrganizationMembership> */
-    public function members(string $organizationId): array { return $this->organizations->members($organizationId); }
+    public function members(string $organizationId): array
+    {
+        return $this->organizations->members($organizationId);
+    }
 
     public function create(string $code, string $name, string $actorAccountId): ?Organization
     {
         return $this->db->transaction(function () use ($code, $name, $actorAccountId): ?Organization {
             $organization = $this->organizations->create($code, $name);
             if ($organization !== null) {
-                $this->record('organization.created', 'core.organization', $organization->id,
-                    $actorAccountId, ['organizationId' => $organization->id, 'organizationCode' => $organization->code]);
+                $this->record(
+                    'organization.created',
+                    'core.organization',
+                    $organization->id,
+                    $actorAccountId,
+                    ['organizationId' => $organization->id, 'organizationCode' => $organization->code],
+                );
             }
             return $organization;
         });
@@ -39,8 +50,13 @@ final readonly class OrganizationService
         return $this->db->transaction(function () use ($organizationId, $personId, $actorAccountId): ?OrganizationMembership {
             $membership = $this->organizations->addMember($organizationId, $personId);
             if ($membership !== null) {
-                $this->record('organization_membership.added', 'core.organization_membership', $membership->id,
-                    $actorAccountId, ['organizationId' => $organizationId, 'personId' => $personId]);
+                $this->record(
+                    'organization_membership.added',
+                    'core.organization_membership',
+                    $membership->id,
+                    $actorAccountId,
+                    ['organizationId' => $organizationId, 'personId' => $personId],
+                );
             }
             return $membership;
         });
@@ -51,8 +67,13 @@ final readonly class OrganizationService
         return $this->db->transaction(function () use ($organizationId, $personId, $actorAccountId): ?OrganizationMembership {
             $membership = $this->organizations->leave($organizationId, $personId);
             if ($membership !== null) {
-                $this->record('organization_membership.left', 'core.organization_membership', $membership->id,
-                    $actorAccountId, ['organizationId' => $organizationId, 'personId' => $personId]);
+                $this->record(
+                    'organization_membership.left',
+                    'core.organization_membership',
+                    $membership->id,
+                    $actorAccountId,
+                    ['organizationId' => $organizationId, 'personId' => $personId],
+                );
             }
             return $membership;
         });
@@ -62,8 +83,12 @@ final readonly class OrganizationService
     private function record(string $action, string $resourceType, string $resourceId, string $actorAccountId, array $metadata): void
     {
         $this->audit->write(new WriteAuditEventCommand(
-            actorType: 'account', actorAccountId: $actorAccountId, action: $action,
-            resourceType: $resourceType, resourceId: $resourceId, metadata: $metadata,
+            actorType: 'account',
+            actorAccountId: $actorAccountId,
+            action: $action,
+            resourceType: $resourceType,
+            resourceId: $resourceId,
+            metadata: $metadata,
         ));
     }
 }

@@ -13,10 +13,14 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 /** Dedicated public-distribution consent; ordinary processing consent is never consulted. */
 final readonly class DistributionConsentService
 {
-    public function __construct(private ConnectionInterface $db, private ClockInterface $clock,
+    public function __construct(
+        private ConnectionInterface $db,
+        private ClockInterface $clock,
         private RepresentativeAuthorityPolicy $authority,
-        private ProcessingPurposeRegistry $purposes, private DataCategoryRegistry $categories,
-        private DistributionConsentDefinitionRegistry $definitions) {}
+        private ProcessingPurposeRegistry $purposes,
+        private DataCategoryRegistry $categories,
+        private DistributionConsentDefinitionRegistry $definitions,
+    ) {}
 
     /**
      * @param list<string> $categories
@@ -24,10 +28,16 @@ final readonly class DistributionConsentService
      * @param list<string> $conditions
      * @param list<string> $restrictions
      */
-    public function grant(AuthenticatedIdentity $actor, string $subjectPersonId, string $purposeCode,
-        array $categories, array $fields, array $conditions, array $restrictions,
-        ?string $representationId = null): string
-    {
+    public function grant(
+        AuthenticatedIdentity $actor,
+        string $subjectPersonId,
+        string $purposeCode,
+        array $categories,
+        array $fields,
+        array $conditions,
+        array $restrictions,
+        ?string $representationId = null,
+    ): string {
         MachineCode::assert($purposeCode);
         if ($this->purposes->get($purposeCode)?->distributionAllowed !== true) {
             throw new DomainException('Purpose does not allow public distribution.');
@@ -74,8 +84,12 @@ final readonly class DistributionConsentService
             if ($representationId === null) {
                 throw new DomainException('Representative authority is required.');
             }
-            $this->authority->assertActiveForAction($representationId, $subjectPersonId,
-                $actor->personId, 'privacy.consent.grant');
+            $this->authority->assertActiveForAction(
+                $representationId,
+                $subjectPersonId,
+                $actor->personId,
+                'privacy.consent.grant',
+            );
         }
         $now = $this->clock->now()->format(DATE_ATOM);
         return (string) $this->db->createCommand(<<<'SQL'
@@ -88,11 +102,11 @@ final readonly class DistributionConsentService
                 CAST(:fields AS text[]), CAST(:conditions AS text[]), CAST(:restrictions AS text[]),
                 :version, :sha, CAST(:now AS timestamptz)) RETURNING id::text
             SQL, [':subject' => $subjectPersonId, ':person' => $actor->personId,
-                ':account' => $actor->accountId, ':representation' => $representationId,
-                ':purpose' => $purposeCode, ':categories' => self::pgArray($categories),
-                ':fields' => self::pgArray($fields), ':conditions' => self::pgArray($conditions),
-                ':restrictions' => self::pgArray($restrictions), ':version' => $definition->documentVersion,
-                ':sha' => $definition->documentSha256, ':now' => $now])->queryScalar();
+            ':account' => $actor->accountId, ':representation' => $representationId,
+            ':purpose' => $purposeCode, ':categories' => self::pgArray($categories),
+            ':fields' => self::pgArray($fields), ':conditions' => self::pgArray($conditions),
+            ':restrictions' => self::pgArray($restrictions), ':version' => $definition->documentVersion,
+            ':sha' => $definition->documentSha256, ':now' => $now])->queryScalar();
     }
 
     public function withdraw(AuthenticatedIdentity $actor, string $consentId): void
@@ -112,8 +126,12 @@ final readonly class DistributionConsentService
                 if ($row['legal_representation_id'] === null) {
                     throw new DomainException('Distribution consent unavailable.');
                 }
-                $this->authority->assertActiveForAction((string) $row['legal_representation_id'],
-                    (string) $row['subject_person_id'], $actor->personId, 'privacy.consent.withdraw');
+                $this->authority->assertActiveForAction(
+                    (string) $row['legal_representation_id'],
+                    (string) $row['subject_person_id'],
+                    $actor->personId,
+                    'privacy.consent.withdraw',
+                );
             }
             $this->db->createCommand(<<<'SQL'
                 UPDATE core.privacy_distribution_consents
@@ -123,14 +141,21 @@ final readonly class DistributionConsentService
     }
 
     /** @param list<string> $satisfiedConditions */
-    public function allows(string $subjectPersonId, string $purposeCode, string $categoryCode,
-        string $fieldCode, string $channelCode, array $satisfiedConditions = []): bool
-    {
+    public function allows(
+        string $subjectPersonId,
+        string $purposeCode,
+        string $categoryCode,
+        string $fieldCode,
+        string $channelCode,
+        array $satisfiedConditions = [],
+    ): bool {
         foreach ([$purposeCode, $categoryCode, $fieldCode, $channelCode, ...$satisfiedConditions] as $code) {
             MachineCode::assert($code);
         }
         $definition = $this->definitions->get($purposeCode);
-        if ($definition === null) { return false; }
+        if ($definition === null) {
+            return false;
+        }
         $rows = $this->db->createCommand(<<<'SQL'
             SELECT condition_codes, restriction_codes FROM core.privacy_distribution_consents
             WHERE subject_person_id = CAST(:subject AS uuid) AND purpose_code = :purpose
@@ -138,9 +163,9 @@ final readonly class DistributionConsentService
                 AND :field = ANY(field_codes)
                 AND document_version = :version AND document_sha256 = :sha
             SQL, [':subject' => $subjectPersonId, ':purpose' => $purposeCode,
-                ':category' => $categoryCode, ':field' => $fieldCode,
-                ':version' => $definition->documentVersion,
-                ':sha' => $definition->documentSha256])->queryAll();
+            ':category' => $categoryCode, ':field' => $fieldCode,
+            ':version' => $definition->documentVersion,
+            ':sha' => $definition->documentSha256])->queryAll();
         foreach ($rows as $row) {
             /** @var array{condition_codes: string|list<string>, restriction_codes: string|list<string>} $row */
             $conditions = self::parsePgArray($row['condition_codes']);
