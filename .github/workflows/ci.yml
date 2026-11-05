@@ -781,9 +781,11 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
-      - name: Install frontend dependencies
+      - name: Install frontend dependencies and runner Chromium
         working-directory: apps/frontend
-        run: npm ci
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
       - name: Start Core frontend
         working-directory: apps/frontend
         env:
@@ -802,19 +804,26 @@ jobs:
           done
           curl -kfsS https://127.0.0.1:4175/ >/dev/null
       - name: Verify Core invitation, password reset, MFA recovery and required password change
-        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-auth
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-auth
       - name: Verify real Core MFA and session management
-        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-security
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-security
       - name: Verify real Core preferences, settings and consent lifecycle
-        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-profile
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-profile
       - name: Verify real passkey and external credential lifecycle
-        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-credentials
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-credentials
       - name: Verify own and representative privacy request lifecycle
-        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-privacy
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-privacy
       - name: Verify privacy operator workflow and presence
-        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-privacy-operator
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-privacy-operator
       - name: Verify Core configuration forms and public publication
-        run: bash scripts/ci/playwright-run.sh npm run test:e2e:core-configuration
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-configuration
       - name: Install Education and verify its PostgreSQL workflows
         env:
           EDUCATION_ENABLED: "1"
@@ -847,7 +856,7 @@ jobs:
             sleep 1
           done
           curl -kfsS https://127.0.0.1:4175/ >/dev/null
-          bash ../../scripts/ci/playwright-run.sh npm run test:e2e:education
+          npm run test:e2e:education
       - name: Upload Core browser evidence
         if: always()
         uses: actions/upload-artifact@v6
@@ -933,9 +942,11 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
-      - name: Install frontend dependencies
+      - name: Install frontend dependencies and runner Chromium
         working-directory: apps/frontend
-        run: npm ci
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
       - name: Generate disposable TLS certificate
         run: |
           mkdir -p "$RUNNER_TEMP/billing-tls"
@@ -961,7 +972,8 @@ jobs:
       - name: Verify scheduler boundaries, retries, grace and late settlement
         env:
           NODE_EXTRA_CA_CERTS: ${{ runner.temp }}/billing-tls/cert.pem
-        run: bash scripts/ci/playwright-run.sh npm run test:e2e:periodic-billing
+        working-directory: apps/frontend
+        run: npm run test:e2e:periodic-billing
       - name: Upload periodic billing evidence
         if: always()
         uses: actions/upload-artifact@v6
@@ -1047,9 +1059,11 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
-      - name: Install frontend dependencies
+      - name: Install frontend dependencies and runner Chromium
         working-directory: apps/frontend
-        run: npm ci
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
       - name: Generate disposable frontend TLS certificate
         run: |
           mkdir -p /tmp/e2e-cert
@@ -1073,7 +1087,8 @@ jobs:
           curl -fsS 'http://127.0.0.1:8026/api/v1/messages?limit=1'
           curl -kfsS https://127.0.0.1:4173/ >/dev/null
       - name: Run browser account workspace flow
-        run: bash scripts/ci/playwright-run.sh node scripts/e2e-account-workspace.mjs
+        working-directory: apps/frontend
+        run: node scripts/e2e-account-workspace.mjs
       - name: Reset disposable Commercial fixtures before invitation flow
         run: |
           docker compose --profile control-test stop control-plane-test
@@ -1081,7 +1096,8 @@ jobs:
           docker compose --profile control-test up -d --wait control-plane-test
           bash ./scripts/ci/control-email-worker-start.sh
       - name: Run browser invitation and MFA flow
-        run: bash scripts/ci/playwright-run.sh node scripts/e2e-invitation-lifecycle.mjs
+        working-directory: apps/frontend
+        run: node scripts/e2e-invitation-lifecycle.mjs
       - name: Reset disposable Commercial fixtures before recovery flow
         run: |
           docker compose --profile control-test stop control-plane-test
@@ -1089,7 +1105,8 @@ jobs:
           docker compose --profile control-test up -d --wait control-plane-test
           bash ./scripts/ci/control-email-worker-start.sh
       - name: Run browser account recovery flow
-        run: bash scripts/ci/playwright-run.sh node scripts/e2e-auth-recovery.mjs
+        working-directory: apps/frontend
+        run: node scripts/e2e-auth-recovery.mjs
       - name: Reset disposable Commercial fixtures before billing flow
         run: |
           docker compose --profile control-test stop control-plane-test
@@ -1097,7 +1114,8 @@ jobs:
           docker compose --profile control-test up -d --wait control-plane-test
           bash ./scripts/ci/control-email-worker-start.sh
       - name: Verify real zero-price billing, MFA and cancellation
-        run: bash scripts/ci/playwright-run.sh npm run test:e2e:billing
+        working-directory: apps/frontend
+        run: npm run test:e2e:billing
       - name: Reset disposable fixtures before paid billing
         run: |
           docker compose --profile control-test stop control-plane-test
@@ -1105,7 +1123,8 @@ jobs:
           docker compose --profile control-test up -d --wait control-plane-test
           bash ./scripts/ci/control-email-worker-start.sh
       - name: Verify paid billing through real gateways with synthetic provider wire
-        run: bash scripts/ci/playwright-run.sh npm run test:e2e:paid-billing
+        working-directory: apps/frontend
+        run: npm run test:e2e:paid-billing
       - name: Reset disposable fixtures before independent operator workflows
         run: |
           docker compose --profile control-test stop control-plane-test
@@ -1113,7 +1132,8 @@ jobs:
           docker compose --profile control-test up -d --wait control-plane-test
           bash ./scripts/ci/control-email-worker-start.sh
       - name: Verify two real operators, MFA, finance and privacy evidence
-        run: bash scripts/ci/playwright-run.sh npm run test:e2e:operators
+        working-directory: apps/frontend
+        run: npm run test:e2e:operators
       - name: Reset isolated fixtures before load without disabling registration limits
         run: |
           docker compose --profile control-test stop control-plane-test

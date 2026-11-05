@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Browser-only verification against a preview started in this same container.
+# Integration E2E uses runner Node/Chromium: it needs the runner's Compose CLI,
+# container IDs, environment and (for billing) shared clock directory.
+
 if [[ "${CI:-}" != "true" ]]; then
   echo "This entry point is CI-only; local Playwright containers are disabled." >&2
   exit 2
