@@ -1,19 +1,17 @@
-Roboto Variable Font
+Roboto — вариативный шрифт
 ====================
 
-This download contains Roboto as both variable fonts and static fonts.
+Этот комплект содержит Roboto как в вариативном, так и в статическом виде.
 
-Roboto is a variable font with these axes:
+Roboto — вариативный шрифт со следующими осями:
   wdth
   wght
 
-This means all the styles are contained in these files:
+Все начертания находятся в следующих файлах:
   Roboto/Roboto-VariableFont_wdth,wght.ttf
   Roboto/Roboto-Italic-VariableFont_wdth,wght.ttf
 
-If your app fully supports variable fonts, you can now pick intermediate styles
-that aren’t available as static fonts. Not all apps support variable fonts, and
-in those cases you can use the static font files for Roboto:
+Если приложение полностью поддерживает вариативные шрифты, можно выбрать промежуточные начертания, отсутствующие среди статических. Иначе используйте статические файлы Roboto:
   Roboto/static/Roboto_Condensed-Thin.ttf
   Roboto/static/Roboto_Condensed-ExtraLight.ttf
   Roboto/static/Roboto_Condensed-Light.ttf
@@ -69,50 +67,46 @@ in those cases you can use the static font files for Roboto:
   Roboto/static/Roboto-ExtraBoldItalic.ttf
   Roboto/static/Roboto-BlackItalic.ttf
 
-Get started
+Начало работы
 -----------
 
-1. Install the font files you want to use
+1. Установите нужные файлы шрифта
 
-2. Use your app's font picker to view the font family and all the
-available styles
+2. Выберите семейство и доступные начертания в списке шрифтов приложения
 
-Learn more about variable fonts
+Подробнее о вариативных шрифтах
 -------------------------------
 
   https://developers.google.com/web/fundamentals/design-and-ux/typography/variable-fonts
   https://variablefonts.typenetwork.com
   https://medium.com/variable-fonts
 
-In desktop apps
+В настольных приложениях
 
   https://theblog.adobe.com/can-variable-fonts-illustrator-cc
   https://helpx.adobe.com/nz/photoshop/using/fonts.html#variable_fonts
 
-Online
+В браузере
 
   https://developers.google.com/fonts/docs/getting_started
   https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Fonts/Variable_Fonts_Guide
   https://developer.microsoft.com/en-us/microsoft-edge/testdrive/demos/variable-fonts
 
-Installing fonts
+Установка шрифтов
 
   MacOS: https://support.apple.com/en-us/HT201749
   Linux: https://www.google.com/search?q=how+to+install+a+font+on+gnu%2Blinux
   Windows: https://support.microsoft.com/en-us/help/314960/how-to-install-or-remove-a-font-in-windows
 
-Android Apps
+Приложения Android
 
   https://developers.google.com/fonts/docs/android
   https://developer.android.com/guide/topics/ui/look-and-feel/downloadable-fonts
 
-License
+Лицензия
 -------
-Please read the full license text (OFL.txt) to understand the permissions,
-restrictions and requirements for usage, redistribution, and modification.
+Полный текст OFL.txt определяет разрешения, ограничения и требования к использованию, распространению и изменению.
 
-You can use them in your products & projects – print or digital,
-commercial or otherwise.
+Шрифты можно использовать в печатных и цифровых, коммерческих и иных продуктах и проектах.
 
-This isn't legal advice, please consider consulting a lawyer and see the full
-license for all details.
+Это не юридическая консультация; все подробности приведены в полной лицензии. При необходимости обратитесь к юристу.

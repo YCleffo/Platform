@@ -36,9 +36,58 @@ jobs:
           for script in scripts/ci/*.sh; do bash -n "$script"; done
           node --check scripts/ci/run-verify-suite.mjs
           node --check apps/frontend/scripts/verify-responsive.mjs
+          node --check scripts/observability/capacity-baseline.mjs
+          node --check scripts/observability/verify-alert-delivery.mjs
           python3 -m py_compile scripts/ci/summarize-image-scan.py
+          python3 -m py_compile infra/observability/alert-sink/server.py
       - name: Verify Compose database credential resolution
         run: python3 -m unittest discover -s scripts/database -p 'test_*.py'
+      - name: Validate observability manifests
+        env:
+          METRICS_TOKEN: ci-metrics-token-0123456789abcdef0123456789abcdef
+          GRAFANA_ADMIN_PASSWORD: ci-grafana-password
+          POSTGRES_DB: platform_test
+          POSTGRES_USER: platform_app
+          POSTGRES_PASSWORD: ci-postgres-password
+          CONTROL_POSTGRES_DB: platform_commercial
+          CONTROL_POSTGRES_USER: platform_control
+          CONTROL_POSTGRES_PASSWORD: ci-control-password
+          CONTROL_APP_SECRET: ci-control-app-secret
+          CONTROL_TOKEN_SECRET: ci-control-token-secret
+          AUTH_IDENTIFIER_HMAC_KEY: ci-auth-identifier-hmac
+          DEVICE_FINGERPRINT_KEY: ci-device-fingerprint
+          AUTH_TOTP_ENCRYPTION_KEY: ci-auth-totp-encryption-key
+          CONTROL_TOTP_ENCRYPTION_KEY: ci-control-totp-encryption-key
+          YOOKASSA_SECRET_KEY: ci-yookassa-secret
+          CORE_RUNTIME_PASSWORD: ci-core-runtime-password
+          CONTROL_RUNTIME_PASSWORD: ci-control-runtime-password
+          CORE_MAINTENANCE_PASSWORD: ci-core-maintenance-password
+          CONTROL_MAINTENANCE_PASSWORD: ci-control-maintenance-password
+          E2E_ISOLATION_PROOF: ci-isolation-proof
+        run: |
+          mkdir -p infra/observability/secrets
+          printf '%s' "$METRICS_TOKEN" > infra/observability/secrets/metrics-token
+          printf '%s' 'http://alert-sink:8080/alerts' > infra/observability/secrets/alert-webhook-url
+          docker compose -f compose.yaml -f compose.observability.yaml --profile control config --quiet
+          tmp=$(mktemp -d)
+          cp -r infra/observability/prometheus/. "$tmp/"
+          cp infra/observability/secrets/metrics-token "$tmp/metrics-token"
+          docker run --rm --entrypoint /bin/promtool \
+            -v "$tmp:/etc/prometheus:ro" \
+            prom/prometheus:v3.5.0@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
+            check config /etc/prometheus/prometheus.yml
+          docker run --rm --entrypoint /bin/promtool \
+            -v "$tmp/rules:/rules:ro" \
+            prom/prometheus:v3.5.0@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
+            check rules /rules/platform.yml
+          mkdir -p "$tmp/alertmanager"
+          cp infra/observability/alertmanager/alertmanager.yml "$tmp/alertmanager/alertmanager.yml"
+          cp infra/observability/secrets/alert-webhook-url "$tmp/alertmanager/alert-webhook-url"
+          docker run --rm --entrypoint /bin/amtool \
+            -v "$tmp/alertmanager:/etc/alertmanager:ro" \
+            prom/alertmanager:v0.28.1@sha256:27c475db5fb156cab31d5c18a4251ac7ed567746a2483ff264516437a39b15ba \
+            check-config /etc/alertmanager/alertmanager.yml
+          node -e "JSON.parse(require('fs').readFileSync('infra/observability/grafana/dashboards/platform-overview.json','utf8'))"
       - name: Verify pinned Playwright container matches the locked browser package
         run: |
           locked=$(python3 -c "import json; print(json.load(open('apps/frontend/package-lock.json'))['packages']['node_modules/playwright']['version'])")
@@ -73,7 +122,7 @@ jobs:
           ./scripts/ci/test-project-zip.ps1
 
   backend-fast:
-    name: Core · fast feedback
+    name: Core В· fast feedback
     if: github.event_name == 'workflow_dispatch' && inputs.profile == 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -153,7 +202,7 @@ jobs:
         run: bash ./scripts/ci/test-stop.sh
 
   control-fast:
-    name: Commercial · fast feedback
+    name: Commercial В· fast feedback
     if: github.event_name == 'workflow_dispatch' && inputs.profile == 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -195,7 +244,7 @@ jobs:
           composer analyse
 
   backend-qa:
-    name: Core · quality and tests
+    name: Core В· quality and tests
     if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -347,7 +396,7 @@ jobs:
           bash ./scripts/ci/test-stop.sh
 
   control-plane-qa:
-    name: Commercial · quality and tests
+    name: Commercial В· quality and tests
     if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -515,7 +564,7 @@ jobs:
         run: bash ./scripts/ci/control-test-stop.sh
 
   infrastructure-images:
-    name: Image security · ${{ matrix.plane }}
+    name: Image security В· ${{ matrix.plane }}
     if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -557,7 +606,7 @@ jobs:
           retention-days: 7
 
   cross-plane-e2e:
-    name: Core ↔ Commercial · E2E
+    name: Core в†” Commercial В· E2E
     if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -623,8 +672,10 @@ jobs:
         run: |
           python scripts/database/export_schema.py --plane core --from-snapshot --check
           python scripts/database/export_schema.py --plane commercial --from-snapshot --check
+          python scripts/database/export_schema.py --plane education --from-snapshot --check
           python scripts/documentation/build-reference.py --check
           python scripts/documentation/build-coverage.py --check
+          python scripts/documentation/build-education-coverage.py --check
           python scripts/documentation/check-links.py
       - name: Parse DBML and verify physical tables, fields and relations
         run: |
@@ -634,7 +685,7 @@ jobs:
           npm audit --audit-level=high --prefix scripts/documentation
 
   frontend-qa:
-    name: Frontend · quality
+    name: Frontend В· quality
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
@@ -711,7 +762,7 @@ jobs:
         run: cat screenshots/vite-verify.log || true
 
   core-auth-browser:
-    name: Core · account browser E2E
+    name: Core В· account browser E2E
     if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -886,7 +937,7 @@ jobs:
           bash scripts/ci/test-stop.sh
 
   billing-periodic:
-    name: Billing · renewal and recovery
+    name: Billing В· renewal and recovery
     if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -994,7 +1045,7 @@ jobs:
           rm -f "$BILLING_TEST_CLOCK_DIRECTORY/time" "$RUNNER_TEMP/billing-tls/key.pem" "$RUNNER_TEMP/billing-tls/cert.pem"
 
   browser-e2e:
-    name: Frontend · browser E2E
+    name: Frontend В· browser E2E
     if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 45

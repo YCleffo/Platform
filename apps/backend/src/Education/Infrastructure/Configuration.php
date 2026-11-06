@@ -22,6 +22,10 @@ final class Configuration
         return ['auditEventDefinitions' => $audit,
             'additionalDataCategoryDefinitions' => [new DataCategoryDefinition('education')],
             'personalDataContributors' => [Reference::to(PersonalDataContributor::class)],
-            'personalDataCorrectionContributors' => [Reference::to(ProfileCorrection::class)]];
+            'personalDataCorrectionContributors' => [Reference::to(ProfileCorrection::class)],
+            'retentionCandidateContributors' => [Reference::to(RetentionCandidateContributor::class)],
+            'lawfulProcessingBasisContributors' => [Reference::to(LawfulProcessingBasisContributor::class)],
+            'processingRestrictionContributors' => [Reference::to(ProcessingRestrictionContributor::class)],
+            'personalDataErasureHandlers' => [Reference::to(WorkspaceErasureHandler::class)]];
     }
 }

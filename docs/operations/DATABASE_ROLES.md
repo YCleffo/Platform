@@ -1,32 +1,37 @@
 # Роли PostgreSQL и минимальные привилегии
 
-Локальный Compose использует bootstrap-пользователей PostgreSQL для удобства разработки. Это не
-production-модель: web/worker процессы не должны подключаться суперпользователем и не должны иметь
+Локальный Compose использует пользователей начальной настройки PostgreSQL для удобства разработки. Это не
+промышленная модель: веб-приложение и фоновые процессы не должны подключаться суперпользователем и не должны иметь
 возможность выполнять DDL.
 
 ## Разделение ролей
 
 | Роль | Назначение | Права |
 | --- | --- | --- |
-| owner | Владение базой и управление ролями | `CREATEDB`, управление membership; не используется приложением |
-| migrator | Применение миграций | `CREATE`/`USAGE` на схемах, владение объектами, `ALTER DEFAULT PRIVILEGES` |
-| runtime | HTTP, workers, scheduler | `CONNECT`, `USAGE` на схемах, `SELECT/INSERT/UPDATE/DELETE`, `USAGE/SELECT` на sequences, `EXECUTE` на прикладных functions |
-| backup | Резервное копирование | `CONNECT`, чтение; отдельный credential |
+| Владелец (`owner`) | Владение базой и управление ролями | `CREATEDB`, управление членствами; не используется приложением |
+| Мигратор (`migrator`) | Применение миграций | `CREATE`/`USAGE` на схемах, владение объектами, `ALTER DEFAULT PRIVILEGES` |
+| Прикладная (`runtime`) | HTTP, обработчики и планировщик | `CONNECT`, `USAGE` на схемах, `SELECT/INSERT/UPDATE/DELETE`, `USAGE/SELECT` на последовательностях, `EXECUTE` на прикладных функциях |
+| Служебная (`maintenance`) | Контролируемые команды жизненного цикла и очистки | Отдельные учётные данные; наследует прикладную роль и получает ограниченные права жизненного цикла аудита; не владелец или мигратор |
+| Резервная (`backup`) | Резервное копирование | `CONNECT`, чтение; отдельные учётные данные |
 
-Runtime не получает `CREATE`, `TRUNCATE`, `REFERENCES`, `REPLICATION`, `BYPASSRLS`, членство в
-owner/migrator, доступ к `pg_read_file`, изменение `doctrine_migration_versions` и таблиц истории
-миграций. Скрипт явно отзывает все членства runtime-роли и требует
+Прикладная роль не получает `CREATE`, `TRUNCATE`, `REFERENCES`, `REPLICATION`, `BYPASSRLS`, членство в
+роли владельца/мигратора, доступ к `pg_read_file`, изменение `doctrine_migration_versions` и таблиц истории
+миграций. Скрипт явно отзывает все членства прикладной роли и требует
 `RUNTIME_ROLE != MIGRATION_ROLE`.
 
-## Новый Commercial database
+`MAINTENANCE_ROLE` и `MAINTENANCE_PASSWORD` задаются вместе и отдельно от прикладной роли и владельца.
+Обычная прикладная роль не получает UPDATE/DELETE/TRUNCATE для неизменяемого аудита; служебный доступ используется только с проверками политики жизненного цикла и полномочий CLI.
+`commercial.catalog_operators` доступна прикладной роли только на чтение; выдачу и отзыв выполняет роль мигратора/администратора, а не HTTP-процесс.
 
-1. Создать базу и роли owner/migrator/runtime средствами администратора.
-2. Выдать migrator членство во владельце схемы и выполнить миграции.
-3. Проверить и при необходимости отозвать `SECURITY DEFINER` у функций, созданных не migrator.
+## Новая база Commercial
+
+1. Создать базу и роли владельца, мигратора и приложения средствами администратора.
+2. Выдать мигратору членство во владельце схемы и выполнить миграции.
+3. Проверить и при необходимости отозвать `SECURITY DEFINER` у функций, созданных не мигратором.
 4. Запустить `scripts/operations/provision-db-role.sh` для схем `commercial` и `public`.
-   `public` содержит `doctrine_migration_versions`; runtime получает на неё только `USAGE`
+   `public` содержит `doctrine_migration_versions`; прикладная роль получает на неё только `USAGE`
    и `SELECT`, без DML и DDL.
-5. Подключить приложение как runtime, мигратор — только для шага миграции.
+5. Подключить приложение с прикладной ролью, мигратор — только для шага миграции.
 
 Пример:
 
@@ -38,44 +43,49 @@ bash ./scripts/operations/provision-db-role.sh
 ```
 
 Для Core используются схемы `core,platform_runtime,public` и отдельная пара ролей. Пароли и
-membership не хранятся в репозитории; `RUNTIME_PASSWORD` передаётся из secret store. Скрипт
-читает пароль внутри `psql` через `\getenv`, а не через argv; production DDL-логи не должны
+членства не хранятся в репозитории; `RUNTIME_PASSWORD` передаётся из хранилища секретов. Скрипт
+читает пароль внутри `psql` через `\getenv`, а не аргументами процесса; промышленные журналы DDL не должны
 включать текст `CREATE/ALTER ROLE ... PASSWORD`.
+
+После отдельной установки Education включить `education` в `SCHEMAS` и повторить
+выдачу разрешений с прежними учётными данными владельца, прикладной и служебной ролей.
+`education.module_migrations` остаётся доступным только для чтения приложению; порядок и проверки ролей:
+[серверная часть Education](../architecture/EDUCATION_BACKEND.md).
 
 ## Проверка отказа
 
-На изолированной копии выполнить от runtime:
+На изолированной копии выполнить от прикладной роли:
 
 ```sql
-CREATE TABLE commercial.should_fail (id int); -- ERROR: permission denied for schema commercial
-TRUNCATE commercial.commercial_accounts;       -- ERROR: permission denied
-ALTER TABLE commercial.commercial_accounts ADD COLUMN x int; -- ERROR
-DELETE FROM public.doctrine_migration_versions; -- ERROR
-SELECT pg_read_file('/etc/passwd');            -- ERROR
+CREATE TABLE commercial.should_fail (id int); -- ОШИБКА: нет прав на схему commercial
+TRUNCATE commercial.commercial_accounts;       -- ОШИБКА: нет прав
+ALTER TABLE commercial.commercial_accounts ADD COLUMN x int; -- ОШИБКА
+DELETE FROM public.doctrine_migration_versions; -- ОШИБКА
+SELECT pg_read_file('/etc/passwd');            -- ОШИБКА
 ```
 
-Затем повторить бизнес-операции (создание аккаунта, приглашения, membership, billing) от runtime.
-Результат фиксируется в release evidence, а не в рабочей базе.
+Затем повторить бизнес-операции (создание аккаунта, приглашения, членства, расчёты) от прикладной роли.
+Результат фиксируется в доказательствах выпуска, а не в рабочей базе.
 
 Скрипт проверен на отдельной базе Commercial: `SELECT` из `commercial` проходит, а `CREATE TABLE`,
 `TRUNCATE` и `DELETE FROM public.doctrine_migration_versions` завершаются `permission denied`.
-CI gate `scripts/ci/db-role-gate.sh core|commercial` выполняет это на одноразовых БД:
-создаёт отдельную runtime-роль, проверяет `rolsuper/rolcreatedb/rolcreaterole/rolbypassrls = 0`,
+Проверка CI `scripts/ci/db-role-gate.sh core|commercial` выполняет это на одноразовых БД:
+создаёт отдельную прикладную роль, проверяет `rolsuper/rolcreatedb/rolcreaterole/rolbypassrls = 0`,
 явно проверяет `has_schema_privilege`/`has_database_privilege`/`has_table_privilege`,
-разрешает чтение прикладной таблицы и требует отказа для DDL, `TRUNCATE`, удаления history
+разрешает чтение прикладной таблицы и требует отказа для DDL, `TRUNCATE`, удаления истории
 миграций (`public.platform_migrations` в Core, `public.doctrine_migration_versions`
 в Commercial) и `pg_read_file`. Каждый отказ обязан быть `SQLSTATE 42501` и выполняется
-в откатываемой транзакции; `0A000` (например, FK-ограничение), syntax/connection errors
-и неожиданный успех делают gate красным. Это gate для ролей, а не доказательство всех
-HTTP/worker flows; полный lifecycle под runtime-role остаётся обязательной
-release-проверкой.
+в откатываемой транзакции; `0A000` (например, FK-ограничение), ошибки синтаксиса/соединения
+и неожиданный успех делают проверку неуспешной. Это проверка ролей, а не доказательство всех
+сценариев HTTP/обработчиков; полный жизненный цикл под прикладной ролью остаётся обязательной
+проверкой выпуска.
 
 ## Ограничения
 
-- Локальный Compose по-прежнему использует bootstrap-суперпользователя. Это dev-модель,
-  а не production credentials; перед production обе БД должны быть переключены на runtime-роль.
+- Локальный Compose по-прежнему использует суперпользователя начальной настройки. Это модель разработки,
+  а не промышленные учётные данные; до промышленного запуска обе БД должны быть переключены на прикладную роль.
 - Скрипт не переключает рабочую установку автоматически: это осознанная операция оператора.
-- Существующие объекты должны принадлежать migrator либо owner; `REASSIGN OWNED` не выполняется
+- Существующие объекты должны принадлежать мигратору или владельцу; `REASSIGN OWNED` не выполняется
   автоматически.
-- Пароль bootstrap-пользователя Compose остаётся локальным секретом и не должен использоваться
-  production-приложением.
+- Пароль пользователя начальной настройки Compose остаётся локальным секретом и не должен использоваться
+  промышленным приложением.

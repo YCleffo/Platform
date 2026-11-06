@@ -1,13 +1,13 @@
 flowchart TD
-  Business[Регистрация, reset или invitation] --> Tx[Business transaction и outbox]
-  Tx --> Claim[Worker атомарно получает lease]
-  Claim --> Render[Разрешить recipient и артефакт, выбрать locale и template]
+  Business[Регистрация, сброс или приглашение] --> Tx[Бизнес-транзакция и исходящая очередь]
+  Tx --> Claim[Обработчик атомарно получает аренду]
+  Claim --> Render[Определить получателя и подтверждение, выбрать язык и шаблон]
   Render --> SMTP[Отправить письмо со стабильным Message-ID]
   SMTP --> Outcome{Результат доставки SMTP}
-  Outcome -->|Принято| Published[Published и минимизация payload]
-  Outcome -->|Временная ошибка| Retry[Backoff и bounded attempts]
+  Outcome -->|Принято| Published[Опубликовано; минимизация содержимого]
+  Outcome -->|Временная ошибка| Retry[Растущая задержка и ограниченные попытки]
   Retry --> Claim
-  Outcome -->|Лимит попыток| Dead[Dead letter и операторское восстановление]
-  Claim -->|Процесс умер| Lease[Просроченный lease доступен новому worker]
+  Outcome -->|Лимит попыток| Dead[Невозможна обработка; операторское восстановление]
+  Claim -->|Процесс умер| Lease[Истёкшая аренда доступна новому обработчику]
   Lease --> Claim
-  Published --> Note[SMTP acceptance не доказывает прочтение письма человеком]
+  Published --> Note[Приём SMTP не доказывает прочтение человеком]

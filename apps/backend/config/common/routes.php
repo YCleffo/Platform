@@ -138,6 +138,10 @@ return [
         ->action(Api\ReadyHealthAction::class)
         ->name('app/health/ready'),
 
+    Route::get('/metrics')
+        ->action(Api\MetricsAction::class)
+        ->name('app/metrics'),
+
     Route::get('/api/public/config')
         ->action(PublicConfigAction::class)
         ->name('public/config'),

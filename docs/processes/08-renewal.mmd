@@ -1,18 +1,18 @@
 flowchart TD
   Active[Активный оплаченный период] --> Auto{Автопродление включено?}
-  Auto -->|Да| Prepare[Подготовить единственный renewal invoice]
-  Prepare --> Saved{Есть допустимый saved payment method?}
-  Saved -->|Да| Collect[Стабильный payment attempt и запрос провайдеру]
-  Saved -->|Нет| Required[payment_method_required и политика dunning]
-  Collect --> Result{Достоверный settlement?}
+  Auto -->|Да| Prepare[Подготовить единственный счёт продления]
+  Prepare --> Saved{Есть допустимый сохранённый способ оплаты?}
+  Saved -->|Да| Collect[Стабильный попытка оплаты и запрос провайдеру]
+  Saved -->|Нет| Required[payment_method_required и правила работы с просрочкой]
+  Collect --> Result{Оплата достоверно подтверждена?}
   Result -->|Да| Advance[Один переход на следующий оплаченный период]
-  Result -->|Нет или uncertain| Dunning[Bounded retry, reconciliation, grace]
+  Result -->|Нет или неопределённо| Dunning[Ограниченные повторы, сверка, льготный срок]
   Required --> Dunning
   Dunning -->|Оплачено| Advance
-  Dunning -->|Исчерпано| Expire[Истечение по правилам периода и grace]
-  Active --> Cancel[Customer отменяет auto-renew]
-  Cancel --> Guard[Сериализация с collection и проверка pending provider attempt]
-  Guard --> Stop[Запрет новых списаний и void допустимого unpaid invoice]
+  Dunning -->|Исчерпано| Expire[Истечение по правилам периода и льготного срока]
+  Active --> Cancel[Клиент отменяет автопродление]
+  Cancel --> Guard[Сериализация со сбором оплаты, проверка ожидающей попытки]
+  Guard --> Stop[Запрет новых списаний и аннулирование допустимого неоплаченного счёта]
   Auto -->|Нет| End[Доступ до конца оплаченного периода]
   Stop --> End
   End --> Expire

@@ -16,6 +16,8 @@ const routes = [
   { path: '/reset-password?token=synthetic', expected: '/reset-password', selector: 'form' },
   { path: '/does-not-exist', expected: '/does-not-exist', selector: '.not-found' },
   { path: '/', expected: '/', selector: '.catalog' },
+  { path: '/plans', expected: '/plans', selector: '.plans' },
+  { path: '/plans/business', expected: '/plans/business', selector: '.plan-detail' },
   { path: '/settings', expected: '/settings', selector: '.appearance-view' },
   { path: '/settings/components', expected: '/settings/components', selector: '.components-view' },
   // Protected / challenge routes must redirect to /login when unauthenticated.
@@ -61,7 +63,7 @@ async function verifyWidth(width) {
     const url = message.location().url ?? '';
     // The SPA intentionally shows an error state when the backend is unavailable;
     // those network failures are expected here. Real JS errors still surface via pageerror.
-    if (url.includes('/api/') || url.endsWith('/favicon.ico') || url.endsWith('/favicon.svg')) {
+    if (url.includes('/api/') || url.includes('local.adguard.org') || url.endsWith('/favicon.ico') || url.endsWith('/favicon.svg')) {
       return;
     }
     pageErrors.push(`${message.text()} (${url})`);

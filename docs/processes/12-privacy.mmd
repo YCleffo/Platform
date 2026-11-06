@@ -1,16 +1,16 @@
 flowchart TD
-  Request[Запрос субъекта данных] --> Identity[Проверка identity или legal representation]
-  Identity --> Scope[Проверка permissions, целей и scope]
-  Scope --> Register[Запрос, deadlines и audit history]
+  Request[Запрос субъекта данных] --> Identity[Проверка личности или представительства]
+  Identity --> Scope[Проверка разрешений, целей и области доступа]
+  Scope --> Register[Запрос, сроки и история аудита]
   Register --> Kind{Вид обработки}
-  Kind --> Export[Export или correction через contributors]
-  Kind --> Consent[Grant или withdrawal consent с immutable evidence]
-  Kind --> Termination[Processing block или termination]
-  Kind --> Retention[Retention evaluation по явной policy]
-  Retention --> Hold{Legal hold или обязанность сохранить данные?}
+  Kind --> Export[Выгрузка или исправление через поставщиков сведений]
+  Kind --> Consent[Выдача или отзыв согласия с неизменяемым доказательством]
+  Kind --> Termination[Блокировка или прекращение обработки]
+  Kind --> Retention[Оценка хранения по явной политике]
+  Retention --> Hold{Запрет уничтожения или обязанность сохранить?}
   Hold -->|Да| Preserve[Не уничтожать защищённую историю]
-  Hold -->|Нет| Erasure[Durable erasure case и отдельные items]
-  Erasure --> Policy{Явно разрешены executor и evidence policy?}
-  Policy -->|Нет| Blocked[Fail closed и ожидание настройки]
-  Policy -->|Да| Execute[Bounded execution, evidence и legal package]
+  Hold -->|Нет| Erasure[Постоянное дело уничтожения и отдельные элементы]
+  Erasure --> Policy{Есть уполномоченный исполнитель и политика доказательств?}
+  Policy -->|Нет| Blocked[Действие запрещено, ожидание настройки]
+  Policy -->|Да| Execute[Ограниченное исполнение, доказательства и юридический пакет]
   Execute --> Complete[Завершение, повтор и восстановление без двойного эффекта]

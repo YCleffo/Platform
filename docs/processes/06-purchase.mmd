@@ -1,17 +1,17 @@
 flowchart TD
-  Account[Commercial Account и owner membership] --> Billing[Billing profile и onboarding]
-  Billing --> Draft[Draft subscription и published plan price]
-  Draft --> Invoice[Issued invoice и неизменяемые строки]
-  Invoice --> Payment[CreatePayment с idempotency key]
+  Account[Commercial Account и членство владельца] --> Billing[Платёжный профиль и начальная настройка]
+  Billing --> Draft[Черновик подписки и опубликованная цена]
+  Draft --> Invoice[Выпущенный счёт и неизменяемые строки]
+  Invoice --> Payment[CreatePayment с ключом идемпотентности]
   Payment --> Free{Сумма равна нулю?}
-  Free -->|Да| Settle[Локальный settlement]
-  Free -->|Нет| Attempt[PaymentAttempt и постоянный provider request key]
-  Attempt --> Network[Внешний вызов вне DB-транзакции]
+  Free -->|Да| Settle[Локальное подтверждение оплаты]
+  Free -->|Нет| Attempt[PaymentAttempt и постоянный ключ запроса провайдеру]
+  Attempt --> Network[Внешний вызов вне транзакции БД]
   Network --> Outcome{Достоверный результат?}
-  Outcome -->|Timeout| Pending[Uncertain: lookup и reconciliation]
+  Outcome -->|Тайм-аут| Pending[Неопределённость: поиск и сверка]
   Pending --> Network
   Outcome -->|Отказ| Failed[Нет активации и нет новых прав]
-  Outcome -->|Успех| Authoritative[Authoritative provider state и проверка суммы]
+  Outcome -->|Успех| Authoritative[Достоверное состояние провайдера и проверка суммы]
   Authoritative --> Settle
-  Settle --> Atomic[Одна транзакция: paid invoice, payment, subscription, audit и outbox]
-  Atomic --> Rights[Derived entitlements и подписанный Tenant document]
+  Settle --> Atomic[Одна транзакция: оплаченный счёт, платёж, подписка, аудит и очередь]
+  Atomic --> Rights[Вычисленные права и подписанный документ установки]

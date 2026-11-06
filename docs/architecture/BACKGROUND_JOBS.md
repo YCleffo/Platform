@@ -1,39 +1,45 @@
-# Background jobs
+# Фоновые задания
 
-`backend-scheduler` runs `php yii scheduler:run`; `control-scheduler` runs `php bin/console control:scheduler:run`. Both perform one bounded call per due job, use a PostgreSQL session advisory lock keyed by `scheduler:<owner>:<job>`, release it after the call, and continue after a job failure. They log only job code, status, duration, count, and a machine error code. Invalid interval or limit configuration stops startup. Intervals and limits below are defaults; the corresponding variables in `.env.example` configure them.
+`backend-scheduler` выполняет `php yii scheduler:run`, а `control-scheduler` — `php bin/console control:scheduler:run`. Каждый планировщик делает один ограниченный вызов на наступившую задачу, захватывает рекомендательную блокировку сессии PostgreSQL по ключу `scheduler:<owner>:<job>`, освобождает её после вызова и продолжает работу при ошибке отдельной задачи. В журнал попадают только код задачи, состояние, длительность, счётчик и безопасный машинный код ошибки. Недопустимый интервал или лимит останавливает запуск. Ниже приведены значения по умолчанию; настройка — соответствующими переменными `.env.example`.
 
-| Job | Owner | Purpose | Cadence | Batch limit | Destructive | Lock key | Failure behaviour |
+| Задача | Владелец | Назначение | Интервал | Размер порции | Удаляет данные | Ключ блокировки | При ошибке |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `auth_cleanup` | Core | Expired Auth artifacts | 3600 s | 500 per category | Yes, retention governed | `scheduler:core:auth_cleanup` | Retry next interval |
-| `privacy_retention_evaluate` | Core | Persist retention decisions | 3600 s | 100 candidates | No | `scheduler:core:privacy_retention_evaluate` | Retry next interval |
-| `privacy_erasure_execute` | Core | Retry executable erasure cases | 300 s | 10 cases, 25 items each | Yes, disabled by default | `scheduler:core:privacy_erasure_execute` | Retry next interval; executor owns case state |
-| `privacy_cleanup` | Core | One configured category per tick | 3600 s | 100 rows | Yes, disabled by default | `scheduler:core:privacy_cleanup` | Skip without policy; retry next interval |
-| `runtime_entitlement_sync` | Core | Pull signed entitlement | 300 s | 1 sync | No | `scheduler:core:runtime_entitlement_sync` | Retain current document; retry next interval |
-| `process_plan_changes` | Control | Apply due scheduled plan changes | 60 s | 100 changes | No | `scheduler:control:process_plan_changes` | Retry next interval |
-| `prepare_renewals` | Control | Prepare renewal invoices | 300 s | 100 subscriptions | No | `scheduler:control:prepare_renewals` | Retry next interval |
-| `collect_renewals` | Control | Initiate eligible saved-card renewal collections | 300 s | 100 invoices | No | `scheduler:control:collect_renewals` | Provider settlement/reconciliation remains authoritative |
-| `process_dunning` | Control | Progress past-due grace, restore saved methods, run due terminal retries, and exhaust delinquent renewals | 300 s | 100 invoices | No | `scheduler:control:process_dunning` | Policy-bounded retry; authoritative settlement wins |
-| `advance_subscriptions` | Control | Advance paid periods | 300 s | 100 subscriptions | No | `scheduler:control:advance_subscriptions` | Retry next interval |
-| `expire_subscriptions` | Control | Expire ended periods | 300 s | 100 subscriptions | No | `scheduler:control:expire_subscriptions` | Retry next interval |
-| `reconcile_yookassa_payments` | Control | Reconcile payments | 120 s | 100 attempts | No | `scheduler:control:reconcile_yookassa_payments` | Provider retry remains in service |
-| `reconcile_yookassa_refunds` | Control | Reconcile refunds | 120 s | 100 refunds | No | `scheduler:control:reconcile_yookassa_refunds` | Provider retry remains in service |
-| `finalize_refunded_plan_changes` | Control | Complete changes after confirmed full refund | 120 s | 100 changes | No | `scheduler:control:finalize_refunded_plan_changes` | Retry next interval |
-| `mark_failed_plan_change_compensations` | Control | Mark canceled compensation refunds for operator recovery | 120 s | 100 changes | No | `scheduler:control:mark_failed_plan_change_compensations` | Retry next interval |
-| `reconcile_yookassa_receipts` | Control | Reconcile receipts | 120 s | 100 receipts | No | `scheduler:control:reconcile_yookassa_receipts` | Provider retry remains in service |
-| `control_privacy_cleanup` | Control | One configured category per tick | 3600 s | 100 rows | Yes, disabled by default | `scheduler:control:control_privacy_cleanup` | Skip without policy; retry next interval |
+| `auth_cleanup` | Core | Истёкшие данные аутентификации | 3600 с | 500 на категорию | Да, по политике хранения | `scheduler:core:auth_cleanup` | Повтор на следующем интервале |
+| `privacy_retention_evaluate` | Core | Запись решений о хранении | 3600 с | 100 кандидатов | Нет | `scheduler:core:privacy_retention_evaluate` | Повтор на следующем интервале |
+| `privacy_erasure_execute` | Core | Повтор доступных к исполнению дел уничтожения | 300 с | 10 дел по 25 элементов | Да, по умолчанию выключено | `scheduler:core:privacy_erasure_execute` | Повтор; состоянием дела управляет исполнитель |
+| `privacy_cleanup` | Core | Одна настроенная категория за цикл | 3600 с | 100 строк | Да, по умолчанию выключено | `scheduler:core:privacy_cleanup` | Без политики пропуск; иначе повтор |
+| `runtime_entitlement_sync` | Core | Получение подписанных прав | 300 с | 1 синхронизация | Нет | `scheduler:core:runtime_entitlement_sync` | Сохранить текущий документ и повторить |
+| `process_plan_changes` | Control | Применение наступивших смен тарифа | 60 с | 100 изменений | Нет | `scheduler:control:process_plan_changes` | Повтор на следующем интервале |
+| `prepare_renewals` | Control | Подготовка счетов продления | 300 с | 100 подписок | Нет | `scheduler:control:prepare_renewals` | Повтор на следующем интервале |
+| `collect_renewals` | Control | Оплата продлений разрешённым сохранённым способом | 300 с | 100 счетов | Нет | `scheduler:control:collect_renewals` | Итог определяет достоверное подтверждение провайдера |
+| `process_dunning` | Control | Льготный срок просрочки, восстановление способов, повторы завершившихся попыток и исчерпание продлений | 300 с | 100 счетов | Нет | `scheduler:control:process_dunning` | Ограниченный политикой повтор; подтверждённая оплата имеет приоритет |
+| `advance_subscriptions` | Control | Переход к оплаченным периодам | 300 с | 100 подписок | Нет | `scheduler:control:advance_subscriptions` | Повтор на следующем интервале |
+| `expire_subscriptions` | Control | Завершение истёкших периодов | 300 с | 100 подписок | Нет | `scheduler:control:expire_subscriptions` | Повтор на следующем интервале |
+| `reconcile_yookassa_payments` | Control | Сверка платежей | 120 с | 100 попыток | Нет | `scheduler:control:reconcile_yookassa_payments` | Правила повторов остаются в сервисе провайдера |
+| `reconcile_yookassa_refunds` | Control | Сверка возвратов | 120 с | 100 возвратов | Нет | `scheduler:control:reconcile_yookassa_refunds` | Правила повторов остаются в сервисе провайдера |
+| `finalize_refunded_plan_changes` | Control | Завершение смен после полного подтверждённого возврата | 120 с | 100 изменений | Нет | `scheduler:control:finalize_refunded_plan_changes` | Повтор на следующем интервале |
+| `mark_failed_plan_change_compensations` | Control | Передача отменённых компенсационных возвратов оператору | 120 с | 100 изменений | Нет | `scheduler:control:mark_failed_plan_change_compensations` | Повтор на следующем интервале |
+| `reconcile_yookassa_receipts` | Control | Сверка чеков | 120 с | 100 чеков | Нет | `scheduler:control:reconcile_yookassa_receipts` | Правила повторов остаются в сервисе провайдера |
+| `control_privacy_cleanup` | Control | Одна настроенная категория за цикл | 3600 с | 100 строк | Да, по умолчанию выключено | `scheduler:control:control_privacy_cleanup` | Без политики пропуск; иначе повтор |
 
-The cycle starts with due plan changes, then runs renewal preparation, collection, dunning, advancement and expiration. Payment/refund reconciliation is followed by compensation finalization and recovery marking, then receipt reconciliation and privacy cleanup. Initial collection selects issued due renewal invoices, creates/reuses the ordinary Payment and active PaymentAttempt, and safely resumes an uncertain provider CREATE with the same provider request key. `process_dunning` owns terminal retries, payment-method restoration, past-due progression, and exhaustion. Provider reconciliation remains authoritative for external payments. Each job has its own interval and a failure does not prevent the next job from running. Core erasure requires `CORE_PRIVACY_ERASURE_ENABLED=true`, a valid active system account in `PRIVACY_AUTOMATION_ACCOUNT_ID`, and configured destruction evidence and legal package policy. Cleanup requires its explicit enable flag and a category retention policy. No automatic job creates a policy or system credential.
+Цикл начинается со смен тарифов, затем идут подготовка и сбор оплаты продлений, работа с просрочками, переход и истечение подписок. После сверки платежей и возвратов выполняются завершение компенсаций, передача неуспешных случаев на восстановление, сверка чеков и очистка персональных данных.
 
-`backend-email-worker` runs `php yii communication:process-email --loop` using the existing outbox processor. `control-outbox-worker` remains separate. Both sleep when the outbox is empty. The new compose services restart unless stopped and use the same application configuration and secrets as their API service.
+Первичный сбор оплаты выбирает выпущенные счета продления с наступившим сроком, создаёт или использует обычный Payment и активный PaymentAttempt, безопасно продолжает неопределённый запрос CREATE с прежним ключом провайдера. `process_dunning` отвечает за повторы завершившихся попыток, восстановление способов оплаты, просрочку и исчерпание попыток. Достоверная сверка провайдера определяет внешние платежи. У каждой задачи свой интервал; ошибка одной не мешает следующей.
 
-Each local dedicated deployment runs its own Core scheduler and email worker from the exact HTTP runtime image digest. Both use that deployment's PostgreSQL and Redis; the email worker uses local Mailpit through the control network. Scheduler writes `__scheduler__` and the email worker writes `backend_email_worker` into the existing `platform_runtime.background_job_status` table. Runtime activation waits for both fresh heartbeats and Redis PING before reporting ready. Destructive privacy jobs stay disabled until deployment-specific policy is explicitly configured. Before final decommission backup, the provider stops all three Core processes so no background writer remains.
+Уничтожение в Core требует `CORE_PRIVACY_ERASURE_ENABLED=true`, активного системного аккаунта в `PRIVACY_AUTOMATION_ACCOUNT_ID`, настроенных свидетельств уничтожения и юридической политики. Очистка требует явного флага и политики хранения категории. Ни одна автоматическая задача не создаёт политику или системные учётные данные.
 
-The Core `runtime_entitlement_sync` job resolves `CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF` through `RuntimeSecretResolver`, exactly as `runtime:deployment:activate` does. A temporary Control Plane or authentication failure is logged as a failed job and leaves the last applied local entitlement untouched. A rotated deployment credential must be placed in the external secret source and loaded by restarting or recreating the runtime process before this scheduled sync can use it.
+`backend-email-worker` выполняет `php yii communication:process-email --loop` через существующий обработчик исходящей очереди. `control-outbox-worker` остаётся независимым. При пустой очереди оба ожидают. Сервисы Compose автоматически перезапускаются, кроме явной остановки, и используют конфигурацию и секреты своего API.
 
-## Docker health у CLI workers
+В каждой локальной выделенной установке собственные планировщик Core и почтовый обработчик работают из того же точного образа, что HTTP-приложение. Они используют PostgreSQL и Redis своей установки; почта идёт в локальный Mailpit через сеть управления. Планировщик пишет `__scheduler__`, почтовый процесс — `backend_email_worker` в `platform_runtime.background_job_status`. Активация ждёт свежие сигналы обоих процессов и Redis PING. Разрушительные задачи остаются выключенными до явной политики установки. Перед итоговой резервной копией при удалении останавливаются все три процесса Core.
 
-Scheduler и email worker не запускают Caddy. При создании dedicated workers
-LocalDockerInfrastructureProvider явно задаёт `php /app/yii ops:health
-backend-scheduler` или `backend-email-worker`, вместо унаследованной Caddy admin
-probe. Новая конфигурация не меняет автоматически уже созданные контейнеры.
-Действующая CLI health проверяет heartbeat, а не наличие HTTP-процесса.
+`runtime_entitlement_sync` получает `CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF` через `RuntimeSecretResolver`, как и `runtime:deployment:activate`. Временная ошибка Control Plane или аутентификации записывается как ошибка задачи; последние применённые права сохраняются. После замены сервисного секрета его нужно поместить во внешний источник и перезапустить либо пересоздать процесс, прежде чем плановая синхронизация сможет его использовать.
+
+## Проверка состояния консольных обработчиков в Docker
+
+Планировщик и почтовый обработчик не запускают Caddy. При создании выделенных обработчиков `LocalDockerInfrastructureProvider` явно задаёт `php /app/yii ops:health backend-scheduler` или `backend-email-worker` вместо унаследованной проверки административного HTTP-порта Caddy. Новая конфигурация не меняет существующие контейнеры автоматически. Консольная проверка контролирует сигнал активности, а не наличие HTTP-процесса.
+
+## Дальнейшее масштабирование
+
+Рекомендательная блокировка сессии сериализует экземпляры одной задачи. Дополнительные планировщики не заменяют измерение очереди, длительности, размера порций, интервалов и блокировок БД. У почтовых обработчиков проверяйте аренду, её истечение и повторную доставку после падения между подтверждением SMTP и записью результата. Доказательства внешних оповещений, производительности и высокой доступности пока отсутствуют.
+
+Этапы и критерии: [план масштабирования, 2 и 4](../roadmap/SCALING_PLAN.md), [правила доставки](COMMUNICATION.md), [наблюдаемость](../../infra/observability/README.md).

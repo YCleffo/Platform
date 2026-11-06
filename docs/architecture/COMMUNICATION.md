@@ -1,123 +1,96 @@
-# Communication в Core
+# Доставка сообщений в Core
 
 ## Назначение и границы
 
-`Core/Communication` — основа доставки транзакционных сообщений. Она отвечает за
-формирование сообщений, правила доставки, адаптеры транспорта и обработку событий
-Communication из транзакционного Outbox. Она не владеет сценариями аккаунтов,
-аутентификации, персон и других доменов.
+`Core/Communication` отвечает за формирование транзакционных сообщений, правила доставки, транспортные адаптеры и обработку почтовых событий из транзакционной исходящей очереди. Он не владеет сценариями аккаунтов, аутентификации, людей и других предметных областей.
 
-The dependency direction is:
+Направление зависимостей:
 
 ```text
-Domain/application module
-  -> Outbox event
-  -> Communication application service
-  -> transport port
-  -> SMTP adapter
-  -> SMTP provider
+Доменный или прикладной модуль
+  -> событие исходящей очереди
+  -> прикладной сервис Communication
+  -> интерфейс транспорта
+  -> адаптер SMTP
+  -> провайдер SMTP
 ```
 
-Доменные модули публикуют событие в одной транзакции PostgreSQL со своим бизнес-изменением.
-Они не вызывают SMTP и не зависят от Symfony Mailer.
+Доменный модуль публикует событие в одной транзакции PostgreSQL со своим бизнес-изменением. Он не вызывает SMTP напрямую и не зависит от Symfony Mailer.
 
 ## Обязанности
 
-Слой Communication:
+Communication:
 
-- validates the versioned email event payload;
-- maps a supported event type to a stable template code;
-- renders locale-aware file templates;
-- constructs a transport-neutral `EmailMessage`;
-- sends through `EmailSenderInterface`;
-- updates the existing Outbox lifecycle and applies retry policy;
-- exposes an application service for queueing generic email requests.
+- проверяет версионированные данные почтового события;
+- сопоставляет поддерживаемый тип события со стабильным кодом шаблона;
+- формирует письмо из файлов шаблонов с учётом языка;
+- создаёт независимый от транспорта `EmailMessage`;
+- отправляет через `EmailSenderInterface`;
+- обновляет состояние существующей исходящей очереди и применяет правила повторов;
+- предоставляет прикладной сервис постановки общих почтовых запросов в очередь.
 
-Он не хранит вторую копию письма, не предоставляет публичный HTTP API и не реализует сценарии аутентификации.
+Вторую копию письма он не хранит, публичного HTTP API не предоставляет, сценарии аутентификации не реализует.
 
 ## Контракт событий
 
-Supported event names are:
+Поддерживаются следующие события:
 
 | Тип события | Код шаблона | Источник |
 | --- | --- | --- |
-| `communication.email.requested` | `payload.templateCode` | any internal module |
-| `auth.password.reset.requested` | `auth.password.reset` | Auth |
-| `auth.email.verification.requested` | `auth.email.verification` | Auth |
-| `auth.account.created` | `auth.account.created` | Auth |
+| `communication.email.requested` | `payload.templateCode` | Любой внутренний модуль |
+| `auth.password.reset.requested` | `auth.password.reset` | Аутентификация |
+| `auth.email.verification.requested` | `auth.email.verification` | Аутентификация |
+| `auth.account.created` | `auth.account.created` | Аутентификация |
 
-Payload version 1:
+Данные события версии 1:
 
 ```json
 {
   "schemaVersion": 1,
   "recipient": {
     "address": "user@example.test",
-    "name": "User"
+    "name": "Пользователь"
   },
   "locale": "ru-RU",
   "templateCode": "auth.account.created",
   "variables": {
-    "displayName": "User",
+    "displayName": "Пользователь",
     "actionUrl": "https://example.test/action"
   }
 }
 ```
 
-`templateCode` is required only for `communication.email.requested`; named Auth
-events use the mapping above. Canonical locales are `ru-RU` and `en-US`; legacy
-`ru` and `en` values are normalized for compatibility. Producers may put
-a short-lived one-time action URL in `variables`, but must never publish a
-password, password hash, TOTP secret, private key, or SMTP credential. Payloads
-and rendered bodies must not be logged.
+`templateCode` обязателен только для `communication.email.requested`; именованные события аутентификации используют таблицу выше. Канонические языковые коды — `ru-RU` и `en-US`; прежние `ru` и `en` нормализуются для совместимости. Отправитель может передать в `variables` краткоживущую одноразовую ссылку, но не пароль, его хеш, секрет TOTP, закрытый ключ или учётные данные SMTP. Данные события и сформированное тело письма не журналируются.
 
 ## Жизненный цикл письма
 
-1. A producer inserts the business change and Outbox event in one transaction.
-2. `EmailOutboxProcessor` atomically claims only supported email event types
-   with a worker lease.
-3. The processor validates the payload and renders subject, HTML, and text from
-   `resources/email/<locale>/`.
-4. The SMTP adapter sends the message with a deterministic Message-ID derived
-   from the Outbox `event_id`.
-5. Success changes the Outbox row to `published`. A transport failure changes it
-   to `failed` and schedules a later `available_at`. Invalid permanent input is
-   moved directly to `dead`.
+1. Отправитель добавляет бизнес-изменение и исходящее событие в одной транзакции.
+2. `EmailOutboxProcessor` атомарно захватывает только поддерживаемые почтовые события на ограниченное время аренды.
+3. Обработчик проверяет данные и формирует тему, HTML и текст из `resources/email/<locale>/`.
+4. SMTP-адаптер отправляет письмо с устойчивым `Message-ID`, вычисленным из `event_id`.
+5. Успех переводит запись в `published`. Ошибка транспорта переводит её в `failed` и назначает более поздний `available_at`. Невосстановимая ошибка входных данных сразу даёт `dead`.
 
-Published and dead rows are never claimed. A lease prevents concurrent workers
-from sending the same row. An expired `processing` lease is reclaimable so a
-crashed worker cannot lose an email.
+Записи `published` и `dead` повторно не захватываются. Аренда предотвращает одновременную отправку одной записи несколькими обработчиками. Просроченную аренду `processing` можно захватить заново, поэтому сбой процесса не теряет письмо.
 
 ## Семантика доставки и идемпотентности
 
-The processor provides at-least-once delivery. PostgreSQL claim/update
-operations prevent duplicates during normal execution, and a deterministic
-Message-ID gives downstream systems a stable deduplication key. SMTP has no
-transactional acknowledgement shared with PostgreSQL, so a process crash after
-the SMTP server accepts a message but before `published` is committed can cause
-redelivery. Exactly-once delivery is impossible over generic SMTP without an
-idempotent provider API.
+Гарантируется доставка как минимум один раз. Атомарный захват и обновление PostgreSQL предотвращают дубли при обычной работе; устойчивый `Message-ID` позволяет следующим системам распознавать повтор. У SMTP нет общей с PostgreSQL транзакции подтверждения: если процесс упал после принятия письма SMTP-сервером, но до записи `published`, возможна повторная доставка. Гарантия строго одного письма через обычный SMTP без идемпотентного API провайдера недостижима.
 
-This trade-off prefers a possible duplicate in the narrow crash window over a
-silently lost security email. Domain handlers should not enqueue multiple
-events for the same business transition.
+В узком окне сбоя допускается возможный дубль вместо молчаливой потери письма безопасности. Доменный обработчик не должен создавать несколько событий для одного бизнес-перехода.
 
 ## Политика повторных попыток
 
-- transport failures use exponential backoff from a configurable base delay;
-- the attempt count is maintained by `core.outbox_events`;
-- after the configured maximum attempts, the event becomes `dead`;
-- payload, template, or address validation errors are permanent and become
-  `dead` immediately;
-- worker leases are configurable and expired leases may be reclaimed.
+- Ошибки транспорта повторяются с экспоненциально растущей задержкой от настраиваемой базы.
+- Число попыток хранится в `core.outbox_events`.
+- После заданного максимума событие становится `dead`.
+- Ошибки данных, шаблона или адреса считаются постоянными и сразу дают `dead`.
+- Срок аренды настраивается; просроченную аренду можно захватить повторно.
 
-Retry values come from environment-backed application parameters. Error text is
-bounded before it is stored and must not include message bodies or credentials.
+Параметры повторов приходят из переменных окружения. Текст ошибки перед хранением ограничивается по длине и не должен содержать тело письма или учётные данные.
 
 ## Шаблоны и локализация
 
-Templates are files, not PHP strings, and use the application-wide canonical
-locale contract:
+Шаблоны — файлы, а не строки PHP. Они используют общий контракт языковых кодов:
 
 ```text
 resources/email/<locale>/<template-code>.subject.txt
@@ -125,35 +98,16 @@ resources/email/<locale>/<template-code>.html
 resources/email/<locale>/<template-code>.txt
 ```
 
-Locale resolution normalizes legacy tags, attempts the canonical locale and
-language-compatible supported locale, then uses the system default. Placeholders
-use `{{ variableName }}` syntax. The renderer fails when a required
-variable is absent or a value is not scalar. HTML values are escaped; subject
-and text values are inserted as plain text. Templates are selected explicitly
-by locale and fall back to the configured default locale only when the requested
-locale file set does not exist.
+Выбор языка нормализует старые коды, проверяет канонический и совместимый поддерживаемый язык, затем использует системное значение по умолчанию. Подстановки задаются как `{{ variableName }}`. Отсутствующая обязательная переменная или нескалярное значение приводят к ошибке. HTML экранируется; тема и текст получают обычный текст. Шаблон выбирается явно по языку; переход на язык по умолчанию возможен только при отсутствии комплекта файлов запрошенного языка.
 
 ## Решение по хранению данных
 
-Communication requires no dedicated migration and no `notification_deliveries`
-table. Migration `010` belongs to international preferences and session
-security, not message delivery. The existing `core.outbox_events` row contains the event
-identity, state, attempts, availability, lease, publication time, and last
-error. A separate delivery table would duplicate that lifecycle without making
-SMTP exactly-once. Such a table should be introduced only for a concrete
-product requirement such as user-visible delivery history, per-channel fan-out,
-or provider webhook reconciliation.
+Отдельная миграция и таблица `notification_deliveries` не нужны. Миграция `010` относится к международным настройкам и безопасности сессий. Существующая запись `core.outbox_events` хранит идентификатор события, состояние, попытки, время доступности, аренду, время публикации и последнюю ошибку.
+
+Отдельная таблица доставки дублировала бы жизненный цикл, не обеспечивая однократность SMTP. Вводить её следует под конкретную потребность: видимую пользователю историю, рассылку по нескольким каналам или сверку уведомлений провайдера.
 
 ## Конфигурация
 
-SMTP host, port, username, password, encryption, sender address, and sender name
-come from environment variables through application params and DI. Source code
-contains no production credentials. Local Compose routes backend SMTP traffic
-to Mailpit and exposes the Mailpit UI on `http://localhost:8025`.
+Адрес и порт SMTP, имя пользователя, пароль, шифрование, адрес и имя отправителя поступают из окружения через параметры приложения и внедрение зависимостей. Промышленных учётных данных в исходниках нет. Локальный Compose направляет почту в Mailpit; просмотр доступен на `http://localhost:8025`.
 
-Yii worker `php yii communication:process-email` должен запускаться по расписанию
-или под supervisor в production. Его `core.outbox_events` поддерживает leases,
-bounded retry/dead state; мониторить pending/dead и явно выполнять requeue
-после устранения причины, не настраивать бесконечные автоматические повторы.
-Commercial verification email использует отдельный worker и отдельную БД;
-см. `COMMERCIAL_CONTROL_PLANE.md`.
+Обработчик Yii `php yii communication:process-email` должен работать по расписанию или под надзором управляющего процесса. `core.outbox_events` поддерживает аренду, ограниченные повторы и состояние `dead`. Наблюдайте за ожидающими и необрабатываемыми событиями; после устранения причины явно возвращайте их в очередь, не вводя бесконечные повторы. Письма подтверждения Commercial обрабатывает независимый процесс с отдельной БД: [Commercial Control Plane](COMMERCIAL_CONTROL_PLANE.md).

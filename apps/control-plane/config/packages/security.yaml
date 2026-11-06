@@ -3,6 +3,9 @@ security:
         ControlPlane\Identity\Security\ControlUserPrincipal:
             algorithm: auto
     firewalls:
+        metrics:
+            pattern: '^/metrics$'
+            security: false
         m2m:
             pattern: '^/api/m2m/'
             stateless: true

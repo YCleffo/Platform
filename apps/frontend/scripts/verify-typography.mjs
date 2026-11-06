@@ -159,7 +159,26 @@ await context.route('**/api/**', async (route) => {
   if (path === '/api/control/accounts')
     return send({ items: [account], total: 1, limit: 20, offset: 0 });
   if (path === `/api/control/accounts/${account.id}`) return send(account);
-  if (path === '/api/control/catalog/plans') return send({ plans: [] });
+  if (path === '/api/control/catalog/plans')
+    return send({
+      plans: [
+        {
+          id: uuid(21), code: 'start', version: 1, name: 'Старт',
+          prices: [{ id: uuid(22), currency: 'RUB', amount_minor: 99000, billing_period: 'month' }],
+          features: { seats: 3, analytics: false, sso: false, support: 'email', audit_retention_days: 30 },
+        },
+        {
+          id: uuid(23), code: 'business', version: 1, name: 'Бизнес',
+          prices: [{ id: uuid(24), currency: 'RUB', amount_minor: 299000, billing_period: 'month' }],
+          features: { seats: 25, analytics: true, sso: true, support: 'priority', audit_retention_days: 180 },
+        },
+        {
+          id: uuid(25), code: 'enterprise', version: 1, name: 'Корпоративный',
+          prices: [{ id: uuid(26), currency: 'RUB', amount_minor: 999000, billing_period: 'month' }],
+          features: { seats: 100, analytics: true, sso: true, support: 'dedicated', audit_retention_days: 365 },
+        },
+      ],
+    });
   if (
     path.endsWith('/memberships') ||
     path.endsWith('/invitations') ||
@@ -386,7 +405,10 @@ const commercialRoutes = [
 ];
 const publicRoutes = [
   '/operator',
+  '/operator/catalog',
   '/',
+  '/plans',
+  '/plans/business',
   '/settings',
   '/settings/components',
   '/does-not-exist',
@@ -500,6 +522,19 @@ try {
     if (path === '/settings')
       await stableScreenshot(page, 'screenshots/typography-public-settings.png');
   }
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(base + '/plans', { waitUntil: 'networkidle' });
+  await page.locator('.plans__table').waitFor();
+  const planOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  assert.ok(planOverflow <= 1, `plans mobile overflow: ${planOverflow}px`);
+  const planFont = await page.locator('.plans__feature').first().evaluate((element) => getComputedStyle(element).fontFamily);
+  assert.match(planFont, /Inter/);
+  assert.match(planFont, /system-ui/);
+  await stableScreenshot(page, 'screenshots/typography-plans-mobile.png');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+
   mfa = true;
   await commercialLogin();
   await page.locator('form').waitFor();
@@ -513,7 +548,7 @@ try {
       {
         fixtureOnly: true,
         passed: problems.length === 0,
-        routes: 50,
+        routes: 53,
         states,
         problems,
         localFonts: fonts.size,
@@ -527,7 +562,7 @@ try {
     JSON.stringify({
       passed: true,
       fixtureOnly: true,
-      routes: 50,
+      routes: 53,
       states: states.length,
       textChecks: states.reduce((sum, s) => sum + s.checked, 0),
       localFonts: fonts.size,

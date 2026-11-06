@@ -1,204 +1,158 @@
-# Аутентификация, внешние identity и MFA
+# Аутентификация, внешние учётные записи и MFA
 
 ## Единая граница создания сессии
 
-Password, Google и Telegram только доказывают первый фактор. Они не имеют права выпускать Platform
-tokens напрямую. После первого фактора `AuthenticationFlowService` проверяет account policy и наличие
-активного verified TOTP. Единственный `SessionIssuer` создаёт `auth_sessions` и выдаёт opaque token pair.
+Пароль, Google и Telegram доказывают первый фактор и не выпускают токены Platform напрямую. `AuthenticationFlowService` проверяет правила аккаунта и наличие активного подтверждённого TOTP. Только `SessionIssuer` создаёт `auth_sessions` и выдаёт пару непрозрачных токенов.
 
 ```text
-без MFA: FIRST_FACTOR -> ACCOUNT_POLICY -> SESSION_CREATED
-с MFA:   FIRST_FACTOR -> ACCOUNT_POLICY -> MFA_REQUIRED -> MFA_VERIFIED -> SESSION_CREATED
-recovery: FIRST_FACTOR -> MFA_REQUIRED -> RECOVERY_CODE_VERIFIED -> SESSION_CREATED
+Без MFA: первый фактор → правила аккаунта → сессия
+С MFA: первый фактор → правила аккаунта → запрос MFA → проверка MFA → сессия
+Восстановление: первый фактор → запрос MFA → проверка резервного кода → сессия
 ```
 
-При активном TOTP первый фактор возвращает `status=mfa_required` и одноразовый challenge, но никогда
-не возвращает access/refresh token. Challenge связан с account, first-factor method, назначением,
-клиентским контекстом и сроком действия. Сессия после второго фактора содержит `mfa_verified_at`, а
-`authentication_method` использует контролируемые значения вроде `password+totp`.
+При активном TOTP первый фактор возвращает `status=mfa_required` и одноразовый проверочный запрос без токенов доступа/обновления. Проверка связана с аккаунтом, способом первого фактора, назначением, клиентом и сроком. После второго фактора сессия содержит `mfa_verified_at`; `authentication_method` использует контролируемые значения, например `password+totp`.
 
 ## Google и Telegram OIDC
 
-Публичный `GET /api/auth/providers` показывает только code, display name и доступность login.
-Google и современный Telegram Login используют Authorization Code flow с PKCE S256. Provider endpoints
-зафиксированы в server-side configuration и всегда используют HTTPS; URL от клиента не принимаются.
-HTTP client запрещает redirects, задаёт connect/total timeouts и тем самым не создаёт SSRF surface.
-Google аутентифицирует token request через `client_secret_post`, а Telegram — через требуемый им
-`client_secret_basic`; client secret передаётся только server-to-server и не попадает в browser payload.
+Публичный `GET /api/auth/providers` показывает код, отображаемое имя и доступность входа. Google и современный Telegram Login используют получение кода авторизации с PKCE S256. Адреса провайдеров закреплены сервером и используют HTTPS; клиентские URL не принимаются. HTTP-клиент запрещает перенаправления, ограничивает время соединения и всего запроса, не создавая возможности SSRF. Google проверяет запрос токена через `client_secret_post`, Telegram — через `client_secret_basic`. Секрет передаётся только между серверами и не попадает в браузер.
 
-Для каждого flow backend генерирует криптографические `state`, `nonce` и PKCE verifier. В БД хранится
-только hash state; nonce/verifier находятся в XChaCha20-Poly1305 sealed payload. Callback проверяет
-single-use state, purpose, provider, account/session binding для link, client binding, signature ID token,
-`iss`, `aud`/`azp`, `exp`, разумный `iat`, `nonce` и обязательный `sub`. JWKS загружается только с
-фиксированного HTTPS endpoint и кешируется в Redis согласно `Cache-Control: max-age` в безопасных пределах.
+Для каждого входа сервер создаёт криптографические `state`, `nonce` и проверочный секрет PKCE. В БД — только хеш `state`; `nonce` и проверочный секрет находятся в зашифрованном контейнере XChaCha20-Poly1305. Обратный вызов проверяет одноразовость `state`, назначение, провайдера, привязку аккаунта/сессии при соединении записей, привязку клиента, подпись ID-токена, `iss`, `aud`/`azp`, `exp`, разумный `iat`, `nonce`, обязательный `sub`. JWKS загружается только с фиксированного HTTPS-адреса и кэшируется Redis по `Cache-Control: max-age` в безопасных пределах.
 
-Frontend переносит несекретный `X-Client-Instance-ID` через full-page login/recovery redirect
-в одноразовом sessionStorage marker вместе с hash state, provider, purpose и expiry.
-Только после успешной проверки marker callback восстанавливает исходный ID и удаляет marker;
-серверная client binding остаётся обязательной. В popup для link ID не восстанавливается:
-запрос завершения делает исходная вкладка. Access/refresh tokens, raw state, code и verifier
-в этот marker не записываются. При обычной перезагрузке без OAuth marker создаётся новый ID.
+Интерфейс переносит несекретный `X-Client-Instance-ID` через полностраничное перенаправление входа/восстановления одноразовым маркером `sessionStorage` вместе с хешем `state`, провайдером, назначением и сроком. После успешной проверки маркера обратный вызов восстанавливает ID и удаляет маркер; серверная привязка клиента обязательна. Во всплывающем окне привязки ID не восстанавливается: завершение выполняет исходная вкладка. Токены, исходный `state`, код и проверочный секрет в маркер не пишутся. Обычная перезагрузка без OAuth-маркера создаёт новый ID.
 
-Google `sub` и Telegram subject — единственные внешние identity keys. Email является только snapshot:
-совпадение provider email с локальным email никогда не создаёт автоматическую привязку и не создаёт
-новый Account. Регистрация через social login выключена текущей DB policy (`allow_registration=false`).
+Google `sub` и субъект Telegram — единственные ключи внешних записей. Почта — только снимок: совпадение с локальной почтой не связывает записи и не создаёт Account автоматически. Регистрация через социальный вход выключена политикой БД `allow_registration=false`.
 
-## Explicit link и unlink
+## Явная привязка и отвязка
 
-`/api/auth/me/identities/*` работает только с текущим authenticated Account. Link имеет отдельный
-challenge purpose `external_link`, связан с session/account и требует recent authentication. Уникальные
-индексы БД и атомарный insert не позволяют одному subject принадлежать двум accounts или создать две
-identity одного provider у Account. Сохраняется только allowlisted profile snapshot; authorization code,
-access/refresh/id tokens, raw response и client secret не сохраняются.
+`/api/auth/me/identities/*` работает только с текущим Account. Привязка использует отдельное назначение `external_link`, связана с аккаунтом/сессией и требует недавнего подтверждения личности. Уникальные индексы и атомарная вставка запрещают принадлежность внешнего субъекта двум аккаунтам и две записи одного провайдера у аккаунта. Сохраняется только разрешённый снимок профиля; код авторизации, токены, исходный ответ и секрет клиента не сохраняются.
 
-Unlink требует recent authentication и отклоняется, если после удаления не останется password,
-другой external identity или активный passkey. Link/unlink записываются в Audit и создают email security
-notification без provider secrets.
+Отвязка требует недавнего подтверждения и запрещена, если не останутся пароль, другая внешняя запись или активный ключ доступа. Оба действия записывают аудит и почтовое уведомление без секретов провайдера.
 
-## TOTP и recovery codes
+## TOTP и резервные коды
 
-TOTP соответствует RFC 6238: SHA-1, 6 цифр, период 30 секунд, окно ±1 time-step. Setup создаёт pending
-factor, возвращает Base32 secret и `otpauth://` URI ровно на этапе enrollment. До успешного confirm factor
-не считается активным. Secret хранится только как libsodium XChaCha20-Poly1305 ciphertext; 32-byte key
-поступает из `AUTH_TOTP_ENCRYPTION_KEY`, версионируется и не хранится в БД.
+TOTP соответствует RFC 6238: SHA-1, 6 цифр, шаг 30 секунд, окно ±1 шаг. Начало подключения создаёт ожидающий фактор и выдаёт секрет Base32 и URI `otpauth://` только на этапе подключения. До успешного подтверждения фактор неактивен. Секрет хранится только как шифротекст libsodium XChaCha20-Poly1305; версионированный ключ 32 байта поступает из `AUTH_TOTP_ENCRYPTION_KEY` и находится вне БД.
 
-Partial unique index разрешает только один active verified TOTP на Account. `last_used_counter` обновляется
-атомарно только при большем counter, поэтому один код нельзя повторно принять в том же time-step.
+Частичный уникальный индекс разрешает один активный подтверждённый TOTP на Account. `last_used_counter` атомарно увеличивается: один код нельзя повторно принять в том же временном шаге.
 
-При confirm создаются 10 криптографически случайных recovery codes. Plaintext показывается один раз;
-PostgreSQL получает только SHA-256 hashes. Consume — один атомарный `UPDATE ... WHERE used_at IS NULL AND
-revoked_at IS NULL`. Regeneration требует recent MFA + новый TOTP, аннулирует старые коды и показывает
-новый набор один раз.
+Подтверждение создаёт 10 случайных резервных кодов. Открытые коды показываются один раз; PostgreSQL получает SHA-256. Использование — один атомарный `UPDATE ... WHERE used_at IS NULL AND revoked_at IS NULL`. Обновление кодов требует недавней MFA и нового TOTP, отзывает прежние и один раз показывает новый набор.
 
-Обычное отключение TOTP требует recent MFA session, действующий TOTP и текущий password, если password
-credential существует. Factor и recovery codes отзываются, security stamp меняется, остальные sessions
-закрываются, а текущая явно reauthenticated session сохраняется с новым stamp.
+Отключение TOTP требует сессию с недавней MFA, действующий TOTP и текущий пароль при его наличии. Фактор и резервные коды отзываются, метка безопасности меняется, остальные сессии закрываются; текущая явно перепроверенная сессия сохраняется с новой меткой.
 
-## Email MFA recovery
+## Восстановление MFA через почту
 
-Recovery request всегда отвечает одинаково. Каналом может быть только `auth_identifiers` типа email с
-`verified_at IS NOT NULL` и `can_recover=true`; provider email snapshot не подходит. Одноразовый token
-имеет короткий TTL и хранится только как hash. Если Account имеет password credential, confirm обязательно
-требует текущий password.
+Запрос всегда отвечает одинаково. Канал — только подтверждённый `auth_identifiers` типа `email` с `verified_at IS NOT NULL` и `can_recover=true`; снимок почты провайдера не подходит. Одноразовый токен имеет короткий срок и хранится хешем. При наличии пароля подтверждение требует текущий пароль.
 
-Успешный reset атомарно отзывает все TOTP factors и recovery codes, меняет security stamp, закрывает все
-sessions, отменяет pending challenges, пишет high-severity Audit и ставит notification в transactional
-Outbox. Новый TOTP автоматически не создаётся. Password reset сам по себе MFA не отключает.
+Успех атомарно отзывает TOTP и резервные коды, меняет метку безопасности, закрывает все сессии, отменяет ожидающие проверки, пишет аудит высокой важности и транзакционно ставит уведомление в очередь. Новый TOTP не создаётся. Сброс пароля сам MFA не отключает.
 
-Все interactive authentication/MFA письма используют уже resolved locale текущего `ClientContext`.
-Background security notification использует сохранённую `accounts.locale`, а при её отсутствии —
-`APP_DEFAULT_LOCALE`. Каноническая locale фиксируется в Outbox до commit и не пересчитывается worker-ом.
+Интерактивные письма аутентификации/MFA используют определённый язык текущего `ClientContext`. Фоновое уведомление использует `accounts.locale`, иначе `APP_DEFAULT_LOCALE`. Язык фиксируется в исходящем событии до транзакционной фиксации и не пересчитывается обработчиком.
 
-## MFA Recovery Assurance Levels
+## Уровни подтверждения при восстановлении MFA
 
-В Platform действуют строгие уровни подтверждения при сбросе MFA (MFA Recovery Assurance Levels):
+### 1. Аккаунт с паролем
 
-### 1. Password account
 ```text
-verified recovery email + current password -> MFA reset
+Подтверждённая почта восстановления + текущий пароль → сброс MFA
 ```
-Для учётной записи с установленным паролем сброс MFA требует подтверждения одноразового токена из письма на верифицированный email и ввода действующего пароля.
 
-### 2. External-only account
+Нужно подтвердить одноразовый токен из письма на проверенную почту и ввести действующий пароль.
+
+### 2. Только внешний вход
+
 ```text
-verified recovery email -> email recovery token -> linked provider reauthentication -> MFA reset
+Подтверждённая почта → почтовый токен → повторный вход у привязанного провайдера → сброс MFA
 ```
-Для аккаунтов без пароля, использующих внешнюю аутентификацию (Google/Telegram OIDC): владение recovery email само по себе **не даёт** права отключить TOTP, если существует доступная привязанная внешняя identity.
-После подтверждения recovery email система переходит в контролируемое состояние `external_reauth_required` и требует обязательной повторной аутентификации через одного из привязанных провайдеров (`POST /api/auth/mfa/recovery/external/{provider}/start` и callback).
-При этом:
-- Reauthentication строго проверяет принадлежность провайдерского `sub`/subject именно восстанавливаемому аккаунту (`auth_external_identities.account_id == recovery_account_id`).
-- Попытка использовать чужой Google/Telegram аккаунт или автопривязка по email категорически запрещены и блокируются.
-- Recovery reauthentication **не выпускает сессию** и не выдаёт access/refresh токены; это исключительно proof для завершения процедуры сброса MFA.
 
-### 3. No remaining authentication method
+У аккаунтов без пароля владение почтой **не разрешает** отключить TOTP при доступной привязанной внешней записи. После почтового подтверждения состояние `external_reauth_required` требует повторного входа через `POST /api/auth/mfa/recovery/external/{provider}/start` и обратный вызов.
+
+- `sub` провайдера должен принадлежать восстанавливаемому аккаунту: `auth_external_identities.account_id == recovery_account_id`.
+- Чужой Google/Telegram и автоматическая привязка по почте запрещены.
+- Повторная проверка **не создаёт сессию и не выдаёт токены**; она только доказывает право завершить сброс.
+
+### 3. Не осталось способов входа
+
 ```text
-manual / additional recovery required
+Нужно ручное или дополнительное восстановление
 ```
-Если у аккаунта отсутствует пароль и нет доступных привязанных внешних провайдеров, одного лишь письма недостаточно для тихого сброса MFA. API возвращает контролируемый результат `additional_recovery_required` без утечки деталей аккаунта анонимному клиенту.
 
-## Threat model и секреты
+Без пароля и доступных внешних провайдеров письма недостаточно. Возвращается `additional_recovery_required` без раскрытия сведений анонимному клиенту.
 
-- **Mailbox compromise**: компрометация почтового ящика недостаточна для сброса MFA — требуется второй фактор (текущий пароль для password-аккаунтов либо владение привязанным Google/Telegram аккаунтом для external-only аккаунтов).
-- **OAuth account mismatch / Provider identity substitution**: при recovery callback проверяется authoritative provider `sub`, сопоставленный с существующей записью `core.auth_external_identities`. Чужой аккаунт провайдера отклоняется, привязка нового провайдера во время recovery запрещена, перемещение identity невозможно.
-- **Automatic email-based account linking**: совпадение email провайдера с локальным recovery email никогда не считается подтверждением identity.
-- **MFA bypass via recovery**: сброс MFA немедленно отзывает все активные факторы, аннулирует резервные коды, отменяет все активные challenges, инвалидирует все существующие сессии через ротацию `security_stamp` и отправляет security notification на verified email.
-- **Recovery callback replay**: одноразовые токены email challenge, state и authorization code single-use; повторный callback отклоняется.
-- **Session issuance boundary**: recovery flow полностью отделён от login flow; provider callback с purpose `mfa_recovery_reauth` никогда не вызывает `SessionIssuer` и не создаёт сессий.
-- **Stale auth artifact accumulation**: периодический cleanup удаляет устаревшие challenges, неактуальные recovery codes и просроченные unverified TOTP setup без удаления активных данных.
-- **TLS и транспорт**: TLS защищает transport, но не скрывает payload от владельца браузера и DevTools; custom JSON encryption поверх HTTPS запрещено.
-- **OAuth state, nonce, PKCE**: OAuth state защищает browser flow от CSRF, nonce — от replay ID token, PKCE — от перехвата code.
-- **Provider URLs и issuer**: не поступают из request, что закрывает SSRF/discovery substitution.
-- **Audit/log/API не получают secrets**: пароли, raw tokens, TOTP secrets, recovery-code hashes, ID tokens, access tokens и client secrets не логируются и не передаются в Audit metadata.
-- Rate limiting: fail-closed лимиты разделены для external login, recovery start, callback, setup confirm, passkey ceremonies и IP.
+## Модель угроз и секреты
 
-## WebAuthn Passkeys Runtime (Level 3)
+- **Компрометация почты:** для сброса дополнительно нужны текущий пароль либо привязанный Google/Telegram.
+- **Подмена аккаунта провайдера:** обратный вызов сверяет достоверный `sub` с `core.auth_external_identities`; чужой аккаунт, новая привязка при восстановлении и перенос внешней записи запрещены.
+- **Связывание по почте:** совпадение адреса провайдера и почты восстановления не доказывает личность.
+- **Обход MFA восстановлением:** сброс немедленно отзывает факторы/коды, отменяет проверки и сессии через замену `security_stamp`, отправляет обязательное уведомление на проверенную почту.
+- **Повтор обратного вызова:** почтовые токены, `state` и код авторизации одноразовые; повтор запрещён.
+- **Выдача сессии:** восстановление отделено от входа; назначение `mfa_recovery_reauth` не вызывает `SessionIssuer`.
+- **Накопление старых данных:** периодическая очистка убирает устаревшие проверки, коды и неподтверждённые подключения TOTP без удаления активных данных.
+- **Транспорт:** TLS не скрывает содержимое от владельца браузера и DevTools; собственное шифрование JSON поверх HTTPS запрещено.
+- **OAuth:** `state` защищает от CSRF, `nonce` — от повтора ID-токена, PKCE — от перехвата кода.
+- **Адреса и издатель провайдера:** не берутся из запроса, исключая SSRF и подмену обнаружения провайдера.
+- **Аудит, журналы, API:** пароли, исходные токены, секреты TOTP, хеши резервных кодов, ID-токены и секреты клиента не журналируются и не копируются в метаданные аудита.
+- **Частота:** независимые ограничения внешнего входа, начала восстановления, обратного вызова, подтверждения подключения, ключей доступа и IP запрещают действие при недоступной защите.
 
-В Platform реализован полноценный runtime ключей доступа (Passkeys) по стандарту **W3C WebAuthn Level 3**:
+## Реализация ключей доступа WebAuthn Level 3
 
 ### 1. Архитектура и библиотека
-- Интеграция выполнена на базе библиотеки `web-auth/webauthn-lib:5.3.9` напрямую в Yii3 без использования Symfony-бандлов.
-- Сущности хранятся в существующей таблице `core.auth_passkeys` (дополненной в миграции `014_passkey_runtime.sql` полями `transports`, `backup_eligible`, `backup_state`), общее число таблиц Core строго сохранено равным 23.
 
-### 2. Discoverable Credentials и User Handle Privacy
-- Аутентификация построена на discoverable credentials (`residentKey: required`), позволяющих пользователю входить без предварительного ввода логина или email.
-- `userHandle` вычисляется детерминированно как `HMAC-SHA256(account.id, identifier_hmac_key)` (первые 32 байта). Это полностью исключает утечку реальных UUID аккаунтов, email или PII на сторону аутентификаторов или в клиентский контекст.
+Интеграция использует `web-auth/webauthn-lib:5.3.9` напрямую в Yii3, без пакетов интеграции Symfony. Таблица `core.auth_passkeys` расширена `014_passkey_runtime.sql`: `transports`, `backup_eligible`, `backup_state`. Эта миграция таблиц не добавляет; [каталог](../database/README.md) содержит 50 таблиц Core и 3 Runtime.
 
-### 3. Relying Party и Origin Policy
-- Relying Party ID (`AUTH_WEBAUTHN_RP_ID`) и список разрешённых origins (`AUTH_WEBAUTHN_ORIGINS`) строго валидируются на backend. Cross-origin запросы и несоответствия RP ID немедленно отклоняются.
+### 2. Обнаруживаемые данные и приватность пользователя
 
-### 4. Политика счетчика (Counter Policy): Synced vs Hardware Passkeys
-- **Synced Passkeys** (синхронизируемые связки ключей: Apple iCloud Keychain, Google Password Manager, 1Password и др.): для ключей с флагом `backupEligible = true` значение счетчика подписи может оставаться равным 0 (согласно стандарту WebAuthn Level 3). Это штатное поведение синхронизируемых ключей доступа.
-- **Hardware Security Keys** (аппаратные FIDO2-токены, например YubiKey, `backupEligible = false`): счетчик подписи строго проверяется на возрастание (`counter > last_sign_count`). Попытка повторного использования счетчика или его уменьшение фиксируется в аудите как `SecurityAction::PASSKEY_COUNTER_ANOMALY` и блокирует аутентификацию.
+`residentKey: required` позволяет вход без предварительного логина или почты. `userHandle` детерминированно вычисляется как первые 32 байта `HMAC-SHA256(account.id, identifier_hmac_key)`, исключая передачу реальных UUID, почты или ПД аутентификатору и клиентскому контексту.
 
-### 5. Требования присутствия и верификации (UP / UV)
-- User Presence (UP) является обязательным требованием.
-- User Verification (UV: биометрия / PIN) строго требуется (`userVerification: required`) как на этапе регистрации, так и при каждой аутентификации. Downgrade до `preferred` сервером категорически блокируется — сервер всегда валидирует ответ в строгом режиме `required`. Ответы без установленного флага UV отклоняются.
+### 3. Доверяющая сторона и источник
 
-### 6. Граница аутентификации и MFA
-- Passkey доказывает **первый фактор** аутентификации.
-- Если для аккаунта настроен и подтверждён второй фактор (TOTP MFA), аутентификация по Passkey **не обходит MFA**. API возвращает промежуточный статус `status: mfa_required` и challenge token, требуя подтверждения 6-значного кода TOTP либо резервного кода. Сессия создаётся только после прохождения второго фактора.
+`AUTH_WEBAUTHN_RP_ID` и разрешённые источники `AUTH_WEBAUTHN_ORIGINS` строго проверяются сервером. Межисточниковые запросы и несовпадение RP ID отклоняются.
 
-### 7. Инвариант последнего метода входа (Last Method Invariant)
-- Passkeys включены в централизованную политику `AccountAuthenticationMethodsPolicy` и сервис взаимной блокировки `CredentialMutationGuard` наравне с паролями и внешними identity.
-- Удаление ключа доступа (`DELETE /api/auth/me/passkeys/{id}`) отклоняется с кодом `409 Conflict` (`auth.identity.last_method`), если после удаления у аккаунта не останется ни одного действующего способа входа (пароля, привязанного Google/Telegram или другого активного passkey).
+### 4. Счётчик синхронизируемых и аппаратных ключей
 
-### 8. Транзакционные уведомления (Transactional Security Notifications)
-- При успешной регистрации ключа доступа и при его отзыве генерируются почтовые уведомления:
-  - `auth.passkey.registered`
-  - `auth.passkey.revoked`
-- Шаблоны подготовлены на двух языках (`ru-RU` и `en-US`), содержат валидные HTML-метатеги (`viewport`, `charset`) и plain-text альтернативы, и отправляются через транзакционный `core.outbox_events` на верифицированный email аккаунта.
+- У синхронизируемых ключей с `backupEligible = true`, например Apple iCloud Keychain, Google Password Manager, 1Password, счётчик может оставаться 0 по WebAuthn Level 3.
+- У аппаратных FIDO2, например YubiKey, с `backupEligible = false` требуется `counter > last_sign_count`. Повтор или уменьшение записывается как `SecurityAction::PASSKEY_COUNTER_ANOMALY` и блокирует вход.
 
-### 9. Аудит и защита от утечки секретов
-- Все операции протоколируются в `core.security_audit_logs`:
-  `PASSKEY_REGISTRATION_STARTED`, `PASSKEY_REGISTRATION_COMPLETED`, `PASSKEY_REGISTRATION_FAILED`,
-  `PASSKEY_AUTHENTICATION_SUCCEEDED`, `PASSKEY_AUTHENTICATION_FAILED`,
-  `PASSKEY_COUNTER_ANOMALY`, `PASSKEY_RENAMED`, `PASSKEY_REVOKED`.
-- В аудит категорически **не попадают**: сырые учетные данные (raw credentials), открытые ключи, подписи, clientDataJSON, challenge tokens или приватные материалы.
+### 5. Присутствие и проверка пользователя
 
-### 10. Rate Limiting
-- Все эндпоинты защищены fail-closed rate-лимитами в Redis:
-  - `passkeyAuthStartLimit`: лимит инициализации аутентификации по IP;
-  - `passkeyAuthCompleteLimit`: лимит завершения аутентификации по IP;
-  - `passkeyRegisterCompleteLimit`: лимит завершения регистрации по IP и по аккаунту.
+Присутствие UP обязательно. Проверка пользователя UV биометрией или PIN строго требуется при регистрации и каждом входе: `userVerification: required`. Понижение до `preferred` запрещено; без флага UV ответ отклоняется.
 
-### 11. Concurrency Safety, CAS Gates и CredentialMutationGuard
-- **Atomic Challenge CAS Gate**: потребление challenge выполняется первым шагом внутри транзакции через атомарный CAS (`UPDATE core.auth_challenges SET consumed_at = now() WHERE id = :id AND consumed_at IS NULL`). При параллельных запросах с одним challenge ровно один поток получает true (1 измененная строка); все остальные запросы немедленно прерываются с отказом.
-- **Session & Client Binding**: challenge на регистрацию привязывается к сессии (`sessionId`) и к клиентскому контексту (`clientBinding: hash(clientInstanceId + clientType + userAgent)`). Попытка завершить регистрацию в чужой сессии или с другого клиента блокируется.
-- **Counter Compare-and-Set**: для аппаратных токенов (non-synced) обновление счетчика выполняется через `WHERE sign_count = :expected_counter`. При гонке между assertion-запросами устаревший запрос не может перезаписать счетчик и отклоняется.
-- **CredentialMutationGuard**: отзыв passkey (`DELETE /api/auth/me/passkeys/{id}`) и отключение внешних identity (`DELETE /api/auth/me/identities/{provider}`) защищены транзакционной блокировкой строки аккаунта (`SELECT id FROM core.accounts WHERE id = :id FOR UPDATE NOWAIT`) с повторным подсчетом оставшихся методов входа. Это исключает race condition (TOCTOU), когда параллельные запросы могли бы одновременно удалить последние методы входа и заблокировать аккаунт.
-- **Payload Size Limits**: размер JSON-ответов WebAuthn строго ограничен 32 KiB на уровне API-экшенов и сервиса, предотвращая DoS через парсинг сверхбольших структур.
-- **Transport Allowlist Normalization**: список транспортов нормализуется по строгому allowlist (`internal`, `usb`, `nfc`, `ble`, `hybrid`, `smart-card`), отсекая неподдерживаемые или вредоносные значения.
+### 6. MFA
+
+Ключ доступа доказывает **первый фактор**. При настроенном подтверждённом TOTP он **не обходит MFA**: `status: mfa_required` и проверочный токен требуют код TOTP из шести цифр или резервный код. Сессия выдаётся после второго фактора.
+
+### 7. Последний способ входа
+
+`AccountAuthenticationMethodsPolicy` и `CredentialMutationGuard` учитывают ключи вместе с паролями и внешними записями. `DELETE /api/auth/me/passkeys/{id}` даёт `409 Conflict`, `auth.identity.last_method`, если не останется пароль, Google/Telegram или другой активный ключ.
+
+### 8. Транзакционные уведомления
+
+Регистрация и отзыв создают `auth.passkey.registered`, `auth.passkey.revoked`. Шаблоны `ru-RU`/`en-US` содержат HTML с `viewport`/`charset` и обычный текст; транзакционный `core.outbox_events` отправляет их на подтверждённую почту.
+
+### 9. Аудит и секреты
+
+События безопасности идут через `SecurityAuditService` в `core.audit_events`; `core.security_audit_logs` отсутствует. Константы: `PASSKEY_REGISTRATION_STARTED`, `PASSKEY_REGISTRATION_COMPLETED`, `PASSKEY_REGISTRATION_FAILED`, `PASSKEY_AUTHENTICATION_SUCCEEDED`, `PASSKEY_AUTHENTICATION_FAILED`, `PASSKEY_COUNTER_ANOMALY`, `PASSKEY_RENAMED`, `PASSKEY_REVOKED`. В аудит не попадают исходные данные, открытые ключи, подписи, `clientDataJSON`, токены проверки и закрытый материал.
+
+### 10. Ограничение частоты
+
+При недоступном Redis действия запрещены. `passkeyAuthStartLimit` ограничивает начало входа по IP; `passkeyAuthCompleteLimit` — завершение по IP; `passkeyRegisterCompleteLimit` — завершение регистрации по IP и аккаунту.
+
+### 11. Конкурентность и атомарные проверки
+
+- Потребление проверки — первый шаг транзакции: `UPDATE core.auth_challenges SET consumed_at = now() WHERE id = :id AND consumed_at IS NULL`. Из конкурентных запросов только один меняет строку, остальные получают отказ.
+- Регистрация привязана к `sessionId` и `clientBinding: hash(clientInstanceId + clientType + userAgent)`; чужие сессия/клиент блокируются.
+- Аппаратный счётчик меняется с `WHERE sign_count = :expected_counter`; устаревший конкурентный ответ не перезаписывает его.
+- Отзыв ключа и внешней записи защищён `SELECT id FROM core.accounts WHERE id = :id FOR UPDATE NOWAIT` и повторным подсчётом способов. Это исключает гонку TOCTOU одновременного удаления последних способов входа.
+- JSON-ответ WebAuthn ограничен 32 КиБ в обработчиках API и сервисе, защищая разбор от сверхбольших структур и DoS.
+- Разрешены только транспорты `internal`, `usb`, `nfc`, `ble`, `hybrid`, `smart-card`; неподдерживаемые и вредоносные значения отбрасываются.
 
 ## API
 
-- `POST /api/auth/login`, `POST /api/auth/mfa/verify`;
-- `GET /api/auth/providers`, `POST /api/auth/external/{provider}/start`, callback;
-- `GET /api/auth/me/identities`, link start/callback, unlink;
-- `GET /api/auth/mfa`, TOTP setup/confirm/disable, recovery-code regenerate;
-- `POST /api/auth/mfa/recovery/request`, `POST /api/auth/mfa/recovery/confirm`;
-- `POST /api/auth/mfa/recovery/external/{provider}/start`, `GET /api/auth/mfa/recovery/external/{provider}/callback`;
-- `POST /api/auth/passkeys/authentication/start`, `POST /api/auth/passkeys/authentication/complete`;
-- `POST /api/auth/passkeys/registration/start`, `POST /api/auth/passkeys/registration/complete`;
+- `POST /api/auth/login`, `POST /api/auth/mfa/verify`.
+- `GET /api/auth/providers`, `POST /api/auth/external/{provider}/start` и обратный вызов.
+- `GET /api/auth/me/identities`, начало/завершение привязки и отвязка.
+- `GET /api/auth/mfa`, начало/подтверждение/отключение TOTP, обновление резервных кодов.
+- `POST /api/auth/mfa/recovery/request`, `POST /api/auth/mfa/recovery/confirm`.
+- `POST /api/auth/mfa/recovery/external/{provider}/start`, `GET /api/auth/mfa/recovery/external/{provider}/callback`.
+- `POST /api/auth/passkeys/authentication/start`, `POST /api/auth/passkeys/authentication/complete`.
+- `POST /api/auth/passkeys/registration/start`, `POST /api/auth/passkeys/registration/complete`.
 - `GET /api/auth/me/passkeys`, `PATCH /api/auth/me/passkeys/{id}`, `DELETE /api/auth/me/passkeys/{id}`.
 
-Все self-service endpoints берут Account только из `AuthenticatedIdentity` и не требуют admin RBAC.
+Все маршруты самообслуживания получают Account только из `AuthenticatedIdentity` и не требуют административных ролей RBAC.

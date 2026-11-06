@@ -14,6 +14,7 @@ const props = withDefaults(
     closeOnSelect?: boolean;
     initialFocus?: 'first' | 'last' | 'selected';
     size?: 'm' | 's';
+    closeOnAnchor?: boolean;
   }>(),
   {
     anchor: null,
@@ -23,6 +24,7 @@ const props = withDefaults(
     closeOnSelect: true,
     initialFocus: 'first',
     size: 'm',
+    closeOnAnchor: false,
   },
 );
 const open = defineModel<boolean>({ default: false });
@@ -35,10 +37,7 @@ const path = ref<MenuItem[]>([]);
 const viewport = ref(typeof window === 'undefined' ? 1024 : window.innerWidth);
 const panelWidth = ref(280);
 const positions = ref<{ left: number; top: number }[]>([]);
-const drill = computed(
-  () =>
-    viewport.value < 640 || (path.value.length + 1) * (panelWidth.value + 6) > viewport.value - 18,
-);
+const drill = computed(() => viewport.value < 768);
 const levels = computed(() => {
   if (query.value.trim())
     return [{ items: searchMenu(props.items, query.value), label: props.label, depth: 0 }];
@@ -61,6 +60,10 @@ let typeTime = 0;
 let keyboardNavigation = false;
 let focusedItemId = '';
 let disposed = false;
+let historyPushed = false;
+let touchStartX = 0;
+let touchStartY = 0;
+let touchDepth = 0;
 
 function panels(): HTMLElement[] {
   return Array.from(layer.value?.querySelectorAll<HTMLElement>('.app-menu__panel') ?? []);
@@ -86,8 +89,36 @@ function row(id: string): HTMLButtonElement | undefined {
     .find((button) => button.dataset.menuId === id);
 }
 function close(restore = true): void {
+  if (historyPushed) {
+    historyPushed = false;
+    window.history.back();
+  }
   open.value = false;
   if (restore) (props.anchor && props.anchor.tabIndex >= 0 ? props.anchor : previousFocus)?.focus();
+}
+function closeFromHistory(): void {
+  if (!open.value || !historyPushed) return;
+  historyPushed = false;
+  if (drill.value && path.value.length > 0) void back(path.value.length);
+  else close(false);
+}
+function touchStart(event: TouchEvent): void {
+  if (!drill.value || event.touches.length !== 1) return;
+  touchStartX = event.touches[0]?.clientX ?? 0;
+  touchStartY = event.touches[0]?.clientY ?? 0;
+  touchDepth = Number(
+    (event.target instanceof Element
+      ? event.target.closest<HTMLElement>('[data-menu-depth]')?.dataset.menuDepth
+      : undefined) ?? path.value.length,
+  );
+}
+function touchEnd(event: TouchEvent): void {
+  if (!drill.value || event.changedTouches.length !== 1) return;
+  const touch = event.changedTouches[0];
+  if (!touch) return;
+  if (touch.clientX - touchStartX < 60 || Math.abs(touch.clientY - touchStartY) > 40) return;
+  if (touchDepth > 0) void back(touchDepth);
+  else close();
 }
 async function back(depth: number): Promise<void> {
   const parent = path.value[depth - 1];
@@ -129,7 +160,7 @@ function hover(item: MenuItem, depth: number, event: PointerEvent): void {
     event.pointerType !== 'mouse' ||
     query.value.trim() ||
     drill.value ||
-    (depth + 2) * (panelWidth.value + 6) > viewport.value - 18
+    (depth + 2) * (panelWidth.value + 8) > viewport.value - 18
   )
     return;
   if (path.value[depth]?.id !== item.id) void enter(item, depth, false);
@@ -143,8 +174,11 @@ function layout(): void {
     ? Math.min(280, width - 24)
     : Math.min(Math.max(anchorWidth, 96), 360, width - 24);
   const elements = panels();
+  const count = Math.max(1, elements.length);
+  const maxEach = Math.max(180, Math.floor((width - 24 - (count - 1) * 8) / count));
+  panelWidth.value = Math.min(panelWidth.value, maxEach);
   const w = panelWidth.value;
-  const total = elements.length * (w + 6) - 6;
+  const total = count * (w + 8) - 8;
   const x = props.point?.x ?? rect?.left ?? 12;
   const right = x + total <= width - 12;
   const left = x + w - total >= 12;
@@ -172,7 +206,7 @@ function layout(): void {
       top = rect.top - panel.offsetHeight - 6;
     }
     top = Math.max(12, Math.min(top, window.innerHeight - panel.offsetHeight - 12));
-    return { left: origin + (right || !left ? index : -index) * (w + 6), top };
+    return { left: origin + (right || !left ? index : -index) * (w + 8), top };
   });
 }
 function scheduleLayout(event?: Event): void {
@@ -203,9 +237,8 @@ function isAnchorLabel(target: Node): boolean {
 }
 function outside(event: PointerEvent): void {
   const target = event.target;
-  if (!(target instanceof Node) || layer.value?.contains(target) || props.anchor?.contains(target))
-    return;
-  if (isAnchorLabel(target)) return;
+  if (!(target instanceof Node) || layer.value?.contains(target)) return;
+  if (!props.closeOnAnchor && (props.anchor?.contains(target) || isAnchorLabel(target))) return;
   close(false);
 }
 function onKeydown(event: KeyboardEvent): void {
@@ -296,6 +329,7 @@ function cleanup(): void {
   document.removeEventListener('keydown', onKeydown, true);
   window.removeEventListener('resize', scheduleLayout);
   window.removeEventListener('scroll', scheduleLayout, true);
+  window.removeEventListener('popstate', closeFromHistory);
   observer?.disconnect();
   cancelAnimationFrame(frame);
 }
@@ -303,7 +337,13 @@ watch(
   open,
   async (value) => {
     cleanup();
-    if (!value) return;
+    if (!value) {
+      if (historyPushed) {
+        historyPushed = false;
+        window.history.back();
+      }
+      return;
+    }
     previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     query.value = '';
     path.value = [];
@@ -329,6 +369,11 @@ watch(
     document.addEventListener('keydown', onKeydown, true);
     window.addEventListener('resize', scheduleLayout);
     window.addEventListener('scroll', scheduleLayout, true);
+    window.addEventListener('popstate', closeFromHistory);
+    if (window.innerWidth < 768 && !historyPushed) {
+      window.history.pushState({ ...window.history.state, appMenu: menuId.value }, '');
+      historyPushed = true;
+    }
     if (typeof ResizeObserver !== 'undefined') {
       observer = new ResizeObserver(() => scheduleLayout());
       panels().forEach((panel) => observer?.observe(panel));
@@ -387,6 +432,8 @@ onBeforeUnmount(() => {
       ref="layer"
       class="app-menu"
       @contextmenu.prevent
+      @touchstart.passive="touchStart"
+      @touchend="touchEnd"
     >
       <section
         v-for="(level, index) in levels"
@@ -401,12 +448,12 @@ onBeforeUnmount(() => {
         }"
       >
         <header
-          v-if="level.depth || searchable"
+          v-if="(level.depth && drill) || (searchable && (!level.depth || drill))"
           class="app-menu__header"
           :class="{ 'app-menu__header--nested': level.depth }"
         >
           <button
-            v-if="level.depth"
+            v-if="level.depth && drill"
             type="button"
             class="app-menu__back"
             @click="back(level.depth)"

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ControlPlane\Infrastructure\Http;
 
+use ControlPlane\Catalog\Authorization\CatalogOperator;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
 use ControlPlane\Privacy\ControlPrivacyOperator;
 use Doctrine\DBAL\Connection;
@@ -16,7 +17,7 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/control/operator', name: 'control_operator_')]
 final class OperatorWorkspaceController extends AbstractController
 {
-    public function __construct(private readonly Connection $db, private readonly ControlPrivacyOperator $privacy) {}
+    public function __construct(private readonly Connection $db, private readonly ControlPrivacyOperator $privacy, private readonly CatalogOperator $catalogOperators) {}
 
     #[Route('/me', name: 'me', methods: ['GET'])]
     public function me(): JsonResponse
@@ -24,8 +25,9 @@ final class OperatorWorkspaceController extends AbstractController
         $user = $this->actor();
         $privacy = $this->isPrivacy($user->id());
         $finance = $this->isFinance($user->id());
-        if (!$privacy && !$finance) return $this->privateResponse(['error' => ['code' => 'operator_authorization_required', 'message' => 'Operator authorization required.']], 403);
-        return $this->privateResponse(['user' => ['id' => $user->id(), 'email' => $user->getUserIdentifier()], 'privacy' => $privacy, 'finance' => $finance]);
+        $catalog = $this->catalogOperators->isAuthorized($user->id());
+        if (!$privacy && !$finance && !$catalog) return $this->privateResponse(['error' => ['code' => 'operator_authorization_required', 'message' => 'Operator authorization required.']], 403);
+        return $this->privateResponse(['user' => ['id' => $user->id(), 'email' => $user->getUserIdentifier()], 'privacy' => $privacy, 'finance' => $finance, 'catalog' => $catalog]);
     }
 
     #[Route('/privacy/requests', name: 'requests', methods: ['GET'])]

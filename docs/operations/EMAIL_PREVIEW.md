@@ -1,34 +1,30 @@
-# Email previews and demo catalog
+# Предпросмотр писем и демонстрационный каталог
 
-Both commands are for the local Docker stack only. They write test messages to Mailpit at
-[http://127.0.0.1:8025](http://127.0.0.1:8025).
+Команды предназначены только для локального Docker. Тестовые письма поступают в [Mailpit](http://127.0.0.1:8025).
 
-## Send every template
+## Отправка всех шаблонов
 
 ```bash
 bash scripts/dev/send-email-previews.sh
 ```
 
-The script clears Mailpit, then sends:
+Скрипт очищает Mailpit и отправляет:
 
-- 14 Core templates in `ru-RU` and `en-US` (28 messages), using the same renderer and SMTP
-  sender as the outbox worker;
-- 8 Commercial templates (verification, invitation, password reset, password changed,
-  MFA enabled/disabled, recovery codes regenerated, security notice).
+- 14 шаблонов Core на `ru-RU` и `en-US`, всего 28 писем, через те же средства формирования и SMTP-отправки, что у обработчика исходящей очереди;
+- 8 шаблонов Commercial: подтверждение почты, приглашение, сброс и смена пароля, включение/отключение MFA, обновление резервных кодов и уведомление безопасности.
 
-All HTML messages use the shared branded layout: Platform header, blue accent, card,
-readable body typography and localized footer. Text alternatives stay plain.
+Все HTML-письма используют общий фирменный макет: заголовок Platform, синий акцент, карточку, читаемый основной текст и локализованный нижний блок. Текстовые версии остаются обычным текстом.
 
-Override the recipient with `PREVIEW_TO=qa@example.test bash scripts/dev/send-email-previews.sh`.
+Изменить получателя можно командой `PREVIEW_TO=qa@example.test bash scripts/dev/send-email-previews.sh`.
 
-## Seed demo tariffs
+## Заполнение демонстрационных тарифов
 
 ```bash
 bash scripts/dev/seed-demo-catalog.sh
 ```
 
-The seed is idempotent and creates three published RUB plans: Старт, Бизнес and
-Корпоративный, with monthly/yearly prices and boolean/integer/counter/gauge features.
-The CI browser job uses the same SQL through
-`scripts/ci/control-test-seed-catalog.sh` against the disposable
-`platform_commercial_test` database only.
+Повторяемое заполнение создаёт четыре опубликованных тарифа в рублях: Старт, Бизнес, Масштаб и Корпоративный. Есть месячные и годовые цены, логические и целочисленные возможности, накопительные счётчики и показатели текущего значения, включая SSO и срок хранения аудита.
+
+В Windows используйте `pwsh -File scripts/dev/seed-demo-catalog.ps1`; оболочка сохраняет байты UTF-8 исходного SQL. Для тестовых данных локального кабинета задайте `DEMO_PASSWORD` и выполните `node scripts/dev/seed-demo-commercial.mjs`. Создаются подтверждённый демонстрационный пользователь Control Plane и два Commercial Account; нелокальные адреса API отклоняются.
+
+Браузерная задача CI применяет тот же SQL через `scripts/ci/control-test-seed-catalog.sh` только к одноразовой БД `platform_commercial_test`.

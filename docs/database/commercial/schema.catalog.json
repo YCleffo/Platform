@@ -1249,6 +1249,174 @@
     },
     {
       "rls": false,
+      "name": "catalog_operators",
+      "schema": "commercial",
+      "columns": [
+        {
+          "name": "control_user_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "authorization_reference",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "control_user_id"
+          ],
+          "name": "catalog_operators_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX catalog_operators_pkey ON commercial.catalog_operators USING btree (control_user_id)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "catalog_operators_authorization_reference_not_null",
+          "columns": [
+            "authorization_reference"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL authorization_reference",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "catalog_operators_control_user_id_fkey",
+          "columns": [
+            "control_user_id"
+          ],
+          "on_delete": "c",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE CASCADE",
+          "target_table": "control_users",
+          "target_schema": "commercial",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "catalog_operators_control_user_id_not_null",
+          "columns": [
+            "control_user_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL control_user_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "catalog_operators_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "catalog_operators_pkey",
+          "columns": [
+            "control_user_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (control_user_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "catalog_operators_reference_check",
+          "columns": [
+            "authorization_reference"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (btrim(authorization_reference) <> ''::text AND length(authorization_reference) <= 500 AND authorization_reference !~ '[[:cntrl:]]'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
       "name": "commercial_account_invitations",
       "schema": "commercial",
       "columns": [
@@ -25554,7 +25722,8 @@
     "ControlPlane\\Migrations\\Version20261015000100",
     "ControlPlane\\Migrations\\Version20261023000100",
     "ControlPlane\\Migrations\\Version20261031000100",
-    "ControlPlane\\Migrations\\Version20261031000200"
+    "ControlPlane\\Migrations\\Version20261031000200",
+    "ControlPlane\\Migrations\\Version20261106000100"
   ],
   "migration_sources": [
     {
@@ -25724,6 +25893,10 @@
     {
       "path": "apps/control-plane/migrations/Version20261031000200.php",
       "sha256": "78d31a835a45cfd2b6088967ea150cd5c9820946a31434fdf5c2c508af7e77eb"
+    },
+    {
+      "path": "apps/control-plane/migrations/Version20261106000100.php",
+      "sha256": "d6e7998e068b1aaa4ab66b830ec2f24c2553f174159f3262f8f11c21d31e77cb"
     }
   ]
 }

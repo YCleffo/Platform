@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import QrcodeVue from 'qrcode.vue';
+import QrCode from '@/shared/ui/media/QrCode.vue';
 import { coreSecurity, type CoreMfaStatus, type CoreTotpSetup } from '@/shared/api/core/security';
 import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import { coreAdminSession } from '@/core/admin/session';
@@ -282,11 +282,10 @@ onMounted(load);
             role="img"
             :aria-label="$t('security.qrLabel')"
           >
-            <QrcodeVue
+            <QrCode
               aria-hidden="true"
               :value="setup.provisioningUri"
               :size="180"
-              level="M"
             />
           </div>
           <p>{{ $t('security.manualSecret') }}</p>

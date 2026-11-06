@@ -1,0 +1,19 @@
+{
+	skip_install_trust
+	metrics
+
+	frankenphp {
+	}
+}
+
+{$SERVER_NAME::8000} {
+	encode zstd br gzip
+	php_server {
+		try_files {path} index.php
+		root /app/public
+	}
+}
+
+:2019 {
+	metrics
+}

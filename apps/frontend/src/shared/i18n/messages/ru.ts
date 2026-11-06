@@ -2,7 +2,7 @@ import {operatorRu} from '../operator';
 import {workbenchRu} from '../workbench';
 export default {
   picker: { chooseDate: 'Выбрать дату', chooseTime: 'Выбрать время', date: 'Дата', time: 'Время', dateTime: 'Дата и время', dateFormatEn: 'MM/DD/YYYY', dateFormatRu: 'ДД.ММ.ГГГГ', invalid: 'Введите корректную дату или время.', range: 'Выберите значение в допустимом диапазоне.', previousMonth: 'Предыдущий месяц', nextMonth: 'Следующий месяц', month: 'Месяц', year: 'Год', hours: 'Часы', minutes: 'Минуты', seconds: 'Секунды', today: 'Сегодня', clear: 'Очистить', apply: 'Применить', example: 'Календарь и время', hint: 'Выберите значение в календаре или введите вручную. Время указано в вашем часовом поясе.', disabled: 'Недоступная дата', disclosure: 'Раскрывающийся раздел', disclosureHint: 'Показать или скрыть дополнительные сведения.' },
-  navigation: { path: 'Хлебные крошки', hidden: 'Показать скрытые уровни', core: 'Core', account: 'Аккаунт', mfa: 'Двухфакторный вход', sessions: 'Устройства и сеансы', passkeys: 'Ключи доступа', identities: 'Внешние аккаунты', profile: 'Моя учётная запись', consents: 'Согласия', privacy: 'Персональные данные', request: 'Запрос', security: 'Безопасность', components: 'Компоненты', operator: 'Кабинет оператора', overview: 'Обзор', members: 'Участники', billing: 'Платежи', usage: 'Использование', analytics: 'Аналитика', audit: 'Журнал действий', invitations: 'Приглашения' },
+  navigation: { path: 'Хлебные крошки', hidden: 'Показать скрытые уровни', core: 'Core', account: 'Аккаунт', mfa: 'Двухфакторный вход', sessions: 'Устройства и сеансы', passkeys: 'Ключи доступа', identities: 'Внешние аккаунты', profile: 'Моя учётная запись', consents: 'Согласия', privacy: 'Персональные данные', request: 'Запрос', security: 'Безопасность', components: 'Компоненты', operator: 'Кабинет оператора', overview: 'Обзор', members: 'Участники', billing: 'Платежи', usage: 'Использование', analytics: 'Аналитика', audit: 'Журнал действий', invitations: 'Приглашения', comparePlans: 'Сравнение тарифов' },
   operator: operatorRu,
   workbench: workbenchRu,
   configuration: {
@@ -270,6 +270,20 @@ export default {
     period_year: 'год',
     period_one_time: 'разово',
   },
+  plans: {
+    compareTitle: 'Сравнение тарифов',
+    compareSubtitle: 'Возможности и цены опубликованных тарифов в одной таблице.',
+    backToCatalog: 'Вернуться к тарифам',
+    backToComparison: 'Вернуться к сравнению',
+    feature: 'Возможность',
+    included: 'Включено',
+    notIncluded: 'Не включено',
+    viewDetails: 'Подробнее',
+    prices: 'Цены',
+    detailSubtitle: 'Полный состав опубликованного тарифа.',
+    notFound: 'Тариф не найден',
+    notFoundText: 'Возможно, тариф снят с публикации или ссылка устарела.',
+  },
   cabinet: {
     title: 'Коммерческие учётные записи',
     subtitle: 'Учётные записи, к которым у вас есть доступ.',
@@ -414,6 +428,9 @@ export default {
     confirmPassword: 'Повторите новый пароль',
     changePassword: 'Сменить пароль',
     passwordChanged: 'Пароль изменён.',
+    passwordNext: 'Далее',
+    passwordBack: 'Назад',
+    passwordStepOf: 'Шаг {current} из {total}',
     regenerateCodes: 'Новые коды восстановления',
     disableMfaTitle: 'Отключение двухфакторной аутентификации',
     disableMfaText: 'Защита входа будет снята с этой учётной записи.',
@@ -823,6 +840,7 @@ export default {
     passwordMax: 'Пароль слишком длинный.',
     passwordChars: 'Пароль содержит недопустимые символы.',
     passwordMismatch: 'Пароли не совпадают.',
+    passwordReuse: 'Новый пароль должен отличаться от текущего.',
     codeInvalid: 'Используйте строчные латинские буквы, цифры и . _ - (например, «acme»).',
     textInvalid: 'Текст содержит недопустимые символы.',
     tooLong: 'Значение слишком длинное.',

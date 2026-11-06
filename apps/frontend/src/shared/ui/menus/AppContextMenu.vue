@@ -49,6 +49,7 @@ function keydown(event: KeyboardEvent): void {
       :anchor="anchor"
       :point="point"
       :searchable="searchable"
+      close-on-anchor
       @select="emit('select', $event)"
     />
   </div>

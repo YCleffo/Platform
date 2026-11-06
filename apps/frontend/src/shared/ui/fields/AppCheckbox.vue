@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, useAttrs } from 'vue';
 import { Check } from '@/shared/ui/icons';
 
@@ -110,10 +110,12 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .app-checkbox {
+  --checkbox-size: calc(18px * var(--ui-density-scale, 1));
+  --checkbox-radius: calc(6px * var(--ui-radius-scale, 1));
   display: flex;
   align-items: center;
   gap: var(--space-12);
-  min-height: 44px;
+  min-height: var(--control-h-l);
   cursor: pointer;
   position: relative;
   min-width: 0;
@@ -122,9 +124,9 @@ onBeforeUnmount(() => {
   display: grid;
   place-items: center;
   position: relative;
-  flex: 0 0 24px;
-  width: 24px;
-  height: 24px;
+  flex: 0 0 var(--checkbox-size);
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
 }
 .app-checkbox input {
   position: absolute;
@@ -137,12 +139,13 @@ onBeforeUnmount(() => {
   cursor: inherit;
 }
 .app-checkbox__box {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
   border: 2px solid var(--text-2);
-  border-radius: 7px;
+  border-radius: var(--checkbox-radius);
   background: var(--surface);
   color: var(--color-white);
   box-shadow: var(--shadow-soft);
@@ -151,6 +154,13 @@ onBeforeUnmount(() => {
     transform var(--motion-control-duration) var(--motion-spring-ease);
 }
 .app-checkbox__box :deep(svg) {
+  display: block;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: calc(12px * var(--ui-density-scale, 1));
+  height: calc(12px * var(--ui-density-scale, 1));
+  transform-origin: center;
   opacity: 0;
   transform: scale(0.45) rotate(-20deg);
   transition:
@@ -160,12 +170,14 @@ onBeforeUnmount(() => {
 }
 .app-checkbox__dash {
   position: absolute;
-  width: 10px;
-  height: 2px;
-  border-radius: 1px;
+  top: 50%;
+  left: 50%;
+  width: calc(8px * var(--ui-density-scale, 1));
+  height: calc(2px * var(--ui-density-scale, 1));
+  border-radius: calc(1px * var(--ui-radius-scale, 1));
   background: currentColor;
   opacity: 0;
-  transform: scale(0.45);
+  transform: translate(-50%, -50%) scale(0.45);
   transition:
     var(--theme-transition),
     opacity var(--motion-fast-duration) var(--motion-ease),
@@ -185,7 +197,7 @@ onBeforeUnmount(() => {
 }
 .app-checkbox input:indeterminate + .app-checkbox__box .app-checkbox__dash {
   opacity: 1;
-  transform: scale(1);
+  transform: translate(-50%, -50%) scale(1);
 }
 .app-checkbox input:focus-visible + .app-checkbox__box {
   outline: 2px solid var(--focus-border);

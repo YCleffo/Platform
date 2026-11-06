@@ -35,6 +35,20 @@ describe('router account guard', () => {
     expect(router.currentRoute.value.params.accountId).toBe(accountId);
   });
 
+  it('exposes public plan comparison and detail routes', async () => {
+    const router = createAppRouter(createMemoryHistory());
+
+    await router.push('/plans');
+    expect(router.currentRoute.value.name).toBe('plans');
+
+    await router.push('/plans/start');
+    expect(router.currentRoute.value.name).toBe('plan-detail');
+    expect(router.currentRoute.value.params.code).toBe('start');
+
+    await router.push('/operator/catalog');
+    expect(router.currentRoute.value.name).toBe('operator-catalog');
+  });
+
   it('keeps /cabinet and / routes working', async () => {
     beginSession({ access_token: 'access-a', refresh_token: 'refresh-a' });
     const auth = useAuthStore();

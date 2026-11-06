@@ -95,6 +95,12 @@ function priceText(price: PlanPrice): string {
     >
       {{ $t('catalog.choosePlan') }}
     </RouterLink>
+    <RouterLink
+      class="plan__details"
+      :to="{ name: 'plan-detail', params: { code: plan.code } }"
+    >
+      {{ $t('plans.viewDetails') }}
+    </RouterLink>
   </AppCard>
 </template>
 
@@ -208,6 +214,17 @@ function priceText(price: PlanPrice): string {
   color: var(--text-1);
   font-weight: var(--type-body-medium-emphasis-weight);
   transition: var(--theme-transition);
+}
+
+.plan__details {
+  margin-top: var(--space-8);
+  color: var(--accent-strong);
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
+  font-weight: var(--type-body-small-weight);
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .plan__cta {

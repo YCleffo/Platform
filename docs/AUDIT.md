@@ -1,219 +1,109 @@
 # Аудит Platform
 
-Дата: **6 ноября 2026**. Education реализуется в ветке `codex/education-start-gates`.
-Предыдущая локальная проверка Platform: `8543cb58` и изменения в `2304c4be`.
+Дата сверки: **6 ноября 2026**. База: `main`, `76759ae4fec37f15b233d2a6705163d92af7005e`, плюс документационные изменения этого прохода.
 
-**Итог: NOT_READY для production.** Этот отчёт заменяет накопленную историю этапов.
-Ниже разделены свежие локальные результаты, исправления CI и ещё не подтверждённые
-условия выпуска. CI подготовки подтверждён; CI реализации Education проверяется отдельно.
+**Статус: NOT_READY — промышленная эксплуатация не готова.** Core, Commercial, операторские сценарии и первая версия Education существуют в коде. Промышленное окружение, предельная нагрузка и несколько реплик пока не подтверждены.
 
-## Подготовка Education: текущий проход
+Дальнейшие действия: [масштабирование с этапами и критериями](roadmap/SCALING_PLAN.md), [план развития продукта](roadmap/PLATFORM_ROADMAP.md), [условия выпуска](operations/READINESS.md). Открытые задачи ссылаются на документы с процедурами и следующими шагами.
 
-Для `2304c4be42b78126d3449d78b428dc33c221be4d` проверен реальный
-[Platform CI #21](https://github.com/YCleffo/Platform/actions/runs/42079392088).
-Запуск завершился: 11 jobs PASS, два browser jobs FAIL. Перед началом Education
-исправлены обе причины:
+## Область и способ проверки
 
-| Job / шаг | Причина | Локальное исправление |
+Сверены 50 исходных Markdown-документов `docs`, корневое руководство и материалы интерфейса, Communication, API сессий, инструментов документации, конфигурации персональных данных и наблюдаемости. Учтены OpenAPI, схемы событий, JSON-каталоги БД, DBML и 13 процессных диаграмм. Утверждения сопоставлены с маршрутами, миграциями, адаптерами, маршрутизатором интерфейса, командами npm, Compose и `.github/workflows/ci.yml`. План масштабирования добавлен по этой сверке.
+
+Это аудит состояния и документации. Полное сканирование безопасности, повтор всех PHP/браузерных наборов, нагрузочная аттестация и приёмка промышленных провайдеров здесь не выполнялись. Наличие теста или задачи CI означает наличие проверки; успех конкретного SHA требует результата запуска.
+
+## Что уже реализовано
+
+| Область | Подтверждённое состояние исходников | Ограничения и следующие шаги |
 | --- | --- | --- |
-| Core account browser E2E / real MFA and session management | После UI-отзыва `second.accessToken` получал 200 вместо ожидаемого 401. E2E выбирал строку по индексу из отдельного API-чтения; сортировка по `last_seen_at` меняется при активности | Строка выбирается по `data-session-id`; проверки отозванного и оставшегося токенов сохранены |
-| Frontend browser E2E / appearance step | Appearance прошёл, затем `verify-menus.mjs` измерил панель за нижней границей при resize: y=595, height=261 для высоты 852. После завершения раскладки y=579 | `bounds` ожидает размещения панелей в viewport, затем сохраняет прежние проверки геометрии и overflow; постоянный выход за границы остаётся ошибкой |
+| Учётные записи и доступ Core | Person отдельно от Account; пароль, Google/Telegram OIDC, ключи доступа, TOTP, восстановление, непрозрачные сессии, RBAC, организации и сервисные данные | Реальные OAuth-секреты, перенаправления и эксплуатация ключей проверяются отдельно: [аутентификация/MFA](security/AUTHENTICATION_AND_MFA.md), [авторизация](architecture/AUTHENTICATION_AUTHORIZATION.md), [организации](architecture/ORGANIZATION_ACCESS.md) |
+| Администрирование и самообслуживание Core | `/admin`, справочники, жизненные циклы, RBAC, настройки/модули/флаги, профиль, безопасность, запросы персональных данных и присутствие | Нужна приёмка прикладной роли БД промышленного окружения: [консоль](operations/ADMIN_CONSOLE.md), [интерфейс](frontend/README.md), [роли](operations/DATABASE_ROLES.md) |
+| Commercial | Независимые Symfony и БД; Control User, аккаунты/участники/приглашения, каталог, расчёты, счета/платежи/возвраты/чеки, смена тарифов, продление/просрочка, использование, аналитика, аудит и собственная выгрузка | Испытательная среда YooKassa, публичные уведомления и настоящий SMTP остаются открытыми: [жизненный цикл](architecture/COMMERCIAL_CONTROL_PLANE.md), [безопасность](architecture/COMMERCIAL_SECURITY.md), [выпуск](operations/READINESS.md) |
+| Оператор Commercial | `/operator` с отдельной сессией в памяти; приём/исполнение запросов и инциденты персональных данных, подтверждения компенсаций с независимыми полномочиями/MFA | Нужны реальные полномочия, защищённые доказательства и внешняя проверка перевода: [компенсации](operations/EXTERNAL_COMPENSATION.md), [данные Commercial](privacy/CONTROL_PLANE_PRIVACY.md) |
+| Education | `App\Education`, схема `education`, две SQL-миграции и журнал; 33 HTTP-операции, пять разделов, шесть быстрых действий, группы/ученики/занятия/посещаемость, файлы, профиль, переписка и входящие сообщения | Флаги по умолчанию 0; обязательны членство, разрешение и назначение преподавателя. Кандидаты/основания/ограничения/уничтожение/файлы/подтверждения реализованы. Нужны общее хранилище реплик и промышленная политика: [Education](architecture/EDUCATION_BACKEND.md), [этапы 3–4](roadmap/SCALING_PLAN.md) |
+| Персональные данные Core | Цели/согласия, представители/полномочия, запросы/сроки, выгрузка/исправление/прекращение, ограничения/запреты уничтожения, оценка хранения и контролируемые обработчики | Политики и покрытие ресурсов не возникают автоматически: [Core](architecture/PRIVACY_COMPLIANCE_CORE.md), [поставщики сведений](architecture/PRIVACY_MODULE_CONTRIBUTORS.md), [хранение и уничтожение](architecture/RETENTION_ERASURE.md) |
+| Фоновые процессы и состояние | Планировщики, почтовые/исходящие обработчики, сигналы активности, готовность, аренда/повтор, ограниченные порции, блокировка отдельной задачи | Локальные Prometheus/Alertmanager/Grafana, экспортёры, защищённый `/metrics` и инструмент измерений реализованы. Промышленный получатель/объёмы, журналы/OTel/Sentry и высокая доступность не подтверждены: [задачи](architecture/BACKGROUND_JOBS.md), [наблюдаемость](../infra/observability/README.md), [SLO](operations/SLO.md), [этап 2](roadmap/SCALING_PLAN.md) |
+| Межсервисные контракты | M2M-секреты/полномочия/замена, Ed25519-права, возрастающая последовательность, аутентифицированное получение, версии схем событий | Универсальной шины событий нет: [M2M](architecture/M2M_SERVICE_AUTHENTICATION.md), [события](architecture/EVENT_CONTRACTS.md) |
+| Подготовка установок и копии | Сохранены local-docker, постоянные операции, активация/обновление/удаление и контрольная резервная копия | Только разработка/тесты/выделенный режим. Резервный обработчик и подготовка не подключены основным Compose. Промышленная/общая среда, размещение у заказчика, DNS/TLS/облако и автоматический откат не реализованы: [подготовка](operations/PROVISIONING.md), [копии](operations/BACKUP_RESTORE.md), [этап 5](roadmap/SCALING_PLAN.md) |
 
-Свежая локальная проверка этих изменений: typecheck, ESLint, Prettier,
-Vitest **70 files / 364 tests**, production build — PASS. На production preview
-прошли `verify-menus.mjs`, `verify-appearance.mjs`, `verify-core-security.mjs`.
-Core security UI regression теперь моделирует несовпадающий порядок двух чтений
-и проверяет точный DELETE ID, сохранение другой сессии и current session.
-Это **HTTP fixtures**, а не повторный real-backend Core security E2E.
-Документационные ссылки и `git diff --check` — PASS.
+Core Account, Control User, Commercial Account, Person и Organization различны. Education использует Core и не переносит учебные данные в Commercial. Правила: [модульность](architecture/MODULARITY.md), [инварианты](architecture/CORE_INVARIANTS.md), [данные](core-data-model.md).
 
-После исправлений полный [Platform CI #22](https://github.com/YCleffo/Platform/actions/runs/42081869693)
-для `ea0dc55425395f11fe56c6c2e16b9a9cb8a83445` прошёл **13/13 jobs**.
-Пользователь отдельно принял Yii-модуль Education. Оба условия старта выполнены
-до добавления реализации.
+## Что устарело и исправлено в документах
 
-## Education: реализация и свежая локальная проверка
-
-Отдельный `App\Education`, схема и идемпотентные migrations, 33 HTTP операции с
-[OpenAPI](../contracts/openapi/education.yaml), собственные private files и inbox.
-Core identity, permissions, membership и явное назначение преподавателя обязательны.
-Commercial не хранит учебные данные. Данные появляются через реальные операции;
-production seeds отсутствуют. Env-флаги по умолчанию выключены.
-
-Frontend реализует пять разделов и шесть быстрых действий, реальные формы, занятия,
-посещаемость, материалы, переписку, уведомления и профиль. Экран 393×852 сверен
-с каноническим SVG; навигация 72px плюс safe-area, локальный Inter.
-
-| Проверка | Свежий результат |
+| Прежнее описание | Актуальное состояние |
 | --- | --- |
-| Backend Education PostgreSQL integration | 6 tests / 54 assertions PASS: scope, disabled, fresh permissions, DST, timeline, attendance, files, message cursor, subject export/correction/block |
-| Frontend unit/component | 73 files / 380 tests PASS, включая stale scope, uncertain write, HTTP FormData/blob refresh и проверки DTO |
-| Typecheck / ESLint / Prettier / styles / tokens / icons | PASS |
-| OpenAPI parity и локальные references | PASS, 33/33 runtime operations |
-| Настоящий backend browser E2E | PASS: группы, 12 учеников, занятия, посещаемость, реальные материалы и completed download с совпадающими bytes; два Core пользователя, ограничения организации/владельца, no-domain-role, профиль/avatar, disabled module |
-| RU/EN × light/dark × 393/1440 | 8 screenshots, без horizontal overflow; axe WCAG 2 A/AA и 2.1 AA — 0 нарушений |
-| Runtime DB role Education | schema USAGE и data INSERT разрешены; schema CREATE, TRUNCATE и ledger INSERT запрещены |
-| Production frontend build и preview | PASS; полный real-backend E2E повторён на production preview, upload/download 3 500 056 bytes совпадает |
+| Education — будущий продукт без API | Первая версия реализована за выключенными флагами: [план развития](roadmap/PLATFORM_ROADMAP.md), [интерфейс](frontend/README.md), [руководство приложения](../apps/frontend/README.md) |
+| Финансовые маршруты ждут операторской модели | Модель и интерфейс есть; нужны независимые полномочия: [план](roadmap/PLATFORM_ROADMAP.md), [компенсации](operations/EXTERNAL_COMPENSATION.md) |
+| Собственные сессии не зарегистрированы | Есть `GET /api/auth/sessions`, `DELETE /api/auth/sessions/{id}`, `POST /api/auth/sessions/revoke-others`: [контракт](../apps/backend/src/Core/Auth/Api/SESSIONS.md) |
+| Кабинета и графиков нет | Кабинет, аналитика, графики, сравнение `/plans`, детали `/plans/:code`, редактор `/operator/catalog` с черновиками/публикацией существуют: [процессы](processes/README.md), [план](roadmap/PLATFORM_ROADMAP.md) |
+| В Core 23 таблицы | Текущий каталог: Core 50, Runtime 3, Commercial 62, Education 15 с журналом; Education имеет отдельные каталог/DBML/покрытие: [БД](database/README.md), [архитектура](architecture/DATABASE.md) |
+| Промышленный транспорт и будущий браузерный контракт уже развёрнуты | Уточнены целевые требования и существующая SPA с токенами в памяти: [безопасность](architecture/SECURITY_HARDENING.md) |
+| Копии и подготовка включаются старым профилем Compose | Нужна отдельная конфигурация; прежние команды профилей не являются инструкцией основного Compose: [подготовка](operations/PROVISIONING.md), [копии](operations/BACKUP_RESTORE.md) |
+| Прежние успешные проверки, размеры сборки, контейнеры и очистка — текущий результат | История отделена от результатов ниже; исходный отчёт сохранён в Git |
 
-Проверки Education выполняются в отдельном Docker project
-`platform-education-qa-20261105`, БД `platform_test`, собственные Redis/SMTP/volumes.
-Рабочие БД не используются; одноразовые credentials и source/vendor copy находятся
-вне репозитория. Screenshots и downloaded material — игнорируемые QA artifacts.
+Согласованы хранилище аудита ключей доступа и безопасные ошибки, владение данными Education и персональными данными. Справочник/DBML и срез Commercial перегенерированы с `catalog_operators`; основной срез и покрытие Core не изменились.
 
-Установка и включение описаны в [Education backend](architecture/EDUCATION_BACKEND.md).
-Автоматические Education retention/erasure и legal-hold workflows не реализованы.
-Публичное production размещение и эксплуатационная приёмка не выполнялись.
-Зелёный CI #22 подтверждает базу, а не новый модуль; итоговый CI реализации нужен отдельно.
+## Проверки этого прохода
 
-## Область и границы проверки
-
-Проверены четыре присланных сбоя: Composer audit Core/Commercial, Core account browser
-E2E и Commercial account workspace E2E. Дополнительно проверяются статический анализ,
-полные прикладные test suites, frontend quality/build и документационные gates.
-Это инженерная проверка текущего кода и CI, а не новый полный security scan исходников,
-нагрузочная аттестация или приёмка внешних провайдеров.
-
-Все destructive проверки выполняются в отдельном проекте Docker
-`platform-ci-repair-20261105`: Core `platform_test`, Commercial
-`platform_commercial_test`, отдельные Redis, SMTP, сети и тома.
-Рабочие Core/Commercial/MyBots БД не используются. Секреты одноразовые и находятся
-вне репозитория. Backend зависимости устанавливаются в отдельной копии исходников;
-рабочие PHP vendor directories не заменяются.
-
-## Исправленные причины CI
-
-| Причина | Изменение | Подтверждение |
-| --- | --- | --- |
-| Новые Symfony advisories от 4 ноября | Core: filesystem, serializer, yaml → 7.4.23. Commercial: config, filesystem, framework-bundle, http-client, http-foundation, http-kernel, routing, security-http, serializer, validator, yaml → 7.4.23 | Обе установки по lock, Composer platform requirements и audit проходят; composer.json и PHP 8.3 сохранены |
-| Core отклонял возврат от Google/Telegram | Per-page client ID менялся после full-page redirect. Одноразовый OAuth marker теперь переносит исходный ID; восстановление разрешено после проверки provider/state/expiry/purpose | Регрессия воспроизводится на исходном коде; unit tests проверяют новый document, чужой state, повреждённый ID, replay и отдельную identity-link вкладку |
-| Workspace проверял активный раздел до завершения router transition | Проверка ждёт ровно одну активную ссылку с нужным href одновременно в desktop и mobile navigation | Полный account workspace browser E2E PASS |
-| UI fixture отпускал задержанный login до ухода со страницы | Перед ответом ожидается новый layout с активной навигацией, а не прежний main | 42 auth UI states PASS, включая late-response race |
-| Следующий Core E2E ждал устаревший текст отказа | Проверяется актуальный status Workbench. Отсутствие строк предыдущего оператора и API 403 остаются обязательными | Полный повторный Core E2E — см. матрицу ниже |
-| Node 20 warning для artifact upload | Все 6 `actions/upload-artifact@v4` заменены на `@v6`, использующий Node 24 | Upstream action.yml проверен; actionlint PASS. Реальная загрузка artifacts требует нового Actions run |
-
-Серверные state/nonce/PKCE/client binding, single-use challenge, проверка владельца
-provider identity и запрет выпуска сессии при MFA recovery сохранены.
-Marker содержит несекретный client ID и hash state, но не access/refresh tokens,
-raw state, code или verifier. После потребления marker удаляется; обычная новая
-страница получает новый ID. Identity-link popup передаёт code исходной вкладке;
-она завершает операцию под собственной session и client binding.
-
-Диагностика Core browser E2E теперь сначала выводит исходную ошибку. Ошибка
-получения screenshot/DOM при навигации больше не подменяет причину падения.
-
-Первичные источники обновлений:
-[Symfony Serializer advisory](https://symfony.com/cve-2026-118515),
-[Filesystem advisory](https://github.com/symfony/symfony/security/advisories/GHSA-6prc-h956-hxjq),
-[upload-artifact v6 action](https://github.com/actions/upload-artifact/blob/v6/action.yml).
-Полный актуальный набор advisories проверяется Composer, без ignore/suppressions.
-
-## Свежие результаты локальной проверки
-
-| Проверка | Результат этого прохода |
+| Проверка | Результат 6 ноября 2026 |
 | --- | --- |
-| Core Composer validate/platform/install/audit | PASS; security advisories 0 |
-| Commercial Composer validate/platform/audit | PASS; security advisories 0 |
-| Core Psalm без cache | PASS, JSON `[]` |
-| Commercial PHPStan level 7 | PASS, 0 errors |
-| Commercial PHPUnit, Linux/PHP 8.3.36 | PASS: 468 tests / 5027 assertions |
-| Symfony YAML/container lint | PASS: 9 YAML files; container compatible |
-| Core полный deterministic suite, seed 2120741368 | PASS: 540 tests / 14290 assertions; API 75, Console 2, Functional 94, Unit 369 |
-| Frontend Vitest | PASS: 70 files / 364 tests |
-| Frontend typecheck, ESLint, Prettier | PASS |
-| Styles, generated tokens, SVG sprite | PASS; 30 symbols |
-| Core mutation guards | PASS: 11 tests |
-| Dependency security regressions | PASS: 2 tests |
-| HTTP workflow contracts / RU-EN labels | PASS: 2 tests |
-| Frontend npm audit | PASS: vulnerabilities 0 |
-| Production frontend build | PASS; main JS 436.38 kB / gzip 139.76 kB |
-| Account workspace browser E2E | PASS: login, accounts, members, switching, unknown account, re-login, theme, 320/1440, keyboard, cross-user denial |
-| Core account browser E2E | PASS: activation/reset/recovery, Google/Telegram, replay denial, API 403 и отсутствие чужих строк, required password change/MFA; 20 responsive/axe public states |
-| Core credential browser E2E | PASS: real cryptographic passkey registration/login, link/unlink/cancel/conflict, last-method protection, recent authentication; 100 reads @20, 0 errors |
-| Core auth UI fixtures | PASS: 42 RU/EN states, light/dark, reduced motion, responsive/axe и auth races |
-| Workflow actionlint / CI shell syntax | PASS |
-| PowerShell syntax | PASS; Windows ZIP regression локально не запускался: CI-only entry point |
-| Database Python tests | PASS: 3 tests |
-| Generated schema reference / coverage inventory | PASS |
-| DBML parser | PASS: Core 50 / Runtime 3 / Commercial 61 tables |
-| Documentation Python types / npm audit | PASS: 0 errors, warnings, vulnerabilities |
-| Markdown local links | PASS: 418 ссылок в 50 Markdown документах |
+| Срез Core и хеши миграций | Пройдено: 53 таблицы `core` + `platform_runtime` |
+| Срез Commercial и хеши | Пройдено: 62 таблицы |
+| Срез Education и хеши | Пройдено: 15 таблиц, включая `education.module_migrations`; 2 миграции |
+| Формируемые справочник и покрытие | Пройдено: Core/Runtime, Commercial, отдельное покрытие Education |
+| Парсер DBML | Пройдено: Core 50 / Runtime 3 / Commercial 62 / Education 15; внешние ключи 86 / 1 / 98 / 11 |
+| TypeScript интерфейса | Пройдено: `npm run typecheck` |
+| Модульные/компонентные тесты | Пройдено: **75 файлов / 384 теста**, включая сравнение/детали тарифов, локальный QR-генератор и маршрутизатор |
+| Публичные страницы тарифов | Пройдено: `/plans`, `/plans/:code`, 4 демонстрационных тарифа, мобильная типографика таблицы, axe **34 состояния**, 384 теста |
+| Редактор черновиков/публикации | Пройдено: `catalog_operators`, API черновика→версии→публикации, неизменяемые опубликованные условия, `/operator/catalog`; локальный API/браузер, модульные тесты Control 148/618 |
+| Соответствие Education OpenAPI, ссылок/аутентификации; путей/прав Core и языков | Пройдено: **4 теста**, 33 операции Education |
+| Жизненный цикл данных Education | Пройдено: **9 тестов / 99 утверждений**; кандидаты/основания/ограничения/уничтожение метаданных и файлов, регистрация зависимостей, идемпотентность ID на синтетических правилах хранения |
+| Наблюдаемость | Локально пройдено: **7/7 целей Prometheus**, экспортёр узла/дисковое правило проверены отдельно, 11 правил, источник/панель Grafana, доставка Alertmanager→приёмник. Пятисекундная нагрузка не доказывает промышленную производительность |
+| Ссылки и пробелы Markdown | Пройдено: 696 локальных ссылок в 54 документах; `git diff --check` без ошибок |
+| CI текущего исходного SHA | Подключённый GitHub для `76759ae4…` вернул пустой список запусков; полный успешный CI **не подтверждён** |
 
-Полные команды соответствуют `.github/workflows/ci.yml`:
-`composer validate --strict`, `composer check-platform-reqs`, `composer audit`,
-`vendor/bin/psalm --no-cache --no-progress --output-format=json`,
-`vendor/bin/phpstan analyse --no-progress`, `vendor/bin/phpunit`,
-`vendor/bin/codecept run --seed 2120741368`, `npm test`, `npm run build`,
-`node scripts/e2e-account-workspace.mjs`, `npm run test:e2e:core-auth`,
-`npm run test:e2e:core-credentials`. Результаты не подменяются прежними прогонами.
+Команды: `python scripts/database/export_schema.py --plane core --from-snapshot --check`, аналогично `--plane commercial` и `--plane education`; `python scripts/documentation/build-reference.py --check`, `python scripts/documentation/build-coverage.py --check`, `python scripts/documentation/build-education-coverage.py --check`, `npm run check:dbml --prefix scripts/documentation`, `npm run typecheck`, `npm test`, `node --test scripts/education-contract.test.mjs scripts/workbench-contracts.test.mjs` из `apps/frontend`; `vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Education` в тестовой среде сервера с `EDUCATION_ENABLED=1`.
 
-## Остаточный security inventory образов
+Также: `docker compose -f compose.yaml -f compose.observability.yaml --profile control config --quiet`, `promtool check config/rules`, `amtool check-config`, `node scripts/observability/verify-alert-delivery.mjs`, `CAPACITY_* node scripts/observability/capacity-baseline.mjs`, `python scripts/documentation/check-links.py`, `git diff --check`.
 
-В этом проходе свежий Trivy inventory рабочих/production images **не выполнялся**.
-Ранее зафиксированный blocker libxml2/CVE-2026-6653 и другие distro findings
-не считаются закрытыми обновлением Composer. Предыдущие counts не переносятся
-в таблицу свежих результатов. Принятие остаточного риска не получено:
-[правила работы с findings](operations/IMAGE_SECURITY.md).
+Проверки срезов не обращаются к живой БД и не доказывают установку Education или схему работающего окружения; они подтверждают сохранённый каталог и хеши. Тесты персональных данных используют синтетические правила, а не утверждённую промышленную политику. Локальная наблюдаемость доказывает доставку только местному приёмнику; промышленный получатель и представительные объёмы требуют отдельного запуска.
 
-Рабочие HTTP/worker images этим изменением не обновляются. Новые lock files
-попадут в них только при следующей сборке и развёртывании. Проверка тестового
-образа и vendor directory не доказывает обновление production.
-Перед выпуском нужны свежие inventories точных image digests и прохождение
-fixable HIGH/CRITICAL gate без сокрытия остальных findings.
+### Исторические результаты
 
-## Актуальные открытые условия
+Прежний аудит сообщал успех PHP/браузерных наборов, интеграции Education, загрузки/скачивания, адаптивной раскладки/axe и ролей БД. Здесь эти прежние результаты не запускались повторно. Полный CI #22 относится к `ea0dc554…` **до** Education. Позднее добавлены Education и исправления CI, операторского и пользовательского интерфейса персональных данных. [Исходный отчёт и доказательства](https://github.com/YCleffo/Platform/blob/76759ae4fec37f15b233d2a6705163d92af7005e/docs/AUDIT.md). Старые хеши локальных ZIP, счётчики контейнеров и временные стенды не доказывают текущий релиз.
 
-1. **Новый полный GitHub Actions для выпускаемого SHA.** Локальные PASS не являются
-   удалённым CI. Cross-plane, production-image smoke/scan, periodic billing и все
-   остальные browser jobs необходимо оценить по новому run.
-2. **Живые внешние интеграции.** Google/Telegram consent/cancel/revoke/recovery,
-   YooKassa sandbox с публичным HTTPS webhook, чеком/refund, фактические SMTP/TLS/DNS.
-   Test OIDC transport, virtual WebAuthn authenticator и Mailpit их не заменяют.
-3. **Production privacy.** Настроить настоящие operator identity/address,
-   processing purposes, evidence storage и legal/representative policies.
-   Синтетические browser fixtures нельзя переносить в production.
-4. **Эксплуатационная приёмка.** Runtime/maintenance/migrator role checks для
-   выпускаемого окружения, restore/PITR drill, monitoring/alerts, worker recovery,
-   реальные объёмы данных и согласованные SLO.
-5. **Coverage и границы продукта.** Source inventory и frontend caller не доказывают
-   end-to-end lifecycle каждой операции. Education/deployment UI по-прежнему требует
-   собственных backend contracts. Существующий billing/periodic код сохраняется;
-   этот проход не означает повторную приёмку всего billing.
+## Остаточный инвентарь безопасности образов
 
-Текущая сборка main JS меньше 500 kB; прежний warning 636.46 kB не является
-результатом этой сборки. Это не измерение сетевой производительности production.
+Свежий Trivy для выпускаемых хешей здесь не выполнялся. Обновление Composer и прежний успех проверки исправляемых находок не закрывают уязвимости системных пакетов. Статус **NOT_ACCEPTED — риск не принят, выпуск заблокирован**. Текущие CVE/счётчики без нового сканирования не утверждаются.
 
-## Документация и очистка
+Нужны полные перечни и отдельная проверка исправляемых высоких/критических уязвимостей всех образов, затем исправление или оформленное принятие остатка: [безопасность образов](operations/IMAGE_SECURITY.md). Отчёты сохраняются с выпуском.
 
-Вместо датированных промежуточных отчётов поддерживается этот единый аудит.
-Обновлены frontend/auth/security описания одноразового OAuth client ID и условия
-выпуска. Архитектура, контракты, миграции, schema catalogs, generated coverage и
-privacy/operations runbooks сохраняются как действующая документация.
+## Открытые задачи по приоритету
 
-Удалены 54 PNG прежних этапов: после переписывания аудита на них нет ссылок из
-действующих документов или кода. Перед удалением все файлы сохранены и проверены
-в архиве вне репозитория: `documentation-evidence.zip`, SHA256
-`863943094a7cf088b84eba8b4b7163d4d11e1dabfe6fff7d9fe209f412d12e46`.
-Файлы удалены по одному без рекурсивного удаления; ссылки документации проверены после очистки.
+Приоритет определяет порядок приёмки, а не новую найденную уязвимость.
 
-Очистка завершена: удалены 7 сервисов стенда, 4 тестовых тома, 2 сети,
-3 созданных test/tool images, frontend dist/screenshots, Python caches и временная
-копия исходников/vendor с одноразовыми секретами. Preview 4174/4175 остановлены;
-временная запись hosts удалена. Build cache освобождён на 3.13 GB, остаток 0 B.
+| Приоритет | Задача | Критерий | Дальнейшие действия |
+| --- | --- | --- | --- |
+| P0 | Полный CI выпускаемого SHA | Завершены Education, браузеры, периодические расчёты, межсистемные и сканирования; материалы доступны | [Готовность](operations/READINESS.md), [проверки CI](../.github/workflows/ci.yml), [этап 1](roadmap/SCALING_PLAN.md) |
+| P0 | Промышленное окружение | Роли БД разделены; секреты/TLS/DNS/прокси, SMTP/OIDC/YooKassa и риски образов проверены | [Роли](operations/DATABASE_ROLES.md), [секреты](operations/ENVIRONMENT.md), [транспорт](architecture/SECURITY_HARDENING.md), [образы](operations/IMAGE_SECURITY.md) |
+| P0 | Восстановление | Утверждены RPO/RTO, пройдены восстановление/PITR и файлы Education вместе с БД; уничтожение повторено до открытия доступа | [Копии](operations/BACKUP_RESTORE.md), [обновление](operations/SAFE_DATABASE_UPGRADE.md), [уничтожение](architecture/RETENTION_ERASURE.md), [этап 2](roadmap/SCALING_PLAN.md) |
+| P0 | Доказательства персональных данных | Реальные цели/основания/сроки/календарь/оператор, обработчики/передачи/резидентность и хранилище; обе проверки соответствия проходят | [Политика](privacy/PRODUCTION_PROCESSING_POLICY.md), [установка](../deployment/privacy/README.md), [Commercial](privacy/CONTROL_PLANE_PRIVACY.md) |
+| P1 | Промышленная наблюдаемость | Внешний получатель доставляет оповещения; SLO/RPO/RTO утверждены; отчёт на представительных объёмах | [SLO](operations/SLO.md), [наблюдаемость](../infra/observability/README.md), [задачи](architecture/BACKGROUND_JOBS.md), [этап 2](roadmap/SCALING_PLAN.md) |
+| P2 | Несколько реплик | Общие закрытые файлы и постоянные данные, проверенные конкурентность/повторы, отказ реплики и совместимость миграций | [Хранилище](architecture/EDUCATION_BACKEND.md), [инварианты](architecture/CORE_INVARIANTS.md), [этап 4](roadmap/SCALING_PLAN.md) |
+| P2 | Тиражирование | Промышленный провайдер, секреты/копии/прокси; создание/обновление/удаление проверены | [Подготовка](operations/PROVISIONING.md), [M2M](architecture/M2M_SERVICE_AUTHENTICATION.md), [этап 5](roadmap/SCALING_PLAN.md) |
 
-Итог Docker: **те же 13 рабочих container IDs, 12 running, 4 рабочих тома,
-7/7 images used**. Core health и Commercial live возвращают **200**.
-Рабочие Core/Commercial/MyBots контейнеры не пересоздавались.
-Пересобранный при разрешении Compose dependencies PostgreSQL image удалён как
-неиспользуемый: локальный tag `platform-postgres:local` создаст следующая сборка;
-работающие PostgreSQL контейнеры сохранили свои исходные image IDs.
+Программная часть P1 Education выполнена: каталогизация, кандидаты/основания/ограничения, уничтожение метаданных и файлов с подтверждением элемента; тесты `9/99`. Программная и конфигурационная часть наблюдаемости выполнена: `/metrics`, Caddy 2019, Prometheus, Alertmanager, Grafana, экспортёры и [измеритель производительности](../scripts/observability/capacity-baseline.mjs); локальная доставка проверена. Промышленный получатель, реальные объёмы и утверждённые RPO/RTO/SLO остаются условиями выпуска. Статус — **NOT_READY**. Критерии продукта и нагрузки разделены в [плане развития](roadmap/PLATFORM_ROADMAP.md) и [масштабировании](roadmap/SCALING_PLAN.md).
 
-При cleanup основной Compose также запросил удаление общих именованных runtime
-томов; Docker отказал, поскольку они используются. Все четыре рабочих тома затем
-проверены. Для повторения следует удалять конкретные test resources, как делают
-`test-stop.sh` и `control-test-stop.sh`: project name сам по себе не изолирует
-явные имена томов из основного Compose.
+## Карта остальных источников
 
-Логи и новые screenshots сохранены вне репозитория в `verification.zip`, SHA256
-`acb221d5bf22be0fd02b4fe4c0f07c46150fcda7d022daf4b20c8de589d6a223`.
-Оба архива и `final-summary.json` находятся в локальном хранилище Codex:
-`~/.codex/state/plugins/codex-security/scans/Platform/artifacts-ab2770cbc283f21f32f548ba352f7e16ca6799138a9831af98b61d68a3b586df/artifacts/ci-repair/`.
+| Группа | Документы |
+| --- | --- |
+| Вход в проект | [Руководство](../README.md), [индекс](README.md), [данные](core-data-model.md), [процессы и 13 диаграмм](processes/README.md) |
+| Архитектура и хранение | [Сервер Core](architecture/CORE_BACKEND.md), [БД](architecture/DATABASE.md), [справочник](database/SCHEMA_REFERENCE.md), [покрытие Core/Runtime](core-database-coverage.md), [покрытие Education](education-database-coverage.md), [инструменты документации](../scripts/documentation/README.md) |
+| Язык и сообщения | [Локализация](architecture/INTERNATIONALIZATION.md), [доставка](architecture/COMMUNICATION.md), [API доставки](../apps/backend/src/Core/Communication/Api/README.md), [уведомления](architecture/NOTIFICATIONS.md), [предпросмотр писем](operations/EMAIL_PREVIEW.md) |
+| Предпочтения | [Настройки](architecture/USER_SETTINGS_PRIVACY.md), [присутствие](architecture/PRESENCE.md); не заменяют согласия или доменный доступ |
+| Инвентари данных | [Core](privacy/CORE_DATA_INVENTORY.md), [Commercial](privacy/CONTROL_PLANE_PRIVACY.md); [Education](education-database-coverage.md) описывает таблицы, но не заменяет инвентарь персональных данных |
+| Доказательства установки | [Резидентность](privacy/DATA_RESIDENCY.md), [обработчики/передачи](privacy/PROCESSORS_AND_TRANSFERS.md), [матрица ИСПДн](privacy/ISPDN_SECURITY_MATRIX.md), [уничтожение](privacy/PERSONAL_DATA_DESTRUCTION_EVIDENCE.md) |
+| Права и публикация | [Информация об обработке](privacy/PROCESSING_INFORMATION.md), [согласие распространения](privacy/DISTRIBUTION_CONSENT.md); публичные имена и аватары требуют разрешённого пути |
+
+Изменяя маршруты, миграции, права, топологию или владение данными, обновляйте профильный документ и аудит. Результаты фиксируйте с SHA и средой; следующие этапы поддерживайте в [масштабировании](roadmap/SCALING_PLAN.md) и [плане развития](roadmap/PLATFORM_ROADMAP.md).

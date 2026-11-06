@@ -1,15 +1,15 @@
 # Покрытие таблиц Core и Runtime
 
-Генерируется `scripts/documentation/build-coverage.py` из фактического catalog и исходников.
+Генерируется `scripts/documentation/build-coverage.py` из фактического каталога и исходников.
 Перечислены все физические таблицы и прямые строки `schema.table` в PHP-коде.
 Ссылки показывают место использования, а не автоматически доказанное полное покрытие.
-Application tests могут вызывать repository без SQL-строки в самом тесте.
+Прикладные тесты могут вызывать репозиторий без SQL-строки в самом тесте.
 
-Слои проверяются отдельно: unit — локальная логика, functional — приложение с PostgreSQL,
-API — HTTP, cross-plane — отдельные Commercial/Core процессы и подписанные documents.
+Слои проверяются отдельно: модульные тесты — локальная логика; функциональные — приложение с PostgreSQL,
+API — HTTP, межсистемные — отдельные процессы Commercial/Core и подписанные документы.
 Структура и ограничения описаны в [справочнике БД](database/SCHEMA_REFERENCE.md).
 
-| Физическая таблица | Прямые source references (до 3) | Прямые test references (до 3) |
+| Физическая таблица | Прямые ссылки на исходники (до 3) | Прямые ссылки на тесты (до 3) |
 | --- | --- | --- |
 | `core.account_roles` | [BootstrapSuperadminCommand](../apps/backend/src/Console/BootstrapSuperadminCommand.php), [PostgresAccountLifecycleRepository](../apps/backend/src/Core/Account/Infrastructure/PostgresAccountLifecycleRepository.php), [ManageCustomRoles](../apps/backend/src/Core/Rbac/Application/ManageCustomRoles.php) | [AccountSettingsCest](../apps/backend/tests/Api/AccountSettingsCest.php), [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php), [AuthorizationLifecycleCest](../apps/backend/tests/Functional/AuthorizationLifecycleCest.php) |
 | `core.account_settings` | [AccountSettingsService](../apps/backend/src/Core/AccountSettings/Application/AccountSettingsService.php), [PostgresAccountSettingsRepository](../apps/backend/src/Core/AccountSettings/Infrastructure/PostgresAccountSettingsRepository.php), [CorePrivacyContributorCoverage](../apps/backend/src/Core/Privacy/Application/CorePrivacyContributorCoverage.php) | [AccountSettingsCest](../apps/backend/tests/Api/AccountSettingsCest.php), [AccountSettingsCest](../apps/backend/tests/Functional/AccountSettingsCest.php), [NotificationPolicyCest](../apps/backend/tests/Functional/NotificationPolicyCest.php) |
@@ -36,7 +36,7 @@ API — HTTP, cross-plane — отдельные Commercial/Core процесс�
 | `core.modules` | [PostgresModuleRepository](../apps/backend/src/Core/Module/Infrastructure/PostgresModuleRepository.php), [PostgresFeatureFlagRepository](../apps/backend/src/Core/Settings/Infrastructure/PostgresFeatureFlagRepository.php), [PostgresModuleSettingsRepository](../apps/backend/src/Core/Settings/Infrastructure/PostgresModuleSettingsRepository.php) | [ConfigurationAuthorizationCest](../apps/backend/tests/Api/ConfigurationAuthorizationCest.php), [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php), [SettingsPersistenceCest](../apps/backend/tests/Functional/SettingsPersistenceCest.php) |
 | `core.organization_memberships` | [OrganizationAction](../apps/backend/src/Core/Organization/Api/OrganizationAction.php), [OrganizationMembershipErasureHandler](../apps/backend/src/Core/Organization/Infrastructure/OrganizationMembershipErasureHandler.php), [OrganizationMembershipPersonalDataContributor](../apps/backend/src/Core/Organization/Infrastructure/OrganizationMembershipPersonalDataContributor.php) | [OrganizationsCest](../apps/backend/tests/Api/OrganizationsCest.php), [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php), [OrganizationFoundationCest](../apps/backend/tests/Functional/OrganizationFoundationCest.php) |
 | `core.organizations` | [OrganizationMembershipPersonalDataContributor](../apps/backend/src/Core/Organization/Infrastructure/OrganizationMembershipPersonalDataContributor.php), [PostgresOrganizationRepository](../apps/backend/src/Core/Organization/Infrastructure/PostgresOrganizationRepository.php) | [OrganizationsCest](../apps/backend/tests/Api/OrganizationsCest.php), [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php), [OrganizationFoundationCest](../apps/backend/tests/Functional/OrganizationFoundationCest.php) |
-| `core.outbox_events` | [PostgresOutboxRepository](../apps/backend/src/Core/Messaging/Infrastructure/PostgresOutboxRepository.php), [OperationalStatus](../apps/backend/src/PlatformRuntime/Scheduler/OperationalStatus.php) | [PasswordChangeCest](../apps/backend/tests/Api/PasswordChangeCest.php), [AuditMessagingPersistenceCest](../apps/backend/tests/Functional/AuditMessagingPersistenceCest.php), [CommunicationOutboxCest](../apps/backend/tests/Functional/CommunicationOutboxCest.php) |
+| `core.outbox_events` | [MetricsAction](../apps/backend/src/Api/MetricsAction.php), [PostgresOutboxRepository](../apps/backend/src/Core/Messaging/Infrastructure/PostgresOutboxRepository.php), [OperationalStatus](../apps/backend/src/PlatformRuntime/Scheduler/OperationalStatus.php) | [PasswordChangeCest](../apps/backend/tests/Api/PasswordChangeCest.php), [AuditMessagingPersistenceCest](../apps/backend/tests/Functional/AuditMessagingPersistenceCest.php), [CommunicationOutboxCest](../apps/backend/tests/Functional/CommunicationOutboxCest.php) |
 | `core.permissions` | [ManageCustomRoles](../apps/backend/src/Core/Rbac/Application/ManageCustomRoles.php), [PostgresPermissionRepository](../apps/backend/src/Core/Rbac/Infrastructure/PostgresPermissionRepository.php) | [ApiTester](../apps/backend/tests/Support/ApiTester.php), [TestReset](../apps/backend/tests/Support/TestReset.php), [core-auth-fixture](../apps/backend/tests/e2e/core-auth-fixture.php) |
 | `core.person_contacts` | [PostgresPersonContactRepository](../apps/backend/src/Core/Person/Infrastructure/PostgresPersonContactRepository.php), [CorePrivacyContributorCoverage](../apps/backend/src/Core/Privacy/Application/CorePrivacyContributorCoverage.php), [CorePersonAnonymizationHandler](../apps/backend/src/Core/Privacy/Infrastructure/CorePersonAnonymizationHandler.php) | [PersonalDataContributorsCest](../apps/backend/tests/Functional/PersonalDataContributorsCest.php), [PersonalDataCorrectionCest](../apps/backend/tests/Functional/PersonalDataCorrectionCest.php), [PrivacyComplianceB5Cest](../apps/backend/tests/Functional/PrivacyComplianceB5Cest.php) |
 | `core.persons` | [BootstrapSuperadminCommand](../apps/backend/src/Console/BootstrapSuperadminCommand.php), [PostgresAccountLifecycleRepository](../apps/backend/src/Core/Account/Infrastructure/PostgresAccountLifecycleRepository.php), [PostgresAccountSecurityRepository](../apps/backend/src/Core/Account/Infrastructure/PostgresAccountSecurityRepository.php) | [ConsentCest](../apps/backend/tests/Api/ConsentCest.php), [DataSubjectRequestsCest](../apps/backend/tests/Api/DataSubjectRequestsCest.php), [OrganizationsCest](../apps/backend/tests/Api/OrganizationsCest.php) |
@@ -62,16 +62,16 @@ API — HTTP, cross-plane — отдельные Commercial/Core процесс�
 | `core.service_credentials` | [PostgresAuthCleanupRepository](../apps/backend/src/Core/Auth/Infrastructure/PostgresAuthCleanupRepository.php), [PostgresServiceCredentialRepository](../apps/backend/src/Core/Auth/Infrastructure/PostgresServiceCredentialRepository.php) | [ServiceCredentialsCest](../apps/backend/tests/Api/ServiceCredentialsCest.php), [TestReset](../apps/backend/tests/Support/TestReset.php) |
 | `core.system_settings` | [PostgresSystemSettingsRepository](../apps/backend/src/Core/Settings/Infrastructure/PostgresSystemSettingsRepository.php) | [SettingsPersistenceCest](../apps/backend/tests/Functional/SettingsPersistenceCest.php), [TestReset](../apps/backend/tests/Support/TestReset.php), [core-auth-fixture](../apps/backend/tests/e2e/core-auth-fixture.php) |
 | `platform_runtime.background_job_status` | [RuntimeReleaseVerifyCommand](../apps/backend/src/Console/RuntimeReleaseVerifyCommand.php), [BackgroundJobStatusRecorder](../apps/backend/src/PlatformRuntime/Scheduler/BackgroundJobStatusRecorder.php), [OperationalStatus](../apps/backend/src/PlatformRuntime/Scheduler/OperationalStatus.php) | [RuntimeBootstrapSyncCest](../apps/backend/tests/Functional/RuntimeBootstrapSyncCest.php), [OperationalStatusTest](../apps/backend/tests/Unit/Core/OperationalStatusTest.php) |
-| `platform_runtime.entitlement_documents` | [HealthAction](../apps/backend/src/Api/HealthAction.php), [DbCheckCommand](../apps/backend/src/Console/DbCheckCommand.php), [PostgresEntitlementApplier](../apps/backend/src/PlatformRuntime/PostgresEntitlementApplier.php) | Нет прямой SQL-строки; смотреть application/use-case tests |
+| `platform_runtime.entitlement_documents` | [HealthAction](../apps/backend/src/Api/HealthAction.php), [DbCheckCommand](../apps/backend/src/Console/DbCheckCommand.php), [PostgresEntitlementApplier](../apps/backend/src/PlatformRuntime/PostgresEntitlementApplier.php) | Нет прямой SQL-строки; смотреть прикладные тесты сценариев |
 | `platform_runtime.installations` | [HealthAction](../apps/backend/src/Api/HealthAction.php), [DbCheckCommand](../apps/backend/src/Console/DbCheckCommand.php), [RuntimeReleaseVerifyCommand](../apps/backend/src/Console/RuntimeReleaseVerifyCommand.php) | [RuntimeBootstrapSyncCest](../apps/backend/tests/Functional/RuntimeBootstrapSyncCest.php), [RuntimeEntitlementsCest](../apps/backend/tests/Functional/RuntimeEntitlementsCest.php), [OperationalStatusTest](../apps/backend/tests/Unit/Core/OperationalStatusTest.php) |
 
 ## Границы владельцев
 
-- Identity: Person != Account; Control User и Commercial Account принадлежат другому приложению.
-- Auth credentials и service credentials не получают универсальный публичный CRUD.
-- Organization access требует membership scope вместе с permission.
-- Privacy tables обслуживаются оркестраторами, policy и contributor registries.
-- Runtime хранит только локальную identity, проверенные документы и worker status.
-- SQL FK не пересекает границы двух баз. Outbox и audit имеют разную семантику.
+- Идентичности: Person != Account; Control User и Commercial Account принадлежат другому приложению.
+- Пользовательские и сервисные учётные данные не получают универсального публичного редактора.
+- Доступ организаций требует членства в нужной области вместе с разрешением.
+- Таблицы персональных данных обслуживаются оркестраторами, политиками и реестрами поставщиков сведений.
+- Среда установки хранит только локальную идентичность, проверенные документы и состояния обработчиков.
+- Внешние ключи SQL не пересекают базы. Исходящая очередь и аудит имеют разный смысл.
 
 Точные поля и FK: [справочник](database/SCHEMA_REFERENCE.md). Процессы: [графики](processes/README.md).

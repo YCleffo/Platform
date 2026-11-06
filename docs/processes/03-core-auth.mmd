@@ -1,20 +1,20 @@
 flowchart TD
-  Start[Создание Person и отдельного human Account] --> Invite[Приглашение или активация credentials]
-  Invite --> Login[Вход по проверенному identifier]
-  External[Проверенная external identity или passkey] --> Policy
-  Login --> Rate{Rate limit, пароль и статус}
-  Rate -->|Отказ| Denied[Общая ошибка credentials и аудит]
-  Rate -->|Допуск| Policy{Нужен MFA или смена пароля?}
-  Policy -->|Да| Challenge[Одноразовый challenge]
-  Challenge --> MFA{TOTP, recovery code или required action}
+  Start[Создание Person и отдельного человеческого Account] --> Invite[Приглашение или активация учётных данных]
+  Invite --> Login[Вход по проверенному идентификатору]
+  External[Проверенная внешняя запись или ключ доступа] --> Policy
+  Login --> Rate{Ограничение частоты, пароль и статус}
+  Rate -->|Отказ| Denied[Общая ошибка учётных данных и аудит]
+  Rate -->|Допуск| Policy{Нужна MFA или смена пароля?}
+  Policy -->|Да| Challenge[Одноразовый проверочный запрос]
+  Challenge --> MFA{TOTP, резервный код или обязательное действие}
   MFA -->|Неуспех| Denied
   MFA -->|Успех| Session
-  Policy -->|Нет| Session[Access и refresh; в БД только хеши]
-  Session --> Access[Проверка срока, статуса и security stamp]
-  Access --> Permission[Отдельная проверка permissions и scope]
-  Session --> Refresh[Ротация refresh]
+  Policy -->|Нет| Session[Токены доступа и обновления; в БД только хеши]
+  Session --> Access[Срок, статус и контрольная метка безопасности]
+  Access --> Permission[Отдельная проверка разрешений и области доступа]
+  Session --> Refresh[Замена токена обновления]
   Refresh --> Replay{Повтор старого токена?}
   Replay -->|Да| Reject[Отказ по политике соответствующей сессии]
   Replay -->|Нет| Session
-  Session --> Logout[Logout, revoke или смена security stamp]
+  Session --> Logout[Выход, отзыв или смена метки безопасности]
   Logout --> Inactive[Сессия больше не допускает запросы]

@@ -59,3 +59,4 @@ Desktop.ini
 
 # Disposable browser verification output
 apps/frontend/screenshots/
+infra/observability/secrets/

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { QrcodeSvg } from 'qrcode.vue';
+import QrCode from '@/shared/ui/media/QrCode.vue';
 import { resolveErrorMessage } from '@/shared/errors/humanize';
 import { useMfaEnrollment } from './useMfaEnrollment';
 import { useSensitiveAction } from '@/shared/composables/useSensitiveAction';
@@ -102,12 +102,11 @@ function done(): void {
     >
       <p class="mfa-setup__intro">{{ $t('security.mfaSetupIntro') }}</p>
       <div class="mfa-setup__qr">
-        <QrcodeSvg
+        <QrCode
           :value="setup.otpauth_uri"
           :size="200"
-          level="M"
           :margin="2"
-          :aria-label="$t('security.qrLabel')"
+          :label="$t('security.qrLabel')"
         />
       </div>
       <div class="mfa-setup__manual">

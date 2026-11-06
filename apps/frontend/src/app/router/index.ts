@@ -6,6 +6,8 @@ import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import { educationRoutes } from '@/modules/education/routes';
 
 const CatalogView = () => import('@/modules/commercial/catalog/CatalogView.vue');
+const PlanComparisonView = () => import('@/modules/commercial/catalog/PlanComparisonView.vue');
+const PlanDetailView = () => import('@/modules/commercial/catalog/PlanDetailView.vue');
 const AccountCabinetView = () => import('@/modules/commercial/account/AccountCabinetView.vue');
 const AccountLayout = () => import('@/modules/commercial/account/AccountLayout.vue');
 const AccountOverviewView = () => import('@/modules/commercial/account/AccountOverviewView.vue');
@@ -40,7 +42,10 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
         component: AppLayout,
         children: [
           { path: 'operator', name: 'operator-console', component: () => import('@/modules/commercial/operator/OperatorConsole.vue') },
+          { path: 'operator/catalog', name: 'operator-catalog', component: () => import('@/modules/commercial/operator/OperatorCatalogView.vue') },
           { path: '', name: 'catalog', component: CatalogView },
+          { path: 'plans', name: 'plans', component: PlanComparisonView, meta: { primaryNavigation: 'catalog' } },
+          { path: 'plans/:code', name: 'plan-detail', component: PlanDetailView, meta: { primaryNavigation: 'catalog' } },
           { path: 'cabinet', name: 'cabinet', component: AccountCabinetView, meta: { requiresAuth: true } },
           {
             path: 'settings', component: SettingsLayout, meta: { primaryNavigation: 'settings' },

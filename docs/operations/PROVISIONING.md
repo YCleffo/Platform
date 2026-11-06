@@ -1,65 +1,67 @@
-# Local Docker deployment provisioning
+# Подготовка локальных установок Docker
 
-A dedicated `provisioner-worker` process. The Control Plane HTTP process owns deployment reservations, published releases, the durable `commercial.deployment_operations` queue, credentials, entitlements, and the authenticated ready transition. It has no Docker socket. The worker alone has that socket; **Docker socket access is a privileged infrastructure capability**.
+За инфраструктуру отвечает отдельный `provisioner-worker`. HTTP-процесс Control Plane владеет резервированием установок, опубликованными выпусками, постоянной очередью `commercial.deployment_operations`, учётными данными, правами и аутентифицированным переходом в готовность. Доступа к сокет Docker у него нет. Этот доступ имеет только фоновый процесс; **сокет Docker даёт привилегированные инфраструктурные возможности**.
 
-This provider is restricted to `APP_ENV=dev|test`, `PROVISIONER_PROVIDER=local-docker`, and `mode=dedicated`. Production, `shared`, and `on_prem` fail closed. It does not manage DNS, TLS, or cloud resources. Local dedicated deployments support the safe forward release-update workflow described below; automatic rollback and production/cloud updates remain unsupported.
+Провайдер ограничен `APP_ENV=dev|test`, `PROVISIONER_PROVIDER=local-docker`, `mode=dedicated`. Промышленная среда, `shared` и `on_prem` блокируются. DNS, TLS и облачные ресурсы не управляются. Локальные выделенные установки поддерживают безопасное обновление вперёд, описанное ниже; автоматический откат и промышленное/облачное обновление не поддерживаются.
 
 ## Состояние локального окружения
 
-Provisioner отключён и не входит в основной Compose. Он создаёт отдельные ресурсы выделенных установок, поэтому его запуск в текущем локальном окружении не используется. CI сохраняет build definitions в `compose.ci.yaml` для проверки образов и инфраструктурных контрактов.
+Процесс подготовки выключен и не входит в основной Compose. Он создаёт отдельные ресурсы выделенных установок; в текущем локальном окружении его запуск не используется. CI сохраняет определения сборки в `compose.ci.yaml` для проверки образов и инфраструктурных контрактов.
 
-Для отдельной установки этот провайдер требует опубликованный immutable release с точным image digest, настроенное подписание entitlements и проверенное резервирование. Эти зависимости являются условиями операции; их отсутствие не разрешает пропустить checkpoint или выдать ready.
+Для отдельной установки нужны опубликованный неизменяемый выпуск с точным хешем образа, подписание прав и проверенное резервирование. Отсутствие зависимости не позволяет пропустить контрольную резервную копию или сообщить готовность.
 
-## Resource and secret boundary
+Ниже описан контракт сохранённого провайдера. До применения вне CI нужна отдельная проверенная конфигурация обработчика, резервирования, сетей и подключения секретов. `compose.ci.yaml` содержит определения сборки и тестов, но не является промышленным развёртыванием. Дальнейшие шаги: [этап 5 масштабирования](../roadmap/SCALING_PLAN.md).
+
+## Граница ресурсов и секретов
 
 ```text
-Dedicated deployment
+Выделенная установка
 ├── PostgreSQL
 ├── Redis
-├── Runtime HTTP
-├── Scheduler
-└── Email worker
+├── HTTP-приложение
+├── Планировщик
+└── Почтовый обработчик
 ```
 
-For each deployment UUID, the worker owns one network and five deterministic containers: PostgreSQL, Redis, HTTP runtime, Core scheduler, and email worker. Each resource has deployment and role ownership labels. All three Core processes use the same release image digest, deployment DB, and deployment Redis. PostgreSQL joins the deployment and backup networks; Redis joins only the deployment network; Core processes join the deployment and control networks. Core processes have no Docker socket or backup network. A conflicting name fails closed. Each deployment has a separate database and random 256-bit password. The password and bootstrap M2M credential are stored in files under `runtime/provisioning-secrets/<deploymentId>/`, mounted read-only into the applicable containers. Only a `localdev://<deploymentId>/db` reference is stored in Control Plane. No raw password or credential enters the operation row, audit, or logs. The local file scheme is valid only in dev/test and requires a Linux host with POSIX group 33; unsupported hosts fail before writing secrets. CI exercises the real group and mode checks in the Linux Control Plane test image. Production requires an external secret-store scheme.
+Для каждого UUID установки обработчик владеет одной сетью и пятью контейнерами с определяемыми именами: PostgreSQL, Redis, HTTP-приложение, планировщик Core и почтовый обработчик. Каждый ресурс имеет метки установки и роли. Все три процесса Core используют один точный образ выпуска, БД и Redis установки. PostgreSQL подключается к сетям установки и резервирования; Redis — только к сети установки; Core — к сетям установки и управления. Core не получает сокет Docker или сеть резервирования. Конфликт имени блокирует действие.
 
-The worker passes one explicit configuration allowlist to all Core processes: installation and release identity, dedicated mode, database and Redis endpoints, Control Plane URL, deployment credential file reference, and trusted entitlement public keys. It does not mount the host `.env` or Control Plane database credentials. Scheduler privacy automation is disabled without deployment-specific policy. The migration container runs the existing Core SQL migration mechanism against **only the deployment database** before activation. The provider starts scheduler and email worker before HTTP runtime.
+У каждой установки отдельная БД и случайный пароль с 256 битами случайности. Пароль и начальные учётные данные M2M находятся в `runtime/provisioning-secrets/<deploymentId>/` и подключаются к нужным контейнерам только для чтения. В Control Plane сохраняется лишь ссылка `localdev://<deploymentId>/db`; исходные секреты не попадают в операцию, аудит или журнал. Локальная схема файлов разрешена только в разработке и тестах и требует Linux с группой POSIX 33. Неподдерживаемый узел даёт отказ до записи секретов. CI проверяет реальные группы и права в тестовом Linux-образе Control Plane. Промышленной установке нужно внешнее хранилище секретов.
 
-After the infrastructure is ready, the worker invokes `php /app/yii runtime:deployment:activate` inside the runtime. That command initializes the installation, pulls and verifies a signed entitlement, waits up to `RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS` for Redis and fresh scheduler/email heartbeats, and sends the authenticated ready report. Only Control Plane's status endpoint sets the deployment `active` and operation `succeeded`. The provider then checks `/health/ready`, both `ops:health` commands, and that all Core containers remain running. An active deployment therefore includes healthy required background processes.
+Всем процессам Core передаётся один явный разрешённый набор настроек: идентификаторы установки и выпуска, выделенный режим, адреса БД и Redis, URL Control Plane, ссылка на сервисный секрет и доверенные открытые ключи прав. Файл `.env` узла и учётные данные БД Control Plane не подключаются. Автоматические действия с персональными данными выключены без политики конкретной установки. Контейнер миграций применяет механизм SQL Core **только к БД своей установки** до активации. Планировщик и почтовый процесс стартуют раньше HTTP-приложения.
 
-For an existing active or suspended local dedicated deployment, run `php /app/bin/console control:deployments:infrastructure:reconcile --deployment-id=<uuid>` in the provisioner worker environment. This adds missing Redis/workers, restarts owned stopped resources, and replaces a verified legacy HTTP container whose immutable environment lacks dedicated Redis. It does not issue a credential, change a release, migrate the DB, or change deployment state. Repeating the command reuses the completed topology.
+После подготовки инфраструктуры вызывается `php /app/yii runtime:deployment:activate` внутри приложения. Команда инициализирует установку, получает и проверяет подписанные права, ждёт Redis и свежие сигналы планировщика/почты не дольше `RUNTIME_ACTIVATION_READY_TIMEOUT_SECONDS`, затем отправляет аутентифицированный отчёт готовности. Только маршрут состояния Control Plane назначает установке `active`, операции — `succeeded`. После этого провайдер проверяет `/health/ready`, обе команды `ops:health` и продолжение работы всех контейнеров Core. Активная установка включает здоровые обязательные фоновые процессы.
 
-The backup worker uses `platform_backup_net` to reach each dedicated PostgreSQL container after activation. Start the `backup` Compose profile before provisioning so that the network exists. The provider attaches a new DB to `PROVISIONER_BACKUP_NETWORK` and repairs a missing attachment on replay. Neither runtime nor Control Plane HTTP joins the backup network. A successful activation makes the deployment backup due immediately; provisioning does not wait for a dump. See [BACKUP_RESTORE.md](BACKUP_RESTORE.md) for commands, retention, and drill behavior.
+Для существующей активной или приостановленной локальной выделенной установки выполните `php /app/bin/console control:deployments:infrastructure:reconcile --deployment-id=<uuid>` в среде фонового процесса подготовки. Команда добавляет недостающие Redis и обработчики, запускает остановленные собственные ресурсы, заменяет проверенный прежний HTTP-контейнер без выделенного Redis в неизменяемом окружении. Она не выдаёт секрет, не меняет выпуск, не применяет миграции и не меняет статус установки. Повтор использует уже подготовленную топологию.
 
-`commercial.deployment_domains.status` is a reservation and workflow state. Even `active` is **not evidence that DNS resolves or TLS is available**. Infrastructure readiness must not infer DNS or TLS availability from this field; those checks belong to a later domain phase.
+Резервный обработчик использует `PROVISIONER_BACKUP_NETWORK` для доступа к PostgreSQL выделенных установок. Отдельно настроенные обработчик и сеть должны существовать до подготовки: основной Compose больше не содержит профиль `backup`. Новая БД подключается к сети; при повторе отсутствующее подключение восстанавливается. Приложение и HTTP Control Plane к этой сети не подключаются. После успешной активации сразу наступает срок резервирования; сама активация не ждёт дамп. Текущие границы и восстановление: [резервные копии](BACKUP_RESTORE.md).
 
-## Failure handling
+`commercial.deployment_domains.status` — состояние резервирования и процесса. Даже `active` **не доказывает доступность DNS или TLS**. Проверка инфраструктуры не выводит их готовность из этого поля; это следующий этап работы с доменом.
 
-The operation row stores the bounded attempt count, machine error code, step, and next retry time. Transient failures use bounded exponential backoff. A stale running attempt is recovered after ten minutes; any old bootstrap credential is revoked before retry. A permanent failure marks the deployment failed. Provisioning cleanup removes only owned resources before successful activation; it does not automatically remove an active deployment.
+## Обработка ошибок
 
-## Safe local decommission
+Операция хранит ограниченное число попыток, машинный код ошибки, шаг и время следующего повтора. Временные ошибки повторяются с ограниченной экспоненциальной задержкой. Зависшая попытка восстанавливается через десять минут; старые начальные учётные данные перед повтором отзываются. Постоянная ошибка переводит установку в неуспех. До успешной активации очистка удаляет только собственные ресурсы; активная установка автоматически не удаляется.
 
-For an active or suspended, unarchived dedicated deployment in dev/test, run:
+## Безопасное удаление локальной установки
 
-```powershell
-docker compose --profile control exec control-plane php bin/console control:deployments:decommission --deployment-id=<uuid> --confirm-installation-id=<installation-uuid> --idempotency-key=<unique-key>
-docker compose --profile control --profile provisioner exec provisioner-worker php /app/bin/console control:deployments:decommission-status --deployment-id=<uuid>
+Для активной или приостановленной неархивированной выделенной установки в разработке/тестах действуют команды ниже. Они выполняются внутри отдельно настроенных сред Control Plane и обработчика подготовки и сами эти среды не настраивают:
+
+```bash
+php bin/console control:deployments:decommission --deployment-id=<uuid> --confirm-installation-id=<installation-uuid> --idempotency-key=<unique-key>
+php /app/bin/console control:deployments:decommission-status --deployment-id=<uuid>
 ```
 
-The first command only queues a durable `deprovision` operation. In the same transaction it suspends the deployment, revokes every active service credential, and writes one audit event. The idempotency key returns the same operation on replay. The provisioner worker then stops HTTP runtime, scheduler, and email worker before final backup, leaves PostgreSQL running for that backup, and removes all six owned resources after verified evidence. It then cleans secrets, archives the deployment, and disables its domain rows. Missing final backup leaves the operation in `retry` at `final_backup`, with writers stopped and DB intact. Worker retries are safe after a crash at any step.
+Первая команда лишь создаёт постоянную операцию `deprovision`. Та же транзакция приостанавливает установку, отзывает все активные сервисные учётные данные и добавляет одно событие аудита. Тот же ключ идемпотентности возвращает прежнюю операцию.
 
-The backup worker must be running with `DEPLOYMENT_BACKUP_ENABLED=true` to service final backup requests automatically. The provisioner mounts `backups/` read-only and only reads published manifest evidence; it does not make dumps. `DECOMMISSION_BACKUP_CHECK_INTERVAL_SECONDS` controls how often a waiting operation retries. Production and other deployment modes fail closed.
+Затем фоновый процесс останавливает HTTP, планировщик и почту до последней резервной копии, оставляя PostgreSQL работающим для её создания. После проверки свидетельств удаляются все шесть собственных ресурсов. Далее очищаются секреты, установка архивируется, строки доменов отключаются. Без последней копии операция остаётся в `retry` на `final_backup`, процессы записи остановлены, БД сохранна. Повтор безопасен после сбоя на любом шаге.
 
-Decommission does not delete DNS/TLS records, perform DSAR erasure, or immediately remove backups. Domain `disabled` is a Control Plane workflow state, not DNS deletion.
-# Safe release updates
+Автоматическое выполнение последней копии требует работающего обработчика с `DEPLOYMENT_BACKUP_ENABLED=true`. Процесс подготовки подключает `backups/` только для чтения и проверяет опубликованный манифест; сам дампы не делает. Частоту проверки ожидающей операции задаёт `DECOMMISSION_BACKUP_CHECK_INTERVAL_SECONDS`. Промышленная среда и остальные режимы блокируются.
 
-For an active dedicated deployment, `current_release_id` is the proven runtime release and
-`desired_release_id` is the requested target. `control:deployments:update` creates a durable
-update operation. The provisioner quiesces application writers, requires a fresh verified
-backup, runs migrations from the pinned target image, and replaces only runtime, scheduler,
-and email-worker. It advances `current_release_id` only after runtime verification succeeds.
-Failed updates preserve deployment data and do not perform automatic rollback.
+Удаление установки не удаляет записи DNS/TLS, не выполняет уничтожение по запросу субъекта и не удаляет копии немедленно. Статус домена `disabled` означает состояние Control Plane, а не удаление DNS.
 
-## Проверка workers
+## Безопасное обновление выпуска
 
-CLI workers имеют отдельный healthcheck `ops:health`. HTTP readiness проверяет актуальность heartbeat и состояние обязательных задач. Ошибка HTTP probe не заменяет проверку CLI-процесса; после изменения конфигурации постоянные контейнеры пересоздаются.
+Для активной выделенной установки `current_release_id` — подтверждённый рабочий выпуск, `desired_release_id` — запрошенный. `control:deployments:update` создаёт постоянную операцию обновления. Провайдер останавливает процессы записи, требует свежую проверенную копию, запускает миграции из закреплённого целевого образа и заменяет только приложение, планировщик и почту. `current_release_id` меняется только после проверки новой среды. Неудачное обновление сохраняет данные и не откатывает БД автоматически.
+
+## Проверка фоновых процессов
+
+Консольные обработчики имеют отдельную проверку `ops:health`. HTTP-готовность учитывает свежесть сигналов и обязательные задачи. Ошибка HTTP-проверки не заменяет проверку консольного процесса; после изменения конфигурации постоянные контейнеры пересоздаются.

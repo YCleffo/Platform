@@ -1,13 +1,17 @@
-# Platform frontend
+# Пользовательский интерфейс Platform
 
-Vue 3 + TypeScript SPA для Core admin и Commercial Control Plane.
+SPA на Vue 3 и TypeScript для администрирования/самообслуживания Core, Commercial, независимой операторской консоли и необязательной рабочей области Education.
+
+Education реализован, но по умолчанию выключен. Страницам `/education/login`, `/today`, `/calendar`, `/people`, `/messages`, `/more` нужны `VITE_EDUCATION_ENABLED=1`, серверный `EDUCATION_ENABLED=1`, миграции, включение модуля и явное назначение преподавателя: [инструкция](../../docs/architecture/EDUCATION_BACKEND.md). `npm run test:e2e:education` требует защищённую одноразовую среду Core; промышленные данные не используются. Следующие этапы: [масштабирование](../../docs/roadmap/SCALING_PLAN.md).
+
+## Запуск и проверки
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Dev server: `http://localhost:5173`. `/api/control` идёт в Commercial на 8090, `/api` — в быстрый Core `backend-fast` на 8082. Настройки proxy: `.env.local` (ignored) или `.env.example`.
+Сервер разработки: `http://localhost:5173`. `/api/control` направляется в Commercial на 8090, `/api` — в быстрый Core `backend-fast` на 8082. Настройки прокси — исключённый из Git `.env.local` или пример `.env.example`.
 
 ```bash
 npm run check:icons
@@ -20,14 +24,9 @@ npm test
 npm run build
 ```
 
-Vue форматируется закреплённым Prettier из `package-lock.json`: `npm run format`.
-В многострочном теге каждый атрибут расположен на отдельной строке, закрывающая скобка
-тоже переносится. Настройки CLI и редактора общие: `.prettierrc.json`. VS Code использует
-расширение Prettier для Vue при сохранении; рекомендуется в `.vscode/extensions.json`.
+Vue форматируется закреплённым в `package-lock.json` Prettier: `npm run format`. В многострочном теге каждый атрибут и закрывающая скобка на отдельных строках. Общая конфигурация консоли/редактора — `.prettierrc.json`. VS Code использует расширение Prettier при сохранении; рекомендация — `.vscode/extensions.json`.
 
-Настройки интерфейса: `/settings`. Примеры dropdown и контекстного меню:
-`/settings/components`. Для проверки собранного приложения запустить `npm run preview`,
-задать `BASE_URL` на его адрес и выполнить:
+Оформление: `/settings`; примеры выпадающих/контекстных меню: `/settings/components`. Для собранного приложения запустите `npm run preview`, задайте `BASE_URL` его адресом:
 
 ```bash
 node scripts/verify-appearance.mjs
@@ -43,154 +42,62 @@ npm run verify:workflows
 npm run test:workbench-contracts
 ```
 
-Эти проверки не меняют данные сервера. UX-прогон сохраняет screenshots и проверяет повторные
-открытия без утечки глобальных обработчиков. Проверка axe-core запускается без исключений
-правил для WCAG A/AA; authenticated matrix в browser E2E включает Security Center, MFA setup,
-recovery codes и MFA challenge. Account/invitation/recovery E2E запускаются только
-через одноразовый CI runtime с isolation nonce; рабочие БД использовать нельзя.
-Сценарии восстановления: `/forgot-password`, `/reset-password?token=…` и
-`/resend-verification`; неизвестные URL показывают локализованную 404-страницу.
+Эти проверки не меняют серверные данные. Проверка удобства сохраняет снимки и контролирует повторное открытие без утечек глобальных обработчиков. axe-core не исключает правила WCAG A/AA. Авторизованная матрица сквозных тестов включает центр безопасности, настройку MFA, коды и проверку MFA. Аккаунты, приглашения и восстановление проверяются только в одноразовой среде CI с доказательством изоляции; рабочие БД запрещены. Восстановление: `/forgot-password`, `/reset-password?token=…`, `/resend-verification`; неизвестный URL даёт локализованную 404.
 
-Нагрузка: `npm run test:load` с `LOAD_PROFILE=smoke|standard|stress` и теми же обязательными
-E2E isolation markers/nonce. Перед запуском на **одноразовой** Commercial БД применить
-`scripts/ci/seed-load-catalog.sql` (через psql из корня репозитория). Скрипт отказывается
-работать с другим именем БД. Smoke — 1/5 одновременных запросов по 5 s;
-standard — 1/5/20/50 по 15 s; stress добавляет 100. Четыре GET endpoint проверяются
-с валидным токеном и непустыми fixtures; error rate ≤1%, p95 ≤1000 ms для каждого этапа
-и endpoint. JSON сохраняется в screenshots. Это локальный closed workload, не production SLO.
+## Нагрузка и ресурсы
 
-Шрифты и SVG-иконки локальные, без Google Fonts или icon CDN.
-Иконки: `src/shared/ui/icons/svg/`, затем `npm run generate:icons`.
+`npm run test:load` принимает `LOAD_PROFILE=smoke|standard|stress` и обязательные признаки изоляции/случайное доказательство. До запуска примените `scripts/ci/seed-load-catalog.sql` через psql из корня **только к одноразовой** БД Commercial; другое имя БД запрещено.
 
-Core auth: `/admin/login`, `/activate`, `/password-reset`, `/mfa-recovery`,
-`/admin/forgot-password`, `/admin/mfa-recovery`. Core и Commercial используют отдельные API
-и сессии. `node scripts/verify-core-auth.mjs` проверяет UI через HTTP fixtures.
-`npm run test:e2e:core-auth` проверяет реальные Core API/SMTP на одноразовом стенде;
-требует explicit `APP_URL`, `CORE_API_URL`, `MAILPIT_URL`, `CORE_TEST_CONTAINER` и E2E isolation
-markers/nonce/password. Guard проверяет nonce и через Core, и через frontend proxy.
-Готовая конфигурация стенда и запуска — job `core-auth-browser` в `ci.yml`.
+Короткий профиль — 1/5 параллельных запросов по 5 секунд; обычный — 1/5/20/50 по 15 секунд; стрессовый добавляет 100. Четыре GET проверяются действующим токеном и непустыми данными. На каждом этапе/маршруте доля ошибок ≤1%, p95 ≤1000 мс. JSON — в `screenshots`. Это локальная замкнутая нагрузка, не промышленное SLO.
 
-`npm run test:e2e:billing` проверяет реальный zero-price lifecycle через Commercial HTTP,
-PostgreSQL, SMTP и MFA: сохранение profile, создание invoice/payment, activation, reload,
-отмена auto-renew и немедленная отмена с проверкой entitlements. Нужны Commercial E2E
-markers/nonce, `APP_URL`, `CONTROL_API_URL`, `MAILPIT_URL`, `E2E_PASSWORD` и Compose test project.
-Скрипт проверяет имя/labels тестовой БД перед seed. Он включён в browser CI после сброса
-одноразовых fixtures. Это не проверка платного YooKassa checkout или provider sandbox.
+Шрифты и SVG локальные, без Google Fonts и CDN значков. Исходники: `src/shared/ui/icons/svg/`; генерация: `npm run generate:icons`.
 
-Core Security: `/admin/security/mfa` и `/admin/security/sessions`. `npm run verify:core-security`
-проверяет новые страницы и dialogs через HTTP fixtures на dev/preview с `BASE_URL`.
-Сценарии включают узкий экран, RU/EN, light/dark, 140% text, QR/manual key, ошибку кода,
-одноразовый показ recovery codes, отзыв сессий и явный повторный вход при recent-auth expiry.
-Это UI regression, а не доказательство реального MFA mutation lifecycle.
+## Вход и безопасность Core
 
-`npm run test:e2e:core-security` запускается на том же доказанном nonce Core test runtime,
-что и `test:e2e:core-auth`. Проверяет настоящий UI revoke/revoke-others, enrollment с TOTP,
-replay отказ, regeneration, новый MFA login, disable и истечение recent authentication.
-Пароли/секреты берутся из guarded fixture только в памяти; рабочие БД запрещены.
-CI использует HTTPS с одноразовым сертификатом; исключение trust ограничено test request context.
+Вход Core: `/admin/login`, `/activate`, `/password-reset`, `/mfa-recovery`, `/admin/forgot-password`, `/admin/mfa-recovery`. API и сессии Core/Commercial раздельны. `node scripts/verify-core-auth.mjs` использует HTTP-подстановки. `npm run test:e2e:core-auth` проверяет реальные API/SMTP одноразового стенда с явными `APP_URL`, `CORE_API_URL`, `MAILPIT_URL`, `CORE_TEST_CONTAINER`, признаками изоляции, случайным доказательством и паролем. Доказательство проверяется через Core и прокси интерфейса. Настройка — задача `core-auth-browser` в `ci.yml`.
 
-Моя учётная запись Core: `/admin/profile` и `/admin/profile/consents`, доступны вошедшему
-пользователю без административных прав. Язык/часовой пояс, шесть настроек schema v2,
-сохранение изменённых полей, отмена и подтверждённый сброс работают через Core API.
-Настройки интерфейса аккаунта применяются внутри Core; браузерные настройки `/settings`
-сохраняются отдельно. Согласия поддерживают просмотр текста, подтверждение, отзыв и
-повторное ознакомление при изменении версии. Редактируемые RU/EN примеры текстов:
-`src/modules/admin/profile/consentTemplates.ts`.
+`/admin/security/mfa`, `/admin/security/sessions`: `npm run verify:core-security` проверяет страницы/диалоги с подстановками в разработке/предпросмотре по `BASE_URL`. Сценарии: узкий экран, русский/английский, светлая/тёмная темы, текст 140%, QR/ручной ключ, неверный код, одноразовые резервные коды, отзыв сессий, явный вход при истечении недавнего подтверждения. Это регрессия интерфейса, не полный реальный жизненный цикл MFA.
 
-`npm run verify:core-profile` проверяет интерфейс с HTTP fixtures, включая пустой реестр
-с шаблонами. `npm run test:e2e:core-profile` использует тот же guarded disposable Core
-runtime, что и auth/security E2E: настоящий HTTP/PG/Redis, запись и сброс настроек,
-согласие/отзыв, параллельные частичные PATCH и повторный вход. Скрипт запускается в CI;
-рабочие БД использовать нельзя.
+`npm run test:e2e:core-security` использует ту же доказанную одноразовую среду, что вход. Проверяет настоящий отзыв одной/прочих сессий, подключение TOTP, запрет повтора, обновление кодов, новый вход MFA, отключение и истечение недавнего подтверждения. Пароли/секреты защищённых данных держатся в памяти; рабочие БД запрещены. HTTPS CI имеет одноразовый сертификат, исключение доверия ограничено тестовым контекстом запроса.
 
-Ключи доступа и внешние аккаунты Core: `/admin/security/passkeys` и
-`/admin/security/identities`; вход по passkey доступен на `/admin/login`. Нужны WebAuthn
-и secure context; локальный адрес по умолчанию — **http://localhost:5173**. `127.0.0.1`
-является другим RP/origin и не заменяет `localhost`. Compose передаёт
-`AUTH_WEBAUTHN_RP_ID`, `AUTH_WEBAUTHN_ORIGINS`, `AUTH_WEBAUTHN_RP_NAME` и TTL в Core.
-Произвольные origins не разрешаются. Контракт: `contracts/openapi/auth-passkeys.yaml`.
+## Профиль и согласия Core
 
-Google/Telegram подключаются в отдельном окне. Исходная Core session остаётся в памяти;
-popup не получает токены и opener. Callback передаёт одноразовый код через same-origin
-BroadcastChannel, сервер проверяет account/session/state/PKCE. Popup blocker и отмена
-показывают локализованную ошибку. Email/имя выводятся текстом, внешние avatar URL не загружаются.
-Provider redirect URI остаётся `/auth/callback/google` или `/auth/callback/telegram`.
+`/admin/profile`, `/admin/profile/consents` доступны вошедшему без административных прав. Язык/пояс, шесть настроек схемы 2, сохранение изменённого, отмена и подтверждённый сброс используют API. Настройки аккаунта действуют в Core; браузерные `/settings` сохраняются отдельно. Согласия позволяют прочитать, подтвердить, отозвать, повторно ознакомиться при смене версии. Редактируемые русские/английские тексты: `src/modules/admin/profile/consentTemplates.ts`.
 
-`npm run verify:core-credentials` проверяет HTTP fixtures и native WebAuthn через виртуальный
-аутентификатор Chromium. `npm run test:e2e:core-credentials` выполняет настоящий Core/PG/Redis
-цикл с криптографической проверкой, последним способом входа, recent authentication и новым
-входом после смены методов. OIDC transport в этом тесте явно синтетический, как в Core auth E2E;
-это не проверка живых Google/Telegram или физического ключа. Guard и cleanup обязательны.
+`npm run verify:core-profile` проверяет подстановки, включая пустой реестр с шаблонами. `npm run test:e2e:core-profile` использует защищённую одноразовую среду Core/PostgreSQL/Redis: запись/сброс, выдачу/отзыв согласия, параллельные частичные PATCH и новый вход. Запускается CI; рабочие БД запрещены.
 
-Core запросы персональных данных: `/admin/profile/privacy` и `/admin/profile/privacy/:id`.
-Обычный вошедший Core account создаёт запрос о себе либо выбирает действующее полномочие
-из списка; scopes проверяются сервером при каждом действии. Статусы/сроки берутся из API.
-Ответ открывается в общей fullscreen modal; скачивается точный JSON сервера, без повторной
-сериализации. Выдача одноразовая: после сетевой ошибки GET автоматически не повторяется.
-Документ хранится только в памяти открытой страницы и очищается при уходе/logout.
+## Ключи доступа и внешние аккаунты
 
-`npm run verify:core-privacy` проверяет HTTP fixtures, responsive/axe и отказы/таймауты.
-`npm run test:e2e:core-privacy` проверяет настоящий Core/PG/Redis: self/representative
-submission/delivery, isolation/revocation, PG SHA256/size и 100 authenticated reads @20.
-Требуются те же Core mutation guards/nonce и `CORE_TEST_CONTAINER`. Processing-information
-E2E требует `CORE_PRIVACY_BROWSER_FIXTURE=1` только на одноразовом стенде: operator name,
-address и два purpose disclosure definitions там явно синтетические. Production legal
-configuration этим не создаётся. Контракт — [core-privacy.yaml](../../contracts/openapi/core-privacy.yaml).
+Страницы: `/admin/security/passkeys`, `/admin/security/identities`; вход ключом — `/admin/login`. Нужны WebAuthn и защищённый контекст. По умолчанию **http://localhost:5173**; `127.0.0.1` — другая доверяющая сторона/источник и не заменяет localhost. Compose передаёт `AUTH_WEBAUTHN_RP_ID`, `AUTH_WEBAUTHN_ORIGINS`, `AUTH_WEBAUTHN_RP_NAME`, TTL. Произвольные источники запрещены. Контракт: `contracts/openapi/auth-passkeys.yaml`.
 
-Операторские запросы: `/admin/privacy` и `/admin/privacy/requests/:id`.
-Фильтры и пагинация выполняются сервером. Регистрация офлайн-запроса, этапы рассмотрения,
-подтверждение доказательств, исправление полей, продление срока и ограничения имеют отдельные
-формы. Контакты выбираются только у человека из запроса; цели — из серверного реестра.
-Выдача оператором разрешена только для verified offline intake. Ответ на онлайн-запрос
-получает сам субъект либо его представитель. Ручного перехода в completed нет.
+Google/Telegram привязываются в отдельном окне. Исходная сессия в памяти; окно не получает токены или `opener`. Обратный вызов передаёт одноразовый код через BroadcastChannel того же источника; сервер проверяет аккаунт, сессию, `state` и PKCE. Блокировка окна и отмена дают локализованную ошибку. Почта/имя выводятся текстом; внешние аватары не загружаются. URI возврата: `/auth/callback/google`, `/auth/callback/telegram`.
 
-`npm run verify:core-privacy-operator` — HTTP fixtures, RU/EN, responsive/axe, права и ошибки.
-`npm run test:e2e:core-privacy-operator` — реальный guarded Core/PG/Redis: intake/corrections,
-deadlines/blocks/termination, raw responses и Redis presence. Требования к nonce/стенду те же.
-Online heartbeat отправляется только после сохранения opt-in, из видимой вкладки с сетью;
-отключение настройки/logout прекращает отправку. Client ID живёт в памяти страницы;
-только одноразовый OAuth marker временно переносит его через redirect в sessionStorage.
-После проверки state marker удаляется. Токены и PKCE verifier в storage не записываются.
-TLS dev/preview согласует HTTP/1.1 для совместимости с локальным API proxy; сертификаты
-остаются обязательными. Рабочий HTTP dev server по-прежнему использует порт 5173.
+`npm run verify:core-credentials` проверяет HTTP-подстановки и WebAuthn виртуального аутентификатора Chromium. `npm run test:e2e:core-credentials` — реальный Core/PostgreSQL/Redis с криптографией, последним методом входа, недавним подтверждением и новым входом после изменения методов. OIDC-транспорт синтетический, как в проверке входа: живые Google/Telegram и физический ключ не проверены. Защита изоляции и очистка обязательны.
 
-`npm run verify:core-configuration` — формы modules/settings/flags, public preview,
-HTTP fixtures, responsive/axe, права и ошибки.
-`npm run test:e2e:core-configuration` — guarded настоящий Core/PG/Redis, MFA operator,
-publication, module lifecycle, typed setting/flag CRUD и read burst. Рабочие БД запрещены.
+## Персональные данные Core
 
-[Архитектура, API, ассеты и browser E2E](../../docs/frontend/README.md).
+`/admin/profile/privacy`, `/admin/profile/privacy/:id`: обычный пользователь создаёт запрос о себе или по действующему представительству. Полномочия проверяются на каждом действии. Статусы/сроки приходят из API. Ответ в общем полноэкранном диалоге; скачивается точный JSON без пересериализации. Выдача одноразовая, сетевой сбой не вызывает автоматический повтор GET. Документ в памяти страницы и удаляется при уходе/выходе.
 
-Мобильные карточки используют отдельные размеры из design tokens; размер полей ввода
-сохраняет защиту от автоматического zoom на iOS. `AppDisclosure` заменяет нативные
-раскрывающиеся блоки, `AppBreadcrumbs` сокращает путь и открывает скрытые уровни через меню.
-Все модалки используют `AppDialog`: общие header, toolbar, прокручиваемый body и footer.
-Для полноэкранного JSON результата используется `AppJsonResponseDialog`.
+`npm run verify:core-privacy` проверяет подстановки, адаптивность/axe, отказы/тайм-ауты. `npm run test:e2e:core-privacy` — настоящий Core/PostgreSQL/Redis: собственная/представительская подача и выдача, изоляция/отзыв, SHA256/размер БД, 100 авторизованных чтений при конкурентности 20. Нужны защиты изменений, доказательство изоляции и `CORE_TEST_CONTAINER`. Информация об обработке требует `CORE_PRIVACY_BROWSER_FIXTURE=1` только на одноразовом стенде: имя/адрес оператора и два определения раскрытия целей синтетические. Промышленная юридическая конфигурация не создаётся. [Контракт](../../contracts/openapi/core-privacy.yaml).
 
-`AppInput` с типами `date`, `time`, `datetime-local` подключает локальный календарь/время
-`AppTemporalPicker`. Он поддерживает RU/EN, ручной ввод, клавиатуру, min/max/step,
-disabled/readonly и вложение в модалку. Значение модели остаётся ISO wall time;
-компонент не переводит его в UTC. У существующих форм сохраняется их преобразование
-часового пояса на границе API. Примеры доступны в `/settings/components`.
+Операторские `/admin/privacy`, `/admin/privacy/requests/:id` фильтруются/листаются сервером. Офлайн-приём, этапы, доказательства, исправления, продление и ограничения имеют отдельные формы. Контакты только субъекта; цели из серверного реестра. Выдача оператором только проверенному офлайн-поступлению; онлайн получает субъект/представитель. Ручного завершения нет.
 
-`npm run verify:mobile-components` проверяет эти компоненты на 320/393/1440 px,
-доступность, вложенные Escape/focus и невозможное время при переходе DST.
-`npm run test:e2e:paid-billing` и `npm run test:e2e:operators` требуют одноразового
-стенда и существующих mutation guards/nonce. Только browser CI подключает
-явный `COMPOSE_PROJECT_NAME`, отличный от рабочего `platform`, и
-`compose.browser.yaml`: настоящие HTTP/PG/SMTP/MFA и gateways, явно синтетический
-внешний платёжный transport. Это не проверка живого OAuth или YooKassa sandbox.
-Production image не содержит классов этого transport и CLI fixtures.
+`npm run verify:core-privacy-operator` — подстановки, языки, адаптивность/axe, права/ошибки. `npm run test:e2e:core-privacy-operator` — защищённый реальный Core/PostgreSQL/Redis: приём/исправление, сроки/блоки/прекращение, исходные ответы и присутствие Redis. Изоляция та же. Сигнал присутствия отправляется после сохранённого включения, из видимой вкладки с сетью; отключение/выход останавливает. ID клиента в памяти; только одноразовый OAuth-маркер переносит его через перенаправление в `sessionStorage`, затем удаляется после проверки состояния. Токены/проверочный секрет PKCE не сохраняются. TLS Vite согласует HTTP/1.1 для прокси без ослабления сертификатов; обычный сервер разработки — 5173.
 
-`npm run test:e2e:periodic-billing` проверяет границу платного downgrade, автоматическое
-продление после отказа, backoff, grace и поздний settlement после истечения доступа.
-Нужен отдельный стенд с `compose.billing-clock.yaml` и `BILLING_TEST_CLOCK_DIRECTORY`:
-тестовые PHP/PostgreSQL используют один readonly clock-файл через libfaketime.
-Время машины и рабочие сервисы не меняются; даты финансовой истории не переписываются.
-CLI worker/fixtures запускаются через `/opt/platform-test/entrypoint`, как HTTP runtime.
-В CI стенд поднимает `scripts/ci/billing-clock-start.sh`, задача `Billing · renewal and recovery`.
-Provider wire синтетический; внешние OAuth/YooKassa credentials для этой проверки не нужны.
+## Конфигурация и общие компоненты
 
-`npm run test:security-dependencies` воспроизводит границы glob/minimatch в ограниченном
-дочернем процессе, проверяет прекращение traversal после abort и обычные пути потребителей.
-Проверяется отдельно от Vitest; CI запускает её после dependency audit.
+`npm run verify:core-configuration` проверяет формы модулей/настроек/флагов, публичный предпросмотр, подстановки, адаптивность/axe, права/ошибки. `npm run test:e2e:core-configuration` — защищённые реальные Core/PostgreSQL/Redis, операторская MFA, публикация, жизненный цикл модуля, типизированные операции и серия чтений. Рабочие БД запрещены. [Архитектура, API, ресурсы и сквозные проверки](../../docs/frontend/README.md).
+
+Мобильные карточки имеют собственные токены размеров; поля защищают от автоматического увеличения iOS. `AppDisclosure` заменяет стандартные раскрываемые блоки; `AppBreadcrumbs` сокращает путь и раскрывает скрытые уровни меню. `AppDialog` объединяет заголовок, панель действий, прокручиваемое содержимое и нижний блок; JSON показывает `AppJsonResponseDialog`.
+
+`AppInput` типов `date`, `time`, `datetime-local` подключает `AppTemporalPicker`: русский/английский, ручной ввод, клавиатура, минимумы/максимумы/шаги, недоступность/чтение и вложенность. Модель — местное календарное время ISO, без перевода в UTC; существующие формы переводят пояс на границе API. Примеры — `/settings/components`. `npm run verify:mobile-components` проверяет 320/393/1440, доступность, вложенные Escape/фокус и невозможное время DST.
+
+## Расчёты и операторы
+
+`npm run test:e2e:billing` проходит настоящий бесплатный жизненный цикл Commercial HTTP/PostgreSQL/SMTP/MFA: профиль, счёт/платёж, активацию, перезагрузку, отмену автопродления и немедленную отмену с правами. Требуются признаки изоляции, `APP_URL`, `CONTROL_API_URL`, `MAILPIT_URL`, `E2E_PASSWORD` и отдельный проект Compose. До заполнения проверяются имя/метки БД. CI запускает после сброса одноразовых данных. Платная YooKassa и её испытательная среда этим не проверяются.
+
+`npm run test:e2e:paid-billing`, `npm run test:e2e:operators` требуют одноразовую среду и действующие защиты изменений/доказательство. Только браузерный CI использует явный `COMPOSE_PROJECT_NAME`, отличный от рабочего `platform`, и `compose.browser.yaml`: реальные HTTP/PostgreSQL/SMTP/MFA/шлюзы с синтетическим внешним платёжным транспортом. Это не живой OAuth или испытательная YooKassa. Промышленный образ не имеет этих транспортных классов и консольных тестовых данных.
+
+`npm run test:e2e:periodic-billing` проверяет платное понижение, продление после отказа, растущую задержку, льготный срок и позднюю оплату после окончания доступа. Нужен `compose.billing-clock.yaml`, `BILLING_TEST_CLOCK_DIRECTORY`: PHP/PostgreSQL читают общий файл времени через libfaketime только для чтения. Время машины/рабочие сервисы и финансовые даты не меняются. Консольные обработчики/данные идут через `/opt/platform-test/entrypoint`, как HTTP. Стенд запускает `scripts/ci/billing-clock-start.sh`, задача `Billing · renewal and recovery` — «Расчёты: продление и восстановление». Внешний транспорт синтетический; реальные OAuth/YooKassa-секреты не нужны.
+
+`npm run test:security-dependencies` воспроизводит границы glob/minimatch в ограниченном дочернем процессе, проверяет остановку обхода после отмены и обычные пути потребителей. Проверка отдельно от Vitest, в CI после аудита зависимостей.

@@ -6,6 +6,7 @@ export interface OperatorIdentity {
   user: { id: string; email: string };
   privacy: boolean;
   finance: boolean;
+  catalog: boolean;
 }
 // An independent memory-only session. Never import customer/Core stores or their tokens here.
 const tokens = ref<SessionTokens | null>(null);
@@ -94,18 +95,43 @@ export const operatorHttp = new Proxy(rawOperatorHttp, {
       } catch (error) {
         if (epoch !== operatorEpoch.value) throw new SupersededOperationError();
         if (key !== 'get' || args[0] !== '/operator/me') {
-          if (error instanceof ApiError && [403, 404].includes(error.status)
-            && !['recent_authentication_required', 'recent_mfa_required', 'mfa_enrollment_required'].includes(error.code)) {
+          if (
+            error instanceof ApiError &&
+            [403, 404].includes(error.status) &&
+            ![
+              'recent_authentication_required',
+              'recent_mfa_required',
+              'mfa_enrollment_required',
+            ].includes(error.code)
+          ) {
             try {
-              const current = await rawOperatorHttp.get<OperatorIdentity>('/operator/me', { retryTransient: false });
+              const current = await rawOperatorHttp.get<OperatorIdentity>('/operator/me', {
+                retryTransient: false,
+              });
               const previous = operatorIdentity.value;
-              if (epoch === operatorEpoch.value && previous && current.user?.id === previous.user.id
-                && typeof current.privacy === 'boolean' && typeof current.finance === 'boolean') {
-                if (!current.privacy && !current.finance) clearOperator();
-                else if (current.privacy !== previous.privacy || current.finance !== previous.finance) operatorIdentity.value = current;
+              if (
+                epoch === operatorEpoch.value &&
+                previous &&
+                current.user?.id === previous.user.id &&
+                typeof current.privacy === 'boolean' &&
+                typeof current.finance === 'boolean' &&
+                typeof current.catalog === 'boolean'
+              ) {
+                if (!current.privacy && !current.finance && !current.catalog) clearOperator();
+                else if (
+                  current.privacy !== previous.privacy ||
+                  current.finance !== previous.finance ||
+                  current.catalog !== previous.catalog
+                )
+                  operatorIdentity.value = current;
               }
             } catch (denial) {
-              if (epoch === operatorEpoch.value && denial instanceof ApiError && [401, 403].includes(denial.status)) clearOperator();
+              if (
+                epoch === operatorEpoch.value &&
+                denial instanceof ApiError &&
+                [401, 403].includes(denial.status)
+              )
+                clearOperator();
             }
           }
         }
@@ -138,7 +164,8 @@ async function establish(value: unknown, epoch: number): Promise<void> {
       typeof identity.user.email !== 'string' ||
       typeof identity.privacy !== 'boolean' ||
       typeof identity.finance !== 'boolean' ||
-      (!identity.privacy && !identity.finance)
+      typeof identity.catalog !== 'boolean' ||
+      (!identity.privacy && !identity.finance && !identity.catalog)
     )
       throw new ApiResponseError('/operator/me');
     operatorIdentity.value = identity;

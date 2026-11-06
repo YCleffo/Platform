@@ -1,11 +1,14 @@
-Solar Linear icons by 480 Design
+Значки Solar Linear, автор 480 Design
 https://github.com/480-Design/Solar-Icon-Set
 https://www.figma.com/community/file/1166831539721848736
 Creative Commons Attribution 4.0 International (CC BY 4.0)
 https://creativecommons.org/licenses/by/4.0/
-Modified: selected subset, file names, currentColor, SVG symbol packaging.
-The loading arc is application-authored.
+Изменения: выбрана часть коллекции, изменены имена и currentColor, SVG объединены в символы.
+Дуга загрузки создана для приложения.
 
-Inter and Space Mono fonts: SIL Open Font License 1.1.
-Full font notices are distributed in licenses/Inter-OFL.txt and
-licenses/SpaceMono-OFL.txt alongside this file.
+Шрифты Inter и Space Mono: лицензия SIL Open Font License 1.1.
+Полные оригинальные уведомления поставляются рядом в licenses/Inter-OFL.txt и licenses/SpaceMono-OFL.txt.
+
+QR Code generator library, Copyright (c) Project Nayuki.
+MIT License. https://www.nayuki.io/page/qr-code-generator-library
+Локальная копия используется в src/shared/qr/qrcodegen.ts.

@@ -1,78 +1,55 @@
-# M2M service authentication foundation
+# Сервисная аутентификация M2M
 
-Human and machine principals are separate. A human `Account` uses the existing session flow and needs an active `Person`; `service` and `system` Accounts cannot use that flow. Core machine authentication returns `ServiceIdentity`, never `AuthenticatedIdentity`. Control Plane machine authentication returns `DeploymentIdentity`, never a Control User session. A Core Account and a Control User are different security principals.
+Человеческие и машинные субъекты безопасности разделены. Человеческий `Account` использует существующие сессии и требует активного `Person`; аккаунты `service` и `system` не могут использовать этот вход. Машинная аутентификация Core возвращает `ServiceIdentity`, а не `AuthenticatedIdentity`. Машинная аутентификация Control Plane возвращает `DeploymentIdentity`, а не сессию Control User. Core Account и Control User — разные субъекты безопасности.
 
-## Credentials and transport
+## Учётные данные и транспорт
 
-Core credentials belong only to service or system Accounts. Control Plane credentials belong to a deployment. Their databases, secrets, scopes and lifecycle are independent; there is no cross database foreign key or automatic secret synchronization. A 32 byte cryptographically random secret is returned only by create and rotate. Both databases store only its SHA-256 hash. The public UUID `credentialId` and secret form `Authorization: Service <credentialId>.<secret>`. Authentication checks the hash in constant time, credential status and expiry, and the current owner state. Invalid attempts use the existing rate limit facilities. `last_used_at` is updated at most once a minute on a best effort basis.
+Учётные данные Core принадлежат только сервисным или системным аккаунтам; учётные данные Control Plane — установке. Базы, секреты, области полномочий и жизненные циклы независимы; межбазовых внешних ключей и автоматической синхронизации секретов нет. Случайный криптографический секрет длиной 32 байта возвращается только при создании и замене. Обе БД хранят лишь его SHA-256-хеш. Публичный UUID `credentialId` и секрет образуют `Authorization: Service <credentialId>.<secret>`.
 
-Rotation atomically marks the old credential unusable and inserts a new credential with the same scopes. Control Plane runtime rotation gets a fresh expiry from `CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS`; an expired or revoked credential cannot authenticate. Revocation is idempotent. There is no implicit privilege for a `system` Account. Machine endpoints authenticate through these dedicated services and call the scope policy explicitly.
+Проверяются хеш сравнением с постоянным временем, статус и срок учётных данных, текущее состояние владельца. Неверные попытки ограничиваются существующими механизмами частоты. `last_used_at` обновляется по возможности не чаще раза в минуту.
 
-## Scopes and management
+Замена атомарно делает прежние данные непригодными и создаёт новые с теми же полномочиями. Для Control Plane новый срок берётся из `CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS`; просроченные или отозванные данные не действуют. Отзыв идемпотентен. Тип `system` не даёт неявных привилегий. Машинные маршруты используют отдельные сервисы аутентификации и явно проверяют области полномочий.
 
-Core foundation scopes: `runtime.entitlements.read`, `runtime.entitlements.apply`, `usage.report`, `deployment.status.write`. Control Plane foundation scopes: `entitlements.read`, `usage.write`, `deployment.status.write`. Both registries reject unknown scopes and accept explicitly registered future codes. Scope policies authorize against the credential's own scope list.
+## Полномочия и управление
 
-Core's human admin API lists metadata with `core.service_credentials.read`, and creates, rotates or revokes with `core.service_credentials.manage`. The list contains only ID, credential ID, owner ID, scopes, status and lifecycle timestamps. Create and rotate return the raw secret once. No permissions are automatically granted to existing roles. Lifecycle audit events are `service_credential.created`, `.rotated`, `.revoked`; the resource ID is the credential ID and metadata contains only the Account ID and scope codes. Secrets and hashes are excluded. Successful M2M requests do not create individual audit events.
+Базовые области Core: `runtime.entitlements.read`, `runtime.entitlements.apply`, `usage.report`, `deployment.status.write`. Области Control Plane: `entitlements.read`, `usage.write`, `deployment.status.write`. Реестры отклоняют неизвестные коды и допускают будущие только после явной регистрации. Авторизация использует список полномочий самих учётных данных.
 
-## Retention
+Административный API Core показывает метаданные по `core.service_credentials.read`; создание, замена и отзыв требуют `core.service_credentials.manage`. Список содержит только ID, идентификатор учётных данных и владельца, полномочия, статус и временные метки жизненного цикла. Создание и замена показывают исходный секрет один раз. Существующие роли не получают разрешения автоматически.
 
-Core `auth/cleanup` deletes bounded batches of revoked, rotated or expired credential metadata after `AUTH_SERVICE_CREDENTIAL_RETENTION_DAYS` (90 days by default). Control Plane privacy cleanup has a `service_credential` category configured through `CONTROL_PRIVACY_RETENTION_DAYS`. Existing audit retention handles lifecycle events. Machine credentials are excluded from human Person DSAR export. No durable raw secret exists.
+События аудита: `service_credential.created`, `.rotated`, `.revoked`; ID ресурса — идентификатор учётных данных, метаданные содержат только Account ID и коды полномочий. Секреты и хеши исключены. Каждый успешный запрос M2M не создаёт отдельную запись аудита.
 
-## Usage ingestion
+## Хранение и очистка
 
-`POST /api/m2m/usage` accepts a Control Plane deployment credential with `usage.write` only while the deployment is active and not archived. Send `Authorization: Service <credentialId>.<secret>`, `Idempotency-Key`, and JSON `{"featureCode":"some.feature","delta":1}`. The body has exactly those two fields. The deployment and commercial account are resolved server side from the credential. The response contains only `featureCode`, `mode`, `used`, `limit`, `remaining`, and `exhausted`. The existing `ApplyUsageDelta` enforces subscription, quota and metering rules; its idempotency namespace includes the deployment source. Successful usage writes create no per-request audit or outbox event.
+Core `auth/cleanup` удаляет ограниченными порциями метаданные отозванных, заменённых и истёкших учётных данных после `AUTH_SERVICE_CREDENTIAL_RETENTION_DAYS`, по умолчанию 90 дней. В Control Plane категория `service_credential` настраивается через `CONTROL_PRIVACY_RETENTION_DAYS`. События жизненного цикла следуют правилам хранения аудита. Машинные учётные данные не входят в выгрузку персональных данных человека. Исходный секрет постоянно не хранится.
 
-## Signed entitlement transport
+## Приём данных использования
 
-Control Plane `GET /api/m2m/entitlements/latest` requires a deployment credential
-with `entitlements.read`; its response has exactly `documentBase64`,
-`signatureBase64`, and `keyId`. Core `POST /api/m2m/runtime/entitlements/apply`
-requires a local service credential with `runtime.entitlements.apply` and the
-same three-field JSON body. The local installation ID comes from Core storage,
-never from a request parameter. The v1 signed bytes contain exactly
-`documentVersion`, `sequence`, `installationId`, `issuedAt`, `validFrom`,
-`validUntil`, `deploymentStatus`, and `features`. Core verifies Ed25519 over the
-exact decoded bytes before applying; unknown or revoked key IDs fail closed.
-Configure `RUNTIME_ENTITLEMENT_TRUSTED_KEYS` as JSON mapping key IDs to
-`{"publicKeyBase64":"...","status":"trusted"}` or `"revoked"`; multiple IDs
-permit rotation. An empty trust map denies all documents. Core stores the exact
-canonical bytes as base64 in its existing JSONB snapshot and only exposes
-features from the latest valid, verified, active applied snapshot.
+`POST /api/m2m/usage` принимает учётные данные установки Control Plane с `usage.write`, только пока установка активна и не архивирована. Передаются `Authorization: Service <credentialId>.<secret>`, `Idempotency-Key` и JSON `{"featureCode":"some.feature","delta":1}` — ровно два поля. Установка и коммерческий аккаунт определяются сервером из учётных данных. Ответ содержит только `featureCode`, `mode`, `used`, `limit`, `remaining`, `exhausted`.
 
-## Bootstrap credential and runtime sync
+`ApplyUsageDelta` проверяет подписку, квоты и правила учёта. Пространство ключей идемпотентности включает установку-источник. Успешная запись использования не создаёт отдельного события аудита или исходящей очереди на каждый запрос.
 
-`control:deployments:provision:start --deployment-id=<uuid>` issues one
-deployment credential with `entitlements.read`, `usage.write`, and
-`deployment.status.write` and a finite expiry from `CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS`. Invalid or missing TTL configuration fails provisioning closed. Its raw secret appears only in that command's
-one-time JSON output. Configure the new runtime with
-`PLATFORM_INSTALLATION_ID`, `PLATFORM_DEPLOYMENT_MODE`, `APP_ENV`,
-`APPLICATION_VERSION`, `PLATFORM_RELEASE_ID`, and
-`PLATFORM_RELEASE_CHANNEL`. `runtime:deployment:activate` is the application bootstrap entry point: it creates the local installation, syncs the signed entitlement, and reports the applied sequence as ready. `runtime:installation:init` creates the local
-singleton as `provisioned` or confirms an exact replay; conflicting identity
-fails closed. Configure `CONTROL_PLANE_URL` and
-`CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF=env:VARIABLE_NAME`, with the named
-environment variable containing `<credentialId>.<secret>`. The credential is
-never stored in Core PostgreSQL. Both status reporting and `runtime:entitlements:sync` resolve the same `env:VARIABLE_NAME` reference through `RuntimeSecretResolver`. `runtime:entitlements:sync` calls the Control
-Plane pull endpoint directly and invokes the existing local
-`EntitlementApplier`. It prints only the applied sequence.
+## Передача подписанных прав
 
-Commercial commits and financial history do not roll back when Tenant is
-temporarily unavailable. During that interval Tenant retains its last valid
-local document subject to its validity period. When Tenant returns, the next
-authenticated pull applies the latest signed sequence; exact replay has no
-second effect and a stale sequence cannot restore old rights. The Core
-application/runtime container is stateless for this acceptance boundary:
-restarting it while PostgreSQL remains available must preserve durable state
-and allow its scheduler or entitlement sync entrypoint to resume. PostgreSQL
-restart, restore/PITR and disaster recovery are separate production reliability
-gates.
+`GET /api/m2m/entitlements/latest` Control Plane требует `entitlements.read` и возвращает ровно `documentBase64`, `signatureBase64`, `keyId`. `POST /api/m2m/runtime/entitlements/apply` Core требует локальные сервисные данные с `runtime.entitlements.apply` и те же три поля JSON. Идентификатор локальной установки берётся из Core, а не из запроса.
 
-The runtime then sends `POST /api/m2m/deployment/status` using its deployment
-credential and `deployment.status.write`. A ready body has exactly `status`
-(`ready`) and `entitlementSequence` (positive integer); a failed body has
-exactly `status` (`failed`) and a machine-only `errorCode` such as
-`runtime.bootstrap_failed`. The deployment identity comes only from the
-credential. The ready report succeeds only for a running provision operation
-and the latest issued entitlement with the deployment's installation ID. On first success, the same transaction removes `deployment.status.write`; the credential remains usable for `entitlements.read` and `usage.write`. A retry with the same latest sequence returns `already_ready` without a new audit event or scope change. An old or incorrect sequence is rejected.
+Подписанные данные версии 1 содержат ровно `documentVersion`, `sequence`, `installationId`, `issuedAt`, `validFrom`, `validUntil`, `deploymentStatus`, `features`. Core проверяет Ed25519 над точными декодированными байтами до применения. Неизвестный или отозванный ключ отклоняется.
 
-`control:deployments:credential:status --deployment-id=<uuid>` shows the single active runtime credential's `expiresAt` and `daysUntilExpiry` without a secret. `control:deployments:credential:rotate --deployment-id=<uuid>` atomically invalidates it and returns a new `credentialId.secret` once, preserving its current runtime scopes and assigning a fresh expiry. Ambiguous active credentials fail closed. After rotation, the operator must update the deployment's external secret source and restart or recreate the runtime process that reads its environment. Control Plane does not edit remote files or containers.
+`RUNTIME_ENTITLEMENT_TRUSTED_KEYS` задаётся JSON-отображением идентификаторов ключей в `{"publicKeyBase64":"...","status":"trusted"}` либо со статусом `"revoked"`. Несколько идентификаторов позволяют менять ключи. Пустой реестр доверия запрещает все документы. Core хранит точные канонические байты как base64 в существующем снимке JSONB и выдаёт возможности только из последнего действующего проверенного активного применённого снимка.
+
+## Начальные учётные данные и синхронизация установки
+
+`control:deployments:provision:start --deployment-id=<uuid>` выдаёт одни учётные данные установки с `entitlements.read`, `usage.write`, `deployment.status.write` и конечным сроком из `CONTROL_DEPLOYMENT_CREDENTIAL_TTL_DAYS`. Неверный или отсутствующий срок блокирует подготовку. Исходный секрет появляется только в одноразовом JSON-выводе команды.
+
+Для новой среды задаются `PLATFORM_INSTALLATION_ID`, `PLATFORM_DEPLOYMENT_MODE`, `APP_ENV`, `APPLICATION_VERSION`, `PLATFORM_RELEASE_ID`, `PLATFORM_RELEASE_CHANNEL`. Точка начальной активации `runtime:deployment:activate` создаёт локальную установку, синхронизирует подписанные права и сообщает применённый номер последовательности как готовый. `runtime:installation:init` создаёт единственную локальную запись `provisioned` либо подтверждает точный повтор; конфликт идентичности блокирует действие.
+
+Задайте `CONTROL_PLANE_URL` и `CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF=env:VARIABLE_NAME`, где указанная переменная содержит `<credentialId>.<secret>`. В PostgreSQL Core секрет не сохраняется. Отчёт состояния и `runtime:entitlements:sync` разрешают одну и ту же ссылку `env:VARIABLE_NAME` через `RuntimeSecretResolver`. Синхронизация напрямую вызывает получение документа Control Plane и локальный `EntitlementApplier`; выводится только применённый номер последовательности.
+
+Транзакции Commercial и финансовая история не откатываются при временной недоступности клиентской установки. Она сохраняет последний действующий локальный документ в пределах его срока. После восстановления следующий аутентифицированный запрос получает последнюю подписанную последовательность; точный повтор не даёт второго эффекта, старая последовательность не возвращает прежние права.
+
+Контейнер приложения Core не хранит постоянное состояние для этой границы приёмки: его перезапуск при доступном PostgreSQL должен сохранять данные и позволять продолжить планировщик или синхронизацию прав. Перезапуск PostgreSQL, восстановление на момент времени и аварийное восстановление — отдельные условия промышленной надёжности.
+
+Затем среда отправляет `POST /api/m2m/deployment/status` с сервисными данными и `deployment.status.write`. Успешное тело содержит ровно `status` со значением `ready` и положительный `entitlementSequence`; ошибка — ровно `status` со значением `failed` и машинный `errorCode`, например `runtime.bootstrap_failed`. Идентичность установки определяется исключительно учётными данными.
+
+Отчёт о готовности принимается только для выполняемой операции подготовки и последнего выданного документа своей установки. При первом успехе та же транзакция удаляет `deployment.status.write`; `entitlements.read` и `usage.write` остаются. Повтор с той же последней последовательностью возвращает `already_ready` без нового аудита или изменения полномочий. Старый или неверный номер отклоняется.
+
+`control:deployments:credential:status --deployment-id=<uuid>` показывает `expiresAt` и `daysUntilExpiry` единственных активных учётных данных без секрета. `control:deployments:credential:rotate --deployment-id=<uuid>` атомарно отзывает их и один раз возвращает новые `credentialId.secret`, сохраняя текущие полномочия и назначая новый срок. Неоднозначность активных данных блокирует действие. После замены оператор обновляет внешний источник секрета и перезапускает либо пересоздаёт читающий окружение процесс. Control Plane не редактирует удалённые файлы и контейнеры.

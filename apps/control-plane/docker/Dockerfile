@@ -87,6 +87,8 @@ RUN mkdir -p /app/var/cache /app/var/log \
     && mkdir -p /data/caddy /config/caddy \
     && chown -R www-data:www-data /data /config
 
+COPY docker/Caddyfile /etc/frankenphp/Caddyfile
+
 USER www-data
 
 EXPOSE 8000
@@ -105,6 +107,7 @@ RUN mkdir -p /app/var/cache /app/var/log \
     && chown -R www-data:www-data /app/var \
     && mkdir -p /data/caddy /config/caddy \
     && chown -R www-data:www-data /data /config
+COPY docker/Caddyfile /etc/frankenphp/Caddyfile
 ENV APP_ENV=test APP_DEBUG=0 SERVER_NAME=:8000 SERVER_ROOT=public/
 USER www-data
 EXPOSE 8000

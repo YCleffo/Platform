@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { RouterLink } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { ApiError } from '@/shared/api/errors';
 import { resolveErrorMessage } from '@/shared/errors/humanize';
@@ -234,20 +235,28 @@ onBeforeUnmount(() => {
   password.value = '';
   code.value = '';
   rows.value = [];
-  clearOperator();
 });
 </script>
 <template>
   <section class="operator-console">
     <header class="operator-console__header">
       <h1>{{ t('operator.title') }}</h1>
-      <AppButton
-        v-if="operatorIdentity"
-        variant="secondary"
-        @click="logout"
-      >
-        {{ t('operator.signOut') }}
-      </AppButton>
+      <div class="operator-console__header-actions">
+        <RouterLink
+          v-if="operatorIdentity?.catalog"
+          class="operator-console__catalog"
+          :to="{ name: 'operator-catalog' }"
+        >
+          {{ t('operator.catalog') }}
+        </RouterLink>
+        <AppButton
+          v-if="operatorIdentity"
+          variant="secondary"
+          @click="logout"
+        >
+          {{ t('operator.signOut') }}
+        </AppButton>
+      </div>
     </header>
     <AppCard v-if="!operatorIdentity">
       <h2>{{ t('operator.signIn') }}</h2>
@@ -538,6 +547,20 @@ onBeforeUnmount(() => {
 }
 .operator-console__header {
   justify-content: space-between;
+}
+.operator-console__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  flex-wrap: wrap;
+}
+.operator-console__catalog {
+  color: var(--accent-strong);
+  font-size: var(--type-body-medium-emphasis-size);
+  line-height: var(--type-body-medium-emphasis-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .operator-console__login {
   display: grid;

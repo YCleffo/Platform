@@ -2,40 +2,41 @@
 
 Сгенерировано `scripts/documentation/build-reference.py` из `schema.catalog.json`.
 Только фактические таблицы, столбцы и SQL FK. Источник структуры — применённые миграции PostgreSQL.
-CHECK, partial/expression indexes, trigger functions и deferred semantics полностью сохранены в JSON-каталогах;
+Проверки CHECK, частичные индексы и индексы выражений, триггерные функции и отложенные ограничения полностью сохранены в JSON-каталогах;
 DBML служит представлением для диаграммы, а не исполняемой заменой миграций.
 
 ## Инвентарь
 
-| Схема | Таблицы | Столбцы | FK | CHECK | Индексы | Пользовательские triggers |
+| Схема | Таблицы | Столбцы | Внешние ключи | Проверки CHECK | Индексы | Пользовательские триггеры |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `core` | 50 | 561 | 86 | 195 | 161 | 19 |
 | `platform_runtime` | 3 | 36 | 1 | 18 | 7 | 2 |
-| `commercial` | 61 | 615 | 97 | 272 | 176 | 53 |
+| `commercial` | 62 | 619 | 98 | 273 | 177 | 53 |
+| `education` | 15 | 91 | 11 | 12 | 31 | 0 |
 
 Технические `public.platform_migrations` и `public.doctrine_migration_versions` не являются бизнес-таблицами и не включены в инвентарь.
-Cross-plane ID в подписанном документе не создаёт FK между двумя базами.
+Межсистемный идентификатор в подписанном документе не создаёт внешний ключ между базами.
 
 ## Как читать поля
 
-`NULL: да` означает допустимый SQL NULL. `DEFAULT: —` означает отсутствие SQL default.
-`bytea` — хеш, подпись, public key или ciphertext в зависимости от поля.
+«NULL: да» означает допустимый SQL NULL. Прочерк в значении по умолчанию означает отсутствие SQL DEFAULT.
+`bytea` — хеш, подпись, открытый ключ или зашифрованные данные в зависимости от поля.
 `timestamp with time zone` хранит момент времени, `amount_minor` — целые минимальные единицы валюты.
 SQL-комментарии приводятся из PostgreSQL; отсутствие комментария не заменяется догадкой.
 
 ## core.account_roles
 
-Current role assignments of Accounts.
+Текущие назначения ролей аккаунтам.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `account_id` | `uuid` | нет | — | — |
 | `role_id` | `uuid` | нет | — | — |
 | `assigned_at` | `timestamp with time zone` | нет | now() | — |
-| `assigned_by_account_id` | `uuid` | да | — | Account that assigned the role; NULL for seed/system operation. |
-| `expires_at` | `timestamp with time zone` | да | — | Optional assignment expiration; NULL means no expiration. |
+| `assigned_by_account_id` | `uuid` | да | — | Аккаунт, назначивший роль; NULL для начального заполнения или системной операции. |
+| `expires_at` | `timestamp with time zone` | да | — | Необязательный срок назначения; NULL означает бессрочность. |
 
-**Первичный ключ:** PRIMARY KEY (account_id, role_id).
+**Первичный ключ:** `PRIMARY KEY (account_id, role_id)`.
 
 **Реальные внешние ключи:**
 
@@ -43,53 +44,53 @@ Current role assignments of Accounts.
 - `fk_account_roles_assigned_by`: `FOREIGN KEY (assigned_by_account_id) REFERENCES core.accounts(id) ON DELETE SET NULL`.
 - `fk_account_roles_role`: `FOREIGN KEY (role_id) REFERENCES core.roles(id) ON DELETE CASCADE`.
 
-CHECK: 0; индексов: 3; пользовательских triggers: 0.
+Проверок CHECK: 0; индексов: 3; пользовательских триггеров: 0.
 
 ## core.account_settings
 
-Sparse personal setting overrides. Effective values are resolved by the versioned Core schema registry.
+Разреженные пользовательские переопределения настроек. Действующие значения вычисляет версионированный реестр схемы Core.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `account_id` | `uuid` | нет | — | — |
-| `settings` | `jsonb` | нет | '{}'::jsonb | Whitelisted sparse overrides only; null reset values are never persisted. |
-| `schema_version` | `integer` | нет | 1 | Version of the settings registry used to validate the stored document. |
+| `settings` | `jsonb` | нет | '{}'::jsonb | Только разрешённые разреженные переопределения; значения сброса null не сохраняются. |
+| `schema_version` | `integer` | нет | 1 | Версия реестра настроек, применённая для проверки сохранённого документа. |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (account_id).
+**Первичный ключ:** `PRIMARY KEY (account_id)`.
 
 **Реальные внешние ключи:**
 
 - `account_settings_account_id_fkey`: `FOREIGN KEY (account_id) REFERENCES core.accounts(id) ON DELETE CASCADE`.
 
-CHECK: 4; индексов: 1; пользовательских triggers: 0.
+Проверок CHECK: 4; индексов: 1; пользовательских триггеров: 0.
 
 ## core.accounts
 
-System identities. Human Accounts link to Person; service/system Accounts may not.
+Учётные записи системы. Человеческие связаны с Person; сервисные и системные могут не иметь этой связи.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
-| `person_id` | `uuid` | да | — | Account -> Person. Unique, therefore one Person has at most one Account in Core v1. |
-| `account_type` | `core.account_type` | нет | 'human'::core.account_type | human, service or system. |
-| `status` | `core.account_status` | нет | 'pending_verification'::core.account_status | Account lifecycle/status. |
+| `person_id` | `uuid` | да | — | Account → Person. Уникальная связь: в Core v1 у Person не более одного Account. |
+| `account_type` | `core.account_type` | нет | 'human'::core.account_type | Тип аккаунта: human — человеческий, service — сервисный, system — системный. |
+| `status` | `core.account_status` | нет | 'pending_verification'::core.account_status | Жизненный цикл и статус аккаунта. |
 | `label` | `character varying(160)` | да | — | — |
-| `security_stamp` | `uuid` | нет | uuidv4() | Random security version. Rotate to invalidate old sessions. |
+| `security_stamp` | `uuid` | нет | uuidv4() | Случайная версия безопасности. Замена делает старые сессии недействительными. |
 | `locked_until` | `timestamp with time zone` | да | — | — |
 | `last_login_at` | `timestamp with time zone` | да | — | — |
-| `created_by_account_id` | `uuid` | да | — | Self-reference: Account that created this Account. |
-| `approved_by_account_id` | `uuid` | да | — | Self-reference: Account that approved this Account. |
+| `created_by_account_id` | `uuid` | да | — | Ссылка на эту же таблицу: аккаунт, создавший данный аккаунт. |
+| `approved_by_account_id` | `uuid` | да | — | Ссылка на эту же таблицу: аккаунт, подтвердивший данный аккаунт. |
 | `approved_at` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 | `disabled_at` | `timestamp with time zone` | да | — | — |
 | `archived_at` | `timestamp with time zone` | да | — | — |
-| `locale` | `character varying(35)` | да | — | Optional saved canonical BCP 47 locale preference. |
-| `timezone` | `character varying(64)` | да | — | Optional saved IANA timezone preference. |
+| `locale` | `character varying(35)` | да | — | Необязательный сохранённый канонический язык по BCP 47. |
+| `timezone` | `character varying(64)` | да | — | Необязательный сохранённый часовой пояс IANA. |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -97,52 +98,52 @@ System identities. Human Accounts link to Person; service/system Accounts may no
 - `fk_accounts_created_by`: `FOREIGN KEY (created_by_account_id) REFERENCES core.accounts(id) ON DELETE SET NULL`.
 - `fk_accounts_person`: `FOREIGN KEY (person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 
-CHECK: 4; индексов: 5; пользовательских triggers: 1.
+Проверок CHECK: 4; индексов: 5; пользовательских триггеров: 1.
 
 ## core.audit_events
 
-Append-only business/security audit: who changed what and when. NOT technical telemetry.
+Неизменяемый аудит бизнеса и безопасности: кто, что и когда изменил. Не техническая телеметрия.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `bigint` | нет | IDENTITY BY DEFAULT | — |
 | `event_id` | `uuid` | нет | uuidv7() | — |
 | `occurred_at` | `timestamp with time zone` | нет | now() | — |
 | `actor_type` | `core.audit_actor_type` | нет | — | — |
-| `actor_account_id` | `uuid` | да | — | Account actor when applicable; SET NULL preserves audit after account deletion. |
-| `action` | `character varying(180)` | нет | — | Stable namespaced action code. |
-| `resource_type` | `character varying(180)` | да | — | Polymorphic resource type, e.g. core.account or education.lesson. |
-| `resource_id` | `character varying(160)` | да | — | Resource ID serialized as text for polymorphic audit reference. |
+| `actor_account_id` | `uuid` | да | — | Аккаунт исполнителя, где применимо; SET NULL сохраняет аудит после удаления аккаунта. |
+| `action` | `character varying(180)` | нет | — | Стабильный код действия в пространстве имён. |
+| `resource_type` | `character varying(180)` | да | — | Полиморфный тип ресурса, например core.account или education.lesson. |
+| `resource_id` | `character varying(160)` | да | — | ID ресурса в текстовом виде для полиморфной ссылки аудита. |
 | `request_id` | `uuid` | да | — | — |
 | `correlation_id` | `uuid` | да | — | — |
 | `ip_address` | `inet` | да | — | — |
 | `user_agent` | `text` | да | — | — |
 | `success` | `boolean` | нет | true | — |
 | `error_code` | `character varying(120)` | да | — | — |
-| `before_data` | `jsonb` | да | — | Relevant safe before-state/diff only; never secrets. |
-| `after_data` | `jsonb` | да | — | Relevant safe after-state/diff only; never secrets. |
-| `metadata` | `jsonb` | нет | '{}'::jsonb | Additional safe metadata. Never passwords, tokens, TOTP secrets, private keys. |
+| `before_data` | `jsonb` | да | — | Только относящееся к действию безопасное прежнее состояние или различие; без секретов. |
+| `after_data` | `jsonb` | да | — | Только относящееся к действию безопасное новое состояние или различие; без секретов. |
+| `metadata` | `jsonb` | нет | '{}'::jsonb | Дополнительные безопасные метаданные. Пароли, токены, секреты TOTP и закрытые ключи запрещены. |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_audit_events_actor`: `FOREIGN KEY (actor_account_id) REFERENCES core.accounts(id) ON DELETE SET NULL`.
 
-CHECK: 1; индексов: 7; пользовательских triggers: 1.
+Проверок CHECK: 1; индексов: 7; пользовательских триггеров: 1.
 
 ## core.auth_challenges
 
-Short-lived one-time auth/security challenges: verification, reset, invitation, magic login, etc.
+Краткоживущие одноразовые проверочные запросы: подтверждение, сброс, приглашение, вход по ссылке и другие.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `account_id` | `uuid` | да | — | — |
-| `challenge_type` | `character varying(80)` | нет | — | Extensible challenge scenario identifier. |
-| `secret_hash` | `bytea` | нет | — | Hash of one-time secret/token. |
+| `challenge_type` | `character varying(80)` | нет | — | Расширяемый идентификатор сценария проверочного запроса. |
+| `secret_hash` | `bytea` | нет | — | Хеш одноразового секрета или токена. |
 | `target_normalized` | `character varying(320)` | да | — | — |
-| `payload` | `jsonb` | нет | '{}'::jsonb | Safe scenario-specific JSON payload; never place secrets here. |
+| `payload` | `jsonb` | нет | '{}'::jsonb | Безопасные данные JSON конкретного сценария; секреты здесь запрещены. |
 | `attempts` | `smallint` | нет | 0 | — |
 | `max_attempts` | `smallint` | нет | 5 | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
@@ -150,178 +151,178 @@ Short-lived one-time auth/security challenges: verification, reset, invitation, 
 | `consumed_at` | `timestamp with time zone` | да | — | — |
 | `cancelled_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_auth_challenges_account`: `FOREIGN KEY (account_id) REFERENCES core.accounts(id) ON DELETE CASCADE`.
 
-CHECK: 5; индексов: 4; пользовательских triggers: 0.
+Проверок CHECK: 5; индексов: 4; пользовательских триггеров: 0.
 
 ## core.auth_external_identities
 
-Links local Accounts to stable external provider subjects.
+Связи локальных аккаунтов со стабильными субъектами внешних провайдеров.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `account_id` | `uuid` | нет | — | — |
 | `provider_id` | `uuid` | нет | — | — |
-| `provider_subject` | `character varying(255)` | нет | — | Stable user identifier supplied by the provider, e.g. OIDC sub. |
-| `email` | `character varying(320)` | да | — | Provider-reported email; never auto-merge Accounts solely by this value. |
+| `provider_subject` | `character varying(255)` | нет | — | Стабильный идентификатор пользователя от провайдера, например OIDC sub. |
+| `email` | `character varying(320)` | да | — | Почта от провайдера; автоматическое объединение аккаунтов только по ней запрещено. |
 | `email_verified` | `boolean` | нет | false | — |
 | `display_name` | `character varying(255)` | да | — | — |
 | `avatar_url` | `text` | да | — | — |
-| `claims` | `jsonb` | нет | '{}'::jsonb | Additional non-secret provider claims. |
+| `claims` | `jsonb` | нет | '{}'::jsonb | Дополнительные несекретные утверждения провайдера. |
 | `linked_at` | `timestamp with time zone` | нет | now() | — |
 | `last_login_at` | `timestamp with time zone` | да | — | — |
-| `created_at` | `timestamp with time zone` | нет | now() | Creation timestamp for the account-to-provider-subject link; mirrors linked_at for pre-existing rows. |
-| `updated_at` | `timestamp with time zone` | нет | now() | Last local mutation of the external identity link; raw provider payloads are never stored. |
-| `last_used_at` | `timestamp with time zone` | да | — | Last successful use after provider-side verification; mirrors last_login_at for login-based providers. |
+| `created_at` | `timestamp with time zone` | нет | now() | Время создания связи аккаунта с внешним субъектом; для прежних строк повторяет linked_at. |
+| `updated_at` | `timestamp with time zone` | нет | now() | Последнее локальное изменение внешней связи; исходное содержимое провайдера не сохраняется. |
+| `last_used_at` | `timestamp with time zone` | да | — | Последнее успешное использование после проверки провайдера; для провайдеров входа повторяет last_login_at. |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_external_identities_account`: `FOREIGN KEY (account_id) REFERENCES core.accounts(id) ON DELETE CASCADE`.
 - `fk_external_identities_provider`: `FOREIGN KEY (provider_id) REFERENCES core.auth_providers(id) ON DELETE RESTRICT`.
 
-CHECK: 1; индексов: 7; пользовательских triggers: 0.
+Проверок CHECK: 1; индексов: 7; пользовательских триггеров: 0.
 
 ## core.auth_identifiers
 
-Login/recovery identifiers of Account: username, email or phone.
+Идентификаторы входа и восстановления аккаунта: имя пользователя, почта или телефон.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
-| `account_id` | `uuid` | нет | — | auth_identifiers -> accounts. |
+| `account_id` | `uuid` | нет | — | Связь auth_identifiers → accounts. |
 | `identifier_type` | `core.auth_identifier_type` | нет | — | — |
 | `value` | `character varying(320)` | нет | — | — |
-| `normalized_value` | `character varying(320)` | нет | — | Canonical normalized form used in unique lookup. |
+| `normalized_value` | `character varying(320)` | нет | — | Каноническая нормализованная форма для уникального поиска. |
 | `is_primary` | `boolean` | нет | false | — |
-| `can_login` | `boolean` | нет | true | Whether this identifier can be used for login. |
-| `can_recover` | `boolean` | нет | false | Whether recovery policy may use this identifier. |
+| `can_login` | `boolean` | нет | true | Можно ли использовать идентификатор для входа. |
+| `can_recover` | `boolean` | нет | false | Может ли политика восстановления использовать идентификатор. |
 | `verified_at` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_auth_identifiers_account`: `FOREIGN KEY (account_id) REFERENCES core.accounts(id) ON DELETE CASCADE`.
 
-CHECK: 5; индексов: 5; пользовательских triggers: 0.
+Проверок CHECK: 5; индексов: 5; пользовательских триггеров: 0.
 
 ## core.auth_passkeys
 
-WebAuthn/passkey credentials. One Account may have multiple passkeys.
+Учётные данные WebAuthn и ключей доступа. Один аккаунт может иметь несколько ключей.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `account_id` | `uuid` | нет | — | — |
-| `credential_id` | `bytea` | нет | — | Binary WebAuthn credential ID. |
-| `public_key` | `bytea` | нет | — | Public key; private key never reaches the server. |
+| `credential_id` | `bytea` | нет | — | Двоичный идентификатор учётных данных WebAuthn. |
+| `public_key` | `bytea` | нет | — | Открытый ключ; закрытый ключ никогда не передаётся серверу. |
 | `sign_count` | `bigint` | нет | 0 | — |
 | `aaguid` | `uuid` | да | — | — |
-| `transports` | `text[]` | нет | ARRAY[]::text[] | Known authenticator transports such as internal, usb, nfc, ble. |
+| `transports` | `text[]` | нет | ARRAY[]::text[] | Известные транспорты аутентификатора, например internal, usb, nfc, ble. |
 | `label` | `character varying(160)` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `last_used_at` | `timestamp with time zone` | да | — | — |
 | `revoked_at` | `timestamp with time zone` | да | — | — |
-| `backup_eligible` | `boolean` | нет | false | WebAuthn Level 3 flag: credential is eligible for cloud synchronization. |
-| `backup_state` | `boolean` | нет | false | WebAuthn Level 3 flag: credential is currently backed up in cloud keychain. |
+| `backup_eligible` | `boolean` | нет | false | Флаг WebAuthn Level 3: учётные данные допускают облачную синхронизацию. |
+| `backup_state` | `boolean` | нет | false | Флаг WebAuthn Level 3: учётные данные сейчас сохранены в облачной связке ключей. |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_auth_passkeys_account`: `FOREIGN KEY (account_id) REFERENCES core.accounts(id) ON DELETE CASCADE`.
 
-CHECK: 4; индексов: 4; пользовательских triggers: 0.
+Проверок CHECK: 4; индексов: 4; пользовательских триггеров: 0.
 
 ## core.auth_password_credentials
 
-Optional password credential of an Account. Zero or one row per Account.
+Необязательные данные пароля аккаунта. Ноль или одна строка на аккаунт.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `account_id` | `uuid` | нет | — | — |
-| `password_hash` | `text` | нет | — | Password hash only. Never store raw passwords. |
-| `password_algorithm` | `character varying(32)` | нет | — | Informational algorithm identifier, e.g. argon2id. |
-| `must_change_password` | `boolean` | нет | false | Force password change on next suitable authentication flow. |
+| `password_hash` | `text` | нет | — | Только хеш пароля. Хранить открытые пароли запрещено. |
+| `password_algorithm` | `character varying(32)` | нет | — | Информационный идентификатор алгоритма, например argon2id. |
+| `must_change_password` | `boolean` | нет | false | Обязательная смена пароля при следующем подходящем входе. |
 | `password_changed_at` | `timestamp with time zone` | нет | now() | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_auth_password_credentials_account`: `FOREIGN KEY (account_id) REFERENCES core.accounts(id) ON DELETE CASCADE`.
 
-CHECK: 2; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 2; индексов: 2; пользовательских триггеров: 0.
 
 ## core.auth_providers
 
-Registry of external authentication providers such as OIDC/OAuth/custom providers.
+Реестр внешних провайдеров аутентификации: OIDC, OAuth и собственные адаптеры.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
-| `code` | `character varying(50)` | нет | — | Stable provider code, e.g. google, telegram, microsoft. |
-| `protocol` | `character varying(50)` | нет | — | Extensible protocol name; intentionally VARCHAR rather than ENUM. |
+| `code` | `character varying(50)` | нет | — | Стабильный код провайдера, например google, telegram, microsoft. |
+| `protocol` | `character varying(50)` | нет | — | Расширяемое имя протокола; намеренно VARCHAR вместо ENUM. |
 | `display_name` | `character varying(120)` | нет | — | — |
-| `enabled` | `boolean` | нет | false | Provider availability switch. |
+| `enabled` | `boolean` | нет | false | Переключатель доступности провайдера. |
 | `allow_login` | `boolean` | нет | true | — |
 | `allow_registration` | `boolean` | нет | false | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 3; индексов: 3; пользовательских triggers: 0.
+Проверок CHECK: 3; индексов: 3; пользовательских триггеров: 0.
 
 ## core.auth_recovery_codes
 
-Single-use MFA recovery codes stored only as cryptographic hashes.
+Одноразовые резервные коды MFA; хранятся только криптографические хеши.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `account_id` | `uuid` | нет | — | — |
-| `code_hash` | `bytea` | нет | — | Hash of a recovery code; raw code is never stored. |
+| `code_hash` | `bytea` | нет | — | Хеш резервного кода; исходный код не сохраняется. |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
-| `used_at` | `timestamp with time zone` | да | — | NULL until consumed. |
-| `revoked_at` | `timestamp with time zone` | да | — | Invalidation timestamp used by regeneration, MFA disable, and recovery reset. |
+| `used_at` | `timestamp with time zone` | да | — | NULL до использования. |
+| `revoked_at` | `timestamp with time zone` | да | — | Время отзыва при обновлении кодов, отключении MFA и сбросе восстановления. |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_auth_recovery_codes_account`: `FOREIGN KEY (account_id) REFERENCES core.accounts(id) ON DELETE CASCADE`.
 
-CHECK: 1; индексов: 5; пользовательских triggers: 0.
+Проверок CHECK: 1; индексов: 5; пользовательских триггеров: 0.
 
 ## core.auth_sessions
 
-Active/historical sessions. Opaque session tokens are stored only as hashes.
+Активные и прежние сессии. Непрозрачные сессионные токены хранятся только как хеши.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `account_id` | `uuid` | нет | — | — |
-| `session_token_hash` | `bytea` | нет | — | Hash of the opaque session token. |
-| `refresh_token_hash` | `bytea` | да | — | Optional refresh-token hash for clients that need refresh semantics. |
-| `security_stamp` | `uuid` | нет | — | Snapshot of accounts.security_stamp when the session was created. |
-| `authentication_method` | `character varying(80)` | нет | — | Extensible authentication method: password, passkey, provider code, etc. |
+| `session_token_hash` | `bytea` | нет | — | Хеш непрозрачного токена сессии. |
+| `refresh_token_hash` | `bytea` | да | — | Необязательный хеш токена обновления для клиентов с обновлением сессии. |
+| `security_stamp` | `uuid` | нет | — | Снимок accounts.security_stamp при создании сессии. |
+| `authentication_method` | `character varying(80)` | нет | — | Расширяемый способ аутентификации: пароль, ключ доступа, код провайдера и другие. |
 | `mfa_verified_at` | `timestamp with time zone` | да | — | — |
-| `client_type` | `character varying(40)` | нет | — | Extensible client type: web, mobile, agent, etc. |
+| `client_type` | `character varying(40)` | нет | — | Расширяемый тип клиента: web, mobile, agent и другие. |
 | `device_name` | `character varying(160)` | да | — | — |
 | `ip_address` | `inet` | да | — | — |
 | `user_agent` | `text` | да | — | — |
@@ -338,54 +339,54 @@ Active/historical sessions. Opaque session tokens are stored only as hashes.
 | `device_model` | `character varying(160)` | да | — | — |
 | `client_locale` | `character varying(35)` | да | — | — |
 | `client_timezone` | `character varying(64)` | да | — | — |
-| `client_instance_id` | `uuid` | да | — | Optional random frontend installation UUID; not an authentication factor. |
-| `device_fingerprint_hash` | `bytea` | да | — | HMAC-SHA-256 risk signal; never an authentication factor. |
-| `geo_country_code` | `character(2)` | да | — | Approximate ISO 3166-1 alpha-2 country inferred from IP. |
+| `client_instance_id` | `uuid` | да | — | Необязательный случайный UUID экземпляра интерфейса; не фактор аутентификации. |
+| `device_fingerprint_hash` | `bytea` | да | — | Сигнал риска HMAC-SHA-256; не фактор аутентификации. |
+| `geo_country_code` | `character(2)` | да | — | Примерная страна по IP в формате ISO 3166-1 alpha-2. |
 | `geo_region` | `character varying(160)` | да | — | — |
-| `geo_city` | `character varying(160)` | да | — | Approximate city inferred from IP; never exact location. |
+| `geo_city` | `character varying(160)` | да | — | Примерный город по IP; не точное местоположение. |
 | `geo_timezone` | `character varying(64)` | да | — | — |
-| `access_expires_at` | `timestamp with time zone` | нет | — | Expiry of the current short-lived opaque access token; expires_at is absolute session expiry. |
+| `access_expires_at` | `timestamp with time zone` | нет | — | Срок текущего краткоживущего непрозрачного токена доступа; expires_at — абсолютный срок сессии. |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_auth_sessions_account`: `FOREIGN KEY (account_id) REFERENCES core.accounts(id) ON DELETE CASCADE`.
 
-CHECK: 13; индексов: 7; пользовательских triggers: 0.
+Проверок CHECK: 13; индексов: 7; пользовательских триггеров: 0.
 
 ## core.auth_totp_factors
 
-TOTP MFA factors. Secret is encrypted; encryption key lives outside the database.
+Факторы TOTP MFA. Секрет зашифрован; ключ шифрования находится вне БД.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `account_id` | `uuid` | нет | — | — |
 | `label` | `character varying(160)` | да | — | — |
-| `secret_encrypted` | `bytea` | нет | — | Encrypted TOTP secret. |
+| `secret_encrypted` | `bytea` | нет | — | Зашифрованный секрет TOTP. |
 | `algorithm` | `core.totp_algorithm` | нет | 'sha1'::core.totp_algorithm | — |
 | `digits` | `smallint` | нет | 6 | — |
 | `period_seconds` | `smallint` | нет | 30 | — |
-| `verified_at` | `timestamp with time zone` | да | — | NULL until setup is confirmed by a valid TOTP code. |
+| `verified_at` | `timestamp with time zone` | да | — | NULL до подтверждения подключения действующим кодом TOTP. |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `last_used_at` | `timestamp with time zone` | да | — | — |
 | `revoked_at` | `timestamp with time zone` | да | — | — |
-| `last_used_counter` | `bigint` | да | — | Last accepted RFC 6238 time-step counter. A counter may be accepted only once. |
-| `secret_key_version` | `smallint` | нет | 1 | Version of the external encryption key used for secret_encrypted. |
-| `setup_expires_at` | `timestamp with time zone` | да | — | Expiry of a pending, unverified TOTP setup. |
+| `last_used_counter` | `bigint` | да | — | Последний принятый счётчик шага RFC 6238. Каждый счётчик принимается только один раз. |
+| `secret_key_version` | `smallint` | нет | 1 | Версия внешнего ключа шифрования secret_encrypted. |
+| `setup_expires_at` | `timestamp with time zone` | да | — | Срок незавершённого неподтверждённого подключения TOTP. |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_auth_totp_factors_account`: `FOREIGN KEY (account_id) REFERENCES core.accounts(id) ON DELETE CASCADE`.
 
-CHECK: 7; индексов: 5; пользовательских triggers: 0.
+Проверок CHECK: 7; индексов: 5; пользовательских триггеров: 0.
 
 ## core.data_subject_request_deadlines
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `request_id` | `uuid` | нет | — | — |
@@ -400,17 +401,17 @@ CHECK: 7; индексов: 5; пользовательских triggers: 0.
 | `satisfied_at` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `data_subject_request_deadlines_request_id_fkey`: `FOREIGN KEY (request_id) REFERENCES core.data_subject_requests(id) ON DELETE RESTRICT`.
 
-CHECK: 6; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 6; индексов: 3; пользовательских триггеров: 1.
 
 ## core.data_subject_request_events
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `request_id` | `uuid` | нет | — | — |
@@ -421,18 +422,18 @@ CHECK: 6; индексов: 3; пользовательских triggers: 1.
 | `reason_code` | `character varying(120)` | да | — | — |
 | `occurred_at` | `timestamp with time zone` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `data_subject_request_events_actor_account_id_fkey`: `FOREIGN KEY (actor_account_id) REFERENCES core.accounts(id) ON DELETE RESTRICT`.
 - `data_subject_request_events_request_id_fkey`: `FOREIGN KEY (request_id) REFERENCES core.data_subject_requests(id) ON DELETE RESTRICT`.
 
-CHECK: 2; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 2; индексов: 2; пользовательских триггеров: 1.
 
 ## core.data_subject_request_executions
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `request_id` | `uuid` | нет | — | — |
@@ -458,7 +459,7 @@ CHECK: 2; индексов: 2; пользовательских triggers: 1.
 | `erasure_blocked_items` | `integer` | да | — | — |
 | `erasure_failed_items` | `integer` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -466,11 +467,11 @@ CHECK: 2; индексов: 2; пользовательских triggers: 1.
 - `data_subject_request_executions_erasure_case_id_fkey`: `FOREIGN KEY (erasure_case_id) REFERENCES core.privacy_erasure_cases(id) ON DELETE RESTRICT`.
 - `data_subject_request_executions_request_id_fkey`: `FOREIGN KEY (request_id) REFERENCES core.data_subject_requests(id) ON DELETE RESTRICT`.
 
-CHECK: 10; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 10; индексов: 3; пользовательских триггеров: 1.
 
 ## core.data_subject_requests
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `subject_person_id` | `uuid` | нет | — | — |
@@ -491,7 +492,7 @@ CHECK: 10; индексов: 3; пользовательских triggers: 1.
 | `identity_evidence_reference` | `character varying(500)` | да | — | — |
 | `representative_verification_reference` | `character varying(500)` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -500,77 +501,77 @@ CHECK: 10; индексов: 3; пользовательских triggers: 1.
 - `data_subject_requests_submitted_by_account_id_fkey`: `FOREIGN KEY (submitted_by_account_id) REFERENCES core.accounts(id) ON DELETE RESTRICT`.
 - `data_subject_requests_submitted_by_person_id_fkey`: `FOREIGN KEY (submitted_by_person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 
-CHECK: 6; индексов: 5; пользовательских triggers: 1.
+Проверок CHECK: 6; индексов: 5; пользовательских триггеров: 1.
 
 ## core.feature_flags
 
-Global or module-owned feature flags with percentage rollout.
+Общие и модульные флаги возможностей с процентом постепенного включения.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
-| `module_id` | `uuid` | да | — | Owner module; NULL means installation-wide flag. |
+| `module_id` | `uuid` | да | — | Модуль-владелец; NULL означает общий флаг установки. |
 | `code` | `character varying(160)` | нет | — | — |
 | `enabled` | `boolean` | нет | false | — |
-| `rollout_percent` | `smallint` | нет | 100 | Integer rollout percentage from 0 to 100. |
+| `rollout_percent` | `smallint` | нет | 100 | Целый процент включения от 0 до 100. |
 | `config` | `jsonb` | нет | '{}'::jsonb | — |
 | `description` | `text` | да | — | — |
 | `updated_by_account_id` | `uuid` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_feature_flags_module`: `FOREIGN KEY (module_id) REFERENCES core.modules(id) ON DELETE CASCADE`.
 - `fk_feature_flags_updated_by`: `FOREIGN KEY (updated_by_account_id) REFERENCES core.accounts(id) ON DELETE SET NULL`.
 
-CHECK: 4; индексов: 3; пользовательских triggers: 0.
+Проверок CHECK: 4; индексов: 3; пользовательских триггеров: 0.
 
 ## core.inbox_events
 
-Consumer idempotency ledger. event_id + consumer is unique.
+Журнал идемпотентности потребителя. event_id + consumer уникальны.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `bigint` | нет | IDENTITY BY DEFAULT | — |
 | `event_id` | `uuid` | нет | — | — |
-| `consumer` | `character varying(180)` | нет | — | Stable unique code of the consuming handler. |
+| `consumer` | `character varying(180)` | нет | — | Стабильный уникальный код обработчика-потребителя. |
 | `status` | `core.inbox_status` | нет | 'received'::core.inbox_status | — |
 | `attempts` | `integer` | нет | 0 | — |
 | `received_at` | `timestamp with time zone` | нет | now() | — |
-| `processed_at` | `timestamp with time zone` | да | — | Successful processing time. |
+| `processed_at` | `timestamp with time zone` | да | — | Время успешной обработки. |
 | `locked_by` | `character varying(160)` | да | — | — |
-| `locked_until` | `timestamp with time zone` | да | — | Lease expiration for a consumer worker lock. |
+| `locked_until` | `timestamp with time zone` | да | — | Срок аренды блокировки обработчика-потребителя. |
 | `last_error` | `text` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 2; индексов: 4; пользовательских triggers: 0.
+Проверок CHECK: 2; индексов: 4; пользовательских триггеров: 0.
 
 ## core.legal_representation_scopes
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `representation_id` | `uuid` | нет | — | — |
 | `scope_code` | `character varying(120)` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (representation_id, scope_code).
+**Первичный ключ:** `PRIMARY KEY (representation_id, scope_code)`.
 
 **Реальные внешние ключи:**
 
 - `legal_representation_scopes_representation_id_fkey`: `FOREIGN KEY (representation_id) REFERENCES core.legal_representations(id) ON DELETE RESTRICT`.
 
-CHECK: 1; индексов: 1; пользовательских triggers: 1.
+Проверок CHECK: 1; индексов: 1; пользовательских триггеров: 1.
 
 ## core.legal_representations
 
-Verified generic authority to act for another Person; no scanned documents stored here.
+Проверенное общее полномочие действовать за другого Person; сканы документов здесь не хранятся.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `subject_person_id` | `uuid` | нет | — | — |
@@ -590,7 +591,7 @@ Verified generic authority to act for another Person; no scanned documents store
 | `revoked_by_account_id` | `uuid` | да | — | — |
 | `revocation_reason_code` | `character varying(120)` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -599,58 +600,58 @@ Verified generic authority to act for another Person; no scanned documents store
 - `legal_representations_subject_person_id_fkey`: `FOREIGN KEY (subject_person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 - `legal_representations_verified_by_account_id_fkey`: `FOREIGN KEY (verified_by_account_id) REFERENCES core.accounts(id) ON DELETE RESTRICT`.
 
-CHECK: 10; индексов: 3; пользовательских triggers: 2.
+Проверок CHECK: 10; индексов: 3; пользовательских триггеров: 2.
 
 ## core.module_settings
 
-Non-secret settings of a specific module.
+Несекретные настройки конкретного модуля.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `module_id` | `uuid` | нет | — | — |
-| `setting_key` | `character varying(160)` | нет | — | Setting key unique inside a module. |
-| `value` | `jsonb` | нет | — | JSONB setting value. Do not put secrets here. |
+| `setting_key` | `character varying(160)` | нет | — | Ключ настройки, уникальный в модуле. |
+| `value` | `jsonb` | нет | — | Значение настройки JSONB. Секреты здесь запрещены. |
 | `description` | `text` | да | — | — |
 | `updated_by_account_id` | `uuid` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_module_settings_module`: `FOREIGN KEY (module_id) REFERENCES core.modules(id) ON DELETE CASCADE`.
 - `fk_module_settings_updated_by`: `FOREIGN KEY (updated_by_account_id) REFERENCES core.accounts(id) ON DELETE SET NULL`.
 
-CHECK: 3; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 3; индексов: 2; пользовательских триггеров: 0.
 
 ## core.modules
 
-Registry of installed/known platform modules. Core knows metadata only, never module internals.
+Реестр установленных и известных модулей. Core знает только метаданные, а не внутреннюю реализацию.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
-| `code` | `character varying(100)` | нет | — | Stable module code, e.g. education, games, chat. |
+| `code` | `character varying(100)` | нет | — | Стабильный код модуля, например education, games, chat. |
 | `name` | `character varying(160)` | нет | — | — |
 | `description` | `text` | да | — | — |
 | `version` | `character varying(40)` | нет | — | — |
-| `settings_schema_version` | `integer` | нет | 1 | Version of module settings schema. |
+| `settings_schema_version` | `integer` | нет | 1 | Версия схемы настроек модуля. |
 | `enabled` | `boolean` | нет | false | — |
 | `installed_at` | `timestamp with time zone` | нет | now() | — |
 | `enabled_at` | `timestamp with time zone` | да | — | — |
 | `disabled_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 5; индексов: 3; пользовательских triggers: 0.
+Проверок CHECK: 5; индексов: 3; пользовательских триггеров: 0.
 
 ## core.organization_memberships
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `organization_id` | `uuid` | нет | — | — |
@@ -661,18 +662,18 @@ CHECK: 5; индексов: 3; пользовательских triggers: 0.
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `organization_memberships_organization_id_fkey`: `FOREIGN KEY (organization_id) REFERENCES core.organizations(id) ON DELETE RESTRICT`.
 - `organization_memberships_person_id_fkey`: `FOREIGN KEY (person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 
-CHECK: 3; индексов: 3; пользовательских triggers: 0.
+Проверок CHECK: 3; индексов: 3; пользовательских триггеров: 0.
 
 ## core.organizations
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `code` | `character varying(120)` | нет | — | — |
@@ -682,22 +683,22 @@ CHECK: 3; индексов: 3; пользовательских triggers: 0.
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 | `archived_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 4; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 4; индексов: 2; пользовательских триггеров: 0.
 
 ## core.outbox_events
 
-Transactional Outbox. Business state and outbox event must be committed in one PostgreSQL transaction.
+Транзакционная исходящая очередь. Бизнес-состояние и событие фиксируются в одной транзакции PostgreSQL.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `bigint` | нет | IDENTITY BY DEFAULT | — |
 | `event_id` | `uuid` | нет | uuidv7() | — |
-| `producer_module` | `character varying(100)` | нет | — | Module that produced the event. |
-| `event_type` | `character varying(220)` | нет | — | Stable namespaced event type. |
+| `producer_module` | `character varying(100)` | нет | — | Модуль, создавший событие. |
+| `event_type` | `character varying(220)` | нет | — | Стабильный тип события в пространстве имён. |
 | `aggregate_type` | `character varying(160)` | да | — | — |
 | `aggregate_id` | `character varying(160)` | да | — | — |
 | `payload` | `jsonb` | нет | — | — |
@@ -707,92 +708,92 @@ Transactional Outbox. Business state and outbox event must be committed in one P
 | `status` | `core.outbox_status` | нет | 'pending'::core.outbox_status | — |
 | `attempts` | `integer` | нет | 0 | — |
 | `occurred_at` | `timestamp with time zone` | нет | now() | — |
-| `available_at` | `timestamp with time zone` | нет | now() | Earliest time the publisher worker may attempt delivery. |
+| `available_at` | `timestamp with time zone` | нет | now() | Самое раннее время, когда обработчик публикации может начать доставку. |
 | `published_at` | `timestamp with time zone` | да | — | — |
 | `locked_by` | `character varying(160)` | да | — | — |
-| `locked_until` | `timestamp with time zone` | да | — | Lease expiration for a worker lock. |
+| `locked_until` | `timestamp with time zone` | да | — | Срок аренды блокировки обработчика. |
 | `last_error` | `text` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 3; индексов: 5; пользовательских triggers: 0.
+Проверок CHECK: 3; индексов: 5; пользовательских триггеров: 0.
 
 ## core.permissions
 
-Global catalog of RBAC permission codes.
+Общий каталог кодов разрешений RBAC.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
-| `module_id` | `uuid` | да | — | Permission -> Module. NULL means permission belongs to Core itself. |
-| `code` | `character varying(180)` | нет | — | Globally unique namespaced permission code. |
+| `module_id` | `uuid` | да | — | Разрешение → модуль. NULL означает принадлежность разрешения самому Core. |
+| `code` | `character varying(180)` | нет | — | Глобально уникальный код разрешения в пространстве имён. |
 | `name` | `character varying(180)` | нет | — | — |
 | `description` | `text` | да | — | — |
 | `is_system` | `boolean` | нет | false | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_permissions_module`: `FOREIGN KEY (module_id) REFERENCES core.modules(id) ON DELETE SET NULL`.
 
-CHECK: 3; индексов: 3; пользовательских triggers: 0.
+Проверок CHECK: 3; индексов: 3; пользовательских триггеров: 0.
 
 ## core.person_contacts
 
-Contacts of a physical Person. These are not Account login identifiers.
+Контакты физического лица Person. Не являются идентификаторами входа Account.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
-| `person_id` | `uuid` | нет | — | Child -> parent: person_contacts.person_id -> persons.id. |
-| `contact_type` | `core.contact_type` | нет | — | Contact type: email or phone. |
-| `value` | `character varying(320)` | нет | — | Original/display value. |
-| `normalized_value` | `character varying(320)` | нет | — | Normalized value used for comparison/search. |
+| `person_id` | `uuid` | нет | — | Дочерняя запись → родитель: person_contacts.person_id → persons.id. |
+| `contact_type` | `core.contact_type` | нет | — | Тип контакта: email — почта, phone — телефон. |
+| `value` | `character varying(320)` | нет | — | Исходное отображаемое значение. |
+| `normalized_value` | `character varying(320)` | нет | — | Нормализованное значение для сравнения и поиска. |
 | `label` | `character varying(80)` | да | — | — |
-| `is_primary` | `boolean` | нет | false | Marks the primary contact of a given type for the Person. |
-| `verified_at` | `timestamp with time zone` | да | — | Verification time; NULL means unverified. |
+| `is_primary` | `boolean` | нет | false | Признак основного контакта данного типа у Person. |
+| `verified_at` | `timestamp with time zone` | да | — | Время подтверждения; NULL означает отсутствие подтверждения. |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_person_contacts_person`: `FOREIGN KEY (person_id) REFERENCES core.persons(id) ON DELETE CASCADE`.
 
-CHECK: 5; индексов: 5; пользовательских triggers: 0.
+Проверок CHECK: 5; индексов: 5; пользовательских триггеров: 0.
 
 ## core.persons
 
-Physical individuals separated from accounts. Core v1 base table (1 of 23). Data hygiene constraints applied.
+Физические лица отдельно от аккаунтов. Базовая таблица Core v1, одна из 23 того этапа. Применены ограничения качества данных.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
-| `id` | `uuid` | нет | uuidv7() | UUIDv7 primary key of the physical person. |
-| `status` | `core.person_status` | нет | 'active'::core.person_status | Person lifecycle status: active, inactive, archived. |
-| `given_name` | `character varying(120)` | нет | — | First/given name. |
-| `family_name` | `character varying(120)` | нет | — | Family/last name. |
-| `middle_name` | `character varying(120)` | да | — | Optional middle/patronymic name. |
-| `display_name` | `character varying(255)` | да | — | Optional preformatted display name for UI. |
-| `birth_date` | `date` | да | — | Birth date without time. |
-| `created_at` | `timestamp with time zone` | нет | now() | Creation timestamp. |
-| `updated_at` | `timestamp with time zone` | нет | now() | Last update timestamp; application-managed for now. |
-| `archived_at` | `timestamp with time zone` | да | — | Archive timestamp; NULL means not archived. |
+| `id` | `uuid` | нет | uuidv7() | Первичный ключ физического лица UUIDv7. |
+| `status` | `core.person_status` | нет | 'active'::core.person_status | Статус Person: active — активен, inactive — неактивен, archived — архивирован. |
+| `given_name` | `character varying(120)` | нет | — | Имя. |
+| `family_name` | `character varying(120)` | нет | — | Фамилия. |
+| `middle_name` | `character varying(120)` | да | — | Необязательное второе имя или отчество. |
+| `display_name` | `character varying(255)` | да | — | Необязательное готовое отображаемое имя интерфейса. |
+| `birth_date` | `date` | да | — | Дата рождения без времени. |
+| `created_at` | `timestamp with time zone` | нет | now() | Время создания. |
+| `updated_at` | `timestamp with time zone` | нет | now() | Время последнего изменения; пока задаётся приложением. |
+| `archived_at` | `timestamp with time zone` | да | — | Время архивирования; NULL означает, что запись не архивирована. |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 5; индексов: 4; пользовательских triggers: 0.
+Проверок CHECK: 5; индексов: 4; пользовательских триггеров: 0.
 
 ## core.privacy_cleanup_runs
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `category_code` | `character varying(120)` | нет | — | — |
@@ -800,15 +801,15 @@ CHECK: 5; индексов: 4; пользовательских triggers: 0.
 | `policy_days` | `integer` | да | — | — |
 | `executed_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 2; индексов: 1; пользовательских triggers: 0.
+Проверок CHECK: 2; индексов: 1; пользовательских триггеров: 0.
 
 ## core.privacy_collection_notices
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `subject_person_id` | `uuid` | нет | — | — |
@@ -823,20 +824,20 @@ CHECK: 2; индексов: 1; пользовательских triggers: 0.
 | `created_by_account_id` | `uuid` | нет | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_collection_notices_created_by_account_id_fkey`: `FOREIGN KEY (created_by_account_id) REFERENCES core.accounts(id) ON DELETE RESTRICT`.
 - `privacy_collection_notices_subject_person_id_fkey`: `FOREIGN KEY (subject_person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 
-CHECK: 4; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 4; индексов: 2; пользовательских триггеров: 0.
 
 ## core.privacy_consents
 
-Subject and actor consent evidence; migration 018 rows remain flagged as unclassified legacy evidence.
+Свидетельства согласия субъекта и действующего лица; строки миграции 018 помечены как неклассифицированные прежние свидетельства.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `granted_by_account_id` | `uuid` | нет | — | — |
@@ -856,7 +857,7 @@ Subject and actor consent evidence; migration 018 rows remain flagged as unclass
 | `retention_until` | `timestamp with time zone` | да | — | — |
 | `legacy_record` | `boolean` | нет | false | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -865,11 +866,11 @@ Subject and actor consent evidence; migration 018 rows remain flagged as unclass
 - `privacy_consents_legal_representation_id_fkey`: `FOREIGN KEY (legal_representation_id) REFERENCES core.legal_representations(id) ON DELETE RESTRICT`.
 - `privacy_consents_subject_person_id_fkey`: `FOREIGN KEY (subject_person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 
-CHECK: 9; индексов: 5; пользовательских triggers: 2.
+Проверок CHECK: 9; индексов: 5; пользовательских триггеров: 2.
 
 ## core.privacy_destruction_evidence
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `case_id` | `uuid` | нет | — | — |
@@ -885,7 +886,7 @@ CHECK: 9; индексов: 5; пользовательских triggers: 2.
 | `executor_account_id` | `uuid` | да | — | — |
 | `journal_event_id` | `uuid` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -893,11 +894,11 @@ CHECK: 9; индексов: 5; пользовательских triggers: 2.
 - `privacy_destruction_evidence_executor_account_id_fkey`: `FOREIGN KEY (executor_account_id) REFERENCES core.accounts(id) ON DELETE RESTRICT`.
 - `privacy_destruction_evidence_item_id_fkey`: `FOREIGN KEY (item_id) REFERENCES core.privacy_erasure_items(id) ON DELETE RESTRICT`.
 
-CHECK: 4; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 4; индексов: 3; пользовательских триггеров: 1.
 
 ## core.privacy_distribution_consents
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `subject_person_id` | `uuid` | нет | — | — |
@@ -915,7 +916,7 @@ CHECK: 4; индексов: 3; пользовательских triggers: 1.
 | `withdrawn_at` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -924,11 +925,11 @@ CHECK: 4; индексов: 3; пользовательских triggers: 1.
 - `privacy_distribution_consents_legal_representation_id_fkey`: `FOREIGN KEY (legal_representation_id) REFERENCES core.legal_representations(id) ON DELETE RESTRICT`.
 - `privacy_distribution_consents_subject_person_id_fkey`: `FOREIGN KEY (subject_person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 
-CHECK: 7; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 7; индексов: 2; пользовательских триггеров: 1.
 
 ## core.privacy_erasure_cases
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `subject_person_id` | `uuid` | нет | — | — |
@@ -941,7 +942,7 @@ CHECK: 7; индексов: 2; пользовательских triggers: 1.
 | `updated_at` | `timestamp with time zone` | нет | — | — |
 | `created_by_account_id` | `uuid` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -949,11 +950,11 @@ CHECK: 7; индексов: 2; пользовательских triggers: 1.
 - `privacy_erasure_cases_source_request_id_fkey`: `FOREIGN KEY (source_request_id) REFERENCES core.data_subject_requests(id) ON DELETE RESTRICT`.
 - `privacy_erasure_cases_subject_person_id_fkey`: `FOREIGN KEY (subject_person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 
-CHECK: 4; индексов: 4; пользовательских triggers: 0.
+Проверок CHECK: 4; индексов: 4; пользовательских триггеров: 0.
 
 ## core.privacy_erasure_item_purposes
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `item_id` | `uuid` | нет | — | — |
 | `purpose_code` | `character varying(120)` | нет | — | — |
@@ -962,17 +963,17 @@ CHECK: 4; индексов: 4; пользовательских triggers: 0.
 | `triggered_at` | `timestamp with time zone` | да | — | — |
 | `contributor_code` | `character varying(120)` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (item_id, purpose_code, contributor_code).
+**Первичный ключ:** `PRIMARY KEY (item_id, purpose_code, contributor_code)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_erasure_item_purposes_item_id_fkey`: `FOREIGN KEY (item_id) REFERENCES core.privacy_erasure_items(id) ON DELETE RESTRICT`.
 
-CHECK: 1; индексов: 1; пользовательских triggers: 0.
+Проверок CHECK: 1; индексов: 1; пользовательских триггеров: 0.
 
 ## core.privacy_erasure_items
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `case_id` | `uuid` | нет | — | — |
@@ -988,32 +989,32 @@ CHECK: 1; индексов: 1; пользовательских triggers: 0.
 | `created_at` | `timestamp with time zone` | нет | — | — |
 | `updated_at` | `timestamp with time zone` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_erasure_items_case_id_fkey`: `FOREIGN KEY (case_id) REFERENCES core.privacy_erasure_cases(id) ON DELETE RESTRICT`.
 
-CHECK: 8; индексов: 3; пользовательских triggers: 0.
+Проверок CHECK: 8; индексов: 3; пользовательских триггеров: 0.
 
 ## core.privacy_incident_categories
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `incident_id` | `uuid` | нет | — | — |
 | `category_code` | `character varying(120)` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (incident_id, category_code).
+**Первичный ключ:** `PRIMARY KEY (incident_id, category_code)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_incident_categories_incident_id_fkey`: `FOREIGN KEY (incident_id) REFERENCES core.privacy_incidents(id) ON DELETE RESTRICT`.
 
-CHECK: 1; индексов: 1; пользовательских triggers: 0.
+Проверок CHECK: 1; индексов: 1; пользовательских триггеров: 0.
 
 ## core.privacy_incident_events
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `incident_id` | `uuid` | нет | — | — |
@@ -1024,34 +1025,34 @@ CHECK: 1; индексов: 1; пользовательских triggers: 0.
 | `actor_account_id` | `uuid` | нет | — | — |
 | `occurred_at` | `timestamp with time zone` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_incident_events_actor_account_id_fkey`: `FOREIGN KEY (actor_account_id) REFERENCES core.accounts(id) ON DELETE RESTRICT`.
 - `privacy_incident_events_incident_id_fkey`: `FOREIGN KEY (incident_id) REFERENCES core.privacy_incidents(id) ON DELETE RESTRICT`.
 
-CHECK: 2; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 2; индексов: 2; пользовательских триггеров: 1.
 
 ## core.privacy_incident_subject_scope
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `incident_id` | `uuid` | нет | — | — |
 | `subject_person_id` | `uuid` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (incident_id, subject_person_id).
+**Первичный ключ:** `PRIMARY KEY (incident_id, subject_person_id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_incident_subject_scope_incident_id_fkey`: `FOREIGN KEY (incident_id) REFERENCES core.privacy_incidents(id) ON DELETE RESTRICT`.
 - `privacy_incident_subject_scope_subject_person_id_fkey`: `FOREIGN KEY (subject_person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 
-CHECK: 0; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 0; индексов: 2; пользовательских триггеров: 0.
 
 ## core.privacy_incidents
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `incident_type` | `character varying(120)` | нет | — | — |
@@ -1070,17 +1071,17 @@ CHECK: 0; индексов: 2; пользовательских triggers: 0.
 | `created_at` | `timestamp with time zone` | нет | — | — |
 | `updated_at` | `timestamp with time zone` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_incidents_created_by_account_id_fkey`: `FOREIGN KEY (created_by_account_id) REFERENCES core.accounts(id) ON DELETE RESTRICT`.
 
-CHECK: 7; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 7; индексов: 2; пользовательских триггеров: 0.
 
 ## core.privacy_legal_destruction_packages
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `evidence_id` | `uuid` | нет | — | — |
@@ -1103,7 +1104,7 @@ CHECK: 7; индексов: 2; пользовательских triggers: 0.
 | `retain_until` | `timestamp with time zone` | нет | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -1112,11 +1113,11 @@ CHECK: 7; индексов: 2; пользовательских triggers: 0.
 - `privacy_legal_destruction_packages_executor_account_id_fkey`: `FOREIGN KEY (executor_account_id) REFERENCES core.accounts(id) ON DELETE RESTRICT`.
 - `privacy_legal_destruction_packages_subject_person_id_fkey`: `FOREIGN KEY (subject_person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 
-CHECK: 2; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 2; индексов: 3; пользовательских триггеров: 1.
 
 ## core.privacy_legal_destruction_signatures
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `package_id` | `uuid` | нет | — | — |
 | `signed_document_reference` | `character varying(500)` | нет | — | — |
@@ -1124,18 +1125,18 @@ CHECK: 2; индексов: 3; пользовательских triggers: 1.
 | `attested_by_account_id` | `uuid` | нет | — | — |
 | `attested_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (package_id).
+**Первичный ключ:** `PRIMARY KEY (package_id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_legal_destruction_signature_attested_by_account_id_fkey`: `FOREIGN KEY (attested_by_account_id) REFERENCES core.accounts(id) ON DELETE RESTRICT`.
 - `privacy_legal_destruction_signatures_package_id_fkey`: `FOREIGN KEY (package_id) REFERENCES core.privacy_legal_destruction_packages(id) ON DELETE CASCADE`.
 
-CHECK: 1; индексов: 1; пользовательских triggers: 1.
+Проверок CHECK: 1; индексов: 1; пользовательских триггеров: 1.
 
 ## core.privacy_legal_holds
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `subject_person_id` | `uuid` | да | — | — |
@@ -1153,7 +1154,7 @@ CHECK: 1; индексов: 1; пользовательских triggers: 1.
 | `released_by_account_id` | `uuid` | да | — | — |
 | `release_reason_code` | `character varying(120)` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -1161,11 +1162,11 @@ CHECK: 1; индексов: 1; пользовательских triggers: 1.
 - `privacy_legal_holds_released_by_account_id_fkey`: `FOREIGN KEY (released_by_account_id) REFERENCES core.accounts(id) ON DELETE RESTRICT`.
 - `privacy_legal_holds_subject_person_id_fkey`: `FOREIGN KEY (subject_person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 
-CHECK: 5; индексов: 3; пользовательских triggers: 0.
+Проверок CHECK: 5; индексов: 3; пользовательских триггеров: 0.
 
 ## core.privacy_processing_blocks
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `subject_person_id` | `uuid` | нет | — | — |
@@ -1183,7 +1184,7 @@ CHECK: 5; индексов: 3; пользовательских triggers: 0.
 | `created_by_account_id` | `uuid` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -1192,11 +1193,11 @@ CHECK: 5; индексов: 3; пользовательских triggers: 0.
 - `privacy_processing_blocks_source_request_id_fkey`: `FOREIGN KEY (source_request_id) REFERENCES core.data_subject_requests(id) ON DELETE RESTRICT`.
 - `privacy_processing_blocks_subject_person_id_fkey`: `FOREIGN KEY (subject_person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 
-CHECK: 4; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 4; индексов: 3; пользовательских триггеров: 1.
 
 ## core.privacy_retention_decisions
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `subject_person_id` | `uuid` | нет | — | — |
@@ -1213,7 +1214,7 @@ CHECK: 4; индексов: 3; пользовательских triggers: 1.
 | `evaluated_at` | `timestamp with time zone` | нет | — | — |
 | `evaluator_version` | `character varying(40)` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -1221,20 +1222,20 @@ CHECK: 4; индексов: 3; пользовательских triggers: 1.
 - `privacy_retention_decisions_source_request_id_fkey`: `FOREIGN KEY (source_request_id) REFERENCES core.data_subject_requests(id) ON DELETE RESTRICT`.
 - `privacy_retention_decisions_subject_person_id_fkey`: `FOREIGN KEY (subject_person_id) REFERENCES core.persons(id) ON DELETE RESTRICT`.
 
-CHECK: 1; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 1; индексов: 3; пользовательских триггеров: 1.
 
 ## core.role_permissions
 
-Many-to-many relation Role <-> Permission.
+Связь многие-ко-многим Role ↔ Permission.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `role_id` | `uuid` | нет | — | — |
 | `permission_id` | `uuid` | нет | — | — |
 | `granted_at` | `timestamp with time zone` | нет | now() | — |
-| `granted_by_account_id` | `uuid` | да | — | Account that granted the permission; NULL for seed/system operation. |
+| `granted_by_account_id` | `uuid` | да | — | Аккаунт, выдавший разрешение; NULL для начального заполнения или системной операции. |
 
-**Первичный ключ:** PRIMARY KEY (role_id, permission_id).
+**Первичный ключ:** `PRIMARY KEY (role_id, permission_id)`.
 
 **Реальные внешние ключи:**
 
@@ -1242,32 +1243,32 @@ Many-to-many relation Role <-> Permission.
 - `fk_role_permissions_permission`: `FOREIGN KEY (permission_id) REFERENCES core.permissions(id) ON DELETE CASCADE`.
 - `fk_role_permissions_role`: `FOREIGN KEY (role_id) REFERENCES core.roles(id) ON DELETE CASCADE`.
 
-CHECK: 0; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 0; индексов: 2; пользовательских триггеров: 0.
 
 ## core.roles
 
-RBAC roles. A role is a bundle of permissions, not a separate Admin entity.
+Роли RBAC. Роль — набор разрешений, а не отдельная сущность администратора.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
-| `code` | `character varying(120)` | нет | — | Stable namespaced role code, e.g. core.superadmin. |
+| `code` | `character varying(120)` | нет | — | Стабильный код роли в пространстве имён, например core.superadmin. |
 | `name` | `character varying(160)` | нет | — | — |
 | `description` | `text` | да | — | — |
-| `is_system` | `boolean` | нет | false | Role is system-provided. |
-| `is_protected` | `boolean` | нет | false | Ordinary management flows must not remove/alter protected roles freely. |
+| `is_system` | `boolean` | нет | false | Роль предоставлена системой. |
+| `is_protected` | `boolean` | нет | false | Обычное управление не может свободно удалять или менять защищённые роли. |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 3; индексов: 3; пользовательских triggers: 0.
+Проверок CHECK: 3; индексов: 3; пользовательских триггеров: 0.
 
 ## core.service_credentials
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `account_id` | `uuid` | нет | — | — |
@@ -1282,41 +1283,41 @@ CHECK: 3; индексов: 3; пользовательских triggers: 0.
 | `revoked_at` | `timestamp with time zone` | да | — | — |
 | `created_by_account_id` | `uuid` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `service_credentials_account_id_fkey`: `FOREIGN KEY (account_id) REFERENCES core.accounts(id) ON DELETE RESTRICT`.
 - `service_credentials_created_by_account_id_fkey`: `FOREIGN KEY (created_by_account_id) REFERENCES core.accounts(id) ON DELETE SET NULL`.
 
-CHECK: 5; индексов: 4; пользовательских triggers: 1.
+Проверок CHECK: 5; индексов: 4; пользовательских триггеров: 1.
 
 ## core.system_settings
 
-Installation-wide non-secret settings: generic platform/branding metadata and similar configuration.
+Общие несекретные настройки установки: метаданные платформы, оформления и подобная конфигурация.
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
-| `setting_key` | `character varying(160)` | нет | — | Globally unique generic setting key. |
+| `setting_key` | `character varying(160)` | нет | — | Глобально уникальный ключ общей настройки. |
 | `value` | `jsonb` | нет | — | — |
-| `is_public` | `boolean` | нет | false | Whether this non-secret setting may be exposed to a public/client configuration endpoint. |
+| `is_public` | `boolean` | нет | false | Можно ли выдавать несекретную настройку через публичную или клиентскую конфигурацию. |
 | `description` | `text` | да | — | — |
 | `updated_by_account_id` | `uuid` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `fk_system_settings_updated_by`: `FOREIGN KEY (updated_by_account_id) REFERENCES core.accounts(id) ON DELETE SET NULL`.
 
-CHECK: 3; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 3; индексов: 2; пользовательских триггеров: 0.
 
 ## platform_runtime.background_job_status
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `job_code` | `character varying(120)` | нет | — | — |
 | `last_started_at` | `timestamp with time zone` | да | — | — |
@@ -1330,41 +1331,41 @@ CHECK: 3; индексов: 2; пользовательских triggers: 0.
 | `heartbeat_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (job_code).
+**Первичный ключ:** `PRIMARY KEY (job_code)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 6; индексов: 1; пользовательских triggers: 0.
+Проверок CHECK: 6; индексов: 1; пользовательских триггеров: 0.
 
 ## platform_runtime.entitlement_documents
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `installation_id` | `uuid` | нет | — | — |
-| `document_version` | `integer` | нет | — | Signed document format version; sequence orders snapshots for one installation. |
+| `document_version` | `integer` | нет | — | Версия формата подписанного документа; sequence упорядочивает снимки одной установки. |
 | `sequence` | `bigint` | нет | — | — |
 | `issued_at` | `timestamp with time zone` | нет | — | — |
 | `valid_from` | `timestamp with time zone` | нет | — | — |
 | `valid_until` | `timestamp with time zone` | да | — | — |
 | `payload` | `jsonb` | нет | — | — |
-| `signature` | `bytea` | нет | — | Ed25519 signature bytes. The private signing key is never stored in this database. |
+| `signature` | `bytea` | нет | — | Байты подписи Ed25519. Закрытый ключ подписи в этой БД не хранится. |
 | `signing_key_id` | `character varying(160)` | нет | — | — |
 | `status` | `platform_runtime.entitlement_status` | нет | 'pending'::platform_runtime.entitlement_status | — |
 | `applied_at` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `entitlement_documents_installation_id_fkey`: `FOREIGN KEY (installation_id) REFERENCES platform_runtime.installations(id) ON DELETE RESTRICT`.
 
-CHECK: 7; индексов: 4; пользовательских triggers: 1.
+Проверок CHECK: 7; индексов: 4; пользовательских триггеров: 1.
 
 ## platform_runtime.installations
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `singleton_key` | `smallint` | нет | 1 | — |
@@ -1379,15 +1380,15 @@ CHECK: 7; индексов: 4; пользовательских triggers: 1.
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 | `activated_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 5; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 5; индексов: 2; пользовательских триггеров: 1.
 
 ## commercial.audit_events
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `bigint` | нет | IDENTITY ALWAYS | — |
 | `event_id` | `uuid` | нет | uuidv7() | — |
@@ -1402,17 +1403,17 @@ CHECK: 5; индексов: 2; пользовательских triggers: 1.
 | `outcome` | `character varying(24)` | нет | — | — |
 | `metadata` | `jsonb` | нет | '{}'::jsonb | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `audit_events_commercial_account_id_fkey`: `FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id) ON DELETE RESTRICT`.
 
-CHECK: 5; индексов: 3; пользовательских triggers: 2.
+Проверок CHECK: 5; индексов: 3; пользовательских триггеров: 2.
 
 ## commercial.background_job_status
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `job_code` | `character varying(120)` | нет | — | — |
 | `last_started_at` | `timestamp with time zone` | да | — | — |
@@ -1426,15 +1427,15 @@ CHECK: 5; индексов: 3; пользовательских triggers: 2.
 | `heartbeat_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (job_code).
+**Первичный ключ:** `PRIMARY KEY (job_code)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 6; индексов: 1; пользовательских triggers: 0.
+Проверок CHECK: 6; индексов: 1; пользовательских триггеров: 0.
 
 ## commercial.billing_profiles
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `commercial_account_id` | `uuid` | нет | — | — |
@@ -1449,17 +1450,34 @@ CHECK: 6; индексов: 1; пользовательских triggers: 0.
 | `address` | `jsonb` | нет | '{}'::jsonb | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `billing_profiles_commercial_account_id_fkey`: `FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id) ON DELETE RESTRICT`.
 
-CHECK: 6; индексов: 3; пользовательских triggers: 0.
+Проверок CHECK: 6; индексов: 3; пользовательских триггеров: 0.
+
+## commercial.catalog_operators
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `control_user_id` | `uuid` | нет | — | — |
+| `authorization_reference` | `text` | нет | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+| `revoked_at` | `timestamp with time zone` | да | — | — |
+
+**Первичный ключ:** `PRIMARY KEY (control_user_id)`.
+
+**Реальные внешние ключи:**
+
+- `catalog_operators_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE CASCADE`.
+
+Проверок CHECK: 1; индексов: 1; пользовательских триггеров: 0.
 
 ## commercial.commercial_account_invitations
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | — | — |
 | `commercial_account_id` | `uuid` | нет | — | — |
@@ -1478,7 +1496,7 @@ CHECK: 6; индексов: 3; пользовательских triggers: 0.
 | `declined_at` | `timestamp with time zone` | да | — | — |
 | `revoked_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -1486,11 +1504,11 @@ CHECK: 6; индексов: 3; пользовательских triggers: 0.
 - `commercial_account_invitations_commercial_account_id_fkey`: `FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id)`.
 - `commercial_account_invitations_invited_by_fkey`: `FOREIGN KEY (invited_by) REFERENCES commercial.control_users(id)`.
 
-CHECK: 4; индексов: 5; пользовательских triggers: 0.
+Проверок CHECK: 4; индексов: 5; пользовательских триггеров: 0.
 
 ## commercial.commercial_account_memberships
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `control_user_id` | `uuid` | нет | — | — |
@@ -1499,18 +1517,18 @@ CHECK: 4; индексов: 5; пользовательских triggers: 0.
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `revoked_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `commercial_account_memberships_commercial_account_id_fkey`: `FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id) ON DELETE RESTRICT`.
 - `commercial_account_memberships_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 1; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 1; индексов: 3; пользовательских триггеров: 1.
 
 ## commercial.commercial_accounts
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `code` | `character varying(120)` | нет | — | — |
@@ -1522,15 +1540,15 @@ CHECK: 1; индексов: 3; пользовательских triggers: 1.
 | `legal_name` | `character varying(240)` | да | — | — |
 | `onboarding_state` | `character varying(40)` | нет | 'profile_required'::character varying | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 6; индексов: 2; пользовательских triggers: 3.
+Проверок CHECK: 6; индексов: 2; пользовательских триггеров: 3.
 
 ## commercial.control_auth_challenges
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `control_user_id` | `uuid` | нет | — | — |
@@ -1542,33 +1560,33 @@ CHECK: 6; индексов: 2; пользовательских triggers: 3.
 | `invalidated_at` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `control_auth_challenges_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 5; индексов: 4; пользовательских triggers: 0.
+Проверок CHECK: 5; индексов: 4; пользовательских триггеров: 0.
 
 ## commercial.control_session_refresh_history
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `token_hash` | `bytea` | нет | — | — |
 | `control_session_id` | `uuid` | нет | — | — |
 | `consumed_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (token_hash).
+**Первичный ключ:** `PRIMARY KEY (token_hash)`.
 
 **Реальные внешние ключи:**
 
 - `control_session_refresh_history_control_session_id_fkey`: `FOREIGN KEY (control_session_id) REFERENCES commercial.control_sessions(id) ON DELETE CASCADE`.
 
-CHECK: 1; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 1; индексов: 2; пользовательских триггеров: 0.
 
 ## commercial.control_sessions
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `control_user_id` | `uuid` | нет | — | — |
@@ -1590,17 +1608,17 @@ CHECK: 1; индексов: 2; пользовательских triggers: 0.
 | `primary_authenticated_at` | `timestamp with time zone` | нет | now() | — |
 | `mfa_authenticated_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `control_sessions_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 9; индексов: 6; пользовательских triggers: 0.
+Проверок CHECK: 9; индексов: 6; пользовательских триггеров: 0.
 
 ## commercial.control_user_email_verifications
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `control_user_id` | `uuid` | нет | — | — |
@@ -1610,17 +1628,17 @@ CHECK: 9; индексов: 6; пользовательских triggers: 0.
 | `invalidated_at` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `control_user_email_verifications_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 3; индексов: 4; пользовательских triggers: 0.
+Проверок CHECK: 3; индексов: 4; пользовательских триггеров: 0.
 
 ## commercial.control_user_password_resets
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `control_user_id` | `uuid` | нет | — | — |
@@ -1630,17 +1648,17 @@ CHECK: 3; индексов: 4; пользовательских triggers: 0.
 | `invalidated_at` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `control_user_password_resets_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 3; индексов: 4; пользовательских triggers: 0.
+Проверок CHECK: 3; индексов: 4; пользовательских триггеров: 0.
 
 ## commercial.control_user_recovery_codes
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `control_user_id` | `uuid` | нет | — | — |
@@ -1650,18 +1668,18 @@ CHECK: 3; индексов: 4; пользовательских triggers: 0.
 | `consumed_at` | `timestamp with time zone` | да | — | — |
 | `revoked_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `control_user_recovery_codes_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 - `control_user_recovery_codes_factor_id_fkey`: `FOREIGN KEY (factor_id) REFERENCES commercial.control_user_totp_factors(id) ON DELETE RESTRICT`.
 
-CHECK: 2; индексов: 3; пользовательских triggers: 0.
+Проверок CHECK: 2; индексов: 3; пользовательских триггеров: 0.
 
 ## commercial.control_user_totp_factors
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `control_user_id` | `uuid` | нет | — | — |
@@ -1674,17 +1692,17 @@ CHECK: 2; индексов: 3; пользовательских triggers: 0.
 | `revoked_at` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `control_user_totp_factors_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 3; индексов: 4; пользовательских triggers: 0.
+Проверок CHECK: 3; индексов: 4; пользовательских триггеров: 0.
 
 ## commercial.control_users
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `email` | `character varying(320)` | нет | — | — |
@@ -1698,15 +1716,15 @@ CHECK: 3; индексов: 4; пользовательских triggers: 0.
 | `last_login_at` | `timestamp with time zone` | да | — | — |
 | `password_changed_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 4; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 4; индексов: 2; пользовательских триггеров: 1.
 
 ## commercial.deployment_domains
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `deployment_id` | `uuid` | нет | — | — |
@@ -1717,17 +1735,17 @@ CHECK: 4; индексов: 2; пользовательских triggers: 1.
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `disabled_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `deployment_domains_deployment_id_fkey`: `FOREIGN KEY (deployment_id) REFERENCES commercial.deployments(id) ON DELETE RESTRICT`.
 
-CHECK: 4; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 4; индексов: 3; пользовательских триггеров: 1.
 
 ## commercial.deployment_entitlement_documents
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `deployment_id` | `uuid` | нет | — | — |
@@ -1744,18 +1762,18 @@ CHECK: 4; индексов: 3; пользовательских triggers: 1.
 | `valid_until` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `deployment_entitlement_documents_deployment_id_fkey`: `FOREIGN KEY (deployment_id) REFERENCES commercial.deployments(id) ON DELETE RESTRICT`.
 - `deployment_entitlement_documents_signing_key_id_fkey`: `FOREIGN KEY (signing_key_id) REFERENCES commercial.signing_keys(key_id) ON DELETE RESTRICT`.
 
-CHECK: 4; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 4; индексов: 3; пользовательских триггеров: 1.
 
 ## commercial.deployment_operations
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `deployment_id` | `uuid` | нет | — | — |
@@ -1770,17 +1788,17 @@ CHECK: 4; индексов: 3; пользовательских triggers: 1.
 | `finished_at` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `deployment_operations_deployment_id_fkey`: `FOREIGN KEY (deployment_id) REFERENCES commercial.deployments(id) ON DELETE RESTRICT`.
 
-CHECK: 5; индексов: 3; пользовательских triggers: 0.
+Проверок CHECK: 5; индексов: 3; пользовательских триггеров: 0.
 
 ## commercial.deployments
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `commercial_account_id` | `uuid` | нет | — | — |
@@ -1796,7 +1814,7 @@ CHECK: 5; индексов: 3; пользовательских triggers: 0.
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 | `archived_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -1804,11 +1822,11 @@ CHECK: 5; индексов: 3; пользовательских triggers: 0.
 - `deployments_current_release_id_fkey`: `FOREIGN KEY (current_release_id) REFERENCES commercial.releases(id) ON DELETE RESTRICT`.
 - `deployments_desired_release_id_fkey`: `FOREIGN KEY (desired_release_id) REFERENCES commercial.releases(id) ON DELETE RESTRICT`.
 
-CHECK: 6; индексов: 4; пользовательских triggers: 2.
+Проверок CHECK: 6; индексов: 4; пользовательских триггеров: 2.
 
 ## commercial.external_compensation_attestations
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `plan_change_id` | `uuid` | нет | — | — |
@@ -1825,7 +1843,7 @@ CHECK: 6; индексов: 4; пользовательских triggers: 2.
 | `reviewed_at` | `timestamp with time zone` | да | — | — |
 | `rejection_reason` | `character varying(500)` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -1834,11 +1852,11 @@ CHECK: 6; индексов: 4; пользовательских triggers: 2.
 - `external_compensation_attestations_proposed_by_fkey`: `FOREIGN KEY (proposed_by) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 - `external_compensation_attestations_reviewed_by_fkey`: `FOREIGN KEY (reviewed_by) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 7; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 7; индексов: 3; пользовательских триггеров: 1.
 
 ## commercial.features
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `code` | `character varying(160)` | нет | — | — |
@@ -1848,32 +1866,32 @@ CHECK: 7; индексов: 3; пользовательских triggers: 1.
 | `retired_at` | `timestamp with time zone` | да | — | — |
 | `usage_mode` | `character varying(16)` | нет | 'none'::character varying | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 5; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 5; индексов: 2; пользовательских триггеров: 1.
 
 ## commercial.financial_operators
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `control_user_id` | `uuid` | нет | — | — |
 | `authorization_reference` | `character varying(500)` | нет | — | — |
 | `authorized_at` | `timestamp with time zone` | нет | now() | — |
 | `revoked_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (control_user_id).
+**Первичный ключ:** `PRIMARY KEY (control_user_id)`.
 
 **Реальные внешние ключи:**
 
 - `financial_operators_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 2; индексов: 1; пользовательских triggers: 0.
+Проверок CHECK: 2; индексов: 1; пользовательских триггеров: 0.
 
 ## commercial.idempotency_keys
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `scope` | `character varying(120)` | нет | — | — |
@@ -1884,15 +1902,15 @@ CHECK: 2; индексов: 1; пользовательских triggers: 0.
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `expires_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 5; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 5; индексов: 2; пользовательских триггеров: 1.
 
 ## commercial.invoice_lines
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `invoice_id` | `uuid` | нет | — | — |
@@ -1908,7 +1926,7 @@ CHECK: 5; индексов: 2; пользовательских triggers: 1.
 | `total_minor` | `bigint` | нет | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -1916,11 +1934,11 @@ CHECK: 5; индексов: 2; пользовательских triggers: 1.
 - `invoice_lines_plan_price_id_fkey`: `FOREIGN KEY (plan_price_id) REFERENCES commercial.plan_prices(id) ON DELETE RESTRICT`.
 - `invoice_lines_subscription_item_id_fkey`: `FOREIGN KEY (subscription_item_id) REFERENCES commercial.subscription_items(id) ON DELETE RESTRICT`.
 
-CHECK: 8; индексов: 4; пользовательских triggers: 1.
+Проверок CHECK: 8; индексов: 4; пользовательских триггеров: 1.
 
 ## commercial.invoices
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `commercial_account_id` | `uuid` | нет | — | — |
@@ -1944,7 +1962,7 @@ CHECK: 8; индексов: 4; пользовательских triggers: 1.
 | `service_period_start` | `timestamp with time zone` | да | — | — |
 | `service_period_end` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -1952,11 +1970,11 @@ CHECK: 8; индексов: 4; пользовательских triggers: 1.
 - `invoices_commercial_account_id_fkey`: `FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id) ON DELETE RESTRICT`.
 - `invoices_subscription_id_fkey`: `FOREIGN KEY (subscription_id) REFERENCES commercial.subscriptions(id) ON DELETE RESTRICT`.
 
-CHECK: 12; индексов: 6; пользовательских triggers: 1.
+Проверок CHECK: 12; индексов: 6; пользовательских триггеров: 1.
 
 ## commercial.issued_entitlement_documents
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `license_id` | `uuid` | нет | — | — |
@@ -1972,35 +1990,35 @@ CHECK: 12; индексов: 6; пользовательских triggers: 1.
 | `valid_until` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `issued_entitlement_documents_license_id_fkey`: `FOREIGN KEY (license_id) REFERENCES commercial.licenses(id) ON DELETE RESTRICT`.
 - `issued_entitlement_documents_signing_key_id_fkey`: `FOREIGN KEY (signing_key_id) REFERENCES commercial.signing_keys(key_id) ON DELETE RESTRICT`.
 
-CHECK: 4; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 4; индексов: 2; пользовательских триггеров: 1.
 
 ## commercial.license_installations
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `license_id` | `uuid` | нет | — | — |
 | `installation_id` | `uuid` | нет | — | — |
 | `activated_at` | `timestamp with time zone` | нет | now() | — |
 | `revoked_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (license_id, installation_id).
+**Первичный ключ:** `PRIMARY KEY (license_id, installation_id)`.
 
 **Реальные внешние ключи:**
 
 - `license_installations_license_id_fkey`: `FOREIGN KEY (license_id) REFERENCES commercial.licenses(id) ON DELETE RESTRICT`.
 
-CHECK: 0; индексов: 1; пользовательских triggers: 1.
+Проверок CHECK: 0; индексов: 1; пользовательских триггеров: 1.
 
 ## commercial.licenses
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `commercial_account_id` | `uuid` | нет | — | — |
@@ -2013,17 +2031,17 @@ CHECK: 0; индексов: 1; пользовательских triggers: 1.
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `revoked_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `licenses_commercial_account_id_fkey`: `FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id) ON DELETE RESTRICT`.
 
-CHECK: 6; индексов: 2; пользовательских triggers: 2.
+Проверок CHECK: 6; индексов: 2; пользовательских триггеров: 2.
 
 ## commercial.maintenance_contracts
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `license_id` | `uuid` | нет | — | — |
@@ -2031,17 +2049,17 @@ CHECK: 6; индексов: 2; пользовательских triggers: 2.
 | `valid_until` | `timestamp with time zone` | нет | — | — |
 | `status` | `character varying(24)` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `maintenance_contracts_license_id_fkey`: `FOREIGN KEY (license_id) REFERENCES commercial.licenses(id) ON DELETE RESTRICT`.
 
-CHECK: 2; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 2; индексов: 3; пользовательских триггеров: 1.
 
 ## commercial.outbox_events
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `bigint` | нет | IDENTITY ALWAYS | — |
 | `event_id` | `uuid` | нет | uuidv7() | — |
@@ -2059,15 +2077,15 @@ CHECK: 2; индексов: 3; пользовательских triggers: 1.
 | `lock_token` | `uuid` | да | — | — |
 | `last_error` | `character varying(160)` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 8; индексов: 4; пользовательских triggers: 1.
+Проверок CHECK: 8; индексов: 4; пользовательских триггеров: 1.
 
 ## commercial.payment_attempts
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `payment_id` | `uuid` | нет | — | — |
@@ -2080,18 +2098,18 @@ CHECK: 8; индексов: 4; пользовательских triggers: 1.
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `completed_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `payment_attempts_payment_id_fkey`: `FOREIGN KEY (payment_id) REFERENCES commercial.payments(id) ON DELETE RESTRICT`.
 - `payment_attempts_provider_account_id_fkey`: `FOREIGN KEY (provider_account_id) REFERENCES commercial.payment_provider_accounts(id) ON DELETE RESTRICT`.
 
-CHECK: 6; индексов: 5; пользовательских triggers: 1.
+Проверок CHECK: 6; индексов: 5; пользовательских триггеров: 1.
 
 ## commercial.payment_provider_accounts
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `provider_code` | `character varying(120)` | нет | — | — |
@@ -2105,15 +2123,15 @@ CHECK: 6; индексов: 5; пользовательских triggers: 1.
 | `receipt_payment_subject` | `character varying(40)` | да | — | — |
 | `receipt_payment_mode` | `character varying(40)` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 5; индексов: 1; пользовательских triggers: 1.
+Проверок CHECK: 5; индексов: 1; пользовательских триггеров: 1.
 
 ## commercial.payment_provider_events
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `provider_account_id` | `uuid` | нет | — | — |
@@ -2126,17 +2144,17 @@ CHECK: 5; индексов: 1; пользовательских triggers: 1.
 | `processed_at` | `timestamp with time zone` | да | — | — |
 | `last_error_code` | `character varying(120)` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `payment_provider_events_provider_account_id_fkey`: `FOREIGN KEY (provider_account_id) REFERENCES commercial.payment_provider_accounts(id) ON DELETE RESTRICT`.
 
-CHECK: 7; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 7; индексов: 3; пользовательских триггеров: 1.
 
 ## commercial.payments
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `invoice_id` | `uuid` | нет | — | — |
@@ -2149,35 +2167,35 @@ CHECK: 7; индексов: 3; пользовательских triggers: 1.
 | `cancelled_at` | `timestamp with time zone` | да | — | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `payments_commercial_account_id_fkey`: `FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id) ON DELETE RESTRICT`.
 - `payments_invoice_id_fkey`: `FOREIGN KEY (invoice_id) REFERENCES commercial.invoices(id) ON DELETE RESTRICT`.
 
-CHECK: 4; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 4; индексов: 3; пользовательских триггеров: 1.
 
 ## commercial.plan_features
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `plan_id` | `uuid` | нет | — | — |
 | `feature_id` | `uuid` | нет | — | — |
 | `value` | `jsonb` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (plan_id, feature_id).
+**Первичный ключ:** `PRIMARY KEY (plan_id, feature_id)`.
 
 **Реальные внешние ключи:**
 
 - `plan_features_feature_id_fkey`: `FOREIGN KEY (feature_id) REFERENCES commercial.features(id) ON DELETE RESTRICT`.
 - `plan_features_plan_id_fkey`: `FOREIGN KEY (plan_id) REFERENCES commercial.plans(id) ON DELETE RESTRICT`.
 
-CHECK: 0; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 0; индексов: 2; пользовательских триггеров: 1.
 
 ## commercial.plan_prices
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `plan_id` | `uuid` | нет | — | — |
@@ -2186,17 +2204,17 @@ CHECK: 0; индексов: 2; пользовательских triggers: 1.
 | `billing_period` | `character varying(24)` | нет | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `plan_prices_plan_id_fkey`: `FOREIGN KEY (plan_id) REFERENCES commercial.plans(id) ON DELETE RESTRICT`.
 
-CHECK: 3; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 3; индексов: 2; пользовательских триггеров: 1.
 
 ## commercial.plans
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `code` | `character varying(120)` | нет | — | — |
@@ -2207,15 +2225,15 @@ CHECK: 3; индексов: 2; пользовательских triggers: 1.
 | `published_at` | `timestamp with time zone` | да | — | — |
 | `retired_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 5; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 5; индексов: 2; пользовательских триггеров: 1.
 
 ## commercial.privacy_erasure_cases
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `control_user_id` | `uuid` | нет | — | — |
@@ -2225,17 +2243,17 @@ CHECK: 5; индексов: 2; пользовательских triggers: 1.
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `completed_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_erasure_cases_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 2; индексов: 1; пользовательских triggers: 1.
+Проверок CHECK: 2; индексов: 1; пользовательских триггеров: 1.
 
 ## commercial.privacy_export_events
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `control_user_id` | `uuid` | нет | — | — |
@@ -2244,18 +2262,18 @@ CHECK: 2; индексов: 1; пользовательских triggers: 1.
 | `item_count` | `integer` | нет | — | — |
 | `exported_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_export_events_actor_id_fkey`: `FOREIGN KEY (actor_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 - `privacy_export_events_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 1; индексов: 1; пользовательских triggers: 1.
+Проверок CHECK: 1; индексов: 1; пользовательских триггеров: 1.
 
 ## commercial.privacy_holds
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `control_user_id` | `uuid` | нет | — | — |
@@ -2263,17 +2281,17 @@ CHECK: 1; индексов: 1; пользовательских triggers: 1.
 | `opened_at` | `timestamp with time zone` | нет | now() | — |
 | `released_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_holds_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 2; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 2; индексов: 2; пользовательских триггеров: 0.
 
 ## commercial.privacy_incident_events
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `incident_id` | `uuid` | нет | — | — |
@@ -2282,18 +2300,18 @@ CHECK: 2; индексов: 2; пользовательских triggers: 0.
 | `actor_user_id` | `uuid` | нет | — | — |
 | `occurred_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_incident_events_actor_user_id_fkey`: `FOREIGN KEY (actor_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 - `privacy_incident_events_incident_id_fkey`: `FOREIGN KEY (incident_id) REFERENCES commercial.privacy_incidents(id) ON DELETE RESTRICT`.
 
-CHECK: 0; индексов: 1; пользовательских triggers: 1.
+Проверок CHECK: 0; индексов: 1; пользовательских триггеров: 1.
 
 ## commercial.privacy_incidents
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `detected_at` | `timestamp with time zone` | нет | — | — |
@@ -2310,17 +2328,17 @@ CHECK: 0; индексов: 1; пользовательских triggers: 1.
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_incidents_created_by_user_id_fkey`: `FOREIGN KEY (created_by_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 4; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 4; индексов: 2; пользовательских триггеров: 0.
 
 ## commercial.privacy_lifecycle_runs
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `category` | `character varying(80)` | нет | — | — |
@@ -2329,31 +2347,31 @@ CHECK: 4; индексов: 2; пользовательских triggers: 0.
 | `deleted_count` | `integer` | нет | — | — |
 | `executed_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 1; индексов: 1; пользовательских triggers: 0.
+Проверок CHECK: 1; индексов: 1; пользовательских триггеров: 0.
 
 ## commercial.privacy_operators
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `control_user_id` | `uuid` | нет | — | — |
 | `authorization_reference` | `character varying(500)` | нет | — | — |
 | `authorized_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (control_user_id).
+**Первичный ключ:** `PRIMARY KEY (control_user_id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_operators_control_user_id_fkey`: `FOREIGN KEY (control_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 
-CHECK: 0; индексов: 1; пользовательских triggers: 0.
+Проверок CHECK: 0; индексов: 1; пользовательских триггеров: 0.
 
 ## commercial.privacy_subject_holds
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `billing_profile_id` | `uuid` | нет | — | — |
@@ -2361,17 +2379,17 @@ CHECK: 0; индексов: 1; пользовательских triggers: 0.
 | `opened_at` | `timestamp with time zone` | нет | now() | — |
 | `released_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `privacy_subject_holds_billing_profile_id_fkey`: `FOREIGN KEY (billing_profile_id) REFERENCES commercial.billing_profiles(id) ON DELETE RESTRICT`.
 
-CHECK: 1; индексов: 1; пользовательских triggers: 0.
+Проверок CHECK: 1; индексов: 1; пользовательских триггеров: 0.
 
 ## commercial.privacy_subject_requests
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `subject_kind` | `character varying(32)` | нет | — | — |
@@ -2390,7 +2408,7 @@ CHECK: 1; индексов: 1; пользовательских triggers: 0.
 | `completed_at` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -2399,11 +2417,11 @@ CHECK: 1; индексов: 1; пользовательских triggers: 0.
 - `privacy_subject_requests_operator_user_id_fkey`: `FOREIGN KEY (operator_user_id) REFERENCES commercial.control_users(id) ON DELETE RESTRICT`.
 - `privacy_subject_requests_receipt_id_fkey`: `FOREIGN KEY (receipt_id) REFERENCES commercial.receipts(id) ON DELETE RESTRICT`.
 
-CHECK: 6; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 6; индексов: 2; пользовательских триггеров: 0.
 
 ## commercial.rate_limit_counters
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `scope` | `character varying(80)` | нет | — | — |
 | `key_hash` | `bytea` | нет | — | — |
@@ -2411,15 +2429,15 @@ CHECK: 6; индексов: 2; пользовательских triggers: 0.
 | `hits` | `integer` | нет | 1 | — |
 | `expires_at` | `timestamp with time zone` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (scope, key_hash, window_started_at).
+**Первичный ключ:** `PRIMARY KEY (scope, key_hash, window_started_at)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 4; индексов: 2; пользовательских triggers: 0.
+Проверок CHECK: 4; индексов: 2; пользовательских триггеров: 0.
 
 ## commercial.receipt_items
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `receipt_id` | `uuid` | нет | — | — |
@@ -2434,18 +2452,18 @@ CHECK: 4; индексов: 2; пользовательских triggers: 0.
 | `payment_mode` | `character varying(40)` | нет | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `receipt_items_invoice_line_id_fkey`: `FOREIGN KEY (invoice_line_id) REFERENCES commercial.invoice_lines(id) ON DELETE RESTRICT`.
 - `receipt_items_receipt_id_fkey`: `FOREIGN KEY (receipt_id) REFERENCES commercial.receipts(id) ON DELETE RESTRICT`.
 
-CHECK: 5; индексов: 3; пользовательских triggers: 2.
+Проверок CHECK: 5; индексов: 3; пользовательских триггеров: 2.
 
 ## commercial.receipts
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `payment_id` | `uuid` | нет | — | — |
@@ -2471,7 +2489,7 @@ CHECK: 5; индексов: 3; пользовательских triggers: 2.
 | `last_error_code` | `character varying(120)` | да | — | — |
 | `refund_id` | `uuid` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -2482,11 +2500,11 @@ CHECK: 5; индексов: 3; пользовательских triggers: 2.
 - `receipts_provider_account_id_fkey`: `FOREIGN KEY (provider_account_id) REFERENCES commercial.payment_provider_accounts(id) ON DELETE RESTRICT`.
 - `receipts_refund_id_fkey`: `FOREIGN KEY (refund_id) REFERENCES commercial.refunds(id) ON DELETE RESTRICT`.
 
-CHECK: 11; индексов: 6; пользовательских triggers: 2.
+Проверок CHECK: 11; индексов: 6; пользовательских триггеров: 2.
 
 ## commercial.refund_items
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `refund_id` | `uuid` | нет | — | — |
@@ -2501,18 +2519,18 @@ CHECK: 11; индексов: 6; пользовательских triggers: 2.
 | `payment_mode` | `character varying(40)` | нет | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `refund_items_invoice_line_id_fkey`: `FOREIGN KEY (invoice_line_id) REFERENCES commercial.invoice_lines(id) ON DELETE RESTRICT`.
 - `refund_items_refund_id_fkey`: `FOREIGN KEY (refund_id) REFERENCES commercial.refunds(id) ON DELETE RESTRICT`.
 
-CHECK: 5; индексов: 3; пользовательских triggers: 2.
+Проверок CHECK: 5; индексов: 3; пользовательских триггеров: 2.
 
 ## commercial.refunds
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `payment_id` | `uuid` | нет | — | — |
@@ -2531,7 +2549,7 @@ CHECK: 5; индексов: 3; пользовательских triggers: 2.
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 | `last_error_code` | `character varying(120)` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -2539,28 +2557,28 @@ CHECK: 5; индексов: 3; пользовательских triggers: 2.
 - `refunds_payment_id_fkey`: `FOREIGN KEY (payment_id) REFERENCES commercial.payments(id) ON DELETE RESTRICT`.
 - `refunds_provider_account_id_fkey`: `FOREIGN KEY (provider_account_id) REFERENCES commercial.payment_provider_accounts(id) ON DELETE RESTRICT`.
 
-CHECK: 9; индексов: 6; пользовательских triggers: 2.
+Проверок CHECK: 9; индексов: 6; пользовательских триггеров: 2.
 
 ## commercial.release_entitlements
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `release_id` | `uuid` | нет | — | — |
 | `feature_id` | `uuid` | нет | — | — |
 | `requirement` | `jsonb` | нет | — | — |
 
-**Первичный ключ:** PRIMARY KEY (release_id, feature_id).
+**Первичный ключ:** `PRIMARY KEY (release_id, feature_id)`.
 
 **Реальные внешние ключи:**
 
 - `release_entitlements_feature_id_fkey`: `FOREIGN KEY (feature_id) REFERENCES commercial.features(id) ON DELETE RESTRICT`.
 - `release_entitlements_release_id_fkey`: `FOREIGN KEY (release_id) REFERENCES commercial.releases(id) ON DELETE RESTRICT`.
 
-CHECK: 0; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 0; индексов: 2; пользовательских триггеров: 1.
 
 ## commercial.releases
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `version` | `character varying(80)` | нет | — | — |
@@ -2576,17 +2594,17 @@ CHECK: 0; индексов: 2; пользовательских triggers: 1.
 | `published_at` | `timestamp with time zone` | да | — | — |
 | `retired_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `releases_signing_key_id_fkey`: `FOREIGN KEY (signing_key_id) REFERENCES commercial.signing_keys(key_id) ON DELETE RESTRICT`.
 
-CHECK: 9; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 9; индексов: 2; пользовательских триггеров: 1.
 
 ## commercial.renewal_collection_states
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `invoice_id` | `uuid` | нет | — | — |
@@ -2602,7 +2620,7 @@ CHECK: 9; индексов: 2; пользовательских triggers: 1.
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 | `network_retry_count` | `integer` | нет | 0 | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -2612,11 +2630,11 @@ CHECK: 9; индексов: 2; пользовательских triggers: 1.
 - `renewal_collection_states_invoice_id_fkey`: `FOREIGN KEY (invoice_id) REFERENCES commercial.invoices(id) ON DELETE RESTRICT`.
 - `renewal_collection_states_subscription_id_fkey`: `FOREIGN KEY (subscription_id) REFERENCES commercial.subscriptions(id) ON DELETE RESTRICT`.
 
-CHECK: 4; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 4; индексов: 3; пользовательских триггеров: 1.
 
 ## commercial.saved_payment_methods
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `commercial_account_id` | `uuid` | нет | — | — |
@@ -2636,7 +2654,7 @@ CHECK: 4; индексов: 3; пользовательских triggers: 1.
 | `last_used_at` | `timestamp with time zone` | да | — | — |
 | `disabled_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -2644,11 +2662,11 @@ CHECK: 4; индексов: 3; пользовательских triggers: 1.
 - `saved_payment_methods_created_from_payment_attempt_id_fkey`: `FOREIGN KEY (created_from_payment_attempt_id) REFERENCES commercial.payment_attempts(id) ON DELETE RESTRICT`.
 - `saved_payment_methods_provider_account_id_fkey`: `FOREIGN KEY (provider_account_id) REFERENCES commercial.payment_provider_accounts(id) ON DELETE RESTRICT`.
 
-CHECK: 5; индексов: 4; пользовательских triggers: 1.
+Проверок CHECK: 5; индексов: 4; пользовательских триггеров: 1.
 
 ## commercial.service_credentials
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `deployment_id` | `uuid` | нет | — | — |
@@ -2662,17 +2680,17 @@ CHECK: 5; индексов: 4; пользовательских triggers: 1.
 | `rotated_at` | `timestamp with time zone` | да | — | — |
 | `revoked_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `service_credentials_deployment_id_fkey`: `FOREIGN KEY (deployment_id) REFERENCES commercial.deployments(id) ON DELETE RESTRICT`.
 
-CHECK: 5; индексов: 4; пользовательских triggers: 0.
+Проверок CHECK: 5; индексов: 4; пользовательских триггеров: 0.
 
 ## commercial.signing_keys
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `key_id` | `character varying(160)` | нет | — | — |
 | `algorithm` | `character varying(24)` | нет | — | — |
@@ -2685,15 +2703,15 @@ CHECK: 5; индексов: 4; пользовательских triggers: 0.
 | `revoked_at` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (key_id).
+**Первичный ключ:** `PRIMARY KEY (key_id)`.
 
-SQL FK из этой таблицы отсутствуют.
+Внешние ключи SQL из этой таблицы отсутствуют.
 
-CHECK: 8; индексов: 1; пользовательских triggers: 2.
+Проверок CHECK: 8; индексов: 1; пользовательских триггеров: 2.
 
 ## commercial.subscription_items
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `subscription_id` | `uuid` | нет | — | — |
@@ -2703,18 +2721,18 @@ CHECK: 8; индексов: 1; пользовательских triggers: 2.
 | `valid_until` | `timestamp with time zone` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `subscription_items_plan_price_id_fkey`: `FOREIGN KEY (plan_price_id) REFERENCES commercial.plan_prices(id) ON DELETE RESTRICT`.
 - `subscription_items_subscription_id_fkey`: `FOREIGN KEY (subscription_id) REFERENCES commercial.subscriptions(id) ON DELETE RESTRICT`.
 
-CHECK: 2; индексов: 3; пользовательских triggers: 1.
+Проверок CHECK: 2; индексов: 3; пользовательских триггеров: 1.
 
 ## commercial.subscription_plan_changes
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `commercial_account_id` | `uuid` | нет | — | — |
@@ -2741,7 +2759,7 @@ CHECK: 2; индексов: 3; пользовательских triggers: 1.
 | `compensation_status` | `character varying(24)` | да | — | — |
 | `compensation_reason` | `character varying(40)` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
@@ -2752,11 +2770,11 @@ CHECK: 2; индексов: 3; пользовательских triggers: 1.
 - `subscription_plan_changes_source_subscription_id_fkey`: `FOREIGN KEY (source_subscription_id) REFERENCES commercial.subscriptions(id) ON DELETE RESTRICT`.
 - `subscription_plan_changes_target_subscription_id_fkey`: `FOREIGN KEY (target_subscription_id) REFERENCES commercial.subscriptions(id) ON DELETE RESTRICT`.
 
-CHECK: 11; индексов: 7; пользовательских triggers: 1.
+Проверок CHECK: 11; индексов: 7; пользовательских триггеров: 1.
 
 ## commercial.subscriptions
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `commercial_account_id` | `uuid` | нет | — | — |
@@ -2771,36 +2789,36 @@ CHECK: 11; индексов: 7; пользовательских triggers: 1.
 | `grace_until` | `timestamp with time zone` | да | — | — |
 | `auto_renew_enabled` | `boolean` | нет | true | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `subscriptions_billing_profile_id_fkey`: `FOREIGN KEY (billing_profile_id) REFERENCES commercial.billing_profiles(id) ON DELETE RESTRICT`.
 - `subscriptions_commercial_account_id_fkey`: `FOREIGN KEY (commercial_account_id) REFERENCES commercial.commercial_accounts(id) ON DELETE RESTRICT`.
 
-CHECK: 7; индексов: 6; пользовательских triggers: 2.
+Проверок CHECK: 7; индексов: 6; пользовательских триггеров: 2.
 
 ## commercial.usage_counters
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `usage_period_id` | `uuid` | нет | — | — |
 | `feature_id` | `uuid` | нет | — | — |
 | `quantity` | `bigint` | нет | 0 | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
 
-**Первичный ключ:** PRIMARY KEY (usage_period_id, feature_id).
+**Первичный ключ:** `PRIMARY KEY (usage_period_id, feature_id)`.
 
 **Реальные внешние ключи:**
 
 - `usage_counters_feature_id_fkey`: `FOREIGN KEY (feature_id) REFERENCES commercial.features(id) ON DELETE RESTRICT`.
 - `usage_counters_usage_period_id_fkey`: `FOREIGN KEY (usage_period_id) REFERENCES commercial.usage_periods(id) ON DELETE RESTRICT`.
 
-CHECK: 1; индексов: 2; пользовательских triggers: 1.
+Проверок CHECK: 1; индексов: 2; пользовательских триггеров: 1.
 
 ## commercial.usage_periods
 
-| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | нет | uuidv7() | — |
 | `subscription_id` | `uuid` | нет | — | — |
@@ -2810,11 +2828,286 @@ CHECK: 1; индексов: 2; пользовательских triggers: 1.
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `closed_at` | `timestamp with time zone` | да | — | — |
 
-**Первичный ключ:** PRIMARY KEY (id).
+**Первичный ключ:** `PRIMARY KEY (id)`.
 
 **Реальные внешние ключи:**
 
 - `usage_periods_subscription_id_fkey`: `FOREIGN KEY (subscription_id) REFERENCES commercial.subscriptions(id) ON DELETE RESTRICT`.
 
-CHECK: 3; индексов: 3; пользовательских triggers: 2.
+Проверок CHECK: 3; индексов: 3; пользовательских триггеров: 2.
+
+## education.attendance
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `lesson_id` | `uuid` | нет | — | — |
+| `student_id` | `uuid` | нет | — | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `owner_account_id` | `uuid` | нет | — | — |
+| `status` | `character varying(12)` | нет | 'pending'::character varying | — |
+| `updated_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (lesson_id, student_id)`.
+
+**Реальные внешние ключи:**
+
+- `attendance_lesson_id_organization_id_owner_account_id_fkey`: `FOREIGN KEY (lesson_id, organization_id, owner_account_id) REFERENCES education.lessons(id, organization_id, owner_account_id)`.
+- `attendance_student_id_organization_id_owner_account_id_fkey`: `FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)`.
+
+Проверок CHECK: 1; индексов: 1; пользовательских триггеров: 0.
+
+## education.events
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `owner_account_id` | `uuid` | нет | — | — |
+| `owner_person_id` | `uuid` | нет | — | — |
+| `title` | `character varying(160)` | нет | — | — |
+| `kind` | `character varying(20)` | нет | — | — |
+| `starts_at` | `timestamp with time zone` | нет | — | — |
+| `ends_at` | `timestamp with time zone` | нет | — | — |
+| `location` | `character varying(240)` | нет | ''::character varying | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+Внешние ключи SQL из этой таблицы отсутствуют.
+
+Проверок CHECK: 3; индексов: 2; пользовательских триггеров: 0.
+
+## education.files
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `owner_account_id` | `uuid` | нет | — | — |
+| `owner_person_id` | `uuid` | нет | — | — |
+| `lesson_id` | `uuid` | да | — | — |
+| `name` | `character varying(240)` | нет | — | — |
+| `mime` | `character varying(100)` | нет | — | — |
+| `purpose` | `character varying(12)` | нет | 'material'::character varying | — |
+| `size_bytes` | `integer` | нет | — | — |
+| `sha256` | `character(64)` | нет | — | — |
+| `storage_key` | `uuid` | нет | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `files_lesson_id_organization_id_owner_account_id_fkey`: `FOREIGN KEY (lesson_id, organization_id, owner_account_id) REFERENCES education.lessons(id, organization_id, owner_account_id)`.
+
+Проверок CHECK: 2; индексов: 3; пользовательских триггеров: 0.
+
+## education.group_students
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `group_id` | `uuid` | нет | — | — |
+| `student_id` | `uuid` | нет | — | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `owner_account_id` | `uuid` | нет | — | — |
+
+**Первичный ключ:** `PRIMARY KEY (group_id, student_id)`.
+
+**Реальные внешние ключи:**
+
+- `group_students_group_id_organization_id_owner_account_id_fkey`: `FOREIGN KEY (group_id, organization_id, owner_account_id) REFERENCES education.groups(id, organization_id, owner_account_id)`.
+- `group_students_student_id_organization_id_owner_account_id_fkey`: `FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)`.
+
+Проверок CHECK: 0; индексов: 1; пользовательских триггеров: 0.
+
+## education.groups
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `owner_account_id` | `uuid` | нет | — | — |
+| `owner_person_id` | `uuid` | нет | — | — |
+| `name` | `character varying(160)` | нет | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+Внешние ключи SQL из этой таблицы отсутствуют.
+
+Проверок CHECK: 1; индексов: 2; пользовательских триггеров: 0.
+
+## education.lessons
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `owner_account_id` | `uuid` | нет | — | — |
+| `owner_person_id` | `uuid` | нет | — | — |
+| `group_id` | `uuid` | нет | — | — |
+| `title` | `character varying(160)` | нет | — | — |
+| `starts_at` | `timestamp with time zone` | нет | — | — |
+| `ends_at` | `timestamp with time zone` | нет | — | — |
+| `location` | `character varying(240)` | нет | ''::character varying | — |
+| `status` | `character varying(20)` | нет | 'scheduled'::character varying | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `lessons_group_id_organization_id_owner_account_id_fkey`: `FOREIGN KEY (group_id, organization_id, owner_account_id) REFERENCES education.groups(id, organization_id, owner_account_id)`.
+
+Проверок CHECK: 3; индексов: 3; пользовательских триггеров: 0.
+
+## education.messages
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `thread_id` | `uuid` | нет | — | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `sender_person_id` | `uuid` | нет | — | — |
+| `body` | `text` | нет | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `messages_thread_id_organization_id_fkey`: `FOREIGN KEY (thread_id, organization_id) REFERENCES education.threads(id, organization_id)`.
+
+Проверок CHECK: 1; индексов: 2; пользовательских триггеров: 0.
+
+## education.module_migrations
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `name` | `text` | нет | — | — |
+| `sha256` | `character(64)` | нет | — | — |
+| `applied_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (name)`.
+
+Внешние ключи SQL из этой таблицы отсутствуют.
+
+Проверок CHECK: 0; индексов: 1; пользовательских триггеров: 0.
+
+## education.notifications
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `person_id` | `uuid` | нет | — | — |
+| `thread_id` | `uuid` | нет | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+| `read_at` | `timestamp with time zone` | да | — | — |
+| `message_id` | `uuid` | да | — | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `notifications_message_id_fkey`: `FOREIGN KEY (message_id) REFERENCES education.messages(id)`.
+- `notifications_thread_id_fkey`: `FOREIGN KEY (thread_id) REFERENCES education.threads(id)`.
+
+Проверок CHECK: 0; индексов: 3; пользовательских триггеров: 0.
+
+## education.privacy_receipts
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `item_id` | `uuid` | нет | — | — |
+| `result` | `character varying(30)` | нет | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (item_id)`.
+
+Внешние ключи SQL из этой таблицы отсутствуют.
+
+Проверок CHECK: 0; индексов: 1; пользовательских триггеров: 0.
+
+## education.profiles
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `account_id` | `uuid` | нет | — | — |
+| `person_id` | `uuid` | нет | — | — |
+| `display_name` | `character varying(160)` | да | — | — |
+| `avatar_file_id` | `uuid` | да | — | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `profiles_avatar_file_id_account_id_fkey`: `FOREIGN KEY (avatar_file_id, account_id) REFERENCES education.files(id, owner_account_id)`.
+
+Проверок CHECK: 0; индексов: 2; пользовательских триггеров: 0.
+
+## education.students
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `owner_account_id` | `uuid` | нет | — | — |
+| `person_id` | `uuid` | нет | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+Внешние ключи SQL из этой таблицы отсутствуют.
+
+Проверок CHECK: 0; индексов: 3; пользовательских триггеров: 0.
+
+## education.teachers
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `account_id` | `uuid` | нет | — | — |
+| `person_id` | `uuid` | нет | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+Внешние ключи SQL из этой таблицы отсутствуют.
+
+Проверок CHECK: 0; индексов: 3; пользовательских триггеров: 0.
+
+## education.thread_members
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `thread_id` | `uuid` | нет | — | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `person_id` | `uuid` | нет | — | — |
+| `last_read_at` | `timestamp with time zone` | да | — | — |
+| `last_read_message_id` | `uuid` | да | — | — |
+
+**Первичный ключ:** `PRIMARY KEY (thread_id, person_id)`.
+
+**Реальные внешние ключи:**
+
+- `thread_members_thread_id_organization_id_fkey`: `FOREIGN KEY (thread_id, organization_id) REFERENCES education.threads(id, organization_id)`.
+
+Проверок CHECK: 0; индексов: 2; пользовательских триггеров: 0.
+
+## education.threads
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `subject` | `character varying(160)` | нет | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+Внешние ключи SQL из этой таблицы отсутствуют.
+
+Проверок CHECK: 1; индексов: 2; пользовательских триггеров: 0.
 

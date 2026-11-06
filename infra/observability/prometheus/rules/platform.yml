@@ -1,0 +1,146 @@
+groups:
+  - name: platform-http
+    rules:
+      - alert: PlatformHttp5xxRateHigh
+        expr: |
+          sum(rate(caddy_http_request_duration_seconds_count{code=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(caddy_http_request_duration_seconds_count[5m])), 0.001)
+          > 0.05
+        for: 10m
+        labels:
+          severity: critical
+          plane: platform
+        annotations:
+          summary: "Platform HTTP 5xx rate is above 5%"
+          description: "5xx rate has exceeded 5% for 10 minutes (current {{ $value | humanizePercentage }})."
+          runbook_url: "docs/operations/SLO.md"
+
+      - alert: PlatformHttpP95LatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(caddy_http_request_duration_seconds_bucket[5m]))
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+          plane: platform
+        annotations:
+          summary: "Platform HTTP p95 latency is above 1s"
+          description: "p95 latency has exceeded 1s for 10 minutes (current {{ $value | humanizeDuration }})."
+          runbook_url: "docs/operations/SLO.md"
+
+  - name: platform-runtime
+    rules:
+      - alert: PlatformScrapeTargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus target {{ $labels.job }} is down"
+          description: "Target {{ $labels.instance }} has been unreachable for 2 minutes."
+          runbook_url: "docs/operations/SLO.md"
+
+      - alert: PlatformDependencyDown
+        expr: |
+          platform_dependency_up == 0
+          or pg_up == 0
+          or redis_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Platform dependency is down"
+          description: "{{ $labels.plane }} {{ $labels.job }} ({{ $labels.instance }}) has been unavailable for 2 minutes."
+          runbook_url: "docs/operations/SLO.md"
+
+      - alert: PlatformNotReady
+        expr: platform_ready == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Platform {{ $labels.plane }} readiness is failing"
+          description: "Readiness has been failing for 5 minutes."
+          runbook_url: "docs/operations/SLO.md"
+
+      - alert: PlatformMetricsAbsent
+        expr: absent(platform_ready)
+        for: 5m
+        labels:
+          severity: critical
+          plane: platform
+        annotations:
+          summary: "Platform operational metrics are absent"
+          description: "Prometheus cannot see platform_ready for one or both planes."
+          runbook_url: "docs/operations/SLO.md"
+
+      - alert: PlatformWorkerHeartbeatStale
+        expr: |
+          platform_background_job_heartbeat_age_seconds{
+            worker=~"__scheduler__|backend_email_worker|control_outbox_worker"
+          } > 180
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Platform worker {{ $labels.worker }} heartbeat is stale"
+          description: "Heartbeat age is {{ $value | humanizeDuration }} (threshold 180s)."
+          runbook_url: "docs/operations/SLO.md"
+
+      - alert: PlatformOutboxBacklogHigh
+        expr: platform_outbox_pending{queue="all"} > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Platform outbox backlog is high on {{ $labels.plane }}"
+          description: "Pending outbox events: {{ $value }} (threshold 100)."
+          runbook_url: "docs/operations/SLO.md"
+
+      - alert: PlatformOutboxOldestAgeHigh
+        expr: platform_outbox_oldest_age_seconds{queue="all"} > 300
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Platform outbox oldest event is too old on {{ $labels.plane }}"
+          description: "Oldest pending event age is {{ $value | humanizeDuration }} (threshold 300s)."
+          runbook_url: "docs/operations/SLO.md"
+
+      - alert: PlatformDiskSpaceLow
+        expr: |
+          node_filesystem_avail_bytes{
+            fstype!~"tmpfs|overlay|squashfs|ramfs",
+            mountpoint=~"/|/mnt/docker-desktop-disk"
+          }
+          /
+          node_filesystem_size_bytes{
+            fstype!~"tmpfs|overlay|squashfs|ramfs",
+            mountpoint=~"/|/mnt/docker-desktop-disk"
+          }
+          < 0.1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host filesystem {{ $labels.mountpoint }} has less than 10% free"
+          description: "Available space is {{ $value | humanizePercentage }} (threshold 10%)."
+          runbook_url: "docs/operations/SLO.md"
+
+      - alert: PlatformFinancialBacklog
+        expr: |
+          platform_financial_backlog_items{
+            kind=~"recovery_required|pending_compensation_refund"
+          } > 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Commercial financial backlog requires operator action"
+          description: "{{ $labels.kind }} backlog is {{ $value }}."
+          runbook_url: "docs/operations/SLO.md"
+
+

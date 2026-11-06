@@ -239,6 +239,16 @@ WHERE a.attrelid = to_regclass(format('%I.audit_events', :'schema')) AND a.attnu
 SQL
 done
 
+# Catalog grants are reviewed by the migration/admin role; runtime may only read them.
+psql_admin -v runtime_role="${RUNTIME_ROLE}" <<'SQL'
+SELECT format('REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON commercial.catalog_operators FROM %I, PUBLIC', :'runtime_role')
+WHERE to_regclass('commercial.catalog_operators') IS NOT NULL
+\gexec
+SELECT format('GRANT SELECT ON commercial.catalog_operators TO %I', :'runtime_role')
+WHERE to_regclass('commercial.catalog_operators') IS NOT NULL
+\gexec
+SQL
+
 if [[ -n "${MAINTENANCE_ROLE}" ]]; then
   psql_admin -v maintenance_role="${MAINTENANCE_ROLE}" -v runtime_role="${RUNTIME_ROLE}" <<'SQL'
 \getenv maintenance_password MAINTENANCE_PASSWORD

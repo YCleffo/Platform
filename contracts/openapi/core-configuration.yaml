@@ -1,18 +1,19 @@
 openapi: 3.0.3
 info:
-  title: 'Platform Core configuration'
+  title: Конфигурация Platform Core
   version: 1.0.0
-  description: 'Installed module lifecycle, system/module settings, feature flags and anonymous publication. Configuration is not a secret store. UI does not claim to evaluate effective feature availability.'
+  description: >-
+    Жизненный цикл модулей, системные/модульные настройки, флаги и анонимная публикация. Конфигурация не хранит секреты.
+    Интерфейс не обещает вычислять фактическую доступность возможностей.
 security:
-  -
-    bearerAuth: {  }
+  - bearerAuth: {}
 paths:
   /api/public/config:
     get:
-      summary: 'Preview the current anonymous public system values'
+      summary: Предпросмотр текущих публичных системных значений без аутентификации
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -32,14 +33,14 @@ paths:
                     properties:
                       settings:
                         type: object
-                        additionalProperties: {  }
-      security: {  }
+                        additionalProperties: {}
+      security: {}
   /api/core/modules:
     get:
-      summary: 'List installed modules'
+      summary: Список установленных модулей
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -55,22 +56,22 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Module'
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.modules.read.'
-  '/api/core/modules/{code}':
+                      $ref: "#/components/schemas/Module"
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.modules.read.
+  /api/core/modules/{code}:
     get:
-      summary: 'Read one installed module'
+      summary: Прочитать установленный модуль
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -84,31 +85,30 @@ paths:
                     enum:
                       - success
                   data:
-                    $ref: '#/components/schemas/Module'
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.modules.read.'
+                    $ref: "#/components/schemas/Module"
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.modules.read.
     parameters:
-      -
-        in: path
+      - in: path
         name: code
         required: true
         schema:
           type: string
           maxLength: 100
-          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
-  '/api/core/modules/{code}/enable':
+          pattern: ^[a-z0-9]+(?:[._-][a-z0-9]+)*$
+  /api/core/modules/{code}/enable:
     post:
-      summary: 'Enable an installed module'
+      summary: Включить установленный модуль
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -123,39 +123,36 @@ paths:
                       - success
                   data:
                     allOf:
-                      -
-                        $ref: '#/components/schemas/Module'
-                      -
-                        type: object
+                      - $ref: "#/components/schemas/Module"
+                      - type: object
                         required:
                           - changed
                         properties:
                           changed:
                             type: boolean
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.modules.manage.'
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.modules.manage.
     parameters:
-      -
-        in: path
+      - in: path
         name: code
         required: true
         schema:
           type: string
           maxLength: 100
-          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
-  '/api/core/modules/{code}/disable':
+          pattern: ^[a-z0-9]+(?:[._-][a-z0-9]+)*$
+  /api/core/modules/{code}/disable:
     post:
-      summary: 'Disable an installed module'
+      summary: Выключить установленный модуль
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -170,39 +167,36 @@ paths:
                       - success
                   data:
                     allOf:
-                      -
-                        $ref: '#/components/schemas/Module'
-                      -
-                        type: object
+                      - $ref: "#/components/schemas/Module"
+                      - type: object
                         required:
                           - changed
                         properties:
                           changed:
                             type: boolean
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.modules.manage.'
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.modules.manage.
     parameters:
-      -
-        in: path
+      - in: path
         name: code
         required: true
         schema:
           type: string
           maxLength: 100
-          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
+          pattern: ^[a-z0-9]+(?:[._-][a-z0-9]+)*$
   /api/core/settings/system:
     get:
-      summary: 'List configuration entries'
+      summary: Список записей конфигурации
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -218,22 +212,22 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/SystemSetting'
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.settings.read.'
-  '/api/core/settings/system/{key}':
+                      $ref: "#/components/schemas/SystemSetting"
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.settings.read.
+  /api/core/settings/system/{key}:
     get:
-      summary: 'Read the current value of one key'
+      summary: Прочитать текущее значение ключа
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -247,21 +241,21 @@ paths:
                     enum:
                       - success
                   data:
-                    $ref: '#/components/schemas/SystemSetting'
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.settings.read.'
+                    $ref: "#/components/schemas/SystemSetting"
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.settings.read.
     put:
-      summary: 'Atomically create or replace one configuration entry'
+      summary: Атомарно создать или заменить запись конфигурации
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -275,27 +269,27 @@ paths:
                     enum:
                       - success
                   data:
-                    $ref: '#/components/schemas/SystemSetting'
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.settings.manage.'
+                    $ref: "#/components/schemas/SystemSetting"
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.settings.manage.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SystemSettingInput'
+              $ref: "#/components/schemas/SystemSettingInput"
     delete:
-      summary: 'Remove one configuration entry'
+      summary: Удалить запись конфигурации
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -320,30 +314,29 @@ paths:
                           - true
                       key:
                         type: string
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.settings.manage.'
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.settings.manage.
     parameters:
-      -
-        in: path
+      - in: path
         name: key
         required: true
         schema:
           type: string
           maxLength: 160
-          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
-  '/api/core/modules/{moduleCode}/settings':
+          pattern: ^[a-z0-9]+(?:[._-][a-z0-9]+)*$
+  /api/core/modules/{moduleCode}/settings:
     get:
-      summary: 'List configuration entries'
+      summary: Список записей конфигурации
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -359,31 +352,30 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ModuleSetting'
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.settings.read.'
+                      $ref: "#/components/schemas/ModuleSetting"
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.settings.read.
     parameters:
-      -
-        in: path
+      - in: path
         name: moduleCode
         required: true
         schema:
           type: string
           maxLength: 100
-          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
-  '/api/core/modules/{moduleCode}/settings/{key}':
+          pattern: ^[a-z0-9]+(?:[._-][a-z0-9]+)*$
+  /api/core/modules/{moduleCode}/settings/{key}:
     get:
-      summary: 'Read the current value of one key'
+      summary: Прочитать текущее значение ключа
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -397,21 +389,21 @@ paths:
                     enum:
                       - success
                   data:
-                    $ref: '#/components/schemas/ModuleSetting'
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.settings.read.'
+                    $ref: "#/components/schemas/ModuleSetting"
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.settings.read.
     put:
-      summary: 'Atomically create or replace one configuration entry'
+      summary: Атомарно создать или заменить запись конфигурации
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -425,27 +417,27 @@ paths:
                     enum:
                       - success
                   data:
-                    $ref: '#/components/schemas/ModuleSetting'
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.settings.manage.'
+                    $ref: "#/components/schemas/ModuleSetting"
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.settings.manage.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModuleSettingInput'
+              $ref: "#/components/schemas/ModuleSettingInput"
     delete:
-      summary: 'Remove one configuration entry'
+      summary: Удалить запись конфигурации
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -470,38 +462,36 @@ paths:
                           - true
                       key:
                         type: string
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.settings.manage.'
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.settings.manage.
     parameters:
-      -
-        in: path
+      - in: path
         name: key
         required: true
         schema:
           type: string
           maxLength: 160
-          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
-      -
-        in: path
+          pattern: ^[a-z0-9]+(?:[._-][a-z0-9]+)*$
+      - in: path
         name: moduleCode
         required: true
         schema:
           type: string
           maxLength: 100
-          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
+          pattern: ^[a-z0-9]+(?:[._-][a-z0-9]+)*$
   /api/core/feature-flags:
     get:
-      summary: 'List feature flag configurations'
+      summary: Список конфигураций флагов возможностей
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -517,22 +507,22 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Flag'
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.feature_flags.read.'
-  '/api/core/feature-flags/{code}':
+                      $ref: "#/components/schemas/Flag"
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.feature_flags.read.
+  /api/core/feature-flags/{code}:
     get:
-      summary: 'Read one feature flag configuration'
+      summary: Прочитать конфигурацию флага
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -546,21 +536,21 @@ paths:
                     enum:
                       - success
                   data:
-                    $ref: '#/components/schemas/Flag'
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.feature_flags.read.'
+                    $ref: "#/components/schemas/Flag"
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.feature_flags.read.
     put:
-      summary: 'Atomically create or replace a feature flag configuration'
+      summary: Атомарно создать или заменить конфигурацию флага
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -574,27 +564,27 @@ paths:
                     enum:
                       - success
                   data:
-                    $ref: '#/components/schemas/Flag'
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.feature_flags.manage.'
+                    $ref: "#/components/schemas/Flag"
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.feature_flags.manage.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FlagInput'
+              $ref: "#/components/schemas/FlagInput"
     delete:
-      summary: 'Remove a feature flag configuration'
+      summary: Удалить конфигурацию флага
       responses:
-        200:
-          description: Success
+        "200":
+          description: Успех
           content:
             application/json:
               schema:
@@ -619,24 +609,23 @@ paths:
                           - true
                       code:
                         type: string
-        401:
-          description: 'Authentication required'
-        403:
-          description: 'Permission denied'
-        404:
-          description: 'Unknown module, key or flag'
-        422:
-          description: 'Invalid input, secret-like key or value above 16384 JSON bytes'
-      description: 'Required permission: core.feature_flags.manage.'
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+        "404":
+          description: Неизвестный модуль, ключ или флаг
+        "422":
+          description: Неверный ввод, похожий на секрет ключ или размер более 16384 байт JSON
+      description: Нужно разрешение core.feature_flags.manage.
     parameters:
-      -
-        in: path
+      - in: path
         name: code
         required: true
         schema:
           type: string
           maxLength: 160
-          pattern: '^[a-z0-9]+(?:[._-][a-z0-9]+)*$'
+          pattern: ^[a-z0-9]+(?:[._-][a-z0-9]+)*$
 components:
   securitySchemes:
     bearerAuth:
@@ -702,7 +691,7 @@ components:
         key:
           type: string
         value:
-          description: 'JSON value, at most 16384 encoded bytes; nested secret-like keys are forbidden.'
+          description: Значение JSON до 16384 байт; вложенные ключи, похожие на секреты, запрещены.
         description:
           type: string
           nullable: true
@@ -736,7 +725,7 @@ components:
         key:
           type: string
         value:
-          description: 'JSON value, at most 16384 encoded bytes; nested secret-like keys are forbidden.'
+          description: Значение JSON до 16384 байт; вложенные ключи, похожие на секреты, запрещены.
         description:
           type: string
           nullable: true
@@ -758,7 +747,7 @@ components:
       required:
         - value
       properties:
-        value: {  }
+        value: {}
         description:
           type: string
           nullable: true
@@ -772,7 +761,7 @@ components:
       required:
         - value
       properties:
-        value: {  }
+        value: {}
         description:
           type: string
           nullable: true
@@ -796,13 +785,13 @@ components:
           maximum: 100
         config:
           oneOf:
-            -
-              type: object
-              additionalProperties: {  }
-            -
-              type: array
+            - type: object
+              additionalProperties: {}
+            - type: array
               maxItems: 0
-          description: 'Object configuration; an empty object may be serialized by PHP as []. Maximum 16384 encoded bytes; secret-like keys are forbidden.'
+          description: >-
+            Конфигурация-объект; пустой объект PHP может сериализовать как []. До 16384 байт; ключи, похожие на секреты,
+            запрещены.
         description:
           type: string
           nullable: true
@@ -837,13 +826,13 @@ components:
           maximum: 100
         config:
           oneOf:
-            -
-              type: object
-              additionalProperties: {  }
-            -
-              type: array
+            - type: object
+              additionalProperties: {}
+            - type: array
               maxItems: 0
-          description: 'Object configuration; an empty object may be serialized by PHP as []. Maximum 16384 encoded bytes; secret-like keys are forbidden.'
+          description: >-
+            Конфигурация-объект; пустой объект PHP может сериализовать как []. До 16384 байт; ключи, похожие на секреты,
+            запрещены.
         description:
           type: string
           nullable: true

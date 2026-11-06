@@ -32,6 +32,27 @@ try {
     await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
     await page.setViewportSize({ width: 393, height: 852 });
     await page.goto(base + '/settings', { waitUntil: 'networkidle' }); await scan(page, `${theme} mobile settings`);
+
+    const plansPage = await context.newPage();
+    await plansPage.route('**/api/control/catalog/plans', (route) => route.fulfill({
+      json: {
+        plans: [
+          { id: '018f0000-0000-7000-8000-000000000021', code: 'starter', version: 1, name: 'Starter',
+            prices: [{ id: '018f0000-0000-7000-8000-000000000022', currency: 'RUB', amount_minor: 99000, billing_period: 'month' }],
+            features: { seats: 3, analytics: false, sso: false, support: 'email' } },
+          { id: '018f0000-0000-7000-8000-000000000023', code: 'business', version: 1, name: 'Business',
+            prices: [{ id: '018f0000-0000-7000-8000-000000000024', currency: 'RUB', amount_minor: 299000, billing_period: 'month' }],
+            features: { seats: 25, analytics: true, sso: true, support: 'priority' } },
+        ],
+      },
+    }));
+    await plansPage.goto(base + '/plans', { waitUntil: 'networkidle' });
+    await scan(plansPage, `${theme} plans`);
+    await plansPage.setViewportSize({ width: 393, height: 852 });
+    await plansPage.reload({ waitUntil: 'networkidle' });
+    await scan(plansPage, `${theme} mobile plans`);
+    await plansPage.close();
+
     await context.close();
   }
   writeFileSync('screenshots/accessibility.json', JSON.stringify({ engine: 'axe-core 4.14', tags: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'], results }, null, 2));

@@ -1,0 +1,18 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: operator-webhook
+  group_by: [alertname, plane, job, worker]
+  group_wait: 5s
+  group_interval: 1m
+  repeat_interval: 4h
+
+receivers:
+  - name: operator-webhook
+    webhook_configs:
+      - url_file: /etc/alertmanager/alert-webhook-url
+        send_resolved: true
+        max_alerts: 20
+
+

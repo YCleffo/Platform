@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, useAttrs } from 'vue';
 defineOptions({ inheritAttrs: false });
 const props = withDefaults(
@@ -91,11 +91,16 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .app-switch {
+  --switch-width: calc(44px * var(--ui-density-scale, 1));
+  --switch-height: calc(26px * var(--ui-density-scale, 1));
+  --switch-thumb-size: calc(20px * var(--ui-density-scale, 1));
+  --switch-inset: calc(3px * var(--ui-density-scale, 1));
+  --switch-travel: calc(var(--switch-width) - var(--switch-thumb-size) - 2 * var(--switch-inset));
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-20);
-  min-height: 44px;
+  min-height: var(--control-h-l);
   min-width: 0;
   cursor: pointer;
 }
@@ -123,9 +128,9 @@ onBeforeUnmount(() => {
   position: relative;
   display: grid;
   place-items: center;
-  flex: 0 0 52px;
-  width: 52px;
-  height: 44px;
+  flex: 0 0 var(--switch-width);
+  width: var(--switch-width);
+  height: var(--control-h-s);
 }
 .app-switch input {
   position: absolute;
@@ -139,20 +144,20 @@ onBeforeUnmount(() => {
 }
 .app-switch__track {
   position: relative;
-  width: 52px;
-  height: 32px;
-  border: 1px solid var(--text-2);
+  width: var(--switch-width);
+  height: var(--switch-height);
   border-radius: 999px;
   background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--text-2);
   transition: var(--theme-transition);
 }
 .app-switch__thumb {
   display: block;
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 24px;
-  height: 24px;
+  top: var(--switch-inset);
+  left: var(--switch-inset);
+  width: var(--switch-thumb-size);
+  height: var(--switch-thumb-size);
   border-radius: 999px;
   background: var(--color-white);
   box-shadow: var(--shadow-soft);
@@ -164,10 +169,10 @@ onBeforeUnmount(() => {
 }
 .app-switch input:checked + .app-switch__track {
   background: var(--accent);
-  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .app-switch input:checked + .app-switch__track .app-switch__thumb {
-  transform: translateX(20px);
+  transform: translateX(var(--switch-travel));
   border-color: var(--color-white);
 }
 .app-switch input:focus-visible + .app-switch__track {
@@ -175,13 +180,13 @@ onBeforeUnmount(() => {
   outline-offset: 4px;
 }
 .app-switch:active:not(.app-switch--disabled) .app-switch__thumb {
-  width: 28px;
+  width: calc(var(--switch-thumb-size) + 4px * var(--ui-density-scale, 1));
 }
 .app-switch:active:not(.app-switch--disabled)
   input:checked
   + .app-switch__track
   .app-switch__thumb {
-  transform: translateX(16px);
+  transform: translateX(calc(var(--switch-travel) - 4px * var(--ui-density-scale, 1)));
 }
 .app-switch--disabled {
   opacity: 0.45;
@@ -189,18 +194,25 @@ onBeforeUnmount(() => {
 }
 @media (hover: hover) {
   .app-switch:hover:not(.app-switch--disabled) .app-switch__track {
-    box-shadow: var(--focus-ring);
+    box-shadow:
+      inset 0 0 0 1px var(--text-2),
+      var(--focus-ring);
+  }
+  .app-switch:hover:not(.app-switch--disabled) input:checked + .app-switch__track {
+    box-shadow:
+      inset 0 0 0 1px var(--accent),
+      var(--focus-ring);
   }
 }
 @media (forced-colors: active) {
   .app-switch__track {
     forced-color-adjust: none;
     background: Canvas;
-    border-color: ButtonText;
+    box-shadow: inset 0 0 0 1px ButtonText;
   }
   .app-switch input:checked + .app-switch__track {
     background: Highlight;
-    border-color: Highlight;
+    box-shadow: inset 0 0 0 1px Highlight;
   }
   .app-switch__thumb {
     background: ButtonText;

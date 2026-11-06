@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+﻿<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useToast } from '@/shared/composables/useToast';
@@ -10,13 +10,13 @@ import { useMfaStatus } from './useMfaStatus';
 import { useSessions } from './useSessions';
 import { useSensitiveAction } from './useSensitiveAction';
 import MfaSetupDialog from './MfaSetupDialog.vue';
+import PasswordChangeDialog from './PasswordChangeDialog.vue';
 import ReauthenticateDialog from './ReauthenticateDialog.vue';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
 import AppBadge from '@/shared/ui/feedback/AppBadge.vue';
 import AppCard from '@/shared/ui/surfaces/AppCard.vue';
 import AppConfirmDialog from '@/shared/ui/overlays/AppConfirmDialog.vue';
 import AppDialog from '@/shared/ui/overlays/AppDialog.vue';
-import AppPasswordInput from '@/shared/ui/fields/AppPasswordInput.vue';
 import AppErrorState from '@/shared/ui/feedback/AppErrorState.vue';
 import AppSkeleton from '@/shared/ui/feedback/AppSkeleton.vue';
 
@@ -38,12 +38,10 @@ const {
 } = useSessions();
 
 const setupOpen = ref(false);
-const reauthOpen = ref(false);
+const passwordOpen = ref(false);
 const codesOpen = ref(false);
 const recoveryCodes = ref<string[]>([]);
 const actionBusy = ref(false);
-const passwordForm = reactive({ current: '', password: '', confirmation: '' });
-const passwordErrors = reactive({ current: '', password: '', confirmation: '' });
 
 const confirmOpen = ref(false);
 const confirmTitle = ref('');
@@ -55,9 +53,15 @@ const {
   reauthOpen: sensitiveReauthOpen,
   runSensitive,
   onReauthenticated: retryPending,
-} = useSensitiveAction((message) => {
-  toast.show(message, 'error', 7000);
-});
+} = useSensitiveAction(
+  (message) => {
+    toast.show(message, 'error', 7000);
+  },
+  () => {
+    setupOpen.value = true;
+    toast.show(t('security.mfaRequired'), 'error', 7000);
+  },
+);
 
 const otherSessions = computed(() => sessions.value.filter((session) => !session.current));
 
@@ -72,11 +76,6 @@ function methodLabel(method: string): string {
 
 function deviceLabel(session: ControlSession): string {
   return session.user_agent?.trim() || t('security.unknownDevice');
-}
-
-async function onReauthenticated(): Promise<void> {
-  toast.show(t('security.reauthSuccess'), 'success');
-  await Promise.all([loadStatus(), loadSessions()]);
 }
 
 async function onSensitiveReauthenticated(): Promise<void> {
@@ -118,34 +117,22 @@ async function confirm(): Promise<void> {
   }
 }
 
-async function changePassword(): Promise<void> {
-  passwordErrors.current = '';
-  passwordErrors.password = '';
-  passwordErrors.confirmation = '';
-  if (passwordForm.current === '') {
-    passwordErrors.current = 'validation.required';
-    return;
+function ensureMfa(): boolean {
+  if (status.value !== null && !status.value.enabled) {
+    setupOpen.value = true;
+    toast.show(t('security.mfaRequired'), 'error', 7000);
+    return false;
   }
-  if (passwordForm.password.length < 12) {
-    passwordErrors.password = 'validation.passwordMin';
-    return;
-  }
-  if (passwordForm.password !== passwordForm.confirmation) {
-    passwordErrors.confirmation = 'validation.passwordMismatch';
-    return;
-  }
-  actionBusy.value = true;
-  try {
-    await runSensitive(async () => {
-      await auth.changePassword(passwordForm.current, passwordForm.password);
-      passwordForm.current = '';
-      passwordForm.password = '';
-      passwordForm.confirmation = '';
-      toast.show(t('security.passwordChanged'), 'success');
-    });
-  } finally {
-    actionBusy.value = false;
-  }
+  return true;
+}
+
+function openPasswordChange(): void {
+  if (!ensureMfa()) return;
+  passwordOpen.value = true;
+}
+
+function onPasswordChanged(): void {
+  toast.show(t('security.passwordChanged'), 'success');
 }
 
 async function regenerateCodes(): Promise<void> {
@@ -178,6 +165,7 @@ function disableMfa(): void {
 }
 
 function revokeSession(session: ControlSession): void {
+  if (!ensureMfa()) return;
   askConfirm(
     t('security.revokeSessionTitle'),
     t('security.revokeSessionText', { device: deviceLabel(session) }),
@@ -193,6 +181,7 @@ function revokeSession(session: ControlSession): void {
 }
 
 function revokeOtherSessions(): void {
+  if (!ensureMfa()) return;
   askConfirm(
     t('security.revokeOthersTitle'),
     t('security.revokeOthersText'),
@@ -284,52 +273,13 @@ function revokeOtherSessions(): void {
       >
         <h2 class="security-view__card-title">{{ $t('security.passwordTitle') }}</h2>
         <p class="security-view__muted">{{ $t('security.passwordHint') }}</p>
-        <form
-          class="security-view__password"
-          @submit.prevent="changePassword"
+        <button
+          type="button"
+          class="security-view__link"
+          @click="openPasswordChange"
         >
-          <AppPasswordInput
-            id="security-current-password"
-            v-model="passwordForm.current"
-            :label="$t('security.currentPassword')"
-            autocomplete="current-password"
-            :error="passwordErrors.current ? $t(passwordErrors.current) : undefined"
-          />
-          <AppPasswordInput
-            id="security-new-password"
-            v-model="passwordForm.password"
-            :label="$t('security.newPassword')"
-            autocomplete="new-password"
-            :error="passwordErrors.password ? $t(passwordErrors.password) : undefined"
-          />
-          <AppPasswordInput
-            id="security-confirm-password"
-            v-model="passwordForm.confirmation"
-            :label="$t('security.confirmPassword')"
-            autocomplete="new-password"
-            :error="passwordErrors.confirmation ? $t(passwordErrors.confirmation) : undefined"
-          />
-          <AppButton
-            type="submit"
-            :loading="actionBusy"
-          >
-            {{ $t('security.changePassword') }}
-          </AppButton>
-        </form>
-      </AppCard>
-
-      <AppCard
-        padding="default"
-        class="security-view__card"
-      >
-        <h2 class="security-view__card-title">{{ $t('security.reauthTitle') }}</h2>
-        <p class="security-view__muted">{{ $t('security.reauthDescription') }}</p>
-        <AppButton
-          variant="secondary"
-          @click="reauthOpen = true"
-        >
-          {{ $t('security.reauthButton') }}
-        </AppButton>
+          {{ $t('security.changePassword') }}
+        </button>
       </AppCard>
 
       <AppCard
@@ -387,13 +337,16 @@ function revokeOtherSessions(): void {
                 </AppBadge>
               </div>
               <p class="security-view__muted">
-                {{ methodLabel(session.authentication_method) }} · {{ $t('security.issuedAt') }}
+                {{ methodLabel(session.authentication_method) }} Р’В· {{ $t('security.issuedAt') }}
                 {{ formatDateTime(session.issued_at, locale) }}
               </p>
               <p class="security-view__muted">
                 {{ $t('security.lastUsedAt') }}:
-                {{ session.last_used_at ? formatDateTime(session.last_used_at, locale) : '—' }} ·
-                {{ $t('security.expiresAt') }}: {{ formatDateTime(session.expires_at, locale) }}
+                {{
+                  session.last_used_at ? formatDateTime(session.last_used_at, locale) : 'РІР‚вЂќ'
+                }}
+                Р’В· {{ $t('security.expiresAt') }}:
+                {{ formatDateTime(session.expires_at, locale) }}
               </p>
             </div>
             <AppButton
@@ -420,9 +373,10 @@ function revokeOtherSessions(): void {
       v-model="setupOpen"
       @enabled="onMfaEnabled"
     />
-    <ReauthenticateDialog
-      v-model="reauthOpen"
-      @authenticated="onReauthenticated"
+    <PasswordChangeDialog
+      v-model="passwordOpen"
+      @completed="onPasswordChanged"
+      @enrollment-required="setupOpen = true"
     />
     <ReauthenticateDialog
       v-model="sensitiveReauthOpen"
@@ -459,8 +413,8 @@ function revokeOtherSessions(): void {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-16);
-  max-width: 960px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
 
 .security-view__header {
@@ -515,10 +469,15 @@ function revokeOtherSessions(): void {
   gap: var(--space-8);
 }
 
-.security-view__password {
-  display: grid;
-  gap: var(--space-12);
-  width: 100%;
+.security-view__link {
+  padding: 0;
+  color: var(--accent-strong);
+  font-size: var(--type-body-medium-emphasis-size);
+  line-height: var(--type-body-medium-emphasis-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .security-view__sessions-head {

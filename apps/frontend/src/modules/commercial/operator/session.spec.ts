@@ -22,6 +22,7 @@ const identity = (id: string) => ({
   user: { id, email: id + '@example.test' },
   privacy: true,
   finance: false,
+  catalog: false,
 });
 function deferred<T>() {
   let resolve!: (value: T) => void;

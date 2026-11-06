@@ -4,9 +4,11 @@
 
 - [Запустить проект](../README.md#запуск).
 - [Актуальный аудит: ошибки и следующие задачи](AUDIT.md).
-- [Разработка frontend и команды проверок](../apps/frontend/README.md).
+- [Разработка интерфейса и команды проверок](../apps/frontend/README.md).
 - [Что входит в Commercial и что планируется дальше](roadmap/PLATFORM_ROADMAP.md).
 - [Условия выпуска](operations/READINESS.md).
+- [Целевые показатели и базовые измерения производительности](operations/SLO.md).
+- [Масштабирование: этапы, зависимости и критерии приёмки](roadmap/SCALING_PLAN.md).
 
 ## Для эксплуатации
 
@@ -20,7 +22,7 @@
 - [Модель данных и владельцы](core-data-model.md).
 - [Бизнес-процессы](processes/README.md).
 - [Фактическая схема PostgreSQL](database/README.md).
-- [Архитектура frontend и компонентов](frontend/README.md).
+- [Архитектура интерфейса и компонентов](frontend/README.md).
 
 ## Архитектура
 
@@ -31,8 +33,8 @@
 | [Commercial Control Plane](architecture/COMMERCIAL_CONTROL_PLANE.md) |
 | [Безопасность Commercial Control Plane](architecture/COMMERCIAL_SECURITY.md) |
 | [Communication в Core](architecture/COMMUNICATION.md) |
-| [Архитектура backend-приложения Core](architecture/CORE_BACKEND.md) |
-| [Education backend: границы, контракт и установка](architecture/EDUCATION_BACKEND.md) |
+| [Архитектура серверного приложения Core](architecture/CORE_BACKEND.md) |
+| [Серверная часть Education: границы, контракт и установка](architecture/EDUCATION_BACKEND.md) |
 | [Инварианты Core](architecture/CORE_INVARIANTS.md) |
 | [Архитектура баз данных](architecture/DATABASE.md) |
 | [События между процессами](architecture/EVENT_CONTRACTS.md) |
@@ -43,10 +45,10 @@
 | [Доступ к организациям](architecture/ORGANIZATION_ACCESS.md) |
 | [Присутствие и приватность](architecture/PRESENCE.md) |
 | [Персональные данные в Core](architecture/PRIVACY_COMPLIANCE_CORE.md) |
-| [Расширение Privacy через contributors](architecture/PRIVACY_MODULE_CONTRIBUTORS.md) |
+| [Расширение обработки персональных данных через поставщиков сведений](architecture/PRIVACY_MODULE_CONTRIBUTORS.md) |
 | [Хранение, ограничения обработки и уничтожение](architecture/RETENTION_ERASURE.md) |
 | [Защита транспорта, браузерная граница и секреты](architecture/SECURITY_HARDENING.md) |
-| [User Settings / Privacy Core](architecture/USER_SETTINGS_PRIVACY.md) |
+| [Пользовательские настройки и приватность Core](architecture/USER_SETTINGS_PRIVACY.md) |
 
 ## Эксплуатация
 
@@ -55,9 +57,12 @@
 | [Резервирование и восстановление](operations/BACKUP_RESTORE.md) |
 | [Роли PostgreSQL и минимальные привилегии](operations/DATABASE_ROLES.md) |
 | [Конфигурация и секреты](operations/ENVIRONMENT.md) |
+| [Административная консоль Core](operations/ADMIN_CONSOLE.md) |
+| [Безопасность выпускаемых образов](operations/IMAGE_SECURITY.md) |
+| [Предпросмотр писем и демонстрационный каталог](operations/EMAIL_PREVIEW.md) |
 | [Компенсация внешних смен тарифа](operations/EXTERNAL_COMPENSATION.md) |
 | [Критерии выпуска](operations/READINESS.md) |
-| [Провижининг локального Docker-развёртывания](operations/PROVISIONING.md) |
+| [Подготовка локальной установки Docker](operations/PROVISIONING.md) |
 | [Безопасное обновление баз данных](operations/SAFE_DATABASE_UPGRADE.md) |
 
 ## Политики и инвентари персональных данных
@@ -78,11 +83,15 @@
 
 | Документ |
 | --- |
-| [Аутентификация, внешние identity и MFA](security/AUTHENTICATION_AND_MFA.md) |
+| [Аутентификация, внешние учётные записи и MFA](security/AUTHENTICATION_AND_MFA.md) |
 
 ## Справочники
 
 - [Справочник фактической базы данных](database/SCHEMA_REFERENCE.md).
+- [Русский перевод лицензии шрифтов OFL 1.1](licenses/OFL-1.1.ru.md).
 - [Покрытие таблиц Core и Runtime](core-database-coverage.md).
+- [Покрытие таблиц Education](education-database-coverage.md).
+- [Наблюдаемость: локальный набор сервисов, оповещения и инструмент измерения производительности](../infra/observability/README.md).
+- [Целевые показатели и базовые измерения производительности](operations/SLO.md).
 
 </details>

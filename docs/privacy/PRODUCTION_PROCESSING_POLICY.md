@@ -1,30 +1,30 @@
-# Production processing policy
+# Политика обработки данных промышленной установки
 
-This document describes the machine-readable deployment contract. The authoritative file is the JSON path in `PRIVACY_CONFIG_FILE`; the loader rejects incomplete files and template sentinel values. The complete shape is [privacy-deployment.example.json](../../docs/privacy-deployment.example.json).
+Документ описывает машиночитаемый контракт конфигурации развёртывания. Авторитетный источник — JSON по пути `PRIVACY_CONFIG_FILE`; загрузчик отклоняет неполные файлы и шаблонные заглушки. Полная структура: [пример конфигурации](../../docs/privacy-deployment.example.json).
 
-The versioned example describes shape only. `apps/backend/tests/Fixtures/privacy/synthetic-production-policy.json` is a deliberately synthetic CI loader fixture. Neither is a production policy or legal evidence. The real operator-managed `deployment/privacy/deployment.json` remains outside Git and must be supplied through the deployment secret/configuration boundary.
+Версионированный пример описывает только формат. `apps/backend/tests/Fixtures/privacy/synthetic-production-policy.json` — намеренно синтетические данные проверки загрузчика в CI. Ни один файл не является промышленной политикой или юридическим доказательством. Настоящий `deployment/privacy/deployment.json` управляется оператором, не входит в Git и передаётся через защищённую границу секретов и конфигурации.
 
-## Repository-defined facts
+## Что определено репозиторием
 
-The application already defines the vocabulary and behaviour for data categories, subject categories, purpose codes, legal-basis codes, processing roles, retention actions/units, processor and recipient declarations, transfer decisions, distribution-consent rules, legal holds, restriction, erasure, anonymization and audit evidence. Loaded definitions are passed into the existing registries; services do not contain a second policy.
+Приложение задаёт словарь и поведение категорий данных и субъектов, кодов целей и оснований, ролей обработки, действий и единиц хранения, обработчиков и получателей, решений о передаче, согласий на распространение, запретов уничтожения, ограничений, уничтожения, обезличивания и свидетельств аудита. Загруженные определения передаются в существующие реестры; второй политики внутри сервисов нет.
 
-The loader also enforces that every purpose has a non-empty description, legal basis, data and subject categories, retention policy, processing role, and processing-information definition. References must resolve within the same deployment file. Distribution remains deny-by-default, and cross-border transfers remain blocked unless the existing transfer policy permits them.
+Загрузчик требует для каждой цели непустое описание, основание, категории данных и субъектов, политику хранения, роль обработки и определение информации об обработке. Ссылки разрешаются в пределах того же файла установки. Распространение по умолчанию запрещено; трансграничная передача блокируется, пока действующая политика явно её не разрешит.
 
-## Operator/legal deployment inputs
+## Решения оператора и юридического владельца
 
-These values cannot be derived from source code and must be approved and supplied in the named JSON fields:
+Следующие значения нельзя получить из исходников: их нужно утвердить и передать в указанных полях JSON.
 
-| Decision | Required field(s) | Expected value/domain |
+| Решение | Обязательные поля | Ожидаемое содержание |
 | --- | --- | --- |
-| Organizational purpose and explanation | `processingPurposeDefinitions[].code`, `.description` | Stable machine code and plain-language approved description |
-| Data and subject scope | `dataCategoryDefinitions[]`, `subjectCategoryDefinitions[]`, `processingPurposeDefinitions[].dataCategories`, `.subjectCategories` | Complete reviewed vocabularies and references |
-| Lawful basis | `processingPurposeDefinitions[].legalBasisCode`, `.requiresConsent` | One supported code; consent must agree with `requiresConsent` |
-| Role and operations | `privacyProcessingRoleDefinitions[]` | Operator/processor role, references, categories and permitted operations |
-| Retention | `retentionPolicyDefinitions[]` and each purpose’s `.retentionPolicyCode` | Reviewed trigger, duration/unit, action and legal-hold rule; no duration is inferred |
-| Processors/recipients | `privacyProcessorDefinitions[]`, `privacyRecipientDefinitions[]` | Actual identity/reference, country, contract, categories and active dates |
-| Cross-border processing | `processingPurposeDefinitions[].crossBorderPolicy`, `privacyTransferDefinitions[]` | Actual routing, country, notification/evidence and regulator decision |
-| Public distribution | `processingPurposeDefinitions[].distributionAllowed`, `privacyDistributionConsentDefinitions[]` | Explicit approval, allowed categories/fields, document version and digest; otherwise deny |
-| Erasure/anonymization and holds | Retention action fields plus existing legal-hold and erasure configuration | Reviewed action/handler semantics; holds remain blockers |
-| Operator evidence | `privacyOperatorIdentity`, notification, security, residency, destruction and legal-evidence sections | Current organization records, references, dates and secrets |
+| Организационная цель и объяснение | `processingPurposeDefinitions[].code`, `.description` | Стабильный машинный код и утверждённое понятное описание |
+| Область данных и субъектов | `dataCategoryDefinitions[]`, `subjectCategoryDefinitions[]`, `processingPurposeDefinitions[].dataCategories`, `.subjectCategories` | Полные проверенные словари и ссылки |
+| Правовое основание | `processingPurposeDefinitions[].legalBasisCode`, `.requiresConsent` | Поддерживаемый код; согласие согласовано с `requiresConsent` |
+| Роль и операции | `privacyProcessingRoleDefinitions[]` | Роль оператора или обработчика, ссылки, категории и разрешённые операции |
+| Хранение | `retentionPolicyDefinitions[]`, `.retentionPolicyCode` каждой цели | Утверждённые событие начала отсчёта, срок/единица, действие и правило запрета уничтожения; срок не выводится автоматически |
+| Обработчики и получатели | `privacyProcessorDefinitions[]`, `privacyRecipientDefinitions[]` | Реальные наименование/ссылка, страна, договор, категории и даты действия |
+| Трансграничная обработка | `processingPurposeDefinitions[].crossBorderPolicy`, `privacyTransferDefinitions[]` | Фактический маршрут, страна, уведомление/доказательство и решение регулятора |
+| Публичное распространение | `processingPurposeDefinitions[].distributionAllowed`, `privacyDistributionConsentDefinitions[]` | Явное одобрение, разрешённые категории/поля, версия и хеш документа; иначе запрет |
+| Уничтожение, обезличивание и запреты | Поля действий хранения и существующая конфигурация запретов/уничтожения | Утверждённый смысл действий и обработчиков; действующие запреты блокируют уничтожение |
+| Доказательства оператора | `privacyOperatorIdentity`, разделы уведомлений, безопасности, резидентности, уничтожения и юридических свидетельств | Актуальные документы организации, ссылки, даты и секреты |
 
-Do not use the example file in production. Its angle-bracket values are intentionally rejected as unresolved placeholders. Legal basis, retention period, processor identity, transfer status, distribution permission and organizational purpose remain unresolved until the operator/legal owner supplies them.
+Не используйте пример как промышленную конфигурацию. Значения в угловых скобках намеренно отклоняются как незаполненные заглушки. Основание, срок, личность обработчика, статус передачи, разрешение распространения и организационная цель остаются неопределёнными до их предоставления ответственным оператором или юридическим владельцем.

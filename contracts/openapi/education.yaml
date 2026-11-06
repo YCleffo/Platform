@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Platform Education",
+    "title": "Education платформы Platform",
     "version": "1.0.0",
-    "description": "Optional Yii module. Core bearer identity, current Core permissions, active organization membership and explicit Education teacher assignment are all checked on every request. X-Education-Organization selects scope; it never grants access. Personal responses are no-store. Calendar days use the Core account IANA timezone. Pagination is 50 records with nextOffset. The first messaging workflow is between active Education teachers in the same organization."
+    "description": "Необязательный модуль Yii. Каждый запрос проверяет Bearer-пользователя Core, текущие разрешения, активное членство организации и явное назначение преподавателя. X-Education-Organization выбирает область, но не выдаёт доступ. Личные ответы no-store. Дни учитывают IANA-пояс аккаунта. Пагинация по 50 с nextOffset. Первая переписка — между активными преподавателями одной организации."
   },
   "servers": [
     {
@@ -19,11 +19,11 @@
     "/context": {
       "get": {
         "operationId": "education_context",
-        "summary": "Context",
+        "summary": "Контекст",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -82,7 +82,7 @@
     "/today/header": {
       "get": {
         "operationId": "education_header",
-        "summary": "Header",
+        "summary": "Заголовок",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -96,7 +96,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -155,7 +155,7 @@
     "/schedule": {
       "get": {
         "operationId": "education_schedule",
-        "summary": "Schedule",
+        "summary": "Расписание",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -174,7 +174,7 @@
               "type": "string",
               "format": "date"
             },
-            "description": "Inclusive local date in the authenticated Core timezone; maximum 31 calendar days."
+            "description": "Включительная локальная дата в часовом поясе Core пользователя; максимум 31 календарный день."
           },
           {
             "name": "to",
@@ -184,12 +184,12 @@
               "type": "string",
               "format": "date"
             },
-            "description": "Inclusive local date in the authenticated Core timezone; maximum 31 calendar days."
+            "description": "Включительная локальная дата в часовом поясе Core пользователя; максимум 31 календарный день."
           }
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -248,7 +248,7 @@
     "/timeline": {
       "get": {
         "operationId": "education_timeline",
-        "summary": "Timeline",
+        "summary": "Хронология",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -271,7 +271,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -330,7 +330,7 @@
     "/attention": {
       "get": {
         "operationId": "education_attention",
-        "summary": "Attention",
+        "summary": "Требует внимания",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -344,7 +344,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -403,7 +403,7 @@
     "/lessons/next": {
       "get": {
         "operationId": "education_next",
-        "summary": "Next",
+        "summary": "Следующее",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -417,7 +417,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -528,7 +528,7 @@
     "/lessons/current": {
       "get": {
         "operationId": "education_current",
-        "summary": "Current",
+        "summary": "Текущее",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -542,7 +542,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -653,7 +653,7 @@
     "/lessons": {
       "post": {
         "operationId": "education_create_lesson",
-        "summary": "Create lesson",
+        "summary": "Создать занятие",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -667,7 +667,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -736,7 +736,7 @@
     "/lessons/{id}/participants": {
       "get": {
         "operationId": "education_participants",
-        "summary": "Participants",
+        "summary": "Участники",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -759,7 +759,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -818,7 +818,7 @@
     "/lessons/{id}/materials": {
       "get": {
         "operationId": "education_materials",
-        "summary": "Materials",
+        "summary": "Материалы",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -851,7 +851,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -910,7 +910,7 @@
     "/lessons/{id}/participants/{studentId}": {
       "put": {
         "operationId": "education_mark_attendance",
-        "summary": "Mark attendance",
+        "summary": "Отметить посещаемость",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -942,7 +942,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1011,7 +1011,7 @@
     "/lessons/{id}": {
       "get": {
         "operationId": "education_lesson",
-        "summary": "Lesson",
+        "summary": "Занятие",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -1034,7 +1034,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1093,7 +1093,7 @@
     "/groups": {
       "get": {
         "operationId": "education_groups",
-        "summary": "Groups",
+        "summary": "Группы",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -1117,7 +1117,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1174,7 +1174,7 @@
       },
       "post": {
         "operationId": "education_create_group",
-        "summary": "Create group",
+        "summary": "Создать группу",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -1188,7 +1188,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1257,7 +1257,7 @@
     "/groups/{id}": {
       "get": {
         "operationId": "education_group",
-        "summary": "Group",
+        "summary": "Группа",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -1280,7 +1280,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1339,7 +1339,7 @@
     "/students": {
       "get": {
         "operationId": "education_students",
-        "summary": "Students",
+        "summary": "Ученики",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -1363,7 +1363,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1420,7 +1420,7 @@
       },
       "post": {
         "operationId": "education_enroll_student",
-        "summary": "Enroll student",
+        "summary": "Зачислить ученика",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -1434,7 +1434,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1503,7 +1503,7 @@
     "/people/candidates": {
       "get": {
         "operationId": "education_candidates",
-        "summary": "Candidates",
+        "summary": "Кандидаты",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -1527,7 +1527,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1586,7 +1586,7 @@
     "/events": {
       "post": {
         "operationId": "education_create_event",
-        "summary": "Create event",
+        "summary": "Создать событие",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -1600,7 +1600,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1669,7 +1669,7 @@
     "/files": {
       "get": {
         "operationId": "education_files",
-        "summary": "Files",
+        "summary": "Файлы",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -1693,7 +1693,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1750,7 +1750,7 @@
       },
       "post": {
         "operationId": "education_upload_file",
-        "summary": "Upload file",
+        "summary": "Загрузить файл",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -1764,7 +1764,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1855,7 +1855,7 @@
     "/files/{id}": {
       "get": {
         "operationId": "education_file_download",
-        "summary": "File download",
+        "summary": "Скачать файл",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -1878,7 +1878,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1922,7 +1922,7 @@
     "/profile": {
       "get": {
         "operationId": "education_profile",
-        "summary": "Profile",
+        "summary": "Профиль",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -1936,7 +1936,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -1993,7 +1993,7 @@
       },
       "put": {
         "operationId": "education_save_profile",
-        "summary": "Save profile",
+        "summary": "Сохранить профиль",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -2007,7 +2007,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -2076,7 +2076,7 @@
     "/colleagues": {
       "get": {
         "operationId": "education_colleagues",
-        "summary": "Colleagues",
+        "summary": "Коллеги",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -2100,7 +2100,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -2159,7 +2159,7 @@
     "/threads": {
       "get": {
         "operationId": "education_threads",
-        "summary": "Threads",
+        "summary": "Беседы",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -2183,7 +2183,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -2240,7 +2240,7 @@
       },
       "post": {
         "operationId": "education_start_thread",
-        "summary": "Start thread",
+        "summary": "Начать беседу",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -2254,7 +2254,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -2323,7 +2323,7 @@
     "/threads/{id}": {
       "get": {
         "operationId": "education_thread",
-        "summary": "Thread",
+        "summary": "Беседа",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -2346,7 +2346,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -2405,7 +2405,7 @@
     "/threads/{id}/messages": {
       "get": {
         "operationId": "education_messages",
-        "summary": "Messages",
+        "summary": "Сообщения",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -2438,7 +2438,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -2495,7 +2495,7 @@
       },
       "post": {
         "operationId": "education_send_message",
-        "summary": "Send message",
+        "summary": "Отправить сообщение",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -2518,7 +2518,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -2587,7 +2587,7 @@
     "/threads/{id}/read": {
       "post": {
         "operationId": "education_read_thread",
-        "summary": "Read thread",
+        "summary": "Прочитать беседу",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -2610,7 +2610,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -2679,7 +2679,7 @@
     "/notifications": {
       "get": {
         "operationId": "education_notifications",
-        "summary": "Notifications",
+        "summary": "Уведомления",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -2703,7 +2703,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -2762,7 +2762,7 @@
     "/notifications/{id}/read": {
       "post": {
         "operationId": "education_read_notification",
-        "summary": "Read notification",
+        "summary": "Прочитать уведомление",
         "parameters": [
           {
             "name": "X-Education-Organization",
@@ -2785,7 +2785,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Authorized result. Empty collections are real empty states, not fallback data.",
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
             "headers": {
               "Cache-Control": {
                 "schema": {
@@ -3938,7 +3938,7 @@
     },
     "responses": {
       "Error": {
-        "description": "Core error envelope; optional meta.educationCode identifies a module-specific reason. An error must never become an empty collection.",
+        "description": "Оболочка ошибки Core; необязательный meta.educationCode задаёт причину модуля. Ошибка никогда не превращается в пустую коллекцию.",
         "headers": {
           "Cache-Control": {
             "schema": {

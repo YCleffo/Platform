@@ -1,32 +1,31 @@
 openapi: 3.1.0
 info:
-  title: Platform User Settings / Privacy API
+  title: API пользовательских настроек и приватности Platform
   version: 2.0.0
-  description: Authenticated self-service contract for schema version 2 account settings, preferences and consents.
-
+  description: Аутентифицированное самообслуживание настроек аккаунта версии 2, предпочтений и согласий.
 paths:
   /api/auth/me/settings:
     get:
       operationId: getOwnAccountSettings
-      summary: Read effective settings for the current account
+      summary: Прочитать действующие настройки текущего аккаунта
       security:
         - BearerAuth: []
       responses:
-        '200':
-          description: Versioned defaults merged with the account's sparse overrides.
+        "200":
+          description: Версионированные значения по умолчанию, объединённые с разреженными пользовательскими переопределениями.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SettingsSuccess'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/SettingsSuccess"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
     patch:
       operationId: patchOwnAccountSettings
-      summary: Deep-merge settings for the current account
-      description: >
-        Accepts a non-empty partial document up to 32768 bytes. Omitted siblings are
-        preserved. A null registered leaf removes its override and restores the
-        versioned default. Account IDs and unregistered namespaces are rejected.
+      summary: Глубоко объединить настройки текущего аккаунта
+      description: >-
+        Принимает непустой частичный документ до 32768 байт. Пропущенные соседние поля сохраняются. null в
+        зарегистрированном конечном поле удаляет переопределение и возвращает версионированное значение по умолчанию. ID
+        аккаунта и незарегистрированные пространства запрещены.
       security:
         - BearerAuth: []
       requestBody:
@@ -34,7 +33,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SettingsPatch'
+              $ref: "#/components/schemas/SettingsPatch"
             examples:
               privacy:
                 value:
@@ -45,27 +44,27 @@ paths:
                   privacy:
                     show_online_status: null
       responses:
-        '200':
-          description: Effective settings after the atomic merge.
+        "200":
+          description: Действующие настройки после атомарного объединения.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SettingsSuccess'
-        '400':
-          description: Malformed JSON.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '413':
-          description: Payload exceeds 32768 bytes.
-        '422':
-          description: Unknown path, invalid type, empty patch, or malformed nested object.
-
+                $ref: "#/components/schemas/SettingsSuccess"
+        "400":
+          description: Некорректный JSON.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          description: Содержимое превышает 32768 байт.
+        "422":
+          description: Неизвестный путь, неверный тип, пустое изменение или некорректный вложенный объект.
   /api/auth/me/preferences:
     patch:
       operationId: patchOwnInternationalPreferences
-      summary: Save language and IANA time zone for the current account
-      description: Omitted fields are preserved atomically; explicit null restores service defaults.
-      security: [{ BearerAuth: [] }]
+      summary: Сохранить язык и часовой пояс IANA текущего аккаунта
+      description: Пропущенные поля атомарно сохраняются; явный null возвращает значения сервиса по умолчанию.
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -75,98 +74,160 @@ paths:
               minProperties: 1
               additionalProperties: false
               properties:
-                locale: { type: [string, 'null'], examples: [ru-RU, en-US] }
-                timezone: { type: [string, 'null'], examples: [UTC, Asia/Yekaterinburg] }
+                locale:
+                  type:
+                    - string
+                    - "null"
+                  examples:
+                    - ru-RU
+                    - en-US
+                timezone:
+                  type:
+                    - string
+                    - "null"
+                  examples:
+                    - UTC
+                    - Asia/Yekaterinburg
       responses:
-        '200':
-          description: Canonical preferences after the update
+        "200":
+          description: Канонические предпочтения после обновления
           content:
             application/json:
               schema:
                 type: object
-                required: [status, data]
+                required:
+                  - status
+                  - data
                 properties:
-                  status: { const: success }
+                  status:
+                    const: success
                   data:
                     type: object
-                    required: [locale, timezone]
+                    required:
+                      - locale
+                      - timezone
                     properties:
-                      locale: { type: [string, 'null'] }
-                      timezone: { type: [string, 'null'] }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '422': { description: Invalid or unsupported language/time zone }
+                      locale:
+                        type:
+                          - string
+                          - "null"
+                      timezone:
+                        type:
+                          - string
+                          - "null"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          description: Неверные или неподдерживаемые язык/часовой пояс
   /api/auth/me/consents:
     get:
       operationId: getOwnConsents
-      summary: Read published consent definitions and the latest record per code
-      security: [{ BearerAuth: [] }]
+      summary: Прочитать опубликованные определения согласий и последнюю запись каждого кода
+      security:
+        - BearerAuth: []
       responses:
-        '200':
-          description: Definitions may be empty; an unavailable full text is null
+        "200":
+          description: Определения могут отсутствовать; недоступный полный текст имеет значение null
           content:
             application/json:
               schema:
                 type: object
-                required: [status, data]
+                required:
+                  - status
+                  - data
                 properties:
-                  status: { const: success }
+                  status:
+                    const: success
                   data:
                     type: object
-                    required: [definitions, consents]
+                    required:
+                      - definitions
+                      - consents
                     properties:
-                      definitions: { type: array, items: { $ref: '#/components/schemas/ConsentDefinition' } }
-                      consents: { type: array, items: { $ref: '#/components/schemas/ConsentRecord' } }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '422': { description: The account has no human Person }
+                      definitions:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ConsentDefinition"
+                      consents:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ConsentRecord"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          description: Аккаунт не связан с человеком Person
   /api/auth/me/consents/{code}:
     parameters:
-      - { name: code, in: path, required: true, schema: { type: string } }
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
     post:
       operationId: grantOwnConsent
-      summary: Record consent to the registered document
-      description: >
-        Browser clients supply the reviewed version and hash. They cannot override server
-        document metadata; mismatches or unavailable full text produce 409. Empty bodies
-        remain supported for existing internal clients.
-      security: [{ BearerAuth: [] }]
+      summary: Записать согласие с зарегистрированным документом
+      description: >-
+        Браузер передаёт просмотренные версию и хеш. Менять серверные метаданные документа нельзя; несовпадение или
+        недоступный полный текст дают 409. Пустое тело сохраняет совместимость с прежними внутренними клиентами.
+      security:
+        - BearerAuth: []
       requestBody:
         required: false
         content:
           application/json:
             schema:
               oneOf:
-                - { type: object, maxProperties: 0 }
+                - type: object
+                  maxProperties: 0
                 - type: object
                   additionalProperties: false
-                  required: [document_version, document_sha256]
+                  required:
+                    - document_version
+                    - document_sha256
                   properties:
-                    document_version: { type: string, minLength: 1 }
-                    document_sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+                    document_version:
+                      type: string
+                      minLength: 1
+                    document_sha256:
+                      type: string
+                      pattern: ^[a-f0-9]{64}$
       responses:
-        '200':
-          description: Existing matching or newly recorded current consent
+        "200":
+          description: Существующее совпавшее или новое действующее согласие
           content:
             application/json:
               schema:
                 type: object
-                required: [status, data]
+                required:
+                  - status
+                  - data
                 properties:
-                  status: { const: success }
-                  data: { $ref: '#/components/schemas/ConsentRecord' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { description: Unknown consent code }
-        '409': { description: Reviewed document changed or is unavailable }
-        '422': { description: Invalid input or ineligible account }
+                  status:
+                    const: success
+                  data:
+                    $ref: "#/components/schemas/ConsentRecord"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Неизвестный код согласия
+        "409":
+          description: Просмотренный документ изменился или недоступен
+        "422":
+          description: Неверный ввод или неподходящий аккаунт
     delete:
       operationId: withdrawOwnConsent
-      summary: Withdraw the active consent when the definition permits it
-      security: [{ BearerAuth: [] }]
+      summary: Отозвать активное согласие, если определение разрешает отзыв
+      security:
+        - BearerAuth: []
       responses:
-        '200': { description: Consent withdrawn; the record remains in history }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { description: No active consent }
-        '422': { description: Withdrawal not permitted or ineligible account }
-
+        "200":
+          description: Согласие отозвано; запись остаётся в истории
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Нет активного согласия
+        "422":
+          description: Отзыв запрещён или аккаунт не подходит
 components:
   securitySchemes:
     BearerAuth:
@@ -175,113 +236,201 @@ components:
   schemas:
     SettingsSuccess:
       type: object
-      required: [status, data]
+      required:
+        - status
+        - data
       properties:
         status:
           const: success
         data:
           type: object
-          required: [settings, schema_version]
+          required:
+            - settings
+            - schema_version
           properties:
             settings:
-              $ref: '#/components/schemas/EffectiveSettings'
+              $ref: "#/components/schemas/EffectiveSettings"
             schema_version:
               type: integer
               const: 2
     EffectiveSettings:
       type: object
       additionalProperties: false
-      required: [interface, notifications, privacy]
+      required:
+        - interface
+        - notifications
+        - privacy
       properties:
         interface:
-          $ref: '#/components/schemas/InterfaceSettings'
+          $ref: "#/components/schemas/InterfaceSettings"
         notifications:
-          $ref: '#/components/schemas/NotificationSettings'
+          $ref: "#/components/schemas/NotificationSettings"
         privacy:
-          $ref: '#/components/schemas/PrivacySettings'
+          $ref: "#/components/schemas/PrivacySettings"
     SettingsPatch:
       type: object
       minProperties: 1
       additionalProperties: false
       properties:
         interface:
-          $ref: '#/components/schemas/InterfaceSettingsPatch'
+          $ref: "#/components/schemas/InterfaceSettingsPatch"
         notifications:
-          $ref: '#/components/schemas/NotificationSettingsPatch'
+          $ref: "#/components/schemas/NotificationSettingsPatch"
         privacy:
-          $ref: '#/components/schemas/PrivacySettingsPatch'
+          $ref: "#/components/schemas/PrivacySettingsPatch"
     InterfaceSettings:
       type: object
       additionalProperties: false
-      required: [animations, transparency]
+      required:
+        - animations
+        - transparency
       properties:
-        animations: { type: boolean, default: true }
-        transparency: { type: boolean, default: true }
+        animations:
+          type: boolean
+          default: true
+        transparency:
+          type: boolean
+          default: true
     InterfaceSettingsPatch:
       type: object
       minProperties: 1
       additionalProperties: false
       properties:
-        animations: { type: [boolean, 'null'] }
-        transparency: { type: [boolean, 'null'] }
+        animations:
+          type:
+            - boolean
+            - "null"
+        transparency:
+          type:
+            - boolean
+            - "null"
     NotificationSettings:
       type: object
       additionalProperties: false
-      required: [browser, sound, email]
+      required:
+        - browser
+        - sound
+        - email
       properties:
-        browser: { type: boolean, default: true }
-        sound: { type: boolean, default: true }
-        email: { type: boolean, default: false }
+        browser:
+          type: boolean
+          default: true
+        sound:
+          type: boolean
+          default: true
+        email:
+          type: boolean
+          default: false
     NotificationSettingsPatch:
       type: object
       minProperties: 1
       additionalProperties: false
       properties:
-        browser: { type: [boolean, 'null'] }
-        sound: { type: [boolean, 'null'] }
-        email: { type: [boolean, 'null'] }
+        browser:
+          type:
+            - boolean
+            - "null"
+        sound:
+          type:
+            - boolean
+            - "null"
+        email:
+          type:
+            - boolean
+            - "null"
     PrivacySettings:
       type: object
       additionalProperties: false
-      required: [show_online_status]
+      required:
+        - show_online_status
       properties:
-        show_online_status: { type: boolean, default: false }
+        show_online_status:
+          type: boolean
+          default: false
     PrivacySettingsPatch:
       type: object
       minProperties: 1
       additionalProperties: false
       properties:
-        show_online_status: { type: [boolean, 'null'] }
+        show_online_status:
+          type:
+            - boolean
+            - "null"
     ConsentDefinition:
       type: object
-      required: [code, purpose_code, current_document_version, current_document_sha256, withdrawable, representative_allowed, document]
+      required:
+        - code
+        - purpose_code
+        - current_document_version
+        - current_document_sha256
+        - withdrawable
+        - representative_allowed
+        - document
       properties:
-        code: { type: string }
-        purpose_code: { type: string }
-        current_document_version: { type: string }
-        current_document_sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
-        withdrawable: { type: boolean }
-        representative_allowed: { type: boolean }
+        code:
+          type: string
+        purpose_code:
+          type: string
+        current_document_version:
+          type: string
+        current_document_sha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        withdrawable:
+          type: boolean
+        representative_allowed:
+          type: boolean
         document:
-          type: [object, 'null']
-          required: [title, text]
+          type:
+            - object
+            - "null"
+          required:
+            - title
+            - text
           properties:
-            title: { type: string }
-            text: { type: string, description: Plain text whose UTF-8 SHA-256 matches the registered document hash }
+            title:
+              type: string
+            text:
+              type: string
+              description: Обычный текст, SHA-256 которого в UTF-8 совпадает с зарегистрированным хешем документа
     ConsentRecord:
       type: object
-      required: [id, consent_code, purpose_code, document_version, document_sha256, locale, source, granted_at, withdrawn_at, current]
+      required:
+        - id
+        - consent_code
+        - purpose_code
+        - document_version
+        - document_sha256
+        - locale
+        - source
+        - granted_at
+        - withdrawn_at
+        - current
       properties:
-        id: { type: string, format: uuid }
-        consent_code: { type: string }
-        purpose_code: { type: string }
-        document_version: { type: string }
-        document_sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
-        locale: { type: string }
-        source: { type: string }
-        granted_at: { type: string }
-        withdrawn_at: { type: [string, 'null'] }
-        current: { type: boolean }
+        id:
+          type: string
+          format: uuid
+        consent_code:
+          type: string
+        purpose_code:
+          type: string
+        document_version:
+          type: string
+        document_sha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        locale:
+          type: string
+        source:
+          type: string
+        granted_at:
+          type: string
+        withdrawn_at:
+          type:
+            - string
+            - "null"
+        current:
+          type: boolean
   responses:
     Unauthorized:
-      description: Missing, invalid, expired, or revoked authentication session.
+      description: Сессия отсутствует, недействительна, истекла или отозвана.

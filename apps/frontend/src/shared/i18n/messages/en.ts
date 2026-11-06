@@ -2,7 +2,7 @@ import {operatorEn} from '../operator';
 import {workbenchEn} from '../workbench';
 export default {
   picker: { chooseDate: 'Choose a date', chooseTime: 'Choose a time', date: 'Date', time: 'Time', dateTime: 'Date and time', dateFormatEn: 'MM/DD/YYYY', dateFormatRu: 'DD.MM.YYYY', invalid: 'Enter a valid date or time.', range: 'Choose a value within the allowed range.', previousMonth: 'Previous month', nextMonth: 'Next month', month: 'Month', year: 'Year', hours: 'Hours', minutes: 'Minutes', seconds: 'Seconds', today: 'Today', clear: 'Clear', apply: 'Apply', example: 'Calendar and time', hint: 'Choose with the picker or type a date and time. The field uses your local time.', disabled: 'Unavailable date', disclosure: 'Expandable section', disclosureHint: 'Show or hide extra information.' },
-  navigation: { path: 'Breadcrumbs', hidden: 'Show hidden levels', core: 'Core', account: 'Account', mfa: 'Two-factor authentication', sessions: 'Devices and sessions', passkeys: 'Passkeys', identities: 'External accounts', profile: 'My account', consents: 'Consents', privacy: 'Privacy', request: 'Request', security: 'Security', components: 'Components', operator: 'Operator workspace', overview: 'Overview', members: 'Members', billing: 'Billing', usage: 'Usage', analytics: 'Analytics', audit: 'Audit', invitations: 'Invitations' },
+  navigation: { path: 'Breadcrumbs', hidden: 'Show hidden levels', core: 'Core', account: 'Account', mfa: 'Two-factor authentication', sessions: 'Devices and sessions', passkeys: 'Passkeys', identities: 'External accounts', profile: 'My account', consents: 'Consents', privacy: 'Privacy', request: 'Request', security: 'Security', components: 'Components', operator: 'Operator workspace', overview: 'Overview', members: 'Members', billing: 'Billing', usage: 'Usage', analytics: 'Analytics', audit: 'Audit', invitations: 'Invitations', comparePlans: 'Compare plans' },
   operator: operatorEn,
   workbench: workbenchEn,
   configuration: {
@@ -270,6 +270,20 @@ export default {
     period_year: 'year',
     period_one_time: 'one-time',
   },
+  plans: {
+    compareTitle: 'Compare plans',
+    compareSubtitle: 'Published plan features and prices in one table.',
+    backToCatalog: 'Back to plans',
+    backToComparison: 'Back to comparison',
+    feature: 'Feature',
+    included: 'Included',
+    notIncluded: 'Not included',
+    viewDetails: 'View details',
+    prices: 'Prices',
+    detailSubtitle: 'Full composition of the published plan.',
+    notFound: 'Plan not found',
+    notFoundText: 'The plan may have been unpublished or the link is out of date.',
+  },
   cabinet: {
     title: 'Commercial accounts',
     subtitle: 'Accounts you can access.',
@@ -414,6 +428,9 @@ export default {
     confirmPassword: 'Confirm new password',
     changePassword: 'Change password',
     passwordChanged: 'Password changed.',
+    passwordNext: 'Next',
+    passwordBack: 'Back',
+    passwordStepOf: 'Step {current} of {total}',
     regenerateCodes: 'New recovery codes',
     disableMfaTitle: 'Disable two-factor authentication',
     disableMfaText: 'Sign-in protection will be removed from this account.',
@@ -823,6 +840,7 @@ export default {
     passwordMax: 'The password is too long.',
     passwordChars: 'The password contains unsupported characters.',
     passwordMismatch: 'Passwords do not match.',
+    passwordReuse: 'The new password must differ from the current password.',
     codeInvalid: 'Use lowercase letters, digits and . _ - (for example "acme").',
     textInvalid: 'The text contains unsupported characters.',
     tooLong: 'The value is too long.',

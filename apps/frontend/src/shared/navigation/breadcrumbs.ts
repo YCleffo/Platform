@@ -26,6 +26,11 @@ export function breadcrumbs(name: unknown, params: Record<string, unknown>, t: (
   if (['security', 'privacy', 'settings-components'].includes(route)) return [item('nav.settings', { name: 'settings' }), item('navigation.' + (route === 'settings-components' ? 'components' : route))];
   if (route === 'operator-console') return [item('app.name', { name: 'catalog' }), item('navigation.operator')];
   if (route === 'catalog') return [item('nav.catalog')];
+  if (route === 'plans') return [item('nav.catalog', { name: 'catalog' }), item('navigation.comparePlans')];
+  if (route === 'plan-detail') {
+    const code = typeof params.code === 'string' ? params.code : '';
+    return [item('nav.catalog', { name: 'catalog' }), item('navigation.comparePlans', { name: 'plans' }), { label: code }];
+  }
   if (route === 'cabinet') return [item('nav.cabinet')];
   if (route === 'settings') return [item('nav.settings')];
   return fallback ? [{ label: fallback }] : [];

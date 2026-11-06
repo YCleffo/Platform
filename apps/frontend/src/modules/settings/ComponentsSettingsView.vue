@@ -157,23 +157,25 @@ const contextItems = computed<MenuItem[]>(() => [
       <AppCard>
         <h3>{{ $t('controls.checkboxes') }}</h3>
         <p>{{ $t('controls.checkboxHint') }}</p>
-        <AppCheckbox
-          id="demo-check-all"
-          v-model="allExamples"
-          :indeterminate="someExamples"
-          :label="$t('controls.selectAll')"
-        />
-        <div class="components-view__check-children">
+        <div class="components-view__check-group">
           <AppCheckbox
-            id="demo-check-first"
-            v-model="selectedExamples[0]"
-            :label="$t('controls.firstOption')"
+            id="demo-check-all"
+            v-model="allExamples"
+            :indeterminate="someExamples"
+            :label="$t('controls.selectAll')"
           />
-          <AppCheckbox
-            id="demo-check-second"
-            v-model="selectedExamples[1]"
-            :label="$t('controls.secondOption')"
-          />
+          <div class="components-view__check-children">
+            <AppCheckbox
+              id="demo-check-first"
+              v-model="selectedExamples[0]"
+              :label="$t('controls.firstOption')"
+            />
+            <AppCheckbox
+              id="demo-check-second"
+              v-model="selectedExamples[1]"
+              :label="$t('controls.secondOption')"
+            />
+          </div>
         </div>
         <AppCheckbox
           id="demo-check-disabled"
@@ -359,10 +361,25 @@ const contextItems = computed<MenuItem[]>(() => [
   letter-spacing: var(--type-h3-tracking);
   line-height: var(--type-h3-line);
 }
+.components-view__check-group {
+  position: relative;
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.components-view__check-group::before {
+  content: '';
+  position: absolute;
+  inset-block-start: calc(var(--control-h-l) / 2 + 9px * var(--ui-density-scale, 1));
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  width: 1px;
+  background: var(--border);
+  pointer-events: none;
+  transition: var(--theme-transition);
+}
 .components-view__check-children {
   padding-inline-start: var(--space-24);
-  border-inline-start: 1px solid var(--border);
-  transition: var(--theme-transition);
 }
 .components-view p {
   color: var(--text-2);

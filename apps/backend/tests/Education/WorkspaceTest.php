@@ -6,7 +6,13 @@ namespace App\Tests\Education;
 
 use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Privacy\Application\DataCategoryRegistry;
+use App\Core\Privacy\Application\PersonalDataErasureHandlerRegistry;
+use App\Core\Privacy\Application\ProcessingPurposeRegistry;
+use App\Core\Privacy\Application\RetentionPolicyRegistry;
 use App\Core\Privacy\Domain\DataCategoryDefinition;
+use App\Core\Privacy\Domain\ProcessingPurposeDefinition;
+use App\Core\Privacy\Domain\RetentionCandidate;
+use App\Core\Privacy\Domain\RetentionPolicyDefinition;
 use App\Core\Shared\Infrastructure\TestRuntimeGuard;
 use App\Core\Time\Application\ClockInterface;
 use App\Education\Application\EducationAccess;
@@ -17,11 +23,16 @@ use App\Education\Application\FileStore;
 use App\Education\Application\Input;
 use App\Education\Application\Mutation;
 use App\Education\Application\Scope;
+use App\Education\Infrastructure\LawfulProcessingBasisContributor;
+use App\Education\Infrastructure\ProcessingRestrictionContributor;
+use App\Education\Infrastructure\RetentionCandidateContributor;
+use App\Education\Infrastructure\WorkspaceErasureHandler;
 use App\Environment;
 use DateTimeImmutable;
 use HttpSoft\Message\StreamFactory;
 use HttpSoft\Message\UploadedFile;
 use PHPUnit\Framework\TestCase;
+use Psr\Container\ContainerInterface;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Transaction\TransactionInterface;
 use Yiisoft\Yii\Runner\Http\HttpApplicationRunner;
@@ -29,6 +40,7 @@ use Yiisoft\Yii\Runner\Http\HttpApplicationRunner;
 final class WorkspaceTest extends TestCase
 {
     private ConnectionInterface $db;
+    private ContainerInterface $container;
     private TransactionInterface $transaction;
     private EducationAccess $access;
     private EducationStore $store;
@@ -44,6 +56,7 @@ final class WorkspaceTest extends TestCase
     {
         self::assertSame('1', getenv('EDUCATION_ENABLED'), 'Run the dedicated Education suite with its module enabled.');
         $container = (new HttpApplicationRunner(rootPath: dirname(__DIR__, 2), environment: Environment::appEnv()))->getContainer();
+        $this->container = $container;
         $this->db = $container->get(ConnectionInterface::class);
         TestRuntimeGuard::assertDestructiveOperationsAllowed($this->db);
         $this->transaction = $this->db->beginTransaction();
@@ -236,6 +249,192 @@ final class WorkspaceTest extends TestCase
             [':person' => $this->scope->personId, ':resource' => $profile['id'], ':actor' => $this->scope->accountId],
         )->execute();
         $this->assertError(403, fn() => $this->service->read('header', $this->scope, []));
+    }
+
+    public function testPrivacyContributorsCoverEducationWorkspace(): void
+    {
+        $this->service->write('save_profile', $this->scope, ['displayName' => 'Retention subject', 'avatarFileId' => null]);
+        $categories = new DataCategoryRegistry(additionalDefinitions: [new DataCategoryDefinition('education')]);
+        $policies = new RetentionPolicyRegistry([
+            new RetentionPolicyDefinition('education.workspace', 'withdrawal', null, 'delete'),
+        ]);
+        $purposes = new ProcessingPurposeRegistry([
+            new ProcessingPurposeDefinition(
+                'education.consent',
+                'consent',
+                true,
+                false,
+                ['education'],
+                ['person'],
+                'education.workspace',
+                'operator',
+            ),
+        ], $categories, $policies);
+        $contributor = new RetentionCandidateContributor($this->db, $purposes, $policies);
+        self::assertSame('education.workspace', $contributor->resourceType());
+        self::assertTrue($contributor->supportsPurpose('education.consent'));
+        $candidates = iterator_to_array($contributor->candidates(10, $this->scope->personId));
+        self::assertCount(1, $candidates);
+        self::assertSame('education.workspace', $candidates[0]->resourceType);
+        self::assertSame($this->scope->personId, $candidates[0]->resourceId);
+        self::assertSame('education.consent', $candidates[0]->purposeCode);
+        self::assertSame('education.workspace', $candidates[0]->retentionPolicyCode);
+        self::assertNull($candidates[0]->triggeredAt);
+
+        $contracts = new ProcessingPurposeRegistry([
+            new ProcessingPurposeDefinition(
+                'education.contract',
+                'contract',
+                false,
+                false,
+                ['education'],
+                ['person'],
+                'education.workspace',
+                'operator',
+            ),
+        ], $categories, $policies);
+        $basis = new LawfulProcessingBasisContributor($this->db, $contracts);
+        $candidate = new RetentionCandidate(
+            $this->scope->personId,
+            'education.workspace',
+            $this->scope->personId,
+            'education.contract',
+            'education.workspace',
+            'withdrawal',
+            null,
+            'education.workspace_retention',
+        );
+        self::assertTrue($basis->supports('education.contract', 'education.workspace'));
+        self::assertSame('active', $basis->resolve($candidate));
+        $this->db->createCommand(
+            "UPDATE core.organization_memberships SET status='left', left_at=now() WHERE person_id=CAST(:person AS uuid)",
+            [':person' => $this->scope->personId],
+        )->execute();
+        $this->db->createCommand(
+            "UPDATE core.accounts SET status='archived', archived_at=now() WHERE person_id=CAST(:person AS uuid)",
+            [':person' => $this->scope->personId],
+        )->execute();
+        self::assertSame('inactive', $basis->resolve($candidate));
+
+        $restriction = new ProcessingRestrictionContributor($purposes);
+        self::assertTrue($restriction->supports('purpose', 'education.consent', null));
+        self::assertFalse($restriction->supports('purpose', 'test.consent', null));
+        $block = (string) $this->db->createCommand('SELECT uuidv7()')->queryScalar();
+        $restriction->applyRestriction($block, $this->scope->personId);
+        $restriction->releaseRestriction($block, $this->scope->personId);
+    }
+
+    public function testWorkspaceErasureRemovesDatabaseFilesAndIsIdempotent(): void
+    {
+        $this->service->write('save_profile', $this->scope, ['displayName' => 'Erase subject', 'avatarFileId' => null]);
+        $group = $this->service->write('create_group', $this->scope, ['name' => 'Erase group']);
+        $studentPerson = $this->person('Erase student');
+        $this->member($studentPerson);
+        $student = $this->service->write('enroll_student', $this->scope, [
+            'groupId' => $group['id'],
+            'personId' => $studentPerson,
+        ]);
+        $lesson = $this->service->write('create_lesson', $this->scope, [
+            'groupId' => $group['id'],
+            'title' => 'Erase lesson',
+            'startsAt' => '2026-03-08T13:30:00Z',
+            'endsAt' => '2026-03-08T15:00:00Z',
+        ]);
+        $this->service->write('mark_attendance', $this->scope, ['status' => 'present'], $lesson['id'], $student['id']);
+        $this->service->write('create_event', $this->scope, [
+            'title' => 'Erase event',
+            'kind' => 'other',
+            'startsAt' => '2026-03-08T16:00:00Z',
+            'endsAt' => '2026-03-08T17:00:00Z',
+        ]);
+        $bytes = "%PDF-1.4\nEducation erasure test\n%%EOF\n";
+        $file = $this->service->upload(
+            $this->scope,
+            new UploadedFile((new StreamFactory())->createStream($bytes), strlen($bytes), UPLOAD_ERR_OK, 'erase.pdf', 'application/pdf'),
+            null,
+            false,
+        );
+        $fileRow = $this->store->file($this->scope, $file['id']);
+        $this->storedFiles[] = $fileRow['storageKey'];
+        $recipient = $this->teacher('Erase recipient');
+        $thread = $this->service->write('start_thread', $this->scope, [
+            'recipientPersonId' => $recipient->personId,
+            'subject' => 'Erase thread',
+            'body' => 'Erase message',
+        ]);
+        $other = $this->teacher('Keep other');
+        $otherScope = $this->access->scope($other, $this->organization, 'education.access');
+        $otherGroup = $this->service->write('create_group', $otherScope, ['name' => 'Keep group']);
+
+        $handler = new WorkspaceErasureHandler($this->db, $this->files);
+        self::assertTrue($handler->supportsAction('delete'));
+        self::assertFalse($handler->supportsAction('anonymize'));
+        self::assertTrue($handler->owns($this->scope->personId, $this->scope->personId));
+        self::assertFalse($handler->owns($this->scope->personId, $recipient->personId));
+        $item = (string) $this->db->createCommand('SELECT uuidv7()')->queryScalar();
+        self::assertSame('deleted', $handler->execute(
+            $this->scope->personId,
+            $this->scope->personId,
+            'delete',
+            $item,
+        ));
+        self::assertSame('deleted', $handler->reconcile($item));
+
+        $count = fn(string $sql, array $params = []): int => (int) $this->db->createCommand($sql, $params)->queryScalar();
+        $person = [':person' => $this->scope->personId];
+        self::assertSame(0, $count('SELECT count(*) FROM education.profiles WHERE person_id = CAST(:person AS uuid)', $person));
+        self::assertSame(0, $count('SELECT count(*) FROM education.teachers WHERE person_id = CAST(:person AS uuid)', $person));
+        self::assertSame(0, $count('SELECT count(*) FROM education.groups WHERE owner_person_id = CAST(:person AS uuid)', $person));
+        self::assertSame(0, $count('SELECT count(*) FROM education.lessons WHERE owner_person_id = CAST(:person AS uuid)', $person));
+        self::assertSame(0, $count('SELECT count(*) FROM education.events WHERE owner_person_id = CAST(:person AS uuid)', $person));
+        self::assertSame(0, $count('SELECT count(*) FROM education.files WHERE owner_person_id = CAST(:person AS uuid)', $person));
+        self::assertSame(0, $count('SELECT count(*) FROM education.messages WHERE sender_person_id = CAST(:person AS uuid)', $person));
+        self::assertSame(0, $count('SELECT count(*) FROM education.notifications WHERE person_id = CAST(:person AS uuid)', $person));
+        self::assertSame(0, $count('SELECT count(*) FROM education.thread_members WHERE person_id = CAST(:person AS uuid)', $person));
+        self::assertSame(0, $count(
+            'SELECT count(*) FROM education.students WHERE person_id = CAST(:person AS uuid)'
+            . ' OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:person AS uuid))',
+            $person,
+        ));
+        self::assertSame(0, $count(
+            'SELECT count(*) FROM education.attendance WHERE lesson_id = CAST(:lesson AS uuid) OR student_id = CAST(:student AS uuid)',
+            [':lesson' => $lesson['id'], ':student' => $student['id']],
+        ));
+        self::assertSame(0, $count(
+            'SELECT count(*) FROM education.group_students WHERE group_id = CAST(:group AS uuid) OR student_id = CAST(:student AS uuid)',
+            [':group' => $group['id'], ':student' => $student['id']],
+        ));
+        self::assertSame(1, $count('SELECT count(*) FROM education.privacy_receipts'));
+        self::assertSame(1, $count('SELECT count(*) FROM education.groups WHERE id = CAST(:group AS uuid)', [':group' => $otherGroup['id']]));
+        self::assertSame(1, $count('SELECT count(*) FROM education.teachers WHERE person_id = CAST(:person AS uuid)', [':person' => $recipient->personId]));
+        self::assertSame(0, $count('SELECT count(*) FROM education.notifications WHERE person_id = CAST(:person AS uuid)', [':person' => $recipient->personId]));
+        self::assertSame(1, $count(
+            'SELECT count(*) FROM education.thread_members WHERE thread_id = CAST(:thread AS uuid) AND person_id = CAST(:person AS uuid)',
+            [':thread' => $thread['id'], ':person' => $recipient->personId],
+        ));
+        self::assertSame(1, $count('SELECT count(*) FROM education.threads WHERE id = CAST(:thread AS uuid)', [':thread' => $thread['id']]));
+        try {
+            $this->files->path($fileRow['storageKey']);
+            self::fail('Erased Education file bytes still exist.');
+        } catch (EducationError) {
+            self::assertTrue(true);
+        }
+
+        $second = (string) $this->db->createCommand('SELECT uuidv7()')->queryScalar();
+        self::assertSame('deleted', $handler->execute(
+            $this->scope->personId,
+            $this->scope->personId,
+            'delete',
+            $second,
+        ));
+        self::assertSame(2, $count('SELECT count(*) FROM education.privacy_receipts'));
+    }
+
+    public function testWorkspaceErasureHandlerIsRegisteredInContainer(): void
+    {
+        $registry = $this->container->get(PersonalDataErasureHandlerRegistry::class);
+        self::assertInstanceOf(WorkspaceErasureHandler::class, $registry->forAction('education.workspace', 'delete'));
+        self::assertNull($registry->forAction('education.workspace', 'anonymize'));
     }
 
     private function teacher(string $name): AuthenticatedIdentity

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ControlPlane\Tests\Integration;
 
+use ControlPlane\Catalog\Authorization\CatalogOperator;
 use ControlPlane\Identity\Security\ControlUserPrincipal;
 use ControlPlane\Infrastructure\Http\OperatorWorkspaceController;
 use ControlPlane\Privacy\ControlPrivacyOperator;
@@ -21,7 +22,11 @@ final class OperatorWorkspaceTest extends DatabaseTestCase
         $storage->setToken(new UsernamePasswordToken(new ControlUserPrincipal($id, 'operator@example.test', '!'), 'main'));
         $container = new Container();
         $container->set('security.token_storage', $storage);
-        $controller = new OperatorWorkspaceController($this->connection, new ControlPrivacyOperator($this->connection));
+        $controller = new OperatorWorkspaceController(
+            $this->connection,
+            new ControlPrivacyOperator($this->connection),
+            new CatalogOperator($this->connection),
+        );
         $controller->setContainer($container);
         return $controller;
     }
@@ -32,6 +37,23 @@ final class OperatorWorkspaceTest extends DatabaseTestCase
         self::assertSame(403, $response->getStatusCode());
         self::assertSame('operator_authorization_required', json_decode((string) $response->getContent(), true, flags: JSON_THROW_ON_ERROR)['error']['code']);
         self::assertTrue($response->headers->hasCacheControlDirective('no-store'));
+    }
+
+    public function testCatalogCapabilityIsIndependentAndRevocable(): void
+    {
+        $id = $this->user();
+        $this->connection->executeStatement(
+            'INSERT INTO commercial.catalog_operators (control_user_id, authorization_reference) VALUES (?, ?)',
+            [$id, 'urn:test:catalog'],
+        );
+        $controller = $this->controller($id);
+        $data = json_decode((string) $controller->me()->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertFalse($data['privacy']);
+        self::assertFalse($data['finance']);
+        self::assertTrue($data['catalog']);
+        $this->connection->executeStatement('DELETE FROM commercial.catalog_operators WHERE control_user_id=?', [$id]);
+        $this->expectException(AccessDeniedException::class);
+        $controller->me();
     }
 
     public function testPrivacyAndFinanceCapabilitiesRemainIndependentAndRevocable(): void

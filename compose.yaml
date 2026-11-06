@@ -93,6 +93,7 @@ services:
 
     environment: &backend_environment
       APP_ENV: ${BACKEND_APP_ENV:-dev}
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
       EDUCATION_ENABLED: ${EDUCATION_ENABLED:-0}
       APP_DEBUG: ${BACKEND_APP_DEBUG:-true}
       XDEBUG_MODE: ${BACKEND_XDEBUG_MODE:-off}
@@ -395,6 +396,7 @@ services:
       target: app
     restart: unless-stopped
     environment: &control_environment
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
       CONTROL_SCHEDULER_ENABLED: ${CONTROL_SCHEDULER_ENABLED:-true}
       CONTROL_OUTBOX_WORKER_ENABLED: ${CONTROL_OUTBOX_WORKER_ENABLED:-true}
       CONTROL_SCHEDULER_HEALTH_TIMEOUT_SECONDS: ${CONTROL_SCHEDULER_HEALTH_TIMEOUT_SECONDS:-120}

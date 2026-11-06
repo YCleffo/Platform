@@ -15,6 +15,7 @@ const cases = [
         "commercial/schema.catalog.json",
         "commercial/Commercial_ControlPlane_v2.dbml",
     ],
+    ["education", "education/schema.catalog.json", "education/Education_v1.dbml"],
 ];
 for (const [schema, catalogFile, dbmlFile] of cases) {
     const catalog = JSON.parse(

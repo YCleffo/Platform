@@ -27,14 +27,9 @@ const { locale, t } = useI18n();
 const {
   appearance,
   updateAppearance,
-  resetAppearance,
   systemReduced,
-  storageAvailable,
   applyPreset,
   activePreset,
-  undoAppearance,
-  canUndo,
-  isDefault,
   beginEdit,
   endEdit,
 } = useAppearance();
@@ -74,32 +69,6 @@ function chooseTheme(value: Theme): void {
 
 <template>
   <div class="appearance-view">
-    <div class="appearance-view__toolbar">
-      <p
-        class="appearance-view__note"
-        role="status"
-      >
-        {{ storageAvailable ? $t('appearance.savedLocally') : $t('appearance.storageUnavailable') }}
-      </p>
-      <div class="appearance-view__buttons">
-        <AppButton
-          id="appearance-undo"
-          variant="ghost"
-          :disabled="!canUndo"
-          @click="undoAppearance"
-        >
-          {{ $t('appearance.undo') }}
-        </AppButton>
-        <AppButton
-          id="appearance-reset"
-          variant="secondary"
-          :disabled="isDefault"
-          @click="resetAppearance"
-        >
-          {{ $t('appearance.reset') }}
-        </AppButton>
-      </div>
-    </div>
     <div class="appearance-view__controls">
       <AppCard>
         <h2>{{ $t('appearance.colorLanguage') }}</h2>
@@ -352,30 +321,6 @@ function chooseTheme(value: Theme): void {
   gap: var(--space-24);
   align-items: start;
   min-width: 0;
-}
-.appearance-view__toolbar {
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--gap-m);
-  flex-wrap: wrap;
-  padding: var(--space-12) var(--space-16);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control-l);
-  transition: var(--theme-transition);
-}
-.appearance-view__toolbar > p {
-  flex: 1;
-  min-width: min(100%, 220px);
-}
-.appearance-view__toolbar .appearance-view__buttons {
-  flex: 1;
-  min-width: min(100%, 320px);
-}
-.appearance-view__toolbar .app-button {
-  flex: 1;
 }
 .appearance-view__advanced {
   border-top: 1px solid var(--border);

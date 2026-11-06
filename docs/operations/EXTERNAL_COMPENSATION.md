@@ -1,51 +1,18 @@
-# External plan-change compensation
+# Внешняя компенсация смены тарифа
 
-This path is only for a full refund that was completed outside YooKassa after
-an upgrade payment became `paid_unapplied` and automatic compensation entered
-`recovery_required`. It never initiates a transfer. Until two independent
-attestations complete, the case remains blocked.
+Этот порядок применяется только к полному возврату, выполненному вне YooKassa после перехода оплаченного повышения тарифа в `paid_unapplied`, когда автоматическая компенсация стала `recovery_required`. Сам перевод денег здесь не выполняется. До завершения двух независимых подтверждений дело остаётся заблокированным.
 
-## Operator prerequisites
+## Требования к операторам
 
-Provision two distinct active Control Plane users as Platform financial
-operators under separate reviewed authorization tickets in
-`commercial.financial_operators`. Client account owner/admin membership does
-not confer this role. Enroll and revoke through a controlled database change;
-there is intentionally no self-service grant endpoint. Set `revoked_at` to
-revoke a grant; retain its row and authorization reference for audit.
+Назначьте двух разных активных пользователей Control Plane финансовыми операторами Platform через `commercial.financial_operators`, по отдельным проверенным основаниям полномочий. Членство владельца или администратора клиентского аккаунта этого права не даёт. Выдача и отзыв выполняются контролируемым изменением БД; маршрута самостоятельного назначения намеренно нет. Для отзыва заполните `revoked_at`; строку и основание полномочий сохраните для аудита.
 
-Each operator must have enrolled MFA and a recent primary and MFA-authenticated
-session. Both must independently inspect the restricted document and the
-external transfer in the bank/provider system. The document must establish
-the exact transfer reference, settled payment amount and currency, payee and
-completion. Store it in access-controlled, retained storage and record an
-immutable `urn:` reference plus SHA-256 digest of the document bytes. The
-application validates the two matching attestations and local financial state;
-it cannot independently verify the external bank transfer.
+Каждый оператор должен подключить MFA и иметь сессию с недавней первичной аутентификацией и MFA. Оба независимо проверяют документ с ограниченным доступом и фактический перевод в системе банка или провайдера. Документ должен подтверждать точный идентификатор перевода, сумму и валюту исполненного платежа, получателя и завершение операции. Храните его с контролем доступа и срока; сохраните неизменяемую ссылку `urn:` и SHA-256 точных байтов. Приложение проверяет совпадение двух подтверждений и локальное финансовое состояние; самостоятельно проверить банковский перевод оно не может.
 
-## Procedure
+## Порядок действий
 
-1. Inspect `control:plan-changes:recovery-cases` and the invoice/payment/refund
-   history. Confirm the transfer has completed and no provider refund is
-   pending or succeeded. Do not use this path for a partial refund.
-2. The first operator sends `POST /api/control/finance/plan-change-compensations/{changeId}`
-   with `externalTransactionReference`, `documentReference`, and
-   `documentSha256`. An identical retry returns the same proposal.
-3. The second operator reads `GET` at the same path, fetches the document from
-   restricted storage, independently checks the actual transfer, then sends
-   `POST /api/control/finance/plan-change-compensations/attestations/{id}/approve`
-   with the same three fields. A mismatch, self-review, inactive authorization,
-   pending provider refund, or altered payment blocks approval. If evidence is
-   inadequate, the second operator uses `/reject` with the same fields and a
-   `rejectionReason`. The first operator may file a corrected proposal.
-4. After approval, verify one approved attestation, two distinct actor IDs,
-   the immutable payment amount/currency, `plan_change=refunded`, old access
-   unchanged, and no pending or succeeded provider refund. Retain the
-   document, authorization tickets and audit events together.
+1. Проверьте `control:plan-changes:recovery-cases` и историю счёта, платежа и возвратов. Убедитесь, что перевод завершён, а у провайдера нет ожидающего или успешного возврата. Для частичного возврата этот путь не применяется.
+2. Первый оператор отправляет `POST /api/control/finance/plan-change-compensations/{changeId}` с `externalTransactionReference`, `documentReference`, `documentSha256`. Идентичный повтор возвращает то же предложение.
+3. Второй оператор читает `GET` по тому же пути, получает документ из защищённого хранилища, независимо проверяет перевод и отправляет `POST /api/control/finance/plan-change-compensations/attestations/{id}/approve` с теми же тремя полями. Несовпадение, самопроверка, недействующие полномочия, ожидающий возврат провайдера или изменение платежа блокируют одобрение. При недостаточных доказательствах второй оператор использует `/reject` с теми же полями и `rejectionReason`. Первый может подать исправленное предложение.
+4. После одобрения проверьте одно одобренное подтверждение, два разных ID исполнителей, неизменные сумму и валюту платежа, `plan_change=refunded`, сохранение прежнего доступа и отсутствие ожидающего или успешного возврата провайдера. Документ, основания полномочий и события аудита хранятся вместе.
 
-An approved external attestation is its own financial record. It does not
-create a synthetic YooKassa refund row or claim that YooKassa returned money.
-If provider state later contradicts the external transfer, stop automated
-resolution and investigate possible duplicate compensation. Production use
-requires reviewed document storage, access controls, retention and alert
-delivery; none of these have been exercised in a hosted environment yet.
+Внешнее подтверждение — самостоятельная финансовая запись. Оно не создаёт фиктивный возврат YooKassa и не утверждает, что деньги вернула YooKassa. Если позднее состояние провайдера противоречит внешнему переводу, остановите автоматическое разрешение и расследуйте возможную двойную компенсацию. Промышленное использование требует проверенных хранения документов, прав, сроков и доставки оповещений; размещённая промышленная среда пока не прошла такую приёмку.

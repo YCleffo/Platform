@@ -1,0 +1,214 @@
+// СФОРМИРОВАНО scripts/database/export_schema.py; не редактировать вручную.
+// Только реальные объекты PostgreSQL. Полное определение SQL: schema.catalog.json.
+Project education {
+  database_type: 'PostgreSQL'
+  Note: 'Каталог PostgreSQL после миграций. Межбазовые идентификаторы не являются внешними ключами.'
+}
+
+Table education.attendance {
+  lesson_id uuid [not null]
+  student_id uuid [not null]
+  organization_id uuid [not null]
+  owner_account_id uuid [not null]
+  status "character varying(12)" [not null, default: `'pending'::character varying`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (lesson_id, student_id) [pk]
+  }
+  Note: 'attendance_lesson_id_not_null: NOT NULL lesson_id\nattendance_lesson_id_organization_id_owner_account_id_fkey: FOREIGN KEY (lesson_id, organization_id, owner_account_id) REFERENCES education.lessons(id, organization_id, owner_account_id)\nattendance_organization_id_not_null: NOT NULL organization_id\nattendance_owner_account_id_not_null: NOT NULL owner_account_id\nattendance_status_check: CHECK (status::text = ANY (ARRAY[\'pending\'::character varying, \'present\'::character varying, \'absent\'::character varying]::text[]))\nattendance_status_not_null: NOT NULL status\nattendance_student_id_not_null: NOT NULL student_id\nattendance_student_id_organization_id_owner_account_id_fkey: FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)\nattendance_updated_at_not_null: NOT NULL updated_at'
+}
+
+Table education.events {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  owner_account_id uuid [not null]
+  owner_person_id uuid [not null]
+  title "character varying(160)" [not null]
+  kind "character varying(20)" [not null]
+  starts_at "timestamp with time zone" [not null]
+  ends_at "timestamp with time zone" [not null]
+  location "character varying(240)" [not null, default: `''::character varying`]
+  indexes {
+    (organization_id, owner_account_id, starts_at, id) [name: 'events_owner_time', type: btree]
+  }
+  Note: 'events_check: CHECK (ends_at > starts_at AND ends_at <= (starts_at + \'24:00:00\'::interval))\nevents_ends_at_not_null: NOT NULL ends_at\nevents_id_not_null: NOT NULL id\nevents_kind_check: CHECK (kind::text = ANY (ARRAY[\'meeting\'::character varying, \'birthday\'::character varying, \'other\'::character varying]::text[]))\nevents_kind_not_null: NOT NULL kind\nevents_location_not_null: NOT NULL location\nevents_organization_id_not_null: NOT NULL organization_id\nevents_owner_account_id_not_null: NOT NULL owner_account_id\nevents_owner_person_id_not_null: NOT NULL owner_person_id\nevents_starts_at_not_null: NOT NULL starts_at\nevents_title_check: CHECK (btrim(title::text) <> \'\'::text)\nevents_title_not_null: NOT NULL title\nCREATE INDEX events_owner_time ON education.events USING btree (organization_id, owner_account_id, starts_at, id)'
+}
+
+Table education.files {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  owner_account_id uuid [not null]
+  owner_person_id uuid [not null]
+  lesson_id uuid [null]
+  name "character varying(240)" [not null]
+  mime "character varying(100)" [not null]
+  purpose "character varying(12)" [not null, default: `'material'::character varying`]
+  size_bytes integer [not null]
+  sha256 character(64) [not null]
+  storage_key uuid [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (id, owner_account_id) [name: 'files_id_owner_account_id_key', type: btree, unique]
+    storage_key [name: 'files_storage_key_key', type: btree, unique]
+  }
+  Note: 'files_created_at_not_null: NOT NULL created_at\nfiles_id_not_null: NOT NULL id\nfiles_id_owner_account_id_key: UNIQUE (id, owner_account_id)\nfiles_lesson_id_organization_id_owner_account_id_fkey: FOREIGN KEY (lesson_id, organization_id, owner_account_id) REFERENCES education.lessons(id, organization_id, owner_account_id)\nfiles_mime_not_null: NOT NULL mime\nfiles_name_not_null: NOT NULL name\nfiles_organization_id_not_null: NOT NULL organization_id\nfiles_owner_account_id_not_null: NOT NULL owner_account_id\nfiles_owner_person_id_not_null: NOT NULL owner_person_id\nfiles_purpose_check: CHECK (purpose::text = ANY (ARRAY[\'avatar\'::character varying, \'material\'::character varying]::text[]))\nfiles_purpose_not_null: NOT NULL purpose\nfiles_sha256_not_null: NOT NULL sha256\nfiles_size_bytes_check: CHECK (size_bytes > 0 AND size_bytes <= 10485760)\nfiles_size_bytes_not_null: NOT NULL size_bytes\nfiles_storage_key_key: UNIQUE (storage_key)\nfiles_storage_key_not_null: NOT NULL storage_key\nCREATE UNIQUE INDEX files_id_owner_account_id_key ON education.files USING btree (id, owner_account_id)\nCREATE UNIQUE INDEX files_storage_key_key ON education.files USING btree (storage_key)'
+}
+
+Table education.group_students {
+  group_id uuid [not null]
+  student_id uuid [not null]
+  organization_id uuid [not null]
+  owner_account_id uuid [not null]
+  indexes {
+    (group_id, student_id) [pk]
+  }
+  Note: 'group_students_group_id_not_null: NOT NULL group_id\ngroup_students_group_id_organization_id_owner_account_id_fkey: FOREIGN KEY (group_id, organization_id, owner_account_id) REFERENCES education.groups(id, organization_id, owner_account_id)\ngroup_students_organization_id_not_null: NOT NULL organization_id\ngroup_students_owner_account_id_not_null: NOT NULL owner_account_id\ngroup_students_student_id_not_null: NOT NULL student_id\ngroup_students_student_id_organization_id_owner_account_id_fkey: FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)'
+}
+
+Table education.groups {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  owner_account_id uuid [not null]
+  owner_person_id uuid [not null]
+  name "character varying(160)" [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (id, organization_id, owner_account_id) [name: 'groups_id_organization_id_owner_account_id_key', type: btree, unique]
+  }
+  Note: 'groups_created_at_not_null: NOT NULL created_at\ngroups_id_not_null: NOT NULL id\ngroups_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\ngroups_name_check: CHECK (btrim(name::text) <> \'\'::text)\ngroups_name_not_null: NOT NULL name\ngroups_organization_id_not_null: NOT NULL organization_id\ngroups_owner_account_id_not_null: NOT NULL owner_account_id\ngroups_owner_person_id_not_null: NOT NULL owner_person_id\nCREATE UNIQUE INDEX groups_id_organization_id_owner_account_id_key ON education.groups USING btree (id, organization_id, owner_account_id)'
+}
+
+Table education.lessons {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  owner_account_id uuid [not null]
+  owner_person_id uuid [not null]
+  group_id uuid [not null]
+  title "character varying(160)" [not null]
+  starts_at "timestamp with time zone" [not null]
+  ends_at "timestamp with time zone" [not null]
+  location "character varying(240)" [not null, default: `''::character varying`]
+  status "character varying(20)" [not null, default: `'scheduled'::character varying`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (id, organization_id, owner_account_id) [name: 'lessons_id_organization_id_owner_account_id_key', type: btree, unique]
+    (organization_id, owner_account_id, starts_at, id) [name: 'lessons_owner_time', type: btree]
+  }
+  Note: 'lessons_check: CHECK (ends_at > starts_at AND ends_at <= (starts_at + \'24:00:00\'::interval))\nlessons_created_at_not_null: NOT NULL created_at\nlessons_ends_at_not_null: NOT NULL ends_at\nlessons_group_id_not_null: NOT NULL group_id\nlessons_group_id_organization_id_owner_account_id_fkey: FOREIGN KEY (group_id, organization_id, owner_account_id) REFERENCES education.groups(id, organization_id, owner_account_id)\nlessons_id_not_null: NOT NULL id\nlessons_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\nlessons_location_not_null: NOT NULL location\nlessons_organization_id_not_null: NOT NULL organization_id\nlessons_owner_account_id_not_null: NOT NULL owner_account_id\nlessons_owner_person_id_not_null: NOT NULL owner_person_id\nlessons_starts_at_not_null: NOT NULL starts_at\nlessons_status_check: CHECK (status::text = ANY (ARRAY[\'scheduled\'::character varying, \'completed\'::character varying, \'cancelled\'::character varying]::text[]))\nlessons_status_not_null: NOT NULL status\nlessons_title_check: CHECK (btrim(title::text) <> \'\'::text)\nlessons_title_not_null: NOT NULL title\nCREATE UNIQUE INDEX lessons_id_organization_id_owner_account_id_key ON education.lessons USING btree (id, organization_id, owner_account_id)\nCREATE INDEX lessons_owner_time ON education.lessons USING btree (organization_id, owner_account_id, starts_at, id)'
+}
+
+Table education.messages {
+  id uuid [pk, not null, default: `uuidv7()`]
+  thread_id uuid [not null]
+  organization_id uuid [not null]
+  sender_person_id uuid [not null]
+  body text [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (thread_id, created_at, id) [name: 'messages_thread_time', type: btree]
+  }
+  Note: 'messages_body_check: CHECK (length(body) >= 1 AND length(body) <= 5000)\nmessages_body_not_null: NOT NULL body\nmessages_created_at_not_null: NOT NULL created_at\nmessages_id_not_null: NOT NULL id\nmessages_organization_id_not_null: NOT NULL organization_id\nmessages_sender_person_id_not_null: NOT NULL sender_person_id\nmessages_thread_id_not_null: NOT NULL thread_id\nmessages_thread_id_organization_id_fkey: FOREIGN KEY (thread_id, organization_id) REFERENCES education.threads(id, organization_id)\nCREATE INDEX messages_thread_time ON education.messages USING btree (thread_id, created_at, id)'
+}
+
+Table education.module_migrations {
+  name text [pk, not null]
+  sha256 character(64) [not null]
+  applied_at "timestamp with time zone" [not null, default: `now()`]
+  Note: 'module_migrations_applied_at_not_null: NOT NULL applied_at\nmodule_migrations_name_not_null: NOT NULL name\nmodule_migrations_sha256_not_null: NOT NULL sha256'
+}
+
+Table education.notifications {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  person_id uuid [not null]
+  thread_id uuid [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  read_at "timestamp with time zone" [null]
+  message_id uuid [null]
+  indexes {
+    message_id [name: 'notifications_message', type: btree]
+    (organization_id, person_id, created_at, id) [name: 'notifications_recipient', type: btree]
+  }
+  Note: 'notifications_created_at_not_null: NOT NULL created_at\nnotifications_id_not_null: NOT NULL id\nnotifications_message_id_fkey: FOREIGN KEY (message_id) REFERENCES education.messages(id)\nnotifications_organization_id_not_null: NOT NULL organization_id\nnotifications_person_id_not_null: NOT NULL person_id\nnotifications_thread_id_fkey: FOREIGN KEY (thread_id) REFERENCES education.threads(id)\nnotifications_thread_id_not_null: NOT NULL thread_id\nCREATE INDEX notifications_message ON education.notifications USING btree (message_id)\nCREATE INDEX notifications_recipient ON education.notifications USING btree (organization_id, person_id, created_at, id)'
+}
+
+Table education.privacy_receipts {
+  item_id uuid [pk, not null]
+  result "character varying(30)" [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  Note: 'privacy_receipts_created_at_not_null: NOT NULL created_at\nprivacy_receipts_item_id_not_null: NOT NULL item_id\nprivacy_receipts_result_not_null: NOT NULL result'
+}
+
+Table education.profiles {
+  id uuid [pk, not null, default: `uuidv7()`]
+  account_id uuid [not null]
+  person_id uuid [not null]
+  display_name "character varying(160)" [null]
+  avatar_file_id uuid [null]
+  indexes {
+    account_id [name: 'profiles_account_id_key', type: btree, unique]
+  }
+  Note: 'profiles_account_id_key: UNIQUE (account_id)\nprofiles_account_id_not_null: NOT NULL account_id\nprofiles_avatar_file_id_account_id_fkey: FOREIGN KEY (avatar_file_id, account_id) REFERENCES education.files(id, owner_account_id)\nprofiles_id_not_null: NOT NULL id\nprofiles_person_id_not_null: NOT NULL person_id\nCREATE UNIQUE INDEX profiles_account_id_key ON education.profiles USING btree (account_id)'
+}
+
+Table education.students {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  owner_account_id uuid [not null]
+  person_id uuid [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (id, organization_id, owner_account_id) [name: 'students_id_organization_id_owner_account_id_key', type: btree, unique]
+    (organization_id, owner_account_id, person_id) [name: 'students_organization_id_owner_account_id_person_id_key', type: btree, unique]
+  }
+  Note: 'students_created_at_not_null: NOT NULL created_at\nstudents_id_not_null: NOT NULL id\nstudents_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\nstudents_organization_id_not_null: NOT NULL organization_id\nstudents_organization_id_owner_account_id_person_id_key: UNIQUE (organization_id, owner_account_id, person_id)\nstudents_owner_account_id_not_null: NOT NULL owner_account_id\nstudents_person_id_not_null: NOT NULL person_id\nCREATE UNIQUE INDEX students_id_organization_id_owner_account_id_key ON education.students USING btree (id, organization_id, owner_account_id)\nCREATE UNIQUE INDEX students_organization_id_owner_account_id_person_id_key ON education.students USING btree (organization_id, owner_account_id, person_id)'
+}
+
+Table education.teachers {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  account_id uuid [not null]
+  person_id uuid [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (organization_id, account_id) [name: 'teachers_organization_id_account_id_key', type: btree, unique]
+    (organization_id, person_id) [name: 'teachers_organization_id_person_id_key', type: btree, unique]
+  }
+  Note: 'teachers_account_id_not_null: NOT NULL account_id\nteachers_created_at_not_null: NOT NULL created_at\nteachers_id_not_null: NOT NULL id\nteachers_organization_id_account_id_key: UNIQUE (organization_id, account_id)\nteachers_organization_id_not_null: NOT NULL organization_id\nteachers_organization_id_person_id_key: UNIQUE (organization_id, person_id)\nteachers_person_id_not_null: NOT NULL person_id\nCREATE UNIQUE INDEX teachers_organization_id_account_id_key ON education.teachers USING btree (organization_id, account_id)\nCREATE UNIQUE INDEX teachers_organization_id_person_id_key ON education.teachers USING btree (organization_id, person_id)'
+}
+
+Table education.thread_members {
+  thread_id uuid [not null]
+  organization_id uuid [not null]
+  person_id uuid [not null]
+  last_read_at "timestamp with time zone" [null]
+  last_read_message_id uuid [null]
+  indexes {
+    (thread_id, person_id) [pk]
+    (person_id, organization_id, thread_id) [name: 'thread_members_person', type: btree]
+  }
+  Note: 'thread_members_organization_id_not_null: NOT NULL organization_id\nthread_members_person_id_not_null: NOT NULL person_id\nthread_members_thread_id_not_null: NOT NULL thread_id\nthread_members_thread_id_organization_id_fkey: FOREIGN KEY (thread_id, organization_id) REFERENCES education.threads(id, organization_id)\nCREATE INDEX thread_members_person ON education.thread_members USING btree (person_id, organization_id, thread_id)'
+}
+
+Table education.threads {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  subject "character varying(160)" [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (id, organization_id) [name: 'threads_id_organization_id_key', type: btree, unique]
+  }
+  Note: 'threads_created_at_not_null: NOT NULL created_at\nthreads_id_not_null: NOT NULL id\nthreads_id_organization_id_key: UNIQUE (id, organization_id)\nthreads_organization_id_not_null: NOT NULL organization_id\nthreads_subject_check: CHECK (btrim(subject::text) <> \'\'::text)\nthreads_subject_not_null: NOT NULL subject\nCREATE UNIQUE INDEX threads_id_organization_id_key ON education.threads USING btree (id, organization_id)'
+}
+
+Ref: education.attendance.(lesson_id, organization_id, owner_account_id) > education.lessons.(id, organization_id, owner_account_id) [delete: no action, update: no action]
+Ref: education.attendance.(student_id, organization_id, owner_account_id) > education.students.(id, organization_id, owner_account_id) [delete: no action, update: no action]
+Ref: education.files.(lesson_id, organization_id, owner_account_id) > education.lessons.(id, organization_id, owner_account_id) [delete: no action, update: no action]
+Ref: education.group_students.(group_id, organization_id, owner_account_id) > education.groups.(id, organization_id, owner_account_id) [delete: no action, update: no action]
+Ref: education.group_students.(student_id, organization_id, owner_account_id) > education.students.(id, organization_id, owner_account_id) [delete: no action, update: no action]
+Ref: education.lessons.(group_id, organization_id, owner_account_id) > education.groups.(id, organization_id, owner_account_id) [delete: no action, update: no action]
+Ref: education.messages.(thread_id, organization_id) > education.threads.(id, organization_id) [delete: no action, update: no action]
+Ref: education.notifications.message_id > education.messages.id [delete: no action, update: no action]
+Ref: education.notifications.thread_id > education.threads.id [delete: no action, update: no action]
+Ref: education.profiles.(avatar_file_id, account_id) > education.files.(id, owner_account_id) [delete: no action, update: no action]
+Ref: education.thread_members.(thread_id, organization_id) > education.threads.(id, organization_id) [delete: no action, update: no action]

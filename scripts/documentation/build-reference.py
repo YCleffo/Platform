@@ -1,6 +1,7 @@
 """Build the complete column dictionary from exported PostgreSQL metadata."""
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -8,6 +9,10 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from scripts.database.catalog_types import decode_catalog
+
+COMMENT_TRANSLATIONS: dict[str, str] = json.loads(
+    (ROOT / "docs/database/comment-translations.ru.json").read_text(encoding="utf-8")
+)
 
 
 def cell(value: object) -> str:
@@ -24,19 +29,19 @@ def main() -> None:
                 encoding="utf-8"
             )
         )
-        for p in ["core", "commercial"]
+        for p in ["core", "commercial", "education"]
     ]
     lines = [
         "# Справочник фактической базы данных",
         "",
         "Сгенерировано `scripts/documentation/build-reference.py` из `schema.catalog.json`.",
         "Только фактические таблицы, столбцы и SQL FK. Источник структуры — применённые миграции PostgreSQL.",
-        "CHECK, partial/expression indexes, trigger functions и deferred semantics полностью сохранены в JSON-каталогах;",
+        "Проверки CHECK, частичные индексы и индексы выражений, триггерные функции и отложенные ограничения полностью сохранены в JSON-каталогах;",
         "DBML служит представлением для диаграммы, а не исполняемой заменой миграций.",
         "",
         "## Инвентарь",
         "",
-        "| Схема | Таблицы | Столбцы | FK | CHECK | Индексы | Пользовательские triggers |",
+        "| Схема | Таблицы | Столбцы | Внешние ключи | Проверки CHECK | Индексы | Пользовательские триггеры |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for catalog in catalogs:
@@ -62,12 +67,12 @@ def main() -> None:
     lines += [
         "",
         "Технические `public.platform_migrations` и `public.doctrine_migration_versions` не являются бизнес-таблицами и не включены в инвентарь.",
-        "Cross-plane ID в подписанном документе не создаёт FK между двумя базами.",
+        "Межсистемный идентификатор в подписанном документе не создаёт внешний ключ между базами.",
         "",
         "## Как читать поля",
         "",
-        "`NULL: да` означает допустимый SQL NULL. `DEFAULT: —` означает отсутствие SQL default.",
-        "`bytea` — хеш, подпись, public key или ciphertext в зависимости от поля.",
+        "«NULL: да» означает допустимый SQL NULL. Прочерк в значении по умолчанию означает отсутствие SQL DEFAULT.",
+        "`bytea` — хеш, подпись, открытый ключ или зашифрованные данные в зависимости от поля.",
         "`timestamp with time zone` хранит момент времени, `amount_minor` — целые минимальные единицы валюты.",
         "SQL-комментарии приводятся из PostgreSQL; отсутствие комментария не заменяется догадкой.",
         "",
@@ -76,9 +81,9 @@ def main() -> None:
         for table in catalog["tables"]:
             lines += ["## " + table["schema"] + "." + table["name"], ""]
             if table["comment"]:
-                lines += [table["comment"], ""]
+                lines += [COMMENT_TRANSLATIONS.get(table["comment"], table["comment"]), ""]
             lines += [
-                "| Поле | PostgreSQL тип | NULL | DEFAULT / generated | Комментарий БД |",
+                "| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |",
                 "| --- | --- | --- | --- | --- |",
             ]
             for c in table["columns"]:
@@ -99,7 +104,7 @@ def main() -> None:
                     + " | "
                     + cell(default)
                     + " | "
-                    + cell(c["comment"] or "—")
+                    + cell(COMMENT_TRANSLATIONS.get(c["comment"] or "", c["comment"] or "—"))
                     + " |"
                 )
             primary = [
@@ -108,7 +113,7 @@ def main() -> None:
             lines += [
                 "",
                 "**Первичный ключ:** "
-                + ("; ".join(primary) if primary else "отсутствует")
+                + ("; ".join("`" + value + "`" for value in primary) if primary else "отсутствует")
                 + ".",
                 "",
             ]
@@ -122,8 +127,8 @@ def main() -> None:
                     + c["definition"]
                     + "`"
                     + (
-                        " — DEFERRABLE"
-                        + (" INITIALLY DEFERRED" if c["initially_deferred"] else "")
+                        " — допускает отложенную проверку (DEFERRABLE)"
+                        + ("; изначально отложен (INITIALLY DEFERRED)" if c["initially_deferred"] else "")
                         if c["deferrable"]
                         else ""
                     )
@@ -132,13 +137,13 @@ def main() -> None:
                 ]
                 lines += [""]
             else:
-                lines += ["SQL FK из этой таблицы отсутствуют.", ""]
+                lines += ["Внешние ключи SQL из этой таблицы отсутствуют.", ""]
             lines += [
-                "CHECK: "
+                "Проверок CHECK: "
                 + str(sum(c["kind"] == "c" for c in table["constraints"]))
                 + "; индексов: "
                 + str(len(table["indexes"]))
-                + "; пользовательских triggers: "
+                + "; пользовательских триггеров: "
                 + str(len(table["triggers"]))
                 + ".",
                 "",

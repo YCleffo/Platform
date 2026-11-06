@@ -1,12 +1,12 @@
 flowchart TD
-  Draft[Новый plan: code и version, status draft] --> Features[Features: boolean, integer, string, JSON]
-  Features --> Prices[Цены: currency, amount_minor и billing_period]
-  Prices --> Checks{SQL constraints и валидный контракт}
+  Draft[Новый тариф: код, версия, черновик] --> Features[Возможности: логические, целые, строки, JSON]
+  Features --> Prices[Цены: валюта, сумма в минимальных единицах, период]
+  Prices --> Checks{Ограничения SQL и действующий контракт}
   Checks -->|Ошибка| Reject[Транзакция отклонена]
-  Checks -->|Успех| Publish[Публикация и published_at]
-  Publish --> Public[GET control catalog plans]
-  Publish --> Freeze[Опубликованные terms, prices и features неизменяемы]
+  Checks -->|Успех| Publish[Публикация и её время]
+  Publish --> Public[Получение опубликованных тарифов]
+  Publish --> Freeze[Опубликованные условия, цены и возможности неизменяемы]
   Freeze --> Version[Новые условия создают новую версию]
   Version --> Draft
-  Publish --> Retire[Retired скрывает план из нового выбора]
-  Retire --> History[Старые subscription и invoice snapshots сохраняются]
+  Publish --> Retire[Вывод из продажи скрывает тариф для нового выбора]
+  Retire --> History[Прежние снимки подписок и счетов сохраняются]

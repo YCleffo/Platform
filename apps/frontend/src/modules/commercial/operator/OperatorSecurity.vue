@@ -2,7 +2,7 @@
 import { onBeforeUnmount, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AppDisclosure from '@/shared/ui/surfaces/AppDisclosure.vue';
-import { QrcodeSvg } from 'qrcode.vue';
+import QrCode from '@/shared/ui/media/QrCode.vue';
 import { createCommercialAuthApi } from '@/shared/api/commercial/auth';
 import { resolveErrorMessage } from '@/shared/errors/humanize';
 import type { TotpSetup } from '@/shared/types';
@@ -115,9 +115,10 @@ onBeforeUnmount(() => {
         v-if="setup"
         @submit.prevent="confirm"
       >
-        <QrcodeSvg
+        <QrCode
           :value="setup.otpauth_uri"
           :size="180"
+          :label="t('security.qrLabel')"
         />
         <code>{{ setup.secret }}</code>
         <AppInput

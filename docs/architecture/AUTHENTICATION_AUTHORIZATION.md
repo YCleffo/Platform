@@ -2,179 +2,94 @@
 
 ## Проверенное исходное состояние
 
-Core already owns the PostgreSQL persistence required for password
-authentication and authorization:
+Core уже хранит в PostgreSQL данные, необходимые для проверки пароля и прав доступа:
 
-- `accounts` separates system identity from `persons` and contains lifecycle,
-  lock, security-stamp, locale, and timezone state;
-- `auth_identifiers`, `auth_password_credentials`, `auth_external_identities`, `auth_sessions`, and
-  `auth_challenges` are the authoritative credential/session stores. A provider adapter passes
-  only `VerifiedExternalIdentity` to Core; Core never persists or audits raw launch payloads,
-  signatures, headers, or provider secrets and reuses the normal account session flow;
-- passkey обслуживается полноценным WebAuthn Level 3 runtime (migration 014); TOTP, recovery-code и external-identity
-  таблицы обслуживаются полноценным runtime;
-- `roles`, `permissions`, `role_permissions`, and `account_roles` implement the
-  RBAC data model;
-- `audit_events` is the append-only security history;
-- Communication and Outbox already provide transactional email delivery.
+- `accounts` отделяет учётную запись от человека в `persons` и хранит состояние жизненного цикла, блокировок, контрольной метки безопасности, языка и часового пояса;
+- `auth_identifiers`, `auth_password_credentials`, `auth_external_identities`, `auth_sessions` и `auth_challenges` служат основными хранилищами учётных данных, сессий и проверочных запросов. Адаптер внешнего провайдера передаёт Core только `VerifiedExternalIdentity`. Исходные данные запуска, подписи, заголовки и секреты провайдера не сохраняются и не попадают в аудит; применяется обычный порядок создания сессии;
+- ключи доступа работают через WebAuthn Level 3; миграция `014` расширяет их хранение. Для TOTP, резервных кодов и внешних учётных записей также реализована рабочая обработка;
+- `roles`, `permissions`, `role_permissions` и `account_roles` реализуют модель управления доступом на основе ролей, RBAC;
+- `audit_events` хранит историю безопасности, допускающую обычным путём только добавление записей;
+- Communication и очередь исходящих событий обеспечивают транзакционную постановку писем на доставку.
 
-В репозитории также есть `SessionRepository`, сервис
-`SessionActivityService`, own-session use cases, `PermissionService`,
-`SecurityAuditService`, `ClientContext`, account preference handling, and safe
-session presenters.
+Также существуют `SessionRepository`, `SessionActivityService`, сценарии управления собственными сессиями, `PermissionService`, `SecurityAuditService`, `ClientContext`, обработка пользовательских настроек и безопасные представления сессий.
 
-## External identity namespace
+## Пространство идентификаторов внешних учётных записей
 
-`auth_providers.code` identifies an identity namespace; `protocol` identifies
-only the verification transport. The existing `telegram` row currently uses
-OIDC and stores Telegram's OIDC `sub`. A future Telegram Mini App adapter may
-use the same `telegram` namespace only after it proves that its verified user
-identifier is the same stable Telegram user ID as that OIDC `sub`, with the
-same collision guarantees. Until that is verified, it must use a distinct
-provider code rather than silently linking identities across protocols.
+`auth_providers.code` определяет пространство идентификаторов, а `protocol` — только протокол проверки. Существующая запись `telegram` использует OIDC и хранит значение `sub` из Telegram OIDC. Будущий адаптер Telegram Mini App сможет использовать то же пространство `telegram` только после подтверждения, что проверяемый им идентификатор — тот же устойчивый ID пользователя Telegram, что и OIDC `sub`, с такими же гарантиями отсутствия совпадений у разных пользователей. До этого нужен отдельный код провайдера; молчаливое объединение учётных записей разных протоколов запрещено.
 
-`VerifiedExternalIdentityService` deliberately does not inspect `protocol`:
-the provider adapter has already performed protocol-specific verification.
+`VerifiedExternalIdentityService` намеренно не проверяет `protocol`: проверку конкретного протокола уже выполнил адаптер провайдера.
 
-В начале этого этапа недостающей частью было применение правил во время выполнения:
-в существующем хранилище не было полного протокола паролей, выпуска токенов,
-идентификации запроса, middleware аутентификации и объявления разрешений на уровне маршрутов.
-Описанная ниже среда выполнения теперь закрывает эту границу.
+В начале этого этапа не хватало применения правил при выполнении запросов: полного протокола проверки паролей, выпуска токенов, определения пользователя, промежуточных обработчиков аутентификации и требований разрешений на маршрутах. Описанная ниже реализация закрывает эту границу.
 
 ## Целевая среда выполнения
 
-API использует случайные непрозрачные bearer-учётные данные. PostgreSQL `auth_sessions`
-остаётся авторитетным источником; JWT и cookie аутентификации не вводятся.
-Сохраняются только SHA-256-хеши токенов. Исходные access- и refresh-токены существуют
-только в момент выдачи вызывающей стороне.
+API использует случайные непрозрачные токены в заголовке Bearer. PostgreSQL `auth_sessions` остаётся основным источником состояния; JWT и аутентификация через cookie не вводятся. Сохраняются только SHA-256-хеши токенов. Исходные токены доступа и обновления существуют при выдаче вызывающей стороне.
 
-The request boundary is:
+Порядок обработки запроса:
 
 ```text
 ClientContextMiddleware
-    -> route RequireAuthentication middleware
-    -> route RequirePermission middleware when required
-    -> Action
+    -> RequireAuthentication на маршруте
+    -> RequirePermission, если маршрут требует разрешение
+    -> обработчик запроса
 ```
 
-`AuthenticatedIdentity` is derived only from a valid bearer token, its active
-session, and the current account security state. Query parameters, JSON, and
-custom account-ID headers can never select the current identity.
+`AuthenticatedIdentity` создаётся только из действующего Bearer-токена, активной сессии и текущего состояния безопасности аккаунта. Параметры запроса, JSON и пользовательские заголовки с идентификатором аккаунта не могут выбирать текущего пользователя.
 
 ## Решение по схеме
 
-Migration `011_core_auth_runtime.sql` alters `core.auth_sessions` with one
-required `access_expires_at timestamptz` column. Existing rows are safely
-backfilled from absolute `expires_at`, then the column becomes non-null with a
-constraint requiring `access_expires_at <= expires_at`.
+Миграция `011_core_auth_runtime.sql` добавляет в `core.auth_sessions` обязательный столбец `access_expires_at timestamptz`. Для существующих строк значение безопасно заполняется из абсолютного `expires_at`, затем вводятся запрет NULL и ограничение `access_expires_at <= expires_at`.
 
-The same migration seeds the minimal Core permission vocabulary and grants it
-explicitly to `core.admin`. `core.superadmin` retains the existing centralized
-`PermissionService` bypass. No new table is required and the Core table count
-remains 23. Migrations `001` through `010` are immutable.
+Та же миграция создаёт минимальный набор разрешений Core и явно выдаёт его роли `core.admin`. Роль `core.superadmin` сохраняет централизованное исключение в `PermissionService`. Новых таблиц эта миграция не создаёт. Миграции `001`–`010` неизменяемы; текущая схема описана в [справочнике](../database/SCHEMA_REFERENCE.md).
 
-Migration `014_passkey_runtime.sql` extends `core.auth_passkeys` with columns
-`transports text[]`, `backup_eligible boolean NOT NULL DEFAULT false`, and
-`backup_state boolean NOT NULL DEFAULT false` for W3C WebAuthn Level 3 compliance.
-No new table is added; total Core table count remains strictly 23. Migrations `001`
-through `013` remain immutable.
+Миграция `014_passkey_runtime.sql` добавляет в `core.auth_passkeys` столбцы `transports text[]`, `backup_eligible boolean NOT NULL DEFAULT false` и `backup_state boolean NOT NULL DEFAULT false` для WebAuthn Level 3. Новых таблиц нет; миграции `001`–`013` неизменяемы. Это исторические решения отдельных миграций: последующие изменения персональных данных и конфигурации расширили Core. Текущий сохранённый срез содержит 50 таблиц Core и 3 таблицы среды установки.
 
 ## Контракт сессий и токенов
 
-- Access and refresh tokens contain at least 256 bits of cryptographic entropy.
-- Token persistence is `SHA-256(raw token)` only.
-- Access expiry is short and independently configurable.
-- `expires_at` is the absolute, non-sliding session expiry.
-- Successful refresh atomically compares and replaces the refresh hash, access
-  hash, and access expiry in one PostgreSQL statement.
-- A rotated access or refresh credential immediately stops being valid.
-- Revocation, absolute expiry, account lifecycle, lock state, and security-stamp
-  mismatch invalidate authentication.
+- Токены доступа и обновления имеют не менее 256 бит криптографической случайности.
+- Хранится только SHA-256-хеш исходного токена.
+- Токен доступа имеет короткий независимо настраиваемый срок действия.
+- `expires_at` — абсолютный срок сессии, который не продлевается при активности.
+- Успешное обновление атомарно сравнивает и заменяет хеши обоих токенов и срок доступа одним запросом PostgreSQL.
+- Заменённый токен доступа или обновления немедленно перестаёт действовать.
+- Отзыв, истечение абсолютного срока, изменение состояния аккаунта, блокировка или несовпадение контрольной метки безопасности делают аутентификацию недействительной.
 
 ## Контракт авторизации
 
-Permission requirements live in route middleware definitions. Actions do not
-contain role-name conditionals and repositories do not silently enforce HTTP
-authorization. Missing or invalid authentication returns `401` with
-`WWW-Authenticate: Bearer`; an authenticated identity without the required
-permission returns `403`.
+Требования разрешений задаются промежуточными обработчиками маршрутов. Обработчики запросов не содержат условий по названиям ролей; репозитории не выполняют скрытые проверки HTTP-доступа. Отсутствующая или недействительная аутентификация возвращает `401` с `WWW-Authenticate: Bearer`; действующий пользователь без нужного разрешения получает `403`.
 
-Both responses use the global localized error contract. Their stable machine
-codes are locale-independent, while the human message and `Content-Language`
-come from the request-scoped Core Internationalization context. Authentication
-and authorization code never returns inline public text or a domain exception
-message.
+Оба ответа используют общий локализованный формат ошибок. Машинные коды не зависят от языка; текст и `Content-Language` берутся из контекста локализации Core текущего запроса. Код аутентификации и авторизации не возвращает встроенные публичные строки или сообщения доменных исключений.
 
-The existing person, contact, account, role, and permission routes are all
-protected. Self-service routes derive the account ID exclusively from
-`AuthenticatedIdentity`. Role assignment is exposed only through named
-account-role operations, never generic table CRUD.
+Маршруты людей, контактов, аккаунтов, ролей и разрешений защищены. Маршруты самообслуживания получают аккаунт исключительно из `AuthenticatedIdentity`. Назначение ролей выполняется именованными операциями связи аккаунта и роли; универсального редактора таблиц для этого нет.
 
 ## Первый супер-администратор
 
-The first usable administrator is created only with
-`php ./yii core:bootstrap-superadmin`. The command creates the Person, active
-Account, verified primary email identifier, Argon2id password credential, and
-`core.superadmin` assignment in one transaction. It refuses to run while an
-active super administrator exists. The password is read from a hidden prompt;
-non-interactive automation may inject `CORE_BOOTSTRAP_PASSWORD` in the process
-environment and must not persist it in `.env` or pass it as a CLI argument.
+Первый действующий администратор создаётся только командой `php ./yii core:bootstrap-superadmin`. Она в одной транзакции создаёт Person, активный Account, подтверждённый основной идентификатор электронной почты, пароль Argon2id и назначение `core.superadmin`. При наличии активного супер-администратора команда отказывается выполняться. Пароль вводится скрыто; автоматизация может передать `CORE_BOOTSTRAP_PASSWORD` через окружение процесса, но не должна сохранять его в `.env` или передавать аргументом командной строки.
 
-Protected roles require a stronger invariant than generic `core.rbac.manage`:
-only a superadmin may assign or revoke them, and the installation must never be
-left without a usable active superadmin.
+Защищённые роли требуют более строгого правила, чем `core.rbac.manage`: назначать и отзывать их может только супер-администратор; установка не должна оставаться без действующего активного супер-администратора.
 
 ## Жизненный цикл учётных данных
 
-Account invitations and password recovery use `auth_challenges` plus the
-transactional Communication Outbox. Challenge credentials are random opaque
-values and only their SHA-256 hashes enter `auth_challenges`. Activation and
-reset are single-use. Successful password reset changes the password hash,
-rotates the account security stamp, revokes every active session, records a
-security audit event, and queues a security notification email.
+Приглашения аккаунтов и восстановление пароля используют `auth_challenges` и транзакционную очередь Communication. Проверочные токены случайны и непрозрачны; в `auth_challenges` попадают только их SHA-256-хеши. Активация и сброс одноразовые. Успешный сброс меняет хеш пароля и контрольную метку безопасности, отзывает все активные сессии, записывает аудит и ставит обязательное уведомление в почтовую очередь.
 
-Password-reset request always returns the same `202 Accepted` representation
-for known and unknown addresses. Invitation, reset, and login throttling use
-digested subjects and cover both IP and identifier dimensions.
+Запрос сброса всегда возвращает одинаковый `202 Accepted` для известных и неизвестных адресов. Ограничения частоты приглашений, сбросов и входа используют хешированные признаки и учитывают IP и идентификатор пользователя.
 
-Authenticated `POST /api/auth/me/password/change` requires the current
-password and recent authentication. It rotates the Argon2id credential and
-security stamp, revokes other sessions, writes Audit and queues mandatory
-security email. `must_change_password` uses a short-lived
-`password_change_required` challenge before normal session issuance;
-`POST /api/auth/password/change-required` consumes it once. Yii already
-implements reset, MFA, step-up/recent-auth and session self-service. The
-separate Control Plane has its own authentication implementation: password reset, TOTP MFA, recovery codes, recent-auth, sensitive-MFA step-up, and Control Plane session self-service. It does not share Core sessions; the two remain separate authentication planes.
+`POST /api/auth/me/password/change` требует действующую сессию, текущий пароль и недавнее подтверждение личности. Он меняет пароль Argon2id и контрольную метку безопасности, отзывает другие сессии, записывает аудит и обязательное письмо. При `must_change_password` до обычной сессии выдаётся краткоживущий проверочный запрос `password_change_required`; `POST /api/auth/password/change-required` потребляет его однократно.
+
+Yii уже поддерживает сброс, MFA, дополнительное и недавнее подтверждение личности и управление собственными сессиями. Control Plane имеет независимую реализацию: сброс пароля, TOTP MFA, резервные коды, недавнее подтверждение личности, дополнительную MFA для чувствительных действий и собственные сессии. Сессии двух систем не объединяются.
 
 ## Жизненный цикл аккаунта
 
-Approval, disable, enable, and archive are explicit application operations;
-there is no security-sensitive generic account CRUD. Disable and archive
-rotate the security stamp and revoke active sessions. Protected-role revocation
-and account disable/archive both lock the superadmin role while checking the
-last-usable-superadmin invariant.
+Подтверждение, отключение, включение и архивирование — явные прикладные операции; универсального редактора чувствительных полей аккаунта нет. Отключение и архивирование меняют контрольную метку безопасности и отзывают активные сессии. При отзыве защищённой роли или отключении/архивировании аккаунта блокируется роль супер-администратора и проверяется сохранение последнего действующего супер-администратора.
 
 ## Границы безопасности и конфиденциальности
 
-Passwords, password hashes, raw access/refresh/challenge tokens, and recovery
-secrets never enter Audit or application logs. Failed login responses are
-generic and do not reveal identifier, account, verification, or credential
-existence. Audit may record the identifier type and a keyed/one-way identifier
-digest together with the existing safe ClientContext metadata.
+Пароли, их хеши, исходные токены доступа, обновления и проверочных запросов, а также секреты восстановления не попадают в аудит и журналы. Ответ об ошибке входа одинаков и не раскрывает существование идентификатора, аккаунта, подтверждения или учётных данных. Аудит может хранить тип идентификатора и его односторонний либо ключевой хеш вместе с безопасными метаданными `ClientContext`.
 
-Redis is permitted only behind a narrow rate-limiter abstraction for
-short-lived anti-abuse counters. It is never authoritative for sessions,
-accounts, RBAC, challenges, or password state. Rate-limit keys contain no
-plaintext identifiers. Authentication abuse-sensitive endpoints fail closed
-with `503 Service Unavailable` when Redis cannot enforce their limits; they do
-not silently disable protection.
+Redis используется через узкий интерфейс ограничения частоты для краткоживущих счётчиков защиты от злоупотреблений. Он не определяет состояние сессий, аккаунтов, RBAC, проверочных запросов или паролей. Ключи ограничителей не содержат открытых идентификаторов. Если Redis не может обеспечить ограничения чувствительных маршрутов аутентификации, они возвращают `503 Service Unavailable`; защита не отключается молча.
 
-Bearer-header authentication is not automatically attached by browsers, so
-CSRF middleware is not part of this contract. Introducing authentication
-cookies later also requires introducing CSRF protection in the same change.
+Браузеры не добавляют Bearer-заголовок автоматически, поэтому промежуточная CSRF-защита не входит в этот контракт. При будущем введении аутентификации через cookie CSRF-защита добавляется тем же изменением.
 
 ## Намеренно исключённые функции
 
-Этот этап не реализует API keys, SAML, SMS/email OTP как обычный
-второй фактор, frontend или optional product modules. Google/Telegram OIDC, Passkeys (WebAuthn Level 3),
-TOTP, recovery codes и email MFA recovery описаны в `docs/security/AUTHENTICATION_AND_MFA.md`.
+Ключи API для пользовательского входа, SAML и SMS/почтовый одноразовый пароль как обычный второй фактор не входят в этот контракт. Сервисные учётные данные имеют отдельную [границу M2M](M2M_SERVICE_AUTHENTICATION.md). Интерфейс и необязательный Education уже реализованы поверх Core: [интерфейс](../frontend/README.md), [Education](EDUCATION_BACKEND.md). Google/Telegram OIDC, ключи доступа, TOTP, резервные коды и восстановление MFA через почту описаны в [документе аутентификации и MFA](../security/AUTHENTICATION_AND_MFA.md).

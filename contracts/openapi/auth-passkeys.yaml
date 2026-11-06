@@ -1,76 +1,103 @@
 openapi: 3.1.0
 info:
-  title: Platform Core WebAuthn and External Credentials API
+  title: API WebAuthn и внешних учётных данных Platform Core
   version: 1.1.0
-  description: >
-    Self-service credentials for Core accounts. WebAuthn requires user verification,
-    discoverable credentials and a configured RP/origin. External linking is bound to
-    the initiating account/session, state and PKCE. The SPA callback relays a one-time
-    provider code to the original authenticated window; no Core tokens go to the popup.
+  description: >-
+    Самообслуживание учётных данных Core. WebAuthn требует проверки пользователя, обнаруживаемых учётных данных и
+    настроенных RP/источника. Внешняя привязка связана с исходными аккаунтом/сессией, state и PKCE. Обратный вызов SPA
+    передаёт одноразовый код провайдера исходному авторизованному окну; токены Core не передаются всплывающему окну.
 paths:
   /api/auth/passkeys/registration/start:
     post:
       operationId: startPasskeyRegistration
-      security: [{ BearerAuth: [] }]
+      security:
+        - BearerAuth: []
       responses:
-        '200':
-          description: Fresh session-bound registration options
+        "200":
+          description: Новые параметры регистрации, привязанные к сессии
           content:
             application/json:
               schema:
                 allOf:
-                  - { $ref: '#/components/schemas/Success' }
+                  - $ref: "#/components/schemas/Success"
                   - properties:
-                      data: { $ref: '#/components/schemas/CreationOptions' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/RecentRequired' }
+                      data:
+                        $ref: "#/components/schemas/CreationOptions"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/RecentRequired"
   /api/auth/passkeys/registration/complete:
     post:
       operationId: completePasskeyRegistration
-      security: [{ BearerAuth: [] }]
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [credential]
+              required:
+                - credential
               properties:
-                credential: { type: object, required: [id, rawId, type, response] }
-                label: { type: [string, 'null'], maxLength: 160 }
+                credential:
+                  type: object
+                  required:
+                    - id
+                    - rawId
+                    - type
+                    - response
+                label:
+                  type:
+                    - string
+                    - "null"
+                  maxLength: 160
       responses:
-        '201':
-          description: Registered credential; private key is never sent to the server
+        "201":
+          description: Зарегистрированные учётные данные; закрытый ключ не отправляется серверу
           content:
             application/json:
               schema:
                 allOf:
-                  - { $ref: '#/components/schemas/Success' }
+                  - $ref: "#/components/schemas/Success"
                   - properties:
-                      data: { $ref: '#/components/schemas/PasskeyCreated' }
-        '400': { description: 'auth.passkey.invalid: invalid/expired/replayed attestation, UV, RP or origin' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/RecentRequired' }
-        '409': { description: 'auth.passkey.conflict: credential already registered' }
-        '413': { description: Request exceeds 32768 bytes }
-        '422': { description: Invalid credential input or label }
-        '429': { $ref: '#/components/responses/RateLimited' }
-        '503': { description: Security limiter unavailable; fail closed }
+                      data:
+                        $ref: "#/components/schemas/PasskeyCreated"
+        "400":
+          description: "auth.passkey.invalid: неверное, истёкшее или повторное подтверждение, UV, RP или источник"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/RecentRequired"
+        "409":
+          description: "auth.passkey.conflict: учётные данные уже зарегистрированы"
+        "413":
+          description: Запрос превышает 32768 байт
+        "422":
+          description: Неверные учётные данные или метка
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          description: Ограничитель безопасности недоступен; действие запрещено
   /api/auth/passkeys/authentication/start:
     post:
       operationId: startPasskeyAuthentication
       responses:
-        '200':
-          description: Discoverable authentication, no account identifier required
+        "200":
+          description: Вход с обнаруживаемыми данными без идентификатора аккаунта
           content:
             application/json:
               schema:
                 allOf:
-                  - { $ref: '#/components/schemas/Success' }
+                  - $ref: "#/components/schemas/Success"
                   - properties:
-                      data: { $ref: '#/components/schemas/RequestOptions' }
-        '429': { $ref: '#/components/responses/RateLimited' }
-        '503': { description: Security limiter unavailable; fail closed }
+                      data:
+                        $ref: "#/components/schemas/RequestOptions"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          description: Ограничитель безопасности недоступен; действие запрещено
   /api/auth/passkeys/authentication/complete:
     post:
       operationId: completePasskeyAuthentication
@@ -80,48 +107,72 @@ paths:
           application/json:
             schema:
               type: object
-              required: [credential]
+              required:
+                - credential
               properties:
-                credential: { type: object, required: [id, rawId, type, response] }
+                credential:
+                  type: object
+                  required:
+                    - id
+                    - rawId
+                    - type
+                    - response
       responses:
-        '200':
-          description: Same authentication continuation as password/external login
+        "200":
+          description: Продолжение аутентификации как при пароле или внешнем входе
           content:
             application/json:
               schema:
                 allOf:
-                  - { $ref: '#/components/schemas/Success' }
+                  - $ref: "#/components/schemas/Success"
                   - properties:
-                      data: { $ref: '#/components/schemas/AuthenticationResult' }
-        '401': { description: 'Invalid/expired assertion, wrong origin/RP/UV/user handle or revoked credential' }
-        '413': { description: Request exceeds 32768 bytes }
-        '429': { $ref: '#/components/responses/RateLimited' }
-        '503': { description: Security limiter unavailable; fail closed }
+                      data:
+                        $ref: "#/components/schemas/AuthenticationResult"
+        "401":
+          description: Неверное/истёкшее подтверждение, источник/RP/UV/идентификатор пользователя или отозванные учётные данные
+        "413":
+          description: Запрос превышает 32768 байт
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          description: Ограничитель безопасности недоступен; действие запрещено
   /api/auth/me/passkeys:
     get:
       operationId: listOwnPasskeys
-      security: [{ BearerAuth: [] }]
+      security:
+        - BearerAuth: []
       responses:
-        '200':
-          description: Active credentials of the authenticated account only
+        "200":
+          description: Только активные учётные данные текущего аккаунта
           content:
             application/json:
               schema:
                 allOf:
-                  - { $ref: '#/components/schemas/Success' }
+                  - $ref: "#/components/schemas/Success"
                   - properties:
                       data:
                         type: object
-                        required: [items]
+                        required:
+                          - items
                         properties:
-                          items: { type: array, items: { $ref: '#/components/schemas/PasskeySummary' } }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/PasskeySummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /api/auth/me/passkeys/{id}:
     parameters:
-      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
     patch:
       operationId: renameOwnPasskey
-      security: [{ BearerAuth: [] }]
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -130,173 +181,358 @@ paths:
               type: object
               additionalProperties: false
               properties:
-                label: { type: [string, 'null'], maxLength: 160 }
+                label:
+                  type:
+                    - string
+                    - "null"
+                  maxLength: 160
       responses:
-        '200': { description: 'Success envelope with PasskeySummary; null removes the label' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { description: Credential missing or belongs to another account }
-        '422': { description: Invalid label }
+        "200":
+          description: Оболочка успеха с PasskeySummary; null удаляет метку
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Учётные данные отсутствуют или принадлежат другому аккаунту
+        "422":
+          description: Неверная метка
     delete:
       operationId: revokeOwnPasskey
-      security: [{ BearerAuth: [] }]
+      security:
+        - BearerAuth: []
       responses:
-        '200': { description: 'Success envelope with data.status=revoked; history retained' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/RecentRequired' }
-        '404': { description: Credential missing or belongs to another account }
-        '409': { $ref: '#/components/responses/LastMethod' }
+        "200":
+          description: Успешный ответ с data.status=revoked; история сохраняется
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/RecentRequired"
+        "404":
+          description: Учётные данные отсутствуют или принадлежат другому аккаунту
+        "409":
+          $ref: "#/components/responses/LastMethod"
   /api/auth/providers:
     get:
       operationId: listEnabledExternalProviders
       responses:
-        '200':
-          description: >
-            Success envelope with data.items containing code, displayName, loginEnabled.
-            An enabled provider with loginEnabled=false may still be linked.
+        "200":
+          description: >-
+            Успешный ответ с data.items: code, displayName, loginEnabled. Включённый провайдер с loginEnabled=false
+            может разрешать привязку.
   /api/auth/me/identities:
     get:
       operationId: listOwnExternalIdentities
-      security: [{ BearerAuth: [] }]
+      security:
+        - BearerAuth: []
       responses:
-        '200':
-          description: Safe linked identities; no subject, claims or OAuth tokens
+        "200":
+          description: Безопасные привязанные записи; без внешнего субъекта, утверждений и токенов OAuth
           content:
             application/json:
               schema:
                 allOf:
-                  - { $ref: '#/components/schemas/Success' }
+                  - $ref: "#/components/schemas/Success"
                   - properties:
                       data:
                         type: object
-                        required: [items]
+                        required:
+                          - items
                         properties:
-                          items: { type: array, items: { $ref: '#/components/schemas/ExternalIdentity' } }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/ExternalIdentity"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /api/auth/me/identities/{provider}/link/start:
     parameters:
-      - { $ref: '#/components/parameters/Provider' }
+      - $ref: "#/components/parameters/Provider"
     post:
       operationId: startOwnExternalIdentityLink
-      security: [{ BearerAuth: [] }]
+      security:
+        - BearerAuth: []
       responses:
-        '200':
-          description: 'Success envelope with data.authorizationUrl and data.expiresAt'
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/RecentRequired' }
-        '404': { description: Provider unavailable }
-        '409': { description: 'auth.identity.conflict: provider already linked' }
-        '429': { $ref: '#/components/responses/RateLimited' }
-        '503': { description: Security limiter unavailable; fail closed }
+        "200":
+          description: Успешный ответ с data.authorizationUrl и data.expiresAt
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/RecentRequired"
+        "404":
+          description: Провайдер недоступен
+        "409":
+          description: "auth.identity.conflict: провайдер уже привязан"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          description: Ограничитель безопасности недоступен; действие запрещено
   /api/auth/me/identities/{provider}/link/callback:
     parameters:
-      - { $ref: '#/components/parameters/Provider' }
-      - { name: state, in: query, required: true, schema: { type: string } }
-      - { name: code, in: query, required: true, schema: { type: string } }
+      - $ref: "#/components/parameters/Provider"
+      - name: state
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: code
+        in: query
+        required: true
+        schema:
+          type: string
     get:
       operationId: completeOwnExternalIdentityLink
-      description: Called by the original authenticated SPA window after its provider popup callback.
-      security: [{ BearerAuth: [] }]
+      description: Вызывается исходным аутентифицированным окном SPA после обратного вызова всплывающего окна провайдера.
+      security:
+        - BearerAuth: []
       responses:
-        '200': { description: Success envelope with ExternalIdentity }
-        '401': { description: 'Invalid authentication, state, callback, PKCE or provider proof' }
-        '403': { $ref: '#/components/responses/RecentRequired' }
-        '409': { description: 'auth.identity.conflict: provider identity already belongs to another account' }
-        '503': { description: Security limiter unavailable; fail closed }
+        "200":
+          description: Успешный ответ с ExternalIdentity
+        "401":
+          description: Неверная аутентификация, state, обратный вызов, PKCE или доказательство провайдера
+        "403":
+          $ref: "#/components/responses/RecentRequired"
+        "409":
+          description: "auth.identity.conflict: внешняя учётная запись уже принадлежит другому аккаунту"
+        "503":
+          description: Ограничитель безопасности недоступен; действие запрещено
   /api/auth/me/identities/{provider}:
     parameters:
-      - { $ref: '#/components/parameters/Provider' }
+      - $ref: "#/components/parameters/Provider"
     delete:
       operationId: unlinkOwnExternalIdentity
-      security: [{ BearerAuth: [] }]
+      security:
+        - BearerAuth: []
       responses:
-        '200': { description: 'Success envelope with data.status=unlinked' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/RecentRequired' }
-        '404': { description: 'auth.provider.not_linked' }
-        '409': { $ref: '#/components/responses/LastMethod' }
+        "200":
+          description: Успешный ответ с data.status=unlinked
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/RecentRequired"
+        "404":
+          description: auth.provider.not_linked
+        "409":
+          $ref: "#/components/responses/LastMethod"
 components:
   securitySchemes:
-    BearerAuth: { type: http, scheme: bearer }
+    BearerAuth:
+      type: http
+      scheme: bearer
   parameters:
-    Provider: { name: provider, in: path, required: true, schema: { type: string, enum: [google, telegram] } }
+    Provider:
+      name: provider
+      in: path
+      required: true
+      schema:
+        type: string
+        enum:
+          - google
+          - telegram
   schemas:
     Success:
       type: object
-      required: [status, data]
+      required:
+        - status
+        - data
       properties:
-        status: { const: success }
+        status:
+          const: success
         data: {}
     CreationOptions:
       type: object
-      required: [rp, user, challenge, pubKeyCredParams, timeout, authenticatorSelection, attestation, excludeCredentials]
+      required:
+        - rp
+        - user
+        - challenge
+        - pubKeyCredParams
+        - timeout
+        - authenticatorSelection
+        - attestation
+        - excludeCredentials
       properties:
-        rp: { type: object, required: [id, name] }
-        user: { type: object, required: [id, name, displayName] }
-        challenge: { type: string, description: Base64url-encoded bytes }
-        pubKeyCredParams: { type: array, items: { type: object, required: [type, alg] } }
-        timeout: { type: integer }
+        rp:
+          type: object
+          required:
+            - id
+            - name
+        user:
+          type: object
+          required:
+            - id
+            - name
+            - displayName
+        challenge:
+          type: string
+          description: Байты в кодировке Base64url
+        pubKeyCredParams:
+          type: array
+          items:
+            type: object
+            required:
+              - type
+              - alg
+        timeout:
+          type: integer
         authenticatorSelection:
           type: object
           properties:
-            residentKey: { const: required }
-            requireResidentKey: { const: true }
-            userVerification: { const: required }
-        attestation: { const: none }
-        excludeCredentials: { type: array, items: { type: object, required: [type, id] } }
+            residentKey:
+              const: required
+            requireResidentKey:
+              const: true
+            userVerification:
+              const: required
+        attestation:
+          const: none
+        excludeCredentials:
+          type: array
+          items:
+            type: object
+            required:
+              - type
+              - id
     RequestOptions:
       type: object
-      required: [challenge, rpId, timeout, userVerification, allowCredentials]
+      required:
+        - challenge
+        - rpId
+        - timeout
+        - userVerification
+        - allowCredentials
       properties:
-        challenge: { type: string }
-        rpId: { type: string }
-        timeout: { type: integer }
-        userVerification: { const: required }
-        allowCredentials: { type: array, maxItems: 0 }
+        challenge:
+          type: string
+        rpId:
+          type: string
+        timeout:
+          type: integer
+        userVerification:
+          const: required
+        allowCredentials:
+          type: array
+          maxItems: 0
     PasskeyCreated:
       type: object
-      required: [id, label, createdAt, transports, backupEligible, backupState]
+      required:
+        - id
+        - label
+        - createdAt
+        - transports
+        - backupEligible
+        - backupState
       properties:
-        id: { type: string, format: uuid }
-        label: { type: [string, 'null'] }
-        createdAt: { type: string, format: date-time }
-        lastUsedAt: { type: [string, 'null'], format: date-time }
-        transports: { type: array, items: { type: string } }
-        backupEligible: { type: boolean }
-        backupState: { type: boolean }
+        id:
+          type: string
+          format: uuid
+        label:
+          type:
+            - string
+            - "null"
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        transports:
+          type: array
+          items:
+            type: string
+        backupEligible:
+          type: boolean
+        backupState:
+          type: boolean
     PasskeySummary:
       allOf:
-        - { $ref: '#/components/schemas/PasskeyCreated' }
-        - required: [lastUsedAt]
+        - $ref: "#/components/schemas/PasskeyCreated"
+        - required:
+            - lastUsedAt
     AuthenticationResult:
       oneOf:
         - type: object
-          required: [status, accessToken, refreshToken, accessExpiresAt, sessionExpiresAt, sessionId]
+          required:
+            - status
+            - accessToken
+            - refreshToken
+            - accessExpiresAt
+            - sessionExpiresAt
+            - sessionId
           properties:
-            status: { const: authenticated }
-            accessToken: { type: string }
-            refreshToken: { type: string }
-            accessExpiresAt: { type: string, format: date-time }
-            sessionExpiresAt: { type: string, format: date-time }
-            sessionId: { type: string, format: uuid }
+            status:
+              const: authenticated
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+            accessExpiresAt:
+              type: string
+              format: date-time
+            sessionExpiresAt:
+              type: string
+              format: date-time
+            sessionId:
+              type: string
+              format: uuid
         - type: object
-          required: [status, challengeToken]
+          required:
+            - status
+            - challengeToken
           properties:
-            status: { enum: [mfa_required, password_change_required] }
-            challengeToken: { type: string }
-            allowedFactors: { type: array, items: { type: string } }
+            status:
+              enum:
+                - mfa_required
+                - password_change_required
+            challengeToken:
+              type: string
+            allowedFactors:
+              type: array
+              items:
+                type: string
     ExternalIdentity:
       type: object
-      required: [provider, email, emailVerified, displayName, avatarUrl, linkedAt, lastLoginAt]
+      required:
+        - provider
+        - email
+        - emailVerified
+        - displayName
+        - avatarUrl
+        - linkedAt
+        - lastLoginAt
       properties:
-        provider: { type: string, enum: [google, telegram] }
-        email: { type: [string, 'null'] }
-        emailVerified: { type: boolean }
-        displayName: { type: [string, 'null'] }
-        avatarUrl: { type: [string, 'null'] }
-        linkedAt: { type: string, format: date-time }
-        lastLoginAt: { type: [string, 'null'], format: date-time }
+        provider:
+          type: string
+          enum:
+            - google
+            - telegram
+        email:
+          type:
+            - string
+            - "null"
+        emailVerified:
+          type: boolean
+        displayName:
+          type:
+            - string
+            - "null"
+        avatarUrl:
+          type:
+            - string
+            - "null"
+        linkedAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type:
+            - string
+            - "null"
+          format: date-time
   responses:
-    Unauthorized: { description: Authentication required }
-    RecentRequired: { description: 'auth.recent_required: explicitly sign in again before retrying' }
-    LastMethod: { description: 'auth.identity.last_method: keep at least one usable sign-in method' }
-    RateLimited: { description: 'auth.rate_limited: do not retry the native ceremony automatically' }
+    Unauthorized:
+      description: Требуется аутентификация
+    RecentRequired:
+      description: "auth.recent_required: явно войдите заново перед повтором"
+    LastMethod:
+      description: "auth.identity.last_method: сохраните хотя бы один действующий способ входа"
+    RateLimited:
+      description: "auth.rate_limited: не повторяйте процедуру аутентификатора автоматически"

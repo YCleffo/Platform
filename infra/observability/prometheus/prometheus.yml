@@ -1,0 +1,76 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    platform: platform
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: core-caddy
+    static_configs:
+      - targets: ["backend:2019"]
+        labels:
+          plane: core
+          source: caddy
+
+  - job_name: control-caddy
+    static_configs:
+      - targets: ["control-plane:2019"]
+        labels:
+          plane: commercial
+          source: caddy
+
+  - job_name: core-ops
+    metrics_path: /metrics
+    authorization:
+      credentials_file: /etc/prometheus/metrics-token
+    static_configs:
+      - targets: ["backend:80"]
+        labels:
+          plane: core
+          source: app
+
+  - job_name: control-ops
+    metrics_path: /metrics
+    authorization:
+      credentials_file: /etc/prometheus/metrics-token
+    static_configs:
+      - targets: ["control-plane:8000"]
+        labels:
+          plane: commercial
+          source: app
+
+  - job_name: postgres-core
+    static_configs:
+      - targets: ["postgres-exporter-core:9187"]
+        labels:
+          plane: core
+          source: postgres
+
+  - job_name: postgres-control
+    static_configs:
+      - targets: ["postgres-exporter-control:9187"]
+        labels:
+          plane: commercial
+          source: postgres
+
+  - job_name: redis-core
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+        labels:
+          plane: core
+          source: redis
+
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          source: host
+

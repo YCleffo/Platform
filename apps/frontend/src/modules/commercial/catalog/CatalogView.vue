@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import type { RouteLocationRaw } from 'vue-router';
-import { useAuthStore } from '@/core/auth/authStore';
-import { useAccountStore } from '@/core/account/accountStore';
-import type { Plan } from '@/shared/types';
+import { RouterLink } from 'vue-router';
 import { usePlanCatalog } from './usePlanCatalog';
+import { usePlanTarget } from './planTarget';
 import PlanCard from './PlanCard.vue';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
 import AppCard from '@/shared/ui/surfaces/AppCard.vue';
@@ -13,37 +10,22 @@ import AppErrorState from '@/shared/ui/feedback/AppErrorState.vue';
 import AppSkeleton from '@/shared/ui/feedback/AppSkeleton.vue';
 
 const { plans, loading, errorMessage, load } = usePlanCatalog();
-const auth = useAuthStore();
-const accounts = useAccountStore();
-
-onMounted(() => {
-  if (auth.isAuthenticated && accounts.accounts.length === 0 && !accounts.loading) {
-    void accounts.loadPage(0);
-  }
-});
-
-function planTarget(plan: Plan): RouteLocationRaw {
-  if (!auth.isAuthenticated) {
-    return { name: 'login', query: { redirect: '/' } };
-  }
-  const accountId = accounts.accounts[0]?.id;
-  if (accountId === undefined) {
-    return { name: 'cabinet' };
-  }
-  const price = plan.prices[0];
-  return {
-    name: 'account-billing',
-    params: { accountId },
-    query: price === undefined ? {} : { planPrice: price.id },
-  };
-}
+const planTarget = usePlanTarget();
 </script>
 
 <template>
   <section class="catalog">
     <header class="catalog__header">
-      <h1 class="catalog__title">{{ $t('catalog.title') }}</h1>
-      <p class="catalog__subtitle">{{ $t('catalog.subtitle') }}</p>
+      <div>
+        <h1 class="catalog__title">{{ $t('catalog.title') }}</h1>
+        <p class="catalog__subtitle">{{ $t('catalog.subtitle') }}</p>
+      </div>
+      <RouterLink
+        class="catalog__compare"
+        :to="{ name: 'plans' }"
+      >
+        {{ $t('plans.compareTitle') }}
+      </RouterLink>
     </header>
 
     <div
@@ -100,7 +82,21 @@ function planTarget(plan: Plan): RouteLocationRaw {
 }
 
 .catalog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-16);
   margin-bottom: var(--space-24);
+}
+
+.catalog__compare {
+  flex: 0 0 auto;
+  color: var(--accent-strong);
+  font-size: var(--type-body-medium-emphasis-size);
+  line-height: var(--type-body-medium-emphasis-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .catalog__title {
@@ -126,6 +122,12 @@ function planTarget(plan: Plan): RouteLocationRaw {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-16);
+}
+
+@media (max-width: 767px) {
+  .catalog__header {
+    flex-direction: column;
+  }
 }
 
 @media (min-width: 768px) {

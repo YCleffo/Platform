@@ -207,16 +207,19 @@ function markEntering(element: Element): void {
   align-items: flex-end;
   justify-content: center;
   background: var(--backdrop);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   transition: var(--theme-transition);
 }
 
 .app-dialog__panel {
+  position: relative;
   width: 100%;
   max-height: 92dvh;
   display: flex;
   flex-direction: column;
-  background: var(--overlay-surface);
-  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--accent-soft), transparent 96px), var(--overlay-surface);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-overlay-modal) var(--radius-overlay-modal) 0 0;
   box-shadow: var(--shadow-modal);
   overflow: hidden;
@@ -224,9 +227,18 @@ function markEntering(element: Element): void {
   transition: var(--theme-transition);
 }
 
+.app-dialog__panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent 72%);
+  pointer-events: none;
+}
+
 .app-dialog__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--gap-l);
   padding: var(--pad-modal-default) var(--pad-modal-default) var(--space-8);

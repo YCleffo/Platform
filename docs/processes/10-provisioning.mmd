@@ -1,18 +1,18 @@
 flowchart TD
-  Reserve[Резервирование deployment и durable operation] --> Start[Начало provisioning и scoped bootstrap credential]
-  Start --> Infrastructure[Инфраструктура через provider boundary]
-  Infrastructure --> Migrate[Core migrations и запуск runtime с workers]
-  Migrate --> Issue[Commercial выдаёт signed document во время provisioning]
+  Reserve[Резервирование установки и постоянной операции] --> Start[Начало подготовки и начальные ограниченные полномочия]
+  Start --> Infrastructure[Инфраструктура через интерфейс провайдера]
+  Infrastructure --> Migrate[Миграции Core, запуск приложения и обработчиков]
+  Migrate --> Issue[Commercial выдаёт подписанный документ при подготовке]
   Issue --> Pull[Core получает документ через M2M]
-  Pull --> Verify{Подпись, trust, installation, expiry и sequence}
-  Verify -->|Допуск| Apply[Применить verified snapshot]
-  Verify -->|Отказ| Fail[Нет ready и новых неподтверждённых прав]
+  Pull --> Verify{Подпись, доверие, установка, срок и последовательность}
+  Verify -->|Допуск| Apply[Применить проверенный снимок]
+  Verify -->|Отказ| Fail[Нет готовности и новых неподтверждённых прав]
   Pull -->|Связь недоступна| Fail
-  Apply --> Ready{DB, Redis и свежие heartbeats?}
+  Apply --> Ready{БД, Redis и свежие сигналы активности?}
   Ready -->|Нет| Fail
-  Ready -->|Да| Report[Отправить ready и применённую sequence]
-  Report --> Accept{Операция, credential и выданная sequence совпали?}
+  Ready -->|Да| Report[Отправить готовность и применённую последовательность]
+  Report --> Accept{Операция, учётные данные и последовательность совпали?}
   Accept -->|Нет| Fail
-  Accept -->|Да| Active[Deployment active, операция succeeded, bootstrap scope снят]
-  Fail --> Retry[Retry или terminal failure по policy]
+  Accept -->|Да| Active[Установка активна, операция успешна, начальные права сняты]
+  Fail --> Retry[Повтор или окончательная ошибка по политике]
   Retry --> Start
