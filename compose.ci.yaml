@@ -5,6 +5,8 @@ services:
     build:
       context: ./infra/postgres
     restart: "no"
+    tmpfs:
+      - /var/lib/postgresql
 
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -40,7 +42,7 @@ services:
     pull_policy: build
     build:
       context: ./infra/postgres
-    restart: unless-stopped
+    restart: "no"
 
     environment:
       POSTGRES_DB: ${POSTGRES_TEST_DB:-platform_test}
@@ -67,7 +69,7 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME:-platform}-redis-test
     profiles: ["test"]
     image: redis:8-alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
-    restart: unless-stopped
+    restart: "no"
 
     command:
       - redis-server
@@ -97,6 +99,8 @@ services:
     build:
       context: ./infra/postgres
     restart: "no"
+    tmpfs:
+      - /var/lib/postgresql
 
     environment:
       POSTGRES_DB: ${POSTGRES_TEST_DB:-platform_test}
@@ -131,7 +135,7 @@ services:
         USER_ID: ${CI_USER_ID:-10001}
         GROUP_ID: ${CI_GROUP_ID:-10001}
 
-    restart: unless-stopped
+    restart: "no"
 
     environment:
       APP_ENV: test
@@ -324,7 +328,13 @@ services:
     build:
       context: ./infra/backup
       dockerfile: Dockerfile
+      additional_contexts:
+        postgres-base: service:postgres
+      args:
+        POSTGRES_IMAGE: postgres-base
     restart: unless-stopped
+    tmpfs:
+      - /var/lib/postgresql
     environment:
       BACKUP_ROOT: /backups
       BACKUP_ENABLED: ${BACKUP_ENABLED:-false}
@@ -371,7 +381,7 @@ services:
     pull_policy: build
     build:
       context: ./infra/postgres
-    restart: unless-stopped
+    restart: "no"
     environment:
       POSTGRES_DB: ${CONTROL_TEST_DB:-platform_commercial_test}
       POSTGRES_USER: ${CONTROL_TEST_USER:-platform_control_test}
@@ -498,8 +508,14 @@ services:
     build:
       context: .
       dockerfile: infra/provisioner/Dockerfile.migrator
+      additional_contexts:
+        postgres-base: service:postgres
+      args:
+        POSTGRES_IMAGE: postgres-base
     entrypoint: ["true"]
     restart: "no"
+    tmpfs:
+      - /var/lib/postgresql
   provisioner-worker:
     container_name: ${COMPOSE_PROJECT_NAME:-platform}-provisioner-worker
     profiles: ["provisioner"]

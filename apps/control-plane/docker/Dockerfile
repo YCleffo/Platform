@@ -4,7 +4,7 @@ FROM composer/composer:2-bin AS composer
 # Base FrankenPHP image
 # ---------------------------------------------------------------------
 # FrankenPHP 1.13.4 includes the former Go dependency overrides and PHP2Shell fixes.
-FROM dunglas/frankenphp:php8.3.36@sha256:29d69af811fa99d158d0ad7f2b4ef3b8d8f591955656975f16ae56cb4f125119 AS base
+FROM dunglas/frankenphp:php8.3.36@sha256:0a0b5e4a5215c3177445834aa4c1fbdc64d2a940c2e5e11bc84113c6a0c20e74 AS base
 
 # Check CLI and the PHP embedded in the HTTP server; neither may regress.
 RUN php -r 'exit(PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION === 3 && PHP_VERSION_ID >= 80336 && PHP_ZTS ? 0 : 1);' \

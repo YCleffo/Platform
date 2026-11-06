@@ -1,4 +1,5 @@
-FROM postgres:18
+ARG POSTGRES_IMAGE=platform-postgres:local
+FROM ${POSTGRES_IMAGE}
 COPY infra/postgres/migrate.sh /migrate.sh
 COPY apps/backend/migrations/sql /migrations
 ENTRYPOINT ["bash", "/migrate.sh"]
