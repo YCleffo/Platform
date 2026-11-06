@@ -99,7 +99,11 @@ try {
   await a.getByRole('dialog').locator('[data-field=categories]').getByRole('button', { name: 'Add', exact: true }).click();
   await save(a); await dismiss(a);
   await a.getByRole('button', { name: 'Close incident', exact: true }).first().click();
-  await save(a, [409]); await a.keyboard.press('Escape'); await a.getByRole('dialog').waitFor({ state: 'hidden' });
+  await save(a, [409]);
+  // Response headers arrive before the form finishes handling the rejection.
+  // Cancel auto-waits until the busy form permits dismissal; Escape does not.
+  await a.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+  await a.getByRole('dialog').waitFor({ state: 'hidden' });
   for (const code of ['containment', 'investigation', 'initial_notification', 'investigation_notification']) {
     await a.getByRole('button', { name: 'Record incident event', exact: true }).first().click();
     await choose('eventCode', code); await fill(a, { evidenceReference: 'urn:test:incident:' + code + ':' + suffix });
