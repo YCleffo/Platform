@@ -43,7 +43,29 @@ await context.route('**/api/**',async route=>{
 });
 async function inspect(label){assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,label+': overflow');if(await page.getByRole('dialog').count())await page.waitForFunction(()=>{const b=document.querySelector('[role=dialog]')?.getBoundingClientRect();return b&&b.top>=0&&b.left>=0&&b.bottom<=innerHeight+1&&b.right<=innerWidth+1;});assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze()).violations.map(v=>v.id),[],label+': axe');states.push(label);}
 async function list(){await navigateClientSide(page,'/admin/profile/privacy');await page.getByRole('heading',{name:'Privacy requests',exact:true}).waitFor();}
-async function create(type='access',grant){await list();await page.getByRole('button',{name:'New request',exact:true}).click();if(grant)await selectDropdown(page,'core-privacy-subject',grant.id);await selectDropdown(page,'core-privacy-type',type);if(type==='erasure'||type==='processing_termination'){assert.equal(await page.getByRole('dialog').getByRole('button',{name:'Submit request',exact:true}).isDisabled(),true);await page.locator('#core-privacy-ack').check();}await page.getByRole('dialog').getByRole('button',{name:'Submit request',exact:true}).dblclick();if(grant===limited){await page.getByText('Request submitted. This authority does not permit viewing it.',{exact:false}).waitFor();return;}await page.waitForURL(url=>url.pathname==='/admin/profile/privacy/'+latest.id);await page.getByText(latest.id,{exact:true}).waitFor();}
+async function create(type='access',grant){
+  await list();
+  await page.getByRole('button',{name:'New request',exact:true}).click();
+  if(grant)await selectDropdown(page,'core-privacy-subject',grant.id);
+  await selectDropdown(page,'core-privacy-type',type);
+  if(type==='erasure'||type==='processing_termination'){
+    assert.equal(await page.getByRole('dialog').getByRole('button',{name:'Submit request',exact:true}).isDisabled(),true);
+    await page.locator('#core-privacy-ack').check();
+  }
+  // A click can finish before the asynchronous route fixture creates the row.
+  const submitted=page.waitForResponse(response=>response.request().method()==='POST'&&/^\/api\/auth\/me\/privacy\/(?:representations\/[^/]+\/)?requests$/.test(new URL(response.url()).pathname));
+  await page.getByRole('dialog').getByRole('button',{name:'Submit request',exact:true}).dblclick();
+  const response=await submitted;
+  assert.equal(response.status(),201);
+  const createdId=(await response.json()).data.id;
+  assert.equal(createdId,latest.id);
+  if(grant===limited){
+    await page.getByText('Request submitted. This authority does not permit viewing it.',{exact:false}).waitFor();
+    return;
+  }
+  await page.waitForURL(url=>url.pathname==='/admin/profile/privacy/'+createdId);
+  await page.getByText(createdId,{exact:true}).waitFor();
+}
 async function ready(){latest.status='in_progress';latest.deadlines=[{code:latest.requestType==='processing_information'?'processing_information_response':'access_response',triggeredAt:'2026-11-04T00:00:00Z',calendarType:'working_days',dueAt:'2026-12-01T00:00:00Z',extendedDueAt:'2026-12-05T00:00:00Z',effectiveDueAt:'2026-12-05T00:00:00Z',satisfiedAt:null,overdue:false}];await page.getByRole('button',{name:'Refresh',exact:true}).click();await page.getByRole('button',{name:'Receive response',exact:true}).waitFor();}
 async function receive(){await page.getByRole('button',{name:'Receive response',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Receive response',exact:true}).click();}
 async function download(){const dialog=page.getByRole('dialog',{name:'Response to your request',exact:true});await dialog.waitFor();const event=page.waitForEvent('download');await dialog.getByRole('button',{name:'Save JSON file',exact:true}).click();const file=await event;const stream=await file.createReadStream();const chunks=[];for await(const chunk of stream)chunks.push(chunk);assert.equal(Buffer.concat(chunks).toString('utf8'),lastRaw);assert.ok(file.suggestedFilename().endsWith('.json'));
