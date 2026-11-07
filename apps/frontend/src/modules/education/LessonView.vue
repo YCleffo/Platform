@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import AppConfirmDialog from '@/shared/ui/overlays/AppConfirmDialog.vue';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
+import AppInput from '@/shared/ui/fields/AppInput.vue';
 import { formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
-import { educationApi } from './api';
+import { educationApi, type Lesson, type ResultStatus } from './api';
 import { useEducationWorkspace } from './workspace';
 import { useEducationMutation, useEducationResource, useEducationError } from './resources';
 import { useEducationI18n } from './i18n';
+import { lessonDisplayStatus, lessonStarted } from './status';
 import EducationState from './EducationState.vue';
 import MaterialList from './MaterialList.vue';
 const props = withDefaults(
-  defineProps<{ mode?: 'detail' | 'participants' | 'materials' | 'current' }>(),
+  defineProps<{ mode?: 'detail' | 'participants' | 'materials' | 'results' | 'current' }>(),
   { mode: 'detail' },
 );
 const route = useRoute();
@@ -31,6 +34,10 @@ const { data, loading, error, refresh } = useEducationResource(
         props.mode === 'participants' && lesson
           ? await educationApi.participants(org, lesson.id, signal)
           : null,
+      results:
+        props.mode === 'results' && lesson
+          ? await educationApi.lessonResults(org, lesson.id, signal)
+          : null,
       materials:
         props.mode === 'materials' && lesson
           ? await educationApi.files(org, offset.value, lesson.id, signal)
@@ -42,10 +49,39 @@ const { data, loading, error, refresh } = useEducationResource(
 const mutation = useEducationMutation();
 const { busy, error: actionError, uncertain } = mutation;
 const started = computed(
-  () =>
-    !!data.value?.lesson &&
-    Date.parse(data.value.lesson.startsAt) <= Date.parse(workspace.header!.now),
+  () => !!data.value?.lesson && lessonStarted(data.value.lesson, workspace.header!.now),
 );
+const displayStatus = computed<Lesson['status'] | 'now'>(() =>
+  data.value?.lesson ? lessonDisplayStatus(data.value.lesson, workspace.header!.now) : 'scheduled',
+);
+const canMarkAttendance = computed(
+  () => !!data.value?.lesson && data.value.lesson.status !== 'cancelled' && started.value,
+);
+const confirmOpen = ref(false);
+const pendingAction = ref<'complete' | 'cancel' | null>(null);
+function statusLabel(value: Lesson['status'] | 'now'): string {
+  return t(`education.${value === 'now' ? 'inProgress' : value}`);
+}
+function ask(action: 'complete' | 'cancel'): void {
+  pendingAction.value = action;
+  confirmOpen.value = true;
+}
+async function confirmStatus(): Promise<void> {
+  const lesson = data.value?.lesson;
+  const action = pendingAction.value;
+  if (!lesson || !action) return;
+  await mutation.run(
+    () => action === 'complete'
+      ? educationApi.completeLesson(workspace.organizationId, lesson.id)
+      : educationApi.cancelLesson(workspace.organizationId, lesson.id),
+    async () => {
+      confirmOpen.value = false;
+      pendingAction.value = null;
+      await refresh();
+      await workspace.refreshHeader();
+    },
+  );
+}
 function time(value: string): string {
   return formatZonedTime(value, locale.value, workspace.header!.timezone);
 }
@@ -67,6 +103,52 @@ async function reconcile(): Promise<void> {
     uncertain.value = false;
     actionError.value = null;
   }
+}
+const resultStatuses: ResultStatus[] = ['pending', 'mastered', 'developing', 'needs_support'];
+const reportDraft = reactive({ topic: '', summary: '', teacherComment: '' });
+const resultDrafts = reactive(new Map<string, { status: ResultStatus; comment: string }>());
+watch(
+  () => data.value?.results,
+  (value) => {
+    if (!value) return;
+    if (value.report) {
+      reportDraft.topic = value.report.topic;
+      reportDraft.summary = value.report.summary;
+      reportDraft.teacherComment = value.report.teacherComment ?? '';
+    }
+    for (const item of value.items) {
+      if (!resultDrafts.has(item.id)) {
+        resultDrafts.set(item.id, { status: item.status, comment: item.comment ?? '' });
+      }
+    }
+  },
+  { immediate: true },
+);
+async function saveReport(): Promise<void> {
+  const lesson = data.value?.lesson;
+  if (!lesson) return;
+  await mutation.run(
+    () =>
+      educationApi.saveLessonReport(workspace.organizationId, lesson.id, {
+        topic: reportDraft.topic,
+        summary: reportDraft.summary,
+        teacherComment: reportDraft.teacherComment.trim() === '' ? null : reportDraft.teacherComment,
+      }),
+    () => refresh(),
+  );
+}
+async function saveResult(id: string): Promise<void> {
+  const lesson = data.value?.lesson;
+  const draft = resultDrafts.get(id);
+  if (!lesson || !draft) return;
+  await mutation.run(
+    () =>
+      educationApi.saveLessonResult(workspace.organizationId, lesson.id, id, {
+        status: draft.status,
+        comment: draft.comment.trim() === '' ? null : draft.comment,
+      }),
+    () => refresh(),
+  );
 }
 </script>
 <template>
@@ -99,6 +181,15 @@ async function reconcile(): Promise<void> {
     </div>
     <template v-if="data?.lesson">
       <article class="edu-card">
+        <p>
+          <span
+            class="edu-status"
+            :class="`edu-status--${displayStatus}`"
+            data-lesson-status
+          >
+            {{ statusLabel(displayStatus) }}
+          </span>
+        </p>
         <p>{{ data.lesson.groupName }} · {{ students(data.lesson.studentCount) }}</p>
         <p>
           {{ time(data.lesson.startsAt) }} – {{ time(data.lesson.endsAt) }} ·
@@ -137,12 +228,49 @@ async function reconcile(): Promise<void> {
           {{ t('education.participants') }}
         </RouterLink>
         <RouterLink
+          :to="`/lessons/${data.lesson.id}/results`"
+          class="edu-button"
+        >
+          {{ t('education.results') }}
+        </RouterLink>
+        <RouterLink
           :to="`/lessons/${data.lesson.id}/materials`"
           class="edu-button"
         >
           {{ t('education.materials') }}
         </RouterLink>
+        <RouterLink
+          v-if="data.lesson.status === 'scheduled'"
+          :to="`/lessons/${data.lesson.id}/edit`"
+          class="edu-button"
+        >
+          {{ t('education.editLesson') }}
+        </RouterLink>
+        <button
+          v-if="data.lesson.status === 'scheduled'"
+          type="button"
+          class="edu-button edu-button--primary"
+          :disabled="busy || uncertain"
+          @click="ask('complete')"
+        >
+          {{ t('education.completeLesson') }}
+        </button>
+        <button
+          v-if="data.lesson.status === 'scheduled'"
+          type="button"
+          class="edu-button"
+          :disabled="busy || uncertain"
+          @click="ask('cancel')"
+        >
+          {{ t('education.cancelLesson') }}
+        </button>
       </nav>
+      <p
+        v-if="data.lesson.status !== 'scheduled'"
+        class="edu-subtle"
+      >
+        {{ t('education.lessonLocked') }}
+      </p>
       <template v-if="data.participants">
         <h2>{{ t('education.attendance') }}</h2>
         <EducationState
@@ -172,7 +300,7 @@ async function reconcile(): Promise<void> {
           >
             <strong>{{ person.name }}</strong>
             <AppDropdown
-              v-if="started"
+              v-if="canMarkAttendance"
               :id="`education-attendance-${person.id}`"
               :label="`${t('education.attendance')}: ${person.name}`"
               :model-value="person.status"
@@ -191,16 +319,165 @@ async function reconcile(): Promise<void> {
           </li>
         </ul>
       </template>
+      <template v-if="data.results">
+        <h2>{{ t('education.results') }}</h2>
+        <p
+          v-if="actionError"
+          class="edu-error"
+          role="alert"
+        >
+          {{ uncertain ? t('education.uncertain') : issue(actionError) }}
+        </p>
+        <button
+          v-if="uncertain"
+          type="button"
+          class="edu-button"
+          @click="reconcile"
+        >
+          {{ t('education.checkList') }}
+        </button>
+        <p
+          v-if="data.lesson.status === 'scheduled'"
+          class="edu-subtle"
+        >
+          {{ t('education.resultsNotCompleted') }}
+        </p>
+        <p
+          v-if="data.lesson.status === 'cancelled'"
+          class="edu-subtle"
+        >
+          {{ t('education.resultsCancelled') }}
+        </p>
+        <template v-if="data.lesson.status === 'completed'">
+          <form
+            class="edu-form edu-card"
+            @submit.prevent="saveReport"
+          >
+            <h3>{{ t('education.lessonReport') }}</h3>
+            <AppInput
+              id="education-report-topic"
+              v-model="reportDraft.topic"
+              :label="t('education.reportTopic')"
+              :maxlength="240"
+              required
+              :disabled="busy || uncertain"
+            />
+            <label>
+              {{ t('education.reportSummary') }}
+              <textarea
+                v-model="reportDraft.summary"
+                :maxlength="4000"
+                required
+                :disabled="busy || uncertain"
+              />
+            </label>
+            <label>
+              {{ t('education.teacherComment') }}
+              <textarea
+                v-model="reportDraft.teacherComment"
+                :maxlength="4000"
+                :disabled="busy || uncertain"
+              />
+            </label>
+            <div class="edu-form-actions">
+              <button
+                type="submit"
+                class="edu-button edu-button--primary"
+                :disabled="busy || uncertain"
+              >
+                {{ t('education.saveReport') }}
+              </button>
+            </div>
+          </form>
+          <h3>{{ t('education.students') }}</h3>
+          <EducationState
+            v-if="!data.results.items.length"
+            :empty="t('education.noLessonResults')"
+          />
+          <ul
+            v-else
+            class="edu-list"
+          >
+            <li
+              v-for="person in data.results.items"
+              :key="person.id"
+              class="edu-list__item"
+              data-result-student
+            >
+              <div>
+                <strong>{{ person.name }}</strong>
+                <div class="edu-form-actions">
+                  <AppDropdown
+                    :id="`education-result-${person.id}`"
+                    :label="`${t('education.results')}: ${person.name}`"
+                    :model-value="resultDrafts.get(person.id)?.status ?? person.status"
+                    :options="
+                      resultStatuses.map((value) => ({
+                        value,
+                        label: t(`education.${value === 'pending' ? 'notAssessed' : value === 'needs_support' ? 'needsSupport' : value}`),
+                      }))
+                    "
+                    :disabled="busy || uncertain"
+                    @update:model-value="(value) => { resultDrafts.set(person.id, { status: String(value) as ResultStatus, comment: resultDrafts.get(person.id)?.comment ?? '' }); }"
+                  />
+                  <label class="edu-subtle">
+                    {{ t('education.resultComment') }}
+                    <textarea
+                      :value="resultDrafts.get(person.id)?.comment ?? person.comment ?? ''"
+                      :maxlength="1000"
+                      :disabled="busy || uncertain"
+                      @input="(event) => { const draft = resultDrafts.get(person.id) ?? { status: person.status, comment: '' }; draft.comment = String((event.target as HTMLTextAreaElement).value); resultDrafts.set(person.id, draft); }"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    class="edu-button"
+                    :disabled="busy || uncertain"
+                    @click="saveResult(person.id)"
+                  >
+                    {{ t('education.saveResult') }}
+                  </button>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </template>
+        <ul
+          v-if="data.lesson.status === 'cancelled' && data.results.items.length"
+          class="edu-list"
+        >
+          <li
+            v-for="person in data.results.items"
+            :key="person.id"
+            class="edu-list__item"
+          >
+            <strong>{{ person.name }}</strong>
+            <span>
+              {{ t(`education.${person.status === 'pending' ? 'notAssessed' : person.status === 'needs_support' ? 'needsSupport' : person.status}`) }}
+              <template v-if="person.comment"> · {{ person.comment }}</template>
+            </span>
+          </li>
+        </ul>
+      </template>
       <template v-if="data.materials">
         <RouterLink
+          v-if="data.lesson.status !== 'cancelled'"
           :to="`/materials/upload?lesson=${data.lesson.id}`"
           class="edu-button"
         >
           {{ t('education.uploadMaterials') }}
         </RouterLink>
+        <p
+          v-if="data.lesson.status === 'completed'"
+          class="edu-subtle"
+        >
+          {{ t('education.materialLocked') }}
+        </p>
         <MaterialList
           :page="data.materials"
+          :deletable="data.lesson.status !== 'completed'"
           @more="(value) => (offset = value)"
+          @refresh="refresh"
         />
         <button
           v-if="offset"
@@ -212,5 +489,23 @@ async function reconcile(): Promise<void> {
         </button>
       </template>
     </template>
+    <AppConfirmDialog
+      v-model="confirmOpen"
+      :title="pendingAction === 'cancel' ? t('education.cancelLesson') : t('education.completeLesson')"
+      :description="pendingAction === 'cancel' ? t('education.cancelConfirm') : t('education.completeConfirm')"
+      :confirm-label="pendingAction === 'cancel' ? t('education.cancelLesson') : t('education.completeLesson')"
+      :cancel-label="t('education.cancel')"
+      :busy="busy"
+      :danger="pendingAction === 'cancel'"
+      @confirm="confirmStatus"
+    >
+      <p
+        v-if="actionError"
+        class="edu-error"
+        role="alert"
+      >
+        {{ uncertain ? t('education.uncertain') : issue(actionError) }}
+      </p>
+    </AppConfirmDialog>
   </section>
 </template>

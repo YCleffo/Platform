@@ -12,7 +12,7 @@ DBML служит представлением для диаграммы, а н�
 | `core` | 50 | 561 | 86 | 195 | 161 | 19 |
 | `platform_runtime` | 3 | 36 | 1 | 18 | 7 | 2 |
 | `commercial` | 62 | 619 | 98 | 273 | 177 | 53 |
-| `education` | 15 | 91 | 11 | 12 | 31 | 0 |
+| `education` | 24 | 181 | 25 | 33 | 55 | 0 |
 
 Технические `public.platform_migrations` и `public.doctrine_migration_versions` не являются бизнес-таблицами и не включены в инвентарь.
 Межсистемный идентификатор в подписанном документе не создаёт внешний ключ между базами.
@@ -2836,6 +2836,83 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 
 Проверок CHECK: 3; индексов: 3; пользовательских триггеров: 2.
 
+## education.activity_assignments
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `owner_account_id` | `uuid` | нет | — | — |
+| `activity_id` | `uuid` | нет | — | — |
+| `group_id` | `uuid` | да | — | — |
+| `student_id` | `uuid` | да | — | — |
+| `config` | `jsonb` | нет | '{}'::jsonb | — |
+| `opens_at` | `timestamp with time zone` | да | — | — |
+| `due_at` | `timestamp with time zone` | да | — | — |
+| `completion` | `jsonb` | да | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `activity_assignments_activity_id_fkey`: `FOREIGN KEY (activity_id) REFERENCES education.activity_definitions(id)`.
+- `activity_assignments_group_id_organization_id_owner_accoun_fkey`: `FOREIGN KEY (group_id, organization_id, owner_account_id) REFERENCES education.groups(id, organization_id, owner_account_id)`.
+- `activity_assignments_student_id_organization_id_owner_acco_fkey`: `FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)`.
+
+Проверок CHECK: 1; индексов: 2; пользовательских триггеров: 0.
+
+## education.activity_attempts
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `student_id` | `uuid` | нет | — | — |
+| `account_id` | `uuid` | нет | — | — |
+| `activity_id` | `uuid` | нет | — | — |
+| `assignment_id` | `uuid` | да | — | — |
+| `status` | `character varying(20)` | нет | 'running'::character varying | — |
+| `source` | `character varying(20)` | нет | 'browser'::character varying | — |
+| `contract_version` | `integer` | нет | 1 | — |
+| `exercise_text` | `text` | да | — | — |
+| `started_at` | `timestamp with time zone` | нет | now() | — |
+| `finished_at` | `timestamp with time zone` | да | — | — |
+| `result_payload` | `jsonb` | да | — | — |
+| `result_version` | `integer` | да | — | — |
+| `config` | `jsonb` | нет | '{}'::jsonb | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `activity_attempts_activity_id_fkey`: `FOREIGN KEY (activity_id) REFERENCES education.activity_definitions(id)`.
+- `activity_attempts_assignment_id_fkey`: `FOREIGN KEY (assignment_id) REFERENCES education.activity_assignments(id)`.
+- `activity_attempts_student_id_fkey`: `FOREIGN KEY (student_id) REFERENCES education.students(id)`.
+
+Проверок CHECK: 3; индексов: 2; пользовательских триггеров: 0.
+
+## education.activity_definitions
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `code` | `character varying(60)` | нет | — | — |
+| `name` | `character varying(160)` | нет | — | — |
+| `kind` | `character varying(40)` | нет | — | — |
+| `contract_version` | `integer` | нет | 1 | — |
+| `enabled` | `boolean` | нет | true | — |
+| `config` | `jsonb` | нет | '{}'::jsonb | — |
+| `metrics` | `jsonb` | нет | '[]'::jsonb | — |
+| `required_permission` | `character varying(180)` | нет | 'education.activities.use'::character varying | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+Внешние ключи SQL из этой таблицы отсутствуют.
+
+Проверок CHECK: 3; индексов: 2; пользовательских триггеров: 0.
+
 ## education.attendance
 
 | Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
@@ -2917,7 +2994,7 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 - `group_students_group_id_organization_id_owner_account_id_fkey`: `FOREIGN KEY (group_id, organization_id, owner_account_id) REFERENCES education.groups(id, organization_id, owner_account_id)`.
 - `group_students_student_id_organization_id_owner_account_id_fkey`: `FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)`.
 
-Проверок CHECK: 0; индексов: 1; пользовательских триггеров: 0.
+Проверок CHECK: 0; индексов: 2; пользовательских триггеров: 0.
 
 ## education.groups
 
@@ -2929,12 +3006,57 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 | `owner_person_id` | `uuid` | нет | — | — |
 | `name` | `character varying(160)` | нет | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
+| `archived_at` | `timestamp with time zone` | да | — | — |
 
 **Первичный ключ:** `PRIMARY KEY (id)`.
 
 Внешние ключи SQL из этой таблицы отсутствуют.
 
 Проверок CHECK: 1; индексов: 2; пользовательских триггеров: 0.
+
+## education.lesson_reports
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `owner_account_id` | `uuid` | нет | — | — |
+| `owner_person_id` | `uuid` | нет | — | — |
+| `lesson_id` | `uuid` | нет | — | — |
+| `topic` | `character varying(240)` | нет | — | — |
+| `summary` | `text` | нет | — | — |
+| `teacher_comment` | `text` | да | — | — |
+| `updated_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `lesson_reports_lesson_id_organization_id_owner_account_id_fkey`: `FOREIGN KEY (lesson_id, organization_id, owner_account_id) REFERENCES education.lessons(id, organization_id, owner_account_id)`.
+
+Проверок CHECK: 3; индексов: 4; пользовательских триггеров: 0.
+
+## education.lesson_results
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `owner_account_id` | `uuid` | нет | — | — |
+| `lesson_id` | `uuid` | нет | — | — |
+| `student_id` | `uuid` | нет | — | — |
+| `status` | `character varying(20)` | нет | 'pending'::character varying | — |
+| `comment` | `text` | да | — | — |
+| `updated_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `lesson_results_lesson_id_organization_id_owner_account_id_fkey`: `FOREIGN KEY (lesson_id, organization_id, owner_account_id) REFERENCES education.lessons(id, organization_id, owner_account_id)`.
+- `lesson_results_student_id_organization_id_owner_account_id_fkey`: `FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)`.
+
+Проверок CHECK: 2; индексов: 3; пользовательских триггеров: 0.
 
 ## education.lessons
 
@@ -2951,6 +3073,8 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 | `location` | `character varying(240)` | нет | ''::character varying | — |
 | `status` | `character varying(20)` | нет | 'scheduled'::character varying | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
+| `completed_at` | `timestamp with time zone` | да | — | — |
+| `cancelled_at` | `timestamp with time zone` | да | — | — |
 
 **Первичный ключ:** `PRIMARY KEY (id)`.
 
@@ -2958,7 +3082,7 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 
 - `lessons_group_id_organization_id_owner_account_id_fkey`: `FOREIGN KEY (group_id, organization_id, owner_account_id) REFERENCES education.groups(id, organization_id, owner_account_id)`.
 
-Проверок CHECK: 3; индексов: 3; пользовательских триггеров: 0.
+Проверок CHECK: 3; индексов: 4; пользовательских триггеров: 0.
 
 ## education.messages
 
@@ -3046,6 +3170,68 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 
 Проверок CHECK: 0; индексов: 2; пользовательских триггеров: 0.
 
+## education.result_revisions
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `owner_account_id` | `uuid` | нет | — | — |
+| `result_id` | `uuid` | нет | — | — |
+| `status` | `character varying(20)` | нет | — | — |
+| `comment` | `text` | да | — | — |
+| `revised_at` | `timestamp with time zone` | нет | now() | — |
+| `revised_by_account_id` | `uuid` | нет | — | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `result_revisions_result_id_fkey`: `FOREIGN KEY (result_id) REFERENCES education.lesson_results(id)`.
+
+Проверок CHECK: 2; индексов: 2; пользовательских триггеров: 0.
+
+## education.student_accounts
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `student_id` | `uuid` | нет | — | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `account_id` | `uuid` | нет | — | — |
+| `person_id` | `uuid` | нет | — | — |
+| `activated_at` | `timestamp with time zone` | нет | now() | — |
+| `revoked_at` | `timestamp with time zone` | да | — | — |
+
+**Первичный ключ:** `PRIMARY KEY (student_id, organization_id)`.
+
+**Реальные внешние ключи:**
+
+- `student_accounts_student_id_fkey`: `FOREIGN KEY (student_id) REFERENCES education.students(id)`.
+
+Проверок CHECK: 0; индексов: 3; пользовательских триггеров: 0.
+
+## education.student_invites
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `owner_account_id` | `uuid` | нет | — | — |
+| `student_id` | `uuid` | нет | — | — |
+| `code_hash` | `character(64)` | нет | — | — |
+| `expires_at` | `timestamp with time zone` | нет | — | — |
+| `used_at` | `timestamp with time zone` | да | — | — |
+| `used_account_id` | `uuid` | да | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `student_invites_student_id_organization_id_owner_account_i_fkey`: `FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)`.
+
+Проверок CHECK: 0; индексов: 2; пользовательских триггеров: 0.
+
 ## education.students
 
 | Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
@@ -3110,4 +3296,29 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 Внешние ключи SQL из этой таблицы отсутствуют.
 
 Проверок CHECK: 1; индексов: 2; пользовательских триггеров: 0.
+
+## education.typing_results
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `attempt_id` | `uuid` | нет | — | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `student_id` | `uuid` | нет | — | — |
+| `duration_seconds` | `integer` | нет | — | — |
+| `language` | `character varying(2)` | нет | — | — |
+| `keystrokes` | `integer` | нет | — | — |
+| `correct_chars` | `integer` | нет | — | — |
+| `errors` | `integer` | нет | — | — |
+| `wpm` | `numeric(6,1)` | нет | — | — |
+| `accuracy` | `numeric(5,2)` | нет | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (attempt_id)`.
+
+**Реальные внешние ключи:**
+
+- `typing_results_attempt_id_fkey`: `FOREIGN KEY (attempt_id) REFERENCES education.activity_attempts(id)`.
+- `typing_results_student_id_fkey`: `FOREIGN KEY (student_id) REFERENCES education.students(id)`.
+
+Проверок CHECK: 7; индексов: 2; пользовательских триггеров: 0.
 

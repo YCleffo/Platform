@@ -137,6 +137,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
             { path: 'privacy/:id', name: 'admin-profile-privacy-request', component: () => import('@/modules/admin/profile/CorePrivacyRequestView.vue') },
           ] },
           { path: 'privacy', name: 'admin-privacy', component: () => import('@/modules/admin/AdminPrivacyView.vue') },
+          { path: 'privacy/registry/:kind?', name: 'admin-privacy-registry', component: () => import('@/modules/admin/AdminPrivacyRegistryView.vue') },
           { path: 'privacy/requests/:id', name: 'admin-privacy-request', component: () => import('@/modules/admin/privacy/PrivacyOperatorRequestView.vue') },
           { path: 'audit', name: 'admin-audit', component: () => import('@/modules/admin/AdminResourcePageView.vue'), meta: { adminResource: 'audit' } },
           { path: 'security', component: () => import('@/modules/admin/AdminSecurityLayout.vue'), children: [

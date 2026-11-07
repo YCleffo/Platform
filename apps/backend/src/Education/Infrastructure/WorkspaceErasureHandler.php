@@ -154,6 +154,45 @@ final readonly class WorkspaceErasureHandler implements PersonalDataErasureHandl
                 AND owner_account_id NOT IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
             SQL, [':subject' => $subject])->execute();
         $this->db->createCommand(<<<'SQL'
+            DELETE FROM education.result_revisions
+            WHERE result_id IN (
+                SELECT id FROM education.lesson_results
+                WHERE student_id IN (
+                    SELECT id FROM education.students
+                    WHERE person_id = CAST(:subject AS uuid)
+                        OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
+                )
+                    OR lesson_id IN (
+                        SELECT id FROM education.lessons
+                        WHERE owner_person_id = CAST(:subject AS uuid)
+                            OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
+                    )
+            )
+            SQL, [':subject' => $subject])->execute();
+        $this->db->createCommand(<<<'SQL'
+            DELETE FROM education.lesson_results
+            WHERE student_id IN (
+                SELECT id FROM education.students
+                WHERE person_id = CAST(:subject AS uuid)
+                    OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
+            )
+                OR lesson_id IN (
+                    SELECT id FROM education.lessons
+                    WHERE owner_person_id = CAST(:subject AS uuid)
+                        OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
+                )
+            SQL, [':subject' => $subject])->execute();
+        $this->db->createCommand(<<<'SQL'
+            DELETE FROM education.lesson_reports
+            WHERE owner_person_id = CAST(:subject AS uuid)
+                OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
+                OR lesson_id IN (
+                    SELECT id FROM education.lessons
+                    WHERE owner_person_id = CAST(:subject AS uuid)
+                        OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
+                )
+            SQL, [':subject' => $subject])->execute();
+        $this->db->createCommand(<<<'SQL'
             DELETE FROM education.lessons
             WHERE owner_person_id = CAST(:subject AS uuid)
                 OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))

@@ -11,8 +11,8 @@ DBML получен из каталога PostgreSQL после применен
 
 Core DBML описывает схему `core`; общий JSON Core содержит также `platform_runtime`. Оба файла генерируются из фактического PostgreSQL после миграций, а не поддерживаются вручную.
 
-Текущий сохранённый срез: **Core 50 / Runtime 3 / Commercial 62 / Education 15 таблиц**.
-Education включает технический журнал `education.module_migrations`; бизнес-таблиц 14.
+Текущий сохранённый срез: **Core 50 / Runtime 3 / Commercial 62 / Education 24 / DeviceManagement 10 / Storage 8 таблиц**.
+Education включает технический журнал `education.module_migrations`; бизнес-таблиц 23. DeviceManagement и Storage включают собственные технические журналы `module_migrations`; бизнес-таблиц 9 и 7 соответственно.
 Опциональный Education устанавливается отдельными миграциями в схему `education`;
 его каталог, DBML и покрытие публикуются отдельно и не входят в срез Core/Runtime.
 Проверка среза подтверждает сохранённый каталог и хеши миграций Education, но не

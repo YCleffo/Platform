@@ -45,7 +45,7 @@ const { submitting, message, run } = useAsyncAction(async () => {
     return;
   }
   await router.push(
-    redirectTarget.value !== null ? { path: redirectTarget.value } : { name: 'cabinet' },
+    redirectTarget.value !== null ? redirectTarget.value : { name: 'cabinet' },
   );
 });
 
@@ -93,11 +93,6 @@ async function onSubmit(): Promise<void> {
         autocomplete="current-password"
         required
       />
-      <p class="auth-form__aux">
-        <RouterLink :to="{ name: 'password-reset-request' }">
-          {{ $t('auth.forgotPassword') }}
-        </RouterLink>
-      </p>
       <AppButton
         type="submit"
         :loading="submitting"
@@ -105,6 +100,11 @@ async function onSubmit(): Promise<void> {
       >
         {{ $t('auth.signIn') }}
       </AppButton>
+      <p class="auth-form__aux">
+        <RouterLink :to="{ name: 'password-reset-request' }">
+          {{ $t('auth.forgotPassword') }}
+        </RouterLink>
+      </p>
       <p class="auth-form__switch">
         {{ $t('auth.noAccount') }}
         <RouterLink
@@ -112,9 +112,6 @@ async function onSubmit(): Promise<void> {
         >
           {{ $t('nav.register') }}
         </RouterLink>
-      </p>
-      <p class="auth-form__switch">
-        <RouterLink :to="{ name: 'resend-verification' }">{{ $t('auth.resendLink') }}</RouterLink>
       </p>
     </form>
   </AppFormShell>
@@ -142,7 +139,7 @@ async function onSubmit(): Promise<void> {
   letter-spacing: var(--type-body-medium-emphasis-tracking);
   line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
-  text-align: end;
+  text-align: center;
 }
 
 .auth-form__notice {

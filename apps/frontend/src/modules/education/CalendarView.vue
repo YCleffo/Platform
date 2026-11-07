@@ -5,10 +5,11 @@ import { ChevronLeft, ChevronRight } from '@/shared/ui/icons';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import { addCalendarDays, formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
 import { validDate } from '@/shared/formatting/temporal';
-import { educationApi } from './api';
+import { educationApi, type Lesson } from './api';
 import { useEducationWorkspace } from './workspace';
 import { useEducationResource } from './resources';
 import { useEducationI18n } from './i18n';
+import { lessonDisplayStatus } from './status';
 import EducationState from './EducationState.vue';
 const workspace = useEducationWorkspace();
 const route = useRoute();
@@ -47,6 +48,10 @@ watch(data, async (value) => {
 });
 function time(value: string): string {
   return formatZonedTime(value, locale.value, workspace.header!.timezone);
+}
+function status(lesson: Lesson): string {
+  const value = lessonDisplayStatus(lesson, workspace.header!.now);
+  return t(`education.${value === 'now' ? 'inProgress' : value}`);
 }
 </script>
 <template>
@@ -123,6 +128,12 @@ function time(value: string): string {
             <p>{{ time(item.startsAt) }} – {{ time(item.endsAt) }} · {{ item.groupName }}</p>
             <small>{{ item.location }}</small>
           </div>
+          <span
+            class="edu-status"
+            :class="`edu-status--${lessonDisplayStatus(item, workspace.header!.now)}`"
+          >
+            {{ status(item) }}
+          </span>
           <ChevronRight
             :size="20"
             aria-hidden="true"

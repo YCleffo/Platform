@@ -1,11 +1,11 @@
 -- Read-only PostgreSQL catalog export. No customer rows or credentials.
 SELECT jsonb_build_object(
  'server_version', current_setting('server_version'),
- 'schemas', (SELECT jsonb_agg(nspname ORDER BY nspname) FROM pg_namespace WHERE nspname IN ('core','platform_runtime','commercial','education')),
+ 'schemas', (SELECT jsonb_agg(nspname ORDER BY nspname) FROM pg_namespace WHERE nspname IN ('core','platform_runtime','commercial','education','device_management','storage')),
  'enums', COALESCE((SELECT jsonb_agg(jsonb_build_object('schema',n.nspname,'name',t.typname,'values',v.labels) ORDER BY n.nspname,t.typname)
    FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
    CROSS JOIN LATERAL (SELECT jsonb_agg(enumlabel ORDER BY enumsortorder) labels FROM pg_enum WHERE enumtypid=t.oid) v
-   WHERE n.nspname IN ('core','platform_runtime','commercial','education') AND t.typtype='e'),'[]'::jsonb),
+   WHERE n.nspname IN ('core','platform_runtime','commercial','education','device_management','storage') AND t.typtype='e'),'[]'::jsonb),
  'tables', COALESCE((SELECT jsonb_agg(jsonb_build_object(
    'schema',n.nspname,'name',c.relname,'comment',obj_description(c.oid,'pg_class'),
    'rls',c.relrowsecurity,'force_rls',c.relforcerowsecurity,
@@ -31,9 +31,9 @@ SELECT jsonb_build_object(
    'triggers',COALESCE((SELECT jsonb_agg(jsonb_build_object('name',tgname,'definition',pg_get_triggerdef(oid,true)) ORDER BY tgname) FROM pg_trigger WHERE tgrelid=c.oid AND NOT tgisinternal),'[]'::jsonb),
    'policies',COALESCE((SELECT jsonb_agg(jsonb_build_object('name',polname,'command',polcmd,'using',pg_get_expr(polqual,polrelid),'check',pg_get_expr(polwithcheck,polrelid)) ORDER BY polname) FROM pg_policy WHERE polrelid=c.oid),'[]'::jsonb)
  ) ORDER BY n.nspname,c.relname) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
- WHERE n.nspname IN ('core','platform_runtime','commercial','education') AND c.relkind IN ('r','p')),'[]'::jsonb),
+ WHERE n.nspname IN ('core','platform_runtime','commercial','education','device_management','storage') AND c.relkind IN ('r','p')),'[]'::jsonb),
  'views',COALESCE((SELECT jsonb_agg(jsonb_build_object('schema',n.nspname,'name',c.relname,'definition',pg_get_viewdef(c.oid,true)) ORDER BY n.nspname,c.relname)
-   FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('core','platform_runtime','commercial','education') AND c.relkind IN ('v','m')),'[]'::jsonb),
+   FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('core','platform_runtime','commercial','education','device_management','storage') AND c.relkind IN ('v','m')),'[]'::jsonb),
  'functions',COALESCE((SELECT jsonb_agg(jsonb_build_object('schema',n.nspname,'name',p.proname,'definition',pg_get_functiondef(p.oid)) ORDER BY n.nspname,p.proname,pg_get_function_identity_arguments(p.oid))
-   FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('core','platform_runtime','commercial','education') AND p.prokind IN ('f','p')),'[]'::jsonb)
+   FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('core','platform_runtime','commercial','education','device_management','storage') AND p.prokind IN ('f','p')),'[]'::jsonb)
 );

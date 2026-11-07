@@ -4,8 +4,8 @@ import { coreOperations, coreResources } from './catalog';
 const id = '01900000-0000-7000-8000-000000000001';
 const operation = (key: string) => coreOperations.find((op) => op.key === key)!;
 describe('Core workflow request contracts', () => {
-  it('covers the 53 previously generic operations with structured forms and lists', () => {
-    expect(coreOperations.length + coreResources.length).toBe(53);
+  it('covers the 57 previously generic operations with structured forms and lists', () => {
+    expect(coreOperations.length + coreResources.length).toBe(57);
     expect(new Set(coreOperations.map((o) => o.method + ' ' + o.path)).size).toBe(
       coreOperations.length,
     );
@@ -34,6 +34,14 @@ describe('Core workflow request contracts', () => {
     const data = { id, status: 'contained', reasonCode: 'investigated' };
     expect(operationPath(op, {}, data)).toBe('/core/privacy/incidents/' + id + '/transition');
     expect(serialize(op.fields, data)).toEqual({ status: 'contained', reasonCode: 'investigated' });
+  });
+  it('does not seed action targets from the current row state', () => {
+    expect(
+      initialData(operation('incident.transition').fields, { id, status: 'detected' }).status,
+    ).toBe('investigating');
+    expect(
+      initialData(operation('hold.release').fields, { id, reasonCode: 'litigation' }).reasonCode,
+    ).toBe('');
   });
   it('keeps protected roles immutable and does not invent lifecycle permissions', () => {
     expect(operation('role.update').blocked!({ isSystem: true })).toBe(true);

@@ -382,6 +382,7 @@ const coreRoutes = [
   ['/admin/profile/privacy', '.core-privacy'],
   [`/admin/profile/privacy/${requestRow.id}`, '.core-privacy'],
   ['/admin/privacy', '.core-privacy'],
+  ['/admin/privacy/registry', '.privacy-registry'],
   [`/admin/privacy/requests/${requestRow.id}`, '.core-privacy'],
   ['/admin/audit', '.admin-resource'],
   ['/admin/security', '.admin-security'],

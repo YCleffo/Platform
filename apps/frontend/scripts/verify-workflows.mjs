@@ -124,6 +124,7 @@ await context.route('**/api/**', async (route) => {
       user: { id: id(10), email: 'operator@example.test' },
       privacy: true,
       finance: true,
+      catalog: true,
     });
   if (path === '/api/control/me')
     return send({
@@ -404,23 +405,32 @@ try {
   await page.locator('form button[type=submit]').click();
   await page.waitForURL((u) => u.pathname === '/admin');
   for (const resource of coreResources) {
+    const isRegistry = ['representations', 'erasureCases', 'privacyIncidents', 'distributionConsents'].includes(resource.key);
     const path =
       resource.key === 'roles' || resource.key === 'permissions'
         ? '/admin/rbac'
         : resource.key === 'legalHolds'
           ? '/admin/privacy'
-          : '/admin/' + resource.key;
+          : isRegistry
+            ? '/admin/privacy/registry'
+            : '/admin/' + resource.key;
     await navigate(
       path,
       resource.key === 'roles' || resource.key === 'permissions'
         ? '.admin-tabs'
         : resource.key === 'legalHolds'
           ? '.admin-tabs'
-          : '.admin-resource',
+          : isRegistry
+            ? '.privacy-registry'
+            : '.admin-resource',
     );
     if (resource.key === 'permissions')
       await page.locator('.admin-tabs__nav button').nth(1).click();
     if (resource.key === 'legalHolds') await page.locator('.admin-tabs__nav button').nth(1).click();
+    if (resource.key === 'representations') await page.locator('.privacy-registry__tabs button').nth(0).click();
+    if (resource.key === 'erasureCases') await page.locator('.privacy-registry__tabs button').nth(1).click();
+    if (resource.key === 'privacyIncidents') await page.locator('.privacy-registry__tabs button').nth(2).click();
+    if (resource.key === 'distributionConsents') await page.locator('.privacy-registry__tabs button').nth(3).click();
     await page.locator('.admin-resource tbody tr').first().waitFor();
     if (resource.create) {
       const op = coreOperations.find((o) => o.key === resource.create);
@@ -632,7 +642,7 @@ try {
       fixtureOnly: true,
       passed: true,
       states: states.length,
-      coreOperations: 53,
+      coreOperations: coreOperations.length + coreResources.length,
       commercialOperations: 10,
     }),
   );

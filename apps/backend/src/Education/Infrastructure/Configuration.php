@@ -15,8 +15,12 @@ final class Configuration
     public static function params(): array
     {
         $audit = [];
-        foreach (['create_group', 'enroll_student', 'create_lesson', 'create_event', 'mark_attendance', 'save_profile',
-            'start_thread', 'send_message', 'read_thread', 'read_notification', 'upload_file', 'assign_teacher'] as $operation) {
+        foreach (['create_group', 'update_group', 'archive_group', 'enroll_student', 'remove_group_student',
+            'transfer_student', 'create_lesson', 'update_lesson', 'complete_lesson', 'cancel_lesson', 'create_event',
+            'mark_attendance', 'save_lesson_report', 'save_lesson_result', 'invite_student', 'revoke_student_account',
+            'activate_invite', 'activities_assign', 'student_start_attempt', 'student_finish_attempt', 'save_profile',
+            'start_thread', 'send_message', 'read_thread', 'read_notification',
+            'upload_file', 'delete_file', 'assign_teacher'] as $operation) {
             $audit[] = new AuditEventDefinition('education.' . $operation, metadataFields: ['organizationId' => 'uuid']);
         }
         return ['auditEventDefinitions' => $audit,

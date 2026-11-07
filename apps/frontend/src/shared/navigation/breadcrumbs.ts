@@ -15,6 +15,7 @@ export function breadcrumbs(name: unknown, params: Record<string, unknown>, t: (
       return [...chain, item('navigation.' + (profile[route.slice(14)] ?? 'profile'))];
     }
     if (route === 'admin-privacy-request') return [root, item('admin.privacy', { name: 'admin-privacy' }), item('navigation.request')];
+    if (route === 'admin-privacy-registry') return [root, item('admin.privacy', { name: 'admin-privacy' }), item('navigation.privacyRegistry')];
     return [root, { label: fallback || t('navigation.' + route.slice(6)) }];
   }
   if (route.startsWith('account-')) {

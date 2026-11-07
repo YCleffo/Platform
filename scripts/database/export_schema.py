@@ -32,6 +32,8 @@ TARGETS = {
         "docs/database/commercial/Commercial_ControlPlane_v2.dbml",
     ),
     "education": ("education", "docs/database/education/Education_v1.dbml"),
+    "device_management": ("device_management", "docs/database/device_management/DeviceManagement_v1.dbml"),
+    "storage": ("storage", "docs/database/storage/Storage_v1.dbml"),
 }
 
 COMMENT_TRANSLATIONS: dict[str, str] = json.loads(
@@ -42,18 +44,24 @@ PLANE_SCHEMAS = {
     "core": {"core", "platform_runtime"},
     "commercial": {"commercial"},
     "education": {"education"},
+    "device_management": {"device_management"},
+    "storage": {"storage"},
 }
 
 SNAPSHOTS = {
     "core": "docs/database/core/schema.catalog.json",
     "commercial": "docs/database/commercial/schema.catalog.json",
     "education": "docs/database/education/schema.catalog.json",
+    "device_management": "docs/database/device_management/schema.catalog.json",
+    "storage": "docs/database/storage/schema.catalog.json",
 }
 
 PLANE_TARGETS = {
     "core": ["core", "runtime"],
     "commercial": ["commercial"],
     "education": ["education"],
+    "device_management": ["device_management"],
+    "storage": ["storage"],
 }
 
 
@@ -244,8 +252,8 @@ def restrict_catalog(catalog: Catalog, plane: str) -> Catalog:
 def migration_manifest(plane: str) -> list[MigrationSource]:
     if plane == "commercial":
         directory, pattern = "apps/control-plane/migrations", "Version*.php"
-    elif plane == "education":
-        directory, pattern = "apps/backend/migrations/education", "*.sql"
+    elif plane in ("education", "device_management", "storage"):
+        directory, pattern = f"apps/backend/migrations/{plane}", "*.sql"
     else:
         directory, pattern = "apps/backend/migrations/sql", "*.sql"
     return [
@@ -327,7 +335,7 @@ def main() -> None:
         elif plane == "commercial":
             history_sql = "SELECT COALESCE(json_agg(version ORDER BY version),'[]') FROM public.doctrine_migration_versions;"
         else:
-            history_sql = "SELECT COALESCE(json_agg(name ORDER BY name),'[]') FROM education.module_migrations;"
+            history_sql = f"SELECT COALESCE(json_agg(name ORDER BY name),'[]') FROM {plane}.module_migrations;"
         history = subprocess.run(
             command,
             input=history_sql,

@@ -25,6 +25,7 @@ export interface Field {
   min?: number;
   max?: number;
   initial?: FormValue;
+  fromRow?: boolean;
   when?: (data: FormData) => boolean;
 }
 export interface Operation {
@@ -51,14 +52,16 @@ export class FormValidationError extends Error {
 export function initialData(fields: Field[], row: Record<string, unknown> = {}): FormData {
   return Object.fromEntries(
     fields.map((field) => {
-      const raw =
-        row[field.name] ??
-        field.initial ??
-        (field.kind === 'boolean'
+      const fallback =
+        field.kind === 'boolean'
           ? false
           : ['multi', 'codes'].includes(field.kind ?? '')
             ? []
-            : '');
+            : '';
+      const raw =
+        field.fromRow === false
+          ? (field.initial ?? fallback)
+          : (row[field.name] ?? field.initial ?? fallback);
       const value = Array.isArray(raw)
         ? raw.filter((v): v is string => typeof v === 'string')
         : ['string', 'number', 'boolean'].includes(typeof raw)

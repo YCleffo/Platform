@@ -9,6 +9,12 @@ return [
         'education:migrate' => \App\Education\Console\MigrateCommand::class,
         'education:teacher:assign' => \App\Education\Console\AssignTeacherCommand::class,
     ] : []),
+    ...(class_exists(\App\DeviceManagement\Console\MigrateCommand::class) ? [
+        'device:migrate' => \App\DeviceManagement\Console\MigrateCommand::class,
+    ] : []),
+    ...(class_exists(\App\Storage\Console\MigrateCommand::class) ? [
+        'storage:migrate' => \App\Storage\Console\MigrateCommand::class,
+    ] : []),
     'scheduler:run' => Console\SchedulerRunCommand::class,
     'ops:status' => Console\OpsStatusCommand::class,
     'ops:health' => Console\OpsHealthCommand::class,

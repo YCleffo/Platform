@@ -94,4 +94,41 @@ final readonly class PrivateFileStore implements FileStore
             throw new EducationError(503, 'file_store_unavailable');
         }
     }
+
+    public function stageRemoval(string $key): ?string
+    {
+        Input::uuid($key);
+        $path = $this->directory . DIRECTORY_SEPARATOR . $key;
+        if (!is_file($path)) {
+            return null;
+        }
+        $trash = $this->directory . DIRECTORY_SEPARATOR . '.trash';
+        if (!is_dir($trash) && !mkdir($trash, 0700, true) && !is_dir($trash)) {
+            throw new EducationError(503, 'file_store_unavailable');
+        }
+        $staged = $trash . DIRECTORY_SEPARATOR . $key;
+        if (!rename($path, $staged)) {
+            throw new EducationError(503, 'file_store_unavailable');
+        }
+        return $staged;
+    }
+
+    public function restoreRemoval(?string $stagedPath): void
+    {
+        if ($stagedPath === null || !is_file($stagedPath)) {
+            return;
+        }
+        $key = basename($stagedPath);
+        Input::uuid($key);
+        if (!rename($stagedPath, $this->directory . DIRECTORY_SEPARATOR . $key)) {
+            throw new EducationError(503, 'file_store_unavailable');
+        }
+    }
+
+    public function purgeRemoval(?string $stagedPath): void
+    {
+        if ($stagedPath !== null && is_file($stagedPath) && !unlink($stagedPath)) {
+            throw new EducationError(503, 'file_store_unavailable');
+        }
+    }
 }

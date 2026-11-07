@@ -370,7 +370,7 @@ const contextItems = computed<MenuItem[]>(() => [
 .components-view__check-group::before {
   content: '';
   position: absolute;
-  inset-block-start: calc(var(--control-h-l) / 2 + 9px * var(--ui-density-scale, 1));
+  inset-block-start: calc(var(--control-h-l) / 2 + 14px * var(--ui-density-scale, 1));
   inset-block-end: 0;
   inset-inline-start: 0;
   width: 1px;

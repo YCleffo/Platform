@@ -60,7 +60,9 @@ let controller: AbortController | undefined;
 const canRead = computed(() =>
   props.config.key === 'audit'
     ? auth.roles?.includes('core.superadmin')
-    : auth.can(props.config.permission),
+    : props.config.permission === ''
+      ? auth.isAuthenticated
+      : auth.can(props.config.permission),
 );
 const shown = computed(() =>
   items.value.filter(

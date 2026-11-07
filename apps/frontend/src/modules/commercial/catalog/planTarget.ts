@@ -1,11 +1,12 @@
 import { onMounted } from 'vue';
-import type { RouteLocationRaw } from 'vue-router';
+import { useRouter, type RouteLocationRaw } from 'vue-router';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useAccountStore } from '@/core/account/accountStore';
 import type { Plan } from '@/shared/types';
 
-/** Shared catalog CTA target. Keeps account bootstrap out of individual views. */
+/** Shared catalog CTA target. Keeps account bootstrap and plan intent out of individual views. */
 export function usePlanTarget() {
+  const router = useRouter();
   const auth = useAuthStore();
   const accounts = useAccountStore();
 
@@ -16,18 +17,24 @@ export function usePlanTarget() {
   });
 
   return function target(plan: Plan): RouteLocationRaw {
+    const price = plan.prices[0];
+    const planQuery = price === undefined ? {} : { planPrice: price.id };
     if (!auth.isAuthenticated) {
-      return { name: 'login', query: { redirect: '/' } };
+      const planRoute = router.resolve({
+        name: 'plan-detail',
+        params: { code: plan.code },
+        query: planQuery,
+      });
+      return { name: 'login', query: { redirect: planRoute.fullPath } };
     }
     const accountId = accounts.accounts[0]?.id;
     if (accountId === undefined) {
-      return { name: 'cabinet' };
+      return { name: 'cabinet', query: planQuery };
     }
-    const price = plan.prices[0];
     return {
       name: 'account-billing',
       params: { accountId },
-      query: price === undefined ? {} : { planPrice: price.id },
+      query: planQuery,
     };
   };
 }

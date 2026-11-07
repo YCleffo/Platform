@@ -19,6 +19,23 @@ export function formatZonedTime(instant: string, locale: string, timezone: strin
   return new Intl.DateTimeFormat(locale, { timeZone: timezone, hour: '2-digit', minute: '2-digit' }).format(new Date(instant));
 }
 
+export function isoToZonedDateTime(instant: string, timezone: string): string {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(new Date(instant))
+      .map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
 /** Reject missing and repeated wall-clock times instead of silently moving a lesson. */
 export function zonedDateTimeToIso(local: string, timezone: string): string {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local)) throw new RangeError('Invalid local date/time');

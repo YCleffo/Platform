@@ -4,6 +4,1233 @@
   "tables": [
     {
       "rls": false,
+      "name": "activity_assignments",
+      "schema": "education",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "owner_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "activity_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "group_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "student_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "config",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "opens_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "due_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "completion",
+          "type": "jsonb",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "organization_id",
+            "owner_account_id",
+            "group_id"
+          ],
+          "name": "activity_assignments_group",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE INDEX activity_assignments_group ON education.activity_assignments USING btree (organization_id, owner_account_id, group_id)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "activity_assignments_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX activity_assignments_pkey ON education.activity_assignments USING btree (id)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "f",
+          "name": "activity_assignments_activity_id_fkey",
+          "columns": [
+            "activity_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (activity_id) REFERENCES education.activity_definitions(id)",
+          "target_table": "activity_definitions",
+          "target_schema": "education",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_assignments_activity_id_not_null",
+          "columns": [
+            "activity_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL activity_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "activity_assignments_check",
+          "columns": [
+            "group_id",
+            "student_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (group_id IS NOT NULL OR student_id IS NOT NULL)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_assignments_config_not_null",
+          "columns": [
+            "config"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL config",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_assignments_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "activity_assignments_group_id_organization_id_owner_accoun_fkey",
+          "columns": [
+            "group_id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (group_id, organization_id, owner_account_id) REFERENCES education.groups(id, organization_id, owner_account_id)",
+          "target_table": "groups",
+          "target_schema": "education",
+          "target_columns": [
+            "id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_assignments_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_assignments_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_assignments_owner_account_id_not_null",
+          "columns": [
+            "owner_account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL owner_account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "activity_assignments_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "activity_assignments_student_id_organization_id_owner_acco_fkey",
+          "columns": [
+            "student_id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)",
+          "target_table": "students",
+          "target_schema": "education",
+          "target_columns": [
+            "id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "activity_attempts",
+      "schema": "education",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "student_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "activity_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "assignment_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "status",
+          "type": "character varying(20)",
+          "comment": null,
+          "default": "'running'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "source",
+          "type": "character varying(20)",
+          "comment": null,
+          "default": "'browser'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "contract_version",
+          "type": "integer",
+          "comment": null,
+          "default": "1",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "exercise_text",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "result_payload",
+          "type": "jsonb",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "result_version",
+          "type": "integer",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "config",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "activity_attempts_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX activity_attempts_pkey ON education.activity_attempts USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "organization_id",
+            "student_id",
+            "started_at",
+            "id"
+          ],
+          "name": "activity_attempts_student",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 4,
+          "predicate": null,
+          "definition": "CREATE INDEX activity_attempts_student ON education.activity_attempts USING btree (organization_id, student_id, started_at DESC, id)",
+          "attribute_count": 4
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "activity_attempts_account_id_not_null",
+          "columns": [
+            "account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "activity_attempts_activity_id_fkey",
+          "columns": [
+            "activity_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (activity_id) REFERENCES education.activity_definitions(id)",
+          "target_table": "activity_definitions",
+          "target_schema": "education",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_attempts_activity_id_not_null",
+          "columns": [
+            "activity_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL activity_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "activity_attempts_assignment_id_fkey",
+          "columns": [
+            "assignment_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (assignment_id) REFERENCES education.activity_assignments(id)",
+          "target_table": "activity_assignments",
+          "target_schema": "education",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "activity_attempts_check",
+          "columns": [
+            "finished_at",
+            "started_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (finished_at IS NULL OR finished_at >= started_at)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_attempts_config_not_null",
+          "columns": [
+            "config"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL config",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_attempts_contract_version_not_null",
+          "columns": [
+            "contract_version"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL contract_version",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_attempts_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_attempts_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "activity_attempts_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "activity_attempts_source_check",
+          "columns": [
+            "source"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (source::text = ANY (ARRAY['browser'::character varying, 'managed-device'::character varying, 'native-app'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_attempts_source_not_null",
+          "columns": [
+            "source"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL source",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_attempts_started_at_not_null",
+          "columns": [
+            "started_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL started_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "activity_attempts_status_check",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (status::text = ANY (ARRAY['running'::character varying, 'finished'::character varying, 'expired'::character varying, 'failed'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_attempts_status_not_null",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL status",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "activity_attempts_student_id_fkey",
+          "columns": [
+            "student_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (student_id) REFERENCES education.students(id)",
+          "target_table": "students",
+          "target_schema": "education",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_attempts_student_id_not_null",
+          "columns": [
+            "student_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL student_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "activity_definitions",
+      "schema": "education",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "code",
+          "type": "character varying(60)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "name",
+          "type": "character varying(160)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "kind",
+          "type": "character varying(40)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "contract_version",
+          "type": "integer",
+          "comment": null,
+          "default": "1",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "enabled",
+          "type": "boolean",
+          "comment": null,
+          "default": "true",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bool",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "config",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "metrics",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'[]'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "required_permission",
+          "type": "character varying(180)",
+          "comment": null,
+          "default": "'education.activities.use'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "code"
+          ],
+          "name": "activity_definitions_code_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX activity_definitions_code_key ON education.activity_definitions USING btree (code)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "activity_definitions_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX activity_definitions_pkey ON education.activity_definitions USING btree (id)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "u",
+          "name": "activity_definitions_code_key",
+          "columns": [
+            "code"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (code)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_definitions_code_not_null",
+          "columns": [
+            "code"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL code",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_definitions_config_not_null",
+          "columns": [
+            "config"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL config",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "activity_definitions_contract_version_check",
+          "columns": [
+            "contract_version"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (contract_version > 0)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_definitions_contract_version_not_null",
+          "columns": [
+            "contract_version"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL contract_version",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_definitions_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_definitions_enabled_not_null",
+          "columns": [
+            "enabled"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL enabled",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_definitions_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "activity_definitions_kind_check",
+          "columns": [
+            "kind"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (kind::text = ANY (ARRAY['typing'::character varying, 'web-game'::character varying, 'test'::character varying, 'programming'::character varying, 'native-app'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_definitions_kind_not_null",
+          "columns": [
+            "kind"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL kind",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_definitions_metrics_not_null",
+          "columns": [
+            "metrics"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL metrics",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "activity_definitions_name_check",
+          "columns": [
+            "name"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (btrim(name::text) <> ''::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_definitions_name_not_null",
+          "columns": [
+            "name"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL name",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "activity_definitions_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "activity_definitions_required_permission_not_null",
+          "columns": [
+            "required_permission"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL required_permission",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
       "name": "attendance",
       "schema": "education",
       "columns": [
@@ -1144,6 +2371,20 @@
           "predicate": null,
           "definition": "CREATE UNIQUE INDEX group_students_pkey ON education.group_students USING btree (group_id, student_id)",
           "attribute_count": 2
+        },
+        {
+          "keys": [
+            "student_id",
+            "group_id"
+          ],
+          "name": "group_students_student",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX group_students_student ON education.group_students USING btree (student_id, group_id)",
+          "attribute_count": 2
         }
       ],
       "policies": [],
@@ -1346,6 +2587,18 @@
           "generated": "",
           "type_name": "timestamptz",
           "type_schema": "pg_catalog"
+        },
+        {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
         }
       ],
       "comment": null,
@@ -1524,6 +2777,780 @@
     },
     {
       "rls": false,
+      "name": "lesson_reports",
+      "schema": "education",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "owner_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "owner_person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "lesson_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "topic",
+          "type": "character varying(240)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "summary",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "teacher_comment",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "name": "lesson_reports_id_organization_id_owner_account_id_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX lesson_reports_id_organization_id_owner_account_id_key ON education.lesson_reports USING btree (id, organization_id, owner_account_id)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "lesson_id"
+          ],
+          "name": "lesson_reports_lesson",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX lesson_reports_lesson ON education.lesson_reports USING btree (lesson_id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "lesson_id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "name": "lesson_reports_lesson_id_organization_id_owner_account_id_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX lesson_reports_lesson_id_organization_id_owner_account_id_key ON education.lesson_reports USING btree (lesson_id, organization_id, owner_account_id)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "lesson_reports_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX lesson_reports_pkey ON education.lesson_reports USING btree (id)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "lesson_reports_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "lesson_reports_id_organization_id_owner_account_id_key",
+          "columns": [
+            "id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (id, organization_id, owner_account_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_reports_lesson_id_not_null",
+          "columns": [
+            "lesson_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL lesson_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "lesson_reports_lesson_id_organization_id_owner_account_id_fkey",
+          "columns": [
+            "lesson_id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (lesson_id, organization_id, owner_account_id) REFERENCES education.lessons(id, organization_id, owner_account_id)",
+          "target_table": "lessons",
+          "target_schema": "education",
+          "target_columns": [
+            "id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "lesson_reports_lesson_id_organization_id_owner_account_id_key",
+          "columns": [
+            "lesson_id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (lesson_id, organization_id, owner_account_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_reports_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_reports_owner_account_id_not_null",
+          "columns": [
+            "owner_account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL owner_account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_reports_owner_person_id_not_null",
+          "columns": [
+            "owner_person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL owner_person_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "lesson_reports_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "lesson_reports_summary_check",
+          "columns": [
+            "summary"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (length(summary) >= 1 AND length(summary) <= 4000)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_reports_summary_not_null",
+          "columns": [
+            "summary"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL summary",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "lesson_reports_teacher_comment_check",
+          "columns": [
+            "teacher_comment"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (teacher_comment IS NULL OR length(teacher_comment) >= 1 AND length(teacher_comment) <= 4000)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "lesson_reports_topic_check",
+          "columns": [
+            "topic"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (btrim(topic::text) <> ''::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_reports_topic_not_null",
+          "columns": [
+            "topic"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL topic",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_reports_updated_at_not_null",
+          "columns": [
+            "updated_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL updated_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "lesson_results",
+      "schema": "education",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "owner_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "lesson_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "student_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "status",
+          "type": "character varying(20)",
+          "comment": null,
+          "default": "'pending'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "comment",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "lesson_id",
+            "student_id"
+          ],
+          "name": "lesson_results_lesson_id_student_id_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX lesson_results_lesson_id_student_id_key ON education.lesson_results USING btree (lesson_id, student_id)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "lesson_results_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX lesson_results_pkey ON education.lesson_results USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "student_id",
+            "lesson_id"
+          ],
+          "name": "lesson_results_student",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX lesson_results_student ON education.lesson_results USING btree (student_id, lesson_id)",
+          "attribute_count": 2
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "c",
+          "name": "lesson_results_comment_check",
+          "columns": [
+            "comment"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (comment IS NULL OR length(comment) >= 1 AND length(comment) <= 1000)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_results_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_results_lesson_id_not_null",
+          "columns": [
+            "lesson_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL lesson_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "lesson_results_lesson_id_organization_id_owner_account_id_fkey",
+          "columns": [
+            "lesson_id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (lesson_id, organization_id, owner_account_id) REFERENCES education.lessons(id, organization_id, owner_account_id)",
+          "target_table": "lessons",
+          "target_schema": "education",
+          "target_columns": [
+            "id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "lesson_results_lesson_id_student_id_key",
+          "columns": [
+            "lesson_id",
+            "student_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (lesson_id, student_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_results_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_results_owner_account_id_not_null",
+          "columns": [
+            "owner_account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL owner_account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "lesson_results_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "lesson_results_status_check",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (status::text = ANY (ARRAY['pending'::character varying, 'mastered'::character varying, 'developing'::character varying, 'needs_support'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_results_status_not_null",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL status",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_results_student_id_not_null",
+          "columns": [
+            "student_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL student_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "lesson_results_student_id_organization_id_owner_account_id_fkey",
+          "columns": [
+            "student_id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)",
+          "target_table": "students",
+          "target_schema": "education",
+          "target_columns": [
+            "id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "lesson_results_updated_at_not_null",
+          "columns": [
+            "updated_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL updated_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
       "name": "lessons",
       "schema": "education",
       "columns": [
@@ -1658,10 +3685,50 @@
           "generated": "",
           "type_name": "timestamptz",
           "type_schema": "pg_catalog"
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
         }
       ],
       "comment": null,
       "indexes": [
+        {
+          "keys": [
+            "group_id",
+            "status",
+            "starts_at",
+            "id"
+          ],
+          "name": "lessons_group_status_time",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 4,
+          "predicate": null,
+          "definition": "CREATE INDEX lessons_group_status_time ON education.lessons USING btree (group_id, status, starts_at, id)",
+          "attribute_count": 4
+        },
         {
           "keys": [
             "id",
@@ -2941,6 +5008,870 @@
     },
     {
       "rls": false,
+      "name": "result_revisions",
+      "schema": "education",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "owner_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "result_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "status",
+          "type": "character varying(20)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "comment",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "revised_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "revised_by_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "result_revisions_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX result_revisions_pkey ON education.result_revisions USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "result_id",
+            "revised_at",
+            "id"
+          ],
+          "name": "result_revisions_result",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE INDEX result_revisions_result ON education.result_revisions USING btree (result_id, revised_at, id)",
+          "attribute_count": 3
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "c",
+          "name": "result_revisions_comment_check",
+          "columns": [
+            "comment"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (comment IS NULL OR length(comment) >= 1 AND length(comment) <= 1000)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "result_revisions_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "result_revisions_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "result_revisions_owner_account_id_not_null",
+          "columns": [
+            "owner_account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL owner_account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "result_revisions_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "result_revisions_result_id_fkey",
+          "columns": [
+            "result_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (result_id) REFERENCES education.lesson_results(id)",
+          "target_table": "lesson_results",
+          "target_schema": "education",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "result_revisions_result_id_not_null",
+          "columns": [
+            "result_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL result_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "result_revisions_revised_at_not_null",
+          "columns": [
+            "revised_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL revised_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "result_revisions_revised_by_account_id_not_null",
+          "columns": [
+            "revised_by_account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL revised_by_account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "result_revisions_status_check",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (status::text = ANY (ARRAY['pending'::character varying, 'mastered'::character varying, 'developing'::character varying, 'needs_support'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "result_revisions_status_not_null",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL status",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "student_accounts",
+      "schema": "education",
+      "columns": [
+        {
+          "name": "student_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "account_id",
+            "organization_id"
+          ],
+          "name": "student_accounts_account",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "(revoked_at IS NULL)",
+          "definition": "CREATE INDEX student_accounts_account ON education.student_accounts USING btree (account_id, organization_id) WHERE (revoked_at IS NULL)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "organization_id",
+            "account_id"
+          ],
+          "name": "student_accounts_organization_id_account_id_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX student_accounts_organization_id_account_id_key ON education.student_accounts USING btree (organization_id, account_id)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "student_id",
+            "organization_id"
+          ],
+          "name": "student_accounts_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX student_accounts_pkey ON education.student_accounts USING btree (student_id, organization_id)",
+          "attribute_count": 2
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "student_accounts_account_id_not_null",
+          "columns": [
+            "account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "student_accounts_activated_at_not_null",
+          "columns": [
+            "activated_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL activated_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "student_accounts_organization_id_account_id_key",
+          "columns": [
+            "organization_id",
+            "account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (organization_id, account_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "student_accounts_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "student_accounts_person_id_not_null",
+          "columns": [
+            "person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL person_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "student_accounts_pkey",
+          "columns": [
+            "student_id",
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (student_id, organization_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "student_accounts_student_id_fkey",
+          "columns": [
+            "student_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (student_id) REFERENCES education.students(id)",
+          "target_table": "students",
+          "target_schema": "education",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "student_accounts_student_id_not_null",
+          "columns": [
+            "student_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL student_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "student_invites",
+      "schema": "education",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "owner_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "student_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "code_hash",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "used_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "used_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "code_hash"
+          ],
+          "name": "student_invites_code_hash_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX student_invites_code_hash_key ON education.student_invites USING btree (code_hash)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "student_invites_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX student_invites_pkey ON education.student_invites USING btree (id)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "u",
+          "name": "student_invites_code_hash_key",
+          "columns": [
+            "code_hash"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (code_hash)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "student_invites_code_hash_not_null",
+          "columns": [
+            "code_hash"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL code_hash",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "student_invites_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "student_invites_expires_at_not_null",
+          "columns": [
+            "expires_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL expires_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "student_invites_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "student_invites_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "student_invites_owner_account_id_not_null",
+          "columns": [
+            "owner_account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL owner_account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "student_invites_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "student_invites_student_id_not_null",
+          "columns": [
+            "student_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL student_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "student_invites_student_id_organization_id_owner_account_i_fkey",
+          "columns": [
+            "student_id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)",
+          "target_table": "students",
+          "target_schema": "education",
+          "target_columns": [
+            "id",
+            "organization_id",
+            "owner_account_id"
+          ],
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
       "name": "students",
       "schema": "education",
       "columns": [
@@ -3798,6 +6729,502 @@
           "initially_deferred": false
         }
       ]
+    },
+    {
+      "rls": false,
+      "name": "typing_results",
+      "schema": "education",
+      "columns": [
+        {
+          "name": "attempt_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "student_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "duration_seconds",
+          "type": "integer",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "language",
+          "type": "character varying(2)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "keystrokes",
+          "type": "integer",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "correct_chars",
+          "type": "integer",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "errors",
+          "type": "integer",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "wpm",
+          "type": "numeric(6,1)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "numeric",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "accuracy",
+          "type": "numeric(5,2)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "numeric",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "attempt_id"
+          ],
+          "name": "typing_results_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX typing_results_pkey ON education.typing_results USING btree (attempt_id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "organization_id",
+            "student_id",
+            "wpm"
+          ],
+          "name": "typing_results_student",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE INDEX typing_results_student ON education.typing_results USING btree (organization_id, student_id, wpm DESC)",
+          "attribute_count": 3
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "c",
+          "name": "typing_results_accuracy_check",
+          "columns": [
+            "accuracy"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (accuracy >= 0::numeric AND accuracy <= 100::numeric)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "typing_results_accuracy_not_null",
+          "columns": [
+            "accuracy"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL accuracy",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "typing_results_attempt_id_fkey",
+          "columns": [
+            "attempt_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (attempt_id) REFERENCES education.activity_attempts(id)",
+          "target_table": "activity_attempts",
+          "target_schema": "education",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "typing_results_attempt_id_not_null",
+          "columns": [
+            "attempt_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL attempt_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "typing_results_check",
+          "columns": [
+            "correct_chars",
+            "keystrokes"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (correct_chars >= 0 AND correct_chars <= keystrokes)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "typing_results_check1",
+          "columns": [
+            "errors",
+            "keystrokes"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (errors >= 0 AND errors <= keystrokes)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "typing_results_correct_chars_not_null",
+          "columns": [
+            "correct_chars"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL correct_chars",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "typing_results_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "typing_results_duration_seconds_check",
+          "columns": [
+            "duration_seconds"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (duration_seconds = ANY (ARRAY[15, 30, 60]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "typing_results_duration_seconds_not_null",
+          "columns": [
+            "duration_seconds"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL duration_seconds",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "typing_results_errors_not_null",
+          "columns": [
+            "errors"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL errors",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "typing_results_keystrokes_check",
+          "columns": [
+            "keystrokes"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (keystrokes >= 0 AND keystrokes <= 10000)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "typing_results_keystrokes_not_null",
+          "columns": [
+            "keystrokes"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL keystrokes",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "typing_results_language_check",
+          "columns": [
+            "language"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (language::text = ANY (ARRAY['ru'::character varying, 'en'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "typing_results_language_not_null",
+          "columns": [
+            "language"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL language",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "typing_results_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "typing_results_pkey",
+          "columns": [
+            "attempt_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (attempt_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "typing_results_student_id_fkey",
+          "columns": [
+            "student_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (student_id) REFERENCES education.students(id)",
+          "target_table": "students",
+          "target_schema": "education",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "typing_results_student_id_not_null",
+          "columns": [
+            "student_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL student_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "typing_results_wpm_check",
+          "columns": [
+            "wpm"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (wpm >= 0::numeric AND wpm <= 500::numeric)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "typing_results_wpm_not_null",
+          "columns": [
+            "wpm"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL wpm",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
     }
   ],
   "schemas": [
@@ -3807,7 +7234,12 @@
   "server_version": "18.6 (Debian 18.6-1.pgdg13+2)",
   "applied_migrations": [
     "001_education.sql",
-    "002_message_read_cursor.sql"
+    "002_message_read_cursor.sql",
+    "003_group_archive_lesson_lifecycle.sql",
+    "004_lesson_results_journal.sql",
+    "005_student_identity_activities.sql",
+    "006_activity_attempt_config.sql",
+    "007_teacher_role_permissions.sql"
   ],
   "migration_sources": [
     {
@@ -3817,6 +7249,26 @@
     {
       "path": "apps/backend/migrations/education/002_message_read_cursor.sql",
       "sha256": "e1fc0a0157d4e186c6e364b484a07f93def771cadb9b17ae3865a1cf79fe3b6c"
+    },
+    {
+      "path": "apps/backend/migrations/education/003_group_archive_lesson_lifecycle.sql",
+      "sha256": "b3f34ffab8793603a3fc6c453221ca56e5b0b4fe6b2ac4d16879d96d8276d8ba"
+    },
+    {
+      "path": "apps/backend/migrations/education/004_lesson_results_journal.sql",
+      "sha256": "fd6fd86da11374b9953b4757220992db921c8a09bcaefa104c91124efe1815bf"
+    },
+    {
+      "path": "apps/backend/migrations/education/005_student_identity_activities.sql",
+      "sha256": "d91abeb64faa4e3c9e386715e283e5b91732031768061381ce40e0406dbe7e18"
+    },
+    {
+      "path": "apps/backend/migrations/education/006_activity_attempt_config.sql",
+      "sha256": "8c55bcfd0c924951c77e414336d9846671a6f0c3cd91361f5528e01479ed30e6"
+    },
+    {
+      "path": "apps/backend/migrations/education/007_teacher_role_permissions.sql",
+      "sha256": "b3c4b43e6938770c77439a91890c817f304a9470422bc4d2f3e8be82aad5427c"
     }
   ]
 }

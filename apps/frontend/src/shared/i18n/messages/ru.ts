@@ -2,7 +2,7 @@ import {operatorRu} from '../operator';
 import {workbenchRu} from '../workbench';
 export default {
   picker: { chooseDate: 'Выбрать дату', chooseTime: 'Выбрать время', date: 'Дата', time: 'Время', dateTime: 'Дата и время', dateFormatEn: 'MM/DD/YYYY', dateFormatRu: 'ДД.ММ.ГГГГ', invalid: 'Введите корректную дату или время.', range: 'Выберите значение в допустимом диапазоне.', previousMonth: 'Предыдущий месяц', nextMonth: 'Следующий месяц', month: 'Месяц', year: 'Год', hours: 'Часы', minutes: 'Минуты', seconds: 'Секунды', today: 'Сегодня', clear: 'Очистить', apply: 'Применить', example: 'Календарь и время', hint: 'Выберите значение в календаре или введите вручную. Время указано в вашем часовом поясе.', disabled: 'Недоступная дата', disclosure: 'Раскрывающийся раздел', disclosureHint: 'Показать или скрыть дополнительные сведения.' },
-  navigation: { path: 'Хлебные крошки', hidden: 'Показать скрытые уровни', core: 'Core', account: 'Аккаунт', mfa: 'Двухфакторный вход', sessions: 'Устройства и сеансы', passkeys: 'Ключи доступа', identities: 'Внешние аккаунты', profile: 'Моя учётная запись', consents: 'Согласия', privacy: 'Персональные данные', request: 'Запрос', security: 'Безопасность', components: 'Компоненты', operator: 'Кабинет оператора', overview: 'Обзор', members: 'Участники', billing: 'Платежи', usage: 'Использование', analytics: 'Аналитика', audit: 'Журнал действий', invitations: 'Приглашения', comparePlans: 'Сравнение тарифов' },
+  navigation: { path: 'Хлебные крошки', hidden: 'Показать скрытые уровни', core: 'Core', account: 'Аккаунт', mfa: 'Двухфакторный вход', sessions: 'Устройства и сеансы', passkeys: 'Ключи доступа', identities: 'Внешние аккаунты', profile: 'Моя учётная запись', consents: 'Согласия', privacy: 'Персональные данные', privacyRegistry: 'Реестр приватности', request: 'Запрос', security: 'Безопасность', components: 'Компоненты', operator: 'Кабинет оператора', overview: 'Обзор', members: 'Участники', billing: 'Платежи', usage: 'Использование', analytics: 'Аналитика', audit: 'Журнал действий', invitations: 'Приглашения', comparePlans: 'Сравнение тарифов' },
   operator: operatorRu,
   workbench: workbenchRu,
   configuration: {
@@ -294,6 +294,7 @@ export default {
     legalName: 'Юридическое название (необязательно)',
     createSuccess: 'Учётная запись создана.',
     noAccounts: 'У вас пока нет коммерческих учётных записей.',
+    planIntent: 'Вы выбрали тариф. Создайте учётную запись, чтобы продолжить оформление.',
     role: 'Роль',
     status: 'Статус',
     role_owner: 'Владелец',
@@ -649,6 +650,8 @@ export default {
     settings: 'Настройки',
     operations: 'Операции',
     privacy: 'Операции с персональными данными',
+    privacyRegistry: 'Реестр приватности',
+    privacyRegistrySubtitle: 'Представительства, дела об удалении, инциденты и согласия на распространение.',
     audit: 'Журнал действий Core',
     auditHint: 'Операторский журнал действий Core. Только для главного администратора.',
     security: 'Безопасность',

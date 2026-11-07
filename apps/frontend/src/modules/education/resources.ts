@@ -8,7 +8,7 @@ export function useEducationError() {
   const { t } = useEducationI18n();
   return (error: unknown): string => {
     if (error instanceof ApiResponseError) return t('education.unexpected');
-    if (error instanceof ApiError) return t(`education.${error.status === 403 ? 'denied' : error.status === 404 ? 'notFound' : error.status < 500 ? 'invalid' : 'error'}`);
+    if (error instanceof ApiError) return t(`education.${error.status === 403 ? 'denied' : error.status === 404 ? 'notFound' : error.status === 409 ? 'conflict' : error.status < 500 ? 'invalid' : 'error'}`);
     return t('education.error');
   };
 }

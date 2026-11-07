@@ -12,11 +12,12 @@ import AppDialog from '@/shared/ui/overlays/AppDialog.vue';
 const open = defineModel<boolean>({ default: false });
 
 const emit = defineEmits<{
-  created: [];
+  created: [accountId: string];
 }>();
 
 const store = useAccountStore();
 const idempotencyKey = ref('');
+const createdAccountId = ref<string | null>(null);
 
 const form = useForm({
   initial: { code: '', displayName: '', legalName: '' },
@@ -28,7 +29,7 @@ const form = useForm({
 });
 
 const { submitting, message, run, clearError } = useAsyncAction(async () => {
-  await store.create(
+  const result = await store.create(
     {
       code: form.values.code.trim(),
       display_name: form.values.displayName.trim(),
@@ -36,11 +37,13 @@ const { submitting, message, run, clearError } = useAsyncAction(async () => {
     },
     idempotencyKey.value,
   );
+  createdAccountId.value = result.id;
 });
 
 watch(open, (value) => {
   if (value) {
     idempotencyKey.value = createIdempotencyKey();
+    createdAccountId.value = null;
     form.reset();
     clearError();
   }
@@ -51,9 +54,9 @@ async function onSubmit(): Promise<void> {
     return;
   }
   const ok = await run();
-  if (ok) {
+  if (ok && createdAccountId.value !== null) {
     open.value = false;
-    emit('created');
+    emit('created', createdAccountId.value);
   }
 }
 </script>

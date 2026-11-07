@@ -32,6 +32,7 @@ const { data, loading, error, refresh } = useEducationResource(
       v-if="data"
       :page="data"
       @more="(value) => (offset = value)"
+      @refresh="refresh"
     />
     <button
       v-if="offset"

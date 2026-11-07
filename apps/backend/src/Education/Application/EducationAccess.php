@@ -44,12 +44,17 @@ final readonly class EducationAccess
     {
         $personId = $this->assertAvailable($identity);
         $assigned = $this->store->teacherOrganizations($identity->accountId, $personId);
+        $studentOrgs = $this->store->studentOrganizations($identity->accountId);
         $organizations = [];
         foreach ($this->organizations->listFor($personId) as $organization) {
-            if (in_array($organization->id, $assigned, true) && $this->organizations->activeMember($personId, $organization->id)) {
-                $organizations[] = ['id' => $organization->id, 'name' => $organization->name];
+            if ($this->organizations->activeMember($personId, $organization->id)) {
+                $organizations[] = ['id' => $organization->id, 'name' => $organization->name,
+                    'teacher' => in_array($organization->id, $assigned, true),
+                    'student' => in_array($organization->id, $studentOrgs, true)];
             }
         }
+        $organizations = array_values(array_filter($organizations,
+            static fn(array $row): bool => $row['teacher'] || $row['student']));
         return ['organizations' => $organizations, 'personId' => $personId,
             'displayName' => $this->personName($personId), 'locale' => $identity->locale ?? 'ru-RU',
             'timezone' => $identity->timezone ?? 'UTC'];
@@ -63,6 +68,32 @@ final readonly class EducationAccess
             || !$this->organizations->activeMember($personId, $organizationId)) {
             throw new EducationError(403, 'access_denied');
         }
+        $timezone = $this->assertTimezone($identity);
+        $scope = new Scope($organizationId, $identity->accountId, $personId, $identity->locale ?? 'ru-RU', $timezone);
+        if (!$this->store->teacherExists($scope)) {
+            throw new EducationError(403, 'access_denied');
+        }
+        return $scope;
+    }
+
+    public function studentScope(AuthenticatedIdentity $identity, string $organizationId, string $permission): Scope
+    {
+        $personId = $this->assertAvailable($identity);
+        Input::uuid($organizationId);
+        if (!$this->permissions->hasPermission($identity->accountId, $permission)
+            || !$this->organizations->activeMember($personId, $organizationId)) {
+            throw new EducationError(403, 'access_denied');
+        }
+        $student = $this->store->studentByAccount($identity->accountId, $organizationId, $personId);
+        if ($student === null) {
+            throw new EducationError(403, 'access_denied');
+        }
+        return new Scope($organizationId, $identity->accountId, $personId,
+            $identity->locale ?? 'ru-RU', $this->assertTimezone($identity), $student['id']);
+    }
+
+    private function assertTimezone(AuthenticatedIdentity $identity): string
+    {
         $timezone = $identity->timezone ?? 'UTC';
         if ($timezone === '') {
             throw new EducationError(422, 'invalid_timezone');
@@ -72,11 +103,7 @@ final readonly class EducationAccess
         } catch (\Exception) {
             throw new EducationError(422, 'invalid_timezone');
         }
-        $scope = new Scope($organizationId, $identity->accountId, $personId, $identity->locale ?? 'ru-RU', $timezone);
-        if (!$this->store->teacherExists($scope)) {
-            throw new EducationError(403, 'access_denied');
-        }
-        return $scope;
+        return $timezone;
     }
 
     public function personName(string $personId): ?string

@@ -98,6 +98,10 @@ $permission = static fn(string $code): array => [
 return [
     ...((getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\Education\Api\EducationAction::class))
         ? require __DIR__ . '/education-routes.php' : []),
+    ...((getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\DeviceManagement\Api\DeviceAction::class))
+        ? require __DIR__ . '/device-routes.php' : []),
+    ...((getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\Storage\Api\StorageAction::class))
+        ? require __DIR__ . '/storage-routes.php' : []),
     Route::get('/api/core/privacy/work-items/representation')
         ->defaults(['kind' => 'representation'])
         ->middleware(RequireAuthentication::class, $permission('core.privacy.representations.manage'))

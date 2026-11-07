@@ -2,7 +2,7 @@ import {operatorEn} from '../operator';
 import {workbenchEn} from '../workbench';
 export default {
   picker: { chooseDate: 'Choose a date', chooseTime: 'Choose a time', date: 'Date', time: 'Time', dateTime: 'Date and time', dateFormatEn: 'MM/DD/YYYY', dateFormatRu: 'DD.MM.YYYY', invalid: 'Enter a valid date or time.', range: 'Choose a value within the allowed range.', previousMonth: 'Previous month', nextMonth: 'Next month', month: 'Month', year: 'Year', hours: 'Hours', minutes: 'Minutes', seconds: 'Seconds', today: 'Today', clear: 'Clear', apply: 'Apply', example: 'Calendar and time', hint: 'Choose with the picker or type a date and time. The field uses your local time.', disabled: 'Unavailable date', disclosure: 'Expandable section', disclosureHint: 'Show or hide extra information.' },
-  navigation: { path: 'Breadcrumbs', hidden: 'Show hidden levels', core: 'Core', account: 'Account', mfa: 'Two-factor authentication', sessions: 'Devices and sessions', passkeys: 'Passkeys', identities: 'External accounts', profile: 'My account', consents: 'Consents', privacy: 'Privacy', request: 'Request', security: 'Security', components: 'Components', operator: 'Operator workspace', overview: 'Overview', members: 'Members', billing: 'Billing', usage: 'Usage', analytics: 'Analytics', audit: 'Audit', invitations: 'Invitations', comparePlans: 'Compare plans' },
+  navigation: { path: 'Breadcrumbs', hidden: 'Show hidden levels', core: 'Core', account: 'Account', mfa: 'Two-factor authentication', sessions: 'Devices and sessions', passkeys: 'Passkeys', identities: 'External accounts', profile: 'My account', consents: 'Consents', privacy: 'Privacy', privacyRegistry: 'Privacy registry', request: 'Request', security: 'Security', components: 'Components', operator: 'Operator workspace', overview: 'Overview', members: 'Members', billing: 'Billing', usage: 'Usage', analytics: 'Analytics', audit: 'Audit', invitations: 'Invitations', comparePlans: 'Compare plans' },
   operator: operatorEn,
   workbench: workbenchEn,
   configuration: {
@@ -294,6 +294,7 @@ export default {
     legalName: 'Legal name (optional)',
     createSuccess: 'Account created.',
     noAccounts: 'You have no commercial accounts yet.',
+    planIntent: 'You selected a plan. Create an account to continue checkout.',
     role: 'Role',
     status: 'Status',
     role_owner: 'Owner',
@@ -649,6 +650,8 @@ export default {
     settings: 'Settings',
     operations: 'Operations',
     privacy: 'Privacy operations',
+    privacyRegistry: 'Privacy registry',
+    privacyRegistrySubtitle: 'Representations, erasure cases, incidents and distribution consents.',
     audit: 'Core audit log',
     auditHint: 'Operator audit trail for Core actions. Superadmin only.',
     security: 'Security',

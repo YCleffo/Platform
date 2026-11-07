@@ -64,9 +64,19 @@ if (Environment::isProd() && $totpEncryptionKey === null) {
     throw new \RuntimeException('AUTH_TOTP_ENCRYPTION_KEY is required in production.');
 }
 
+$auditEventDefinitions = [
+    ...((getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\Education\Infrastructure\Configuration::class))
+        ? (\App\Education\Infrastructure\Configuration::params()['auditEventDefinitions'] ?? []) : []),
+    ...(class_exists(\App\DeviceManagement\Infrastructure\Configuration::class)
+        ? (\App\DeviceManagement\Infrastructure\Configuration::params()['auditEventDefinitions'] ?? []) : []),
+    ...(class_exists(\App\Storage\Infrastructure\Configuration::class)
+        ? (\App\Storage\Infrastructure\Configuration::params()['auditEventDefinitions'] ?? []) : []),
+];
+
 return [
     ...((getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\Education\Infrastructure\Configuration::class))
-        ? \App\Education\Infrastructure\Configuration::params() : []),
+        ? array_diff_key(\App\Education\Infrastructure\Configuration::params(), ['auditEventDefinitions' => true]) : []),
+    'auditEventDefinitions' => $auditEventDefinitions,
     'runtimeTrustedEntitlementKeys' => json_decode($envOr('RUNTIME_ENTITLEMENT_TRUSTED_KEYS', '{}'), true, 16, JSON_THROW_ON_ERROR),
     'runtimeControlPlaneUrl' => $envOr('CONTROL_PLANE_URL', ''),
     'runtimeDeploymentCredentialReference' => $envOr('CONTROL_PLANE_DEPLOYMENT_CREDENTIAL_REF', ''),

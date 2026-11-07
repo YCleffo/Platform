@@ -86,6 +86,6 @@ describe('router account guard', () => {
     await enabled.push('/today'); expect(enabled.currentRoute.value.name).toBe('education-login');
     expect(enabled.currentRoute.value.query.redirect).toBe('/today');
     await enabled.push('/'); expect(enabled.currentRoute.value.name).toBe('catalog');
-    expect(enabled.getRoutes().filter(route => route.name?.toString().startsWith('education-'))).toHaveLength(20);
+    expect(enabled.getRoutes().filter(route => route.name?.toString().startsWith('education-'))).toHaveLength(36);
   });
 });

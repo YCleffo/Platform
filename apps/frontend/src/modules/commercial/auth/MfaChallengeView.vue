@@ -45,7 +45,7 @@ const { submitting, message, run } = useAsyncAction(async () => {
     return;
   }
   await router.push(
-    redirectTarget.value !== null ? { path: redirectTarget.value } : { name: 'cabinet' },
+    redirectTarget.value !== null ? redirectTarget.value : { name: 'cabinet' },
   );
 });
 

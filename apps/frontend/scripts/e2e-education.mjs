@@ -64,6 +64,13 @@ function wall(instant, zone) {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(instant)).map(item => [item.type, item.value]));
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
+async function eventually(action, message) {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    if (await action()) return;
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+  throw new Error(message);
+}
 async function today(page) { await page.locator('.edu-navigation a[href="/today"]').click(); await page.locator('.edu-quick').waitFor(); }
 async function inspect(page, label) {
   await page.evaluate(() => document.fonts.ready);
@@ -90,7 +97,18 @@ try {
   await page.locator('form button[type=submit]').click(); await page.waitForURL(url => url.pathname === '/people');
   for (const candidate of seeded.candidates.slice(1)) await api('/students', { method: 'POST', body: { groupId: group.id, personId: candidate.id }, status: 201 });
   assert.equal((await api('/groups')).items.find(item => item.id === group.id).studentCount, 12);
-  report('group and student forms persist real scoped records; 12 Core roster members enrolled through Education API');
+  const roster = (await api('/students')).items;
+  await page.locator('.edu-navigation a[href="/people"]').click();
+  await page.getByRole('link', { name: 'Группы', exact: true }).click();
+  await page.getByRole('link', { name: 'Открыть группу', exact: true }).click();
+  await page.locator('[data-student-id]').first().waitFor();
+  assert.equal(await page.locator('[data-student-id]').count(), 12);
+  assert.equal((await api(`/groups/${group.id}/students`)).items.length, 12);
+  await page.locator('#education-group-name').fill('Группа ВС 12:00');
+  await page.locator('#education-group-name').press('Enter');
+  await eventually(async () => (await api('/groups')).items.find(item => item.id === group.id)?.name === 'Группа ВС 12:00', 'group rename was not persisted');
+  await inspect(page, 'group-roster-ru-light');
+  report('group roster view and rename persist real scoped records; 12 Core roster members remain unique');
 
   await today(page); await page.locator('[data-action="createLesson"]').click();
   const header = await api('/today/header'); const start = new Date(Date.parse(header.now) + 80 * 60000); const end = new Date(start.getTime() + 150 * 60000);
@@ -108,6 +126,38 @@ try {
   await download.saveAs(`${artifact}/lesson-material.txt`); assert.deepEqual(readFileSync(`${artifact}/lesson-material.txt`), bytes);
   report('lesson form, real participant snapshot, multipart upload and completed browser download with matching bytes');
 
+  await page.getByRole('link', { name: 'Открыть занятие', exact: true }).click();
+  await page.getByRole('link', { name: 'Редактировать занятие', exact: true }).click();
+  await inspect(page, 'lesson-edit-ru-light');
+  const rescheduledStart = new Date(Date.parse(header.now));
+  await page.locator('#education-edit-starts-at').fill(wall(rescheduledStart, header.timezone)); await page.locator('#education-edit-starts-at').press('Tab');
+  await page.locator('#education-edit-ends-at').fill(wall(new Date(rescheduledStart.getTime() + 30 * 60000), header.timezone)); await page.locator('#education-edit-ends-at').press('Tab');
+  await page.locator('#education-edit-location').fill('Каб. 2');
+  await page.locator('form button[type=submit]').click(); await page.waitForURL(url => new RegExp(`^/lessons/${lessonId}$`).test(url.pathname));
+  const moved = await api(`/lessons/${lessonId}`);
+  assert.equal(moved.location, 'Каб. 2'); assert.ok(Date.parse(moved.startsAt) <= Date.parse(header.now));
+  await page.locator('.edu-navigation a[href="/calendar"]').click();
+  await page.getByRole('link', { name: /Python \+ Ai помощник/ }).first().click();
+  await page.getByRole('link', { name: 'Список', exact: true }).click();
+  await selectDropdown(page, `education-attendance-${roster[0].id}`, 'present');
+  await eventually(async () => (await api(`/lessons/${lessonId}/participants`)).items.find(item => item.id === roster[0].id)?.status === 'present', 'attendance was not persisted');
+  await page.getByRole('link', { name: 'Открыть занятие', exact: true }).click();
+  await page.getByRole('button', { name: 'Завершить занятие', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Завершить занятие', exact: true }).click();
+  await page.getByText('Завершено', { exact: true }).waitFor();
+  const completed = await api(`/lessons/${lessonId}`);
+  assert.equal(completed.status, 'completed'); assert.ok(completed.completedAt);
+  const history = await api(`/lessons/${lessonId}/participants`);
+  assert.equal(history.items.find(item => item.id === roster[0].id)?.status, 'present');
+  assert.equal((await api(`/lessons/${lessonId}/materials`)).items[0].name, 'lesson-material.txt');
+  await page.locator('.edu-navigation a[href="/calendar"]').click();
+  await page.getByRole('link', { name: /Python \+ Ai помощник/ }).first().click();
+  await page.getByText('Завершено', { exact: true }).waitFor();
+  await page.getByRole('link', { name: 'Материалы', exact: true }).click(); await page.getByText('lesson-material.txt', { exact: true }).waitFor();
+  await inspect(page, 'lesson-history-ru-light');
+  assert.equal((await api(`/lessons/${lessonId}`)).title, 'Python + Ai помощник');
+  report('lesson rescheduled through the edit form, updated calendar opened, attendance persisted, completion kept materials and survived reload');
+
   await today(page); await page.locator('[data-action="currentLesson"]').click(); await page.getByText('Сейчас нет занятия', { exact: true }).waitFor();
   await today(page); await page.locator('[data-action="uploadMaterials"]').click(); await page.locator('#education-material-file').waitFor();
   await page.locator('.edu-navigation a[href="/calendar"]').click(); await page.getByRole('link', { name: 'Добавить событие', exact: true }).click();
@@ -118,11 +168,12 @@ try {
   await page.locator('form button[type=submit]').click(); await page.waitForURL(url => url.pathname === '/calendar');
   await api('/events', { method: 'POST', status: 201, body: { title: 'Илья Гилёв', kind: 'birthday', startsAt: new Date(meetingStart.getTime() + 10 * 60000).toISOString(), endsAt: new Date(meetingEnd.getTime() + 10 * 60000).toISOString(), location: 'День рождения' } });
   const secondStart = new Date(Date.parse(header.now) + 10 * 60000);
-  await api('/lessons', { method: 'POST', status: 201, body: { title: 'Python + Ai помощник', groupId: group.id, startsAt: secondStart.toISOString(), endsAt: new Date(secondStart.getTime() + 10 * 60000).toISOString(), location: 'Каб. 1' } });
-  const roster = (await api('/students')).items;
+  const secondLesson = await api('/lessons', { method: 'POST', status: 201, body: { title: 'Python + Ai помощник', groupId: group.id, startsAt: secondStart.toISOString(), endsAt: new Date(secondStart.getTime() + 10 * 60000).toISOString(), location: 'Каб. 1' } });
+  const yesterdayLessons = [];
   for (let index = 0; index < 2; index++) {
     const at = new Date(Date.parse(header.now) - 86400000 + index * 3600000);
     const lesson = await api('/lessons', { method: 'POST', status: 201, body: { groupId: group.id, title: 'Вчерашнее занятие ' + (index + 1), startsAt: at.toISOString(), endsAt: new Date(at.getTime() + 30 * 60000).toISOString(), location: 'Каб. 1' } });
+    yesterdayLessons.push(lesson.id);
     for (const student of roster.slice(0, 3)) await api(`/lessons/${lesson.id}/participants/${student.id}`, { method: 'PUT', body: { status: 'absent' } });
   }
   const timeline = await api(`/timeline?date=${header.date}`);
@@ -131,6 +182,28 @@ try {
   await today(page); await page.locator('.edu-attention__item').first().waitFor();
   report('calendar form and real timeline sort; attention derives from persisted absence records');
 
+  await api(`/lessons/${secondLesson.id}/cancel`, { method: 'POST' });
+  for (const id of yesterdayLessons) await api(`/lessons/${id}/complete`, { method: 'POST' });
+  await page.locator('.edu-navigation a[href="/people"]').click();
+  await page.getByRole('link', { name: 'Группы', exact: true }).click();
+  await page.getByRole('link', { name: 'Открыть группу', exact: true }).click();
+  await page.getByRole('button', { name: 'Архивировать', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Архивировать', exact: true }).click();
+  await page.getByText('Группа в архиве. История занятий сохранена.', { exact: true }).waitFor();
+  const archivedGroup = (await api('/groups')).items.find(item => item.id === group.id);
+  assert.ok(archivedGroup.archivedAt);
+  assert.equal((await api(`/groups/${group.id}/students`)).items.length, 12);
+  assert.equal((await api(`/lessons/${lessonId}`)).status, 'completed');
+  assert.equal((await api(`/lessons/${lessonId}/participants`)).items.find(item => item.id === roster[0].id)?.status, 'present');
+  const restarted = await session(seeded.accounts.teacher);
+  await restarted.page.locator('.edu-navigation a[href="/calendar"]').click();
+  await restarted.page.getByRole('link', { name: /Python \+ Ai помощник/ }).first().click();
+  await restarted.page.getByText('Завершено', { exact: true }).waitFor();
+  assert.equal((await restarted.api(`/lessons/${lessonId}`)).status, 'completed');
+  assert.equal((await restarted.api(`/lessons/${lessonId}/materials`)).items[0].name, 'lesson-material.txt');
+  report('archived group keeps roster, completed lesson, attendance and materials intact after a fresh login');
+
+  await today(page);
   await page.locator('[data-action="writeMessage"]').click(); await selectDropdown(page, 'education-create-recipient', seeded.accounts.colleague.personId);
   await page.locator('#education-create-title').fill('После занятия'); await page.locator('#education-message-body').fill('Встречаемся после занятия.');
   await page.locator('form button[type=submit]').click(); await page.waitForURL(url => /^\/messages\/[a-f0-9-]+$/.test(url.pathname));
@@ -144,6 +217,10 @@ try {
   const outsider = await session(seeded.accounts.outsider); await outsider.page.locator('.edu-greeting').waitFor();
   await outsider.api(`/threads/${threadId}/messages`, { organization: seeded.organizationId, status: 403 });
   await colleague.api(`/lessons/${lessonId}`, { status: 404 });
+  await colleague.api(`/groups/${group.id}`, { status: 404 });
+  await colleague.api(`/groups/${group.id}/students`, { status: 404 });
+  await colleague.api(`/groups/${group.id}/archive`, { method: 'POST', status: 404 });
+  await colleague.api(`/groups/${group.id}`, { method: 'PUT', body: { name: 'Hijacked' }, status: 404 });
   const memberOnly = await session(seeded.accounts.memberOnly); await memberOnly.page.getByText('Нет доступных организаций', { exact: true }).waitFor();
   await memberOnly.api('/today/header', { status: 403 });
   report('two real Core users exchange messages; own inbox badge, organization/member isolation and no implicit teacher role');
@@ -167,6 +244,24 @@ try {
       await page.getByRole('button', { name: label, exact: true }).click();
       await today(page);
       for (const width of [393, 1440]) { await page.setViewportSize({ width, height: width === 393 ? 852 : 1000 }); await inspect(page, `${language}-${theme}-${width}`); }
+      if (language === 'en-US' && theme === 'dark') {
+        await page.setViewportSize({ width: 393, height: 852 });
+        await page.locator('.edu-navigation a[href="/people"]').click();
+        await page.getByRole('link', { name: 'Groups', exact: true }).click();
+        await page.getByRole('link', { name: 'Open group', exact: true }).click();
+        await page.locator('[data-student-id]').first().waitFor();
+        await inspect(page, 'en-dark-group-393');
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        await inspect(page, 'en-dark-group-1440');
+        await page.locator('.edu-navigation a[href="/calendar"]').click();
+        await page.getByRole('link', { name: /Python \+ Ai помощник/ }).first().click();
+        await page.getByText('Completed', { exact: true }).waitFor();
+        await page.setViewportSize({ width: 393, height: 852 });
+        await inspect(page, 'en-dark-lesson-393');
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        await inspect(page, 'en-dark-lesson-1440');
+        await today(page);
+      }
       await page.locator('.edu-navigation a[href="/more"]').click();
     }
   }

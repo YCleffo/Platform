@@ -1,0 +1,121 @@
+// СФОРМИРОВАНО scripts/database/export_schema.py; не редактировать вручную.
+// Только реальные объекты PostgreSQL. Полное определение SQL: schema.catalog.json.
+Project storage {
+  database_type: 'PostgreSQL'
+  Note: 'Каталог PostgreSQL после миграций. Межбазовые идентификаторы не являются внешними ключами.'
+}
+
+Table storage.conflicts {
+  id uuid [pk, not null, default: `uuidv7()`]
+  space_id uuid [not null]
+  path "character varying(1024)" [not null]
+  server_version integer [null]
+  device_version integer [null]
+  server_sha256 character(64) [null]
+  device_sha256 character(64) [null]
+  resolution "character varying(16)" [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  resolved_at "timestamp with time zone" [null]
+  Note: 'conflicts_created_at_not_null: NOT NULL created_at\nconflicts_id_not_null: NOT NULL id\nconflicts_path_not_null: NOT NULL path\nconflicts_space_id_fkey: FOREIGN KEY (space_id) REFERENCES storage.spaces(id)\nconflicts_space_id_not_null: NOT NULL space_id'
+}
+
+Table storage.files {
+  id uuid [pk, not null, default: `uuidv7()`]
+  space_id uuid [not null]
+  path "character varying(1024)" [not null]
+  current_version_id uuid [null]
+  deleted_at "timestamp with time zone" [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (space_id, deleted_at, path) [name: 'files_space', type: btree]
+    (space_id, path) [name: 'files_space_id_path_key', type: btree, unique]
+  }
+  Note: 'files_created_at_not_null: NOT NULL created_at\nfiles_id_not_null: NOT NULL id\nfiles_path_check: CHECK (btrim(path::text) <> \'\'::text AND path::text !~~ \'%..%\'::text)\nfiles_path_not_null: NOT NULL path\nfiles_space_id_fkey: FOREIGN KEY (space_id) REFERENCES storage.spaces(id)\nfiles_space_id_not_null: NOT NULL space_id\nfiles_space_id_path_key: UNIQUE (space_id, path)\nCREATE INDEX files_space ON storage.files USING btree (space_id, deleted_at, path)\nCREATE UNIQUE INDEX files_space_id_path_key ON storage.files USING btree (space_id, path)'
+}
+
+Table storage.manifests {
+  id uuid [pk, not null, default: `uuidv7()`]
+  space_id uuid [not null]
+  version integer [not null]
+  entries jsonb [not null, default: `'[]'::jsonb`]
+  status "character varying(16)" [not null, default: `'pending'::character varying`]
+  device_id uuid [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  confirmed_at "timestamp with time zone" [null]
+  indexes {
+    (space_id, version) [name: 'manifests_space_id_version_key', type: btree, unique]
+  }
+  Note: 'manifests_created_at_not_null: NOT NULL created_at\nmanifests_entries_not_null: NOT NULL entries\nmanifests_id_not_null: NOT NULL id\nmanifests_space_id_fkey: FOREIGN KEY (space_id) REFERENCES storage.spaces(id)\nmanifests_space_id_not_null: NOT NULL space_id\nmanifests_space_id_version_key: UNIQUE (space_id, version)\nmanifests_status_check: CHECK (status::text = ANY (ARRAY[\'pending\'::character varying, \'accepted\'::character varying, \'confirmed\'::character varying]::text[]))\nmanifests_status_not_null: NOT NULL status\nmanifests_version_check: CHECK (version > 0)\nmanifests_version_not_null: NOT NULL version\nCREATE UNIQUE INDEX manifests_space_id_version_key ON storage.manifests USING btree (space_id, version)'
+}
+
+Table storage.module_migrations {
+  name text [pk, not null]
+  sha256 character(64) [not null]
+  applied_at "timestamp with time zone" [not null, default: `now()`]
+  Note: 'module_migrations_applied_at_not_null: NOT NULL applied_at\nmodule_migrations_name_not_null: NOT NULL name\nmodule_migrations_sha256_not_null: NOT NULL sha256'
+}
+
+Table storage.spaces {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  student_id uuid [not null]
+  account_id uuid [not null]
+  max_files integer [not null, default: `5000`]
+  max_bytes bigint [not null, default: `1073741824`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (organization_id, student_id) [name: 'spaces_organization_id_student_id_key', type: btree, unique]
+  }
+  Note: 'spaces_account_id_not_null: NOT NULL account_id\nspaces_created_at_not_null: NOT NULL created_at\nspaces_id_not_null: NOT NULL id\nspaces_max_bytes_check: CHECK (max_bytes >= 1 AND max_bytes <= \'1099511627776\'::bigint)\nspaces_max_bytes_not_null: NOT NULL max_bytes\nspaces_max_files_check: CHECK (max_files >= 1 AND max_files <= 100000)\nspaces_max_files_not_null: NOT NULL max_files\nspaces_organization_id_not_null: NOT NULL organization_id\nspaces_organization_id_student_id_key: UNIQUE (organization_id, student_id)\nspaces_student_id_not_null: NOT NULL student_id\nCREATE UNIQUE INDEX spaces_organization_id_student_id_key ON storage.spaces USING btree (organization_id, student_id)'
+}
+
+Table storage.sync_sessions {
+  id uuid [pk, not null, default: `uuidv7()`]
+  space_id uuid [not null]
+  device_id uuid [not null]
+  direction "character varying(8)" [not null]
+  status "character varying(16)" [not null, default: `'running'::character varying`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  finished_at "timestamp with time zone" [null]
+  Note: 'sync_sessions_created_at_not_null: NOT NULL created_at\nsync_sessions_device_id_not_null: NOT NULL device_id\nsync_sessions_direction_check: CHECK (direction::text = ANY (ARRAY[\'in\'::character varying, \'out\'::character varying]::text[]))\nsync_sessions_direction_not_null: NOT NULL direction\nsync_sessions_id_not_null: NOT NULL id\nsync_sessions_space_id_fkey: FOREIGN KEY (space_id) REFERENCES storage.spaces(id)\nsync_sessions_space_id_not_null: NOT NULL space_id\nsync_sessions_status_check: CHECK (status::text = ANY (ARRAY[\'running\'::character varying, \'done\'::character varying, \'failed\'::character varying]::text[]))\nsync_sessions_status_not_null: NOT NULL status'
+}
+
+Table storage.tickets {
+  id uuid [pk, not null, default: `uuidv7()`]
+  space_id uuid [not null]
+  purpose "character varying(8)" [not null]
+  path "character varying(1024)" [not null]
+  token_hash character(64) [not null]
+  single_use boolean [not null, default: `true`]
+  used_at "timestamp with time zone" [null]
+  expires_at "timestamp with time zone" [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (space_id, created_at) [name: 'tickets_space', type: btree]
+    token_hash [name: 'tickets_token_hash_key', type: btree, unique]
+  }
+  Note: 'tickets_created_at_not_null: NOT NULL created_at\ntickets_expires_at_not_null: NOT NULL expires_at\ntickets_id_not_null: NOT NULL id\ntickets_path_check: CHECK (btrim(path::text) <> \'\'::text AND path::text !~~ \'%..%\'::text)\ntickets_path_not_null: NOT NULL path\ntickets_purpose_check: CHECK (purpose::text = ANY (ARRAY[\'upload\'::character varying, \'download\'::character varying]::text[]))\ntickets_purpose_not_null: NOT NULL purpose\ntickets_single_use_not_null: NOT NULL single_use\ntickets_space_id_fkey: FOREIGN KEY (space_id) REFERENCES storage.spaces(id)\ntickets_space_id_not_null: NOT NULL space_id\ntickets_token_hash_key: UNIQUE (token_hash)\ntickets_token_hash_not_null: NOT NULL token_hash\nCREATE INDEX tickets_space ON storage.tickets USING btree (space_id, created_at)\nCREATE UNIQUE INDEX tickets_token_hash_key ON storage.tickets USING btree (token_hash)'
+}
+
+Table storage.versions {
+  id uuid [pk, not null, default: `uuidv7()`]
+  file_id uuid [not null]
+  version integer [not null]
+  size_bytes bigint [not null]
+  sha256 character(64) [not null]
+  storage_key uuid [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (file_id, version) [name: 'versions_file', type: btree]
+    (file_id, version) [name: 'versions_file_id_version_key', type: btree, unique]
+    storage_key [name: 'versions_storage_key_key', type: btree, unique]
+  }
+  Note: 'versions_created_at_not_null: NOT NULL created_at\nversions_file_id_fkey: FOREIGN KEY (file_id) REFERENCES storage.files(id)\nversions_file_id_not_null: NOT NULL file_id\nversions_file_id_version_key: UNIQUE (file_id, version)\nversions_id_not_null: NOT NULL id\nversions_sha256_not_null: NOT NULL sha256\nversions_size_bytes_check: CHECK (size_bytes >= 0 AND size_bytes <= 1073741824)\nversions_size_bytes_not_null: NOT NULL size_bytes\nversions_storage_key_key: UNIQUE (storage_key)\nversions_storage_key_not_null: NOT NULL storage_key\nversions_version_check: CHECK (version > 0)\nversions_version_not_null: NOT NULL version\nCREATE INDEX versions_file ON storage.versions USING btree (file_id, version)\nCREATE UNIQUE INDEX versions_file_id_version_key ON storage.versions USING btree (file_id, version)\nCREATE UNIQUE INDEX versions_storage_key_key ON storage.versions USING btree (storage_key)'
+}
+
+Ref: storage.conflicts.space_id > storage.spaces.id [delete: no action, update: no action]
+Ref: storage.files.space_id > storage.spaces.id [delete: no action, update: no action]
+Ref: storage.manifests.space_id > storage.spaces.id [delete: no action, update: no action]
+Ref: storage.sync_sessions.space_id > storage.spaces.id [delete: no action, update: no action]
+Ref: storage.tickets.space_id > storage.spaces.id [delete: no action, update: no action]
+Ref: storage.versions.file_id > storage.files.id [delete: no action, update: no action]

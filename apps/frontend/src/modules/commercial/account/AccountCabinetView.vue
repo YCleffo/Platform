@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import { Plus } from '@/shared/ui/icons';
 import { useAccountStore } from '@/core/account/accountStore';
 import { useToast } from '@/shared/composables/useToast';
@@ -11,9 +12,14 @@ import AccountPagination from './AccountPagination.vue';
 
 const store = useAccountStore();
 const toast = useToast();
+const route = useRoute();
+const router = useRouter();
 const { t } = useI18n();
 
 const dialogOpen = ref(false);
+const pendingPlanPrice = computed(() =>
+  typeof route.query.planPrice === 'string' ? route.query.planPrice : '',
+);
 
 const rangeLabel = computed(() => {
   if (store.total === 0) {
@@ -24,16 +30,39 @@ const rangeLabel = computed(() => {
   return t('cabinet.pageRange', { from, to, total: store.total });
 });
 
-onMounted(() => {
-  void store.loadPage(0);
+onMounted(async () => {
+  await store.loadPage(0);
+  if (pendingPlanPrice.value === '' || store.errorMessage !== null) {
+    return;
+  }
+  const accountId = store.accounts[0]?.id;
+  if (accountId !== undefined) {
+    await router.replace({
+      name: 'account-billing',
+      params: { accountId },
+      query: { planPrice: pendingPlanPrice.value },
+    });
+    return;
+  }
+  if (store.total === 0) {
+    dialogOpen.value = true;
+  }
 });
 
 function openCreate(): void {
   dialogOpen.value = true;
 }
 
-async function onCreated(): Promise<void> {
+async function onCreated(accountId: string): Promise<void> {
   toast.show(t('cabinet.createSuccess'), 'success');
+  if (pendingPlanPrice.value !== '') {
+    await router.push({
+      name: 'account-billing',
+      params: { accountId },
+      query: { planPrice: pendingPlanPrice.value },
+    });
+    return;
+  }
   await store.loadPage(0);
 }
 </script>
@@ -53,6 +82,14 @@ async function onCreated(): Promise<void> {
         {{ $t('cabinet.create') }}
       </AppButton>
     </header>
+
+    <p
+      v-if="pendingPlanPrice !== ''"
+      class="cabinet__intent"
+      role="status"
+    >
+      {{ $t('cabinet.planIntent') }}
+    </p>
 
     <AccountList
       :accounts="store.accounts"
@@ -110,6 +147,19 @@ async function onCreated(): Promise<void> {
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
   color: var(--text-2);
+  transition: var(--theme-transition);
+}
+
+.cabinet__intent {
+  margin-bottom: var(--space-16);
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-control-m);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: var(--type-body-medium-size);
+  letter-spacing: var(--type-body-medium-tracking);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-weight);
   transition: var(--theme-transition);
 }
 </style>

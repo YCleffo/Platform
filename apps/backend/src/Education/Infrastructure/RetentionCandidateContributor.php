@@ -91,6 +91,7 @@ final readonly class RetentionCandidateContributor implements Contributor
                 UNION SELECT owner_person_id FROM education.lessons
                 UNION SELECT owner_person_id FROM education.events
                 UNION SELECT owner_person_id FROM education.files
+                UNION SELECT owner_person_id FROM education.lesson_reports
                 UNION SELECT sender_person_id FROM education.messages
                 UNION SELECT person_id FROM education.thread_members
                 UNION SELECT person_id FROM education.notifications
@@ -109,6 +110,7 @@ final readonly class RetentionCandidateContributor implements Contributor
             UNION ALL SELECT 1 FROM education.lessons WHERE owner_person_id = CAST(:subject AS uuid)
             UNION ALL SELECT 1 FROM education.events WHERE owner_person_id = CAST(:subject AS uuid)
             UNION ALL SELECT 1 FROM education.files WHERE owner_person_id = CAST(:subject AS uuid)
+            UNION ALL SELECT 1 FROM education.lesson_reports WHERE owner_person_id = CAST(:subject AS uuid)
             UNION ALL SELECT 1 FROM education.messages WHERE sender_person_id = CAST(:subject AS uuid)
             UNION ALL SELECT 1 FROM education.thread_members WHERE person_id = CAST(:subject AS uuid)
             UNION ALL SELECT 1 FROM education.notifications WHERE person_id = CAST(:subject AS uuid)

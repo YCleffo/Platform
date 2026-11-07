@@ -130,6 +130,12 @@ const sections = computed<Array<{ title: string; items: AdminNavItem[] }>>(() =>
         icon: Eye,
         permission: 'core.privacy.requests.read',
       },
+      {
+        label: t('admin.privacyRegistry'),
+        name: 'admin-privacy-registry',
+        icon: Eye,
+        permission: 'core.privacy.read',
+      },
       { label: t('admin.audit'), name: 'admin-audit', icon: Eye, permission: 'core.superadmin' },
       { label: t('admin.security'), name: 'admin-security', icon: ShieldCheck },
       { label: t('coreProfile.title'), name: 'admin-profile', icon: Settings },
@@ -155,9 +161,11 @@ const activeRoute = computed(() =>
     ? 'admin-security'
     : String(route.name ?? '').startsWith('admin-profile')
       ? 'admin-profile'
-      : String(route.name ?? '').startsWith('admin-privacy')
-        ? 'admin-privacy'
-        : String(route.name ?? ''),
+      : String(route.name ?? '').startsWith('admin-privacy-registry')
+        ? 'admin-privacy-registry'
+        : String(route.name ?? '').startsWith('admin-privacy')
+          ? 'admin-privacy'
+          : String(route.name ?? ''),
 );
 const currentLabel = computed(
   () =>

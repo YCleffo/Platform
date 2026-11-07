@@ -5,9 +5,9 @@ import { readFileSync } from 'node:fs';
 const contract = JSON.parse(readFileSync('../../contracts/openapi/education.yaml', 'utf8'));
 test('Education OpenAPI covers precisely the registered optional HTTP operations', () => {
   const routes = readFileSync('../backend/config/common/education-routes.php', 'utf8');
-  const actual = [...routes.matchAll(/\['(GET|POST|PUT)', '([^']+)', '[^']+'\]/g)].map(([, method, path]) => `${method} ${path}`).sort();
-  const documented = Object.entries(contract.paths).flatMap(([path, item]) => Object.keys(item).filter(method => ['get', 'post', 'put'].includes(method)).map(method => `${method.toUpperCase()} ${path.replace('/api/education', '')}`)).sort();
-  assert.equal(actual.length, 33); assert.deepEqual(documented, actual);
+  const actual = [...routes.matchAll(/\['(GET|POST|PUT|DELETE)', '([^']+)', '[^']+'\]/g)].map(([, method, path]) => `${method} ${path}`).sort();
+  const documented = Object.entries(contract.paths).flatMap(([path, item]) => Object.keys(item).filter(method => ['get', 'post', 'put', 'delete'].includes(method)).map(method => `${method.toUpperCase()} ${path.replace('/api/education', '')}`)).sort();
+  assert.equal(actual.length, 66); assert.deepEqual(documented, actual);
 });
 test('Education OpenAPI references resolve and every operation requires Core authentication', () => {
   function visit(value) {
@@ -22,7 +22,7 @@ test('Education OpenAPI references resolve and every operation requires Core aut
   }
   visit(contract);
   for (const path of Object.values(contract.paths)) for (const [method, operation] of Object.entries(path)) {
-    if (!['get', 'post', 'put'].includes(method)) continue;
+    if (!['get', 'post', 'put', 'delete'].includes(method)) continue;
     assert.ok((operation.security ?? contract.security)?.some(value => 'CoreBearer' in value));
   }
 });

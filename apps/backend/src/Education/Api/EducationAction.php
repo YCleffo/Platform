@@ -33,15 +33,37 @@ final readonly class EducationAction
             if ($operation === 'context') {
                 return $responses->success($access->context($identity));
             }
+            if ($operation === 'activate_invite') {
+                $personId = $access->assertAvailable($identity);
+                $body = $request->getParsedBody();
+                if ($body !== null && !is_array($body)) {
+                    throw new EducationError(422, 'invalid_input');
+                }
+                /** @var array<string,mixed> $body */
+                return $responses->success($education->activateInvite($identity, $personId, $body ?? []));
+            }
             $permission = match ($operation) {
-                'groups', 'group', 'students', 'candidates', 'create_group', 'enroll_student' => 'education.people.manage',
-                'create_lesson', 'create_event', 'mark_attendance' => 'education.schedule.manage',
-                'upload_file', 'file_download', 'files', 'materials' => 'education.files.manage',
+                'groups', 'group', 'group_students', 'students', 'candidates', 'create_group', 'update_group',
+                'archive_group', 'enroll_student', 'remove_group_student', 'transfer_student',
+                'group_journal', 'student', 'student_attendance', 'student_results', 'student_progress',
+                'invite_student', 'revoke_student_account' => 'education.people.manage',
+                'create_lesson', 'update_lesson', 'complete_lesson', 'cancel_lesson', 'create_event',
+                'mark_attendance', 'save_lesson_report', 'save_lesson_result' => 'education.schedule.manage',
+                'upload_file', 'file_download', 'files', 'materials', 'delete_file' => 'education.files.manage',
                 'threads', 'thread', 'messages', 'colleagues', 'start_thread', 'send_message', 'read_thread',
                 'read_notification', 'notifications' => 'education.messages.use',
+                'activities_assign', 'activity_assignments', 'group_activity_results' => 'education.activities.manage',
                 default => 'education.access',
             };
-            $scope = $access->scope($identity, $request->getHeaderLine('X-Education-Organization'), $permission);
+            $studentOperations = ['student_home', 'student_schedule', 'student_lessons', 'student_lesson',
+                'student_activity_catalog', 'student_activity_config', 'student_attempt_history',
+                'student_typing_history', 'student_start_attempt', 'student_finish_attempt'];
+            $scope = in_array($operation, $studentOperations, true)
+                ? $access->studentScope($identity, $request->getHeaderLine('X-Education-Organization'),
+                    in_array($operation, ['student_activity_catalog', 'student_activity_config', 'student_start_attempt',
+                        'student_finish_attempt', 'student_attempt_history', 'student_typing_history'], true)
+                        ? 'education.activities.use' : 'education.student.use')
+                : $access->scope($identity, $request->getHeaderLine('X-Education-Organization'), $permission);
             $argument = $route->getArgument('id');
             $id = is_string($argument) ? $argument : null;
             if ($operation === 'file_download') {
@@ -79,7 +101,8 @@ final readonly class EducationAction
             $result = $education->write($operation, $scope, $body, $id, is_string($studentId) ? $studentId : null);
             return $responses->success($result)->withStatus(in_array(
                 $operation,
-                ['create_group', 'enroll_student', 'create_lesson', 'create_event', 'start_thread', 'send_message'],
+                ['create_group', 'enroll_student', 'create_lesson', 'create_event', 'start_thread', 'send_message',
+                    'invite_student', 'activities_assign', 'student_start_attempt'],
                 true,
             ) ? 201 : 200);
         } catch (EducationError $error) {

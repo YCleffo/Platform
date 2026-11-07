@@ -27,6 +27,8 @@ use App\Education\Infrastructure\LawfulProcessingBasisContributor;
 use App\Education\Infrastructure\ProcessingRestrictionContributor;
 use App\Education\Infrastructure\RetentionCandidateContributor;
 use App\Education\Infrastructure\WorkspaceErasureHandler;
+use App\Core\Organization\Application\OrganizationRepository;
+use App\Core\Rbac\Application\PermissionService;
 use App\Environment;
 use DateTimeImmutable;
 use HttpSoft\Message\StreamFactory;
@@ -70,7 +72,9 @@ final class WorkspaceTest extends TestCase
                 return new DateTimeImmutable('2026-03-08T14:00:00Z');
             }
         };
-        $this->service = new EducationService($this->store, $this->access, $clock, $this->files, $container->get(Mutation::class));
+        $this->service = new EducationService($this->store, $this->access, $clock, $this->files,
+            $container->get(Mutation::class), $container->get(PermissionService::class),
+            $container->get(OrganizationRepository::class));
         $this->organization = (string) $this->db->createCommand("INSERT INTO core.organizations(code,name)
             VALUES(:code,'Education test') RETURNING id::text", [':code' => 'education.test.' . bin2hex(random_bytes(8))])->queryScalar();
         $this->actor = $this->teacher('First');
@@ -144,6 +148,229 @@ final class WorkspaceTest extends TestCase
         )->queryScalar();
         self::assertIsString($audit);
         self::assertStringNotContainsString('Python', $audit);
+    }
+
+    public function testGroupCompositionRenameTransferRemovalAndArchivePreserveHistory(): void
+    {
+        $group = $this->service->write('create_group', $this->scope, ['name' => 'First group']);
+        $target = $this->service->write('create_group', $this->scope, ['name' => 'Second group']);
+        self::assertNull($group['archivedAt']);
+        self::assertSame(0, $group['studentCount']);
+        $firstPerson = $this->person('Group first');
+        $secondPerson = $this->person('Group second');
+        $this->member($firstPerson);
+        $this->member($secondPerson);
+        $student = $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $firstPerson]);
+        $duplicate = $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $firstPerson]);
+        self::assertSame($student['id'], $duplicate['id']);
+        $composition = $this->service->read('group_students', $this->scope, [], $group['id']);
+        self::assertCount(1, $composition['items']);
+        self::assertSame('Group first Test', $composition['items'][0]['name']);
+        self::assertSame(1, $this->service->read('group', $this->scope, [], $group['id'])['studentCount']);
+        $renamed = $this->service->write('update_group', $this->scope, ['name' => 'Renamed group'], $group['id']);
+        self::assertSame('Renamed group', $renamed['name']);
+        $secondStudent = $this->service->write('enroll_student', $this->scope, ['groupId' => $target['id'], 'personId' => $secondPerson]);
+        $this->service->write('transfer_student', $this->scope, ['groupId' => $target['id']], $group['id'], $student['id']);
+        self::assertSame([], $this->service->read('group_students', $this->scope, [], $group['id'])['items']);
+        $transferred = array_column($this->service->read('group_students', $this->scope, [], $target['id'])['items'], 'id');
+        self::assertCount(2, $transferred);
+        self::assertContains($student['id'], $transferred);
+        $this->service->write('remove_group_student', $this->scope, [], $target['id'], $student['id']);
+        self::assertSame([$secondStudent['id']], array_column($this->service->read('group_students', $this->scope, [], $target['id'])['items'], 'id'));
+        self::assertContains($student['id'], array_column($this->service->read('students', $this->scope, [])['items'], 'id'));
+        self::assertSame(1, (int) $this->db->createCommand(
+            'SELECT count(*) FROM core.persons WHERE id=CAST(:person AS uuid)',
+            [':person' => $firstPerson],
+        )->queryScalar());
+        $this->service->write('remove_group_student', $this->scope, [], $target['id'], $student['id']);
+
+        $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $firstPerson]);
+        $lesson = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Archived history',
+            'startsAt' => '2026-03-08T13:30:00Z', 'endsAt' => '2026-03-08T15:00:00Z']);
+        $this->assertError(409, fn() => $this->service->write('archive_group', $this->scope, [], $group['id']), 'group_has_scheduled_lessons');
+        $this->service->write('complete_lesson', $this->scope, [], $lesson['id']);
+        $this->service->write('mark_attendance', $this->scope, ['status' => 'present'], $lesson['id'], $student['id']);
+        $archived = $this->service->write('archive_group', $this->scope, [], $group['id']);
+        self::assertNotNull($archived['archivedAt']);
+        self::assertSame($archived['archivedAt'], $this->service->write('archive_group', $this->scope, [], $group['id'])['archivedAt']);
+        self::assertCount(1, $this->service->read('group_students', $this->scope, [], $group['id'])['items']);
+        self::assertSame('completed', $this->service->read('lesson', $this->scope, [], $lesson['id'])['status']);
+        self::assertSame('present', $this->service->read('participants', $this->scope, [], $lesson['id'])['items'][0]['status']);
+        self::assertContains($group['id'], array_column($this->service->read('groups', $this->scope, [])['items'], 'id'));
+        $this->assertError(409, fn() => $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'],
+            'title' => 'Blocked', 'startsAt' => '2026-03-08T16:00:00Z', 'endsAt' => '2026-03-08T17:00:00Z']), 'group_archived');
+        $this->assertError(409, fn() => $this->service->write('enroll_student', $this->scope, [
+            'groupId' => $group['id'], 'personId' => $secondPerson,
+        ]), 'group_archived');
+        $this->assertError(409, fn() => $this->service->write('update_group', $this->scope, ['name' => 'Blocked'], $group['id']), 'group_archived');
+        $this->assertError(409, fn() => $this->service->write('remove_group_student', $this->scope, [], $group['id'], $student['id']), 'group_archived');
+        $this->assertError(409, fn() => $this->service->write('transfer_student', $this->scope, ['groupId' => $target['id']], $group['id'], $student['id']), 'group_archived');
+        $this->assertError(409, fn() => $this->service->write('transfer_student', $this->scope, ['groupId' => $group['id']], $target['id'], $secondStudent['id']), 'group_archived');
+    }
+
+    public function testLessonEditingTransitionsOverlapAndAttendanceHistory(): void
+    {
+        $group = $this->service->write('create_group', $this->scope, ['name' => 'Schedule group']);
+        $otherGroup = $this->service->write('create_group', $this->scope, ['name' => 'Other schedule group']);
+        $person = $this->person('Schedule first');
+        $otherPerson = $this->person('Schedule second');
+        $this->member($person);
+        $this->member($otherPerson);
+        $student = $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $person]);
+        $otherStudent = $this->service->write('enroll_student', $this->scope, ['groupId' => $otherGroup['id'], 'personId' => $otherPerson]);
+        $lesson = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Original',
+            'startsAt' => '2026-03-08T13:00:00Z', 'endsAt' => '2026-03-08T14:00:00Z', 'location' => 'Room A']);
+        $this->assertError(409, fn() => $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'],
+            'title' => 'Overlap', 'startsAt' => '2026-03-08T13:30:00Z', 'endsAt' => '2026-03-08T14:30:00Z']), 'schedule_conflict');
+        $adjacent = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Adjacent',
+            'startsAt' => '2026-03-08T14:00:00Z', 'endsAt' => '2026-03-08T15:00:00Z']);
+        $this->service->write('create_event', $this->scope, ['title' => 'Overlapping event', 'kind' => 'meeting',
+            'startsAt' => '2026-03-08T13:00:00Z', 'endsAt' => '2026-03-08T14:00:00Z']);
+        $this->service->write('mark_attendance', $this->scope, ['status' => 'present'], $lesson['id'], $student['id']);
+        $edited = $this->service->write('update_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Edited',
+            'startsAt' => '2026-03-08T13:00:00Z', 'endsAt' => '2026-03-08T14:00:00Z', 'location' => 'Room B'], $lesson['id']);
+        self::assertSame('Edited', $edited['title']);
+        self::assertSame('Room B', $edited['location']);
+        self::assertSame('present', $this->service->read('participants', $this->scope, [], $lesson['id'])['items'][0]['status']);
+        $this->assertError(409, fn() => $this->service->write('update_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Edited',
+            'startsAt' => '2026-03-08T13:30:00Z', 'endsAt' => '2026-03-08T14:30:00Z', 'location' => 'Room B'], $lesson['id']), 'schedule_conflict');
+        $this->service->write('cancel_lesson', $this->scope, [], $adjacent['id']);
+        self::assertSame('cancelled', $this->service->read('lesson', $this->scope, [], $adjacent['id'])['status']);
+        self::assertSame('cancelled', $this->service->write('cancel_lesson', $this->scope, [], $adjacent['id'])['status']);
+        $moved = $this->service->write('update_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Edited',
+            'startsAt' => '2026-03-08T13:30:00Z', 'endsAt' => '2026-03-08T14:30:00Z', 'location' => 'Room B'], $lesson['id']);
+        self::assertSame('2026-03-08T13:30:00.000000+00:00', $moved['startsAt']);
+        $completed = $this->service->write('complete_lesson', $this->scope, [], $lesson['id']);
+        self::assertSame('completed', $completed['status']);
+        self::assertNotNull($completed['completedAt']);
+        self::assertSame('completed', $this->service->write('complete_lesson', $this->scope, [], $lesson['id'])['status']);
+        $this->assertError(409, fn() => $this->service->write('cancel_lesson', $this->scope, [], $lesson['id']), 'invalid_status_transition');
+        $locked = ['groupId' => $group['id'], 'title' => 'Edited', 'startsAt' => '2026-03-08T13:30:00Z',
+            'endsAt' => '2026-03-08T14:30:00Z', 'location' => 'Room B'];
+        self::assertSame('completed', $this->service->write('update_lesson', $this->scope, $locked, $lesson['id'])['status']);
+        $this->assertError(409, fn() => $this->service->write('update_lesson', $this->scope, [...$locked, 'title' => 'Changed'], $lesson['id']), 'lesson_locked');
+        $overCompleted = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Historical overlap',
+            'startsAt' => '2026-03-08T13:30:00Z', 'endsAt' => '2026-03-08T14:30:00Z']);
+        $this->service->write('mark_attendance', $this->scope, ['status' => 'absent'], $lesson['id'], $student['id']);
+        self::assertSame('absent', $this->service->read('participants', $this->scope, [], $lesson['id'])['items'][0]['status']);
+
+        $active = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Group change',
+            'startsAt' => '2026-03-08T12:00:00Z', 'endsAt' => '2026-03-08T13:00:00Z']);
+        $this->service->write('mark_attendance', $this->scope, ['status' => 'present'], $active['id'], $student['id']);
+        $this->assertError(409, fn() => $this->service->write('update_lesson', $this->scope, ['groupId' => $otherGroup['id'],
+            'title' => 'Group change', 'startsAt' => '2026-03-08T12:00:00Z', 'endsAt' => '2026-03-08T13:00:00Z',
+            'location' => ''], $active['id']), 'attendance_recorded');
+        $this->service->write('mark_attendance', $this->scope, ['status' => 'pending'], $active['id'], $student['id']);
+        $changed = $this->service->write('update_lesson', $this->scope, ['groupId' => $otherGroup['id'],
+            'title' => 'Group change', 'startsAt' => '2026-03-08T12:00:00Z', 'endsAt' => '2026-03-08T13:00:00Z',
+            'location' => ''], $active['id']);
+        self::assertSame($otherGroup['id'], $changed['groupId']);
+        self::assertSame([$otherStudent['id']], array_column($this->service->read('participants', $this->scope, [], $active['id'])['items'], 'id'));
+        $this->service->write('cancel_lesson', $this->scope, [], $active['id']);
+        $this->assertError(409, fn() => $this->service->write('mark_attendance', $this->scope, ['status' => 'present'], $active['id'], $otherStudent['id']), 'lesson_cancelled');
+        $this->assertError(409, fn() => $this->service->write('complete_lesson', $this->scope, [], $active['id']), 'invalid_status_transition');
+        self::assertSame('cancelled', $this->service->write('update_lesson', $this->scope, ['groupId' => $otherGroup['id'],
+            'title' => 'Group change', 'startsAt' => '2026-03-08T12:00:00Z', 'endsAt' => '2026-03-08T13:00:00Z',
+            'location' => ''], $active['id'])['status']);
+        $this->assertError(409, fn() => $this->service->write('update_lesson', $this->scope, ['groupId' => $otherGroup['id'],
+            'title' => 'Changed after cancel', 'startsAt' => '2026-03-08T12:00:00Z', 'endsAt' => '2026-03-08T13:00:00Z',
+            'location' => ''], $active['id']), 'lesson_locked');
+
+        $future = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Future',
+            'startsAt' => '2030-01-01T10:00:00Z', 'endsAt' => '2030-01-01T11:00:00Z']);
+        $this->assertError(409, fn() => $this->service->write('complete_lesson', $this->scope, [], $future['id']), 'lesson_not_started');
+        self::assertSame('cancelled', $this->service->write('cancel_lesson', $this->scope, [], $future['id'])['status']);
+        self::assertSame('cancelled', $this->service->write('cancel_lesson', $this->scope, [], $future['id'])['status']);
+        $schedule = $this->service->read('schedule', $this->scope, ['from' => '2026-03-08', 'to' => '2026-03-08']);
+        $byId = array_column($schedule['lessons'], null, 'id');
+        self::assertSame('completed', $byId[$lesson['id']]['status']);
+        self::assertSame('cancelled', $byId[$adjacent['id']]['status']);
+        self::assertSame('scheduled', $byId[$overCompleted['id']]['status']);
+    }
+
+    public function testMaterialDeletionIsScopedAndCompletedHistoryIsRetained(): void
+    {
+        $group = $this->service->write('create_group', $this->scope, ['name' => 'Materials group']);
+        $person = $this->person('Material student');
+        $this->member($person);
+        $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $person]);
+        $lesson = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Materials lesson',
+            'startsAt' => '2026-03-08T13:00:00Z', 'endsAt' => '2026-03-08T14:00:00Z']);
+        $bytes = "%PDF-1.4\nEducation material lifecycle\n%%EOF\n";
+        $file = $this->service->upload($this->scope, new UploadedFile(
+            (new StreamFactory())->createStream($bytes), strlen($bytes), UPLOAD_ERR_OK, 'lifecycle.pdf', 'text/plain',
+        ), $lesson['id'], false);
+        $lessonFile = $this->store->file($this->scope, $file['id']);
+        $this->storedFiles[] = $lessonFile['storageKey'];
+        $this->service->write('complete_lesson', $this->scope, [], $lesson['id']);
+        self::assertSame($file['id'], $this->service->read('materials', $this->scope, [], $lesson['id'])['items'][0]['id']);
+        self::assertSame('completed', $this->service->read('materials', $this->scope, [], $lesson['id'])['items'][0]['lessonStatus']);
+        self::assertSame($bytes, file_get_contents($this->service->download($this->scope, $file['id'])['path']));
+        $this->assertError(409, fn() => $this->service->write('delete_file', $this->scope, [], $file['id']), 'lesson_locked');
+        self::assertNotNull($this->store->file($this->scope, $file['id']));
+
+        $scheduled = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Cancelled materials',
+            'startsAt' => '2026-03-08T15:00:00Z', 'endsAt' => '2026-03-08T16:00:00Z']);
+        $cancelledFile = $this->service->upload($this->scope, new UploadedFile(
+            (new StreamFactory())->createStream($bytes), strlen($bytes), UPLOAD_ERR_OK, 'cancelled.pdf', 'application/pdf',
+        ), $scheduled['id'], false);
+        $cancelledRow = $this->store->file($this->scope, $cancelledFile['id']);
+        $this->storedFiles[] = $cancelledRow['storageKey'];
+        $this->service->write('cancel_lesson', $this->scope, [], $scheduled['id']);
+        self::assertSame(true, $this->service->write('delete_file', $this->scope, [], $cancelledFile['id'])['deleted']);
+        self::assertNull($this->store->file($this->scope, $cancelledFile['id']));
+        $this->assertError(404, fn() => $this->files->path($cancelledRow['storageKey']));
+
+        $unattached = $this->service->upload($this->scope, new UploadedFile(
+            (new StreamFactory())->createStream($bytes), strlen($bytes), UPLOAD_ERR_OK, 'unattached.pdf', 'application/pdf',
+        ), null, false);
+        $unattachedRow = $this->store->file($this->scope, $unattached['id']);
+        $this->storedFiles[] = $unattachedRow['storageKey'];
+        self::assertSame(true, $this->service->write('delete_file', $this->scope, [], $unattached['id'])['deleted']);
+        self::assertNull($this->store->file($this->scope, $unattached['id']));
+
+        $other = $this->teacher('Materials other');
+        $otherScope = $this->access->scope($other, $this->organization, 'education.files.manage');
+        $this->assertError(404, fn() => $this->service->write('delete_file', $otherScope, [], $file['id']));
+        self::assertNotNull($this->store->file($this->scope, $file['id']));
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=', true);
+        self::assertIsString($png);
+        $avatar = $this->service->upload($this->scope, new UploadedFile(
+            (new StreamFactory())->createStream($png), strlen($png), UPLOAD_ERR_OK, 'avatar.png', 'image/png',
+        ), null, true);
+        $avatarRow = $this->store->file($this->scope, $avatar['id']);
+        $this->storedFiles[] = $avatarRow['storageKey'];
+        $this->assertError(404, fn() => $this->service->write('delete_file', $this->scope, [], $avatar['id']));
+    }
+
+    public function testOtherTeachersAndRevokedPermissionsCannotUseNewOperations(): void
+    {
+        $group = $this->service->write('create_group', $this->scope, ['name' => 'Protected group']);
+        $person = $this->person('Protected student');
+        $this->member($person);
+        $student = $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $person]);
+        $lesson = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Protected lesson',
+            'startsAt' => '2026-03-08T13:00:00Z', 'endsAt' => '2026-03-08T14:00:00Z']);
+        $other = $this->teacher('Protected other');
+        $otherScope = $this->access->scope($other, $this->organization, 'education.people.manage');
+        $this->assertError(404, fn() => $this->service->read('group_students', $otherScope, [], $group['id']));
+        $this->assertError(404, fn() => $this->service->write('update_group', $otherScope, ['name' => 'Hijacked'], $group['id']));
+        $this->assertError(404, fn() => $this->service->write('archive_group', $otherScope, [], $group['id']));
+        $this->assertError(404, fn() => $this->service->write('remove_group_student', $otherScope, [], $group['id'], $student['id']));
+        $this->assertError(404, fn() => $this->service->write('transfer_student', $otherScope, ['groupId' => $this->id()], $group['id'], $student['id']));
+        $scheduleScope = $this->access->scope($other, $this->organization, 'education.schedule.manage');
+        $this->assertError(404, fn() => $this->service->write('update_lesson', $scheduleScope, ['groupId' => $group['id'],
+            'title' => 'Hijacked', 'startsAt' => '2026-03-08T13:00:00Z', 'endsAt' => '2026-03-08T14:00:00Z', 'location' => ''], $lesson['id']));
+        $this->assertError(404, fn() => $this->service->write('complete_lesson', $scheduleScope, [], $lesson['id']));
+        $this->assertError(404, fn() => $this->service->write('cancel_lesson', $scheduleScope, [], $lesson['id']));
+
+        $this->db->createCommand(
+            "DELETE FROM core.role_permissions rp USING core.roles r, core.permissions p
+            WHERE rp.role_id=r.id AND rp.permission_id=p.id AND r.code='education.teacher'
+            AND p.code='education.people.manage'",
+        )->execute();
+        $this->assertError(403, fn() => $this->access->scope($this->actor, $this->organization, 'education.people.manage'));
+        self::assertSame($this->organization, $this->access->scope($this->actor, $this->organization, 'education.schedule.manage')->organizationId);
     }
 
     public function testLocalDateRangesRespectBothDstTransitionsAndRejectInvalidInput(): void
@@ -341,6 +568,10 @@ final class WorkspaceTest extends TestCase
             'endsAt' => '2026-03-08T15:00:00Z',
         ]);
         $this->service->write('mark_attendance', $this->scope, ['status' => 'present'], $lesson['id'], $student['id']);
+        $this->service->write('complete_lesson', $this->scope, [], $lesson['id']);
+        $this->service->write('save_lesson_report', $this->scope, ['topic' => 'Erase report', 'summary' => 'Erase summary',
+            'teacherComment' => null], $lesson['id']);
+        $this->service->write('save_lesson_result', $this->scope, ['status' => 'mastered', 'comment' => null], $lesson['id'], $student['id']);
         $this->service->write('create_event', $this->scope, [
             'title' => 'Erase event',
             'kind' => 'other',
@@ -404,6 +635,10 @@ final class WorkspaceTest extends TestCase
             'SELECT count(*) FROM education.group_students WHERE group_id = CAST(:group AS uuid) OR student_id = CAST(:student AS uuid)',
             [':group' => $group['id'], ':student' => $student['id']],
         ));
+        self::assertSame(0, $count('SELECT count(*) FROM education.lesson_results WHERE lesson_id = CAST(:lesson AS uuid) OR student_id = CAST(:student AS uuid)',
+            [':lesson' => $lesson['id'], ':student' => $student['id']]));
+        self::assertSame(0, $count('SELECT count(*) FROM education.lesson_reports WHERE lesson_id = CAST(:lesson AS uuid)', [':lesson' => $lesson['id']]));
+        self::assertSame(0, $count('SELECT count(*) FROM education.result_revisions'));
         self::assertSame(1, $count('SELECT count(*) FROM education.privacy_receipts'));
         self::assertSame(1, $count('SELECT count(*) FROM education.groups WHERE id = CAST(:group AS uuid)', [':group' => $otherGroup['id']]));
         self::assertSame(1, $count('SELECT count(*) FROM education.teachers WHERE person_id = CAST(:person AS uuid)', [':person' => $recipient->personId]));
@@ -437,6 +672,191 @@ final class WorkspaceTest extends TestCase
         self::assertNull($registry->forAction('education.workspace', 'anonymize'));
     }
 
+    public function testLessonReportsAndResultsRequireCompletedLessonAndKeepCorrectionHistory(): void
+    {
+        $group = $this->service->write('create_group', $this->scope, ['name' => 'Results group']);
+        $person = $this->person('Results student');
+        $this->member($person);
+        $student = $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $person]);
+        $lesson = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Results lesson',
+            'startsAt' => '2026-03-08T13:00:00Z', 'endsAt' => '2026-03-08T14:00:00Z']);
+        $this->assertError(409, fn() => $this->service->write('save_lesson_report', $this->scope, [
+            'topic' => 'Vectors', 'summary' => 'Scalar product', 'teacherComment' => 'Next: basis',
+        ], $lesson['id']), 'lesson_not_completed');
+        $this->assertError(409, fn() => $this->service->write('save_lesson_result', $this->scope, [
+            'status' => 'mastered', 'comment' => null,
+        ], $lesson['id'], $student['id']), 'lesson_not_completed');
+        $this->service->write('complete_lesson', $this->scope, [], $lesson['id']);
+
+        $report = $this->service->write('save_lesson_report', $this->scope, [
+            'topic' => 'Vectors', 'summary' => 'Scalar product', 'teacherComment' => 'Next: basis',
+        ], $lesson['id']);
+        self::assertSame('Vectors', $report['topic']);
+        self::assertSame('Scalar product', $report['summary']);
+        self::assertSame('Next: basis', $report['teacherComment']);
+        $reapplied = $this->service->write('save_lesson_report', $this->scope, [
+            'topic' => 'Vectors', 'summary' => 'Scalar product', 'teacherComment' => 'Next: basis',
+        ], $lesson['id']);
+        self::assertSame($report['id'], $reapplied['id']);
+        $this->service->write('save_lesson_report', $this->scope, [
+            'topic' => 'Vector algebra', 'summary' => 'Scalar product and basis', 'teacherComment' => null,
+        ], $lesson['id']);
+        $results = $this->service->read('lesson_results', $this->scope, [], $lesson['id']);
+        self::assertNull($results['report']['teacherComment']);
+        self::assertSame('Vector algebra', $results['report']['topic']);
+        self::assertSame('pending', $results['items'][0]['status']);
+        self::assertNull($results['items'][0]['comment']);
+
+        $saved = $this->service->write('save_lesson_result', $this->scope, [
+            'status' => 'mastered', 'comment' => 'Confident',
+        ], $lesson['id'], $student['id']);
+        self::assertSame('mastered', $saved['status']);
+        self::assertSame('Confident', $saved['comment']);
+        $corrected = $this->service->write('save_lesson_result', $this->scope, [
+            'status' => 'developing', 'comment' => 'Needs more practice',
+        ], $lesson['id'], $student['id']);
+        self::assertSame($saved['id'], $corrected['id']);
+        $revisions = $this->store->lessonResultRevisions($this->scope, $lesson['id'], $student['id']);
+        self::assertCount(2, $revisions);
+        self::assertSame('mastered', $revisions[0]['status']);
+        self::assertSame('developing', $revisions[1]['status']);
+        $results = $this->service->read('lesson_results', $this->scope, [], $lesson['id']);
+        self::assertSame('developing', $results['items'][0]['status']);
+        self::assertSame('Needs more practice', $results['items'][0]['comment']);
+
+        $this->service->write('remove_group_student', $this->scope, [], $group['id'], $student['id']);
+        $results = $this->service->read('lesson_results', $this->scope, [], $lesson['id']);
+        self::assertCount(1, $results['items']);
+        self::assertSame('developing', $results['items'][0]['status']);
+
+        $cancelled = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Cancelled results',
+            'startsAt' => '2026-03-08T15:00:00Z', 'endsAt' => '2026-03-08T16:00:00Z']);
+        $this->service->write('cancel_lesson', $this->scope, [], $cancelled['id']);
+        $this->assertError(409, fn() => $this->service->write('save_lesson_report', $this->scope, [
+            'topic' => 'Blocked', 'summary' => 'Blocked', 'teacherComment' => null,
+        ], $cancelled['id']), 'lesson_cancelled');
+        $this->assertError(409, fn() => $this->service->write('save_lesson_result', $this->scope, [
+            'status' => 'mastered', 'comment' => null,
+        ], $cancelled['id'], $student['id']), 'lesson_cancelled');
+
+        $other = $this->teacher('Results other');
+        $otherScope = $this->access->scope($other, $this->organization, 'education.schedule.manage');
+        $this->assertError(404, fn() => $this->service->read('lesson_results', $otherScope, [], $lesson['id']));
+        $this->assertError(404, fn() => $this->service->write('save_lesson_report', $otherScope, [
+            'topic' => 'Hijacked', 'summary' => 'Hijacked', 'teacherComment' => null,
+        ], $lesson['id']));
+        $this->assertError(404, fn() => $this->service->write('save_lesson_result', $otherScope, [
+            'status' => 'mastered', 'comment' => null,
+        ], $lesson['id'], $student['id']));
+        $this->assertError(422, fn() => $this->service->write('save_lesson_result', $this->scope, [
+            'status' => 'five', 'comment' => null,
+        ], $lesson['id'], $student['id']));
+        $this->assertError(404, fn() => $this->service->write('save_lesson_result', $this->scope, [
+            'status' => 'mastered', 'comment' => null,
+        ], $lesson['id'], $this->id()));
+    }
+
+    public function testGroupJournalListsCompletedLessonsWithFiltersAndPagination(): void
+    {
+        $group = $this->service->write('create_group', $this->scope, ['name' => 'Journal group']);
+        $firstPerson = $this->person('Journal first');
+        $secondPerson = $this->person('Journal second');
+        $this->member($firstPerson);
+        $this->member($secondPerson);
+        $first = $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $firstPerson]);
+        $second = $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $secondPerson]);
+        $firstLesson = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'First conducted',
+            'startsAt' => '2026-03-07T13:00:00Z', 'endsAt' => '2026-03-07T14:00:00Z']);
+        $secondLesson = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Second conducted',
+            'startsAt' => '2026-03-08T13:00:00Z', 'endsAt' => '2026-03-08T14:00:00Z']);
+        $scheduled = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Still scheduled',
+            'startsAt' => '2026-03-08T16:00:00Z', 'endsAt' => '2026-03-08T17:00:00Z']);
+        $this->service->write('complete_lesson', $this->scope, [], $firstLesson['id']);
+        $this->service->write('complete_lesson', $this->scope, [], $secondLesson['id']);
+        $this->service->write('save_lesson_report', $this->scope, ['topic' => 'Topic one', 'summary' => 'Summary one',
+            'teacherComment' => null], $firstLesson['id']);
+        $this->service->write('save_lesson_result', $this->scope, ['status' => 'mastered', 'comment' => null], $firstLesson['id'], $first['id']);
+        $this->service->write('save_lesson_result', $this->scope, ['status' => 'developing', 'comment' => 'Try again'], $secondLesson['id'], $first['id']);
+        $this->service->write('save_lesson_result', $this->scope, ['status' => 'mastered', 'comment' => null], $secondLesson['id'], $second['id']);
+
+        $journal = $this->service->read('group_journal', $this->scope, [], $group['id']);
+        self::assertSame([$secondLesson['id'], $firstLesson['id']], array_column($journal['items'], 'id'));
+        self::assertSame('Topic one', $journal['items'][1]['report']['topic']);
+        self::assertNull($journal['items'][0]['report']);
+        self::assertSame('Try again', $journal['items'][0]['results'][0]['comment']);
+        self::assertCount(2, $journal['items'][0]['results']);
+        self::assertSame('pending', $journal['items'][1]['results'][1]['status']);
+
+        $filtered = $this->service->read('group_journal', $this->scope, ['studentId' => $second['id']], $group['id']);
+        self::assertSame([$secondLesson['id'], $firstLesson['id']], array_column($filtered['items'], 'id'));
+        self::assertSame([$second['id']], array_column($filtered['items'][0]['results'], 'studentId'));
+        self::assertSame('mastered', $filtered['items'][0]['results'][0]['status']);
+        self::assertSame('pending', $filtered['items'][1]['results'][0]['status']);
+
+        $period = $this->service->read('group_journal', $this->scope, ['from' => '2026-03-07', 'to' => '2026-03-07'], $group['id']);
+        self::assertSame([$firstLesson['id']], array_column($period['items'], 'id'));
+        $this->assertError(422, fn() => $this->service->read('group_journal', $this->scope, ['from' => '2026-03-07'], $group['id']), 'invalid_range');
+        $this->assertError(404, fn() => $this->service->read('group_journal', $this->scope, ['studentId' => $this->id()], $group['id']));
+
+        $other = $this->teacher('Journal other');
+        $otherScope = $this->access->scope($other, $this->organization, 'education.people.manage');
+        $this->assertError(404, fn() => $this->service->read('group_journal', $otherScope, [], $group['id']));
+        self::assertNotContains($scheduled['id'], array_column($journal['items'], 'id'));
+    }
+
+    public function testStudentCardKeepsHistoryAcrossRemovalTransferAndArchive(): void
+    {
+        $group = $this->service->write('create_group', $this->scope, ['name' => 'Card group']);
+        $target = $this->service->write('create_group', $this->scope, ['name' => 'Card target']);
+        $person = $this->person('Card student');
+        $this->member($person);
+        $student = $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $person]);
+        $firstLesson = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Card first',
+            'startsAt' => '2026-03-07T13:00:00Z', 'endsAt' => '2026-03-07T14:00:00Z']);
+        $secondLesson = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Card second',
+            'startsAt' => '2026-03-08T13:00:00Z', 'endsAt' => '2026-03-08T14:00:00Z']);
+        $this->service->write('complete_lesson', $this->scope, [], $firstLesson['id']);
+        $this->service->write('complete_lesson', $this->scope, [], $secondLesson['id']);
+        $this->service->write('mark_attendance', $this->scope, ['status' => 'present'], $firstLesson['id'], $student['id']);
+        $this->service->write('mark_attendance', $this->scope, ['status' => 'absent'], $secondLesson['id'], $student['id']);
+        $this->service->write('save_lesson_result', $this->scope, ['status' => 'mastered', 'comment' => 'Great work'], $firstLesson['id'], $student['id']);
+        $this->service->write('save_lesson_result', $this->scope, ['status' => 'needs_support', 'comment' => 'Review basics'], $secondLesson['id'], $student['id']);
+
+        $card = $this->service->read('student', $this->scope, [], $student['id']);
+        self::assertSame('Card student Test', $card['name']);
+        self::assertSame([$group['id']], array_column($card['groups'], 'id'));
+
+        $attendance = $this->service->read('student_attendance', $this->scope, ['from' => '2026-03-07', 'to' => '2026-03-08'], $student['id']);
+        self::assertSame('absent', $attendance['items'][0]['attendance']);
+        self::assertSame('present', $attendance['items'][1]['attendance']);
+
+        $results = $this->service->read('student_results', $this->scope, [], $student['id']);
+        self::assertSame([$secondLesson['id'], $firstLesson['id']], array_column($results['items'], 'lessonId'));
+        self::assertSame('Great work', $results['items'][1]['comment']);
+
+        $progress = $this->service->read('student_progress', $this->scope, ['from' => '2026-03-07', 'to' => '2026-03-08'], $student['id']);
+        self::assertSame('2026-03-07', $progress['from']);
+        self::assertSame('2026-03-08', $progress['to']);
+        self::assertSame(['mastered' => 1, 'developing' => 0, 'needs_support' => 1], $progress['results']);
+        self::assertSame(['present' => 1, 'absent' => 1], $progress['attendance']);
+
+        $this->service->write('transfer_student', $this->scope, ['groupId' => $target['id']], $group['id'], $student['id']);
+        self::assertCount(2, $this->service->read('student_results', $this->scope, [], $student['id'])['items']);
+        self::assertSame([$target['id']], array_column($this->service->read('student', $this->scope, [], $student['id'])['groups'], 'id'));
+        $this->service->write('remove_group_student', $this->scope, [], $target['id'], $student['id']);
+        self::assertSame([], $this->service->read('student', $this->scope, [], $student['id'])['groups']);
+        self::assertSame('mastered', $this->service->read('student_results', $this->scope, [], $student['id'])['items'][1]['status']);
+        $this->service->write('enroll_student', $this->scope, ['groupId' => $group['id'], 'personId' => $person]);
+        $this->service->write('archive_group', $this->scope, [], $group['id']);
+        self::assertSame([$group['id']], array_column($this->service->read('student', $this->scope, [], $student['id'])['groups'], 'id'));
+        self::assertCount(2, $this->service->read('student_results', $this->scope, [], $student['id'])['items']);
+
+        $other = $this->teacher('Card other');
+        $otherScope = $this->access->scope($other, $this->organization, 'education.people.manage');
+        $this->assertError(404, fn() => $this->service->read('student', $otherScope, [], $student['id']));
+        $this->assertError(404, fn() => $this->service->read('student_results', $otherScope, [], $student['id']));
+    }
+
     private function teacher(string $name): AuthenticatedIdentity
     {
         $person = $this->person($name);
@@ -467,13 +887,30 @@ final class WorkspaceTest extends TestCase
         return (string) $this->db->createCommand('SELECT uuidv7()::text')->queryScalar();
     }
 
-    private function assertError(int $status, callable $action): void
+    private function assertError(int $status, callable $action, ?string $reason = null): void
     {
         try {
             $action();
             self::fail('Expected Education request rejection.');
         } catch (EducationError $error) {
             self::assertSame($status, $error->status);
+            if ($reason !== null) {
+                self::assertSame($reason, $error->reason);
+            }
         }
+    }
+
+    private function serviceAt(string $moment): EducationService
+    {
+        $clock = new class($moment) implements ClockInterface {
+            public function __construct(private readonly string $moment) {}
+            public function now(): DateTimeImmutable
+            {
+                return new DateTimeImmutable($this->moment);
+            }
+        };
+        return new EducationService($this->store, $this->access, $clock, $this->files,
+            $this->container->get(Mutation::class), $this->container->get(PermissionService::class),
+            $this->container->get(OrganizationRepository::class));
     }
 }

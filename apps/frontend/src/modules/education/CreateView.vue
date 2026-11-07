@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
@@ -28,7 +28,8 @@ const titles = {
 };
 const title = computed(() => t(`education.${titles[props.kind]}`));
 const name = ref('');
-const groupId = ref(typeof route.query.group === 'string' ? route.query.group : '');
+const initialGroupId = typeof route.query.group === 'string' ? route.query.group : '';
+const groupId = ref(initialGroupId);
 const personId = ref('');
 const recipientId = ref('');
 const body = ref('');
@@ -46,10 +47,29 @@ const choices = useEducationResource(async (org, signal) => ({
   groups: ['lesson', 'student'].includes(props.kind)
     ? await educationApi.groups(org, 0, signal)
     : null,
+  selectedGroup:
+    ['lesson', 'student'].includes(props.kind) && initialGroupId !== ''
+      ? await educationApi.group(org, initialGroupId, signal).catch(() => null)
+      : null,
   candidates: props.kind === 'student' ? await educationApi.candidates(org, 0, signal) : null,
   colleagues: props.kind === 'message' ? await educationApi.colleagues(org, 0, signal) : null,
 }));
 const { data, loading, error, refresh } = choices;
+const groupOptions = computed(() => {
+  const items = (data.value?.groups?.items ?? []).filter((item) => !item.archivedAt);
+  const selected = data.value?.selectedGroup;
+  return selected && !selected.archivedAt && !items.some((item) => item.id === selected.id)
+    ? [selected, ...items]
+    : items;
+});
+watch(
+  () => data.value?.groups,
+  (page) => {
+    if (!page || initialGroupId === '' || data.value?.selectedGroup !== null) return;
+    if (!page.items.some((item) => item.id === initialGroupId && !item.archivedAt)) groupId.value = '';
+  },
+  { immediate: true },
+);
 const mutation = useEducationMutation();
 const { busy, error: actionError, uncertain } = mutation;
 const listPath = computed(() =>
@@ -209,7 +229,7 @@ async function submit(): Promise<void> {
             v-model="groupId"
             :label="t('education.group')"
             :placeholder="t('education.chooseGroup')"
-            :options="data.groups.items.map((item) => ({ value: item.id, label: item.name }))"
+            :options="groupOptions.map((item) => ({ value: item.id, label: item.name }))"
             :disabled="busy || uncertain"
           />
           <button

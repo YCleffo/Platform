@@ -17,6 +17,7 @@ import { useEducationWorkspace } from './workspace';
 import { educationApi, type Lesson } from './api';
 import { useEducationI18n } from './i18n';
 import { useEducationResource } from './resources';
+import { lessonDisplayStatus } from './status';
 import EducationAvatar from './EducationAvatar.vue';
 import EducationState from './EducationState.vue';
 const workspace = useEducationWorkspace();
@@ -55,13 +56,7 @@ function time(value: string): string {
   return formatZonedTime(value, locale.value, workspace.header!.timezone);
 }
 function status(lesson: Lesson): string {
-  if (lesson.status === 'cancelled' || lesson.status === 'completed') return lesson.status;
-  const now = Date.parse(workspace.header!.now);
-  return Date.parse(lesson.endsAt) <= now
-    ? 'completed'
-    : Date.parse(lesson.startsAt) <= now
-      ? 'now'
-      : 'scheduled';
+  return lessonDisplayStatus(lesson, workspace.header!.now);
 }
 const dateLine = computed(() =>
   formatCalendarDate(workspace.header!.date, locale.value, {

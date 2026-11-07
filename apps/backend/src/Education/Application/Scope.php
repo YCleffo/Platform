@@ -13,5 +13,6 @@ final readonly class Scope
         public string $personId,
         public string $locale,
         public string $timezone,
+        public ?string $studentId = null,
     ) {}
 }

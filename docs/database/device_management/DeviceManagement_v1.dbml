@@ -1,0 +1,147 @@
+// СФОРМИРОВАНО scripts/database/export_schema.py; не редактировать вручную.
+// Только реальные объекты PostgreSQL. Полное определение SQL: schema.catalog.json.
+Project device_management {
+  database_type: 'PostgreSQL'
+  Note: 'Каталог PostgreSQL после миграций. Межбазовые идентификаторы не являются внешними ключами.'
+}
+
+Table device_management.classrooms {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  owner_account_id uuid [not null]
+  owner_person_id uuid [not null]
+  name "character varying(160)" [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (id, organization_id, owner_account_id) [name: 'classrooms_id_organization_id_owner_account_id_key', type: btree, unique]
+  }
+  Note: 'classrooms_created_at_not_null: NOT NULL created_at\nclassrooms_id_not_null: NOT NULL id\nclassrooms_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\nclassrooms_name_check: CHECK (btrim(name::text) <> \'\'::text)\nclassrooms_name_not_null: NOT NULL name\nclassrooms_organization_id_not_null: NOT NULL organization_id\nclassrooms_owner_account_id_not_null: NOT NULL owner_account_id\nclassrooms_owner_person_id_not_null: NOT NULL owner_person_id\nCREATE UNIQUE INDEX classrooms_id_organization_id_owner_account_id_key ON device_management.classrooms USING btree (id, organization_id, owner_account_id)'
+}
+
+Table device_management.device_commands {
+  id uuid [pk, not null, default: `uuidv7()`]
+  device_id uuid [not null]
+  kind "character varying(40)" [not null]
+  payload jsonb [not null, default: `'{}'::jsonb`]
+  state "character varying(16)" [not null, default: `'queued'::character varying`]
+  expires_at "timestamp with time zone" [not null]
+  delivered_at "timestamp with time zone" [null]
+  acknowledged_at "timestamp with time zone" [null]
+  authorized_by_account_id uuid [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (device_id, state, id) [name: 'device_commands_poll', type: btree]
+  }
+  Note: 'device_commands_created_at_not_null: NOT NULL created_at\ndevice_commands_device_id_fkey: FOREIGN KEY (device_id) REFERENCES device_management.devices(id)\ndevice_commands_device_id_not_null: NOT NULL device_id\ndevice_commands_expires_at_not_null: NOT NULL expires_at\ndevice_commands_id_not_null: NOT NULL id\ndevice_commands_kind_not_null: NOT NULL kind\ndevice_commands_payload_not_null: NOT NULL payload\ndevice_commands_state_check: CHECK (state::text = ANY (ARRAY[\'queued\'::character varying, \'delivered\'::character varying, \'acknowledged\'::character varying, \'expired\'::character varying]::text[]))\ndevice_commands_state_not_null: NOT NULL state\nCREATE INDEX device_commands_poll ON device_management.device_commands USING btree (device_id, state, id)'
+}
+
+Table device_management.device_credentials {
+  id uuid [pk, not null, default: `uuidv7()`]
+  device_id uuid [not null]
+  credential_hash character(64) [not null]
+  revoked_at "timestamp with time zone" [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    credential_hash [name: 'device_credentials_credential_hash_key', type: btree, unique]
+  }
+  Note: 'device_credentials_created_at_not_null: NOT NULL created_at\ndevice_credentials_credential_hash_key: UNIQUE (credential_hash)\ndevice_credentials_credential_hash_not_null: NOT NULL credential_hash\ndevice_credentials_device_id_fkey: FOREIGN KEY (device_id) REFERENCES device_management.devices(id)\ndevice_credentials_device_id_not_null: NOT NULL device_id\ndevice_credentials_id_not_null: NOT NULL id\nCREATE UNIQUE INDEX device_credentials_credential_hash_key ON device_management.device_credentials USING btree (credential_hash)\nCREATE INDEX device_credentials_device ON device_management.device_credentials USING btree (device_id) WHERE (revoked_at IS NULL)'
+}
+
+Table device_management.device_enrollments {
+  id uuid [pk, not null, default: `uuidv7()`]
+  device_id uuid [not null]
+  code_hash character(64) [not null]
+  expires_at "timestamp with time zone" [not null]
+  used_at "timestamp with time zone" [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    code_hash [name: 'device_enrollments_code_hash_key', type: btree, unique]
+  }
+  Note: 'device_enrollments_code_hash_key: UNIQUE (code_hash)\ndevice_enrollments_code_hash_not_null: NOT NULL code_hash\ndevice_enrollments_created_at_not_null: NOT NULL created_at\ndevice_enrollments_device_id_fkey: FOREIGN KEY (device_id) REFERENCES device_management.devices(id)\ndevice_enrollments_device_id_not_null: NOT NULL device_id\ndevice_enrollments_expires_at_not_null: NOT NULL expires_at\ndevice_enrollments_id_not_null: NOT NULL id\nCREATE UNIQUE INDEX device_enrollments_code_hash_key ON device_management.device_enrollments USING btree (code_hash)'
+}
+
+Table device_management.device_events {
+  id uuid [pk, not null, default: `uuidv7()`]
+  device_id uuid [not null]
+  kind "character varying(60)" [not null]
+  payload jsonb [not null, default: `'{}'::jsonb`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (device_id, id) [name: 'device_events_device', type: btree]
+  }
+  Note: 'device_events_created_at_not_null: NOT NULL created_at\ndevice_events_device_id_fkey: FOREIGN KEY (device_id) REFERENCES device_management.devices(id)\ndevice_events_device_id_not_null: NOT NULL device_id\ndevice_events_id_not_null: NOT NULL id\ndevice_events_kind_not_null: NOT NULL kind\ndevice_events_payload_not_null: NOT NULL payload\nCREATE INDEX device_events_device ON device_management.device_events USING btree (device_id, id)'
+}
+
+Table device_management.device_heartbeats {
+  device_id uuid [not null]
+  received_at "timestamp with time zone" [not null, default: `now()`]
+  state jsonb [not null, default: `'{}'::jsonb`]
+  indexes {
+    (device_id, received_at) [pk]
+  }
+  Note: 'device_heartbeats_device_id_fkey: FOREIGN KEY (device_id) REFERENCES device_management.devices(id)\ndevice_heartbeats_device_id_not_null: NOT NULL device_id\ndevice_heartbeats_received_at_not_null: NOT NULL received_at\ndevice_heartbeats_state_not_null: NOT NULL state'
+}
+
+Table device_management.device_sessions {
+  id uuid [pk, not null, default: `uuidv7()`]
+  device_id uuid [not null]
+  student_id uuid [not null]
+  organization_id uuid [not null]
+  owner_account_id uuid [not null]
+  status "character varying(24)" [not null, default: `'AUTHORIZED'::character varying`]
+  desired_status "character varying(24)" [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  started_at "timestamp with time zone" [not null, default: `now()`]
+  ended_at "timestamp with time zone" [null]
+  Note: 'device_sessions_created_at_not_null: NOT NULL created_at\ndevice_sessions_desired_status_check: CHECK (desired_status IS NULL OR (desired_status::text = ANY (ARRAY[\'AUTHORIZED\'::character varying, \'PREPARING\'::character varying, \'WINDOWS_PROFILE_READY\'::character varying, \'SYNCING_IN\'::character varying, \'ACTIVE\'::character varying, \'ENDING\'::character varying, \'SYNCING_OUT\'::character varying, \'STORAGE_CONFIRMED\'::character varying, \'CLEANUP\'::character varying, \'CLOSED\'::character varying, \'SYNC_PENDING\'::character varying, \'RECOVERY_REQUIRED\'::character varying, \'FAILED\'::character varying]::text[])))\ndevice_sessions_device_id_fkey: FOREIGN KEY (device_id) REFERENCES device_management.devices(id)\ndevice_sessions_device_id_not_null: NOT NULL device_id\ndevice_sessions_id_not_null: NOT NULL id\ndevice_sessions_organization_id_not_null: NOT NULL organization_id\ndevice_sessions_owner_account_id_not_null: NOT NULL owner_account_id\ndevice_sessions_started_at_not_null: NOT NULL started_at\ndevice_sessions_status_check: CHECK (status::text = ANY (ARRAY[\'AUTHORIZED\'::character varying, \'PREPARING\'::character varying, \'WINDOWS_PROFILE_READY\'::character varying, \'SYNCING_IN\'::character varying, \'ACTIVE\'::character varying, \'ENDING\'::character varying, \'SYNCING_OUT\'::character varying, \'STORAGE_CONFIRMED\'::character varying, \'CLEANUP\'::character varying, \'CLOSED\'::character varying, \'SYNC_PENDING\'::character varying, \'RECOVERY_REQUIRED\'::character varying, \'FAILED\'::character varying]::text[]))\ndevice_sessions_status_not_null: NOT NULL status\ndevice_sessions_student_id_not_null: NOT NULL student_id\nCREATE UNIQUE INDEX device_sessions_active ON device_management.device_sessions USING btree (device_id) WHERE ((status)::text <> ALL ((ARRAY[\'CLOSED\'::character varying, \'FAILED\'::character varying])::text[]))'
+}
+
+Table device_management.devices {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  owner_account_id uuid [not null]
+  owner_person_id uuid [not null]
+  classroom_id uuid [null]
+  workstation_id uuid [null]
+  name "character varying(160)" [not null, default: `''::character varying`]
+  number "character varying(40)" [not null, default: `''::character varying`]
+  status "character varying(24)" [not null, default: `'OFFLINE'::character varying`]
+  enrollment_state "character varying(20)" [not null, default: `'pending'::character varying`]
+  last_seen_at "timestamp with time zone" [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (id, organization_id, owner_account_id) [name: 'devices_id_organization_id_owner_account_id_key', type: btree, unique]
+    (organization_id, owner_account_id, created_at, id) [name: 'devices_owner', type: btree]
+  }
+  Note: 'devices_classroom_id_organization_id_owner_account_id_fkey: FOREIGN KEY (classroom_id, organization_id, owner_account_id) REFERENCES device_management.classrooms(id, organization_id, owner_account_id)\ndevices_created_at_not_null: NOT NULL created_at\ndevices_enrollment_state_check: CHECK (enrollment_state::text = ANY (ARRAY[\'pending\'::character varying, \'confirmed\'::character varying, \'revoked\'::character varying]::text[]))\ndevices_enrollment_state_not_null: NOT NULL enrollment_state\ndevices_id_not_null: NOT NULL id\ndevices_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\ndevices_name_not_null: NOT NULL name\ndevices_number_not_null: NOT NULL number\ndevices_organization_id_not_null: NOT NULL organization_id\ndevices_owner_account_id_not_null: NOT NULL owner_account_id\ndevices_owner_person_id_not_null: NOT NULL owner_person_id\ndevices_status_check: CHECK (status::text = ANY (ARRAY[\'OFFLINE\'::character varying, \'AVAILABLE\'::character varying, \'RESERVED\'::character varying, \'PREPARING\'::character varying, \'SYNCING_IN\'::character varying, \'ACTIVE\'::character varying, \'SYNCING_OUT\'::character varying, \'CLEANUP\'::character varying, \'RECOVERY_REQUIRED\'::character varying, \'ERROR\'::character varying]::text[]))\ndevices_status_not_null: NOT NULL status\ndevices_workstation_id_fkey: FOREIGN KEY (workstation_id) REFERENCES device_management.workstations(id)\nCREATE UNIQUE INDEX devices_id_organization_id_owner_account_id_key ON device_management.devices USING btree (id, organization_id, owner_account_id)\nCREATE INDEX devices_owner ON device_management.devices USING btree (organization_id, owner_account_id, created_at, id)'
+}
+
+Table device_management.module_migrations {
+  name text [pk, not null]
+  sha256 character(64) [not null]
+  applied_at "timestamp with time zone" [not null, default: `now()`]
+  Note: 'module_migrations_applied_at_not_null: NOT NULL applied_at\nmodule_migrations_name_not_null: NOT NULL name\nmodule_migrations_sha256_not_null: NOT NULL sha256'
+}
+
+Table device_management.workstations {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  owner_account_id uuid [not null]
+  classroom_id uuid [not null]
+  number "character varying(40)" [not null]
+  name "character varying(160)" [not null, default: `''::character varying`]
+  indexes {
+    (classroom_id, number) [name: 'workstations_classroom_id_number_key', type: btree, unique]
+  }
+  Note: 'workstations_classroom_id_not_null: NOT NULL classroom_id\nworkstations_classroom_id_number_key: UNIQUE (classroom_id, number)\nworkstations_classroom_id_organization_id_owner_account_id_fkey: FOREIGN KEY (classroom_id, organization_id, owner_account_id) REFERENCES device_management.classrooms(id, organization_id, owner_account_id)\nworkstations_id_not_null: NOT NULL id\nworkstations_name_not_null: NOT NULL name\nworkstations_number_check: CHECK (btrim(number::text) <> \'\'::text)\nworkstations_number_not_null: NOT NULL number\nworkstations_organization_id_not_null: NOT NULL organization_id\nworkstations_owner_account_id_not_null: NOT NULL owner_account_id\nCREATE UNIQUE INDEX workstations_classroom_id_number_key ON device_management.workstations USING btree (classroom_id, number)'
+}
+
+Ref: device_management.device_commands.device_id > device_management.devices.id [delete: no action, update: no action]
+Ref: device_management.device_credentials.device_id > device_management.devices.id [delete: no action, update: no action]
+Ref: device_management.device_enrollments.device_id > device_management.devices.id [delete: no action, update: no action]
+Ref: device_management.device_events.device_id > device_management.devices.id [delete: no action, update: no action]
+Ref: device_management.device_heartbeats.device_id > device_management.devices.id [delete: no action, update: no action]
+Ref: device_management.device_sessions.device_id > device_management.devices.id [delete: no action, update: no action]
+Ref: device_management.devices.(classroom_id, organization_id, owner_account_id) > device_management.classrooms.(id, organization_id, owner_account_id) [delete: no action, update: no action]
+Ref: device_management.devices.workstation_id > device_management.workstations.id [delete: no action, update: no action]
+Ref: device_management.workstations.(classroom_id, organization_id, owner_account_id) > device_management.classrooms.(id, organization_id, owner_account_id) [delete: no action, update: no action]

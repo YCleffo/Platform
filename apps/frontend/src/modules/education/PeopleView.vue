@@ -22,6 +22,12 @@ const { data, loading, error, refresh } = useEducationResource(
     <header class="edu-page-title">
       <h1>{{ t('education.people') }}</h1>
       <RouterLink
+        to="/devices"
+        class="edu-button"
+      >
+        {{ t('education.computers') }}
+      </RouterLink>
+      <RouterLink
         :to="groups ? '/groups/new' : '/students/new'"
         class="edu-button edu-button--primary"
       >
@@ -68,16 +74,34 @@ const { data, loading, error, refresh } = useEducationResource(
         :key="item.id"
         class="edu-list__item"
       >
-        <div>
-          <strong>{{ item.name }}</strong>
-          <p class="edu-subtle">{{ students(item.studentCount ?? 0) }}</p>
-        </div>
         <RouterLink
-          :to="`/students/new?group=${item.id}`"
-          class="edu-button"
+          :to="`/groups/${item.id}`"
+          class="edu-list__main"
         >
-          {{ t('education.addStudent') }}
+          <strong>{{ item.name }}</strong>
+          <p class="edu-subtle">
+            {{ students(item.studentCount ?? 0) }}
+            <span
+              v-if="item.archivedAt"
+              class="edu-status edu-status--cancelled"
+            >{{ t('education.archived') }}</span>
+          </p>
         </RouterLink>
+        <div class="edu-form-actions">
+          <RouterLink
+            :to="`/groups/${item.id}`"
+            class="edu-button"
+          >
+            {{ t('education.openGroup') }}
+          </RouterLink>
+          <RouterLink
+            v-if="!item.archivedAt"
+            :to="`/students/new?group=${item.id}`"
+            class="edu-button"
+          >
+            {{ t('education.addStudent') }}
+          </RouterLink>
+        </div>
       </li>
     </ul>
     <ul
@@ -89,7 +113,18 @@ const { data, loading, error, refresh } = useEducationResource(
         :key="item.id"
         class="edu-list__item"
       >
-        <strong>{{ item.name }}</strong>
+        <RouterLink
+          :to="`/students/${item.id}`"
+          class="edu-list__main"
+        >
+          <strong>{{ item.name }}</strong>
+        </RouterLink>
+        <RouterLink
+          :to="`/students/${item.id}`"
+          class="edu-button"
+        >
+          {{ t('education.openStudentCard') }}
+        </RouterLink>
       </li>
     </ul>
     <div class="edu-form-actions">
