@@ -22,11 +22,23 @@ let active = true;
 
 const mode = ref<'code' | 'recovery'>('code');
 const isFocused = ref(false);
+const isSuccess = ref(false);
+const isShaking = ref(false);
+let shakeTimer: ReturnType<typeof setTimeout> | undefined;
 const codeInputRef = ref<HTMLInputElement | null>(null);
+
+function triggerShake(): void {
+  isShaking.value = true;
+  if (shakeTimer) clearTimeout(shakeTimer);
+  shakeTimer = setTimeout(() => {
+    isShaking.value = false;
+  }, 450);
+}
 
 onBeforeUnmount(() => {
   active = false;
   controller.abort();
+  if (shakeTimer) clearTimeout(shakeTimer);
 });
 
 const form = useForm({
@@ -55,6 +67,9 @@ function onCodeInput(event: Event): void {
   target.value = cleaned;
   if (crossError.value) {
     crossError.value = null;
+  }
+  if (cleaned.length === 6 && !submitting.value && !isSuccess.value) {
+    void onSubmit();
   }
 }
 
@@ -88,6 +103,11 @@ const { submitting, message, run } = useAsyncAction(async () => {
   if (!active) {
     return;
   }
+  isSuccess.value = true;
+  await new Promise((resolve) => setTimeout(resolve, 450));
+  if (!active) {
+    return;
+  }
   await router.push(redirectTarget.value !== null ? redirectTarget.value : { name: 'cabinet' });
 });
 
@@ -102,7 +122,7 @@ onMounted(() => {
 });
 
 async function onSubmit(): Promise<void> {
-  if (submitting.value) {
+  if (submitting.value || isSuccess.value) {
     return;
   }
   if (auth.mfaChallenge === null) {
@@ -113,6 +133,7 @@ async function onSubmit(): Promise<void> {
     const code = form.values.code.trim();
     if (code.length !== 6) {
       crossError.value = t('coreAuth.totpInvalid');
+      triggerShake();
       focusCodeInput();
       return;
     }
@@ -121,12 +142,23 @@ async function onSubmit(): Promise<void> {
     const recovery = form.values.recoveryCode.trim();
     if (recovery === '') {
       crossError.value = t('auth.mfaInvalid');
+      triggerShake();
       return;
     }
     form.values.code = '';
   }
   crossError.value = null;
-  await run();
+  const ok = await run();
+  if (!ok) {
+    triggerShake();
+    if (mode.value === 'code') {
+      form.values.code = '';
+      if (codeInputRef.value) {
+        codeInputRef.value.value = '';
+      }
+      focusCodeInput();
+    }
+  }
 }
 </script>
 
@@ -140,6 +172,7 @@ async function onSubmit(): Promise<void> {
     <template #icon>
       <span
         class="mfa__icon"
+        :class="{ 'mfa__icon--success': isSuccess }"
         aria-hidden="true"
       >
         <ShieldCheck :size="28" />
@@ -164,6 +197,8 @@ async function onSubmit(): Promise<void> {
             :class="{
               'mfa-pin--focused': isFocused,
               'mfa-pin--error': Boolean(message ?? crossError),
+              'mfa-pin--shake': isShaking,
+              'mfa-pin--success': isSuccess,
             }"
             @click="focusCodeInput"
           >
@@ -178,7 +213,7 @@ async function onSubmit(): Promise<void> {
               maxlength="6"
               class="mfa-pin__input"
               :aria-label="$t('auth.mfaCode')"
-              :disabled="submitting"
+              :disabled="submitting || isSuccess"
               @focus="isFocused = true"
               @blur="isFocused = false"
               @input="onCodeInput"
@@ -208,10 +243,11 @@ async function onSubmit(): Promise<void> {
 
         <AppButton
           type="submit"
-          :loading="submitting"
+          :loading="submitting && !isSuccess"
+          :disabled="isSuccess"
           block
         >
-          {{ $t('auth.mfaSubmit') }}
+          {{ isSuccess ? '✓' : $t('auth.mfaSubmit') }}
         </AppButton>
 
         <p class="auth-form__aux">
@@ -279,7 +315,17 @@ async function onSubmit(): Promise<void> {
   border-radius: var(--radius-badge-module-tile);
   background: var(--accent-soft);
   color: var(--accent-text);
-  transition: var(--theme-transition);
+  transition:
+    var(--theme-transition),
+    transform var(--motion-control-duration) var(--motion-spring-ease),
+    background-color var(--motion-fast-duration) var(--motion-ease),
+    color var(--motion-fast-duration) var(--motion-ease);
+}
+
+.mfa__icon--success {
+  background: var(--success-soft);
+  color: var(--success);
+  transform: scale(1.08);
 }
 
 .mfa-pin-wrapper {
@@ -303,6 +349,25 @@ async function onSubmit(): Promise<void> {
   display: flex;
   justify-content: center;
   width: 100%;
+}
+
+.mfa-pin--shake {
+  animation: mfa-shake var(--motion-control-duration) var(--motion-ease);
+}
+
+@keyframes mfa-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-8px);
+  }
+  40%,
+  80% {
+    transform: translateX(8px);
+  }
 }
 
 .mfa-pin__input {
@@ -346,6 +411,7 @@ async function onSubmit(): Promise<void> {
   transition:
     var(--theme-transition),
     border-color var(--motion-fast-duration) var(--motion-ease),
+    background-color var(--motion-fast-duration) var(--motion-ease),
     box-shadow var(--motion-fast-duration) var(--motion-ease),
     transform var(--motion-fast-duration) var(--motion-ease);
 }
@@ -363,6 +429,17 @@ async function onSubmit(): Promise<void> {
 
 .mfa-pin--error .mfa-pin__cell {
   border-color: var(--color-danger-500);
+}
+
+.mfa-pin--success .mfa-pin__cell {
+  border-color: var(--success);
+  background: var(--success-soft);
+  box-shadow: 0 0 16px var(--success-soft);
+  transform: scale(1.04);
+}
+
+.mfa-pin--success .mfa-pin__digit {
+  color: var(--success);
 }
 
 .mfa-pin__digit {

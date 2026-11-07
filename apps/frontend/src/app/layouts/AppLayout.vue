@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
@@ -45,6 +45,57 @@ const bottomItems = computed<BottomNavItem[]>(() => [
   { label: t('nav.cabinet'), icon: Building2, routeName: 'cabinet' },
   { label: t('nav.settings'), icon: Settings, routeName: 'settings' },
 ]);
+
+const primaryOrder: Record<string, number> = {
+  catalog: 0,
+  cabinet: 1,
+  settings: 2,
+};
+
+const pageTransition = ref<'page-slide-left' | 'page-slide-right'>('page-slide-left');
+
+watch(primaryNavigation, (to: string, from: string) => {
+  const toIdx = primaryOrder[to];
+  const fromIdx = primaryOrder[from];
+  if (toIdx !== undefined && fromIdx !== undefined && toIdx !== fromIdx) {
+    pageTransition.value = toIdx > fromIdx ? 'page-slide-left' : 'page-slide-right';
+  }
+});
+
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+
+function onTouchStart(event: TouchEvent): void {
+  const touch = event.changedTouches[0];
+  if (!touch) return;
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  touchStartTime = performance.now();
+}
+
+function onTouchEnd(event: TouchEvent): void {
+  const touch = event.changedTouches[0];
+  if (!touch) return;
+  const dx = touch.clientX - touchStartX;
+  const dy = touch.clientY - touchStartY;
+  const dt = performance.now() - touchStartTime;
+
+  if (Math.abs(dx) >= 45 && Math.abs(dx) > Math.abs(dy) * 1.4 && dt < 500) {
+    const currentIndex = bottomItems.value.findIndex(
+      (item) => item.routeName === primaryNavigation.value,
+    );
+    if (currentIndex === -1) return;
+
+    if (dx < 0 && currentIndex < bottomItems.value.length - 1) {
+      const nextItem = bottomItems.value[currentIndex + 1];
+      if (nextItem) void router.push({ name: nextItem.routeName });
+    } else if (dx > 0 && currentIndex > 0) {
+      const prevItem = bottomItems.value[currentIndex - 1];
+      if (prevItem) void router.push({ name: prevItem.routeName });
+    }
+  }
+}
 
 const localeLabel = computed(() => (locale.value === 'ru' ? 'RU' : 'EN'));
 
@@ -149,13 +200,15 @@ async function logout(): Promise<void> {
         </AppIconButton>
         <AppIconButton
           class="app-layout__menu-button"
-          :label="$t('nav.menu')"
+          :class="{ 'app-layout__menu-button--open': menuOpen }"
+          :label="menuOpen ? $t('common.close') : $t('nav.menu')"
           aria-haspopup="dialog"
           :aria-expanded="menuOpen"
-          @click="menuOpen = true"
+          @click="menuOpen = !menuOpen"
         >
           <span
             class="hamburger"
+            :class="{ 'hamburger--open': menuOpen }"
             aria-hidden="true"
           >
             <span />
@@ -167,8 +220,22 @@ async function logout(): Promise<void> {
     </AppHeader>
 
     <SiteContextMenu>
-      <main class="app-layout__main">
-        <RouterView />
+      <main
+        class="app-layout__main"
+        @touchstart.passive="onTouchStart"
+        @touchend.passive="onTouchEnd"
+      >
+        <RouterView v-slot="{ Component }">
+          <Transition
+            :name="pageTransition"
+            mode="out-in"
+          >
+            <component
+              :is="Component"
+              :key="primaryNavigation"
+            />
+          </Transition>
+        </RouterView>
       </main>
     </SiteContextMenu>
 
@@ -244,9 +311,11 @@ async function logout(): Promise<void> {
 }
 
 .hamburger {
+  position: relative;
   display: inline-flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   gap: 5px;
   width: 20px;
   height: 20px;
@@ -258,14 +327,90 @@ async function logout(): Promise<void> {
   height: 2px;
   border-radius: 2px;
   background: currentColor;
-  transition: var(--theme-transition);
+  transform-origin: center;
+  transition:
+    var(--theme-transition),
+    transform var(--motion-control-duration) var(--motion-ease),
+    opacity var(--motion-fast-duration) var(--motion-ease);
+}
+
+.hamburger--open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.hamburger--open span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.hamburger--open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+.app-layout__menu-button {
+  transition:
+    var(--theme-transition),
+    background-color var(--motion-fast-duration) var(--motion-ease),
+    color var(--motion-fast-duration) var(--motion-ease);
+}
+
+.app-layout__menu-button--open {
+  color: var(--accent-text);
+  background: var(--accent-soft);
 }
 
 .app-layout__main {
   flex: 1;
   width: 100%;
+  overflow-x: hidden;
   padding: var(--page-pad-y) var(--page-pad-x)
     calc(var(--bottom-nav-h) + var(--space-24) + env(safe-area-inset-bottom));
+}
+
+/* Page swipe transitions */
+.page-slide-left-enter-active,
+.page-slide-right-enter-active {
+  transition:
+    var(--theme-transition),
+    transform var(--motion-control-duration) var(--motion-ease),
+    opacity var(--motion-control-duration) var(--motion-ease);
+}
+
+.page-slide-left-leave-active,
+.page-slide-right-leave-active {
+  transition:
+    var(--theme-transition),
+    transform var(--motion-fast-duration) var(--motion-ease),
+    opacity var(--motion-fast-duration) var(--motion-ease);
+}
+
+.page-slide-left-enter-from {
+  opacity: 0;
+  transform: translateX(64px);
+}
+
+.page-slide-left-leave-to {
+  opacity: 0;
+  transform: translateX(-64px);
+}
+
+.page-slide-right-enter-from {
+  opacity: 0;
+  transform: translateX(-64px);
+}
+
+.page-slide-right-leave-to {
+  opacity: 0;
+  transform: translateX(64px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-slide-left-enter-active,
+  .page-slide-left-leave-active,
+  .page-slide-right-enter-active,
+  .page-slide-right-leave-active {
+    transition: none;
+  }
 }
 
 @media (min-width: 768px) {

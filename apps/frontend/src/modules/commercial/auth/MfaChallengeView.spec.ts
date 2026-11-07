@@ -58,12 +58,12 @@ describe('MfaChallengeView', () => {
     // Recovery input is not visible by default
     expect(wrapper.find('#mfa-recovery').exists()).toBe(false);
 
-    // Type 6 digits into the code input
-    await codeInput.setValue('123456');
+    // Type digits into the code input
+    await codeInput.setValue('12345');
     await codeInput.trigger('input');
 
     const digits = wrapper.findAll('.mfa-pin__digit');
-    expect(digits.map((d) => d.text())).toEqual(['1', '2', '3', '4', '5', '6']);
+    expect(digits.map((d) => d.text())).toEqual(['1', '2', '3', '4', '5', '']);
 
     // Click link to switch to recovery mode
     const toggleRecovery = wrapper.find('#mfa-toggle-recovery');
@@ -105,8 +105,28 @@ describe('MfaChallengeView', () => {
 
     // Submit valid 6 digits
     await wrapper.find('#mfa-code').setValue('654321');
-    await wrapper.find('form').trigger('submit');
     expect(verifySpy).toHaveBeenCalledWith('654321', undefined, expect.any(AbortSignal));
+  });
+
+  it('automatically verifies when 6 digits are typed', async () => {
+    const auth = useAuthStore();
+    auth.mfaChallenge = {
+      status: 'mfa_required',
+      challenge_token: 'test-challenge',
+      expires_in: 300,
+    };
+    const verifySpy = vi.spyOn(auth, 'verifyMfa').mockResolvedValue(undefined);
+
+    const wrapper = mount(MfaChallengeView, {
+      global: {
+        plugins: [router, i18n],
+      },
+    });
+
+    const codeInput = wrapper.find('#mfa-code');
+    await codeInput.setValue('123456');
+
+    expect(verifySpy).toHaveBeenCalledWith('123456', undefined, expect.any(AbortSignal));
   });
 
   it('validates and submits recovery code in recovery mode', async () => {

@@ -31,7 +31,7 @@ withDefaults(defineProps<{ sticky?: boolean }>(), { sticky: true });
 .app-header--sticky {
   position: sticky;
   top: 0;
-  z-index: 800;
+  z-index: 900;
 }
 
 .app-header__inner {
