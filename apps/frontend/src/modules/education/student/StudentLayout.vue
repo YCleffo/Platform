@@ -11,7 +11,9 @@ const { data, loading, error, refresh } = useEducationResource(
   async (_org, signal) => educationApi.context(signal),
   [],
 );
-const studentOrganizations = computed(() => (data.value?.organizations ?? []).filter(org => org.student));
+const studentOrganizations = computed(() =>
+  (data.value?.organizations ?? []).filter((org) => org.student),
+);
 const current = computed(() => studentOrganizations.value[0] ?? null);
 watch(
   [data, current],

@@ -99,9 +99,9 @@ try {
   await range(page, 'appearance-font-scale', 1.1);
   await other.waitForFunction(() => document.documentElement.style.getPropertyValue('--ui-font-scale') === '1.1');
   await other.close();
-  await page.getByRole('button', { name: 'Reset appearance', exact: true }).click();
+  await page.locator('#appearance-preset-default').click();
   check(await page.locator('#appearance-font-scale').inputValue() === '1', 'Reset did not restore defaults');
-  check(await page.locator('#appearance-animations').isChecked(), 'Reset did not restore animations');
+  check(!(await page.locator('#appearance-animations').isChecked()), 'Visual presets must preserve the motion preference');
   await page.getByRole('button', { name: 'Open a dialog', exact: true }).click();
   await page.getByRole('dialog').waitFor();
   await page.keyboard.press('Escape');
@@ -110,7 +110,7 @@ try {
   await page.locator('#appearance-font-scale').focus();
   await page.keyboard.press('ArrowRight');
   check(await page.locator('#appearance-font-scale').inputValue() === '1.05', 'Range is not keyboard accessible');
-  await page.getByRole('button', { name: 'Reset appearance', exact: true }).click();
+  await page.locator('#appearance-preset-default').click();
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: 'screenshots/settings-desktop-light.png', fullPage: true });
   await page.getByRole('radio', { name: 'Dark', exact: true }).check(); await settled(page);

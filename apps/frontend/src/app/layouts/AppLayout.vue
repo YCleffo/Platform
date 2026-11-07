@@ -59,125 +59,125 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <SiteContextMenu>
-    <div class="app-layout">
-      <AppHeader>
-        <template #leading>
+  <div class="app-layout">
+    <AppHeader>
+      <template #leading>
+        <RouterLink
+          class="brand"
+          :to="{ name: 'catalog' }"
+          :aria-label="$t('app.name')"
+        >
+          <span
+            class="brand__mark"
+            aria-hidden="true"
+          >
+            <Layers :size="18" />
+          </span>
+          <span class="brand__name">{{ $t('app.name') }}</span>
+        </RouterLink>
+      </template>
+
+      <template #center>
+        <AppBreadcrumbs
+          class="app-layout__mobile-title"
+          :items="headerCrumbs"
+        />
+        <nav
+          class="app-layout__nav"
+          :aria-label="$t('nav.primary')"
+        >
           <RouterLink
-            class="brand"
-            :to="{ name: 'catalog' }"
-            :aria-label="$t('app.name')"
+            v-for="item in bottomItems"
+            :key="item.routeName"
+            class="app-layout__nav-link"
+            :class="{ 'app-layout__nav-link--active': primaryNavigation === item.routeName }"
+            active-class=""
+            exact-active-class=""
+            :to="{ name: item.routeName }"
+            :aria-current="primaryNavigation === item.routeName ? 'page' : undefined"
           >
-            <span
-              class="brand__mark"
-              aria-hidden="true"
-            >
-              <Layers :size="18" />
-            </span>
-            <span class="brand__name">{{ $t('app.name') }}</span>
+            {{ item.label }}
           </RouterLink>
-        </template>
+        </nav>
+      </template>
 
-        <template #center>
-          <AppBreadcrumbs
-            class="app-layout__mobile-title"
-            :items="headerCrumbs"
+      <template #actions>
+        <AppIconButton
+          class="app-layout__desktop-action"
+          :label="isDark ? $t('theme.light') : $t('theme.dark')"
+          @click="toggleTheme"
+        >
+          <Sun
+            v-if="isDark"
+            :size="20"
+            aria-hidden="true"
           />
-          <nav
-            class="app-layout__nav"
-            :aria-label="$t('nav.primary')"
-          >
-            <RouterLink
-              v-for="item in bottomItems"
-              :key="item.routeName"
-              class="app-layout__nav-link"
-              :class="{ 'app-layout__nav-link--active': primaryNavigation === item.routeName }"
-              active-class=""
-              exact-active-class=""
-              :to="{ name: item.routeName }"
-              :aria-current="primaryNavigation === item.routeName ? 'page' : undefined"
-            >
-              {{ item.label }}
-            </RouterLink>
-          </nav>
-        </template>
-
-        <template #actions>
-          <AppIconButton
-            class="app-layout__desktop-action"
-            :label="isDark ? $t('theme.light') : $t('theme.dark')"
-            @click="toggleTheme"
-          >
-            <Sun
-              v-if="isDark"
-              :size="20"
-              aria-hidden="true"
-            />
-            <Moon
-              v-else
-              :size="20"
-              aria-hidden="true"
-            />
-          </AppIconButton>
-          <AppIconButton
-            class="app-layout__desktop-action"
-            :label="`${localeLabel}: ${$t('theme.locale')}`"
-            @click="toggleLocale"
-          >
-            <span class="app-layout__locale">{{ localeLabel }}</span>
-          </AppIconButton>
-          <AppIconButton
-            v-if="auth.isAuthenticated"
-            class="app-layout__desktop-action"
-            :label="$t('nav.logout')"
-            @click="logout"
-          >
-            <LogOut
-              :size="20"
-              aria-hidden="true"
-            />
-          </AppIconButton>
-          <AppIconButton
+          <Moon
             v-else
-            class="app-layout__desktop-action"
-            :label="$t('nav.login')"
-            @click="router.push({ name: 'login' })"
+            :size="20"
+            aria-hidden="true"
+          />
+        </AppIconButton>
+        <AppIconButton
+          class="app-layout__desktop-action"
+          :label="`${localeLabel}: ${$t('theme.locale')}`"
+          @click="toggleLocale"
+        >
+          <span class="app-layout__locale">{{ localeLabel }}</span>
+        </AppIconButton>
+        <AppIconButton
+          v-if="auth.isAuthenticated"
+          class="app-layout__desktop-action"
+          :label="$t('nav.logout')"
+          @click="logout"
+        >
+          <LogOut
+            :size="20"
+            aria-hidden="true"
+          />
+        </AppIconButton>
+        <AppIconButton
+          v-else
+          class="app-layout__desktop-action"
+          :label="$t('nav.login')"
+          @click="router.push({ name: 'login' })"
+        >
+          <LogIn
+            :size="20"
+            aria-hidden="true"
+          />
+        </AppIconButton>
+        <AppIconButton
+          class="app-layout__menu-button"
+          :label="$t('nav.menu')"
+          aria-haspopup="dialog"
+          :aria-expanded="menuOpen"
+          @click="menuOpen = true"
+        >
+          <span
+            class="hamburger"
+            aria-hidden="true"
           >
-            <LogIn
-              :size="20"
-              aria-hidden="true"
-            />
-          </AppIconButton>
-          <AppIconButton
-            class="app-layout__menu-button"
-            :label="$t('nav.menu')"
-            aria-haspopup="dialog"
-            :aria-expanded="menuOpen"
-            @click="menuOpen = true"
-          >
-            <span
-              class="hamburger"
-              aria-hidden="true"
-            >
-              <span />
-              <span />
-              <span />
-            </span>
-          </AppIconButton>
-        </template>
-      </AppHeader>
+            <span />
+            <span />
+            <span />
+          </span>
+        </AppIconButton>
+      </template>
+    </AppHeader>
 
+    <SiteContextMenu>
       <main class="app-layout__main">
         <RouterView />
       </main>
+    </SiteContextMenu>
 
-      <AppBottomNav
-        :items="bottomItems"
-        :active-route-name="primaryNavigation"
-      />
-      <AppMobileMenu v-model="menuOpen" />
-    </div>
-  </SiteContextMenu>
+    <AppBottomNav
+      :items="bottomItems"
+      :active-route-name="primaryNavigation"
+    />
+    <AppMobileMenu v-model="menuOpen" />
+  </div>
 </template>
 
 <style scoped>

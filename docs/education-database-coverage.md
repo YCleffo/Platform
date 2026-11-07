@@ -9,10 +9,13 @@
 
 | Схема | Таблицы | Столбцы | Внешние ключи | Проверки CHECK | Индексы | Пользовательские триггеры |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `education` | 18 | 119 | 15 | 19 | 42 | 0 |
+| `education` | 24 | 181 | 25 | 33 | 55 | 0 |
 
 | Физическая таблица | Прямые ссылки на исходники (до 3) | Прямые ссылки на тесты (до 3) |
 | --- | --- | --- |
+| `education.activity_assignments` | [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php) | Нет прямой SQL-строки; смотреть прикладные тесты сценариев |
+| `education.activity_attempts` | [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php) | Нет прямой SQL-строки; смотреть прикладные тесты сценариев |
+| `education.activity_definitions` | [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php) | Нет прямой SQL-строки; смотреть прикладные тесты сценариев |
 | `education.attendance` | [PersonalDataContributor](../apps/backend/src/Education/Infrastructure/PersonalDataContributor.php), [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php), [WorkspaceErasureHandler](../apps/backend/src/Education/Infrastructure/WorkspaceErasureHandler.php) | [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php) |
 | `education.events` | [PersonalDataContributor](../apps/backend/src/Education/Infrastructure/PersonalDataContributor.php), [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php), [RetentionCandidateContributor](../apps/backend/src/Education/Infrastructure/RetentionCandidateContributor.php) | [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php) |
 | `education.files` | [EducationAction](../apps/backend/src/Education/Api/EducationAction.php), [PersonalDataContributor](../apps/backend/src/Education/Infrastructure/PersonalDataContributor.php), [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php) | [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php) |
@@ -27,10 +30,13 @@
 | `education.privacy_receipts` | [WorkspaceErasureHandler](../apps/backend/src/Education/Infrastructure/WorkspaceErasureHandler.php) | [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php) |
 | `education.profiles` | [PersonalDataContributor](../apps/backend/src/Education/Infrastructure/PersonalDataContributor.php), [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php), [ProfileCorrection](../apps/backend/src/Education/Infrastructure/ProfileCorrection.php) | [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php) |
 | `education.result_revisions` | [PersonalDataContributor](../apps/backend/src/Education/Infrastructure/PersonalDataContributor.php), [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php), [WorkspaceErasureHandler](../apps/backend/src/Education/Infrastructure/WorkspaceErasureHandler.php) | [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php) |
+| `education.student_accounts` | [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php) | Нет прямой SQL-строки; смотреть прикладные тесты сценариев |
+| `education.student_invites` | [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php) | Нет прямой SQL-строки; смотреть прикладные тесты сценариев |
 | `education.students` | [PersonalDataContributor](../apps/backend/src/Education/Infrastructure/PersonalDataContributor.php), [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php), [RetentionCandidateContributor](../apps/backend/src/Education/Infrastructure/RetentionCandidateContributor.php) | [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php) |
 | `education.teachers` | [PersonalDataContributor](../apps/backend/src/Education/Infrastructure/PersonalDataContributor.php), [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php), [RetentionCandidateContributor](../apps/backend/src/Education/Infrastructure/RetentionCandidateContributor.php) | [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php) |
 | `education.thread_members` | [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php), [RetentionCandidateContributor](../apps/backend/src/Education/Infrastructure/RetentionCandidateContributor.php), [WorkspaceErasureHandler](../apps/backend/src/Education/Infrastructure/WorkspaceErasureHandler.php) | [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php) |
 | `education.threads` | [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php), [WorkspaceErasureHandler](../apps/backend/src/Education/Infrastructure/WorkspaceErasureHandler.php) | [WorkspaceTest](../apps/backend/tests/Education/WorkspaceTest.php) |
+| `education.typing_results` | [PostgresEducationStore](../apps/backend/src/Education/Infrastructure/PostgresEducationStore.php) | Нет прямой SQL-строки; смотреть прикладные тесты сценариев |
 
 ## Границы владельцев
 

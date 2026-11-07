@@ -65,7 +65,10 @@ function onFinished(): void {
           class="edu-list__item"
         >
           <strong>{{ entry.wpm }} {{ t('education.wpm') }}</strong>
-          <span>{{ entry.accuracy }}% · {{ entry.errors }} · {{ entry.durationSeconds }}{{ t('education.seconds') }}</span>
+          <span>
+            {{ entry.accuracy }}% · {{ entry.errors }} · {{ entry.durationSeconds
+            }}{{ t('education.seconds') }}
+          </span>
         </li>
       </ul>
       <div class="edu-form-actions">

@@ -44,9 +44,7 @@ const { submitting, message, run } = useAsyncAction(async () => {
     });
     return;
   }
-  await router.push(
-    redirectTarget.value !== null ? redirectTarget.value : { name: 'cabinet' },
-  );
+  await router.push(redirectTarget.value !== null ? redirectTarget.value : { name: 'cabinet' });
 });
 
 async function onSubmit(): Promise<void> {

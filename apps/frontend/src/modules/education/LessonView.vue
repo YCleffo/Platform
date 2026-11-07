@@ -71,9 +71,10 @@ async function confirmStatus(): Promise<void> {
   const action = pendingAction.value;
   if (!lesson || !action) return;
   await mutation.run(
-    () => action === 'complete'
-      ? educationApi.completeLesson(workspace.organizationId, lesson.id)
-      : educationApi.cancelLesson(workspace.organizationId, lesson.id),
+    () =>
+      action === 'complete'
+        ? educationApi.completeLesson(workspace.organizationId, lesson.id)
+        : educationApi.cancelLesson(workspace.organizationId, lesson.id),
     async () => {
       confirmOpen.value = false;
       pendingAction.value = null;
@@ -132,7 +133,8 @@ async function saveReport(): Promise<void> {
       educationApi.saveLessonReport(workspace.organizationId, lesson.id, {
         topic: reportDraft.topic,
         summary: reportDraft.summary,
-        teacherComment: reportDraft.teacherComment.trim() === '' ? null : reportDraft.teacherComment,
+        teacherComment:
+          reportDraft.teacherComment.trim() === '' ? null : reportDraft.teacherComment,
       }),
     () => refresh(),
   );
@@ -414,11 +416,20 @@ async function saveResult(id: string): Promise<void> {
                     :options="
                       resultStatuses.map((value) => ({
                         value,
-                        label: t(`education.${value === 'pending' ? 'notAssessed' : value === 'needs_support' ? 'needsSupport' : value}`),
+                        label: t(
+                          `education.${value === 'pending' ? 'notAssessed' : value === 'needs_support' ? 'needsSupport' : value}`,
+                        ),
                       }))
                     "
                     :disabled="busy || uncertain"
-                    @update:model-value="(value) => { resultDrafts.set(person.id, { status: String(value) as ResultStatus, comment: resultDrafts.get(person.id)?.comment ?? '' }); }"
+                    @update:model-value="
+                      (value) => {
+                        resultDrafts.set(person.id, {
+                          status: String(value) as ResultStatus,
+                          comment: resultDrafts.get(person.id)?.comment ?? '',
+                        });
+                      }
+                    "
                   />
                   <label class="edu-subtle">
                     {{ t('education.resultComment') }}
@@ -426,7 +437,16 @@ async function saveResult(id: string): Promise<void> {
                       :value="resultDrafts.get(person.id)?.comment ?? person.comment ?? ''"
                       :maxlength="1000"
                       :disabled="busy || uncertain"
-                      @input="(event) => { const draft = resultDrafts.get(person.id) ?? { status: person.status, comment: '' }; draft.comment = String((event.target as HTMLTextAreaElement).value); resultDrafts.set(person.id, draft); }"
+                      @input="
+                        (event) => {
+                          const draft = resultDrafts.get(person.id) ?? {
+                            status: person.status,
+                            comment: '',
+                          };
+                          draft.comment = String((event.target as HTMLTextAreaElement).value);
+                          resultDrafts.set(person.id, draft);
+                        }
+                      "
                     />
                   </label>
                   <button
@@ -453,8 +473,12 @@ async function saveResult(id: string): Promise<void> {
           >
             <strong>{{ person.name }}</strong>
             <span>
-              {{ t(`education.${person.status === 'pending' ? 'notAssessed' : person.status === 'needs_support' ? 'needsSupport' : person.status}`) }}
-              <template v-if="person.comment"> · {{ person.comment }}</template>
+              {{
+                t(
+                  `education.${person.status === 'pending' ? 'notAssessed' : person.status === 'needs_support' ? 'needsSupport' : person.status}`,
+                )
+              }}
+              <template v-if="person.comment">· {{ person.comment }}</template>
             </span>
           </li>
         </ul>
@@ -491,9 +515,15 @@ async function saveResult(id: string): Promise<void> {
     </template>
     <AppConfirmDialog
       v-model="confirmOpen"
-      :title="pendingAction === 'cancel' ? t('education.cancelLesson') : t('education.completeLesson')"
-      :description="pendingAction === 'cancel' ? t('education.cancelConfirm') : t('education.completeConfirm')"
-      :confirm-label="pendingAction === 'cancel' ? t('education.cancelLesson') : t('education.completeLesson')"
+      :title="
+        pendingAction === 'cancel' ? t('education.cancelLesson') : t('education.completeLesson')
+      "
+      :description="
+        pendingAction === 'cancel' ? t('education.cancelConfirm') : t('education.completeConfirm')
+      "
+      :confirm-label="
+        pendingAction === 'cancel' ? t('education.cancelLesson') : t('education.completeLesson')
+      "
       :cancel-label="t('education.cancel')"
       :busy="busy"
       :danger="pendingAction === 'cancel'"

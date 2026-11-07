@@ -66,9 +66,11 @@ try {
 
   const control = page.locator('label[for="demo-switch"] .app-switch__control');
   await control.scrollIntoViewIfNeeded();
+  const thumb = page.locator('#demo-switch + .app-switch__track .app-switch__thumb');
+  const restingWidth = await thumb.evaluate(el => parseFloat(getComputedStyle(el).width));
   const point = await control.boundingBox();
   await page.mouse.move(point.x + point.width / 2, point.y + point.height / 2); await page.mouse.down();
-  await page.waitForFunction(() => parseFloat(getComputedStyle(document.querySelector('#demo-switch + .app-switch__track .app-switch__thumb')).width) > 27);
+  await page.waitForFunction(resting => parseFloat(getComputedStyle(document.querySelector('#demo-switch + .app-switch__track .app-switch__thumb')).width) > resting, restingWidth);
   check(true, 'Switch thumb expands during a real press');
   await page.mouse.up();
   await stableScreenshot(page, 'screenshots/controls-desktop-light.png');
@@ -87,13 +89,13 @@ try {
   // Releasing outside the range must still finish the edit through native pointer capture.
   await page.mouse.move(box.x + box.width + 50, box.y - 40); await page.mouse.up();
   check(!await page.locator('.app-range--pressed').count(), 'Release outside slider clears pressed state');
-  await page.locator('#appearance-undo').click();
-  check(await slider.inputValue() === '1', 'A complete drag is undone in one step');
+  await page.locator('#appearance-preset-default').click();
+  check(await slider.inputValue() === '1', 'Default preset restores a completed drag');
   await slider.focus(); await page.keyboard.press('End');
   check(await slider.inputValue() === '1.4', 'Keyboard End reaches the range maximum');
   await page.keyboard.press('Home');
   check(await slider.inputValue() === '0.9', 'Keyboard Home reaches the range minimum');
-  await page.locator('#appearance-reset').click();
+  await page.locator('#appearance-preset-default').click();
   await page.locator('#appearance-animations').uncheck();
   check(await page.locator('#appearance-speed').isDisabled(), 'Animation switch disables dependent settings');
   await page.reload({ waitUntil: 'networkidle' });
@@ -135,7 +137,7 @@ try {
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   check(Number(await range.inputValue()) >= 1.25, 'Native range follows real touch dragging');
   check(!await touch.locator('.app-range--pressed').count(), 'Touch release clears pressed state');
-  await touch.locator('#appearance-reset').click();
+  await touch.locator('#appearance-preset-default').click();
   await range.scrollIntoViewIfNeeded();
   await stableScreenshot(touch, 'screenshots/controls-mobile-slider.png');
   await touch.setViewportSize({ width: 320, height: 740 });

@@ -40,16 +40,23 @@ function date(value: string): string {
     />
     <template v-if="data">
       <p class="edu-subtle">
-        {{ date(data.startsAt) }} · {{ time(data.startsAt) }} – {{ time(data.endsAt) }} · {{ data.groupName }}
+        {{ date(data.startsAt) }} · {{ time(data.startsAt) }} – {{ time(data.endsAt) }} ·
+        {{ data.groupName }}
       </p>
       <article class="edu-card">
         <h2>{{ t('education.attendanceHistory') }}</h2>
-        <p>{{ t(`education.${data.attendance === 'absent' ? 'absentStatus' : data.attendance}`) }}</p>
+        <p>
+          {{ t(`education.${data.attendance === 'absent' ? 'absentStatus' : data.attendance}`) }}
+        </p>
       </article>
       <article class="edu-card">
         <h2>{{ t('education.results') }}</h2>
         <p v-if="data.resultStatus !== 'pending'">
-          {{ t(`education.${data.resultStatus === 'needs_support' ? 'needsSupport' : data.resultStatus}`) }}
+          {{
+            t(
+              `education.${data.resultStatus === 'needs_support' ? 'needsSupport' : data.resultStatus}`,
+            )
+          }}
         </p>
         <p
           v-if="data.resultComment"

@@ -16,9 +16,7 @@ const attendanceOffset = ref(0);
 const resultsOffset = ref(0);
 const from = ref('');
 const to = ref('');
-const periodInvalid = computed(
-  () => !!from.value && !!to.value && from.value > to.value,
-);
+const periodInvalid = computed(() => !!from.value && !!to.value && from.value > to.value);
 const period = computed(() => ({ from: from.value, to: to.value }));
 const { data, loading, error, refresh } = useEducationResource(
   async (org, signal) => {
@@ -26,7 +24,14 @@ const { data, loading, error, refresh } = useEducationResource(
     const [results, attendance, progress] = await Promise.all([
       educationApi.studentResults(org, id.value, resultsOffset.value, signal),
       from.value && to.value && !periodInvalid.value
-        ? educationApi.studentAttendance(org, id.value, from.value, to.value, attendanceOffset.value, signal)
+        ? educationApi.studentAttendance(
+            org,
+            id.value,
+            from.value,
+            to.value,
+            attendanceOffset.value,
+            signal,
+          )
         : null,
       from.value && to.value && !periodInvalid.value
         ? educationApi.studentProgress(org, id.value, from.value, to.value, signal)
@@ -125,11 +130,15 @@ async function revoke(): Promise<void> {
       </article>
       <article class="edu-card">
         <h2>{{ t('education.studentCabinet') }}</h2>
-        <p v-if="data.card.account && !data.card.account.revokedAt">{{ t('education.accountActive') }}</p>
+        <p v-if="data.card.account && !data.card.account.revokedAt">
+          {{ t('education.accountActive') }}
+        </p>
         <p
           v-else
           class="edu-subtle"
-        >{{ t('education.accountPending') }}</p>
+        >
+          {{ t('education.accountPending') }}
+        </p>
         <div class="edu-form-actions">
           <button
             type="button"
@@ -153,7 +162,8 @@ async function revoke(): Promise<void> {
           v-if="inviteCode"
           class="edu-subtle"
         >
-          {{ t('education.generatedInvite') }}: <strong>{{ inviteCode }}</strong>
+          {{ t('education.generatedInvite') }}:
+          <strong>{{ inviteCode }}</strong>
         </p>
       </article>
       <form
@@ -189,10 +199,15 @@ async function revoke(): Promise<void> {
         class="edu-card"
       >
         <h2>{{ t('education.progress') }}</h2>
-        <p class="edu-subtle">{{ date(`${data.progress.from}T00:00:00Z`) }} – {{ date(`${data.progress.to}T00:00:00Z`) }}</p>
+        <p class="edu-subtle">
+          {{ date(`${data.progress.from}T00:00:00Z`) }} –
+          {{ date(`${data.progress.to}T00:00:00Z`) }}
+        </p>
         <p>{{ t('education.masteredCount', { count: data.progress.results.mastered }) }}</p>
         <p>{{ t('education.developingCount', { count: data.progress.results.developing }) }}</p>
-        <p>{{ t('education.needsSupportCount', { count: data.progress.results.needs_support }) }}</p>
+        <p>
+          {{ t('education.needsSupportCount', { count: data.progress.results.needs_support }) }}
+        </p>
         <p>{{ t('education.presentCount', { count: data.progress.attendance.present }) }}</p>
         <p>{{ t('education.absentCount', { count: data.progress.attendance.absent }) }}</p>
       </article>
@@ -214,7 +229,11 @@ async function revoke(): Promise<void> {
               <strong>{{ entry.title }}</strong>
               <p class="edu-subtle">{{ date(entry.startsAt) }} · {{ time(entry.startsAt) }}</p>
             </div>
-            <span>{{ t(`education.${entry.attendance === 'absent' ? 'absentStatus' : entry.attendance}`) }}</span>
+            <span>
+              {{
+                t(`education.${entry.attendance === 'absent' ? 'absentStatus' : entry.attendance}`)
+              }}
+            </span>
           </li>
         </ul>
         <div class="edu-form-actions">

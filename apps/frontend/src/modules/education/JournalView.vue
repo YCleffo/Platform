@@ -17,9 +17,7 @@ const offset = ref(0);
 const from = ref('');
 const to = ref('');
 const studentId = ref('');
-const periodInvalid = computed(
-  () => !!from.value && !!to.value && from.value > to.value,
-);
+const periodInvalid = computed(() => !!from.value && !!to.value && from.value > to.value);
 const filters = computed(() => ({
   offset: offset.value,
   ...(from.value && to.value ? { from: from.value, to: to.value } : {}),
@@ -66,9 +64,7 @@ function statusLabel(status: string): string {
 <template>
   <section>
     <header class="edu-page-title">
-      <h1>
-        {{ data?.group.name ?? t('education.journal') }} · {{ t('education.journal') }}
-      </h1>
+      <h1>{{ data?.group.name ?? t('education.journal') }} · {{ t('education.journal') }}</h1>
       <RouterLink
         :to="`/groups/${id}`"
         class="edu-link"
@@ -107,7 +103,10 @@ function statusLabel(status: string): string {
           :label="t('education.students')"
           :options="[
             { value: '', label: t('education.allStudents') },
-            ...data.roster.items.map((student) => ({ value: student.id, label: student.name ?? student.id })),
+            ...data.roster.items.map((student) => ({
+              value: student.id,
+              label: student.name ?? student.id,
+            })),
           ]"
         />
         <button
@@ -137,7 +136,7 @@ function statusLabel(status: string): string {
             <strong>{{ date(entry.startsAt) }} · {{ entry.title }}</strong>
             <p class="edu-subtle">
               {{ time(entry.startsAt) }} – {{ time(entry.endsAt) }}
-              <template v-if="entry.report"> · {{ entry.report.topic }}</template>
+              <template v-if="entry.report">· {{ entry.report.topic }}</template>
             </p>
             <p v-if="entry.report">
               {{ entry.report.summary }}
@@ -163,7 +162,9 @@ function statusLabel(status: string): string {
                 <span
                   v-if="result.comment"
                   class="edu-subtle"
-                >{{ result.comment }}</span>
+                >
+                  {{ result.comment }}
+                </span>
               </li>
             </ul>
           </div>

@@ -4,7 +4,6 @@ import { Layers, Moon, Sun } from '@/shared/ui/icons';
 import { useTheme } from '@/app/theme';
 import { setLocale } from '@/shared/i18n';
 import AppIconButton from '@/shared/ui/actions/AppIconButton.vue';
-import SiteContextMenu from './SiteContextMenu.vue';
 
 const { locale } = useI18n();
 const { isDark, toggleTheme } = useTheme();
@@ -15,54 +14,52 @@ function toggleLocale(): void {
 </script>
 
 <template>
-  <SiteContextMenu>
-    <div class="auth-layout">
-      <header class="auth-layout__header">
-        <RouterLink
-          class="brand"
-          :to="{ name: 'catalog' }"
-          :aria-label="$t('app.name')"
+  <div class="auth-layout">
+    <header class="auth-layout__header">
+      <RouterLink
+        class="brand"
+        :to="{ name: 'catalog' }"
+        :aria-label="$t('app.name')"
+      >
+        <span
+          class="brand__mark"
+          aria-hidden="true"
         >
-          <span
-            class="brand__mark"
+          <Layers :size="18" />
+        </span>
+        <span class="brand__name">{{ $t('app.name') }}</span>
+      </RouterLink>
+      <div class="auth-layout__actions">
+        <AppIconButton
+          :label="isDark ? $t('theme.light') : $t('theme.dark')"
+          @click="toggleTheme"
+        >
+          <Sun
+            v-if="isDark"
+            :size="20"
             aria-hidden="true"
-          >
-            <Layers :size="18" />
-          </span>
-          <span class="brand__name">{{ $t('app.name') }}</span>
-        </RouterLink>
-        <div class="auth-layout__actions">
-          <AppIconButton
-            :label="isDark ? $t('theme.light') : $t('theme.dark')"
-            @click="toggleTheme"
-          >
-            <Sun
-              v-if="isDark"
-              :size="20"
-              aria-hidden="true"
-            />
-            <Moon
-              v-else
-              :size="20"
-              aria-hidden="true"
-            />
-          </AppIconButton>
-          <AppIconButton
-            :label="`${locale === 'ru' ? 'RU' : 'EN'}: ${$t('theme.locale')}`"
-            @click="toggleLocale"
-          >
-            <span class="auth-layout__locale">{{ locale === 'ru' ? 'RU' : 'EN' }}</span>
-          </AppIconButton>
-        </div>
-      </header>
+          />
+          <Moon
+            v-else
+            :size="20"
+            aria-hidden="true"
+          />
+        </AppIconButton>
+        <AppIconButton
+          :label="`${locale === 'ru' ? 'RU' : 'EN'}: ${$t('theme.locale')}`"
+          @click="toggleLocale"
+        >
+          <span class="auth-layout__locale">{{ locale === 'ru' ? 'RU' : 'EN' }}</span>
+        </AppIconButton>
+      </div>
+    </header>
 
-      <main class="auth-layout__main">
-        <div class="auth-layout__card">
-          <RouterView />
-        </div>
-      </main>
-    </div>
-  </SiteContextMenu>
+    <main class="auth-layout__main">
+      <div class="auth-layout__card">
+        <RouterView />
+      </div>
+    </main>
+  </div>
 </template>
 
 <style scoped>

@@ -19,6 +19,10 @@ env:
 permissions:
   contents: read
 
+concurrency:
+  group: platform-ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.profile || 'full' }}
+  cancel-in-progress: true
+
 jobs:
   ci-configuration:
     name: CI configuration
@@ -72,18 +76,18 @@ jobs:
           tmp=$(mktemp -d)
           cp -r infra/observability/prometheus/. "$tmp/"
           cp infra/observability/secrets/metrics-token "$tmp/metrics-token"
-          docker run --rm --entrypoint /bin/promtool \
+          docker run --rm --user "$(id -u):$(id -g)" --entrypoint /bin/promtool \
             -v "$tmp:/etc/prometheus:ro" \
             prom/prometheus:v3.5.0@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
             check config /etc/prometheus/prometheus.yml
-          docker run --rm --entrypoint /bin/promtool \
+          docker run --rm --user "$(id -u):$(id -g)" --entrypoint /bin/promtool \
             -v "$tmp/rules:/rules:ro" \
             prom/prometheus:v3.5.0@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996 \
             check rules /rules/platform.yml
           mkdir -p "$tmp/alertmanager"
           cp infra/observability/alertmanager/alertmanager.yml "$tmp/alertmanager/alertmanager.yml"
           cp infra/observability/secrets/alert-webhook-url "$tmp/alertmanager/alert-webhook-url"
-          docker run --rm --entrypoint /bin/amtool \
+          docker run --rm --user "$(id -u):$(id -g)" --entrypoint /bin/amtool \
             -v "$tmp/alertmanager:/etc/alertmanager:ro" \
             prom/alertmanager:v0.28.1@sha256:27c475db5fb156cab31d5c18a4251ac7ed567746a2483ff264516437a39b15ba \
             check-config /etc/alertmanager/alertmanager.yml
@@ -120,6 +124,20 @@ jobs:
           $env:PATH = "C:\Program Files\Git\bin;C:\Program Files\Git\cmd;" + $env:PATH
           if (@(Get-Command git -All -CommandType Application).Count -lt 2) { throw 'Multiple Git paths were not exercised.' }
           ./scripts/ci/test-project-zip.ps1
+
+  windows-agent:
+    name: Windows agent
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build all agent components
+        run: dotnet build apps/agent/KiberOne.Agent.sln --configuration Release
+      - name: Run agent protocol and recovery tests
+        run: dotnet run --project apps/agent/KiberOne.Agent.Tests --configuration Release --no-build
 
   backend-fast:
     name: Core В· fast feedback
@@ -702,8 +720,8 @@ jobs:
         run: npm ci
       - name: Audit locked dependencies
         run: npm audit --audit-level=high
-      - name: Verify dependency cancellation and pattern amplification regressions
-        run: npm run test:security-dependencies
+      - name: Verify all dependency, frontend and HTTP contracts
+        run: node --test scripts/*.test.mjs
       - name: Verify local SVG sprite
         run: npm run check:icons
       - name: Verify design tokens are generated from the canonical source
@@ -712,12 +730,6 @@ jobs:
         run: npm run check:styles
       - name: Verify Vue formatting
         run: npm run format:check
-      - name: Verify disposable Core browser guard
-        run: npm run test:core-auth-guard
-      - name: Verify typed Core workflow contracts
-        run: npm run test:workbench-contracts
-      - name: Verify Education HTTP contract parity
-        run: node --test scripts/education-contract.test.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
@@ -884,10 +896,13 @@ jobs:
           export CI_USER_ID CI_GROUP_ID
           docker compose --profile test exec -T backend-test php yii education:migrate
           docker compose --profile test exec -T backend-test php yii education:migrate
+          docker compose --profile test exec -T backend-test php yii device:migrate
+          docker compose --profile test exec -T backend-test php yii storage:migrate
           docker compose --profile test up -d --no-build --no-deps --wait backend-test
           docker compose --profile test exec -T backend-test composer yii-config-rebuild
           echo "CORE_TEST_CONTAINER=$(docker compose --profile test ps -q backend-test)" >> "$GITHUB_ENV"
           docker compose --profile test exec -T backend-test vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Education
+          docker compose --profile test exec -T backend-test vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Foundation
           bash scripts/ci/db-role-gate.sh core
       - name: Verify Education through real Core identities, files and browser
         working-directory: apps/frontend

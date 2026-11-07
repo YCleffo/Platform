@@ -20,7 +20,9 @@ function date(value: string): string {
   return formatCalendarDate(value, locale.value, { dateStyle: 'medium' });
 }
 function statusLabel(lesson: StudentDiaryLesson): string {
-  return t(`education.${lesson.status === 'cancelled' ? 'cancelledStatus' : lesson.status === 'scheduled' ? 'scheduled' : 'completed'}`);
+  return t(
+    `education.${lesson.status === 'cancelled' ? 'cancelledStatus' : lesson.status === 'scheduled' ? 'scheduled' : 'completed'}`,
+  );
 }
 </script>
 <template>
@@ -51,13 +53,23 @@ function statusLabel(lesson: StudentDiaryLesson): string {
           >
             <strong>{{ lesson.title }}</strong>
             <p class="edu-subtle">
-              {{ date(lesson.startsAt) }} · {{ time(lesson.startsAt) }} – {{ time(lesson.endsAt) }} ·
+              {{ date(lesson.startsAt) }} · {{ time(lesson.startsAt) }} –
+              {{ time(lesson.endsAt) }} ·
               {{ statusLabel(lesson) }}
             </p>
             <p>
-              {{ t(`education.${lesson.attendance === 'absent' ? 'absentStatus' : lesson.attendance}`) }}
+              {{
+                t(
+                  `education.${lesson.attendance === 'absent' ? 'absentStatus' : lesson.attendance}`,
+                )
+              }}
               <template v-if="lesson.resultStatus !== 'pending'">
-                · {{ t(`education.${lesson.resultStatus === 'needs_support' ? 'needsSupport' : lesson.resultStatus}`) }}
+                ·
+                {{
+                  t(
+                    `education.${lesson.resultStatus === 'needs_support' ? 'needsSupport' : lesson.resultStatus}`,
+                  )
+                }}
               </template>
             </p>
             <p

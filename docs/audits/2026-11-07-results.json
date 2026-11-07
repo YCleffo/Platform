@@ -1,0 +1,1915 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-07",
+  "timezone": "Asia/Yekaterinburg",
+  "source_sha": "74377296c46b170b1b3171d56d4a00ca7d42a30a",
+  "status": "NOT_READY",
+  "scope": "CI, local tests, dependencies, Docker; not a complete security scan",
+  "concurrent_workspace_edits_preserved": true,
+  "manual_provisioner_smoke": {
+    "status": "NOT_VERIFIED",
+    "reason": "Requires the dedicated provisioner worker with Docker CLI, socket access and the platform-runtime:local fixture image."
+  },
+  "github": {
+    "run_id": 42386800485,
+    "sha": "74377296c46b170b1b3171d56d4a00ca7d42a30a",
+    "branch_protected": false,
+    "jobs": [
+      {
+        "id": 128445793002,
+        "name": "CI configuration",
+        "status": "completed",
+        "conclusion": "failure",
+        "failed_steps": [
+          "Validate observability manifests"
+        ]
+      },
+      {
+        "id": 128445793192,
+        "name": "Image security В· Redis",
+        "status": "completed",
+        "conclusion": "success",
+        "failed_steps": []
+      },
+      {
+        "id": 128445793205,
+        "name": "Core В· account browser E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "failed_steps": []
+      },
+      {
+        "id": 128445793206,
+        "name": "Windows tools",
+        "status": "completed",
+        "conclusion": "success",
+        "failed_steps": []
+      },
+      {
+        "id": 128445793214,
+        "name": "Database and documentation",
+        "status": "completed",
+        "conclusion": "failure",
+        "failed_steps": [
+          "Verify migration-bound metadata and generated references"
+        ]
+      },
+      {
+        "id": 128445793220,
+        "name": "Image security В· Mailpit",
+        "status": "completed",
+        "conclusion": "success",
+        "failed_steps": []
+      },
+      {
+        "id": 128445793229,
+        "name": "Core в†” Commercial В· E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "failed_steps": []
+      },
+      {
+        "id": 128445793235,
+        "name": "Billing В· renewal and recovery",
+        "status": "completed",
+        "conclusion": "success",
+        "failed_steps": []
+      },
+      {
+        "id": 128445793258,
+        "name": "Frontend В· browser E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "failed_steps": []
+      },
+      {
+        "id": 128445793273,
+        "name": "Image security В· PostgreSQL",
+        "status": "completed",
+        "conclusion": "failure",
+        "failed_steps": [
+          "Summarize and enforce zero fixable high and critical infrastructure image vulnerabilities"
+        ]
+      },
+      {
+        "id": 128445793282,
+        "name": "Commercial В· quality and tests",
+        "status": "completed",
+        "conclusion": "failure",
+        "failed_steps": [
+          "Database constraints and integration tests"
+        ]
+      },
+      {
+        "id": 128445793295,
+        "name": "Frontend В· quality",
+        "status": "completed",
+        "conclusion": "failure",
+        "failed_steps": [
+          "Verify shared style variables and animation timings"
+        ]
+      },
+      {
+        "id": 128445793309,
+        "name": "Core В· quality and tests",
+        "status": "completed",
+        "conclusion": "failure",
+        "failed_steps": [
+          "Run Psalm Static Analysis"
+        ]
+      },
+      {
+        "id": 128445794075,
+        "name": "Core В· fast feedback",
+        "status": "completed",
+        "conclusion": "skipped",
+        "failed_steps": []
+      },
+      {
+        "id": 128445795017,
+        "name": "Commercial В· fast feedback",
+        "status": "completed",
+        "conclusion": "skipped",
+        "failed_steps": []
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "core-unit-native",
+      "exit": 0,
+      "seconds": 2.3,
+      "command": [
+        "docker",
+        "exec",
+        "platform-audit-20261107-backend-test",
+        "vendor/bin/codecept",
+        "run",
+        "Unit",
+        "--seed",
+        "2120741368",
+        "--no-colors"
+      ]
+    },
+    {
+      "name": "core-console-native",
+      "exit": 0,
+      "seconds": 0.9,
+      "command": [
+        "docker",
+        "exec",
+        "platform-audit-20261107-backend-test",
+        "vendor/bin/codecept",
+        "run",
+        "Console",
+        "--seed",
+        "2120741368",
+        "--no-colors"
+      ]
+    },
+    {
+      "name": "core-functional-native",
+      "exit": 0,
+      "seconds": 26.6,
+      "command": [
+        "docker",
+        "exec",
+        "platform-audit-20261107-backend-test",
+        "vendor/bin/codecept",
+        "run",
+        "Functional",
+        "--seed",
+        "2120741368",
+        "--no-colors"
+      ]
+    },
+    {
+      "name": "core-api-native",
+      "exit": 0,
+      "seconds": 159.5,
+      "command": [
+        "docker",
+        "exec",
+        "platform-audit-20261107-backend-test",
+        "vendor/bin/codecept",
+        "run",
+        "Api",
+        "--seed",
+        "2120741368",
+        "--no-colors"
+      ]
+    },
+    {
+      "name": "commercial-tests-clean",
+      "exit": 0,
+      "seconds": 61.1,
+      "command": [
+        "docker",
+        "compose",
+        "--profile",
+        "control-test",
+        "run",
+        "--rm",
+        "-v",
+        "C:\\Platform\\apps\\control-plane\\tests:/app/tests:ro",
+        "control-plane-test",
+        "vendor/bin/phpunit"
+      ]
+    },
+    {
+      "name": "cross-plane-tests",
+      "exit": 0,
+      "seconds": 43.4,
+      "command": [
+        "docker",
+        "compose",
+        "--profile",
+        "control-test",
+        "run",
+        "--rm",
+        "--no-deps",
+        "-e",
+        "CROSS_PLANE_REQUIRED=1",
+        "cross-plane-test",
+        "vendor/bin/phpunit",
+        "--configuration",
+        "phpunit.cross-plane.xml",
+        "--testdox"
+      ]
+    },
+    {
+      "name": "modules-tests",
+      "exit": 1,
+      "seconds": 2.9,
+      "command": [
+        "docker",
+        "exec",
+        "-e",
+        "EDUCATION_ENABLED=1",
+        "platform-audit-20261107-backend-test",
+        "sh",
+        "-c",
+        "vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Education; education_status=$?; vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Foundation; foundation_status=$?; test $education_status -eq 0 && test $foundation_status -eq 0"
+      ]
+    },
+    {
+      "name": "commercial-quality",
+      "exit": 0,
+      "seconds": 35.0,
+      "command": [
+        "docker",
+        "compose",
+        "--profile",
+        "control-test",
+        "run",
+        "--rm",
+        "-v",
+        "C:\\Platform\\apps\\backend:/backend:ro",
+        "control-plane-test",
+        "sh",
+        "-c",
+        "composer validate --strict && composer check-platform-reqs && composer audit && composer analyse"
+      ]
+    },
+    {
+      "name": "core-quality",
+      "exit": 2,
+      "seconds": 117.3,
+      "command": [
+        "docker",
+        "compose",
+        "--profile",
+        "test",
+        "exec",
+        "-T",
+        "backend-test",
+        "sh",
+        "-c",
+        "composer validate --strict && composer check-platform-reqs && composer audit && vendor/bin/psalm --no-cache --output-format=json > /app/tests/_output/audit-psalm.json"
+      ]
+    },
+    {
+      "name": "core-style",
+      "exit": 8,
+      "seconds": 32.6,
+      "command": [
+        "docker",
+        "compose",
+        "--profile",
+        "test",
+        "exec",
+        "-T",
+        "backend-test",
+        "php",
+        "vendor/bin/php-cs-fixer",
+        "fix",
+        "--dry-run",
+        "--diff",
+        "--using-cache=no"
+      ]
+    },
+    {
+      "name": "backup-deployment-tests",
+      "exit": 0,
+      "seconds": 4.1,
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        "C:\\Platform:/repo",
+        "-w",
+        "/repo",
+        "--entrypoint",
+        "bash",
+        "platform-audit-backup:20261107",
+        "infra/backup/test_deployment.sh"
+      ]
+    },
+    {
+      "name": "backup-manifest-tests",
+      "exit": 0,
+      "seconds": 4.3,
+      "command": [
+        "python",
+        "C:\\Users\\Yuran\\AppData\\Local\\Temp\\platform-audit-20261107\\backup-suite.py"
+      ]
+    },
+    {
+      "name": "powershell-tools",
+      "exit": 0,
+      "seconds": 1.3,
+      "command": [
+        "powershell",
+        "-NoProfile",
+        "-File",
+        "scripts/ci/test-project-zip.ps1"
+      ]
+    },
+    {
+      "name": "windows-syntax",
+      "exit": 0,
+      "seconds": 1.4,
+      "command": [
+        "powershell",
+        "-NoProfile",
+        "-File",
+        "C:\\Users\\Yuran\\AppData\\Local\\Temp\\platform-audit-20261107\\powershell-syntax.ps1"
+      ]
+    },
+    {
+      "name": "observability-checks",
+      "exit": 0,
+      "seconds": 93.1,
+      "command": [
+        "python",
+        "C:\\Users\\Yuran\\AppData\\Local\\Temp\\platform-audit-20261107\\observability-checks.py"
+      ]
+    },
+    {
+      "name": "core-runtime-role",
+      "exit": 0,
+      "seconds": 12.8,
+      "command": [
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "-c",
+        "EDUCATION_ENABLED=1 bash scripts/ci/db-role-gate.sh core"
+      ]
+    },
+    {
+      "name": "commercial-runtime-role",
+      "exit": 0,
+      "seconds": 12.6,
+      "command": [
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "scripts/ci/db-role-gate.sh",
+        "commercial"
+      ]
+    },
+    {
+      "name": "module-restart",
+      "exit": 0,
+      "seconds": 16.0,
+      "command": [
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "scripts/ci/core-app-restart-test.sh"
+      ]
+    },
+    {
+      "name": "core-production-build",
+      "exit": 0,
+      "seconds": 16.5,
+      "command": [
+        "docker",
+        "build",
+        "--target",
+        "prod",
+        "-f",
+        "apps/backend/docker/Dockerfile",
+        "-t",
+        "platform-audit-core-prod:20261107",
+        "apps/backend"
+      ]
+    },
+    {
+      "name": "commercial-production-build",
+      "exit": 0,
+      "seconds": 15.9,
+      "command": [
+        "docker",
+        "build",
+        "--target",
+        "app",
+        "-f",
+        "apps/control-plane/docker/Dockerfile",
+        "-t",
+        "platform-audit-control-prod:20261107",
+        "apps/control-plane"
+      ]
+    },
+    {
+      "name": "core-production-smoke",
+      "exit": 0,
+      "seconds": 3.5,
+      "command": [
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "-c",
+        "CORE_SMOKE_IMAGE=platform-audit-core-prod:20261107 bash scripts/ci/production-image-smoke.sh core"
+      ]
+    },
+    {
+      "name": "commercial-production-smoke",
+      "exit": 0,
+      "seconds": 3.2,
+      "command": [
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "-c",
+        "CONTROL_SMOKE_IMAGE=platform-audit-control-prod:20261107 bash scripts/ci/production-image-smoke.sh commercial"
+      ]
+    },
+    {
+      "name": "commercial-readiness",
+      "exit": 0,
+      "seconds": 27.0,
+      "command": [
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "scripts/ci/control-readiness-test.sh"
+      ]
+    },
+    {
+      "name": "commercial-load",
+      "exit": 0,
+      "seconds": 15.6,
+      "command": [
+        "node",
+        "scripts/load-commercial.mjs"
+      ]
+    }
+  ],
+  "core_tests": {
+    "Unit": {
+      "tests": 369,
+      "assertions": 12610
+    },
+    "Console": {
+      "tests": 2,
+      "assertions": 9
+    },
+    "Functional": {
+      "tests": 94,
+      "assertions": 931
+    },
+    "Api": {
+      "tests": 75,
+      "assertions": 776
+    }
+  },
+  "commercial_tests": {
+    "tests": 469,
+    "assertions": 5036,
+    "exit": 0
+  },
+  "education_tests": {
+    "tests": 16,
+    "assertions": 269,
+    "exit": 0
+  },
+  "foundation_tests": {
+    "tests": 13,
+    "assertions": 97,
+    "errors": 5,
+    "failures": 1,
+    "exit": 2,
+    "error_tests": [
+      "DeviceManagementTest::testSyncPendingBlocksNextSessionAndRevokedDeviceStops",
+      "StorageTest::testStudentUploadsVersionsAndDownloadsWithTickets",
+      "StorageTest::testPathTraversalAndLimitsAreRejected",
+      "StorageTest::testAgentManifestUploadAndConflictResolution",
+      "StorageTest::testStudentCannotTouchAnotherSpace"
+    ],
+    "failure_tests": [
+      "DeviceManagementTest::testSessionLifecycleTransitionsAndSingleActiveSessionInvariant"
+    ]
+  },
+  "frontend_tests": {
+    "vitest_tests": 394,
+    "vitest_files": 77,
+    "node_contract_tests": 19,
+    "exit": 0
+  },
+  "agent_tests": {
+    "configuration": "Release",
+    "tests": 15,
+    "warnings": 0,
+    "errors": 0,
+    "exit": 0
+  },
+  "browser_e2e": [
+    {
+      "name": "browser-core-auth",
+      "exit": 0,
+      "seconds": 64.3,
+      "command": [
+        "node",
+        "scripts/e2e-core-auth.mjs"
+      ]
+    },
+    {
+      "name": "browser-core-security",
+      "exit": 0,
+      "seconds": 91.2,
+      "command": [
+        "node",
+        "scripts/e2e-core-security.mjs"
+      ]
+    },
+    {
+      "name": "browser-core-profile",
+      "exit": 0,
+      "seconds": 14.8,
+      "command": [
+        "node",
+        "scripts/e2e-core-profile.mjs"
+      ]
+    },
+    {
+      "name": "browser-core-credentials",
+      "exit": 0,
+      "seconds": 35.0,
+      "command": [
+        "node",
+        "scripts/e2e-core-credentials.mjs"
+      ]
+    },
+    {
+      "name": "browser-core-privacy",
+      "exit": 0,
+      "seconds": 27.8,
+      "command": [
+        "node",
+        "scripts/e2e-core-privacy.mjs"
+      ]
+    },
+    {
+      "name": "browser-core-privacy-operator",
+      "exit": 0,
+      "seconds": 39.2,
+      "command": [
+        "node",
+        "scripts/e2e-core-privacy-operator.mjs"
+      ]
+    },
+    {
+      "name": "browser-core-configuration",
+      "exit": 0,
+      "seconds": 19.9,
+      "command": [
+        "node",
+        "scripts/e2e-core-configuration.mjs"
+      ]
+    },
+    {
+      "name": "browser-education",
+      "exit": 0,
+      "seconds": 48.7,
+      "command": [
+        "node",
+        "scripts/e2e-education.mjs"
+      ]
+    },
+    {
+      "name": "browser-account-workspace",
+      "exit": 0,
+      "seconds": 28.5,
+      "command": [
+        "node",
+        "scripts/e2e-account-workspace.mjs"
+      ]
+    },
+    {
+      "name": "browser-invitation-lifecycle",
+      "exit": 0,
+      "seconds": 88.9,
+      "command": [
+        "node",
+        "scripts/e2e-invitation-lifecycle.mjs"
+      ]
+    },
+    {
+      "name": "browser-auth-recovery",
+      "exit": 0,
+      "seconds": 29.7,
+      "command": [
+        "node",
+        "scripts/e2e-auth-recovery.mjs"
+      ]
+    },
+    {
+      "name": "browser-billing-recovery",
+      "exit": 0,
+      "seconds": 61.2,
+      "command": [
+        "node",
+        "scripts/e2e-billing-recovery.mjs"
+      ]
+    },
+    {
+      "name": "browser-paid-billing",
+      "exit": 0,
+      "seconds": 23.0,
+      "command": [
+        "node",
+        "scripts/e2e-paid-billing.mjs"
+      ]
+    },
+    {
+      "name": "browser-commercial-operators",
+      "exit": 0,
+      "seconds": 25.1,
+      "command": [
+        "node",
+        "scripts/e2e-commercial-operators.mjs"
+      ]
+    },
+    {
+      "name": "browser-periodic-billing",
+      "exit": 0,
+      "seconds": 87.1,
+      "command": [
+        "node",
+        "scripts/e2e-periodic-billing.mjs"
+      ]
+    }
+  ],
+  "ui_verification": [
+    {
+      "script": "verify-responsive.mjs",
+      "group": "appearance-theme-responsive",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 94035,
+      "log": "screenshots\\verify-logs\\verify-responsive.log"
+    },
+    {
+      "script": "verify-accessibility.mjs",
+      "group": "accessibility-controls-typography",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 56523,
+      "log": "screenshots\\verify-logs\\verify-accessibility.log"
+    },
+    {
+      "script": "verify-core-privacy.mjs",
+      "group": "core-profile-credentials-privacy",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 51757,
+      "log": "screenshots\\verify-logs\\verify-core-privacy.log"
+    },
+    {
+      "script": "verify-workflows.mjs",
+      "group": "navigation-workflows-mobile",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 49679,
+      "log": "screenshots\\verify-logs\\verify-workflows.log"
+    },
+    {
+      "script": "verify-core-auth.mjs",
+      "group": "core-authentication-security-configuration",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 42622,
+      "log": "screenshots\\verify-logs\\verify-core-auth.log"
+    },
+    {
+      "script": "verify-core-privacy-operator.mjs",
+      "group": "core-profile-credentials-privacy",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 36954,
+      "log": "screenshots\\verify-logs\\verify-core-privacy-operator.log"
+    },
+    {
+      "script": "verify-controls.mjs",
+      "group": "accessibility-controls-typography",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 9100,
+      "log": "screenshots\\verify-logs\\verify-controls.log",
+      "rechecked_after_fix": true
+    },
+    {
+      "script": "verify-mobile-components.mjs",
+      "group": "accessibility-controls-typography",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 21861,
+      "log": "screenshots\\verify-logs\\verify-mobile-components.log"
+    },
+    {
+      "script": "verify-ux.mjs",
+      "group": "appearance-theme-responsive",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 17134,
+      "log": "screenshots\\verify-logs\\verify-ux.log"
+    },
+    {
+      "script": "verify-core-credentials.mjs",
+      "group": "core-profile-credentials-privacy",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 17089,
+      "log": "screenshots\\verify-logs\\verify-core-credentials.log"
+    },
+    {
+      "script": "verify-core-configuration.mjs",
+      "group": "core-authentication-security-configuration",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 15141,
+      "log": "screenshots\\verify-logs\\verify-core-configuration.log"
+    },
+    {
+      "script": "verify-menus.mjs",
+      "group": "navigation-workflows-mobile",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 13453,
+      "log": "screenshots\\verify-logs\\verify-menus.log"
+    },
+    {
+      "script": "verify-core-security.mjs",
+      "group": "core-authentication-security-configuration",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 13129,
+      "log": "screenshots\\verify-logs\\verify-core-security.log"
+    },
+    {
+      "script": "verify-billing.mjs",
+      "group": "commercial-billing-admin",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 11789,
+      "log": "screenshots\\verify-logs\\verify-billing.log"
+    },
+    {
+      "script": "verify-appearance.mjs",
+      "group": "appearance-theme-responsive",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 10252,
+      "log": "screenshots\\verify-logs\\verify-appearance.log"
+    },
+    {
+      "script": "verify-core-profile.mjs",
+      "group": "core-profile-credentials-privacy",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 9622,
+      "log": "screenshots\\verify-logs\\verify-core-profile.log"
+    },
+    {
+      "script": "verify-admin.mjs",
+      "group": "commercial-billing-admin",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 5135,
+      "log": "screenshots\\verify-logs\\verify-admin.log"
+    },
+    {
+      "script": "verify-typography.mjs",
+      "group": "accessibility-controls-typography",
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 68000,
+      "log": "screenshots\\verify-logs\\verify-typography.log",
+      "rechecked_after_fix": true
+    }
+  ],
+  "frontend_checks": [
+    {
+      "name": "check-icons",
+      "exit": 0,
+      "seconds": 0.5,
+      "command": [
+        "npm.cmd",
+        "run",
+        "check:icons"
+      ]
+    },
+    {
+      "name": "check-tokens",
+      "exit": 0,
+      "seconds": 0.5,
+      "command": [
+        "npm.cmd",
+        "run",
+        "check:tokens"
+      ]
+    },
+    {
+      "name": "check-styles",
+      "exit": 0,
+      "seconds": 2.0,
+      "command": [
+        "npm.cmd",
+        "run",
+        "check:styles"
+      ]
+    },
+    {
+      "name": "format-check",
+      "exit": 0,
+      "seconds": 6.9,
+      "command": [
+        "npm.cmd",
+        "run",
+        "format:check"
+      ]
+    },
+    {
+      "name": "typecheck",
+      "exit": 0,
+      "seconds": 12.2,
+      "command": [
+        "npm.cmd",
+        "run",
+        "typecheck"
+      ]
+    },
+    {
+      "name": "lint",
+      "exit": 0,
+      "seconds": 7.5,
+      "command": [
+        "npm.cmd",
+        "run",
+        "lint"
+      ]
+    },
+    {
+      "name": "build",
+      "exit": 0,
+      "seconds": 16.6,
+      "command": [
+        "npm.cmd",
+        "run",
+        "build"
+      ]
+    },
+    {
+      "name": "npm-audit",
+      "exit": 0,
+      "seconds": 1.6,
+      "command": [
+        "npm.cmd",
+        "audit",
+        "--audit-level=high"
+      ]
+    }
+  ],
+  "documentation_checks": [
+    {
+      "name": "schema-core",
+      "exit": 0,
+      "seconds": 0.2,
+      "command": [
+        "python",
+        "scripts/database/export_schema.py",
+        "--plane",
+        "core",
+        "--from-snapshot",
+        "--check"
+      ]
+    },
+    {
+      "name": "schema-commercial",
+      "exit": 0,
+      "seconds": 0.2,
+      "command": [
+        "python",
+        "scripts/database/export_schema.py",
+        "--plane",
+        "commercial",
+        "--from-snapshot",
+        "--check"
+      ]
+    },
+    {
+      "name": "schema-education",
+      "exit": 0,
+      "seconds": 0.2,
+      "command": [
+        "python",
+        "scripts/database/export_schema.py",
+        "--plane",
+        "education",
+        "--from-snapshot",
+        "--check"
+      ]
+    },
+    {
+      "name": "build-reference",
+      "exit": 0,
+      "seconds": 0.2,
+      "command": [
+        "python",
+        "scripts/documentation/build-reference.py",
+        "--check"
+      ]
+    },
+    {
+      "name": "build-coverage",
+      "exit": 0,
+      "seconds": 0.6,
+      "command": [
+        "python",
+        "scripts/documentation/build-coverage.py",
+        "--check"
+      ]
+    },
+    {
+      "name": "build-education-coverage",
+      "exit": 0,
+      "seconds": 0.2,
+      "command": [
+        "python",
+        "scripts/documentation/build-education-coverage.py",
+        "--check"
+      ]
+    },
+    {
+      "name": "links",
+      "exit": 0,
+      "seconds": 0.2,
+      "command": [
+        "python",
+        "scripts/documentation/check-links.py"
+      ]
+    },
+    {
+      "name": "database-tools",
+      "exit": 0,
+      "seconds": 0.3,
+      "command": [
+        "python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts/database",
+        "-p",
+        "test_*.py"
+      ]
+    },
+    {
+      "name": "check-dbml",
+      "exit": 0,
+      "seconds": 3.9,
+      "command": [
+        "npm.cmd",
+        "run",
+        "check:dbml",
+        "--prefix",
+        "scripts/documentation"
+      ]
+    },
+    {
+      "name": "check-python",
+      "exit": 0,
+      "seconds": 6.1,
+      "command": [
+        "npm.cmd",
+        "run",
+        "check:python",
+        "--prefix",
+        "scripts/documentation"
+      ]
+    },
+    {
+      "name": "docs-npm-audit",
+      "exit": 0,
+      "seconds": 3.6,
+      "command": [
+        "npm.cmd",
+        "audit",
+        "--audit-level=high",
+        "--prefix",
+        "scripts/documentation"
+      ]
+    }
+  ],
+  "core_psalm": {
+    "count": 84,
+    "by_type": {
+      "TypeDoesNotContainType": 1,
+      "ArgumentTypeCoercion": 23,
+      "MixedArgument": 13,
+      "MoreSpecificReturnType": 4,
+      "LessSpecificReturnStatement": 4,
+      "RedundantConditionGivenDocblockType": 1,
+      "DocblockTypeContradiction": 1,
+      "MixedArgumentTypeCoercion": 10,
+      "MixedArrayAccess": 3,
+      "MixedReturnTypeCoercion": 2,
+      "PossiblyNullArrayAccess": 1,
+      "RedundantFunctionCall": 1,
+      "ParadoxicalCondition": 1,
+      "MixedPropertyFetch": 1,
+      "MixedReturnStatement": 1,
+      "UndefinedClass": 1,
+      "PossiblyUndefinedArrayOffset": 1,
+      "RedundantCast": 4,
+      "InvalidArgument": 1,
+      "LessSpecificImplementedReturnType": 1,
+      "PossiblyNullArgument": 1,
+      "RedundantCastGivenDocblockType": 8
+    },
+    "locations": [
+      {
+        "file": "src/DeviceManagement/Application/DeviceAccess.php",
+        "line": 39,
+        "type": "TypeDoesNotContainType",
+        "message": "1 cannot be identical to bool"
+      },
+      {
+        "file": "src/DeviceManagement/Application/DeviceAccess.php",
+        "line": 45,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 1 of DateTimeZone::__construct expects non-empty-string, but parent type string provided"
+      },
+      {
+        "file": "src/DeviceManagement/Application/DeviceAccess.php",
+        "line": 49,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 5 of App\\DeviceManagement\\Application\\Scope::__construct expects non-empty-string, but parent type string provided"
+      },
+      {
+        "file": "src/DeviceManagement/Application/DeviceService.php",
+        "line": 200,
+        "type": "MixedArgument",
+        "message": "Argument 3 of App\\DeviceManagement\\Application\\DeviceStore::recordEvent cannot be array<never, never>|mixed, expecting array<array-key, mixed>"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 72,
+        "type": "MoreSpecificReturnType",
+        "message": "The declared return type 'array{id: string, name: string, organizationId: string, status: string, studentId: string}|null' for App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::classroom is more specific than the inferred return type 'array<string, mixed>|null'"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 74,
+        "type": "LessSpecificReturnStatement",
+        "message": "The type 'array<string, mixed>|null' is more general than the declared return type 'array{id: string, name: string, organizationId: string, status: string, studentId: string}|null' for App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::classroom"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 76,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::one expects array<non-empty-string, int|null|string>, but parent type array{':id': string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 85,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::all expects array<non-empty-string, int|null|string>, but parent type array<string, string> provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 95,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::one expects array<non-empty-string, int|null|string>, but parent type array{':name': string, ':person': string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 103,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::all expects array<non-empty-string, int|null|string>, but parent type array{':offset': int, ...<string, string>} provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 111,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::one expects array<non-empty-string, int|null|string>, but parent type array{':id': string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 125,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::all expects array<non-empty-string, int|null|string>, but parent type array{':device': string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 139,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::one expects array<non-empty-string, int|null|string>, but parent type array{':classroom': null|string, ':name': string, ':number': string, ':person': string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 151,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::one expects array<non-empty-string, int|null|string>, but parent type array{':code': string, ':device': string, ':expires': string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 227,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of Yiisoft\\Db\\Connection\\ConnectionInterface::createCommand expects array<int<0, max>|non-empty-string, mixed>, but parent type array{':device': string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 268,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::one expects array<non-empty-string, int|null|string>, but parent type array{':id': string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 285,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::one expects array<non-empty-string, int|null|string>, but parent type array{':device': string, ':student': string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 301,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::one expects array<non-empty-string, int|null|string>, but parent type array{':device': string, ':session': string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 312,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::one expects array<non-empty-string, int|null|string>, but parent type array{':device': string, ':session': string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/DeviceManagement/Infrastructure/PostgresDeviceStore.php",
+        "line": 455,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\DeviceManagement\\Infrastructure\\PostgresDeviceStore::all expects array<non-empty-string, int|null|string>, but parent type array{':device': string, ':offset': int, ...<string, string>} provided"
+      },
+      {
+        "file": "src/Education/Api/EducationAction.php",
+        "line": 43,
+        "type": "RedundantConditionGivenDocblockType",
+        "message": "Docblock-defined type array<string, mixed> for $body is never null"
+      },
+      {
+        "file": "src/Education/Api/EducationAction.php",
+        "line": 43,
+        "type": "DocblockTypeContradiction",
+        "message": "Cannot resolve types for $body - docblock-defined type array<string, mixed> does not contain null"
+      },
+      {
+        "file": "src/Education/Application/EducationAccess.php",
+        "line": 72,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 5 of App\\Education\\Application\\Scope::__construct expects non-empty-string, but parent type string provided"
+      },
+      {
+        "file": "src/Education/Application/EducationAccess.php",
+        "line": 92,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 5 of App\\Education\\Application\\Scope::__construct expects non-empty-string, but parent type string provided"
+      },
+      {
+        "file": "src/Education/Application/EducationService.php",
+        "line": 90,
+        "type": "MixedArgumentTypeCoercion",
+        "message": "Argument 3 of App\\Education\\Application\\Mutation::run expects callable():array<string, mixed>, but parent type impure-Closure():array<array-key, mixed> provided"
+      },
+      {
+        "file": "src/Education/Application/EducationService.php",
+        "line": 718,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 5 of App\\Education\\Application\\Scope::__construct expects non-empty-string, but parent type string provided"
+      },
+      {
+        "file": "src/Education/Application/EducationService.php",
+        "line": 741,
+        "type": "MixedArgument",
+        "message": "Argument 1 of array_keys cannot be array<never, never>|mixed, expecting array<array-key, mixed>"
+      },
+      {
+        "file": "src/Education/Application/EducationService.php",
+        "line": 747,
+        "type": "MixedArgument",
+        "message": "Argument 5 of App\\Education\\Application\\EducationStore::createAssignment cannot be array<never, never>|mixed, expecting array<array-key, mixed>"
+      },
+      {
+        "file": "src/Education/Application/EducationService.php",
+        "line": 835,
+        "type": "MixedArrayAccess",
+        "message": "Cannot access array value on mixed variable $config"
+      },
+      {
+        "file": "src/Education/Application/EducationService.php",
+        "line": 858,
+        "type": "MixedArrayAccess",
+        "message": "Cannot access array value on mixed variable $config"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 793,
+        "type": "MoreSpecificReturnType",
+        "message": "The declared return type 'list<array{archivedAt: null|string, id: string, name: string}>' for App\\Education\\Infrastructure\\PostgresEducationStore::studentGroups is more specific than the inferred return type 'list<array<string, mixed>>'"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 795,
+        "type": "LessSpecificReturnStatement",
+        "message": "The type 'list<array<string, mixed>>' is more general than the declared return type 'list<array{archivedAt: null|string, id: string, name: string}>' for App\\Education\\Infrastructure\\PostgresEducationStore::studentGroups"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 866,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\Education\\Infrastructure\\PostgresEducationStore::all expects array<non-empty-string, int|null|string>, but parent type array{':actor': string, ':org': string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 888,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 2 of App\\Education\\Infrastructure\\PostgresEducationStore::all expects array<non-empty-string, int|null|string>, but parent type array{':actor': string, ':org': string, ':student'?: string, ...<string, string>} provided"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 892,
+        "type": "MixedReturnTypeCoercion",
+        "message": "The declared return type 'list<string>' for App\\Education\\Infrastructure\\PostgresEducationStore::studentOrganizations is more specific than the inferred return type 'list<mixed>'"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 894,
+        "type": "MixedReturnTypeCoercion",
+        "message": "The type 'list<mixed>' is more general than the declared return type 'list<string>' for App\\Education\\Infrastructure\\PostgresEducationStore::studentOrganizations"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 901,
+        "type": "MoreSpecificReturnType",
+        "message": "The declared return type 'list<array{archivedAt: null|string, id: string, name: string}>' for App\\Education\\Infrastructure\\PostgresEducationStore::studentGroupList is more specific than the inferred return type 'list<array<string, mixed>>'"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 903,
+        "type": "LessSpecificReturnStatement",
+        "message": "The type 'list<array<string, mixed>>' is more general than the declared return type 'list<array{archivedAt: null|string, id: string, name: string}>' for App\\Education\\Infrastructure\\PostgresEducationStore::studentGroupList"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 922,
+        "type": "MoreSpecificReturnType",
+        "message": "The declared return type 'array{id: string, personId: string}|null' for App\\Education\\Infrastructure\\PostgresEducationStore::studentByAccount is more specific than the inferred return type 'array<string, mixed>|null'"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 924,
+        "type": "LessSpecificReturnStatement",
+        "message": "The type 'array<string, mixed>|null' is more general than the declared return type 'array{id: string, personId: string}|null' for App\\Education\\Infrastructure\\PostgresEducationStore::studentByAccount"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 1163,
+        "type": "MixedArrayAccess",
+        "message": "Cannot access array value on mixed variable $stored"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 1163,
+        "type": "PossiblyNullArrayAccess",
+        "message": "Cannot access array value on possibly null variable $stored of type mixed|null"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 1178,
+        "type": "MixedArgumentTypeCoercion",
+        "message": "Argument 2 of App\\Education\\Infrastructure\\PostgresEducationStore::required expects array<non-empty-string, int|null|string>, but parent type array{':accuracy': mixed, ':attempt': string, ':correct': mixed, ':duration': int, ':errors': mixed, ':keystrokes': mixed, ':language': mixed, ':org': string, ':student': string, ':wpm': mixed} provided"
+      },
+      {
+        "file": "src/Education/Infrastructure/PostgresEducationStore.php",
+        "line": 1402,
+        "type": "RedundantFunctionCall",
+        "message": "The call to array_values is unnecessary, list<string> is already a list"
+      },
+      {
+        "file": "src/Storage/Api/StorageAction.php",
+        "line": 51,
+        "type": "ParadoxicalCondition",
+        "message": "Condition ($device is App\\DeviceManagement\\Application\\DeviceIdentity) contradicts a previously-established condition ($device is not App\\DeviceManagement\\Application\\DeviceIdentity)"
+      },
+      {
+        "file": "src/Storage/Api/StorageAction.php",
+        "line": 51,
+        "type": "MixedPropertyFetch",
+        "message": "Cannot fetch property on mixed var $device"
+      },
+      {
+        "file": "src/Storage/Api/StorageAction.php",
+        "line": 73,
+        "type": "MixedArgument",
+        "message": "Argument 4 of App\\Storage\\Application\\StorageService::uploadWithTicket cannot be mixed|null, expecting null|string"
+      },
+      {
+        "file": "src/Storage/Api/StorageAction.php",
+        "line": 77,
+        "type": "MixedArgument",
+        "message": "Argument 2 of App\\Storage\\Application\\StorageService::downloadWithTicket cannot be mixed|null, expecting null|string"
+      },
+      {
+        "file": "src/Storage/Api/StorageAction.php",
+        "line": 78,
+        "type": "MixedReturnStatement",
+        "message": "Could not infer a return type"
+      },
+      {
+        "file": "src/Storage/Api/StorageAction.php",
+        "line": 78,
+        "type": "UndefinedClass",
+        "message": "Class, interface or enum named Yiisoft\\Http\\Response does not exist"
+      },
+      {
+        "file": "src/Storage/Application/StorageService.php",
+        "line": 98,
+        "type": "PossiblyUndefinedArrayOffset",
+        "message": "Possibly undefined array key $ticket['path'] on array<string, mixed>"
+      },
+      {
+        "file": "src/Storage/Application/StorageService.php",
+        "line": 145,
+        "type": "MixedArgument",
+        "message": "Argument 1 of count cannot be array<never, never>|mixed, expecting Countable|array<array-key, mixed>"
+      },
+      {
+        "file": "src/Storage/Application/StorageService.php",
+        "line": 155,
+        "type": "RedundantCast",
+        "message": "Redundant cast to string"
+      },
+      {
+        "file": "src/Storage/Application/StorageService.php",
+        "line": 169,
+        "type": "InvalidArgument",
+        "message": "Argument 3 of App\\Storage\\Application\\StorageStore::mergeManifest expects list<array{baseSha256?: string, op: string, path: string, sha256?: string, size?: int}>, but list<array{baseSha256: null|string, op: 'add'|'delete'|'update', path: string, sha256?: string, size?: int<0, 268435456>}> provided"
+      },
+      {
+        "file": "src/Storage/Application/StorageService.php",
+        "line": 215,
+        "type": "MixedArgument",
+        "message": "Argument 1 of count cannot be array<never, never>|mixed, expecting Countable|array<array-key, mixed>"
+      },
+      {
+        "file": "src/Storage/Application/StorageService.php",
+        "line": 307,
+        "type": "RedundantCast",
+        "message": "Redundant cast to int"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 89,
+        "type": "MixedArgumentTypeCoercion",
+        "message": "Argument 2 of App\\Storage\\Infrastructure\\PostgresStorageStore::one expects array<non-empty-string, int|null|string>, but parent type array{':space': mixed} provided"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 104,
+        "type": "MixedArgumentTypeCoercion",
+        "message": "Argument 2 of App\\Storage\\Infrastructure\\PostgresStorageStore::all expects array<non-empty-string, int|null|string>, but parent type array{':offset': int, ':space': mixed} provided"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 139,
+        "type": "MixedArgument",
+        "message": "Argument 6 of App\\Storage\\Infrastructure\\PostgresStorageStore::createDeviceTicket cannot be mixed|null, expecting null|string"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 193,
+        "type": "MixedArgumentTypeCoercion",
+        "message": "Argument 2 of App\\Storage\\Infrastructure\\PostgresStorageStore::one expects array<non-empty-string, int|null|string>, but parent type array{':path': string, ':space': mixed} provided"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 220,
+        "type": "MixedArgumentTypeCoercion",
+        "message": "Argument 2 of App\\Storage\\Infrastructure\\PostgresStorageStore::one expects array<non-empty-string, int|null|string>, but parent type array{':space': mixed, ':version': string} provided"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 248,
+        "type": "MixedArgumentTypeCoercion",
+        "message": "Argument 2 of App\\Storage\\Infrastructure\\PostgresStorageStore::one expects array<non-empty-string, int|null|string>, but parent type array{':id': mixed} provided"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 261,
+        "type": "MixedArgumentTypeCoercion",
+        "message": "Argument 2 of App\\Storage\\Infrastructure\\PostgresStorageStore::one expects array<non-empty-string, int|null|string>, but parent type array{':file': mixed, ':key': string, ':sha256': string, ':size': int, ':version': int} provided"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 320,
+        "type": "LessSpecificImplementedReturnType",
+        "message": "The inherited return type 'array<string, mixed>' for App\\Storage\\Application\\StorageStore::mergeManifest is more specific than the implemented return type for App\\Storage\\Infrastructure\\PostgresStorageStore::mergemanifest 'array<array-key, mixed>'"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 390,
+        "type": "PossiblyNullArgument",
+        "message": "Argument 2 of hash_equals cannot be null, possibly null value provided"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 482,
+        "type": "RedundantCastGivenDocblockType",
+        "message": "Redundant cast to string given docblock-provided type"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 483,
+        "type": "RedundantCastGivenDocblockType",
+        "message": "Redundant cast to int given docblock-provided type"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 502,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 1 of App\\Storage\\Infrastructure\\PostgresStorageStore::canonicalSnapshot expects list<array{path: string, sha256: string, size: int}>, but parent type list<array<string, mixed>> provided"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 533,
+        "type": "MixedArgument",
+        "message": "Argument 3 of App\\Storage\\Infrastructure\\PostgresStorageStore::completeSync cannot be mixed|null|string, expecting null|string"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 546,
+        "type": "ArgumentTypeCoercion",
+        "message": "Argument 1 of App\\Storage\\Infrastructure\\PostgresStorageStore::canonicalSnapshot expects list<array{path: string, sha256: string, size: int}>, but parent type list<array<string, mixed>> provided"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 575,
+        "type": "MixedArgumentTypeCoercion",
+        "message": "Argument 2 of App\\Storage\\Infrastructure\\PostgresStorageStore::one expects array<non-empty-string, int|null|string>, but parent type array{':space': mixed} provided"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 634,
+        "type": "RedundantCastGivenDocblockType",
+        "message": "Redundant cast to string given docblock-provided type"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 640,
+        "type": "RedundantCastGivenDocblockType",
+        "message": "Redundant cast to string given docblock-provided type"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 644,
+        "type": "RedundantCast",
+        "message": "Redundant cast to string"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 645,
+        "type": "RedundantCast",
+        "message": "Redundant cast to string"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 646,
+        "type": "RedundantCastGivenDocblockType",
+        "message": "Redundant cast to int given docblock-provided type"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 660,
+        "type": "MixedArgument",
+        "message": "Argument 1 of strcmp cannot be mixed, expecting string"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 660,
+        "type": "MixedArgument",
+        "message": "Argument 2 of strcmp cannot be mixed, expecting string"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 673,
+        "type": "RedundantCastGivenDocblockType",
+        "message": "Redundant cast to string given docblock-provided type"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 675,
+        "type": "RedundantCastGivenDocblockType",
+        "message": "Redundant cast to string given docblock-provided type"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 676,
+        "type": "RedundantCastGivenDocblockType",
+        "message": "Redundant cast to int given docblock-provided type"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 684,
+        "type": "MixedArgument",
+        "message": "Argument 1 of strcmp cannot be mixed, expecting string"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 684,
+        "type": "MixedArgument",
+        "message": "Argument 2 of strcmp cannot be mixed, expecting string"
+      },
+      {
+        "file": "src/Storage/Infrastructure/PostgresStorageStore.php",
+        "line": 737,
+        "type": "MixedArgumentTypeCoercion",
+        "message": "Argument 2 of App\\Storage\\Infrastructure\\PostgresStorageStore::one expects array<non-empty-string, int|null|string>, but parent type array{':path': mixed, ':space': string} provided"
+      }
+    ]
+  },
+  "postgres_scan": {
+    "fixed_available_high_critical": 0,
+    "unfixed_high": 64,
+    "unfixed_critical": 1,
+    "patched_image_id": "sha256:fb490676cd14e2f4a7c0b2a7e9d7166f78bf002bc0dbb064d99563e012e90356",
+    "working_postgres_image_id": "sha256:4c2ea9b140ec15a4768ea13a935ce79757f2b57d333f4f50f129c1885009cb8a",
+    "working_zlib": "1:1.3.dfsg+really1.3.1-1+b1",
+    "working_containers_recreated": false,
+    "retained_patched_image_id": "sha256:a9aba2c8906f1e91b3164403f3cc27592a98b4893397e6359d37fd1ef5a4ca68",
+    "retained_patched_image_zlib": "1:1.3.dfsg+really1.3.1-1+deb13u1"
+  },
+  "local_logs": "C:\\Users\\Yuran\\AppData\\Local\\Temp\\platform-audit-20261107",
+  "docker_cleanup": {
+    "removed_containers": [
+      "platform-audit-20261107-control-plane-test",
+      "platform-audit-20261107-control-postgres-test",
+      "platform-audit-20261107-backend-test",
+      "platform-audit-20261107-mailpit-test",
+      "platform-audit-20261107-redis-test",
+      "platform-audit-20261107-postgres-test",
+      "platform-audit-20261107-mailpit-core-test",
+      "platform-billing-ci-control-plane-test",
+      "platform-billing-ci-mailpit-test",
+      "platform-billing-ci-control-postgres-test",
+      "platform-postgres-test",
+      "platform-backend-test",
+      "platform-redis-test"
+    ],
+    "removed_volumes": [
+      "platform-audit-20261107_control_postgres_test_data",
+      "platform-audit-20261107_postgres_test_data",
+      "platform-audit-20261107_redis_test_data",
+      "platform-billing-ci_control_postgres_test_data",
+      "platform_postgres_test_data",
+      "platform_redis_test_data",
+      "platform-audit-20261107_core_source"
+    ],
+    "removed_networks": [
+      "platform-audit-20261107_control_test_net",
+      "platform-audit-20261107_test_net",
+      "platform-billing-ci_control_test_net",
+      "platform-billing-ci_test_net"
+    ],
+    "removed_image_tags": [
+      "platform-audit-core-prod:20261107",
+      "platform-audit-control-prod:20261107",
+      "platform-billing-ci-php-clock:local",
+      "platform-billing-ci-postgres-clock:local",
+      "platform-billing-ci-control-plane-test:latest",
+      "platform-audit-backup:20261107",
+      "platform-audit-20261107-cross-plane-test:latest",
+      "platform-audit-postgres:20261107",
+      "platform-audit-20261107-control-plane-test:latest",
+      "platform-audit-20261107-backend-test:latest",
+      "platform-backend-test:latest",
+      "aquasec/trivy:0.69.3",
+      "rhysd/actionlint:1.7.11",
+      "prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996",
+      "prom/alertmanager@sha256:27c475db5fb156cab31d5c18a4251ac7ed567746a2483ff264516437a39b15ba"
+    ],
+    "preserved_before": {
+      "platform-postgres": {
+        "id": "04b19654ab48556fee7db61e392bb2a5f43ac31c0aa42a605ad7c686fa40ad69",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-control-postgres": {
+        "id": "2fe2b5e30e2728d86b5761bec169702069fe253b0b683c32f210627d7cb6a7bf",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-redis": {
+        "id": "398cf01dd209234726e4ad2dc7f4a4b5c1312f7d3dc9cba3a29d93c52b30160e",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-backend": {
+        "id": "cf4d87484faf89e23e0a4e51c74ccc155c4a54eb92eac471c07af8fd8d3cd659",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-backend-fast": {
+        "id": "c8b2fd7a8d56b7dc3705ecba7185aa63eb2948c7d1ff647175a2b3e89ffdaf09",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-backend-email-worker": {
+        "id": "53dc0b22f0035757f32dfa37ebf9cf0f26cef2e7ead2298e88ab20ce93835905",
+        "status": "running",
+        "health": "unhealthy"
+      },
+      "platform-backend-scheduler": {
+        "id": "c3aa8347df53736d8c8de645835b1671ed6b1a1185ab8927e763e9b9b585ec98",
+        "status": "running",
+        "health": "unhealthy"
+      },
+      "platform-control-plane": {
+        "id": "7f9b0b6d7f99adc7d1aec67b5e9e2a734ea6249e49460aaed5ac40a5890f1230",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-control-scheduler": {
+        "id": "7f0c7e4fef788ddbecab0b4217f8885b0385be54c35d5d8b1542fef642ebbcba",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-control-outbox-worker": {
+        "id": "596d29ab29691273f9ea8b953be30b022e7f693047d0fbdeab657e74b9401580",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-mailpit": {
+        "id": "c8442a45b019db9c470147852f99713a2196ae060a3718a0463b938e37362d08",
+        "status": "running",
+        "health": "healthy"
+      },
+      "mybots-postgres-1": {
+        "id": "81d2cacdfb86596ffe6e8810f4c8577a30212dc7d6783b15cf735ee454c92fd6",
+        "status": "running",
+        "health": "healthy"
+      },
+      "mybots-mybots-app-1": {
+        "id": "a73062e7055b85be8fc19911fe48599852c12d7d6c2610b8bf6962e37c6e0d4e",
+        "status": "created",
+        "health": null
+      }
+    },
+    "image_prune_summary": "Total reclaimed space: 641.7MB",
+    "build_cache_summary": "Total:\t5.318GB",
+    "preserved_after": {
+      "platform-postgres": {
+        "id": "04b19654ab48556fee7db61e392bb2a5f43ac31c0aa42a605ad7c686fa40ad69",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-control-postgres": {
+        "id": "2fe2b5e30e2728d86b5761bec169702069fe253b0b683c32f210627d7cb6a7bf",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-redis": {
+        "id": "398cf01dd209234726e4ad2dc7f4a4b5c1312f7d3dc9cba3a29d93c52b30160e",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-backend": {
+        "id": "cf4d87484faf89e23e0a4e51c74ccc155c4a54eb92eac471c07af8fd8d3cd659",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-backend-fast": {
+        "id": "c8b2fd7a8d56b7dc3705ecba7185aa63eb2948c7d1ff647175a2b3e89ffdaf09",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-backend-email-worker": {
+        "id": "53dc0b22f0035757f32dfa37ebf9cf0f26cef2e7ead2298e88ab20ce93835905",
+        "status": "running",
+        "health": "unhealthy"
+      },
+      "platform-backend-scheduler": {
+        "id": "c3aa8347df53736d8c8de645835b1671ed6b1a1185ab8927e763e9b9b585ec98",
+        "status": "running",
+        "health": "unhealthy"
+      },
+      "platform-control-plane": {
+        "id": "7f9b0b6d7f99adc7d1aec67b5e9e2a734ea6249e49460aaed5ac40a5890f1230",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-control-scheduler": {
+        "id": "7f0c7e4fef788ddbecab0b4217f8885b0385be54c35d5d8b1542fef642ebbcba",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-control-outbox-worker": {
+        "id": "596d29ab29691273f9ea8b953be30b022e7f693047d0fbdeab657e74b9401580",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-mailpit": {
+        "id": "c8442a45b019db9c470147852f99713a2196ae060a3718a0463b938e37362d08",
+        "status": "running",
+        "health": "healthy"
+      },
+      "mybots-postgres-1": {
+        "id": "81d2cacdfb86596ffe6e8810f4c8577a30212dc7d6783b15cf735ee454c92fd6",
+        "status": "running",
+        "health": "healthy"
+      },
+      "mybots-mybots-app-1": {
+        "id": "a73062e7055b85be8fc19911fe48599852c12d7d6c2610b8bf6962e37c6e0d4e",
+        "status": "created",
+        "health": null
+      }
+    },
+    "preserved_container_ids_unchanged": true,
+    "preserved_status_unchanged": true,
+    "preserved_healthy": false,
+    "cleanup_completed": true,
+    "health_warning_resolved_by": "worker_health_fix",
+    "final_system_df": "TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE\nImages          8         7         3.733GB   647.8MB (17%)\nContainers      13        12        12.52MB   4.096kB (0%)\nLocal Volumes   4         4         237.3MB   0B (0%)\nBuild Cache     0         0         0B        0B\n"
+  },
+  "filesystem_cleanup": {
+    "dependency_junction_removed": true,
+    "temporary_secrets_removed": true,
+    "workspace_bytes_removed": 15832895,
+    "removed": [
+      "apps/agent/KiberOne.Agent/bin",
+      "apps/agent/KiberOne.Agent/obj",
+      "apps/agent/KiberOne.Agent.Service/bin",
+      "apps/agent/KiberOne.Agent.Service/obj",
+      "apps/agent/KiberOne.Agent.Ui/bin",
+      "apps/agent/KiberOne.Agent.Ui/obj",
+      "apps/agent/KiberOne.Agent.Tests/bin",
+      "apps/agent/KiberOne.Agent.Tests/obj",
+      "scripts/database/__pycache__",
+      "scripts/ci/__pycache__",
+      "infra/observability/alert-sink/__pycache__",
+      "apps/frontend/screenshots",
+      "apps/backend/tests/_output/App.Tests.Api.DataSubjectRequestsCest.ownPaginationPreservesLegacyShapeAndIsolation.fail.json",
+      "apps/backend/tests/_output/App.Tests.Api.PasskeyApiCest.discoverableAuthenticationFlow.fail.json",
+      "apps/backend/tests/_output/App.Tests.Api.PasskeyApiCest.lastAuthenticationMethodCannotBeRevoked.fail.json",
+      "apps/backend/tests/_output/audit-psalm.json",
+      "apps/backend/dist",
+      "apps/backend/node_modules",
+      "temporary audit worktree",
+      "audit/vite-cache",
+      "audit/clock",
+      "audit/backup-source",
+      "audit/prometheus",
+      "audit/alertmanager"
+    ],
+    "secrets_and_working_data_preserved": true
+  },
+  "worker_health_fix": {
+    "diagnostics": [
+      {
+        "name": "platform-backend-email-worker",
+        "exit": 0,
+        "seconds": 6.92,
+        "output": ""
+      },
+      {
+        "name": "platform-backend-scheduler",
+        "exit": 0,
+        "seconds": 7.68,
+        "output": ""
+      }
+    ],
+    "timeout_before_seconds": 5,
+    "timeout_after_seconds": 15,
+    "intentionally_recreated": [
+      "platform-backend-email-worker",
+      "platform-backend-scheduler"
+    ],
+    "before": {
+      "platform-backend-email-worker": {
+        "id": "53dc0b22f0035757f32dfa37ebf9cf0f26cef2e7ead2298e88ab20ce93835905",
+        "status": "running",
+        "health": "unhealthy"
+      },
+      "platform-backend-scheduler": {
+        "id": "c3aa8347df53736d8c8de645835b1671ed6b1a1185ab8927e763e9b9b585ec98",
+        "status": "running",
+        "health": "unhealthy"
+      }
+    },
+    "final_containers": {
+      "platform-postgres": {
+        "id": "04b19654ab48556fee7db61e392bb2a5f43ac31c0aa42a605ad7c686fa40ad69",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-control-postgres": {
+        "id": "2fe2b5e30e2728d86b5761bec169702069fe253b0b683c32f210627d7cb6a7bf",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-redis": {
+        "id": "398cf01dd209234726e4ad2dc7f4a4b5c1312f7d3dc9cba3a29d93c52b30160e",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-backend": {
+        "id": "cf4d87484faf89e23e0a4e51c74ccc155c4a54eb92eac471c07af8fd8d3cd659",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-backend-fast": {
+        "id": "c8b2fd7a8d56b7dc3705ecba7185aa63eb2948c7d1ff647175a2b3e89ffdaf09",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-backend-email-worker": {
+        "id": "b4756bb760bbff101a6e3ac765eff2e9d2b74f84e5de097d85cae757e123c20d",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-backend-scheduler": {
+        "id": "77d02d81db26c3d824be2aa3357e978447c2c74a0d39e7cf39fbf6dc8ac8647e",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-control-plane": {
+        "id": "7f9b0b6d7f99adc7d1aec67b5e9e2a734ea6249e49460aaed5ac40a5890f1230",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-control-scheduler": {
+        "id": "7f0c7e4fef788ddbecab0b4217f8885b0385be54c35d5d8b1542fef642ebbcba",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-control-outbox-worker": {
+        "id": "596d29ab29691273f9ea8b953be30b022e7f693047d0fbdeab657e74b9401580",
+        "status": "running",
+        "health": "healthy"
+      },
+      "platform-mailpit": {
+        "id": "c8442a45b019db9c470147852f99713a2196ae060a3718a0463b938e37362d08",
+        "status": "running",
+        "health": "healthy"
+      },
+      "mybots-postgres-1": {
+        "id": "81d2cacdfb86596ffe6e8810f4c8577a30212dc7d6783b15cf735ee454c92fd6",
+        "status": "running",
+        "health": "healthy"
+      },
+      "mybots-mybots-app-1": {
+        "id": "a73062e7055b85be8fc19911fe48599852c12d7d6c2610b8bf6962e37c6e0d4e",
+        "status": "created",
+        "health": null
+      }
+    },
+    "other_container_ids_preserved": true,
+    "all_running_containers_healthy": true,
+    "running_containers": 12
+  }
+}

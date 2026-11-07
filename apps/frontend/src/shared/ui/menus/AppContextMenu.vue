@@ -3,21 +3,39 @@ import { ref } from 'vue';
 import AppMenu from './AppMenu.vue';
 import type { MenuItem } from './types';
 
-defineProps<{ items: readonly MenuItem[]; label: string; searchable?: boolean }>();
+const props = withDefaults(
+  defineProps<{
+    items: readonly MenuItem[];
+    label: string;
+    searchable?: boolean;
+    disabled?: boolean;
+    beforeOpen?: (context: {
+      target: HTMLElement;
+      event: MouseEvent | KeyboardEvent;
+    }) => Promise<void> | void;
+  }>(),
+  {
+    searchable: false,
+    disabled: false,
+    beforeOpen: undefined,
+  },
+);
+
 const emit = defineEmits<{ select: [item: MenuItem] }>();
 const open = ref(false);
 const point = ref<{ x: number; y: number } | null>(null);
 const anchor = ref<HTMLElement | null>(null);
-function show(event: MouseEvent | KeyboardEvent): void {
+
+async function show(event: MouseEvent | KeyboardEvent): Promise<void> {
+  if (props.disabled) return;
   if (event.defaultPrevented || (event.shiftKey && event instanceof MouseEvent)) return;
   const target = event.target instanceof HTMLElement ? event.target : null;
-  // Preserve browser editing, link actions and selected text. Shift + right click is an escape hatch.
+  // Preserve browser editing, link actions, dialogs and custom opt-outs. Shift + right click is an escape hatch.
   if (
     !target ||
     target.closest(
-      'input, textarea, select, [contenteditable]:not([contenteditable="false"]), a, button, [role="menu"], [data-native-context]',
-    ) ||
-    window.getSelection()?.toString()
+      'input, textarea, select, [contenteditable]:not([contenteditable="false"]), a, button, [role="menu"], [role="dialog"], dialog, .app-dialog, [data-native-context], [data-no-context-menu]',
+    )
   )
     return;
   event.preventDefault();
@@ -28,10 +46,16 @@ function show(event: MouseEvent | KeyboardEvent): void {
     event instanceof MouseEvent
       ? { x: event.clientX, y: event.clientY }
       : { x: rect.left + 8, y: rect.top + 8 };
+  if (props.beforeOpen) {
+    await props.beforeOpen({ target, event });
+  }
   open.value = true;
 }
+
 function keydown(event: KeyboardEvent): void {
-  if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) show(event);
+  if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
+    void show(event);
+  }
 }
 </script>
 

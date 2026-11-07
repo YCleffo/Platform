@@ -1,8 +1,7 @@
 // Read-only style matrix. HTTP fixtures include populated, empty and safe error states.
 // This checks rendered typography/layout; it does not prove backend business lifecycles.
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import ts from 'typescript';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { launchBrowser, navigateClientSide, stableScreenshot } from './e2e-support.mjs';
 
 const base = process.env.BASE_URL ?? 'http://localhost:5173';
@@ -430,56 +429,28 @@ const publicRoutes = [
 ];
 mkdirSync('screenshots', { recursive: true });
 try {
-  const source = ts.createSourceFile(
-    'router.ts',
-    readFileSync('src/app/router/index.ts', 'utf8'),
-    ts.ScriptTarget.Latest,
-    true,
-  );
-  const named = new Map();
-  const literal = (node, name) =>
-    node.properties.find(
-      (p) =>
-        ts.isPropertyAssignment(p) &&
-        p.name.getText(source) === name &&
-        ts.isStringLiteral(p.initializer),
-    )?.initializer.text;
-  function visit(node) {
-    if (ts.isObjectLiteralExpression(node)) {
-      const name = literal(node, 'name');
-      let path = literal(node, 'path');
-      if (name !== undefined && path !== undefined) {
-        let parent = node.parent;
-        while (!path.startsWith('/') && parent) {
-          if (ts.isObjectLiteralExpression(parent)) {
-            const prefix = literal(parent, 'path');
-            if (prefix !== undefined) path = prefix.replace(/\/$/, '') + '/' + path;
-          }
-          parent = parent.parent;
-        }
-        named.set(name, path.replace(/\/$/, '') || '/');
-      }
-    }
-    ts.forEachChild(node, visit);
-  }
-  visit(source);
+  await page.goto(base + '/', { waitUntil: 'networkidle' });
+  // Read the registered routes, including records built with map/spread.
+  const named = new Map(await page.evaluate(() => {
+    const router = document.querySelector('#app').__vue_app__.config.globalProperties.$router;
+    return router.getRoutes().filter(route => typeof route.name === 'string')
+      .map(route => [route.name, route.path.replace(/\/$/, '') || '/']);
+  }));
   const tested = [...coreRoutes, ...commercialRoutes]
     .map(([path]) => path)
     .concat(
       publicRoutes.map((path) => path.split('?')[0]),
       '/mfa',
     );
-  const covered = new Set(
-    tested.map(
-      (path) =>
-        [...named].find(
-          ([name, pattern]) =>
-            name !== 'not-found' &&
-            new RegExp('^' + pattern.replace(/:\w+/g, '[^/]+') + '$').test(path),
-        )?.[0] ?? (path === '/does-not-exist' ? 'not-found' : null),
-    ),
-  );
-  assert.equal(covered.has(null), false, 'Unknown route in style matrix');
+  const resolved = await page.evaluate(paths => {
+    const router = document.querySelector('#app').__vue_app__.config.globalProperties.$router;
+    return paths.map(path => {
+      const name = router.resolve(path).name;
+      return { path, name: name === 'not-found' && path !== '/does-not-exist' ? null : name ?? null };
+    });
+  }, tested);
+  const covered = new Set(resolved.map(route => route.name));
+  assert.deepEqual(resolved.filter(route => route.name === null).map(route => route.path), [], 'Unknown routes in style matrix');
   assert.deepEqual(
     [...covered].sort(),
     [...named.keys()].sort(),

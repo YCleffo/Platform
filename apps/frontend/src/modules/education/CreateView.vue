@@ -66,7 +66,8 @@ watch(
   () => data.value?.groups,
   (page) => {
     if (!page || initialGroupId === '' || data.value?.selectedGroup !== null) return;
-    if (!page.items.some((item) => item.id === initialGroupId && !item.archivedAt)) groupId.value = '';
+    if (!page.items.some((item) => item.id === initialGroupId && !item.archivedAt))
+      groupId.value = '';
   },
   { immediate: true },
 );

@@ -117,15 +117,15 @@ html:has(.education-shell), html:has(.education-login) { scrollbar-gutter: auto;
 .edu-journal__entry { align-items: flex-start; }
 .edu-journal__results { display: grid; gap: 6px; padding: 0; margin: 8px 0 0; list-style: none; }
 .edu-journal__results li { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
-.edu-bottom-nav { display: flex; gap: 4px; overflow-x: auto; position: sticky; bottom: 0; background: var(--edu-card); border-top: 1px solid var(--edu-border); padding: 8px; }
-.edu-bottom-nav a { padding: 8px 12px; border-radius: 8px; color: var(--edu-muted); text-decoration: none; white-space: nowrap; }
-.edu-bottom-nav a.router-link-active { color: var(--edu-accent); font-weight: 600; }
-.edu-typing__board { font-size: 1.35rem; line-height: 2rem; }
+.edu-bottom-nav { display: flex; gap: 4px; overflow-x: auto; position: sticky; bottom: 0; background: var(--card); border-top: 1px solid var(--border); padding: 8px; }
+.edu-bottom-nav a { padding: 8px 12px; border-radius: 8px; color: var(--text-2); text-decoration: none; white-space: nowrap; }
+.edu-bottom-nav a.router-link-active { color: var(--accent-text); font-weight: var(--type-body-small-emphasis-weight); }
+.edu-typing__board { font-size: var(--type-h1-size); font-weight: var(--type-body-medium-weight); line-height: var(--type-h1-line); }
 .edu-typing__text { word-break: break-all; white-space: pre-wrap; user-select: none; }
 .edu-typing__stats { font-variant-numeric: tabular-nums; }
 .edu-typing__char { border-radius: 2px; }
-.edu-typing__char--ok { color: var(--edu-ok, #1a7f37); }
-.edu-typing__char--wrong { color: var(--edu-bad, #cf222e); background: color-mix(in srgb, var(--edu-bad, #cf222e) 12%, transparent); text-decoration: underline; }
-.edu-typing__char--caret { border-left: 2px solid var(--edu-accent); animation: edu-caret 1s steps(1) infinite; }
+.edu-typing__char--ok { color: var(--success); }
+.edu-typing__char--wrong { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); text-decoration: underline; }
+.edu-typing__char--caret { border-left: 2px solid var(--accent-text); animation: edu-caret var(--motion-caret-duration) steps(1) infinite; }
 @keyframes edu-caret { 50% { border-left-color: transparent; } }
 

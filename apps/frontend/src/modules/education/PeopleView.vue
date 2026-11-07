@@ -84,7 +84,9 @@ const { data, loading, error, refresh } = useEducationResource(
             <span
               v-if="item.archivedAt"
               class="edu-status edu-status--cancelled"
-            >{{ t('education.archived') }}</span>
+            >
+              {{ t('education.archived') }}
+            </span>
           </p>
         </RouterLink>
         <div class="edu-form-actions">

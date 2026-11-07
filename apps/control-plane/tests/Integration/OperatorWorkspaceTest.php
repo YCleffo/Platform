@@ -52,8 +52,12 @@ final class OperatorWorkspaceTest extends DatabaseTestCase
         self::assertFalse($data['finance']);
         self::assertTrue($data['catalog']);
         $this->connection->executeStatement('DELETE FROM commercial.catalog_operators WHERE control_user_id=?', [$id]);
-        $this->expectException(AccessDeniedException::class);
-        $controller->me();
+        $response = $controller->me();
+        self::assertSame(403, $response->getStatusCode());
+        $denied = json_decode((string) $response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame('operator_authorization_required', $denied['error']['code']);
+        self::assertArrayNotHasKey('user', $denied);
+        self::assertTrue($response->headers->hasCacheControlDirective('no-store'));
     }
 
     public function testPrivacyAndFinanceCapabilitiesRemainIndependentAndRevocable(): void

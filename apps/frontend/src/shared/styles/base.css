@@ -6,7 +6,6 @@
 
 html {
   color-scheme: light;
-  scrollbar-gutter: stable;
 }
 
 html[data-theme='dark'] {

@@ -21,11 +21,12 @@ RUN --mount=type=cache,target=/go/pkg/mod \
         go build -mod=readonly -trimpath -buildvcs=false -ldflags '-d -w' -o /out/gosu .
 
 FROM postgres:18.6-trixie@sha256:bd5dfa494a5a259704365813dbfa5fa6b3e69be7348d43b547f540c730478583
-# CVE-2026-109518: update only the package manager; keep PostgreSQL and PGDATA
-# compatible with the pinned 18.6 base. Disable retries while bootstrapping APT.
+# Update the package manager and zlib security fixes while keeping PostgreSQL
+# and PGDATA compatible with the pinned 18.6 base.
 RUN apt-get -o Acquire::Retries=0 update \
-    && apt-get -o Acquire::Retries=0 install -y --no-install-recommends --only-upgrade apt libapt-pkg7.0 \
+    && apt-get -o Acquire::Retries=0 install -y --no-install-recommends --only-upgrade apt libapt-pkg7.0 zlib1g \
     && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge '3.0.4' \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' zlib1g)" ge '1:1.3.dfsg+really1.3.1-1+deb13u1' \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=gosu-builder --chmod=0755 /out/gosu /usr/local/bin/gosu
 RUN gosu --version \

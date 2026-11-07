@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { ShieldCheck } from '@/shared/ui/icons';
@@ -20,6 +20,10 @@ const { t } = useI18n();
 const controller = new AbortController();
 let active = true;
 
+const mode = ref<'code' | 'recovery'>('code');
+const isFocused = ref(false);
+const codeInputRef = ref<HTMLInputElement | null>(null);
+
 onBeforeUnmount(() => {
   active = false;
   controller.abort();
@@ -33,25 +37,67 @@ const form = useForm({
   },
 });
 
+const digits = computed(() => {
+  const chars = form.values.code.split('');
+  return Array.from({ length: 6 }, (_, i) => chars[i] ?? '');
+});
+
+const activeCellIndex = computed(() => Math.min(form.values.code.length, 5));
+
+function focusCodeInput(): void {
+  codeInputRef.value?.focus();
+}
+
+function onCodeInput(event: Event): void {
+  const target = event.target as HTMLInputElement;
+  const cleaned = target.value.replace(/\D/g, '').slice(0, 6);
+  form.values.code = cleaned;
+  target.value = cleaned;
+  if (crossError.value) {
+    crossError.value = null;
+  }
+}
+
+function switchToRecovery(): void {
+  mode.value = 'recovery';
+  crossError.value = null;
+  void nextTick(() => {
+    document.getElementById('mfa-recovery')?.focus();
+  });
+}
+
+function switchToCode(): void {
+  mode.value = 'code';
+  crossError.value = null;
+  void nextTick(() => {
+    focusCodeInput();
+  });
+}
+
 const crossError = ref<string | null>(null);
 
 const { submitting, message, run } = useAsyncAction(async () => {
-  await auth.verifyMfa(
-    form.values.code.trim() !== '' ? form.values.code.trim() : undefined,
-    form.values.recoveryCode.trim() !== '' ? form.values.recoveryCode.trim() : undefined,
-    controller.signal,
-  );
+  const code =
+    mode.value === 'code' && form.values.code.trim() !== '' ? form.values.code.trim() : undefined;
+  const recoveryCode =
+    mode.value === 'recovery' && form.values.recoveryCode.trim() !== ''
+      ? form.values.recoveryCode.trim()
+      : undefined;
+
+  await auth.verifyMfa(code, recoveryCode, controller.signal);
   if (!active) {
     return;
   }
-  await router.push(
-    redirectTarget.value !== null ? redirectTarget.value : { name: 'cabinet' },
-  );
+  await router.push(redirectTarget.value !== null ? redirectTarget.value : { name: 'cabinet' });
 });
 
 onMounted(() => {
   if (auth.mfaChallenge === null) {
     void router.push({ name: 'login' });
+  } else {
+    void nextTick(() => {
+      focusCodeInput();
+    });
   }
 });
 
@@ -63,11 +109,21 @@ async function onSubmit(): Promise<void> {
     await router.push({ name: 'login' });
     return;
   }
-  const hasCode = form.values.code.trim() !== '';
-  const hasRecovery = form.values.recoveryCode.trim() !== '';
-  if (hasCode === hasRecovery) {
-    crossError.value = t('auth.mfaInvalid');
-    return;
+  if (mode.value === 'code') {
+    const code = form.values.code.trim();
+    if (code.length !== 6) {
+      crossError.value = t('coreAuth.totpInvalid');
+      focusCodeInput();
+      return;
+    }
+    form.values.recoveryCode = '';
+  } else {
+    const recovery = form.values.recoveryCode.trim();
+    if (recovery === '') {
+      crossError.value = t('auth.mfaInvalid');
+      return;
+    }
+    form.values.code = '';
   }
   crossError.value = null;
   await run();
@@ -77,7 +133,7 @@ async function onSubmit(): Promise<void> {
 <template>
   <AppFormShell
     :title="$t('auth.mfaTitle')"
-    :subtitle="$t('auth.mfaIntro')"
+    :subtitle="mode === 'code' ? $t('auth.mfaCodeIntro') : $t('auth.mfaRecoveryIntro')"
     :error="message ?? crossError"
     centered
   >
@@ -94,27 +150,114 @@ async function onSubmit(): Promise<void> {
       novalidate
       @submit.prevent="onSubmit"
     >
-      <AppInput
-        id="mfa-code"
-        v-model="form.values.code"
-        :label="$t('auth.mfaCode')"
-        inputmode="numeric"
-        autocomplete="one-time-code"
-        placeholder="••••••"
-      />
-      <AppInput
-        id="mfa-recovery"
-        v-model="form.values.recoveryCode"
-        :label="$t('auth.mfaRecoveryCode')"
-        autocomplete="off"
-      />
-      <AppButton
-        type="submit"
-        :loading="submitting"
-        block
-      >
-        {{ $t('auth.mfaSubmit') }}
-      </AppButton>
+      <!-- Authenticator Code 6-cell Input -->
+      <template v-if="mode === 'code'">
+        <div class="mfa-pin-wrapper">
+          <label
+            for="mfa-code"
+            class="mfa-pin__label"
+          >
+            {{ $t('auth.mfaCode') }}
+          </label>
+          <div
+            class="mfa-pin"
+            :class="{
+              'mfa-pin--focused': isFocused,
+              'mfa-pin--error': Boolean(message ?? crossError),
+            }"
+            @click="focusCodeInput"
+          >
+            <input
+              id="mfa-code"
+              ref="codeInputRef"
+              v-model="form.values.code"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              autocomplete="one-time-code"
+              maxlength="6"
+              class="mfa-pin__input"
+              :aria-label="$t('auth.mfaCode')"
+              :disabled="submitting"
+              @focus="isFocused = true"
+              @blur="isFocused = false"
+              @input="onCodeInput"
+            />
+            <div
+              class="mfa-pin__cells"
+              aria-hidden="true"
+            >
+              <div
+                v-for="idx in 6"
+                :key="idx"
+                class="mfa-pin__cell"
+                :class="{
+                  'mfa-pin__cell--active': isFocused && activeCellIndex === idx - 1,
+                  'mfa-pin__cell--filled': Boolean(digits[idx - 1]),
+                }"
+              >
+                <span class="mfa-pin__digit">{{ digits[idx - 1] || '' }}</span>
+                <span
+                  v-if="isFocused && activeCellIndex === idx - 1 && !digits[idx - 1]"
+                  class="mfa-pin__caret"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <AppButton
+          type="submit"
+          :loading="submitting"
+          block
+        >
+          {{ $t('auth.mfaSubmit') }}
+        </AppButton>
+
+        <p class="auth-form__aux">
+          <button
+            id="mfa-toggle-recovery"
+            type="button"
+            class="auth-link-button"
+            :disabled="submitting"
+            @click="switchToRecovery"
+          >
+            {{ $t('auth.mfaUseRecovery') }}
+          </button>
+        </p>
+      </template>
+
+      <!-- Recovery Code Input -->
+      <template v-else>
+        <AppInput
+          id="mfa-recovery"
+          v-model="form.values.recoveryCode"
+          :label="$t('auth.mfaRecoveryCode')"
+          autocomplete="off"
+          :disabled="submitting"
+          placeholder="••••••••••••"
+        />
+
+        <AppButton
+          type="submit"
+          :loading="submitting"
+          block
+        >
+          {{ $t('auth.mfaSubmit') }}
+        </AppButton>
+
+        <p class="auth-form__aux">
+          <button
+            id="mfa-toggle-code"
+            type="button"
+            class="auth-link-button"
+            :disabled="submitting"
+            @click="switchToCode"
+          >
+            {{ $t('auth.mfaUseCode') }}
+          </button>
+        </p>
+      </template>
     </form>
   </AppFormShell>
 </template>
@@ -137,5 +280,150 @@ async function onSubmit(): Promise<void> {
   background: var(--accent-soft);
   color: var(--accent-text);
   transition: var(--theme-transition);
+}
+
+.mfa-pin-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.mfa-pin__label {
+  font-size: var(--type-body-small-emphasis-size);
+  font-weight: var(--type-body-small-emphasis-weight);
+  line-height: var(--type-body-small-emphasis-line);
+  letter-spacing: var(--type-body-small-emphasis-tracking);
+  color: var(--text-2);
+  transition: var(--theme-transition);
+}
+
+.mfa-pin {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.mfa-pin__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.01;
+  background: transparent;
+  color: transparent;
+  border: none;
+  outline: none;
+  caret-color: transparent;
+  cursor: text;
+  z-index: 2;
+}
+
+.mfa-pin__cells {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.mfa-pin__cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 40px;
+  max-width: 54px;
+  height: 58px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control-m);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  transition:
+    var(--theme-transition),
+    border-color var(--motion-fast-duration) var(--motion-ease),
+    box-shadow var(--motion-fast-duration) var(--motion-ease),
+    transform var(--motion-fast-duration) var(--motion-ease);
+}
+
+.mfa-pin__cell--active {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus-ring);
+  transform: translateY(-2px);
+}
+
+.mfa-pin__cell--filled {
+  border-color: var(--border-strong, var(--border));
+  background: var(--surface-2, var(--surface));
+}
+
+.mfa-pin--error .mfa-pin__cell {
+  border-color: var(--color-danger-500);
+}
+
+.mfa-pin__digit {
+  font-size: var(--type-h2-size);
+  font-weight: var(--type-h2-weight);
+  line-height: var(--type-h2-line);
+  letter-spacing: var(--type-h2-tracking);
+  color: var(--text-1);
+  user-select: none;
+}
+
+@keyframes mfa-pin-caret {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.mfa-pin__caret {
+  display: inline-block;
+  width: 2px;
+  height: 24px;
+  background: var(--accent);
+  border-radius: 1px;
+  animation: mfa-pin-caret var(--motion-caret-duration) var(--motion-pulse-ease) infinite;
+}
+
+.auth-form__aux {
+  font-size: var(--type-body-medium-emphasis-size);
+  font-weight: var(--type-body-medium-emphasis-weight);
+  line-height: var(--type-body-medium-emphasis-line);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
+  text-align: center;
+  margin: 0;
+}
+
+.auth-link-button {
+  display: inline-block;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-link);
+  font-size: var(--type-body-medium-emphasis-size);
+  font-weight: var(--type-body-medium-emphasis-weight);
+  line-height: var(--type-body-medium-emphasis-line);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
+  cursor: pointer;
+  text-decoration: none;
+  transition: var(--theme-transition);
+}
+
+.auth-link-button:hover:not(:disabled) {
+  text-decoration: underline;
+  color: var(--color-link-hover);
+}
+
+.auth-link-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

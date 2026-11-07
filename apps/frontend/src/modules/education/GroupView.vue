@@ -38,7 +38,7 @@ watch(
 );
 const archived = computed(() => !!data.value?.group.archivedAt);
 const transferTargets = computed(() =>
-  (data.value?.groups.items ?? []).filter(item => item.id !== id.value && !item.archivedAt),
+  (data.value?.groups.items ?? []).filter((item) => item.id !== id.value && !item.archivedAt),
 );
 const mutation = useEducationMutation();
 const { busy, error: actionError, uncertain } = mutation;
@@ -90,7 +90,13 @@ async function transfer(): Promise<void> {
   const student = selected.value;
   if (!student || !targetGroupId.value) return;
   await mutation.run(
-    () => educationApi.transferStudent(workspace.organizationId, id.value, student.id, targetGroupId.value),
+    () =>
+      educationApi.transferStudent(
+        workspace.organizationId,
+        id.value,
+        student.id,
+        targetGroupId.value,
+      ),
     async () => {
       transferOpen.value = false;
       selected.value = null;
@@ -137,7 +143,9 @@ async function reconcile(): Promise<void> {
         {{ t('education.groupArchived') }}
       </p>
       <article class="edu-card">
-        <p class="edu-subtle">{{ students(data.group.studentCount ?? data.roster.items.length) }}</p>
+        <p class="edu-subtle">
+          {{ students(data.group.studentCount ?? data.roster.items.length) }}
+        </p>
         <form
           v-if="!archived"
           class="edu-form"
@@ -302,7 +310,11 @@ async function reconcile(): Promise<void> {
       :description="selected?.name"
       size="s"
       :persistent="busy"
-      @update:model-value="(value) => { if (!value) closeDialogs(); }"
+      @update:model-value="
+        (value) => {
+          if (!value) closeDialogs();
+        }
+      "
     >
       <EducationState
         v-if="!transferTargets.length"

@@ -28,7 +28,8 @@ function operationId(file, route) {
     agent_command_ack: 'device_agent_command_ack', agent_session: 'device_agent_session', agent_session_state: 'device_agent_session_state',
     agent_event: 'device_agent_event',
     space: 'storage_space', files: 'storage_files', ticket: 'storage_ticket', upload: 'storage_upload', download: 'storage_download',
-    agent_storage_manifest: 'storage_agent_manifest', agent_storage_ticket: 'storage_agent_ticket', agent_storage_sync: 'storage_agent_sync',
+    agent_storage_manifest: 'storage_agent_manifest', agent_storage_manifest_read: 'storage_agent_manifest_read',
+    agent_storage_ticket: 'storage_agent_ticket', agent_storage_sync: 'storage_agent_sync',
     agent_storage_space: 'storage_agent_space', agent_storage_upload: 'storage_agent_upload', agent_storage_download: 'storage_agent_download',
   };
   void prefix;

@@ -225,6 +225,7 @@ onBeforeUnmount(deactivateOverlay);
         role="dialog"
         aria-modal="true"
         :aria-label="$t('nav.menuTitle')"
+        @click.self="close"
       >
         <div
           ref="panel"
@@ -236,6 +237,7 @@ onBeforeUnmount(deactivateOverlay);
               class="mobile-menu__brand"
               :to="{ name: 'catalog' }"
               :aria-label="$t('app.name')"
+              @click="close"
             >
               <span
                 class="mobile-menu__mark"
@@ -243,19 +245,21 @@ onBeforeUnmount(deactivateOverlay);
               >
                 <Layers :size="20" />
               </span>
-              <span>{{ $t('app.name') }}</span>
+              <span class="mobile-menu__brand-text">{{ $t('app.name') }}</span>
             </RouterLink>
             <AppIconButton
+              class="mobile-menu__close-btn"
               :label="$t('common.close')"
               @click="close"
             >
               <X
-                :size="22"
+                :size="20"
                 aria-hidden="true"
               />
             </AppIconButton>
           </header>
 
+          <!-- Account Card (Authenticated) -->
           <RouterLink
             v-if="accountId !== null && detail !== null"
             class="mobile-menu__account"
@@ -268,111 +272,129 @@ onBeforeUnmount(deactivateOverlay);
             >
               {{ accountInitials }}
             </span>
-            <span class="mobile-menu__account-copy">
-              <strong>{{ detail.display_name }}</strong>
-              <small>{{ detail.role }} · {{ detail.status }}</small>
-            </span>
+            <div class="mobile-menu__account-copy">
+              <strong class="mobile-menu__account-name">{{ detail.display_name }}</strong>
+              <div class="mobile-menu__account-meta">
+                <span class="mobile-menu__account-badge">{{ detail.role }}</span>
+                <span class="mobile-menu__account-status">{{ detail.status }}</span>
+              </div>
+            </div>
             <ChevronRight
+              class="mobile-menu__account-arrow"
               :size="18"
               aria-hidden="true"
             />
           </RouterLink>
 
+          <!-- Content Sections -->
           <div class="mobile-menu__content">
+            <!-- Main Navigation -->
             <nav
               class="mobile-menu__section"
               :aria-label="$t('nav.main')"
             >
               <p class="mobile-menu__section-title">{{ $t('nav.main') }}</p>
-              <RouterLink
-                v-for="link in mainLinks"
-                :key="link.routeName"
-                class="mobile-menu__link"
-                :class="{ 'mobile-menu__link--active': currentRoute === link.routeName }"
-                :to="link.to"
-                :aria-current="currentRoute === link.routeName ? 'page' : undefined"
-                @click="close"
-              >
-                <span
-                  class="mobile-menu__link-icon"
-                  aria-hidden="true"
+              <div class="mobile-menu__card">
+                <RouterLink
+                  v-for="link in mainLinks"
+                  :key="link.routeName"
+                  class="mobile-menu__link"
+                  :class="{ 'mobile-menu__link--active': currentRoute === link.routeName }"
+                  :to="link.to"
+                  :aria-current="currentRoute === link.routeName ? 'page' : undefined"
+                  @click="close"
                 >
-                  <component
-                    :is="link.icon"
-                    :size="20"
+                  <span
+                    class="mobile-menu__link-icon"
+                    aria-hidden="true"
+                  >
+                    <component
+                      :is="link.icon"
+                      :size="18"
+                    />
+                  </span>
+                  <span class="mobile-menu__link-label">{{ link.label }}</span>
+                  <ChevronRight
+                    class="mobile-menu__link-arrow"
+                    :size="16"
+                    aria-hidden="true"
                   />
-                </span>
-                <span class="mobile-menu__link-label">{{ link.label }}</span>
-                <ChevronRight
-                  :size="18"
-                  aria-hidden="true"
-                />
-              </RouterLink>
+                </RouterLink>
+              </div>
             </nav>
 
+            <!-- Account Navigation -->
             <nav
               v-if="accountLinks.length > 0"
               class="mobile-menu__section"
               :aria-label="$t('nav.account')"
             >
               <p class="mobile-menu__section-title">{{ $t('nav.account') }}</p>
-              <RouterLink
-                v-for="link in accountLinks"
-                :key="link.routeName"
-                class="mobile-menu__link"
-                :class="{ 'mobile-menu__link--active': currentRoute === link.routeName }"
-                :to="link.to"
-                :aria-current="currentRoute === link.routeName ? 'page' : undefined"
-                @click="close"
-              >
-                <span
-                  class="mobile-menu__link-icon"
-                  aria-hidden="true"
+              <div class="mobile-menu__card">
+                <RouterLink
+                  v-for="link in accountLinks"
+                  :key="link.routeName"
+                  class="mobile-menu__link"
+                  :class="{ 'mobile-menu__link--active': currentRoute === link.routeName }"
+                  :to="link.to"
+                  :aria-current="currentRoute === link.routeName ? 'page' : undefined"
+                  @click="close"
                 >
-                  <component
-                    :is="link.icon"
-                    :size="20"
+                  <span
+                    class="mobile-menu__link-icon"
+                    aria-hidden="true"
+                  >
+                    <component
+                      :is="link.icon"
+                      :size="18"
+                    />
+                  </span>
+                  <span class="mobile-menu__link-label">{{ link.label }}</span>
+                  <ChevronRight
+                    class="mobile-menu__link-arrow"
+                    :size="16"
+                    aria-hidden="true"
                   />
-                </span>
-                <span class="mobile-menu__link-label">{{ link.label }}</span>
-                <ChevronRight
-                  :size="18"
-                  aria-hidden="true"
-                />
-              </RouterLink>
+                </RouterLink>
+              </div>
             </nav>
 
+            <!-- Personal Navigation -->
             <nav
               class="mobile-menu__section"
               :aria-label="$t('nav.personal')"
             >
               <p class="mobile-menu__section-title">{{ $t('nav.personal') }}</p>
-              <RouterLink
-                v-for="link in personalLinks"
-                :key="link.routeName"
-                class="mobile-menu__link"
-                :class="{ 'mobile-menu__link--active': currentRoute === link.routeName }"
-                :to="link.to"
-                :aria-current="currentRoute === link.routeName ? 'page' : undefined"
-                @click="close"
-              >
-                <span
-                  class="mobile-menu__link-icon"
-                  aria-hidden="true"
+              <div class="mobile-menu__card">
+                <RouterLink
+                  v-for="link in personalLinks"
+                  :key="link.routeName"
+                  class="mobile-menu__link"
+                  :class="{ 'mobile-menu__link--active': currentRoute === link.routeName }"
+                  :to="link.to"
+                  :aria-current="currentRoute === link.routeName ? 'page' : undefined"
+                  @click="close"
                 >
-                  <component
-                    :is="link.icon"
-                    :size="20"
+                  <span
+                    class="mobile-menu__link-icon"
+                    aria-hidden="true"
+                  >
+                    <component
+                      :is="link.icon"
+                      :size="18"
+                    />
+                  </span>
+                  <span class="mobile-menu__link-label">{{ link.label }}</span>
+                  <ChevronRight
+                    class="mobile-menu__link-arrow"
+                    :size="16"
+                    aria-hidden="true"
                   />
-                </span>
-                <span class="mobile-menu__link-label">{{ link.label }}</span>
-                <ChevronRight
-                  :size="18"
-                  aria-hidden="true"
-                />
-              </RouterLink>
+                </RouterLink>
+              </div>
             </nav>
 
+            <!-- Preferences -->
             <div class="mobile-menu__section">
               <p class="mobile-menu__section-title">{{ $t('nav.preferences') }}</p>
               <div class="mobile-menu__quick">
@@ -381,39 +403,46 @@ onBeforeUnmount(deactivateOverlay);
                   class="mobile-menu__quick-button"
                   @click="toggleTheme"
                 >
-                  <Sun
-                    v-if="isDark"
-                    :size="20"
+                  <span
+                    class="mobile-menu__quick-icon"
                     aria-hidden="true"
-                  />
-                  <Moon
-                    v-else
-                    :size="20"
-                    aria-hidden="true"
-                  />
-                  <span>{{ isDark ? $t('theme.light') : $t('theme.dark') }}</span>
+                  >
+                    <Sun
+                      v-if="isDark"
+                      :size="18"
+                    />
+                    <Moon
+                      v-else
+                      :size="18"
+                    />
+                  </span>
+                  <span class="mobile-menu__quick-text">
+                    {{ isDark ? $t('theme.light') : $t('theme.dark') }}
+                  </span>
                 </button>
+
                 <button
                   type="button"
                   class="mobile-menu__quick-button"
                   @click="toggleLocale"
                 >
-                  <span class="mobile-menu__locale">{{ localeLabel }}</span>
-                  <span>{{ $t('theme.locale') }}</span>
+                  <span class="mobile-menu__locale-tag">{{ localeLabel }}</span>
+                  <span class="mobile-menu__quick-text">{{ $t('theme.locale') }}</span>
                 </button>
               </div>
             </div>
           </div>
 
+          <!-- Footer Auth Button -->
           <footer class="mobile-menu__footer">
             <button
               v-if="auth.isAuthenticated"
               type="button"
-              class="mobile-menu__auth"
+              class="mobile-menu__auth mobile-menu__auth--logout"
               @click="logout"
             >
               <LogOut
-                :size="20"
+                :size="18"
                 aria-hidden="true"
               />
               <span>{{ $t('nav.logout') }}</span>
@@ -421,11 +450,11 @@ onBeforeUnmount(deactivateOverlay);
             <button
               v-else
               type="button"
-              class="mobile-menu__auth"
+              class="mobile-menu__auth mobile-menu__auth--login"
               @click="goLogin"
             >
               <LogIn
-                :size="20"
+                :size="18"
                 aria-hidden="true"
               />
               <span>{{ $t('nav.login') }}</span>
@@ -443,37 +472,47 @@ onBeforeUnmount(deactivateOverlay);
   inset: 0;
   width: 100vw;
   width: 100dvw;
-  z-index: 900;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 950;
   display: flex;
-  background: var(--bg);
-  color: var(--text-1);
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   isolation: isolate;
   overflow: hidden;
-  transition: var(--theme-transition);
-}
-
-.mobile-menu::before {
-  position: absolute;
-  top: -120px;
-  right: -100px;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--accent-soft) 0%, transparent 70%);
-  content: '';
-  pointer-events: none;
-  z-index: -1;
+  transition:
+    var(--theme-transition),
+    opacity var(--motion-control-duration) var(--motion-ease);
 }
 
 .mobile-menu__panel {
   display: flex;
   flex-direction: column;
   width: 100%;
+  max-width: 480px;
   min-height: 100dvh;
+  background: var(--bg);
+  background-image:
+    radial-gradient(
+      ellipse at 90% 0%,
+      color-mix(in srgb, var(--accent) 10%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse at 10% 100%,
+      color-mix(in srgb, var(--accent) 6%, transparent) 0%,
+      transparent 60%
+    );
   padding: max(var(--space-12), env(safe-area-inset-top)) var(--page-pad-x)
     max(var(--space-16), env(safe-area-inset-bottom));
   overflow-y: auto;
   outline: none;
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.15);
+  transition:
+    var(--theme-transition),
+    transform var(--motion-control-duration) var(--motion-spring-ease);
 }
 
 .mobile-menu__header {
@@ -481,19 +520,16 @@ onBeforeUnmount(deactivateOverlay);
   align-items: center;
   justify-content: space-between;
   gap: var(--space-12);
-  padding-bottom: var(--space-16);
+  padding-bottom: var(--space-12);
   border-bottom: 1px solid var(--border);
 }
 
 .mobile-menu__brand {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-8);
-  font-size: var(--type-h2-size);
-  letter-spacing: var(--type-h2-tracking);
-  line-height: var(--type-h2-line);
-  font-weight: var(--type-h2-weight);
+  gap: var(--space-10);
   color: var(--text-1);
+  text-decoration: none;
 }
 
 .mobile-menu__mark {
@@ -505,6 +541,31 @@ onBeforeUnmount(deactivateOverlay);
   border-radius: var(--radius-control-m);
   background: var(--accent);
   color: var(--color-white);
+  box-shadow: 0 4px 14px rgba(34, 96, 255, 0.3);
+}
+
+.mobile-menu__brand-text {
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  line-height: var(--type-h3-line);
+  letter-spacing: var(--type-h3-tracking);
+}
+
+.mobile-menu__close-btn {
+  border-radius: var(--radius-circle);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition:
+    var(--theme-transition),
+    transform var(--motion-fast-duration) var(--motion-ease);
+}
+
+.mobile-menu__close-btn:hover {
+  background: var(--surface-hover);
+}
+
+.mobile-menu__close-btn:active {
+  transform: scale(0.92);
 }
 
 .mobile-menu__account {
@@ -515,15 +576,22 @@ onBeforeUnmount(deactivateOverlay);
   padding: var(--space-12);
   border: 1px solid var(--border);
   border-radius: var(--radius-card-m);
-  background: linear-gradient(135deg, var(--surface-2), var(--surface));
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
   color: var(--text-1);
-  transition: var(--theme-transition);
+  text-decoration: none;
+  transition:
+    var(--theme-transition),
+    transform var(--motion-fast-duration) var(--motion-ease);
 }
 
 .mobile-menu__account:hover {
   border-color: var(--accent);
-  text-decoration: none;
-  transition: var(--theme-transition);
+  box-shadow: 0 4px 16px rgba(34, 96, 255, 0.12);
+}
+
+.mobile-menu__account:active {
+  transform: scale(0.98);
 }
 
 .mobile-menu__avatar {
@@ -532,69 +600,110 @@ onBeforeUnmount(deactivateOverlay);
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background: var(--accent);
   color: var(--color-white);
   font-size: var(--type-body-medium-emphasis-size);
-  letter-spacing: var(--type-body-medium-emphasis-tracking);
-  line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
+  line-height: var(--type-body-medium-emphasis-line);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
+  box-shadow: 0 2px 10px rgba(34, 96, 255, 0.3);
   flex: 0 0 auto;
 }
 
 .mobile-menu__account-copy {
   display: grid;
-  gap: 2px;
+  gap: 3px;
   flex: 1;
   min-width: 0;
 }
 
-.mobile-menu__account-copy strong,
-.mobile-menu__account-copy small {
+.mobile-menu__account-name {
+  font-size: var(--type-body-medium-emphasis-size);
+  font-weight: var(--type-body-medium-emphasis-weight);
+  line-height: var(--type-body-medium-emphasis-line);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
+  color: var(--text-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.mobile-menu__account-copy strong {
-  font-size: var(--type-body-medium-emphasis-size);
-  letter-spacing: var(--type-body-medium-emphasis-tracking);
-  line-height: var(--type-body-medium-emphasis-line);
-  font-weight: var(--type-body-medium-emphasis-weight);
+.mobile-menu__account-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  overflow: hidden;
 }
 
-.mobile-menu__account-copy small {
+.mobile-menu__account-badge {
+  display: inline-flex;
+  padding: 1px var(--space-8);
+  border-radius: var(--radius-badge-pill);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: var(--type-body-caption-size);
+  font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
+  letter-spacing: var(--type-body-caption-tracking);
+  text-transform: capitalize;
+}
+
+.mobile-menu__account-status {
   font-size: var(--type-body-small-size);
   font-weight: var(--type-body-small-weight);
-  letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
-  color: var(--text-2);
+  letter-spacing: var(--type-body-small-tracking);
+  color: var(--text-3);
   text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-menu__account-arrow {
+  color: var(--text-3);
+  flex-shrink: 0;
+  transition:
+    var(--theme-transition),
+    transform var(--motion-fast-duration) var(--motion-ease);
+}
+
+.mobile-menu__account:hover .mobile-menu__account-arrow {
+  transform: translateX(2px);
+  color: var(--accent);
 }
 
 .mobile-menu__content {
   display: grid;
   gap: var(--space-20);
   flex: 1;
-  padding: var(--space-20) 0;
-  max-width: 560px;
+  padding: var(--space-16) 0;
   width: 100%;
-  margin: 0 auto;
 }
 
 .mobile-menu__section {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-6);
 }
 
 .mobile-menu__section-title {
-  padding: 0 var(--space-12) var(--space-4);
-  font-size: var(--type-body-small-emphasis-size);
-  line-height: var(--type-body-small-emphasis-line);
-  font-weight: var(--type-body-small-emphasis-weight);
-  letter-spacing: 0.04em;
+  padding: 0 var(--space-4);
+  margin: 0;
+  font-size: var(--type-body-caption-size);
+  font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-3);
+}
+
+.mobile-menu__card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card-m);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
   transition: var(--theme-transition);
 }
 
@@ -603,86 +712,135 @@ onBeforeUnmount(deactivateOverlay);
   align-items: center;
   gap: var(--space-12);
   min-height: 52px;
-  padding: var(--space-8) var(--space-12);
-  border-radius: var(--radius-control-m);
-  font-size: var(--type-body-medium-emphasis-size);
-  letter-spacing: var(--type-body-medium-emphasis-tracking);
-  line-height: var(--type-body-medium-emphasis-line);
-  font-weight: var(--type-body-medium-emphasis-weight);
+  padding: var(--space-10) var(--space-12);
   color: var(--text-1);
-  transition: var(--theme-transition);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+  transition:
+    var(--theme-transition),
+    transform var(--motion-fast-duration) var(--motion-ease);
+}
+
+.mobile-menu__link:last-child {
+  border-bottom: none;
 }
 
 .mobile-menu__link:hover {
   background: var(--surface-hover);
-  text-decoration: none;
-  transition: var(--theme-transition);
+}
+
+.mobile-menu__link:active {
+  transform: scale(0.99);
 }
 
 .mobile-menu__link--active {
   background: var(--accent-soft);
   color: var(--accent-text);
+  font-weight: var(--type-body-medium-emphasis-weight);
 }
 
 .mobile-menu__link-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-control-s);
-  background: var(--surface-hover);
-  color: currentColor;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-control-m);
+  background: var(--surface-2);
+  color: var(--text-2);
   flex: 0 0 auto;
+  transition:
+    var(--theme-transition),
+    transform var(--motion-control-duration) var(--motion-spring-ease);
+}
+
+.mobile-menu__link--active .mobile-menu__link-icon {
+  background: var(--accent);
+  color: var(--color-white);
+  box-shadow: 0 2px 8px rgba(34, 96, 255, 0.3);
+  transform: scale(1.05);
 }
 
 .mobile-menu__link-label {
   flex: 1;
   min-width: 0;
+  font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  line-height: var(--type-body-medium-line);
+  letter-spacing: var(--type-body-medium-tracking);
+}
+
+.mobile-menu__link-arrow {
+  color: var(--text-3);
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition:
+    var(--theme-transition),
+    transform var(--motion-fast-duration) var(--motion-ease),
+    opacity var(--motion-fast-duration) var(--motion-ease);
+}
+
+.mobile-menu__link:hover .mobile-menu__link-arrow {
+  transform: translateX(2px);
+  opacity: 1;
 }
 
 .mobile-menu__quick {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-8);
+  gap: var(--space-10);
 }
 
 .mobile-menu__quick-button {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-8);
   min-height: 48px;
   padding: var(--space-8) var(--space-12);
   border: 1px solid var(--border);
-  border-radius: var(--radius-control-m);
+  border-radius: var(--radius-card-s);
   background: var(--surface);
   color: var(--text-1);
-  font-size: var(--type-body-medium-size);
-  font-weight: var(--type-body-medium-weight);
-  letter-spacing: var(--type-body-medium-tracking);
-  line-height: var(--type-body-medium-line);
-  text-align: left;
-  transition: var(--theme-transition);
+  font-size: var(--type-body-small-emphasis-size);
+  font-weight: var(--type-body-small-emphasis-weight);
+  line-height: var(--type-body-small-emphasis-line);
+  letter-spacing: var(--type-body-small-emphasis-tracking);
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition:
+    var(--theme-transition),
+    transform var(--motion-fast-duration) var(--motion-ease);
 }
 
 .mobile-menu__quick-button:hover {
   background: var(--surface-hover);
-  transition: var(--theme-transition);
+  border-color: var(--border-hover, var(--border));
 }
 
-.mobile-menu__locale {
+.mobile-menu__quick-button:active {
+  transform: scale(0.97);
+}
+
+.mobile-menu__quick-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  height: 24px;
+  color: var(--accent);
+}
+
+.mobile-menu__locale-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
   border-radius: var(--radius-control-s);
   background: var(--accent-soft);
   color: var(--accent-text);
-  font-size: var(--type-body-small-emphasis-size);
-  letter-spacing: var(--type-body-small-emphasis-tracking);
-  line-height: var(--type-body-small-emphasis-line);
-  font-weight: var(--type-body-small-emphasis-weight);
+  font-size: var(--type-body-caption-size);
+  font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
+  letter-spacing: 0.04em;
 }
 
 .mobile-menu__footer {
@@ -696,35 +854,58 @@ onBeforeUnmount(deactivateOverlay);
   justify-content: center;
   gap: var(--space-8);
   width: 100%;
-  min-height: 48px;
-  padding: var(--space-8) var(--space-12);
-  border-radius: var(--radius-control-m);
-  background: var(--surface-hover);
-  color: var(--text-1);
+  min-height: 50px;
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-card-s);
   font-size: var(--type-body-medium-emphasis-size);
-  letter-spacing: var(--type-body-medium-emphasis-tracking);
-  line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
-  transition: var(--theme-transition);
+  line-height: var(--type-body-medium-emphasis-line);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
+  cursor: pointer;
+  transition:
+    var(--theme-transition),
+    transform var(--motion-fast-duration) var(--motion-ease);
 }
 
-.mobile-menu__auth:hover {
-  background: var(--border);
-  transition: var(--theme-transition);
+.mobile-menu__auth:active {
+  transform: scale(0.98);
 }
 
+.mobile-menu__auth--logout {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--danger-text, #ef4444);
+}
+
+.mobile-menu__auth--logout:hover {
+  background: var(--danger-soft, #fef2f2);
+  border-color: var(--danger-border, #fca5a5);
+}
+
+.mobile-menu__auth--login {
+  background: var(--accent);
+  border: 1px solid transparent;
+  color: var(--color-white);
+  box-shadow: 0 4px 14px rgba(34, 96, 255, 0.25);
+}
+
+.mobile-menu__auth--login:hover {
+  background: var(--accent-hover, #1d4ed8);
+}
+
+/* Animations */
 .mobile-menu-enter-active,
 .mobile-menu-leave-active {
   transition:
-    opacity var(--motion-enter-duration) var(--motion-ease),
-    var(--theme-transition);
+    var(--theme-transition),
+    opacity var(--motion-enter-duration) var(--motion-ease);
 }
 
 .mobile-menu-enter-active .mobile-menu__panel,
 .mobile-menu-leave-active .mobile-menu__panel {
   transition:
-    transform var(--motion-enter-duration) var(--motion-ease),
-    var(--theme-transition);
+    var(--theme-transition),
+    transform var(--motion-control-duration) var(--motion-spring-ease);
 }
 
 .mobile-menu-enter-from,
@@ -734,7 +915,7 @@ onBeforeUnmount(deactivateOverlay);
 
 .mobile-menu-enter-from .mobile-menu__panel,
 .mobile-menu-leave-to .mobile-menu__panel {
-  transform: translateY(-12px);
+  transform: translateX(100%);
 }
 
 @media (prefers-reduced-motion: reduce) {

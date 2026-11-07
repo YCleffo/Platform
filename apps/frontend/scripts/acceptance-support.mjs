@@ -133,7 +133,11 @@ export async function uiLogin(page, actor, operator = false) {
     await page.locator('.operator-console__login button[type=submit]').click();
     await page.locator('.operator-console__tabs').waitFor();
   } else {
-    await page.locator('#mfa-recovery').fill(actor.recovery.shift());
+    const recoveryInput = page.locator('#mfa-recovery');
+    if (!(await recoveryInput.isVisible())) {
+      await page.locator('#mfa-toggle-recovery').click();
+    }
+    await recoveryInput.fill(actor.recovery.shift());
     await page.locator('form button[type=submit]').click();
     await page.waitForURL((url) => url.pathname === '/cabinet');
   }

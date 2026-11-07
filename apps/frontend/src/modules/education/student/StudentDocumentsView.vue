@@ -52,7 +52,7 @@ async function download(path: string): Promise<void> {
 }
 async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 function formatBytes(value: number): string {
   if (value < 1024) return `${value} B`;
@@ -69,7 +69,14 @@ function formatBytes(value: number): string {
       @retry="refresh"
     />
     <template v-if="data">
-      <p class="edu-subtle">{{ t('education.storageUsed', { used: formatBytes(data.space.totalBytes), total: formatBytes(data.space.maxBytes) }) }}</p>
+      <p class="edu-subtle">
+        {{
+          t('education.storageUsed', {
+            used: formatBytes(data.space.totalBytes),
+            total: formatBytes(data.space.maxBytes),
+          })
+        }}
+      </p>
       <label class="edu-button">
         {{ t('education.uploadFile') }}
         <input
@@ -77,7 +84,7 @@ function formatBytes(value: number): string {
           class="edu-visually-hidden"
           :disabled="uploadBusy"
           @change="upload"
-        >
+        />
       </label>
       <p
         v-if="uploadError"

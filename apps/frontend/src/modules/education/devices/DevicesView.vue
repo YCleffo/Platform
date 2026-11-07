@@ -67,7 +67,11 @@ async function assign(): Promise<void> {
   assignBusy.value = true;
   assignError.value = '';
   try {
-    await deviceApi.startSession(workspace.organizationId, assignDevice.value.id, assignStudentId.value);
+    await deviceApi.startSession(
+      workspace.organizationId,
+      assignDevice.value.id,
+      assignStudentId.value,
+    );
     assignDevice.value = null;
     await refresh();
   } catch (failure) {
@@ -78,7 +82,7 @@ async function assign(): Promise<void> {
 }
 async function endSession(device: Device): Promise<void> {
   const detail = await deviceApi.device(workspace.organizationId, device.id);
-  const open = detail.sessions.find(session => !['CLOSED', 'FAILED'].includes(session.status));
+  const open = detail.sessions.find((session) => !['CLOSED', 'FAILED'].includes(session.status));
   if (open) {
     await deviceApi.endSession(workspace.organizationId, device.id, open.id);
     await refresh();
@@ -127,7 +131,10 @@ async function endSession(device: Device): Promise<void> {
           :label="t('education.classroom')"
           :options="[
             { value: '', label: t('education.noClassroom') },
-            ...data.classrooms.items.map(classroom => ({ value: classroom.id, label: classroom.name })),
+            ...data.classrooms.items.map((classroom) => ({
+              value: classroom.id,
+              label: classroom.name,
+            })),
           ]"
         />
         <button
@@ -160,20 +167,26 @@ async function endSession(device: Device): Promise<void> {
           class="edu-list__item"
         >
           <div class="edu-list__main">
-            <strong>{{ t('education.computerNumber', { number: device.number }) }} · {{ device.name || device.number }}</strong>
+            <strong>
+              {{ t('education.computerNumber', { number: device.number }) }} ·
+              {{ device.name || device.number }}
+            </strong>
             <p class="edu-subtle">
               {{ device.status }} · {{ t(`education.device_${device.status.toLowerCase()}`) }}
-              <template v-if="device.classroomName"> · {{ device.classroomName }}</template>
+              <template v-if="device.classroomName">· {{ device.classroomName }}</template>
             </p>
             <p
               v-if="device.lastSeenAt"
               class="edu-subtle"
-            >{{ t('education.lastSeen') }}: {{ device.lastSeenAt }}</p>
+            >
+              {{ t('education.lastSeen') }}: {{ device.lastSeenAt }}
+            </p>
             <p
               v-if="enrollments.get(device.id)"
               class="edu-subtle"
             >
-              {{ t('education.generatedInvite') }}: <strong>{{ enrollments.get(device.id)?.code }}</strong>
+              {{ t('education.generatedInvite') }}:
+              <strong>{{ enrollments.get(device.id)?.code }}</strong>
             </p>
             <p
               v-if="device.status === 'RECOVERY_REQUIRED' || device.status === 'ERROR'"
@@ -239,7 +252,12 @@ async function endSession(device: Device): Promise<void> {
           id="education-assign-student"
           v-model="assignStudentId"
           :label="t('education.students')"
-          :options="(roster?.items ?? []).map(student => ({ value: student.id, label: student.name ?? student.id }))"
+          :options="
+            (roster?.items ?? []).map((student) => ({
+              value: student.id,
+              label: student.name ?? student.id,
+            }))
+          "
         />
         <button
           type="button"

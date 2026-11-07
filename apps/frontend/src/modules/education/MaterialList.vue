@@ -114,7 +114,11 @@ function close(): void {
     :busy="mutation.busy.value"
     danger
     @confirm="remove"
-    @update:model-value="(value) => { if (!value) close(); }"
+    @update:model-value="
+      (value) => {
+        if (!value) close();
+      }
+    "
   >
     <p
       v-if="pending"

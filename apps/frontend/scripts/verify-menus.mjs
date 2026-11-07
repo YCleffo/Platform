@@ -128,7 +128,7 @@ try {
     await page.locator('#demo-hierarchy').click();
     await page.locator('[data-menu-id="tools"]').click(); await page.locator('[data-menu-id="design"]').click();
     await bounds(page);
-    if (width < 900) {
+    if (width < 768) {
       check(await page.locator('.app-menu__panel').count() === 1, `${width}px hierarchy did not switch to Back navigation`);
       await page.locator('.app-menu__back').click();
       await page.locator('[data-menu-id="development"]').waitFor();

@@ -64,13 +64,14 @@ async function submit(): Promise<void> {
     return;
   }
   await mutation.run(
-    () => educationApi.updateLesson(workspace.organizationId, id.value, {
-      title: title.value,
-      groupId: groupId.value,
-      startsAt: start,
-      endsAt: end,
-      location: location.value,
-    }),
+    () =>
+      educationApi.updateLesson(workspace.organizationId, id.value, {
+        title: title.value,
+        groupId: groupId.value,
+        startsAt: start,
+        endsAt: end,
+        location: location.value,
+      }),
     async () => {
       await workspace.refreshHeader();
       await router.push(`/lessons/${id.value}`);
@@ -118,7 +119,11 @@ async function submit(): Promise<void> {
           id="education-edit-group"
           v-model="groupId"
           :label="t('education.group')"
-          :options="groupOptions.filter((item) => !item.archivedAt).map((item) => ({ value: item.id, label: item.name }))"
+          :options="
+            groupOptions
+              .filter((item) => !item.archivedAt)
+              .map((item) => ({ value: item.id, label: item.name }))
+          "
           :disabled="busy || uncertain"
         />
         <p class="edu-subtle">{{ t('education.timezone') }}: {{ workspace.header!.timezone }}</p>

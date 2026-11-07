@@ -19,7 +19,9 @@ function date(value: string): string {
   return formatCalendarDate(value, locale.value, { dateStyle: 'medium' });
 }
 function statusLabel(status: string): string {
-  return t(`education.${status === 'pending' ? 'notAssessed' : status === 'needs_support' ? 'needsSupport' : status}`);
+  return t(
+    `education.${status === 'pending' ? 'notAssessed' : status === 'needs_support' ? 'needsSupport' : status}`,
+  );
 }
 </script>
 <template>
@@ -37,7 +39,8 @@ function statusLabel(status: string): string {
         <h2>{{ t('education.nextLesson') }}</h2>
         <strong>{{ data.nextLesson.title }}</strong>
         <p class="edu-subtle">
-          {{ date(data.nextLesson.startsAt) }} · {{ time(data.nextLesson.startsAt) }} – {{ time(data.nextLesson.endsAt) }}
+          {{ date(data.nextLesson.startsAt) }} · {{ time(data.nextLesson.startsAt) }} –
+          {{ time(data.nextLesson.endsAt) }}
         </p>
         <p>{{ data.nextLesson.groupName }}</p>
         <RouterLink

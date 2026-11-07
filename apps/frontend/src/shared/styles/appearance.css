@@ -19,6 +19,7 @@
   --motion-leave-duration: calc(120ms * var(--ui-motion-scale));
   --motion-spinner-duration: calc(800ms * var(--ui-motion-scale));
   --motion-skeleton-duration: calc(1400ms * var(--ui-motion-scale));
+  --motion-caret-duration: calc(1000ms * var(--ui-motion-scale));
   --motion-ease: cubic-bezier(.2, 0, 0, 1);
   --motion-linear: linear;
   --motion-pulse-ease: ease-in-out;

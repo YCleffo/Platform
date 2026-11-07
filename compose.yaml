@@ -301,7 +301,7 @@ services:
     healthcheck:
       test: ["CMD", "php", "yii", "ops:health", "backend-email-worker"]
       interval: 15s
-      timeout: 5s
+      timeout: 15s
       retries: 3
       start_period: 30s
     environment:
@@ -328,7 +328,7 @@ services:
     healthcheck:
       test: ["CMD", "php", "yii", "ops:health", "backend-scheduler"]
       interval: 15s
-      timeout: 5s
+      timeout: 15s
       retries: 3
       start_period: 30s
     environment:

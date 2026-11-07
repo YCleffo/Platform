@@ -33,8 +33,12 @@ const extra = computed(() => Math.max(0, typed.value.length - text.value.length)
 const errors = computed(() => wrong.value + extra.value);
 const minutes = computed(() => Math.max(elapsed.value, 1) / 60);
 const wpm = computed(() => Math.round(correct.value / 5 / minutes.value));
-const accuracy = computed(() => typed.value.length > 0 ? Math.round(correct.value / typed.value.length * 1000) / 10 : 100);
-const remaining = computed(() => Math.max(0, (exercise.value?.exercise.durationSeconds ?? 0) - Math.floor(elapsed.value)));
+const accuracy = computed(() =>
+  typed.value.length > 0 ? Math.round((correct.value / typed.value.length) * 1000) / 10 : 100,
+);
+const remaining = computed(() =>
+  Math.max(0, (exercise.value?.exercise.durationSeconds ?? 0) - Math.floor(elapsed.value)),
+);
 
 function tick(): void {
   if (!startedAt.value) return;
@@ -71,7 +75,11 @@ async function finish(): Promise<void> {
   status.value = 'saving';
   const values = { typed: typed.value, durationSeconds: exercise.value.exercise.durationSeconds };
   try {
-    result.value = await studentPortalApi.finishAttempt(props.organizationId, exercise.value.attempt.id, values);
+    result.value = await studentPortalApi.finishAttempt(
+      props.organizationId,
+      exercise.value.attempt.id,
+      values,
+    );
     status.value = 'finished';
     emit('finished', result.value);
   } catch (error) {
@@ -86,8 +94,11 @@ function stopTimer(): void {
   }
 }
 function charClass(index: number): string {
-  if (index >= typed.value.length) return index === typed.value.length ? 'edu-typing__char--caret' : '';
-  return typed.value[index] === text.value[index] ? 'edu-typing__char--ok' : 'edu-typing__char--wrong';
+  if (index >= typed.value.length)
+    return index === typed.value.length ? 'edu-typing__char--caret' : '';
+  return typed.value[index] === text.value[index]
+    ? 'edu-typing__char--ok'
+    : 'edu-typing__char--wrong';
 }
 function onKeydown(event: KeyboardEvent): void {
   if (status.value !== 'running') return;
@@ -157,8 +168,9 @@ window.addEventListener('keydown', onKeydown);
       class="edu-card edu-typing__board"
     >
       <p class="edu-typing__stats">
-        <strong>{{ wpm }} WPM</strong> · {{ accuracy }}% · {{ t('education.errors') }}: {{ errors }} ·
-        {{ remaining }}{{ t('education.seconds') }}
+        <strong>{{ wpm }} WPM</strong>
+        · {{ accuracy }}% · {{ t('education.errors') }}: {{ errors }} · {{ remaining
+        }}{{ t('education.seconds') }}
       </p>
       <p class="edu-typing__text">
         <template v-if="status !== 'finished'">
@@ -166,7 +178,9 @@ window.addEventListener('keydown', onKeydown);
             v-for="(char, index) in text"
             :key="index"
             :class="charClass(index)"
-          >{{ char === ' ' ? '\u00A0' : char }}</span>
+          >
+            {{ char === ' ' ? '\u00A0' : char }}
+          </span>
         </template>
         <template v-else>{{ text }}</template>
       </p>
@@ -184,12 +198,18 @@ window.addEventListener('keydown', onKeydown);
       class="edu-card"
     >
       <h2>{{ t('education.trainingResult') }}</h2>
-      <p><strong>{{ result.wpm }} {{ t('education.wpm') }}</strong> · {{ result.accuracy }}% ·
-        {{ t('education.errors') }}: {{ result.errors }}</p>
+      <p>
+        <strong>{{ result.wpm }} {{ t('education.wpm') }}</strong>
+        · {{ result.accuracy }}% · {{ t('education.errors') }}: {{ result.errors }}
+      </p>
       <button
         type="button"
         class="edu-button"
-        @click="status = 'idle'; exercise = null; result = null"
+        @click="
+          status = 'idle';
+          exercise = null;
+          result = null;
+        "
       >
         {{ t('education.trainAgain') }}
       </button>
