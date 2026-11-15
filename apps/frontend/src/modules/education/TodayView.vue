@@ -45,7 +45,7 @@ const resource = useEducationResource(
 );
 const { data, loading, error, refresh } = resource;
 const quick = [
-  { key: 'currentLesson', path: '/lessons/current', icon: ChevronRight, tone: 'primary' },
+  { key: 'programs', path: '/programs', icon: Book, tone: 'primary' },
   { key: 'createLesson', path: '/lessons/new', icon: Plus, tone: 'success' },
   { key: 'createGroup', path: '/groups/new', icon: People, tone: 'warning' },
   { key: 'addStudent', path: '/students/new', icon: UserPlus, tone: 'info' },
@@ -126,12 +126,14 @@ const dateLine = computed(() =>
       </RouterLink>
     </div>
     <EducationState
-      v-if="loading || error"
+      v-if="(loading && !data) || error"
       :loading="loading"
       :error="error"
       @retry="refresh"
     />
-    <template v-else-if="data">
+    <template v-if="data">
+      <article v-if="!data.next && !data.schedule.lessons.length" class="edu-card edu-onboarding"><h2>{{ t('education.getStarted') }}</h2><p class="edu-subtle">{{ t('education.onboardingHint') }}</p><ol><li><RouterLink to="/groups/new" class="edu-link">{{ t('education.createGroup') }}</RouterLink></li><li><RouterLink to="/students/new" class="edu-link">{{ t('education.addStudent') }}</RouterLink></li><li><RouterLink to="/programs" class="edu-link">{{ t('education.programs') }}</RouterLink></li><li><RouterLink to="/lessons/new" class="edu-link">{{ t('education.createLesson') }}</RouterLink></li></ol></article>
+      <p v-if="loading" class="edu-subtle" role="status">{{ t('education.refreshing') }}</p>
       <div class="edu-today-columns">
         <div class="edu-today-primary">
           <article

@@ -1,0 +1,4279 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Platform Education Parent and Family",
+    "version": "1.0.0",
+    "description": "Core authentication with a distinct parent scope. Family evidence and login identity are separate. Existing guardian relationships migrate to pending. Revocation is effective on next request. 72-hour one-time 256-bit invitations store only SHA-256 digests. All mutations audit and preserve educational history."
+  },
+  "servers": [
+    {
+      "url": "/api/education"
+    }
+  ],
+  "security": [
+    {
+      "CoreBearer": []
+    }
+  ],
+  "paths": {
+    "/parent/context": {
+      "get": {
+        "operationId": "education_parent_context",
+        "summary": "context",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Context"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/parent/activate": {
+      "post": {
+        "operationId": "education_parent_activate",
+        "summary": "activate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Activate"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                },
+                "required": [
+                  "code"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/parent/register": {
+      "post": {
+        "operationId": "education_parent_register",
+        "summary": "register",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Registered"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 254
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12,
+                    "maxLength": 1024,
+                    "writeOnly": true
+                  }
+                },
+                "required": [
+                  "code",
+                  "email",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "security": [],
+        "description": "Redeem a confirmed employee-issued family invitation for a Person without an existing Core account. Uses Core CreateAccount and CompleteAccountActivation. Existing accounts must log in through Core and use parent/activate. No SMTP or parallel credentials/session system. IP and identifier rate limits apply."
+      }
+    },
+    "/parent/children/{studentId}": {
+      "get": {
+        "operationId": "education_parent_child",
+        "summary": "child",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Child"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires education.parent.use and an active confirmed relation, matching active Core account and organization membership of both parent and child, on every request. Never grants student editing, Storage Documents, draft answers, private messages, staff notes or other children."
+      }
+    },
+    "/parent/children/{studentId}/home": {
+      "get": {
+        "operationId": "education_parent_home",
+        "summary": "home",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Home"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires education.parent.use and an active confirmed relation, matching active Core account and organization membership of both parent and child, on every request. Never grants student editing, Storage Documents, draft answers, private messages, staff notes or other children."
+      }
+    },
+    "/parent/children/{studentId}/schedule": {
+      "get": {
+        "operationId": "education_parent_schedule",
+        "summary": "schedule",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive date in account timezone; maximum 31 days, defaults to current month."
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive date in account timezone; maximum 31 days, defaults to current month."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Schedule"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires education.parent.use and an active confirmed relation, matching active Core account and organization membership of both parent and child, on every request. Never grants student editing, Storage Documents, draft answers, private messages, staff notes or other children."
+      }
+    },
+    "/parent/children/{studentId}/diary": {
+      "get": {
+        "operationId": "education_parent_diary",
+        "summary": "diary",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive date in account timezone; maximum 31 days, defaults to current month."
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive date in account timezone; maximum 31 days, defaults to current month."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Diary"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires education.parent.use and an active confirmed relation, matching active Core account and organization membership of both parent and child, on every request. Never grants student editing, Storage Documents, draft answers, private messages, staff notes or other children."
+      }
+    },
+    "/parent/children/{studentId}/homework": {
+      "get": {
+        "operationId": "education_parent_homework",
+        "summary": "homework",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/HomeworkPage"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires education.parent.use and an active confirmed relation, matching active Core account and organization membership of both parent and child, on every request. Never grants student editing, Storage Documents, draft answers, private messages, staff notes or other children."
+      }
+    },
+    "/parent/children/{studentId}/progress": {
+      "get": {
+        "operationId": "education_parent_progress",
+        "summary": "progress",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive date in account timezone; maximum 31 days, defaults to current month."
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive date in account timezone; maximum 31 days, defaults to current month."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Progress"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires education.parent.use and an active confirmed relation, matching active Core account and organization membership of both parent and child, on every request. Never grants student editing, Storage Documents, draft answers, private messages, staff notes or other children."
+      }
+    },
+    "/parent/children/{studentId}/notifications": {
+      "get": {
+        "operationId": "education_parent_notifications",
+        "summary": "notifications",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Notifications"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires education.parent.use and an active confirmed relation, matching active Core account and organization membership of both parent and child, on every request. Never grants student editing, Storage Documents, draft answers, private messages, staff notes or other children."
+      }
+    },
+    "/parent/children/{studentId}/notifications/{id}/read": {
+      "post": {
+        "operationId": "education_parent_read_notification",
+        "summary": "read notification",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Read"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/family/candidates": {
+      "get": {
+        "operationId": "education_parent_staff_candidates",
+        "summary": "staff candidates",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Candidates"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires education.family.manage plus active teacher access to this student; candidates restricted to active organization members."
+      }
+    },
+    "/students/{studentId}/guardians": {
+      "get": {
+        "operationId": "education_parent_staff_list",
+        "summary": "staff list",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Guardians"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "education_parent_staff_add",
+        "summary": "staff add",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Guardians"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "personId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "relationship": {
+                    "type": "string",
+                    "enum": [
+                      "mother",
+                      "father",
+                      "guardian"
+                    ]
+                  }
+                },
+                "required": [
+                  "personId",
+                  "relationship"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "description": "Requires education.family.manage plus active teacher access to this student; candidates restricted to active organization members."
+      }
+    },
+    "/students/{studentId}/guardians/history": {
+      "get": {
+        "operationId": "education_parent_staff_history",
+        "summary": "staff history",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/History"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/students/{studentId}/guardians/{personId}": {
+      "put": {
+        "operationId": "education_parent_staff_update",
+        "summary": "staff update",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "personId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Guardians"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "relationship": {
+                    "type": "string",
+                    "enum": [
+                      "mother",
+                      "father",
+                      "guardian"
+                    ]
+                  }
+                },
+                "required": [
+                  "relationship"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "description": "Requires education.family.manage plus active teacher access to this student; candidates restricted to active organization members."
+      }
+    },
+    "/students/{studentId}/guardians/{personId}/confirm": {
+      "post": {
+        "operationId": "education_parent_staff_confirm",
+        "summary": "staff confirm",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "personId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Guardians"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "description": "Requires education.family.confirm in addition to active teacher assignment and people.manage. Not granted to ordinary education.teacher."
+      }
+    },
+    "/students/{studentId}/guardians/{personId}/revoke": {
+      "post": {
+        "operationId": "education_parent_staff_revoke",
+        "summary": "staff revoke",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "personId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Guardians"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "description": "Requires education.family.manage plus active teacher access to this student; candidates restricted to active organization members."
+      }
+    },
+    "/students/{studentId}/guardians/{personId}/invite": {
+      "post": {
+        "operationId": "education_parent_staff_invite",
+        "summary": "staff invite",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "personId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Invitation"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "description": "Requires education.family.manage plus active teacher access to this student; candidates restricted to active organization members."
+      }
+    },
+    "/students/{studentId}/guardians/{personId}/invite/revoke": {
+      "post": {
+        "operationId": "education_parent_staff_revoke_invite",
+        "summary": "staff revoke invite",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "path",
+            "name": "studentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "personId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result, current Core identity and persisted authorization checked.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Guardians"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Core authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current permission or processing restricted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No accessible resource or invalid/expired/revoked/used invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting identity or family state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Enrollment rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "description": "Requires education.family.manage plus active teacher access to this student; candidates restricted to active organization members."
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "CoreBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "parameters": {
+      "Organization": {
+        "in": "header",
+        "name": "X-Education-Organization",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "schemas": {
+      "Named": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "Child": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "organizationName": {
+            "type": "string"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Named"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "personId",
+          "name",
+          "organizationId",
+          "organizationName",
+          "groups"
+        ],
+        "additionalProperties": false
+      },
+      "Notice": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "createdAt",
+          "readAt"
+        ],
+        "additionalProperties": false
+      },
+      "Context": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "locale": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Child"
+            }
+          },
+          "notices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Notice"
+            }
+          }
+        },
+        "required": [
+          "personId",
+          "displayName",
+          "locale",
+          "timezone",
+          "children",
+          "notices"
+        ],
+        "additionalProperties": false
+      },
+      "Lesson": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "groupId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "groupName": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "location": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "attendance": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "present",
+              "absent",
+              null
+            ],
+            "nullable": true
+          },
+          "resultStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "mastered",
+              "developing",
+              "needs_support"
+            ]
+          },
+          "resultComment": {
+            "type": "string",
+            "nullable": true
+          },
+          "topic": {
+            "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "groupId",
+          "groupName",
+          "title",
+          "startsAt",
+          "endsAt",
+          "location",
+          "status",
+          "attendance",
+          "resultStatus",
+          "resultComment",
+          "topic",
+          "summary"
+        ],
+        "additionalProperties": false
+      },
+      "Review": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "returned"
+            ]
+          },
+          "resultStatus": {
+            "type": "string",
+            "enum": [
+              "mastered",
+              "developing",
+              "needs_support",
+              null
+            ],
+            "nullable": true
+          },
+          "comment": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "decision",
+          "resultStatus",
+          "comment",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "Homework": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "files",
+              "typing",
+              "activity"
+            ]
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PUBLISHED",
+              "CLOSED",
+              "ARCHIVED"
+            ]
+          },
+          "submissionState": {
+            "type": "string",
+            "enum": [
+              "IN_PROGRESS",
+              "SUBMITTED",
+              "RETURNED",
+              "RESUBMITTED",
+              "REVIEWED"
+            ]
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "review": {
+            "type": "object",
+            "properties": {
+              "decision": {
+                "type": "string",
+                "enum": [
+                  "accepted",
+                  "returned"
+                ]
+              },
+              "resultStatus": {
+                "type": "string",
+                "enum": [
+                  "mastered",
+                  "developing",
+                  "needs_support",
+                  null
+                ],
+                "nullable": true
+              },
+              "comment": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "decision",
+              "resultStatus",
+              "comment",
+              "createdAt"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "instructions",
+          "type",
+          "dueAt",
+          "status",
+          "submissionState",
+          "submittedAt",
+          "review"
+        ],
+        "additionalProperties": false
+      },
+      "Attendance": {
+        "type": "object",
+        "properties": {
+          "present": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "absent": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pending": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "present",
+          "absent",
+          "pending",
+          "total"
+        ],
+        "additionalProperties": false
+      },
+      "Home": {
+        "type": "object",
+        "properties": {
+          "child": {
+            "$ref": "#/components/schemas/Child"
+          },
+          "nextLesson": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "groupId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "groupName": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "startsAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "endsAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "location": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "scheduled",
+                  "completed",
+                  "cancelled"
+                ]
+              },
+              "attendance": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "present",
+                  "absent",
+                  null
+                ],
+                "nullable": true
+              },
+              "resultStatus": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "mastered",
+                  "developing",
+                  "needs_support"
+                ]
+              },
+              "resultComment": {
+                "type": "string",
+                "nullable": true
+              },
+              "topic": {
+                "type": "string",
+                "nullable": true
+              },
+              "summary": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "groupId",
+              "groupName",
+              "title",
+              "startsAt",
+              "endsAt",
+              "location",
+              "status",
+              "attendance",
+              "resultStatus",
+              "resultComment",
+              "topic",
+              "summary"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lesson"
+            }
+          },
+          "homework": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Homework"
+            }
+          },
+          "attendance": {
+            "$ref": "#/components/schemas/Attendance"
+          },
+          "unreadCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "child",
+          "nextLesson",
+          "results",
+          "homework",
+          "attendance",
+          "unreadCount"
+        ],
+        "additionalProperties": false
+      },
+      "Schedule": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lesson"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "timezone",
+          "items",
+          "truncated"
+        ],
+        "additionalProperties": false
+      },
+      "Diary": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lesson"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "nextOffset"
+        ],
+        "additionalProperties": false
+      },
+      "HomeworkPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Homework"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "nextOffset"
+        ],
+        "additionalProperties": false
+      },
+      "ModuleProgress": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "totalLessons": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completedLessons": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "totalLessons",
+          "completedLessons",
+          "percent",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "ProgramProgress": {
+        "type": "object",
+        "properties": {
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "programId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "groupId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "endedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "totalLessons": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completedLessons": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "masteredLessons": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "modules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModuleProgress"
+            }
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignmentId",
+          "programId",
+          "groupId",
+          "name",
+          "endedAt",
+          "totalLessons",
+          "completedLessons",
+          "masteredLessons",
+          "percent",
+          "modules",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "Typing": {
+        "type": "object",
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "language": {
+            "type": "string"
+          },
+          "keystrokes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "correctChars": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "errors": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "wpm": {
+            "type": "number"
+          },
+          "accuracy": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "attemptId",
+          "durationSeconds",
+          "language",
+          "keystrokes",
+          "correctChars",
+          "errors",
+          "wpm",
+          "accuracy",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "Activity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activityCode": {
+            "type": "string"
+          },
+          "activityName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "wpm": {
+            "type": "number",
+            "nullable": true
+          },
+          "accuracy": {
+            "type": "number",
+            "nullable": true
+          },
+          "errors": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          },
+          "correctAnswers": {
+            "type": "integer",
+            "nullable": true
+          },
+          "totalRounds": {
+            "type": "integer",
+            "nullable": true
+          },
+          "score": {
+            "type": "integer",
+            "nullable": true
+          },
+          "passed": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "activityId",
+          "activityCode",
+          "activityName",
+          "status",
+          "source",
+          "startedAt",
+          "finishedAt",
+          "durationSeconds",
+          "language",
+          "wpm",
+          "accuracy",
+          "errors"
+        ],
+        "additionalProperties": false
+      },
+      "Progress": {
+        "type": "object",
+        "properties": {
+          "programs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProgramProgress"
+            }
+          },
+          "attendance": {
+            "$ref": "#/components/schemas/Attendance"
+          },
+          "homework": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "submitted": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reviewed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "returned": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total",
+              "submitted",
+              "reviewed",
+              "returned"
+            ],
+            "additionalProperties": false
+          },
+          "typing": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Typing"
+            }
+          },
+          "activities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Activity"
+            }
+          },
+          "achievements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Achievement"
+            }
+          },
+          "activityProgress": {
+            "$ref": "#/components/schemas/ActivityProgress"
+          }
+        },
+        "required": [
+          "programs",
+          "attendance",
+          "homework",
+          "typing",
+          "activities",
+          "achievements",
+          "activityProgress"
+        ],
+        "additionalProperties": false
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "threadId": {
+            "type": "string",
+            "nullable": true
+          },
+          "kind": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resourcePath": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "threadId",
+          "kind",
+          "resourceId",
+          "resourcePath",
+          "subject",
+          "body",
+          "createdAt",
+          "readAt"
+        ],
+        "additionalProperties": false
+      },
+      "Notifications": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Notification"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          },
+          "unreadCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "nextOffset",
+          "unreadCount"
+        ],
+        "additionalProperties": false
+      },
+      "Guardian": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string",
+            "enum": [
+              "mother",
+              "father",
+              "guardian"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "confirmed",
+              "revoked"
+            ]
+          },
+          "confirmedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "account": {
+            "type": "object",
+            "properties": {
+              "accountId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "activatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "accountId",
+              "activatedAt"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "invitation": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "usedAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              },
+              "revokedAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "expiresAt",
+              "usedAt",
+              "revokedAt"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          }
+        },
+        "required": [
+          "personId",
+          "name",
+          "relationship",
+          "status",
+          "confirmedAt",
+          "revokedAt",
+          "account",
+          "invitation"
+        ],
+        "additionalProperties": false
+      },
+      "Guardians": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Guardian"
+            }
+          },
+          "canManage": {
+            "type": "boolean"
+          },
+          "canConfirm": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "canManage",
+          "canConfirm"
+        ],
+        "additionalProperties": false
+      },
+      "HistoryEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "action": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string",
+            "enum": [
+              "mother",
+              "father",
+              "guardian"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "confirmed",
+              "revoked"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "personId",
+          "actorAccountId",
+          "action",
+          "relationship",
+          "status",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "History": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoryEntry"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "nextOffset"
+        ],
+        "additionalProperties": false
+      },
+      "Candidates": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Named"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "Invitation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "Shown only in the issue response. Deliver privately; never log, store plaintext, or place in a URL."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "expiresAt",
+          "studentId",
+          "personId"
+        ],
+        "additionalProperties": false
+      },
+      "Activate": {
+        "type": "object",
+        "properties": {
+          "activated": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "activated",
+          "studentId",
+          "organizationId"
+        ],
+        "additionalProperties": false
+      },
+      "Registered": {
+        "type": "object",
+        "properties": {
+          "activated": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "activated"
+        ],
+        "additionalProperties": false
+      },
+      "Read": {
+        "type": "object",
+        "properties": {
+          "read": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "read"
+        ],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "meta": {
+                "type": "object",
+                "properties": {
+                  "educationCode": {
+                    "type": "string"
+                  },
+                  "parentCode": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "educationCode",
+                  "parentCode"
+                ],
+                "additionalProperties": false
+              },
+              "requestId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "Achievement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "ruleVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "unlockedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "attempt",
+              "homework",
+              null
+            ],
+            "nullable": true
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "progress": {
+            "type": "object",
+            "properties": {
+              "current": {
+                "type": "number"
+              },
+              "target": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "current",
+              "target"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "description",
+          "ruleVersion",
+          "unlockedAt",
+          "sourceType",
+          "sourceId",
+          "progress"
+        ],
+        "additionalProperties": false
+      },
+      "ActivityHistory": {
+        "type": "object",
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ]
+          },
+          "mode": {
+            "type": "string"
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "errors": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "accuracy": {
+            "type": "number"
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "wpm": {
+            "type": "number"
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "typedCharacters": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "keystrokes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "correctChars": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "correctAnswers": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalRounds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "corrections": {
+            "type": "integer",
+            "nullable": true
+          },
+          "inputErrors": {
+            "type": "integer",
+            "nullable": true
+          },
+          "telemetryVerified": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "attemptId",
+          "createdAt",
+          "language",
+          "accuracy",
+          "errors"
+        ],
+        "additionalProperties": false
+      },
+      "ActivityProgress": {
+        "type": "object",
+        "properties": {
+          "typing": {
+            "type": "object",
+            "properties": {
+              "attempts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "bestWpm": {
+                "type": "number",
+                "nullable": true
+              },
+              "averageAccuracy": {
+                "type": "number",
+                "nullable": true
+              },
+              "history": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ActivityHistory"
+                }
+              }
+            },
+            "required": [
+              "attempts",
+              "bestWpm",
+              "averageAccuracy",
+              "history"
+            ],
+            "additionalProperties": false
+          },
+          "logic": {
+            "type": "object",
+            "properties": {
+              "attempts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "bestScore": {
+                "type": "number",
+                "nullable": true
+              },
+              "history": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ActivityHistory"
+                }
+              }
+            },
+            "required": [
+              "attempts",
+              "bestScore",
+              "history"
+            ],
+            "additionalProperties": false
+          },
+          "achievements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Achievement"
+            }
+          },
+          "completedAssignments": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "historyLimit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "historyTruncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "typing",
+          "logic",
+          "achievements",
+          "completedAssignments",
+          "historyLimit",
+          "historyTruncated"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

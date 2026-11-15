@@ -1,5 +1,6 @@
 import { effectScope, nextTick, reactive } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { coreAdminSession } from '@/core/admin/session';
 import { ApiResponseError } from '@/shared/api/errors';
 import { useEducationMutation, useEducationResource } from './resources';
 
@@ -20,6 +21,13 @@ describe('Education asynchronous scope', () => {
     first.resolve('private first data'); await first.promise; await nextTick();
     expect(signals[0]!.aborted).toBe(true); expect(resource.data.value).toBe('second data');
     scope.stop(); expect(signals[1]!.aborted).toBe(true);
+  });
+  it('keeps the last successful data visible during refresh and clears it synchronously on logout', async () => {
+    const pending = deferred<string>(); let calls = 0; const scope = effectScope();
+    const resource = scope.run(() => useEducationResource(async () => ++calls === 1 ? 'visible' : pending.promise))!;
+    await nextTick(); await nextTick(); expect(resource.data.value).toBe('visible');
+    const refreshing = resource.refresh(); expect(resource.loading.value).toBe(true); expect(resource.data.value).toBe('visible');
+    coreAdminSession.clear(); expect(resource.data.value).toBeNull(); pending.resolve('late secret'); await refreshing; expect(resource.data.value).toBeNull(); scope.stop();
   });
   it('does not accept mutation results after the organization changes', async () => {
     const pending = deferred<string>(); const accept = vi.fn(); const scope = effectScope();

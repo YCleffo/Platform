@@ -35,6 +35,8 @@
 | [Communication в Core](architecture/COMMUNICATION.md) |
 | [Архитектура серверного приложения Core](architecture/CORE_BACKEND.md) |
 | [Серверная часть Education: границы, контракт и установка](architecture/EDUCATION_BACKEND.md) |
+| [Родительский кабинет и семейные связи](architecture/EDUCATION_PARENT.md) |
+| [Typing 2.0, Logic, достижения и локальные проверки EDUCATION_06](operations/EDUCATION_06_LOCAL.md) |
 | [Инварианты Core](architecture/CORE_INVARIANTS.md) |
 | [Архитектура баз данных](architecture/DATABASE.md) |
 | [События между процессами](architecture/EVENT_CONTRACTS.md) |
@@ -95,3 +97,8 @@
 - [Целевые показатели и базовые измерения производительности](operations/SLO.md).
 
 </details>
+
+## Storage and installation branding
+
+- [Current S3 operations and backup/restore](operations/STORAGE_02.md).
+- [STORAGE_02 acceptance and remaining verification](operations/STORAGE_02_ACCEPTANCE.md).

@@ -97,6 +97,9 @@ async function reconcile(): Promise<void> {
       class="edu-toolbar"
       :aria-label="t('education.more')"
     >
+      <RouterLink to="/programs" class="edu-button">{{ t('education.programs') }}</RouterLink>
+      <RouterLink to="/homework" class="edu-button">{{ t('education.homework') }}</RouterLink>
+      <RouterLink to="/messages" class="edu-button">{{ t('education.messages') }}</RouterLink>
       <RouterLink
         to="/materials"
         class="edu-button"

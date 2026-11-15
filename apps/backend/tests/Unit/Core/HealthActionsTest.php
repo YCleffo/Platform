@@ -31,7 +31,9 @@ final class HealthActionsTest extends TestCase
         $db = $this->createMock(ConnectionInterface::class);
         $db->method('createCommand')->willThrowException(new \RuntimeException('private DB path'));
         $redis = $this->createMock(ClientInterface::class);
-        self::assertSame($response, (new ReadyHealthAction())($factory, new OperationalStatus($db, $redis)));
+        $container = $this->createMock(\Psr\Container\ContainerInterface::class);
+        $storage = new \App\Storage\Infrastructure\StorageReadiness($container);
+        self::assertSame($response, (new ReadyHealthAction())($factory, new OperationalStatus($db, $redis), $storage));
         self::assertSame([['status' => 'ok'], ['status' => 'not_ready']], $payloads);
     }
 }

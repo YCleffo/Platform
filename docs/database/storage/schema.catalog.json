@@ -4,6 +4,167 @@
   "tables": [
     {
       "rls": false,
+      "name": "binary_cleanup",
+      "schema": "storage",
+      "columns": [
+        {
+          "name": "storage_key",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "queued_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "attempts",
+          "type": "integer",
+          "comment": null,
+          "default": "0",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "last_error",
+          "type": "character varying(160)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "storage_key"
+          ],
+          "name": "binary_cleanup_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX binary_cleanup_pkey ON storage.binary_cleanup USING btree (storage_key)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "queued_at"
+          ],
+          "name": "storage_cleanup_pending",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": "(completed_at IS NULL)",
+          "definition": "CREATE INDEX storage_cleanup_pending ON storage.binary_cleanup USING btree (queued_at) WHERE (completed_at IS NULL)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "binary_cleanup_attempts_not_null",
+          "columns": [
+            "attempts"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL attempts",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "binary_cleanup_pkey",
+          "columns": [
+            "storage_key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (storage_key)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "binary_cleanup_queued_at_not_null",
+          "columns": [
+            "queued_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL queued_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "binary_cleanup_storage_key_not_null",
+          "columns": [
+            "storage_key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL storage_key",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
       "name": "conflicts",
       "schema": "storage",
       "columns": [
@@ -126,6 +287,18 @@
           "generated": "",
           "type_name": "timestamptz",
           "type_schema": "pg_catalog"
+        },
+        {
+          "name": "manifest_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
         }
       ],
       "comment": null,
@@ -176,6 +349,23 @@
           "target_table": null,
           "target_schema": null,
           "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "conflicts_manifest_id_fkey",
+          "columns": [
+            "manifest_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (manifest_id) REFERENCES storage.manifests(id)",
+          "target_table": "manifests",
+          "target_schema": "storage",
+          "target_columns": [
+            "id"
+          ],
           "initially_deferred": false
         },
         {
@@ -317,6 +507,18 @@
           "nullable": false,
           "generated": "",
           "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "deleted_by_manifest_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
           "type_schema": "pg_catalog"
         }
       ],
@@ -496,6 +698,395 @@
     },
     {
       "rls": false,
+      "name": "manifest_entries",
+      "schema": "storage",
+      "columns": [
+        {
+          "name": "manifest_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "path",
+          "type": "character varying(1024)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "operation",
+          "type": "character varying(8)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "size_bytes",
+          "type": "bigint",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "int8",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "base_sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "state",
+          "type": "character varying(16)",
+          "comment": null,
+          "default": "'expected'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "ticket_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "verified_sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "verified_size",
+          "type": "bigint",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "int8",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "verified_version_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "manifest_id",
+            "path"
+          ],
+          "name": "manifest_entries_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX manifest_entries_pkey ON storage.manifest_entries USING btree (manifest_id, path)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "manifest_id",
+            "state"
+          ],
+          "name": "manifest_entries_state",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX manifest_entries_state ON storage.manifest_entries USING btree (manifest_id, state)",
+          "attribute_count": 2
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "f",
+          "name": "manifest_entries_manifest_id_fkey",
+          "columns": [
+            "manifest_id"
+          ],
+          "on_delete": "c",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (manifest_id) REFERENCES storage.manifests(id) ON DELETE CASCADE",
+          "target_table": "manifests",
+          "target_schema": "storage",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "manifest_entries_manifest_id_not_null",
+          "columns": [
+            "manifest_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL manifest_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "manifest_entries_operation_check",
+          "columns": [
+            "operation"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (operation::text = ANY (ARRAY['add'::character varying, 'update'::character varying, 'delete'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "manifest_entries_operation_not_null",
+          "columns": [
+            "operation"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL operation",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "manifest_entries_path_check",
+          "columns": [
+            "path"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (btrim(path::text) <> ''::text AND path::text !~~ '%..%'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "manifest_entries_path_not_null",
+          "columns": [
+            "path"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL path",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "manifest_entries_pkey",
+          "columns": [
+            "manifest_id",
+            "path"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (manifest_id, path)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "manifest_entries_size_bytes_check",
+          "columns": [
+            "size_bytes"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (size_bytes IS NULL OR size_bytes >= 0 AND size_bytes <= '5497558138880'::bigint)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "manifest_entries_state_check",
+          "columns": [
+            "state"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (state::text = ANY (ARRAY['expected'::character varying, 'verified'::character varying, 'deleted'::character varying, 'skipped'::character varying, 'conflict'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "manifest_entries_state_not_null",
+          "columns": [
+            "state"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL state",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "manifest_entries_ticket_id_fkey",
+          "columns": [
+            "ticket_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (ticket_id) REFERENCES storage.tickets(id)",
+          "target_table": "tickets",
+          "target_schema": "storage",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "manifest_entries_updated_at_not_null",
+          "columns": [
+            "updated_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL updated_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "manifest_entries_verified_version_id_fkey",
+          "columns": [
+            "verified_version_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (verified_version_id) REFERENCES storage.versions(id)",
+          "target_table": "versions",
+          "target_schema": "storage",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
       "name": "manifests",
       "schema": "storage",
       "columns": [
@@ -594,10 +1185,72 @@
           "generated": "",
           "type_name": "timestamptz",
           "type_schema": "pg_catalog"
+        },
+        {
+          "name": "entries_sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "base_version",
+          "type": "integer",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "snapshot",
+          "type": "jsonb",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "snapshot_sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
         }
       ],
       "comment": null,
       "indexes": [
+        {
+          "keys": [
+            "space_id",
+            "version"
+          ],
+          "name": "manifests_confirmed",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "((status)::text = 'confirmed'::text)",
+          "definition": "CREATE INDEX manifests_confirmed ON storage.manifests USING btree (space_id, version DESC) WHERE ((status)::text = 'confirmed'::text)",
+          "attribute_count": 2
+        },
         {
           "keys": [
             "id"
@@ -926,6 +1579,595 @@
     },
     {
       "rls": false,
+      "name": "object_cleanup",
+      "schema": "storage",
+      "columns": [
+        {
+          "name": "object_key",
+          "type": "character varying(1024)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "multipart_upload_id",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "transfer_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "queued_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "not_before",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "attempts",
+          "type": "integer",
+          "comment": null,
+          "default": "0",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "last_error",
+          "type": "character varying(160)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "object_key"
+          ],
+          "name": "object_cleanup_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX object_cleanup_pkey ON storage.object_cleanup USING btree (object_key)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "not_before",
+            "queued_at"
+          ],
+          "name": "storage_object_cleanup_pending",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "(completed_at IS NULL)",
+          "definition": "CREATE INDEX storage_object_cleanup_pending ON storage.object_cleanup USING btree (not_before, queued_at) WHERE (completed_at IS NULL)",
+          "attribute_count": 2
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "object_cleanup_attempts_not_null",
+          "columns": [
+            "attempts"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL attempts",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "object_cleanup_not_before_not_null",
+          "columns": [
+            "not_before"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL not_before",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "object_cleanup_object_key_not_null",
+          "columns": [
+            "object_key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL object_key",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "object_cleanup_pkey",
+          "columns": [
+            "object_key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (object_key)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "object_cleanup_queued_at_not_null",
+          "columns": [
+            "queued_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL queued_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "object_migrations",
+      "schema": "storage",
+      "columns": [
+        {
+          "name": "module",
+          "type": "character varying(16)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "storage_key",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "size_bytes",
+          "type": "bigint",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int8",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "source_fingerprint",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "module",
+            "storage_key"
+          ],
+          "name": "object_migrations_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX object_migrations_pkey ON storage.object_migrations USING btree (module, storage_key)",
+          "attribute_count": 2
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "c",
+          "name": "object_migrations_module_check",
+          "columns": [
+            "module"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (module::text = ANY (ARRAY['storage'::character varying, 'education'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "object_migrations_module_not_null",
+          "columns": [
+            "module"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL module",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "object_migrations_pkey",
+          "columns": [
+            "module",
+            "storage_key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (module, storage_key)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "object_migrations_sha256_check",
+          "columns": [
+            "sha256"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (sha256 ~ '^[0-9a-f]{64}$'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "object_migrations_sha256_not_null",
+          "columns": [
+            "sha256"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL sha256",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "object_migrations_size_bytes_check",
+          "columns": [
+            "size_bytes"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (size_bytes >= 0)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "object_migrations_size_bytes_not_null",
+          "columns": [
+            "size_bytes"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL size_bytes",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "object_migrations_source_fingerprint_not_null",
+          "columns": [
+            "source_fingerprint"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL source_fingerprint",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "object_migrations_storage_key_not_null",
+          "columns": [
+            "storage_key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL storage_key",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "object_migrations_verified_at_not_null",
+          "columns": [
+            "verified_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL verified_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "privacy_receipts",
+      "schema": "storage",
+      "columns": [
+        {
+          "name": "item_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "result",
+          "type": "character varying(32)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "item_id"
+          ],
+          "name": "privacy_receipts_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX privacy_receipts_pkey ON storage.privacy_receipts USING btree (item_id)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "privacy_receipts_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "privacy_receipts_item_id_not_null",
+          "columns": [
+            "item_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL item_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "privacy_receipts_pkey",
+          "columns": [
+            "item_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (item_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "privacy_receipts_result_not_null",
+          "columns": [
+            "result"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL result",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
       "name": "spaces",
       "schema": "storage",
       "columns": [
@@ -1011,6 +2253,18 @@
           "nullable": false,
           "generated": "",
           "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "subject_person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
           "type_schema": "pg_catalog"
         }
       ],
@@ -1592,6 +2846,90 @@
           "generated": "",
           "type_name": "timestamptz",
           "type_schema": "pg_catalog"
+        },
+        {
+          "name": "expected_sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "expected_size",
+          "type": "bigint",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "int8",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "file_version_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "device_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "base_version_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "base_deleted_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "actor_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
         }
       ],
       "comment": null,
@@ -1657,6 +2995,21 @@
           "initially_deferred": false
         },
         {
+          "kind": "c",
+          "name": "tickets_expected_size_check",
+          "columns": [
+            "expected_size"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (expected_size IS NULL OR expected_size >= 0 AND expected_size <= '5497558138880'::bigint)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
           "kind": "n",
           "name": "tickets_expires_at_not_null",
           "columns": [
@@ -1669,6 +3022,23 @@
           "target_table": null,
           "target_schema": null,
           "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "tickets_file_version_id_fkey",
+          "columns": [
+            "file_version_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (file_version_id) REFERENCES storage.versions(id)",
+          "target_table": "versions",
+          "target_schema": "storage",
+          "target_columns": [
+            "id"
+          ],
           "initially_deferred": false
         },
         {
@@ -1833,6 +3203,1137 @@
           "on_update": " ",
           "deferrable": false,
           "definition": "NOT NULL token_hash",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "transfer_parts",
+      "schema": "storage",
+      "columns": [
+        {
+          "name": "transfer_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "part_number",
+          "type": "integer",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "size_bytes",
+          "type": "bigint",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int8",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "transfer_id",
+            "part_number"
+          ],
+          "name": "transfer_parts_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX transfer_parts_pkey ON storage.transfer_parts USING btree (transfer_id, part_number)",
+          "attribute_count": 2
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "transfer_parts_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfer_parts_part_number_check",
+          "columns": [
+            "part_number"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (part_number >= 1 AND part_number <= 10000)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfer_parts_part_number_not_null",
+          "columns": [
+            "part_number"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL part_number",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "transfer_parts_pkey",
+          "columns": [
+            "transfer_id",
+            "part_number"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (transfer_id, part_number)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfer_parts_sha256_check",
+          "columns": [
+            "sha256"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (sha256 ~ '^[0-9a-f]{64}$'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfer_parts_sha256_not_null",
+          "columns": [
+            "sha256"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL sha256",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfer_parts_size_bytes_check",
+          "columns": [
+            "size_bytes"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (size_bytes >= 1 AND size_bytes <= '5368709120'::bigint)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfer_parts_size_bytes_not_null",
+          "columns": [
+            "size_bytes"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL size_bytes",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "transfer_parts_transfer_id_fkey",
+          "columns": [
+            "transfer_id"
+          ],
+          "on_delete": "c",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (transfer_id) REFERENCES storage.transfers(id) ON DELETE CASCADE",
+          "target_table": "transfers",
+          "target_schema": "storage",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfer_parts_transfer_id_not_null",
+          "columns": [
+            "transfer_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL transfer_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "transfers",
+      "schema": "storage",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "ticket_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "space_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "actor_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "device_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "direction",
+          "type": "character varying(8)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "path",
+          "type": "character varying(1024)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "status",
+          "type": "character varying(16)",
+          "comment": null,
+          "default": "'pending'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "mode",
+          "type": "character varying(12)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "expected_size",
+          "type": "bigint",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int8",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "expected_sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "staging_key",
+          "type": "character varying(1024)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "final_storage_key",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "multipart_upload_id",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "part_size",
+          "type": "bigint",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "int8",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "total_parts",
+          "type": "integer",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "reserved_bytes",
+          "type": "bigint",
+          "comment": null,
+          "default": "0",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int8",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "reserved_files",
+          "type": "integer",
+          "comment": null,
+          "default": "0",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "result",
+          "type": "jsonb",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "(now() + '24:00:00'::interval)",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "status",
+            "updated_at"
+          ],
+          "name": "storage_transfer_reconciliation",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX storage_transfer_reconciliation ON storage.transfers USING btree (status, updated_at)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "space_id",
+            "expires_at"
+          ],
+          "name": "storage_transfer_reservations",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "(((direction)::text = 'upload'::text) AND ((status)::text = ANY ((ARRAY['pending'::character varying, 'uploading'::character varying, 'verifying'::character varying])::text[])))",
+          "definition": "CREATE INDEX storage_transfer_reservations ON storage.transfers USING btree (space_id, expires_at) WHERE (((direction)::text = 'upload'::text) AND ((status)::text = ANY ((ARRAY['pending'::character varying, 'uploading'::character varying, 'verifying'::character varying])::text[])))",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "final_storage_key"
+          ],
+          "name": "transfers_final_storage_key_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX transfers_final_storage_key_key ON storage.transfers USING btree (final_storage_key)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "transfers_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX transfers_pkey ON storage.transfers USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "staging_key"
+          ],
+          "name": "transfers_staging_key_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX transfers_staging_key_key ON storage.transfers USING btree (staging_key)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "ticket_id"
+          ],
+          "name": "transfers_ticket_id_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX transfers_ticket_id_key ON storage.transfers USING btree (ticket_id)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "c",
+          "name": "transfers_check",
+          "columns": [
+            "device_id",
+            "actor_account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK ((device_id IS NULL) <> (actor_account_id IS NULL))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfers_check1",
+          "columns": [
+            "mode",
+            "part_size",
+            "total_parts"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (mode::text = 'single'::text AND part_size IS NULL AND total_parts IS NULL OR mode::text = 'multipart'::text AND part_size IS NOT NULL AND total_parts IS NOT NULL)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfers_check2",
+          "columns": [
+            "status",
+            "result"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (status::text <> 'confirmed'::text OR result IS NOT NULL)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfers_direction_check",
+          "columns": [
+            "direction"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (direction::text = ANY (ARRAY['upload'::character varying, 'download'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_direction_not_null",
+          "columns": [
+            "direction"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL direction",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfers_expected_sha256_check",
+          "columns": [
+            "expected_sha256"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (expected_sha256 ~ '^[0-9a-f]{64}$'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_expected_sha256_not_null",
+          "columns": [
+            "expected_sha256"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL expected_sha256",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfers_expected_size_check",
+          "columns": [
+            "expected_size"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (expected_size >= 0 AND expected_size <= '5497558138880'::bigint)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_expected_size_not_null",
+          "columns": [
+            "expected_size"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL expected_size",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_expires_at_not_null",
+          "columns": [
+            "expires_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL expires_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "transfers_final_storage_key_key",
+          "columns": [
+            "final_storage_key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (final_storage_key)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_final_storage_key_not_null",
+          "columns": [
+            "final_storage_key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL final_storage_key",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfers_mode_check",
+          "columns": [
+            "mode"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (mode::text = ANY (ARRAY['single'::character varying, 'multipart'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_mode_not_null",
+          "columns": [
+            "mode"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL mode",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfers_part_size_check",
+          "columns": [
+            "part_size"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (part_size >= 5242880 AND part_size <= '5368709120'::bigint)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_path_not_null",
+          "columns": [
+            "path"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL path",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "transfers_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfers_reserved_bytes_check",
+          "columns": [
+            "reserved_bytes"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (reserved_bytes >= 0)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_reserved_bytes_not_null",
+          "columns": [
+            "reserved_bytes"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL reserved_bytes",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfers_reserved_files_check",
+          "columns": [
+            "reserved_files"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (reserved_files >= 0 AND reserved_files <= 1)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_reserved_files_not_null",
+          "columns": [
+            "reserved_files"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL reserved_files",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "transfers_space_id_fkey",
+          "columns": [
+            "space_id"
+          ],
+          "on_delete": "a",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (space_id) REFERENCES storage.spaces(id)",
+          "target_table": "spaces",
+          "target_schema": "storage",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_space_id_not_null",
+          "columns": [
+            "space_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL space_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "transfers_staging_key_key",
+          "columns": [
+            "staging_key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (staging_key)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_staging_key_not_null",
+          "columns": [
+            "staging_key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL staging_key",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfers_status_check",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (status::text = ANY (ARRAY['pending'::character varying, 'uploading'::character varying, 'verifying'::character varying, 'confirmed'::character varying, 'aborted'::character varying, 'expired'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_status_not_null",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL status",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "transfers_ticket_id_fkey",
+          "columns": [
+            "ticket_id"
+          ],
+          "on_delete": "c",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (ticket_id) REFERENCES storage.tickets(id) ON DELETE CASCADE",
+          "target_table": "tickets",
+          "target_schema": "storage",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "transfers_ticket_id_key",
+          "columns": [
+            "ticket_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (ticket_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_ticket_id_not_null",
+          "columns": [
+            "ticket_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL ticket_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "transfers_total_parts_check",
+          "columns": [
+            "total_parts"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (total_parts >= 1 AND total_parts <= 10000)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "transfers_updated_at_not_null",
+          "columns": [
+            "updated_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL updated_at",
           "target_table": null,
           "target_schema": null,
           "target_columns": null,
@@ -2108,7 +4609,7 @@
           "on_delete": " ",
           "on_update": " ",
           "deferrable": false,
-          "definition": "CHECK (size_bytes >= 0 AND size_bytes <= 1073741824)",
+          "definition": "CHECK (size_bytes >= 0 AND size_bytes <= '5497558138880'::bigint)",
           "target_table": null,
           "target_schema": null,
           "target_columns": null,
@@ -2198,12 +4699,27 @@
   "functions": [],
   "server_version": "18.6 (Debian 18.6-1.pgdg13+2)",
   "applied_migrations": [
-    "001_spaces.sql"
+    "001_spaces.sql",
+    "002_verified_manifests.sql",
+    "003_lifecycle_consistency.sql",
+    "004_s3_transfers.sql"
   ],
   "migration_sources": [
     {
       "path": "apps/backend/migrations/storage/001_spaces.sql",
       "sha256": "cbb3e6ad06202e7794ab6a052d5910e1bde657fbb43ed63da028bfd75be4fabb"
+    },
+    {
+      "path": "apps/backend/migrations/storage/002_verified_manifests.sql",
+      "sha256": "d15d19238d6764a4ea49f6d04db252b8d3ba912daa20236b6cefc476b6948bc8"
+    },
+    {
+      "path": "apps/backend/migrations/storage/003_lifecycle_consistency.sql",
+      "sha256": "3eec9af4834b771d3eb132017d8f67aecacc9e2b6af4f57d680b668f6e206d8d"
+    },
+    {
+      "path": "apps/backend/migrations/storage/004_s3_transfers.sql",
+      "sha256": "883ec71d127e0b2df62d1837010b9efbe9216cc4b84e7335bba651bdbcc84517"
     }
   ]
 }

@@ -41,6 +41,7 @@ final readonly class DeviceAction
                     'agent_commands' => $service->agentCommands($device->deviceId),
                     'agent_command_ack' => $service->agentAcknowledge($device->deviceId, (string) $id, $body),
                     'agent_session_state' => $service->agentSessionState($device->deviceId, (string) $id, $body),
+                    'agent_session_end' => $service->agentSessionEnd($device->deviceId, (string) $id, $body),
                     'agent_session' => $service->agentSession($device->deviceId),
                     'agent_event' => $service->agentEvent($device->deviceId, $body),
                     default => throw new DeviceError(404, 'not_found'),

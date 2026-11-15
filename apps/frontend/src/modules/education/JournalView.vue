@@ -9,6 +9,7 @@ import { useEducationWorkspace } from './workspace';
 import { useEducationResource } from './resources';
 import { useEducationI18n } from './i18n';
 import EducationState from './EducationState.vue';
+import HomeworkSummary from './homework/HomeworkSummary.vue';
 const route = useRoute();
 const workspace = useEducationWorkspace();
 const { t, locale } = useEducationI18n();
@@ -63,6 +64,7 @@ function statusLabel(status: string): string {
 </script>
 <template>
   <section>
+    <HomeworkSummary :group-id="id" :student-id="studentId || undefined" />
     <header class="edu-page-title">
       <h1>{{ data?.group.name ?? t('education.journal') }} · {{ t('education.journal') }}</h1>
       <RouterLink

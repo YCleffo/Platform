@@ -1,6 +1,12 @@
 import {operatorRu} from '../operator';
 import {workbenchRu} from '../workbench';
 export default {
+  branding: {
+    title: 'Название и значок платформы', name: 'Название платформы', favicon: 'Значок вкладки',
+    iconHint: 'PNG или ICO, до 512 КБ и 1024 × 1024 пикселей.', chooseIcon: 'Выбрать значок',
+    upload: 'Загрузить значок', uploadProgress: 'Загрузка значка', removeIcon: 'Вернуть стандартный значок',
+    invalidIcon: 'Выберите файл PNG или ICO размером до 512 КБ.', saved: 'Изменения сохранены.',
+  },
   picker: { chooseDate: 'Выбрать дату', chooseTime: 'Выбрать время', date: 'Дата', time: 'Время', dateTime: 'Дата и время', dateFormatEn: 'MM/DD/YYYY', dateFormatRu: 'ДД.ММ.ГГГГ', invalid: 'Введите корректную дату или время.', range: 'Выберите значение в допустимом диапазоне.', previousMonth: 'Предыдущий месяц', nextMonth: 'Следующий месяц', month: 'Месяц', year: 'Год', hours: 'Часы', minutes: 'Минуты', seconds: 'Секунды', today: 'Сегодня', clear: 'Очистить', apply: 'Применить', example: 'Календарь и время', hint: 'Выберите значение в календаре или введите вручную. Время указано в вашем часовом поясе.', disabled: 'Недоступная дата', disclosure: 'Раскрывающийся раздел', disclosureHint: 'Показать или скрыть дополнительные сведения.' },
   navigation: { path: 'Хлебные крошки', hidden: 'Показать скрытые уровни', core: 'Core', account: 'Аккаунт', mfa: 'Двухфакторный вход', sessions: 'Устройства и сеансы', passkeys: 'Ключи доступа', identities: 'Внешние аккаунты', profile: 'Моя учётная запись', consents: 'Согласия', privacy: 'Персональные данные', privacyRegistry: 'Реестр приватности', request: 'Запрос', security: 'Безопасность', components: 'Компоненты', operator: 'Кабинет оператора', overview: 'Обзор', members: 'Участники', billing: 'Платежи', usage: 'Использование', analytics: 'Аналитика', audit: 'Журнал действий', invitations: 'Приглашения', comparePlans: 'Сравнение тарифов' },
   operator: operatorRu,

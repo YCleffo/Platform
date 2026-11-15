@@ -39,16 +39,32 @@ final readonly class PersonalDataExportService
         return $this->export($actor, $requestId, null, true);
     }
 
+    public function streamSelf(AuthenticatedIdentity $actor, string $requestId): PersonalDataExportArtifact
+    {
+        return $this->export($actor, $requestId, null, stream: true);
+    }
+
+    public function streamRepresentative(AuthenticatedIdentity $actor, string $requestId, string $representationId): PersonalDataExportArtifact
+    {
+        return $this->export($actor, $requestId, $representationId, stream: true);
+    }
+
+    public function streamOperator(AuthenticatedIdentity $actor, string $requestId): PersonalDataExportArtifact
+    {
+        return $this->export($actor, $requestId, null, true, stream: true);
+    }
+
     private function export(
         AuthenticatedIdentity $actor,
         string $requestId,
         ?string $representationId,
         bool $operatorIntake = false,
-    ): PersonalDataExportResult {
+        bool $stream = false,
+    ): PersonalDataExportResult|PersonalDataExportArtifact {
         $authorized = false;
         try {
             $isolation = $this->db->getTransaction() === null ? TransactionInterface::REPEATABLE_READ : null;
-            return $this->db->transaction(function () use ($actor, $requestId, $representationId, $operatorIntake, &$authorized): PersonalDataExportResult {
+            return $this->db->transaction(function () use ($actor, $requestId, $representationId, $operatorIntake, $stream, &$authorized): PersonalDataExportResult|PersonalDataExportArtifact {
                 $row = $this->db->createCommand(<<<'SQL'
                     SELECT r.subject_person_id::text, r.request_type, r.status,
                            r.legal_representation_id::text, r.intake_channel
@@ -100,7 +116,7 @@ final readonly class PersonalDataExportService
                     $representationId,
                     $this->clock->now(),
                 );
-                $result = $this->exporter->export($context);
+                $result = $stream ? $this->exporter->exportToStream($context) : $this->exporter->export($context);
                 $this->executions->recordExportIssued(
                     $actor,
                     $requestId,

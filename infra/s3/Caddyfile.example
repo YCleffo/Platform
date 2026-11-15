@@ -1,0 +1,5 @@
+# Native Caddy on the same VPS as Docker. Port 8333 remains bound to loopback.
+# Set S3_PUBLIC_ENDPOINT=https://your-object-host before signing requests.
+{$S3_HOSTNAME} {
+    reverse_proxy 127.0.0.1:8333
+}

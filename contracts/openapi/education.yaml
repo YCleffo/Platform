@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Education платформы Platform",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Необязательный модуль Yii. Каждый запрос проверяет Bearer-пользователя Core, текущие разрешения, активное членство организации и явное назначение преподавателя. X-Education-Organization выбирает область, но не выдаёт доступ. Личные ответы no-store. Дни учитывают IANA-пояс аккаунта. Пагинация по 50 с nextOffset. Первая переписка — между активными преподавателями одной организации."
   },
   "servers": [
@@ -16,6 +16,78 @@
     }
   ],
   "paths": {
+    "/homework/{id}/files": {
+      "$ref": "./homework.yaml#/paths/~1homework~1{id}~1files"
+    },
+    "/student/homework/{id}/files": {
+      "$ref": "./homework.yaml#/paths/~1student~1homework~1{id}~1files"
+    },
+    "/student/homework/{id}/files/{fileId}": {
+      "$ref": "./homework.yaml#/paths/~1student~1homework~1{id}~1files~1{fileId}"
+    },
+    "/student/homework/progress": {
+      "$ref": "./homework.yaml#/paths/~1student~1homework~1progress"
+    },
+    "/student/homework/{id}/activity/start": {
+      "$ref": "./homework.yaml#/paths/~1student~1homework~1{id}~1activity~1start"
+    },
+    "/student/homework/{id}/activity/attach": {
+      "$ref": "./homework.yaml#/paths/~1student~1homework~1{id}~1activity~1attach"
+    },
+    "/student/notifications": {
+      "$ref": "./homework.yaml#/paths/~1student~1notifications"
+    },
+    "/student/notifications/{id}/read": {
+      "$ref": "./homework.yaml#/paths/~1student~1notifications~1{id}~1read"
+    },
+    "/homework/files/{id}": {
+      "$ref": "./homework.yaml#/paths/~1homework~1files~1{id}"
+    },
+    "/homework": {
+      "$ref": "./homework.yaml#/paths/~1homework"
+    },
+    "/homework/progress": {
+      "$ref": "./homework.yaml#/paths/~1homework~1progress"
+    },
+    "/homework/{id}": {
+      "$ref": "./homework.yaml#/paths/~1homework~1{id}"
+    },
+    "/homework/{id}/publish": {
+      "$ref": "./homework.yaml#/paths/~1homework~1{id}~1publish"
+    },
+    "/homework/{id}/close": {
+      "$ref": "./homework.yaml#/paths/~1homework~1{id}~1close"
+    },
+    "/homework/{id}/archive": {
+      "$ref": "./homework.yaml#/paths/~1homework~1{id}~1archive"
+    },
+    "/homework/{id}/recipients": {
+      "$ref": "./homework.yaml#/paths/~1homework~1{id}~1recipients"
+    },
+    "/homework/{id}/history": {
+      "$ref": "./homework.yaml#/paths/~1homework~1{id}~1history"
+    },
+    "/homework/{id}/submissions": {
+      "$ref": "./homework.yaml#/paths/~1homework~1{id}~1submissions"
+    },
+    "/homework/submissions/{id}": {
+      "$ref": "./homework.yaml#/paths/~1homework~1submissions~1{id}"
+    },
+    "/homework/submissions/{id}/review": {
+      "$ref": "./homework.yaml#/paths/~1homework~1submissions~1{id}~1review"
+    },
+    "/student/homework": {
+      "$ref": "./homework.yaml#/paths/~1student~1homework"
+    },
+    "/student/homework/{id}": {
+      "$ref": "./homework.yaml#/paths/~1student~1homework~1{id}"
+    },
+    "/student/homework/{id}/draft": {
+      "$ref": "./homework.yaml#/paths/~1student~1homework~1{id}~1draft"
+    },
+    "/student/homework/{id}/submit": {
+      "$ref": "./homework.yaml#/paths/~1student~1homework~1{id}~1submit"
+    },
     "/context": {
       "get": {
         "operationId": "education_context",
@@ -3416,7 +3488,10 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ],
                   "properties": {
                     "status": {
                       "type": "string",
@@ -3425,13 +3500,9 @@
                       ]
                     },
                     "data": {
-                      "$ref": "#/components/schemas/Updated"
+                      "$ref": "#/components/schemas/EducationFileTransfer"
                     }
-                  },
-                  "required": [
-                    "status",
-                    "data"
-                  ]
+                  }
                 }
               }
             }
@@ -3460,7 +3531,8 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GroupTransfer"
+                "type": "object",
+                "additionalProperties": false
               }
             }
           }
@@ -5815,6 +5887,1973 @@
           }
         }
       }
+    },
+    "/programs": {
+      "get": {
+        "operationId": "education_programs",
+        "summary": "Каталог учебных программ",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EducationProgramPage"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "education_create_program",
+        "summary": "Создать учебную программу",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EducationProgram"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgramSave"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/programs/{id}": {
+      "get": {
+        "operationId": "education_program",
+        "summary": "Программа с упорядоченными модулями и уроками",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EducationProgram"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "education_update_program",
+        "summary": "Изменить или архивировать программу с сохранением истории",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EducationProgram"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgramSave"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/programs/{id}/modules": {
+      "post": {
+        "operationId": "education_create_curriculum_module",
+        "summary": "Добавить учебный модуль",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CurriculumModule"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CurriculumModuleSave"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/curriculum-modules/{id}": {
+      "get": {
+        "operationId": "education_curriculum_module",
+        "summary": "Учебный модуль и его уроки",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CurriculumModule"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "education_update_curriculum_module",
+        "summary": "Изменить порядок, описание или архивировать модуль",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CurriculumModule"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CurriculumModuleSave"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/curriculum-modules/{id}/lessons": {
+      "post": {
+        "operationId": "education_create_curriculum_lesson",
+        "summary": "Добавить урок программы",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CurriculumLesson"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CurriculumLessonSave"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/curriculum-lessons/{id}": {
+      "get": {
+        "operationId": "education_curriculum_lesson",
+        "summary": "Урок программы",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CurriculumLesson"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "education_update_curriculum_lesson",
+        "summary": "Изменить или архивировать урок программы",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CurriculumLesson"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CurriculumLessonSave"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/groups/{id}/programs": {
+      "get": {
+        "operationId": "education_group_programs",
+        "summary": "Назначенные версии программы группы",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GroupProgramList"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "education_assign_program",
+        "summary": "Назначить группе неизменяемый снимок программы",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GroupProgram"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgramAssign"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/groups/{id}/progress": {
+      "get": {
+        "operationId": "education_group_progress",
+        "summary": "Прогресс группы по фактам завершённых занятий",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CurriculumProgress"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/students/{id}/curriculum-progress": {
+      "get": {
+        "operationId": "education_student_curriculum_progress",
+        "summary": "Прогресс ученика по сохранённым результатам освоения",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CurriculumProgress"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/student/curriculum-progress": {
+      "get": {
+        "operationId": "education_own_curriculum_progress",
+        "summary": "Собственный прогресс из идентичности Core",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CurriculumProgress"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/groups/{id}/teachers": {
+      "get": {
+        "operationId": "education_group_teachers",
+        "summary": "Преподаватели и возможности назначения",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GroupTeachers"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "education_set_group_teachers",
+        "summary": "Владелец назначает преподавателей той же организации",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GroupTeachers"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupTeachersSave"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/students/new": {
+      "post": {
+        "operationId": "education_create_student",
+        "summary": "Создать ученика через Core и зачислить в группу",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные, а не подстановку.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Student"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EducationStudentCreate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/file-transfers": {
+      "post": {
+        "operationId": "education_transfer_start",
+        "description": "Current actor, organization and resource permissions required. Upload: name, sizeBytes (1..10485760), sha256, optional avatar or lessonId. Complete and abort accept {}. Direct S3 requests never carry Core credentials.",
+        "responses": {
+          "200": {
+            "description": "Actor-bound transfer metadata (id, status, expectedSize, expectedSha256, expiresAt, signed request, result), or download (name, mime, sizeBytes, sha256, signed request).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EducationFileTransfer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EducationFileTransferInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/homework/{id}/file-transfers": {
+      "post": {
+        "operationId": "education_transfer_material",
+        "description": "Current actor, organization and resource permissions required. Upload: name, sizeBytes (1..10485760), sha256, optional avatar or lessonId. Complete and abort accept {}. Direct S3 requests never carry Core credentials.",
+        "responses": {
+          "200": {
+            "description": "Actor-bound transfer metadata (id, status, expectedSize, expectedSha256, expiresAt, signed request, result), or download (name, mime, sizeBytes, sha256, signed request).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EducationFileTransfer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EducationFileTransferInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/homework/{id}/file-transfers": {
+      "post": {
+        "operationId": "education_transfer_submission",
+        "description": "Current actor, organization and resource permissions required. Upload: name, sizeBytes (1..10485760), sha256, optional avatar or lessonId. Complete and abort accept {}. Direct S3 requests never carry Core credentials.",
+        "responses": {
+          "200": {
+            "description": "Actor-bound transfer metadata (id, status, expectedSize, expectedSha256, expiresAt, signed request, result), or download (name, mime, sizeBytes, sha256, signed request).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EducationFileTransfer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EducationFileTransferInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/file-transfers/{id}": {
+      "get": {
+        "operationId": "education_transfer_status",
+        "description": "Current actor, organization and resource permissions required. Upload: name, sizeBytes (1..10485760), sha256, optional avatar or lessonId. Complete and abort accept {}. Direct S3 requests never carry Core credentials.",
+        "responses": {
+          "200": {
+            "description": "Actor-bound transfer metadata (id, status, expectedSize, expectedSha256, expiresAt, signed request, result), or download (name, mime, sizeBytes, sha256, signed request).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EducationFileTransfer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/file-transfers/{id}/complete": {
+      "post": {
+        "operationId": "education_transfer_complete",
+        "description": "Current actor, organization and resource permissions required. Upload: name, sizeBytes (1..10485760), sha256, optional avatar or lessonId. Complete and abort accept {}. Direct S3 requests never carry Core credentials.",
+        "responses": {
+          "200": {
+            "description": "Actor-bound transfer metadata (id, status, expectedSize, expectedSha256, expiresAt, signed request, result), or download (name, mime, sizeBytes, sha256, signed request).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EducationFileTransfer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/file-transfers/{id}/abort": {
+      "post": {
+        "operationId": "education_transfer_abort",
+        "description": "Current actor, organization and resource permissions required. Upload: name, sizeBytes (1..10485760), sha256, optional avatar or lessonId. Complete and abort accept {}. Direct S3 requests never carry Core credentials.",
+        "responses": {
+          "200": {
+            "description": "Actor-bound transfer metadata (id, status, expectedSize, expectedSha256, expiresAt, signed request, result), or download (name, mime, sizeBytes, sha256, signed request).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EducationFileTransfer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/files/{id}/transfer": {
+      "get": {
+        "operationId": "education_transfer_download",
+        "description": "Current actor, organization and resource permissions required. Upload: name, sizeBytes (1..10485760), sha256, optional avatar or lessonId. Complete and abort accept {}. Direct S3 requests never carry Core credentials.",
+        "responses": {
+          "200": {
+            "description": "Actor-bound transfer metadata (id, status, expectedSize, expectedSha256, expiresAt, signed request, result), or download (name, mime, sizeBytes, sha256, signed request).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EducationObjectDownload"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/homework/files/{id}/transfer": {
+      "get": {
+        "operationId": "education_transfer_homework_download",
+        "description": "Current actor, organization and resource permissions required. Upload: name, sizeBytes (1..10485760), sha256, optional avatar or lessonId. Complete and abort accept {}. Direct S3 requests never carry Core credentials.",
+        "responses": {
+          "200": {
+            "description": "Actor-bound transfer metadata (id, status, expectedSize, expectedSha256, expiresAt, signed request, result), or download (name, mime, sizeBytes, sha256, signed request).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/EducationObjectDownload"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -6080,6 +8119,22 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "curriculumLessonId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "groupProgramId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "curriculumSnapshot": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "description": "Immutable lesson, module and program labels at scheduling time."
           }
         },
         "required": [
@@ -6769,6 +8824,12 @@
           "groupId": {
             "type": "string",
             "format": "uuid"
+          },
+          "curriculumLessonId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Lesson in the active group program snapshot. An unassigned or foreign lesson is rejected."
           }
         },
         "required": [
@@ -7331,6 +9392,58 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "guardians": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "personId",
+                "name",
+                "relationship",
+                "contacts"
+              ],
+              "properties": {
+                "personId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "relationship": {
+                  "type": "string",
+                  "enum": [
+                    "mother",
+                    "father",
+                    "guardian"
+                  ]
+                },
+                "contacts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "type",
+                      "value",
+                      "label"
+                    ],
+                    "properties": {
+                      "type": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -8567,6 +10680,702 @@
           "nextOffset",
           "best"
         ]
+      },
+      "CurriculumLesson": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "moduleId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "position",
+          "version",
+          "archivedAt"
+        ]
+      },
+      "CurriculumModule": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "programId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lessons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CurriculumLesson"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "version",
+          "archivedAt",
+          "position",
+          "lessons"
+        ]
+      },
+      "EducationProgram": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "modules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CurriculumModule"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "version",
+          "archivedAt"
+        ]
+      },
+      "EducationProgramPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EducationProgram"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "enum": [
+              50
+            ]
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "nextOffset"
+        ]
+      },
+      "ProgramSave": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 8000
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Expected current revision; a stale version returns 409."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CurriculumModuleSave": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 8000
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Expected current revision; a stale version returns 409."
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CurriculumLessonSave": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 8000
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Expected current revision; a stale version returns 409."
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "GroupProgram": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "programId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "programVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "assignedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "modules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CurriculumModule"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "programId",
+          "programVersion",
+          "name",
+          "description",
+          "assignedAt",
+          "endedAt",
+          "modules"
+        ]
+      },
+      "GroupProgramList": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupProgram"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ProgramAssign": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "programId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "programId"
+        ]
+      },
+      "CurriculumProgress": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "programs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "assignmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "programId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "groupId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "endedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "totalLessons": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "completedLessons": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "masteredLessons": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "percent": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "modules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "totalLessons": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "completedLessons": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "percent": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "not_started",
+                          "in_progress",
+                          "completed"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "totalLessons",
+                      "completedLessons",
+                      "percent",
+                      "status"
+                    ]
+                  }
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "not_started",
+                    "in_progress",
+                    "completed"
+                  ]
+                }
+              },
+              "required": [
+                "assignmentId",
+                "programId",
+                "groupId",
+                "name",
+                "endedAt",
+                "totalLessons",
+                "completedLessons",
+                "masteredLessons",
+                "percent",
+                "modules",
+                "status"
+              ]
+            }
+          }
+        },
+        "required": [
+          "programs"
+        ]
+      },
+      "GroupTeachers": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ownerAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "canAssign": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "accountId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "personId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "assigned": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "accountId",
+                "personId",
+                "name",
+                "assigned"
+              ]
+            }
+          }
+        },
+        "required": [
+          "ownerAccountId",
+          "canAssign",
+          "items"
+        ]
+      },
+      "GroupTeachersSave": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "accountIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "accountIds"
+        ]
+      },
+      "EducationStudentCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "givenName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "familyName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "middleName": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "groupId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "givenName",
+          "familyName",
+          "groupId"
+        ],
+        "description": "Requires education.students.create. Creates Core Person and organization membership, then enrolls in an accessible group atomically. No independent identity or credentials."
+      },
+      "SignedObjectRequest": {
+        "type": "object",
+        "required": [
+          "url",
+          "method",
+          "headers",
+          "expiresAt"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "PUT"
+            ]
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "EducationFileTransferInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "sizeBytes",
+          "sha256"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10485760
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "avatar": {
+            "type": "boolean",
+            "default": false
+          },
+          "lessonId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "EducationFileTransfer": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "expectedSize",
+          "expectedSha256",
+          "expiresAt",
+          "request",
+          "result"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "confirmed",
+              "aborted",
+              "expired"
+            ]
+          },
+          "expectedSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10485760
+          },
+          "expectedSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "request": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SignedObjectRequest"
+              }
+            ],
+            "nullable": true
+          },
+          "result": {
+            "type": "object",
+            "nullable": true,
+            "description": "Existing File or HomeworkFile DTO returned by publication."
+          }
+        }
+      },
+      "EducationObjectDownload": {
+        "type": "object",
+        "required": [
+          "name",
+          "mime",
+          "sizeBytes",
+          "sha256",
+          "request"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10485760
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "request": {
+            "$ref": "#/components/schemas/SignedObjectRequest"
+          }
+        }
       }
     },
     "responses": {
@@ -8591,5 +11400,9 @@
         }
       }
     }
+  },
+  "externalDocs": {
+    "description": "Typing 2.0, Logic, versioned attempts, progress and achievements. Existing legacy routes remain compatible.",
+    "url": "./education-activities.yaml"
   }
 }

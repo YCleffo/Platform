@@ -3,14 +3,15 @@ import { computed } from 'vue';
 import { formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
 import { studentPortalApi } from './api';
 import { studentSession } from './session';
-import { useEducationResource } from '../resources';
+import { useHomeworkResource } from '../homework/resources';
 import { useEducationI18n } from '../i18n';
 import EducationState from '../EducationState.vue';
+import HomeworkSummary from '../homework/HomeworkSummary.vue';
 const { t, locale } = useEducationI18n();
 const org = computed(() => studentSession.organizationId);
-const { data, loading, error, refresh } = useEducationResource(
-  async (_org, signal) => studentPortalApi.home(org.value, signal),
-  [org],
+const { data, loading, error, refresh } = useHomeworkResource(
+  () => org.value,
+  async (organization, signal) => studentPortalApi.home(organization, signal),
 );
 function time(value: string): string {
   return formatZonedTime(value, locale.value, 'UTC');
@@ -26,6 +27,7 @@ function statusLabel(status: string): string {
 </script>
 <template>
   <section>
+    <HomeworkSummary student />
     <EducationState
       :loading="loading"
       :error="error"
@@ -84,15 +86,29 @@ function statusLabel(status: string): string {
         </ul>
       </article>
       <article class="edu-card">
-        <h2>{{ t('education.activities') }}</h2>
+        <div class="edu-section-title">
+          <h2>{{ t('education.activities') }}</h2>
+          <RouterLink
+            to="/student/activities"
+            class="edu-link"
+          >
+            {{ t('education.openActivity') }}
+          </RouterLink>
+        </div>
         <ul class="edu-list">
           <li
-            v-for="activity in data.activities"
+            v-for="activity in data.activities.filter(
+              (a) => a.enabled && ['platform-typing', 'platform-logic'].includes(a.code),
+            )"
             :key="activity.id"
             class="edu-list__item"
           >
             <RouterLink
-              :to="`/student/typing/${activity.code}`"
+              :to="
+                activity.code === 'platform-logic'
+                  ? `/student/logic/${activity.code}`
+                  : `/student/typing/${activity.code}`
+              "
               class="edu-list__main"
             >
               <strong>{{ activity.name }}</strong>

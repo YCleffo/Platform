@@ -1,0 +1,2981 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Platform Education Activities and Achievements",
+    "version": "2.0.0",
+    "description": "Core authentication, organization scope, current student/teacher authorization and private no-store responses. Typing 2.0 and Platform Logic extend the existing activity attempt engine. Fixed exercise/result snapshots preserve historical semantics. Final-text verification and client telemetry have distinct guarantees."
+  },
+  "servers": [
+    {
+      "url": "/api/education"
+    }
+  ],
+  "security": [
+    {
+      "CoreBearer": []
+    }
+  ],
+  "paths": {
+    "/activities": {
+      "get": {
+        "operationId": "education_activity_catalog",
+        "summary": "activity catalog",
+        "description": "",
+        "x-required-permission": "education.activities.manage",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized private result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Catalog"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/activities": {
+      "get": {
+        "operationId": "education_student_activity_catalog",
+        "summary": "student activity catalog",
+        "description": "",
+        "x-required-permission": "education.activities.use",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized private result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Catalog"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/activities/{code}/attempts": {
+      "post": {
+        "operationId": "education_student_start_attempt",
+        "summary": "student start attempt",
+        "description": "Code selects its own strict handler. Native ActivityAssignment IDs enforce membership, opens/due and per-student attempt limits under a row lock. Homework assignment IDs require the existing Homework start route. Exercise and configuration versions are frozen at start.",
+        "x-required-permission": "education.activities.use",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "platform-typing",
+                "platform-logic"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Authorized private result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AttemptExercise"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/TypingStart"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LogicStart"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/attempts/{id}": {
+      "get": {
+        "operationId": "education_student_attempt",
+        "summary": "student attempt",
+        "description": "Owner account, organization, active student mapping, activity permission and privacy are checked on every read. Running Logic exercises contain prompts and options only.",
+        "x-required-permission": "education.activities.use",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized private result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AttemptExercise"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/attempts/{id}/state": {
+      "put": {
+        "operationId": "education_student_save_attempt_state",
+        "summary": "student save attempt state",
+        "description": "Durable draft state. Initial stateVersion is 0. A successful update increments it once. A stale version or finished attempt returns 409 state_conflict. State accepts only the current activity handler fields.",
+        "x-required-permission": "education.activities.use",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized private result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AttemptExercise"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StateUpdate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/attempts/{id}/finish": {
+      "put": {
+        "operationId": "education_student_finish_attempt",
+        "summary": "student finish attempt",
+        "description": "Typing legacy typed/durationSeconds requests are supported. Logic accepts exactly one valid option per generated round. Server computes all metrics. The same canonical request is idempotent including concurrent requests. A changed finish request returns 409 attempt_finished. Logic solutions and explanations become available after finish.",
+        "x-required-permission": "education.activities.use",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized private result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/TypingResult"
+                        },
+                        {
+                          "$ref": "#/components/schemas/LogicResult"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/TypingFinish"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LogicFinish"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/achievements": {
+      "get": {
+        "operationId": "education_student_achievements",
+        "summary": "student achievements",
+        "description": "Six versioned rules use confirmed persisted attempts and accepted Homework reviews. Replayed events cannot duplicate unlocks. Revoked sources revoke dependent awards. New rule versions have separate definition identities. Historical attempts are ingested only by an explicit confirmed source replay, with no automatic database-wide backfill.",
+        "x-required-permission": "education.activities.use",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized private result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Achievements"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/activity-progress": {
+      "get": {
+        "operationId": "education_student_activity_progress",
+        "summary": "student activity progress",
+        "description": "Defaults to the last 31 calendar dates including today. Maximum date difference is 30 days. Counts and best results cover all permitted records in the selected period. History retains the latest 500 records. Privacy filtering occurs before aggregation.",
+        "x-required-permission": "education.activities.use",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "activity",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "platform-typing",
+                "platform-logic"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized private result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ActivityProgress"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/groups/{id}/activity-progress": {
+      "get": {
+        "operationId": "education_group_activity_progress",
+        "summary": "group activity progress",
+        "description": "Existing teacher group authorization and member/resource privacy apply. Up to 50 students per page.",
+        "x-required-permission": "education.activities.manage",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "activity",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "platform-typing",
+                "platform-logic"
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized private result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GroupProgress"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/activities/{code}/assignments": {
+      "post": {
+        "operationId": "education_activities_assign",
+        "summary": "activities assign",
+        "description": "Assign one existing activity to exactly one group or student. Configuration is validated by its activity handler. Existing Homework remains the review/submission workflow.",
+        "x-required-permission": "education.activities.manage",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "platform-typing",
+                "platform-logic"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Authorized private result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ActivityAssignment"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/attempts/{id}/revoke": {
+      "put": {
+        "operationId": "education_revoke_activity_attempt",
+        "summary": "revoke activity attempt",
+        "description": "Existing authorized teacher scope only. Records source revocation and reconciles dependent achievements. Withdrawal preserves historical result evidence. Revoked attempts leave progress and personal-best projections.",
+        "x-required-permission": "education.activities.manage",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized private result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AttemptRevocation"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request rejected by current identity, permission, source state or strict input validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "CoreBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "TypingConfig": {
+        "type": "object",
+        "properties": {
+          "durationSeconds": {
+            "type": "integer",
+            "enum": [
+              15,
+              30,
+              60
+            ],
+            "default": 30
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ],
+            "default": "en"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "words",
+              "sentences",
+              "numbers",
+              "code",
+              "accuracy"
+            ],
+            "default": "words"
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3,
+            "default": 1
+          },
+          "minAccuracy": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 0
+          },
+          "targetWpm": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 500,
+            "default": 0
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 20
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "LogicConfig": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ],
+            "default": "ru"
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3,
+            "default": 1
+          },
+          "roundCount": {
+            "type": "integer",
+            "enum": [
+              5,
+              10
+            ],
+            "default": 5
+          },
+          "minAccuracy": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 60
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 20
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "TypingStart": {
+        "type": "object",
+        "properties": {
+          "durationSeconds": {
+            "type": "integer",
+            "enum": [
+              15,
+              30,
+              60
+            ],
+            "default": 30
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ],
+            "default": "en"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "words",
+              "sentences",
+              "numbers",
+              "code",
+              "accuracy"
+            ],
+            "default": "words"
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3,
+            "default": 1
+          },
+          "minAccuracy": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 0
+          },
+          "targetWpm": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 500,
+            "default": 0
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 20
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "browser",
+              "managed-device",
+              "native-app"
+            ]
+          },
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "LogicStart": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ],
+            "default": "ru"
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3,
+            "default": 1
+          },
+          "roundCount": {
+            "type": "integer",
+            "enum": [
+              5,
+              10
+            ],
+            "default": 5
+          },
+          "minAccuracy": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 60
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 20
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "browser",
+              "managed-device",
+              "native-app"
+            ]
+          },
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "ActivityDefinition": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "platform-typing",
+              "platform-logic"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "typing",
+              "web-game"
+            ]
+          },
+          "contractVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object"
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "requiredPermission": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "kind",
+          "contractVersion",
+          "enabled",
+          "config",
+          "metrics",
+          "requiredPermission"
+        ],
+        "additionalProperties": false
+      },
+      "Catalog": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActivityDefinition"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "LogicAnswer": {
+        "type": "object",
+        "properties": {
+          "roundId": {
+            "type": "string"
+          },
+          "optionId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "roundId",
+          "optionId"
+        ],
+        "additionalProperties": false
+      },
+      "LogicRound": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "sequence",
+              "pattern",
+              "logic",
+              "order",
+              "algorithm"
+            ]
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "prompt",
+          "options"
+        ],
+        "additionalProperties": false
+      },
+      "TypingExercise": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "words",
+              "sentences",
+              "numbers",
+              "code",
+              "accuracy"
+            ],
+            "default": "words"
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "enum": [
+              15,
+              30,
+              60
+            ],
+            "default": 30
+          }
+        },
+        "required": [
+          "text",
+          "version",
+          "language",
+          "mode",
+          "difficulty",
+          "durationSeconds"
+        ],
+        "additionalProperties": false
+      },
+      "LogicExercise": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ]
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "rounds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LogicRound"
+            },
+            "minItems": 5,
+            "maxItems": 10
+          }
+        },
+        "required": [
+          "version",
+          "language",
+          "difficulty",
+          "rounds"
+        ],
+        "additionalProperties": false
+      },
+      "Attempt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activityCode": {
+            "type": "string",
+            "enum": [
+              "platform-typing",
+              "platform-logic"
+            ]
+          },
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "finished",
+              "expired",
+              "failed"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "browser",
+              "managed-device",
+              "native-app"
+            ]
+          },
+          "contractVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TypingConfig"
+              },
+              {
+                "$ref": "#/components/schemas/LogicConfig"
+              }
+            ]
+          },
+          "state": {
+            "type": "object"
+          },
+          "stateVersion": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "activityCode",
+          "status",
+          "startedAt",
+          "config",
+          "state",
+          "stateVersion"
+        ],
+        "additionalProperties": true
+      },
+      "AttemptExercise": {
+        "type": "object",
+        "properties": {
+          "attempt": {
+            "$ref": "#/components/schemas/Attempt"
+          },
+          "exercise": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TypingExercise"
+              },
+              {
+                "$ref": "#/components/schemas/LogicExercise"
+              }
+            ]
+          },
+          "result": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TypingResult"
+              },
+              {
+                "$ref": "#/components/schemas/LogicResult"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "attempt",
+          "exercise"
+        ],
+        "additionalProperties": false
+      },
+      "TypingFinish": {
+        "type": "object",
+        "properties": {
+          "typed": {
+            "type": "string",
+            "maxLength": 2500
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "enum": [
+              15,
+              30,
+              60
+            ],
+            "default": 30
+          },
+          "corrections": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "inputErrors": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          }
+        },
+        "required": [
+          "typed",
+          "durationSeconds"
+        ],
+        "additionalProperties": false
+      },
+      "LogicFinish": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LogicAnswer"
+            },
+            "minItems": 5,
+            "maxItems": 10
+          }
+        },
+        "required": [
+          "answers"
+        ],
+        "additionalProperties": false
+      },
+      "TypingResult": {
+        "type": "object",
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "enum": [
+              15,
+              30,
+              60
+            ],
+            "default": 30
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "words",
+              "sentences",
+              "numbers",
+              "code",
+              "accuracy"
+            ],
+            "default": "words"
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "keystrokes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "typedCharacters": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "correctChars": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "errors": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "wpm": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 500
+          },
+          "accuracy": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "corrections": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000,
+            "nullable": true
+          },
+          "inputErrors": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000,
+            "nullable": true
+          },
+          "telemetryVerified": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          }
+        },
+        "required": [
+          "attemptId",
+          "durationSeconds",
+          "language",
+          "keystrokes",
+          "correctChars",
+          "errors",
+          "wpm",
+          "accuracy"
+        ],
+        "additionalProperties": false,
+        "description": "keystrokes is the historical field for the number of final Unicode text characters. Corrections and inputErrors are optional unverified client observations. Server metrics compare final text against the immutable exercise snapshot."
+      },
+      "LogicResult": {
+        "type": "object",
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ]
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "correctAnswers": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "totalRounds": {
+            "type": "integer",
+            "enum": [
+              5,
+              10
+            ]
+          },
+          "errors": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "accuracy": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "rounds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "roundId": {
+                  "type": "string"
+                },
+                "optionId": {
+                  "type": "string"
+                },
+                "correctOptionId": {
+                  "type": "string"
+                },
+                "correct": {
+                  "type": "boolean"
+                },
+                "explanation": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "roundId",
+                "optionId",
+                "correctOptionId",
+                "correct",
+                "explanation"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "attemptId",
+          "language",
+          "difficulty",
+          "correctAnswers",
+          "totalRounds",
+          "errors",
+          "score",
+          "accuracy",
+          "passed",
+          "rounds"
+        ],
+        "additionalProperties": false
+      },
+      "StateUpdate": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483646
+              },
+              "state": {
+                "type": "object",
+                "properties": {
+                  "typed": {
+                    "type": "string",
+                    "maxLength": 2500
+                  },
+                  "corrections": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000
+                  },
+                  "inputErrors": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000
+                  }
+                },
+                "required": [],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "version",
+              "state"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483646
+              },
+              "state": {
+                "type": "object",
+                "properties": {
+                  "answers": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LogicAnswer"
+                    }
+                  },
+                  "currentRound": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10
+                  }
+                },
+                "required": [],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "version",
+              "state"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Achievement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "ruleVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "unlockedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "attempt",
+              "homework",
+              null
+            ],
+            "nullable": true
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "progress": {
+            "type": "object",
+            "properties": {
+              "current": {
+                "type": "number",
+                "minimum": 0
+              },
+              "target": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "current",
+              "target"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "description",
+          "ruleVersion",
+          "unlockedAt",
+          "sourceType",
+          "sourceId",
+          "progress"
+        ],
+        "additionalProperties": false
+      },
+      "Achievements": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Achievement"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "TypingHistory": {
+        "type": "object",
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "enum": [
+              15,
+              30,
+              60
+            ],
+            "default": 30
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "words",
+              "sentences",
+              "numbers",
+              "code",
+              "accuracy"
+            ],
+            "default": "words"
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "keystrokes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "typedCharacters": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "correctChars": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "errors": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "wpm": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 500
+          },
+          "accuracy": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "corrections": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000,
+            "nullable": true
+          },
+          "inputErrors": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000,
+            "nullable": true
+          },
+          "telemetryVerified": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "attemptId",
+          "durationSeconds",
+          "language",
+          "keystrokes",
+          "correctChars",
+          "errors",
+          "wpm",
+          "accuracy",
+          "createdAt"
+        ],
+        "additionalProperties": true
+      },
+      "LogicHistory": {
+        "type": "object",
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ]
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "correctAnswers": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "totalRounds": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 10
+          },
+          "errors": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "accuracy": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "passed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "attemptId",
+          "createdAt",
+          "language",
+          "difficulty",
+          "correctAnswers",
+          "totalRounds",
+          "errors",
+          "score",
+          "accuracy",
+          "passed"
+        ],
+        "additionalProperties": true
+      },
+      "ActivityProgress": {
+        "type": "object",
+        "properties": {
+          "typing": {
+            "type": "object",
+            "properties": {
+              "attempts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "bestWpm": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 500,
+                "nullable": true
+              },
+              "averageAccuracy": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100,
+                "nullable": true
+              },
+              "history": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TypingHistory"
+                }
+              }
+            },
+            "required": [
+              "attempts",
+              "bestWpm",
+              "averageAccuracy",
+              "history"
+            ],
+            "additionalProperties": false
+          },
+          "logic": {
+            "type": "object",
+            "properties": {
+              "attempts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "bestScore": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000,
+                "nullable": true
+              },
+              "history": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LogicHistory"
+                }
+              }
+            },
+            "required": [
+              "attempts",
+              "bestScore",
+              "history"
+            ],
+            "additionalProperties": false
+          },
+          "achievements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Achievement"
+            }
+          },
+          "completedAssignments": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "historyLimit": {
+            "type": "integer",
+            "enum": [
+              500
+            ]
+          },
+          "historyTruncated": {
+            "type": "boolean"
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "typing",
+          "logic",
+          "achievements",
+          "completedAssignments"
+        ],
+        "additionalProperties": true
+      },
+      "GroupProgress": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/ActivityProgress"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "studentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "studentId",
+                    "name"
+                  ],
+                  "additionalProperties": true
+                }
+              ]
+            }
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "enum": [
+              50
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "from",
+          "to",
+          "offset",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "ActivityAssignment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activityCode": {
+            "type": "string"
+          },
+          "activityName": {
+            "type": "string"
+          },
+          "groupId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "config": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "activityId",
+          "activityCode",
+          "activityName",
+          "groupId",
+          "studentId",
+          "config"
+        ],
+        "additionalProperties": true
+      },
+      "AssignmentInput": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TypingConfig"
+              },
+              {
+                "$ref": "#/components/schemas/LogicConfig"
+              }
+            ]
+          }
+        },
+        "required": [
+          "config"
+        ],
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "groupId"
+            ],
+            "not": {
+              "required": [
+                "studentId"
+              ]
+            }
+          },
+          {
+            "required": [
+              "studentId"
+            ],
+            "not": {
+              "required": [
+                "groupId"
+              ]
+            }
+          }
+        ]
+      },
+      "AttemptRevocation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "studentId",
+          "revokedAt"
+        ],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "meta": {
+                "type": "object",
+                "properties": {
+                  "educationCode": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "educationCode"
+                ],
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": true
+      }
+    }
+  }
+}

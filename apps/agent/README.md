@@ -1,39 +1,58 @@
-# KiberOne Agent
+# Platform Agent
 
-Отдельное приложение для операций Windows, которые браузер и сервер выполнить не могут: управляемые временные профили учеников, синхронизация Documents с Storage и жизненный цикл учебной сессии.
+An existing installation upgrades through `Install-Service.ps1 -MigrateLegacyState`. The installer stops its earlier owned service, invokes the published service's `--migrate-legacy-state` operation and disables the earlier registration after successful migration. The operation verifies a retained backup and a staged copy before publishing `ProgramData\Platform\Agent`. It preserves unfinished sessions, Documents, managed account SIDs and protected credentials. Conflicting journals and orphaned account records stop the migration for recovery. Service startup checks the migration receipt before using the default state location. Historical names appear in the explicit `LegacyInstallation` compatibility files to locate and read earlier data.
 
-## Компоненты
+Windows service and desktop UI for managed classroom sessions and Documents synchronization through the existing Platform DeviceManagement and Storage APIs.
 
-- **KiberOne.Agent** — домен: конечный автомат сессий (зеркало серверной модели), манифесты и diff, атомарный журнал состояния, HTTP-клиент протокола, абстракция управления профилями.
-- **KiberOne.Agent.Service** — привилегированный хост: Windows Service через SCM (P/Invoke, без NuGet) и консольный режим `--console`; локальный named-pipe IPC для UI.
-- **KiberOne.Agent.Ui** — непривилегированный консольный интерфейс; читает только статус через named pipe, административных операций не выполняет.
-- **KiberOne.Agent.Tests** — автономный тестовый прогон (без NuGet): конечный автомат, manifest/diff, журнал, изолированный менеджер профилей.
+## S3 document transfers
 
-## Сборка и проверка
+The platform agent exchanges authenticated metadata with DeviceManagement and Storage, then uses the returned signed requests for S3. Uploads keep a read-sharing file lock and use bounded streams. Multipart requests run within the configured concurrency and share one bandwidth budget. The agent hashes each part, checks the complete source again before confirmation and validates the server's version, size and SHA-256 receipt.
+
+The existing durable journal stores transfer IDs, expected object identity and completed part hashes. Download checkpoints contain hashes of flushed 8 MiB chunks. On restart the agent verifies these chunks, discards the uncheckpointed tail and requests the remaining range. Upgrade recovery copies any earlier staging partial to the current protected staging directory before checkpoint verification. Signed URLs stay transient. The device credential is attached only to platform metadata requests.
+
+Download partials live in an ACL-protected `.platform-transfer-staging` directory beside Documents. Their location keeps the final rename on the same filesystem and excludes partial files from the Documents manifest. The agent verifies the whole size and SHA-256 before placing a document. Unique existing local bytes receive a verified conflict copy before replacement. SyncIn remains required before ACTIVE. Pending uploads block confirmation, profile cleanup and adoption of another session.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PLATFORM_AGENT_TRANSFER_MAX_BYTES` | 10 GiB | Configured file bound. Server quotas and limits also apply |
+| `PLATFORM_AGENT_TRANSFER_CONCURRENCY` | 3 | Maximum parallel multipart requests, bounded to 1–16 |
+| `PLATFORM_AGENT_TRANSFER_BYTES_PER_SECOND` | 0 | Shared upload/download bandwidth limit. Zero disables rate limiting |
+| `PLATFORM_AGENT_TRANSFER_RETRY_ATTEMPTS` | 4 | Bounded retry budget with exponential delay and jitter |
+| `PLATFORM_AGENT_TRANSFER_TIMEOUT_SECONDS` | 900 | Deadline for one transfer attempt. Metadata requests use 30 seconds |
+
+The targeted lifecycle and IPC regressions use a controlled HTTP implementation. Native Windows service restart, reboot, logon, real S3 multipart and large-file fault acceptance require their corresponding isolated integration scenarios. Existing confirmed file hashes avoid repeated downloads. Full manifest scans still re-hash local content, so timestamp-only matching does not establish integrity.
+
+- `Platform.Agent`: session state machine, durable journal, manifests, HTTP/IPC contracts, native/test session adapters.
+- `Platform.Agent.Service`: LocalSystem SCM host and OS-authenticated named-pipe IPC; `--console` is available for safe development.
+- `Platform.Agent.Ui`: unprivileged Windows Forms UI and optional JSON `--console` status client. Enrollment requires an administrator; a managed student can request the end of their own session.
+- `Platform.CredentialProvider`: separate VM-only x64 COM logon tile. C++ v143/Windows SDK build and native VM validation are still required.
+- `Platform.Agent.Tests`, `Platform.Agent.RegressionTests`: targeted autonomous tests using isolated temporary Documents and a controlled HTTP double.
+- `Platform.Agent.HttpScenario`: opt-in integration against production HTTP Device/Storage actions in the separate classroom test database. It uses the test profile adapter and does not verify native Windows logon.
+
+## Targeted local verification
 
 ```powershell
-dotnet build KiberOne.Agent.sln
-dotnet run --project KiberOne.Agent.Tests
+dotnet build .\apps\agent\Platform.Agent.Service\Platform.Agent.Service.csproj
+dotnet build .\apps\agent\Platform.Agent.Ui\Platform.Agent.Ui.csproj
+dotnet run --project .\apps\agent\Platform.Agent.Tests
+dotnet run --project .\apps\agent\Platform.Agent.RegressionTests
+python .\apps\agent\tests\ipc_smoke.py
 ```
 
-## Конфигурация (переменные окружения)
+The IPC smoke explicitly disables both native-mode switches. It starts a disposable console process, checks the actual named pipe, then removes only its own temporary test directory. It never registers a service or COM provider and never changes Windows accounts/profiles.
 
-| Переменная | Назначение |
+## Configuration
+
+| Variable | Meaning |
 | --- | --- |
-| `KIBERONE_AGENT_BASE_URL` | Адрес Platform (по умолчанию `http://127.0.0.1:8080`) |
-| `KIBERONE_AGENT_STATE_DIR` | Каталог журнала и секретов агента (защитить ACL) |
-| `KIBERONE_AGENT_DOCUMENTS_ROOT` | Тестовая папка Documents (development mode) |
-| `KIBERONE_AGENT_ALLOW_INSECURE_HTTP` | Явное разрешение локального HTTP для разработки |
-| `KIBERONE_AGENT_DANGEROUS_WINDOWS_MODE` | Включает настоящие операции профилей — только в выделенной тестовой VM |
+| `PLATFORM_AGENT_BASE_URL` | HTTPS Platform URL; default local development URL `http://127.0.0.1:8080` requires explicit insecure-local opt-in |
+| `PLATFORM_AGENT_STATE_DIR` | Private journal/credential directory; default actual ProgramData `Platform\Agent` |
+| `PLATFORM_AGENT_DOCUMENTS_ROOT` | Development test Documents root |
+| `PLATFORM_AGENT_ALLOW_INSECURE_HTTP=1` | Allows HTTP only for loopback; remote addresses always require HTTPS |
+| `PLATFORM_AGENT_DANGEROUS_WINDOWS_MODE=1` | Selects the native profile adapter; additionally requires the next guard and an expiring authorized VM permit |
+| `PLATFORM_AGENT_DANGEROUS_MODE=true` | Separate native-operation guard; insufficient without virtual firmware and matching MachineGuid permit |
+| `PLATFORM_AGENT_ALLOW_CONSOLE_IPC=1` | Allows the UI to verify a same-user console pipe for local development; leave disabled for installed service |
 
-## Границы и незавершённое
+`AUTHORIZED → PREPARING → WINDOWS_PROFILE_READY → SYNCING_IN → ACTIVE → ENDING → SYNCING_OUT → STORAGE_CONFIRMED → CLEANUP → CLOSED`; failures preserve local data in `SYNC_PENDING` or `RECOVERY_REQUIRED`. Native ACTIVE requires independent WTS SID evidence. A reboot/lost token invalidates the durable prior logon flag and requires recovery.
 
-- Имитация Windows-профилей полностью изолирована в `TestSessionManager` и не является доказательством корректности Windows Logon.
-- `WindowsSessionManager` — скелет; реальные операции требуют включения опасного режима в специальной тестовой VM и пока не реализованы.
-- Pre-login сценарий (Credential Provider / kiosk shell) **не реализован**: агент не блокирует Windows до авторизации и не выдаёт это за готовое.
-- Кейлоггер, запись рабочего стола и скрытое наблюдение не входят в состав агента; результаты передают только доверенные нативные приложения через контракт Education Activities.
-- Аварийный административный доступ для восстановления компьютера должен быть обеспечен на уровне развёртывания (локальная административная учётная запись вне агента).
-
-## Жизненный цикл
-
-`AUTHORIZED → PREPARING → WINDOWS_PROFILE_READY → SYNCING_IN → ACTIVE → ENDING → SYNCING_OUT → STORAGE_CONFIRMED → CLEANUP → CLOSED`, аварийные `SYNC_PENDING / RECOVERY_REQUIRED / FAILED`. Локальные документы не удаляются, пока сервер не подтвердил принятый манифест (`ConfirmSyncAsync`), а очистка профиля выполняется только после `STORAGE_CONFIRMED`.
+See [CREDENTIAL_PROVIDER.md](CREDENTIAL_PROVIDER.md) for current executable contracts and [VM_ACCEPTANCE.md](VM_ACCEPTANCE.md) for guarded installation, VMware HTTPS, manual native checks and actual evidence statuses.

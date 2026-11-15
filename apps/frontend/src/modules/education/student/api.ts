@@ -1,12 +1,13 @@
 import { coreAdminHttp } from '@/shared/api/core/adminHttp';
 import { ApiResponseError } from '@/shared/api/errors';
 import type { Lesson, Page, ResultStatus } from '../api';
+import type { ActivityConfig } from '../activityTypes';
 
 export interface StudentActivityDefinition { id: string; code: string; name: string; kind: 'typing' | 'web-game' | 'test' | 'programming' | 'native-app'; contractVersion: number; enabled: boolean; config: Record<string, unknown>; metrics: Record<string, unknown>[]; requiredPermission: string }
 export interface StudentAssignment { id: string; activityId: string; activityCode: string; activityName: string; groupId: string | null; studentId: string | null; config: Record<string, unknown>; opensAt: string | null; dueAt: string | null; completion: Record<string, unknown> | null }
 export interface StudentDiaryLesson { id: string; groupId: string; groupName: string; title: string; startsAt: string; endsAt: string; location: string; status: Lesson['status']; attendance: 'pending' | 'present' | 'absent'; resultStatus: ResultStatus; resultComment: string | null }
-export interface TypingResult { attemptId: string; durationSeconds: 15 | 30 | 60; language: 'ru' | 'en'; keystrokes: number; correctChars: number; errors: number; wpm: number; accuracy: number; createdAt?: string }
-export interface ActivityAttemptSummary { id: string; activityId: string; activityCode: string; activityName: string; status: 'running' | 'finished' | 'expired' | 'failed'; source: string; startedAt: string; finishedAt: string | null; durationSeconds?: number | null; language?: string | null; wpm?: number | null; accuracy?: number | null; errors?: number | null }
+export interface TypingResult { attemptId: string; durationSeconds: 15 | 30 | 60; language: 'ru' | 'en'; keystrokes: number; correctChars: number; errors: number; wpm: number; accuracy: number; createdAt?: string; typedCharacters?: number; corrections?: number; inputErrors?: number; telemetryVerified?: boolean; passed?: boolean }
+export interface ActivityAttemptSummary { id: string; activityId: string; activityCode: string; activityName: string; status: 'running' | 'finished' | 'expired' | 'failed'; source: string; startedAt: string; finishedAt: string | null; durationSeconds?: number | null; language?: string | null; wpm?: number | null; accuracy?: number | null; errors?: number | null; score?: number | null; correctAnswers?: number | null; totalRounds?: number | null }
 export interface TypingExercise { attempt: { id: string; status: string; startedAt: string }; exercise: { text: string; durationSeconds: 15 | 30 | 60; language: 'ru' | 'en' } }
 export interface StudentHome { nextLesson: StudentDiaryLesson | null; groups: { id: string; name: string; archivedAt: string | null }[]; recentResults: StudentDiaryLesson[]; activities: StudentActivityDefinition[]; pendingAttempts: ActivityAttemptSummary[]; bestTyping: TypingResult | null }
 export interface StudentLessonDetail extends StudentDiaryLesson { materials: { id: string; name: string; mime: string; sizeBytes: number; createdAt: string }[] }
@@ -75,8 +76,8 @@ export const studentPortalApi = {
   lesson: (org: string, id: string, signal?: AbortSignal) => get(`/education/student/lessons/${pathId(id)}`, org, lessonDetailGuard, signal),
   activities: (org: string, signal?: AbortSignal) => get('/education/student/activities', org, (v): v is { items: StudentActivityDefinition[] } => record(v) && Array.isArray(v.items) && v.items.every(definitionGuard), signal),
   activityConfig: (org: string, code: string, signal?: AbortSignal) => get(`/education/student/activities/${pathId(code)}`, org, configGuard, signal),
-  startAttempt: (org: string, code: string, values: { durationSeconds: 15 | 30 | 60; language: 'ru' | 'en' }, signal?: AbortSignal) => post(`/education/student/activities/${pathId(code)}/attempts`, org, values, exerciseGuard, signal),
-  finishAttempt: (org: string, attemptId: string, values: { typed: string; durationSeconds: number }) => write(`/education/student/attempts/${pathId(attemptId)}/finish`, org, values, typingResultGuard),
+  startAttempt: (org: string, code: string, values: ActivityConfig & { durationSeconds: 15 | 30 | 60 }, signal?: AbortSignal) => post(`/education/student/activities/${pathId(code)}/attempts`, org, values, exerciseGuard, signal),
+  finishAttempt: (org: string, attemptId: string, values: { typed: string; durationSeconds: number; corrections?: number; inputErrors?: number }) => write(`/education/student/attempts/${pathId(attemptId)}/finish`, org, values, typingResultGuard),
   attempts: (org: string, offset = 0, signal?: AbortSignal) => get(`/education/student/attempts?offset=${offset}`, org, pageGuard(attemptSummaryGuard), signal),
   typingHistory: (org: string, offset = 0, signal?: AbortSignal) => get(`/education/student/typing?offset=${offset}`, org, typingHistoryGuard, signal),
 };

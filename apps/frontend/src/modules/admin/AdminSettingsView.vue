@@ -4,12 +4,14 @@ import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import ConfigSettingsPanel from './configuration/ConfigSettingsPanel.vue';
 import ConfigFlagsPanel from './configuration/ConfigFlagsPanel.vue';
 import ConfigPublicPanel from './configuration/ConfigPublicPanel.vue';
+import BrandingSettingsPanel from './configuration/BrandingSettingsPanel.vue';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
 import './configuration/configuration.css';
 const auth = useAdminAuthStore();
 const tab = ref('settings');
 const tabs = computed(() =>
   [
+    { key: 'branding', label: 'branding.title', allowed: auth.can('core.settings.read') },
     {
       key: 'settings',
       label: 'configuration.systemSettings',
@@ -43,7 +45,8 @@ watch(
         {{ $t(item.label) }}
       </AppButton>
     </nav>
-    <ConfigSettingsPanel v-if="tab === 'settings'" />
+    <BrandingSettingsPanel v-if="tab === 'branding'" />
+    <ConfigSettingsPanel v-else-if="tab === 'settings'" />
     <ConfigFlagsPanel v-else-if="tab === 'flags'" />
     <ConfigPublicPanel v-else-if="tab === 'public'" />
     <p

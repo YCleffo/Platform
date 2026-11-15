@@ -1,0 +1,48 @@
+# Merge with compose.yaml for a local installation, or use alone for an isolated S3 fixture.
+# Generate the secret configuration first: python scripts/dev/storage02/s3-config.py --directory runtime/s3
+services:
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.53@sha256:ccad23e18639c8b98cee17e7100b95830a06077b56d8e5b006d6dcf8ec5e94a0
+    restart: unless-stopped
+    command: ["server", "-dir=/data", "-ip=seaweedfs", "-ip.bind=0.0.0.0", "-master.volumeSizeLimitMB=1024", "-volume.max=0", "-filer", "-filer.exposeDirectoryData=false", "-filer.disableDirListing", "-s3", "-s3.port=8333", "-s3.port.iceberg=0", "-s3.port.lance=0", "-s3.config=/etc/seaweedfs/s3.json"]
+    volumes:
+      - seaweedfs_data:/data
+      - ${S3_CONFIG_FILE:-./runtime/s3/seaweedfs.json}:/etc/seaweedfs/s3.json:ro
+    ports:
+      - "127.0.0.1:${S3_PORT:-8333}:8333"
+    networks: [s3_net, s3_endpoint]
+    logging:
+      driver: local
+      options: {max-size: "10m", max-file: "2"}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9333/cluster/status"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+  s3-init:
+    image: platform-backend:latest
+    restart: "no"
+    entrypoint: ["php", "/app/bin/s3-init.php"]
+    volumes:
+      - ${S3_APP_BACKEND_PATH:-./apps/backend}:/app:ro
+    environment:
+      S3_ENDPOINT_INTERNAL: ${S3_ENDPOINT_INTERNAL:-http://seaweedfs:8333}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET_STORAGE: ${S3_BUCKET_STORAGE:-platform-storage}
+      S3_BUCKET_EDUCATION: ${S3_BUCKET_EDUCATION:-platform-education}
+      S3_INIT_ACCESS_KEY_ID: ${S3_INIT_ACCESS_KEY_ID:?Generate S3 initializer credentials}
+      S3_INIT_SECRET_ACCESS_KEY: ${S3_INIT_SECRET_ACCESS_KEY:?Generate S3 initializer credentials}
+      S3_CORS_ORIGINS: ${S3_CORS_ORIGINS:-http://localhost:5174,http://127.0.0.1:5174,http://localhost:5173}
+    depends_on:
+      seaweedfs: {condition: service_healthy}
+    networks: [s3_net]
+    logging:
+      driver: local
+      options: {max-size: "10m", max-file: "2"}
+volumes:
+  seaweedfs_data:
+networks:
+  s3_net:
+    internal: true
+  s3_endpoint:

@@ -3,13 +3,18 @@ import { computed, nextTick, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ChevronLeft, ChevronRight } from '@/shared/ui/icons';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
-import { addCalendarDays, formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
+import {
+  addCalendarDays,
+  calendarWeek,
+  formatCalendarDate,
+  isoToZonedDateTime,
+} from '@/shared/formatting/calendar';
 import { validDate } from '@/shared/formatting/temporal';
-import { educationApi, type Lesson } from './api';
+import { educationApi } from './api';
+import CalendarTimeGrid from './CalendarTimeGrid.vue';
 import { useEducationWorkspace } from './workspace';
 import { useEducationResource } from './resources';
 import { useEducationI18n } from './i18n';
-import { lessonDisplayStatus } from './status';
 import EducationState from './EducationState.vue';
 const workspace = useEducationWorkspace();
 const route = useRoute();
@@ -20,25 +25,36 @@ const selected = ref(
     ? route.query.date
     : workspace.header!.date,
 );
+const view = ref(route.query.view === 'week' ? 'week' : 'day');
+const days = computed(() =>
+  view.value === 'week' ? calendarWeek(selected.value) : [selected.value],
+);
 watch(
   () => route.query.date,
   (date) => {
     if (typeof date === 'string' && validDate(date)) selected.value = date;
   },
 );
-watch(selected, (date) => {
-  if (validDate(date)) void router.replace({ query: { date } });
+watch([selected, view], ([date, mode]) => {
+  if (validDate(date)) void router.replace({ query: { date, view: mode } });
 });
 const { data, loading, error, refresh } = useEducationResource(
-  (org, signal) => educationApi.timeline(org, selected.value, signal),
-  [selected],
+  (org, signal) => educationApi.schedule(org, days.value[0]!, days.value.at(-1)!, signal),
+  [days],
 );
-const label = computed(() =>
-  formatCalendarDate(selected.value, locale.value, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  }),
+const columns = computed(() =>
+  days.value.map((day) => ({
+    day,
+    items: [
+      ...(data.value?.lessons ?? []).map((lesson) => ({ ...lesson, kind: 'lesson' as const })),
+      ...(data.value?.events ?? []),
+    ]
+      .filter(
+        (item) =>
+          isoToZonedDateTime(item.startsAt, workspace.header!.timezone).slice(0, 10) === day,
+      )
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+  })),
 );
 watch(data, async (value) => {
   if (value && route.hash.startsWith('#event-')) {
@@ -46,12 +62,8 @@ watch(data, async (value) => {
     document.getElementById(route.hash.slice(1))?.scrollIntoView({ block: 'center' });
   }
 });
-function time(value: string): string {
-  return formatZonedTime(value, locale.value, workspace.header!.timezone);
-}
-function status(lesson: Lesson): string {
-  const value = lessonDisplayStatus(lesson, workspace.header!.now);
-  return t(`education.${value === 'now' ? 'inProgress' : value}`);
+function navigate(direction: number): void {
+  selected.value = addCalendarDays(selected.value, direction * (view.value === 'week' ? 7 : 1));
 }
 </script>
 <template>
@@ -61,7 +73,7 @@ function status(lesson: Lesson): string {
       <div class="edu-form-actions">
         <RouterLink
           :to="`/lessons/new?date=${selected}`"
-          class="edu-button"
+          class="edu-button edu-button--primary"
         >
           {{ t('education.createLesson') }}
         </RouterLink>
@@ -78,82 +90,87 @@ function status(lesson: Lesson): string {
         type="button"
         class="edu-icon-button"
         :aria-label="
-          formatCalendarDate(addCalendarDays(selected, -1), locale, { dateStyle: 'full' })
+          formatCalendarDate(addCalendarDays(selected, view === 'week' ? -7 : -1), locale, {
+            dateStyle: 'full',
+          })
         "
-        @click="selected = addCalendarDays(selected, -1)"
+        @click="navigate(-1)"
       >
-        <ChevronLeft :size="20" />
+        <ChevronLeft
+          :size="20"
+          aria-hidden="true"
+        />
       </button>
       <AppInput
         id="education-calendar-date"
         v-model="selected"
         type="date"
-        :label="t('education.week')"
+        :label="t('education.calendar')"
       />
       <button
         type="button"
         class="edu-icon-button"
         :aria-label="
-          formatCalendarDate(addCalendarDays(selected, 1), locale, { dateStyle: 'full' })
+          formatCalendarDate(addCalendarDays(selected, view === 'week' ? 7 : 1), locale, {
+            dateStyle: 'full',
+          })
         "
-        @click="selected = addCalendarDays(selected, 1)"
+        @click="navigate(1)"
       >
-        <ChevronRight :size="20" />
+        <ChevronRight
+          :size="20"
+          aria-hidden="true"
+        />
+      </button>
+      <div
+        class="edu-pills"
+        role="group"
+        :aria-label="t('education.calendar')"
+      >
+        <button
+          type="button"
+          :aria-pressed="view === 'day'"
+          @click="view = 'day'"
+        >
+          {{ t('education.dayView') }}
+        </button>
+        <button
+          type="button"
+          :aria-pressed="view === 'week'"
+          @click="view = 'week'"
+        >
+          {{ t('education.weekView') }}
+        </button>
+      </div>
+      <button
+        type="button"
+        class="edu-button"
+        @click="selected = workspace.header!.date"
+      >
+        {{ t('education.today') }}
       </button>
     </div>
-    <p class="edu-subtle">{{ workspace.header!.timezone }}</p>
-    <h2>{{ label }}</h2>
+    <p class="edu-subtle">
+      {{ workspace.header!.timezone }}
+      <span
+        v-if="loading && data"
+        role="status"
+      >
+        · {{ t('education.refreshing') }}
+      </span>
+    </p>
     <EducationState
-      :loading="loading"
+      :loading="loading && !data"
       :error="error"
-      :empty="data && !data.items.length ? t('education.emptyDay') : undefined"
       @retry="refresh"
     />
-    <ul
+    <CalendarTimeGrid
       v-if="data"
-      class="edu-list"
-    >
-      <li
-        v-for="item in data.items"
-        :id="`event-${item.id}`"
-        :key="item.id"
-      >
-        <RouterLink
-          v-if="item.kind === 'lesson'"
-          :to="`/lessons/${item.id}`"
-          class="edu-list__item"
-        >
-          <div>
-            <strong>{{ item.title }}</strong>
-            <p>{{ time(item.startsAt) }} – {{ time(item.endsAt) }} · {{ item.groupName }}</p>
-            <small>{{ item.location }}</small>
-          </div>
-          <span
-            class="edu-status"
-            :class="`edu-status--${lessonDisplayStatus(item, workspace.header!.now)}`"
-          >
-            {{ status(item) }}
-          </span>
-          <ChevronRight
-            :size="20"
-            aria-hidden="true"
-          />
-        </RouterLink>
-        <details
-          v-else
-          class="edu-list__item"
-          :open="route.hash === `#event-${item.id}`"
-        >
-          <summary>
-            <strong>{{ item.title }}</strong>
-            · {{ time(item.startsAt) }}
-          </summary>
-          <p>
-            {{ time(item.startsAt) }} – {{ time(item.endsAt) }} · {{ t(`education.${item.kind}`) }}
-          </p>
-          <p>{{ item.location }}</p>
-        </details>
-      </li>
-    </ul>
+      :columns="columns"
+      :timezone="workspace.header!.timezone"
+      :today="workspace.header!.date"
+      :now="workspace.header!.now"
+      :day-view="view === 'day'"
+    />
   </section>
 </template>

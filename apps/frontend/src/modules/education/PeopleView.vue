@@ -5,10 +5,12 @@ import { educationApi } from './api';
 import { useEducationResource } from './resources';
 import { useEducationI18n } from './i18n';
 import EducationState from './EducationState.vue';
+import AppInput from '@/shared/ui/fields/AppInput.vue';
 const route = useRoute();
 const { t, students } = useEducationI18n();
 const groups = computed(() => route.query.tab === 'groups');
 const offset = ref(0);
+const search = ref('');
 const { data, loading, error, refresh } = useEducationResource(
   async (org, signal) => ({
     students: groups.value ? null : await educationApi.students(org, offset.value, signal),
@@ -16,6 +18,8 @@ const { data, loading, error, refresh } = useEducationResource(
   }),
   [groups, offset],
 );
+const filteredGroups = computed(() => data.value?.groups?.items.filter(item => item.name.toLocaleLowerCase().includes(search.value.toLocaleLowerCase().trim())) ?? []);
+const filteredStudents = computed(() => data.value?.students?.items.filter(item => (item.name ?? '').toLocaleLowerCase().includes(search.value.toLocaleLowerCase().trim())) ?? []);
 </script>
 <template>
   <section>
@@ -55,8 +59,9 @@ const { data, loading, error, refresh } = useEducationResource(
         {{ t('education.groups') }}
       </RouterLink>
     </nav>
+    <AppInput id="education-people-search" v-model="search" :label="t('education.search')" />
     <EducationState
-      :loading="loading"
+      :loading="loading && !data"
       :error="error"
       :empty="
         data && !(data.groups?.items.length || data.students?.items.length)
@@ -67,10 +72,10 @@ const { data, loading, error, refresh } = useEducationResource(
     />
     <ul
       v-if="data?.groups"
-      class="edu-list"
+      class="edu-list edu-people-grid"
     >
       <li
-        v-for="item in data.groups.items"
+        v-for="item in filteredGroups"
         :key="item.id"
         class="edu-list__item"
       >
@@ -111,7 +116,7 @@ const { data, loading, error, refresh } = useEducationResource(
       class="edu-list"
     >
       <li
-        v-for="item in data.students.items"
+        v-for="item in filteredStudents"
         :key="item.id"
         class="edu-list__item"
       >

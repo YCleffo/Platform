@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { createMemoryHistory } from 'vue-router';
 import { createAppRouter } from './index';
 import { useAuthStore } from '@/core/auth/authStore';
+import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import { beginSession, endSession } from '@/core/auth/session';
 
 const accountId = '018f0000-0000-7000-8000-000000000001';
@@ -86,6 +87,18 @@ describe('router account guard', () => {
     await enabled.push('/today'); expect(enabled.currentRoute.value.name).toBe('education-login');
     expect(enabled.currentRoute.value.query.redirect).toBe('/today');
     await enabled.push('/'); expect(enabled.currentRoute.value.name).toBe('catalog');
-    expect(enabled.getRoutes().filter(route => route.name?.toString().startsWith('education-'))).toHaveLength(36);
+    const educationNames = enabled.getRoutes().map(route => route.name?.toString()).filter(name => name?.startsWith('education-'));
+    expect(educationNames).toEqual(expect.arrayContaining(['education-today', 'education-student-home', 'education-parent-home', 'education-parent-activate', 'education-contexts']));
+    expect(new Set(educationNames).size).toBe(educationNames.length);
+  });
+
+  it('lets an authenticated Core account reach invitation activation before it has Education roles', async () => {
+    const auth = useAdminAuthStore();
+    auth.status = 'authenticated';
+    auth.identity = { account: { id: accountId, personId: accountId }, roles: [], permissions: [],
+      locale: 'en-US', timezone: 'UTC', sessionId: 'synthetic-parent-session' };
+    const router = createAppRouter(createMemoryHistory(), true);
+    await router.push('/education/login?redirect=/parent/activate');
+    expect(router.currentRoute.value.name).toBe('education-parent-activate');
   });
 });

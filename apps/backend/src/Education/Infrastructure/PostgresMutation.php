@@ -20,22 +20,13 @@ final readonly class PostgresMutation implements Mutation
             $result = $action();
             $auditCommand = new WriteAuditEventCommand(
                 actorType: 'account',
-                actorAccountId: $scope->accountId,
+                actorAccountId: $scope->actor(),
                 action: 'education.' . $operation,
                 resourceType: 'education.workspace',
                 resourceId: isset($result['id']) && is_string($result['id']) ? $result['id'] : $scope->organizationId,
                 metadata: ['organizationId' => $scope->organizationId],
             );
-            try {
-                $this->audit->write($auditCommand);
-            } catch (\InvalidArgumentException $e) {
-                fwrite(STDERR, 'AUDIT-FAIL: ' . $operation . ' cmd=' . var_export([
-                    'action' => $auditCommand->action, 'resourceType' => $auditCommand->resourceType,
-                    'resourceId' => $auditCommand->resourceId, 'metadata' => $auditCommand->metadata,
-                    'before' => $auditCommand->beforeData, 'after' => $auditCommand->afterData,
-                ], true) . ' msg=' . $e->getMessage() . PHP_EOL);
-                throw $e;
-            }
+            $this->audit->write($auditCommand);
             return $result;
         });
     }

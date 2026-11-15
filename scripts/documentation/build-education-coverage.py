@@ -26,7 +26,8 @@ def main() -> None:
     }
     tests = {
         p: p.read_text(encoding="utf-8")
-        for p in (ROOT / "apps/backend/tests/Education").rglob("*.php")
+        for directory in ("Education", "Foundation")
+        for p in (ROOT / "apps/backend/tests" / directory).rglob("*.php")
         if "_generated" not in p.parts
     }
 
@@ -87,7 +88,8 @@ def main() -> None:
         "## Границы владельцев",
         "",
         "- Education владеет схемой `education`; учётные записи Core, организации и RBAC",
-        "  используются через прикладные интерфейсы, а не через внешние ключи между схемами.",
+        "  используются через прикладные интерфейсы. Семейные связи дополнительно закреплены",
+        "  реальными FK на Core Person, Account и Organization.",
         "- `education.module_migrations` — отдельный журнал необязательного модуля;",
         "  Механизм миграций Core его не изменяет.",
         "- `education.files` хранит метаданные и SHA-256; байты находятся во внешнем",

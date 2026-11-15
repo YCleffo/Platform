@@ -6,6 +6,7 @@ import { studentSession } from './session';
 import { useEducationResource } from '../resources';
 import { useEducationI18n } from '../i18n';
 import EducationState from '../EducationState.vue';
+import HomeworkSummary from '../homework/HomeworkSummary.vue';
 const { t, locale } = useEducationI18n();
 const org = computed(() => studentSession.organizationId);
 const offset = ref(0);
@@ -28,6 +29,7 @@ function statusLabel(lesson: StudentDiaryLesson): string {
 <template>
   <section>
     <h2>{{ t('education.myDiary') }}</h2>
+    <HomeworkSummary student compact />
     <EducationState
       :loading="loading"
       :error="error"

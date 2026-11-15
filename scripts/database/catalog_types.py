@@ -88,6 +88,7 @@ class Catalog(TypedDict):
     functions: list[SchemaDefinition]
     applied_migrations: NotRequired[list[str]]
     migration_sources: NotRequired[list[MigrationSource]]
+    external_tables: NotRequired[list[TableDefinition]]
 
 
 def decode_catalog(content: str) -> Catalog:

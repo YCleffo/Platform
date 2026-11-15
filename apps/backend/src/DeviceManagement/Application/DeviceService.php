@@ -24,9 +24,18 @@ final readonly class DeviceService
     {
         $offset = max(0, (int) ($query['offset'] ?? 0));
         return match ($operation) {
-            'classrooms' => ['items' => $this->store->classrooms($scope)],
-            'devices' => $this->pageOf(fn(): array => $this->store->devices($scope, $offset), $offset),
+            'classrooms' => $this->pageOf(fn(): array => $this->store->classrooms($scope, $offset,
+                empty($query['search']) ? null : self::text($query['search'], 80), ($query['archived'] ?? '') === '1'), $offset),
+            'devices' => $this->pageOf(fn(): array => $this->store->devices(
+                $scope,
+                $offset,
+                empty($query['classroomId']) ? null : self::uuid($query['classroomId']),
+                empty($query['status']) ? null : self::text($query['status'], 24),
+                empty($query['search']) ? null : self::text($query['search'], 80, false),
+            ), $offset),
             'device' => $this->deviceDetail($scope, self::uuid($id)),
+            'device_sessions' => $this->pageOf(fn(): array => $this->store->deviceSessions($scope, self::uuid($id), $offset), $offset),
+            'device_commands' => $this->pageOf(fn(): array => $this->store->commands($scope, self::uuid($id), $offset), $offset),
             'device_events' => $this->pageOf(fn(): array => $this->store->deviceEvents($scope, self::uuid($id), $offset), $offset),
             default => throw new DeviceError(404, 'not_found'),
         };
@@ -52,8 +61,22 @@ final readonly class DeviceService
         return match ($operation) {
             'create_classroom' => $this->mutations->run($scope, 'create_classroom',
                 fn(): array => $this->store->createClassroom($scope, self::text($body['name'] ?? null, 160))),
+            'update_classroom' => $this->mutations->run($scope, 'update_classroom',
+                fn(): array => $this->store->updateClassroom($scope, self::uuid($id), self::text($body['name'] ?? null, 160))),
+            'archive_classroom' => $this->mutations->run($scope, 'archive_classroom',
+                fn(): array => $this->store->archiveClassroom($scope, self::uuid($id))),
+            'restore_classroom' => $this->mutations->run($scope, 'restore_classroom',
+                fn(): array => $this->store->restoreClassroom($scope, self::uuid($id))),
+            'cancel_assignment' => $this->mutations->run($scope, 'cancel_assignment',
+                fn(): array => $this->store->cancelAssignment($scope, self::uuid($id), self::uuid($body['sessionId'] ?? null), self::stateVersion($body))),
+            'retry_recovery' => $this->mutations->run($scope, 'retry_recovery',
+                fn(): array => $this->store->retryRecovery($scope, self::uuid($id), self::stateVersion($body))),
             'create_device' => $this->mutations->run($scope, 'create_device',
                 fn(): array => $this->store->createDevice($scope,
+                    empty($body['classroomId']) ? null : self::uuid($body['classroomId']),
+                    self::text($body['name'] ?? '', 160, false), self::text($body['number'] ?? '', 40, false))),
+            'update_device' => $this->mutations->run($scope, 'update_device',
+                fn(): array => $this->store->updateDevice($scope, self::uuid($id),
                     empty($body['classroomId']) ? null : self::uuid($body['classroomId']),
                     self::text($body['name'] ?? '', 160, false), self::text($body['number'] ?? '', 40, false))),
             'device_enroll' => $this->enroll($scope, self::uuid($id)),
@@ -72,7 +95,8 @@ final readonly class DeviceService
     private function deviceDetail(Scope $scope, string $id): array
     {
         $device = $this->store->device($scope, $id) ?? throw new DeviceError(404, 'not_found');
-        return [...$device, 'sessions' => $this->store->deviceSessions($scope, $id)];
+        return [...$device, 'sessions' => array_slice($this->store->deviceSessions($scope, $id), 0, 50),
+            ...$this->store->lifecycleDetails($scope, $id)];
     }
 
     /** @return array<string,mixed> */
@@ -106,7 +130,7 @@ final readonly class DeviceService
         }
         $name = $this->educationAccess->personName($personId) ?? '';
         return $this->mutations->run($scope, 'start_session',
-            fn(): array => $this->store->startSession($scope, $deviceId, $studentId, ['personId' => $personId, 'name' => $name]));
+            fn(): array => $this->store->startSession($scope, $deviceId, $studentId, ['personId' => $personId, 'name' => $name], self::stateVersion($body)));
     }
 
     /**
@@ -147,7 +171,7 @@ final readonly class DeviceService
         $state = is_array($body['state'] ?? null) ? $body['state'] : [];
         $this->store->heartbeat($deviceId, json_encode($state, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
         $session = $this->store->activeSession($deviceId);
-        return ['status' => 'ok', 'session' => $session];
+        return ['status' => 'ok', 'session' => $session, 'device' => $this->store->agentInfo($deviceId)];
     }
 
     /** @return array<string,mixed> */
@@ -172,10 +196,10 @@ final readonly class DeviceService
      */
     public function agentSessionState(string $deviceId, string $sessionId, array $body): array
     {
-        self::only($body, ['status']);
+        self::only($body, ['status', 'evidence', 'progress', 'error']);
         $status = self::text($body['status'] ?? null, 24);
         SessionTransitions::validate($status);
-        return $this->store->transitionSession($deviceId, $sessionId, $status);
+        return $this->store->transitionSession($deviceId, self::uuid($sessionId), $status, SessionEvidence::validate($body));
     }
 
     /** @return array<string,mixed> */
@@ -196,6 +220,7 @@ final readonly class DeviceService
     {
         self::only($body, ['kind', 'payload']);
         $kind = self::text($body['kind'] ?? null, 60);
+        /** @var array<string,mixed> $payload */
         $payload = is_array($body['payload'] ?? null) ? $body['payload'] : [];
         $this->store->recordEvent($deviceId, $kind, $payload);
         return ['recorded' => true];
@@ -207,8 +232,21 @@ final readonly class DeviceService
      */
     private static function decodeCommand(array $command): array
     {
-        $payload = is_string($command['payload'] ?? null) ? json_decode((string) $command['payload'], true) : null;
+        $payload = is_string($command['payload'] ?? null) ? json_decode((string) $command['payload'], true) : ($command['payload'] ?? null);
         return [...$command, 'payload' => is_array($payload) ? $payload : []];
+    }
+
+    public function agentSessionEnd(string $deviceId, string $sessionId, array $body): array
+    {
+        self::only($body, []);
+        return $this->store->requestLocalSessionEnd($deviceId, self::uuid($sessionId));
+    }
+
+    private static function stateVersion(array $body): ?int
+    {
+        if (!array_key_exists('stateVersion', $body)) return null;
+        if (!is_int($body['stateVersion']) || $body['stateVersion'] < 0) throw new DeviceError(422, 'invalid_input');
+        return $body['stateVersion'];
     }
 
     private static function text(mixed $value, int $maximum, bool $required = true): string

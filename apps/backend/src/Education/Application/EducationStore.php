@@ -172,6 +172,12 @@ interface EducationStore
     public function attempt(Scope $scope, string $attemptId): ?array;
     /** @return array<string,mixed> */
     public function finishAttempt(Scope $scope, string $attemptId, string $typed, int $durationSeconds, array $metrics, array $payload): array;
+    public function guardAssignmentAttempt(Scope $scope,string $assignmentId,int $maxAttempts,bool $fromHomework):void;
+    public function exerciseSet(string $code, string $language, string $mode, int $difficulty): ?array;
+    public function snapshotAttempt(Scope $scope, string $attemptId, int $version, array $exercise): void;
+    public function saveAttemptState(Scope $scope, string $attemptId, int $version, array $state): void;
+    public function completeActivityAttempt(Scope $scope, string $attemptId, array $evaluation): array;
+    public function revokeActivityAttempt(Scope $scope, string $attemptId): array;
     /** @return list<array<string,mixed>> */
     public function studentAttempts(Scope $scope, int $offset): array;
     /** @return list<array<string,mixed>> */
@@ -185,5 +191,5 @@ interface EducationStore
     /** @return list<array<string,mixed>> */
     public function assignments(Scope $scope, int $offset): array;
     /** @return list<array<string,mixed>> */
-    public function groupActivityResults(Scope $scope, string $groupId, string $activityCode, int $offset): array;
+    public function groupActivityResults(Scope $scope, string $groupId, string $activityCode, int $offset, ?string $from = null, ?string $to = null): array;
 }

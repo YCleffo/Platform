@@ -36,15 +36,17 @@ final readonly class PersonalDataExportAction
             $actor = AuthenticatedIdentity::fromRequest($request);
             $operator = $route->getArgument('operator');
             $result = $operator === 'intake'
-                ? $service->exportOperator($actor, $id)
+                ? $service->streamOperator($actor, $id)
                 : ($representationId === null
-                ? $service->exportSelf($actor, $id)
-                : $service->exportRepresentative($actor, $id, $representationId));
+                ? $service->streamSelf($actor, $id)
+                : $service->streamRepresentative($actor, $id, $representationId));
             return $psrResponses->createResponse(200)
                 ->withHeader('Content-Type', 'application/json; charset=utf-8')
                 ->withHeader('Cache-Control', 'no-store')
                 ->withHeader('X-Content-Type-Options', 'nosniff')
-                ->withBody($streams->createStream($result->json));
+                ->withHeader('Content-Length', (string) $result->sizeBytes)
+                ->withHeader('X-Content-Sha256', $result->sha256)
+                ->withBody($streams->createStreamFromResource($result->detachStream()));
         } catch (PersonalDataExportLimitException) {
             return $responses->error(ApiMessage::VALIDATION_INVALID, httpCode: 413);
         } catch (DomainException) {

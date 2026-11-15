@@ -5,6 +5,7 @@ import { router } from './app/router';
 import { i18n } from './shared/i18n';
 import { initTheme } from './app/theme';
 import { initAppearance } from './app/appearance';
+import { loadPlatformBranding } from './shared/branding';
 import { sessionEpoch, setUnauthorizedHandler } from './core/auth/session';
 import { useAuthStore } from './core/auth/authStore';
 import { coreAdminSessionEpoch } from './core/admin/session';
@@ -25,6 +26,7 @@ app.use(i18n);
 
 initAppearance();
 initTheme();
+void loadPlatformBranding().catch(() => undefined);
 document.documentElement.lang = String(i18n.global.locale.value);
 
 setUnauthorizedHandler(() => {

@@ -1,0 +1,84 @@
+name: platform-education-local
+
+# Explicit local fixture environment. Never combines with compose.yaml.
+services:
+  postgres-test:
+    image: postgres:18
+    pull_policy: never
+    environment:
+      POSTGRES_DB: platform_test
+      POSTGRES_USER: education_fixture
+      POSTGRES_PASSWORD: ${EDUCATION_LOCAL_DB_PASSWORD:?Run scripts/dev/education-local.py start}
+    volumes:
+      - education_local_postgres:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U education_fixture -d platform_test']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks: [education_local]
+
+  redis-test:
+    image: redis:8-alpine
+    command: [redis-server, --save, '', --appendonly, 'no']
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks: [education_local]
+
+  backend:
+    image: platform-backend:latest
+    pull_policy: never
+    working_dir: /app
+    environment:
+      APP_ENV: test
+      APP_DEBUG: 'false'
+      TEST_ISOLATED_RUNTIME: '1'
+      EDUCATION_LOCAL_FIXTURE: '1'
+      EDUCATION_ENABLED: '1'
+      E2E_ISOLATION_PROOF: ${EDUCATION_LOCAL_PROOF:?}
+      XDEBUG_MODE: 'off'
+      DB_HOST: postgres-test
+      DB_PORT: '5432'
+      DB_NAME: platform_test
+      DB_USER: education_fixture
+      DB_PASSWORD: ${EDUCATION_LOCAL_DB_PASSWORD:?}
+      REDIS_HOST: redis-test
+      REDIS_PORT: '6379'
+      REDIS_DATABASE: '0'
+      REDIS_RATE_LIMIT_PREFIX: education:local
+      DEVICE_FINGERPRINT_KEY: ${EDUCATION_LOCAL_HMAC_KEY:?}
+      AUTH_IDENTIFIER_HMAC_KEY: ${EDUCATION_LOCAL_HMAC_KEY:?}
+      AUTH_TOTP_ENCRYPTION_KEY: ${EDUCATION_LOCAL_TOTP_KEY:?}
+      AUTH_PUBLIC_BASE_URL: http://localhost:5178
+      APP_DEFAULT_LOCALE: ru-RU
+      APP_DEFAULT_TIMEZONE: Asia/Yekaterinburg
+      EDUCATION_FILE_DIRECTORY: /education-data/materials
+      STORAGE_FILE_DIRECTORY: /education-data/documents
+      SMTP_HOST: 127.0.0.1
+      SMTP_PORT: '1025'
+      SMTP_ENCRYPTION: none
+      MAIL_FROM_ADDRESS: education@example.test
+      MAIL_FROM_NAME: Education Local
+      CORE_SCHEDULER_ENABLED: 'false'
+      CORE_EMAIL_WORKER_ENABLED: 'false'
+    ports: ['127.0.0.1:8088:80']
+    volumes:
+      - ./apps/backend:/app
+      - ./runtime/education-local/backend:/app/runtime
+      - ./runtime/education-local/data:/education-data
+      - ./scripts/dev/education:/education-tools:ro
+    depends_on:
+      postgres-test: {condition: service_healthy}
+      redis-test: {condition: service_healthy}
+    networks: [education_local, education_browser]
+
+volumes:
+  education_local_postgres:
+
+networks:
+  education_local:
+    internal: true
+  education_browser:

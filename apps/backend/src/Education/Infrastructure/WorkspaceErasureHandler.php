@@ -64,6 +64,26 @@ final readonly class WorkspaceErasureHandler implements PersonalDataErasureHandl
         $accounts = <<<'SQL'
             SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid)
             SQL;
+        $transfers = $this->db->createCommand('SELECT id::text,staging_key,final_key::text FROM education.file_transfers
+            WHERE person_id=CAST(:subject AS uuid) OR account_id IN (SELECT id FROM core.accounts WHERE person_id=CAST(:subject AS uuid))
+            OR student_id IN(SELECT id FROM education.students WHERE person_id=CAST(:subject AS uuid)
+                OR owner_account_id IN(SELECT id FROM core.accounts WHERE person_id=CAST(:subject AS uuid)))
+            OR resource_id IN(SELECT id FROM education.homework_assignments WHERE author_person_id=CAST(:subject AS uuid)
+                OR group_id IN(SELECT id FROM education.groups WHERE owner_person_id=CAST(:subject AS uuid))
+                OR lesson_id IN(SELECT id FROM education.lessons WHERE owner_person_id=CAST(:subject AS uuid)))
+            OR lesson_id IN(SELECT id FROM education.lessons WHERE owner_person_id=CAST(:subject AS uuid))', [':subject'=>$subject])->queryAll();
+        foreach ($transfers as $transfer) {
+            $this->db->createCommand('INSERT INTO education.object_cleanup(object_key) VALUES(:key) ON CONFLICT(object_key) DO NOTHING',
+                [':key'=>$transfer['staging_key']])->execute();
+            $this->files->remove($transfer['final_key']);
+            $this->db->createCommand('DELETE FROM education.file_transfers WHERE id=CAST(:id AS uuid)', [':id'=>$transfer['id']])->execute();
+        }
+        (new ActivityPrivacy($this->db))->erase($subject);
+        (new FamilyPrivacy($this->db))->erase($subject);
+        $homeworkKeys = (new HomeworkPrivacy($this->db))->erase($subject);
+        $this->db->createCommand('DELETE FROM education.student_guardians WHERE guardian_person_id=CAST(:subject AS uuid)
+            OR student_id IN (SELECT id FROM education.students WHERE person_id=CAST(:subject AS uuid)
+                OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id=CAST(:subject AS uuid)))', [':subject' => $subject])->execute();
         $keys = $this->db->createCommand(<<<'SQL'
             SELECT storage_key::text FROM education.files
             WHERE owner_person_id = CAST(:subject AS uuid)
@@ -198,6 +218,17 @@ final readonly class WorkspaceErasureHandler implements PersonalDataErasureHandl
                 OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
             SQL, [':subject' => $subject])->execute();
         $this->db->createCommand(<<<'SQL'
+            DELETE FROM education.group_programs
+            WHERE group_id IN (SELECT id FROM education.groups WHERE owner_person_id=CAST(:subject AS uuid)
+                OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id=CAST(:subject AS uuid)))
+            SQL, [':subject' => $subject])->execute();
+        $this->db->createCommand(<<<'SQL'
+            DELETE FROM education.group_teachers
+            WHERE group_id IN (SELECT id FROM education.groups WHERE owner_person_id=CAST(:subject AS uuid)
+                OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id=CAST(:subject AS uuid)))
+                OR account_id IN (SELECT id FROM core.accounts WHERE person_id=CAST(:subject AS uuid))
+            SQL, [':subject' => $subject])->execute();
+        $this->db->createCommand(<<<'SQL'
             DELETE FROM education.groups
             WHERE owner_person_id = CAST(:subject AS uuid)
                 OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
@@ -227,7 +258,7 @@ final readonly class WorkspaceErasureHandler implements PersonalDataErasureHandl
                 )
             SQL)->execute();
 
-        foreach ($keys as $key) {
+        foreach ([...$keys, ...$homeworkKeys] as $key) {
             $this->files->remove((string) $key['storage_key']);
         }
 

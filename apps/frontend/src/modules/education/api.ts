@@ -1,12 +1,14 @@
 import { coreAdminHttp } from '@/shared/api/core/adminHttp';
+import { educationUpload, educationDownload } from './fileTransfer';
 import { ApiError, ApiResponseError } from '@/shared/api/errors';
+import { educationRead, educationTags, invalidateEducationCache, educationMeasurements } from './cache';
 
-export interface EducationContext { organizations: { id: string; name: string; teacher?: boolean; student?: boolean }[]; personId: string; displayName: string | null; locale: string; timezone: string }
+export interface EducationContext { organizations: { id: string; name: string; teacher?: boolean; student?: boolean; parent?: boolean }[]; personId: string; displayName: string | null; locale: string; timezone: string }
 export interface Header { displayName: string | null; avatarFileId: string | null; personId: string; date: string; now: string; greeting: 'night' | 'morning' | 'afternoon' | 'evening'; locale: string; timezone: string; unreadCount: number }
 export interface Group { id: string; name: string; studentCount?: number; archivedAt?: string | null }
 export interface Student { id: string; personId: string; name?: string; createdAt?: string }
 export interface PersonChoice { id: string; name: string; personId?: string }
-export interface Lesson { id: string; groupId: string; groupName: string; title: string; startsAt: string; endsAt: string; location: string; status: 'scheduled' | 'completed' | 'cancelled'; studentCount: number; completedAt?: string | null; cancelledAt?: string | null }
+export interface Lesson { curriculumLessonId?: string | null; id: string; groupId: string; groupName: string; title: string; startsAt: string; endsAt: string; location: string; status: 'scheduled' | 'completed' | 'cancelled'; studentCount: number; completedAt?: string | null; cancelledAt?: string | null }
 export interface CalendarEvent { id: string; title: string; kind: 'meeting' | 'birthday' | 'other'; startsAt: string; endsAt: string; location: string }
 export type TimelineItem = (Lesson & { kind: 'lesson' }) | CalendarEvent;
 export interface Schedule { from: string; to: string; timezone: string; lessons: Lesson[]; events: CalendarEvent[] }
@@ -18,20 +20,28 @@ export interface LessonResults { report: LessonReport | null; items: LessonResul
 export interface JournalStudentResult { studentId: string; name: string; status: ResultStatus; comment: string | null }
 export interface JournalEntry extends Lesson { report: LessonReport | null; results: JournalStudentResult[] }
 export interface StudentGroup { id: string; name: string; archivedAt: string | null }
-export interface StudentCard { id: string; personId: string; name: string; createdAt: string; groups: StudentGroup[]; account?: StudentAccount | null }
+export interface StudentGuardian { personId: string; name: string; relationship: 'mother' | 'father' | 'guardian'; contacts: { type: string; value: string; label: string | null }[] }
+export interface StudentCard { id: string; personId: string; name: string; createdAt: string; groups: StudentGroup[]; account?: StudentAccount | null; guardians?: StudentGuardian[] }
 export interface StudentAttendanceEntry { lessonId: string; title: string; startsAt: string; status: Lesson['status']; attendance: 'pending' | 'present' | 'absent' }
 export interface StudentResultEntry { id: string; lessonId: string; lessonTitle: string; startsAt: string; status: ResultStatus; comment: string | null; updatedAt: string }
 export interface StudentProgress { from: string; to: string; attendance: { present: number; absent: number }; results: { mastered: number; developing: number; needs_support: number } }
 export interface SavedLessonResult { id: string; lessonId: string; studentId: string; status: ResultStatus; comment: string | null; updatedAt: string }
 export interface StudentAccount { accountId: string; activatedAt: string; revokedAt: string | null }
 export interface ActivityAssignment { id: string; activityId: string; activityCode: string; activityName: string; groupId: string | null; groupName: string | null; studentId: string | null; studentPersonId: string | null; config: Record<string, unknown>; opensAt: string | null; dueAt: string | null; completion: Record<string, unknown> | null; createdAt: string }
-export interface GroupActivityAttempt { id: string; studentId: string; personId: string; name?: string; status: 'running' | 'finished' | 'expired' | 'failed'; source: string; startedAt: string; finishedAt: string | null; durationSeconds?: number | null; language?: string | null; keystrokes?: number | null; correctChars?: number | null; errors?: number | null; wpm?: number | null; accuracy?: number | null }
+export interface GroupActivityAttempt { id: string; studentId: string; personId: string; name?: string; status: 'running' | 'finished' | 'expired' | 'failed'; source: string; startedAt: string; finishedAt: string | null; durationSeconds?: number | null; language?: string | null; keystrokes?: number | null; correctChars?: number | null; errors?: number | null; wpm?: number | null; accuracy?: number | null; score?: number | null; correctAnswers?: number | null; totalRounds?: number | null }
 export interface Material { id: string; name: string; mime: string; sizeBytes: number; lessonId?: string | null; lessonStatus?: Lesson['status'] | null; createdAt?: string }
 export interface Attention { date: string; items: { id: string; title: string; absentCount: number }[] }
 export interface Thread { id: string; subject: string; createdAt?: string; unreadCount?: number }
 export interface Message { id: string; senderPersonId: string; senderName?: string | null; body: string | null; createdAt: string }
-export interface Notification { id: string; threadId: string; subject: string; createdAt: string; readAt: string | null }
+export interface Notification { id: string; threadId: string | null; subject: string; createdAt: string; readAt: string | null; kind?: string; resourceId?: string | null; resourcePath?: string | null; body?: string | null }
 export interface Page<T> { items: T[]; limit: number; offset: number; nextOffset: number | null }
+
+export interface CurriculumLesson { id: string; title: string; description: string; position: number; archivedAt: string | null }
+export interface CurriculumModule { id: string; name: string; description: string; position: number; archivedAt: string | null; lessons: CurriculumLesson[] }
+export interface EducationProgram { id: string; name: string; description: string; archivedAt: string | null; modules?: CurriculumModule[] }
+export interface GroupProgram { id: string; programId: string; name: string; assignedAt: string; endedAt: string | null; modules: CurriculumModule[] }
+export interface TeacherAssignments { ownerAccountId: string; canAssign: boolean; items: { accountId: string; personId: string; name: string; assigned: boolean }[] }
+export interface ProgramProgress { assignmentId: string; programId: string; name: string; totalLessons: number; completedLessons: number; percent: number; modules: { id?: string; name: string; totalLessons: number; completedLessons: number; percent: number }[] }
 
 type Guard<T> = (value: unknown) => value is T;
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -47,6 +57,12 @@ const nullableText = (value: unknown): value is string | null => value === null 
 const nullableUuid = (value: unknown): value is string | null => value === null || uuid(value);
 const nullableInstant = (value: unknown): value is string | null => value === null || instant(value);
 const named = (value: unknown): value is PersonChoice => record(value) && uuid(value.id) && text(value.name);
+const curriculumLessonGuard: Guard<CurriculumLesson> = (v): v is CurriculumLesson => record(v) && uuid(v.id) && text(v.title) && text(v.description) && integer(v.position) && nullableInstant(v.archivedAt);
+const curriculumModuleGuard: Guard<CurriculumModule> = (v): v is CurriculumModule => record(v) && uuid(v.id) && text(v.name) && text(v.description) && integer(v.position) && nullableInstant(v.archivedAt) && Array.isArray(v.lessons) && v.lessons.every(curriculumLessonGuard);
+const programGuard: Guard<EducationProgram> = (v): v is EducationProgram => record(v) && uuid(v.id) && text(v.name) && text(v.description) && nullableInstant(v.archivedAt) && (v.modules === undefined || Array.isArray(v.modules) && v.modules.every(curriculumModuleGuard));
+const groupProgramGuard: Guard<GroupProgram> = (v): v is GroupProgram => record(v) && uuid(v.id) && uuid(v.programId) && text(v.name) && instant(v.assignedAt) && nullableInstant(v.endedAt) && Array.isArray(v.modules) && v.modules.every(curriculumModuleGuard);
+const progressGuard: Guard<{ programs: ProgramProgress[] }> = (v): v is { programs: ProgramProgress[] } => record(v) && Array.isArray(v.programs) && v.programs.every(p => record(p) && uuid(p.assignmentId) && uuid(p.programId) && text(p.name) && integer(p.totalLessons) && integer(p.completedLessons) && number(p.percent) && p.percent >= 0 && p.percent <= 100 && Array.isArray(p.modules) && p.modules.every(m => record(m) && text(m.name) && integer(m.totalLessons) && integer(m.completedLessons) && number(m.percent)));
+const teacherGuard: Guard<TeacherAssignments> = (v): v is TeacherAssignments => record(v) && uuid(v.ownerAccountId) && typeof v.canAssign === 'boolean' && Array.isArray(v.items) && v.items.every(x => record(x) && uuid(x.accountId) && uuid(x.personId) && text(x.name) && typeof x.assigned === 'boolean');
 const contextGuard: Guard<EducationContext> = (v): v is EducationContext => record(v) && Array.isArray(v.organizations) && v.organizations.every(named) && uuid(v.personId) && nullableText(v.displayName) && locale(v.locale) && timezone(v.timezone);
 const headerGuard: Guard<Header> = (v): v is Header => record(v) && nullableText(v.displayName) && nullableUuid(v.avatarFileId) && uuid(v.personId) && date(v.date) && instant(v.now) && ['night', 'morning', 'afternoon', 'evening'].includes(String(v.greeting)) && locale(v.locale) && timezone(v.timezone) && integer(v.unreadCount);
 const groupGuard: Guard<Group> = (v): v is Group => named(v) && (!('studentCount' in v) || integer(v.studentCount)) && (!('archivedAt' in v) || nullableInstant(v.archivedAt));
@@ -64,7 +80,8 @@ const lessonResultsGuard: Guard<LessonResults> = (v): v is LessonResults => reco
 const journalStudentResultGuard: Guard<JournalStudentResult> = (v): v is JournalStudentResult => record(v) && uuid(v.studentId) && text(v.name) && resultStatusGuard(v.status) && nullableText(v.comment);
 const journalEntryGuard: Guard<JournalEntry> = (v): v is JournalEntry => record(v) && lessonGuard(v) && (v.report === null || lessonReportGuard(v.report)) && Array.isArray(v.results) && v.results.every(journalStudentResultGuard);
 const studentGroupGuard: Guard<StudentGroup> = (v): v is StudentGroup => record(v) && uuid(v.id) && text(v.name) && nullableInstant(v.archivedAt);
-const studentCardGuard: Guard<StudentCard> = (v): v is StudentCard => record(v) && uuid(v.id) && uuid(v.personId) && text(v.name) && instant(v.createdAt) && Array.isArray(v.groups) && v.groups.every(studentGroupGuard) && (v.account === undefined || v.account === null || (record(v.account) && uuid(v.account.accountId) && instant(v.account.activatedAt) && nullableInstant(v.account.revokedAt)));
+const guardianGuard: Guard<StudentGuardian> = (v): v is StudentGuardian => record(v) && uuid(v.personId) && text(v.name) && ['mother', 'father', 'guardian'].includes(String(v.relationship)) && Array.isArray(v.contacts) && v.contacts.every(c => record(c) && text(c.type) && text(c.value) && nullableText(c.label));
+const studentCardGuard: Guard<StudentCard> = (v): v is StudentCard => record(v) && uuid(v.id) && uuid(v.personId) && text(v.name) && instant(v.createdAt) && Array.isArray(v.groups) && v.groups.every(studentGroupGuard) && (v.guardians === undefined || Array.isArray(v.guardians) && v.guardians.every(guardianGuard)) && (v.account === undefined || v.account === null || (record(v.account) && uuid(v.account.accountId) && instant(v.account.activatedAt) && nullableInstant(v.account.revokedAt)));
 const assignmentGuard: Guard<ActivityAssignment> = (v): v is ActivityAssignment => record(v) && uuid(v.id) && uuid(v.activityId) && text(v.activityCode) && text(v.activityName) && (v.groupId === null || uuid(v.groupId)) && (v.groupName === null || text(v.groupName)) && (v.studentId === null || uuid(v.studentId)) && (v.studentPersonId === null || uuid(v.studentPersonId)) && record(v.config) && nullableInstant(v.opensAt) && nullableInstant(v.dueAt) && (v.completion === null || record(v.completion)) && instant(v.createdAt);
 const groupActivityAttemptGuard: Guard<GroupActivityAttempt> = (v): v is GroupActivityAttempt => record(v) && uuid(v.id) && uuid(v.studentId) && uuid(v.personId) && (v.name === undefined || text(v.name)) && ['running', 'finished', 'expired', 'failed'].includes(String(v.status)) && text(v.source) && instant(v.startedAt) && nullableInstant(v.finishedAt) && (v.wpm === undefined || v.wpm === null || number(v.wpm)) && (v.accuracy === undefined || v.accuracy === null || number(v.accuracy));
 const studentAttendanceGuard: Guard<StudentAttendanceEntry> = (v): v is StudentAttendanceEntry => record(v) && uuid(v.lessonId) && text(v.title) && instant(v.startsAt) && ['scheduled', 'completed', 'cancelled'].includes(String(v.status)) && ['pending', 'present', 'absent'].includes(String(v.attendance));
@@ -73,7 +90,7 @@ const studentProgressGuard: Guard<StudentProgress> = (v): v is StudentProgress =
 const savedResultGuard: Guard<SavedLessonResult> = (v): v is SavedLessonResult => record(v) && uuid(v.id) && uuid(v.lessonId) && uuid(v.studentId) && resultStatusGuard(v.status) && nullableText(v.comment) && instant(v.updatedAt);
 const threadGuard: Guard<Thread> = (v): v is Thread => record(v) && uuid(v.id) && text(v.subject) && (v.unreadCount === undefined || integer(v.unreadCount));
 const messageGuard: Guard<Message> = (v): v is Message => record(v) && uuid(v.id) && uuid(v.senderPersonId) && nullableText(v.body) && instant(v.createdAt) && (v.senderName === undefined || nullableText(v.senderName));
-const notificationGuard: Guard<Notification> = (v): v is Notification => record(v) && uuid(v.id) && uuid(v.threadId) && text(v.subject) && instant(v.createdAt) && (v.readAt === null || instant(v.readAt));
+const notificationGuard: Guard<Notification> = (v): v is Notification => record(v) && uuid(v.id) && nullableUuid(v.threadId) && text(v.subject) && instant(v.createdAt) && nullableInstant(v.readAt) && (v.kind === undefined || text(v.kind)) && (v.resourceId === undefined || nullableUuid(v.resourceId)) && (v.resourcePath === undefined || nullableText(v.resourcePath)) && (v.body === undefined || nullableText(v.body));
 function pageGuard<T>(guard: Guard<T>): Guard<Page<T>> {
   return (v): v is Page<T> => record(v) && Array.isArray(v.items) && v.items.length <= 50 && v.items.every(guard) && v.limit === 50 && integer(v.offset) && (v.nextOffset === null || (integer(v.nextOffset) && v.nextOffset === v.offset + 50));
 }
@@ -83,10 +100,12 @@ function checked<T>(value: unknown, guard: Guard<T>, path: string): T {
 }
 
 async function get<T>(path: string, organization: string | null, guard: Guard<T>, signal?: AbortSignal): Promise<T> {
-  return checked(await coreAdminHttp.request<unknown>(`/education${path}`, { signal, headers: organization ? { 'X-Education-Organization': organization } : {} }), guard, path);
+  return educationRead(organization, path, async requestSignal => checked(await coreAdminHttp.request<unknown>(`/education${path}`, { signal: requestSignal, headers: organization ? { 'X-Education-Organization': organization } : {} }), guard, path), signal);
 }
 async function write<T>(path: string, organization: string, body: unknown, guard: Guard<T>, method: 'POST' | 'PUT' | 'DELETE' = 'POST'): Promise<T> {
-  return checked(await coreAdminHttp.request<unknown>(`/education${path}`, { method, body, headers: { 'X-Education-Organization': organization } }), guard, path);
+  const started = performance.now();
+  try { return checked(await coreAdminHttp.request<unknown>(`/education${path}`, { method, body, headers: { 'X-Education-Organization': organization } }), guard, path); }
+  finally { invalidateEducationCache(educationTags(path)); educationMeasurements.record('write', started); }
 }
 const updated: Guard<{ updated: true }> = (v): v is { updated: true } => record(v) && v.updated === true;
 const deleted: Guard<{ id: string; deleted: true }> = (v): v is { id: string; deleted: true } => record(v) && uuid(v.id) && v.deleted === true;
@@ -94,6 +113,20 @@ function pathId(id: string): string { if (!uuid(id)) throw new ApiError(404, 'ht
 const query = (path: string, offset: number) => `${path}${path.includes('?') ? '&' : '?'}offset=${offset}`;
 
 export const educationApi = {
+  programs: (org: string, offset = 0, signal?: AbortSignal) => get(query('/programs', offset), org, pageGuard(programGuard), signal),
+  program: (org: string, id: string, signal?: AbortSignal) => get(`/programs/${pathId(id)}`, org, programGuard, signal),
+  createProgram: (org: string, values: { name: string; description: string }) => write('/programs', org, values, programGuard),
+  updateProgram: (org: string, id: string, values: { name: string; description: string; archived?: boolean }) => write(`/programs/${pathId(id)}`, org, values, programGuard, 'PUT'),
+  createCurriculumModule: (org: string, id: string, values: { name: string; description: string; position: number }) => write(`/programs/${pathId(id)}/modules`, org, values, (v): v is { id: string } => record(v) && uuid(v.id)),
+  updateCurriculumModule: (org: string, id: string, values: { name: string; description: string; position: number; archived?: boolean }) => write(`/curriculum-modules/${pathId(id)}`, org, values, (v): v is { id: string } => record(v) && uuid(v.id), 'PUT'),
+  createCurriculumLesson: (org: string, id: string, values: { title: string; description: string; position: number }) => write(`/curriculum-modules/${pathId(id)}/lessons`, org, values, (v): v is { id: string } => record(v) && uuid(v.id)),
+  updateCurriculumLesson: (org: string, id: string, values: { title: string; description: string; position: number; archived?: boolean }) => write(`/curriculum-lessons/${pathId(id)}`, org, values, (v): v is { id: string } => record(v) && uuid(v.id), 'PUT'),
+  groupPrograms: (org: string, id: string, signal?: AbortSignal) => get(`/groups/${pathId(id)}/programs`, org, (v): v is { items: GroupProgram[] } => record(v) && Array.isArray(v.items) && v.items.every(groupProgramGuard), signal),
+  assignProgram: (org: string, id: string, programId: string) => write(`/groups/${pathId(id)}/programs`, org, { programId }, (v): v is { id: string } => record(v) && uuid(v.id)),
+  groupProgress: (org: string, id: string, signal?: AbortSignal) => get(`/groups/${pathId(id)}/progress`, org, progressGuard, signal),
+  groupTeachers: (org: string, id: string, signal?: AbortSignal) => get(`/groups/${pathId(id)}/teachers`, org, teacherGuard, signal),
+  assignTeachers: (org: string, id: string, accountIds: string[]) => write(`/groups/${pathId(id)}/teachers`, org, { accountIds }, teacherGuard, 'PUT'),
+  createStudent: (org: string, values: { givenName: string; familyName: string; middleName?: string; birthDate?: string; groupId: string }) => write('/students/new', org, values, studentGuard),
   context: (signal?: AbortSignal) => get('/context', null, contextGuard, signal),
   header: (org: string, signal?: AbortSignal) => get('/today/header', org, headerGuard, signal),
   profile: (org: string, signal?: AbortSignal) => get('/profile', org, headerGuard, signal),
@@ -122,6 +155,8 @@ export const educationApi = {
     params.set('offset', String(filters.offset ?? 0));
     return get(`/groups/${pathId(id)}/journal?${params.toString()}`, org, pageGuard(journalEntryGuard), signal);
   },
+  studentCurriculumProgress: (org: string, id: string, signal?: AbortSignal) => get(`/students/${pathId(id)}/curriculum-progress`, org, progressGuard, signal),
+  myCurriculumProgress: (org: string, signal?: AbortSignal) => get('/student/curriculum-progress', org, progressGuard, signal),
   student: (org: string, id: string, signal?: AbortSignal) => get(`/students/${pathId(id)}`, org, studentCardGuard, signal),
   studentAttendance: (org: string, id: string, from: string, to: string, offset = 0, signal?: AbortSignal) => get(
     `/students/${pathId(id)}/attendance?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&offset=${offset}`,
@@ -140,8 +175,8 @@ export const educationApi = {
   revokeStudentAccount: (org: string, id: string) => write(`/students/${pathId(id)}/revoke-account`, org, {}, (v): v is { revoked: boolean } => record(v) && v.revoked === true, 'POST'),
   activityAssignments: (org: string, offset = 0, signal?: AbortSignal) => get(query('/activities/assignments', offset), org, pageGuard(assignmentGuard), signal),
   assignActivity: (org: string, code: string, values: { groupId?: string; studentId?: string; config?: Record<string, unknown> }) => write(`/activities/${encodeURIComponent(code)}/assignments`, org, values, assignmentGuard, 'POST'),
-  groupActivityResults: (org: string, id: string, activity: string, offset = 0, signal?: AbortSignal) => get(
-    `/groups/${pathId(id)}/activity-results?activity=${encodeURIComponent(activity)}&offset=${offset}`,
+  groupActivityResults: (org: string, id: string, activity: string, offset = 0, signal?: AbortSignal, period?: { from: string; to: string }) => get(
+    `/groups/${pathId(id)}/activity-results?activity=${encodeURIComponent(activity)}&offset=${offset}${period ? `&from=${encodeURIComponent(period.from)}&to=${encodeURIComponent(period.to)}` : ''}`,
     org,
     (v): v is Page<GroupActivityAttempt> & { activity?: string } => pageGuard(groupActivityAttemptGuard)(v) && ((v as { activity?: unknown }).activity === undefined || text((v as { activity?: unknown }).activity)),
     signal,
@@ -150,6 +185,8 @@ export const educationApi = {
   thread: (org: string, id: string, signal?: AbortSignal) => get(`/threads/${pathId(id)}`, org, threadGuard, signal),
   messages: (org: string, id: string, offset = 0, signal?: AbortSignal) => get(query(`/threads/${pathId(id)}/messages`, offset), org, pageGuard(messageGuard), signal),
   notifications: (org: string, offset = 0, signal?: AbortSignal) => get(query('/notifications', offset), org, pageGuard(notificationGuard), signal),
+  studentNotifications: (org: string, offset = 0, signal?: AbortSignal) => get(query('/student/notifications', offset), org, pageGuard(notificationGuard), signal),
+  readStudentNotification: (org: string, id: string) => write(`/student/notifications/${pathId(id)}/read`, org, {}, updated),
   createGroup: (org: string, name: string) => write('/groups', org, { name }, groupGuard),
   updateGroup: (org: string, id: string, name: string) => write(`/groups/${pathId(id)}`, org, { name }, groupGuard, 'PUT'),
   archiveGroup: (org: string, id: string) => write(`/groups/${pathId(id)}/archive`, org, {}, groupGuard),
@@ -161,8 +198,8 @@ export const educationApi = {
     updated,
   ),
   enroll: (org: string, personId: string, groupId: string) => write('/students', org, { personId, groupId }, studentGuard),
-  createLesson: (org: string, values: { title: string; groupId: string; startsAt: string; endsAt: string; location: string }) => write('/lessons', org, values, lessonGuard),
-  updateLesson: (org: string, id: string, values: { title: string; groupId: string; startsAt: string; endsAt: string; location: string }) => write(`/lessons/${pathId(id)}`, org, values, lessonGuard, 'PUT'),
+  createLesson: (org: string, values: { title: string; groupId: string; startsAt: string; endsAt: string; location: string; curriculumLessonId?: string | null }) => write('/lessons', org, values, lessonGuard),
+  updateLesson: (org: string, id: string, values: { title: string; groupId: string; startsAt: string; endsAt: string; location: string; curriculumLessonId?: string | null }) => write(`/lessons/${pathId(id)}`, org, values, lessonGuard, 'PUT'),
   completeLesson: (org: string, id: string) => write(`/lessons/${pathId(id)}/complete`, org, {}, lessonGuard),
   cancelLesson: (org: string, id: string) => write(`/lessons/${pathId(id)}/cancel`, org, {}, lessonGuard),
   createEvent: (org: string, values: { title: string; kind: string; startsAt: string; endsAt: string; location: string }) => write('/events', org, values, eventGuard),
@@ -172,11 +209,13 @@ export const educationApi = {
   sendMessage: (org: string, id: string, body: string) => write(`/threads/${pathId(id)}/messages`, org, { body }, messageGuard),
   readThread: (org: string, id: string, lastSeenMessageId: string) => write(`/threads/${pathId(id)}/read`, org, { lastSeenMessageId }, updated),
   readNotification: (org: string, id: string) => write(`/notifications/${pathId(id)}/read`, org, {}, updated),
-  upload: async (org: string, file: File, lessonId?: string, avatar = false) => {
-    const form = new FormData(); form.set('file', file); form.set('purpose', avatar ? 'avatar' : 'material');
-    if (lessonId) form.set('lessonId', lessonId);
-    return write('/files', org, form, materialGuard);
+  upload: async (org: string, file: File, lessonId?: string, avatar = false): Promise<Material> => {
+    try {
+      const value = await educationUpload(org, '/education/file-transfers', file, { ...(lessonId ? { lessonId } : {}), avatar });
+      if (!materialGuard(value)) throw new ApiResponseError('/education/file-transfers');
+      return value;
+    } finally { invalidateEducationCache(educationTags('/files')); }
   },
   deleteFile: (org: string, id: string) => write(`/files/${pathId(id)}`, org, {}, deleted, 'DELETE'),
-  download: (org: string, id: string, signal?: AbortSignal) => coreAdminHttp.binary(`/education/files/${pathId(id)}`, { 'X-Education-Organization': org }, signal),
+  download: (org: string, id: string, signal?: AbortSignal) => educationDownload(org, `/education/files/${pathId(id)}/transfer`, signal),
 };

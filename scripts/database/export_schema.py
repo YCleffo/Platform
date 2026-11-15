@@ -101,6 +101,26 @@ def render(catalog: Catalog, schema: str) -> str:
         "}",
         "",
     ]
+    external_columns: dict[tuple[str, str], set[str]] = {}
+    for table in tables:
+        for constraint in table["constraints"]:
+            if constraint["kind"] == "f" and constraint["target_schema"] != schema:
+                target_schema = constraint["target_schema"]
+                target_table = constraint["target_table"]
+                if target_schema is None or target_table is None:
+                    raise ValueError("Foreign key target is incomplete: " + constraint["name"])
+                key = (target_schema, target_table)
+                external_columns.setdefault(key, set()).update(constraint["target_columns"] or [])
+    for external in catalog.get("external_tables", []) + catalog["tables"]:
+        key = (external["schema"], external["name"])
+        if key not in external_columns:
+            continue
+        lines += ["// External reference: only the actual FK target columns are shown.",
+                  "Table " + external["schema"] + "." + identifier(external["name"]) + " {"]
+        for column in external["columns"]:
+            if column["name"] in external_columns[key]:
+                lines.append("  " + identifier(column["name"]) + " " + column["type"].replace(" ", "_") + " [not null]")
+        lines += ["  Note: 'External FK target; full definition belongs to its own schema catalog.'", "}", ""]
     for enum in catalog["enums"]:
         if enum["schema"] == schema:
             lines += ["Enum " + schema + "." + identifier(enum["name"]) + " {"]
@@ -237,6 +257,17 @@ def render(catalog: Catalog, schema: str) -> str:
 
 def restrict_catalog(catalog: Catalog, plane: str) -> Catalog:
     allowed = PLANE_SCHEMAS[plane]
+    external_targets = {
+        (constraint["target_schema"], constraint["target_table"])
+        for table in catalog["tables"] if table["schema"] in allowed
+        for constraint in table["constraints"]
+        if constraint["kind"] == "f" and constraint["target_schema"] not in allowed
+    }
+    if external_targets:
+        catalog["external_tables"] = [
+            table for table in catalog.get("external_tables", []) + catalog["tables"]
+            if (table["schema"], table["name"]) in external_targets
+        ]
     catalog["schemas"] = [schema for schema in catalog["schemas"] if schema in allowed]
     catalog["enums"] = [item for item in catalog["enums"] if item["schema"] in allowed]
     catalog["tables"] = [
@@ -268,13 +299,15 @@ def migration_manifest(plane: str) -> list[MigrationSource]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--plane", choices=["core", "commercial", "education"], required=True
+        "--plane", choices=["core", "commercial", "education", "device_management", "storage"], required=True
     )
     parser.add_argument("--from-snapshot", action="store_true")
     parser.add_argument(
         "--check", action="store_true", help="Read-only comparison; exit 1 on drift"
     )
-    parser.add_argument("--psql", help="Local psql executable instead of Compose")
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--psql", help="Local psql executable instead of Compose")
+    source.add_argument("--container", help="Read metadata from this exact PostgreSQL container, including an isolated test stack")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default="5432")
     parser.add_argument("--database")
@@ -296,6 +329,8 @@ def main() -> None:
         command = (
             [args.psql, "-h", args.host, "-p", str(args.port)]
             if args.psql
+            else ["docker", "exec", "-i", args.container, "psql"]
+            if args.container
             else [
                 "docker",
                 "compose",

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <UseWindowsForms>true</UseWindowsForms>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>Platform.Agent.Ui</RootNamespace>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <AssemblyName>platform-agent-ui</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Platform.Agent\Platform.Agent.csproj" />
+    </ItemGroup>
+
+</Project>

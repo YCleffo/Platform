@@ -150,7 +150,7 @@ final class StudentPortalTest extends TestCase
         self::assertSame('Diary group', $home['groups'][0]['name']);
         self::assertNull($home['nextLesson']);
         self::assertSame('mastered', $home['recentResults'][0]['resultStatus']);
-        self::assertSame('kiberone-typing', $home['activities'][0]['code']);
+        self::assertSame('platform-typing', $home['activities'][0]['code']);
 
         $history = $this->service->read('student_lessons', $scope, []);
         self::assertSame([$lesson['id']], array_column($history['items'], 'id'));
@@ -186,16 +186,16 @@ final class StudentPortalTest extends TestCase
         $scope = $this->access->studentScope($identity, $this->organization, 'education.activities.use');
 
         $catalog = $this->service->read('student_activity_catalog', $scope, []);
-        self::assertSame('kiberone-typing', $catalog['items'][0]['code']);
-        $config = $this->service->read('student_activity_config', $scope, [], 'kiberone-typing');
+        self::assertSame('platform-typing', $catalog['items'][0]['code']);
+        $config = $this->service->read('student_activity_config', $scope, [], 'platform-typing');
         self::assertSame([15, 30, 60], $config['config']['durations']);
 
-        $started = $this->service->write('student_start_attempt', $scope, ['durationSeconds' => 15, 'language' => 'en'], 'kiberone-typing');
+        $started = $this->service->write('student_start_attempt', $scope, ['durationSeconds' => 15, 'language' => 'en'], 'platform-typing');
         $text = $started['exercise']['text'];
         self::assertNotSame('', $text);
         self::assertSame(15, $started['exercise']['durationSeconds']);
         $attemptId = $started['attempt']['id'];
-        $this->assertError(422, fn() => $this->service->write('student_start_attempt', $scope, ['durationSeconds' => 5, 'language' => 'en'], 'kiberone-typing'));
+        $this->assertError(422, fn() => $this->service->write('student_start_attempt', $scope, ['durationSeconds' => 5, 'language' => 'en'], 'platform-typing'));
 
         $finished = $this->service->write('student_finish_attempt', $scope, ['typed' => $text, 'durationSeconds' => 15], $attemptId);
         $expectedWpm = round(strlen($text) / 5 / 0.25, 1);
@@ -208,7 +208,7 @@ final class StudentPortalTest extends TestCase
         $this->assertError(422, fn() => $this->service->write('student_finish_attempt', $scope, ['typed' => $text, 'durationSeconds' => 30], $attemptId));
 
         $typedWithError = substr($text, 0, 10) . (substr($text, 10, 1) === 'a' ? 'b' : 'a') . substr($text, 11);
-        $secondAttempt = $this->service->write('student_start_attempt', $scope, ['durationSeconds' => 15, 'language' => 'en'], 'kiberone-typing');
+        $secondAttempt = $this->service->write('student_start_attempt', $scope, ['durationSeconds' => 15, 'language' => 'en'], 'platform-typing');
         $secondResult = $this->service->write('student_finish_attempt', $scope, ['typed' => $typedWithError, 'durationSeconds' => 15], $secondAttempt['attempt']['id']);
         self::assertGreaterThan(0, $secondResult['errors']);
         self::assertLessThan(100.0, $secondResult['accuracy']);
@@ -236,26 +236,26 @@ final class StudentPortalTest extends TestCase
         $this->member($person);
         $student = $this->service->write('enroll_student', $this->teacherScope, ['groupId' => $group['id'], 'personId' => $person]);
         $assignment = $this->service->write('activities_assign', $this->teacherScope,
-            ['groupId' => $group['id'], 'config' => ['durationSeconds' => 30]], 'kiberone-typing');
-        self::assertSame('kiberone-typing', $assignment['activityCode']);
+            ['groupId' => $group['id'], 'config' => ['durationSeconds' => 30]], 'platform-typing');
+        self::assertSame('platform-typing', $assignment['activityCode']);
         $this->assertError(422, fn() => $this->service->write('activities_assign', $this->teacherScope,
-            ['config' => []], 'kiberone-typing'));
+            ['config' => []], 'platform-typing'));
         $this->assertError(422, fn() => $this->service->write('activities_assign', $this->teacherScope,
-            ['groupId' => $group['id'], 'config' => ['durationSeconds' => 5]], 'kiberone-typing'));
+            ['groupId' => $group['id'], 'config' => ['durationSeconds' => 5]], 'platform-typing'));
 
         $account = $this->account($person, 'Assign student');
         $identity = new AuthenticatedIdentity($account, $person, $this->id(), ['education.student'], [], 'en-US', 'UTC');
         $invite = $this->service->write('invite_student', $this->teacherScope, [], $student['id']);
         $this->service->activateInvite($identity, $person, ['code' => $invite['code']]);
         $scope = $this->access->studentScope($identity, $this->organization, 'education.activities.use');
-        $config = $this->service->read('student_activity_config', $scope, [], 'kiberone-typing');
+        $config = $this->service->read('student_activity_config', $scope, [], 'platform-typing');
         self::assertSame($assignment['id'], $config['assignments'][0]['id']);
         self::assertSame(['durationSeconds' => 30], $config['assignments'][0]['config']);
 
-        $started = $this->service->write('student_start_attempt', $scope, ['durationSeconds' => 30, 'language' => 'en'], 'kiberone-typing');
+        $started = $this->service->write('student_start_attempt', $scope, ['durationSeconds' => 30, 'language' => 'en'], 'platform-typing');
         $this->service->write('student_finish_attempt', $scope, ['typed' => $started['exercise']['text'], 'durationSeconds' => 30], $started['attempt']['id']);
 
-        $results = $this->service->read('group_activity_results', $this->teacherScope, ['activity' => 'kiberone-typing'], $group['id']);
+        $results = $this->service->read('group_activity_results', $this->teacherScope, ['activity' => 'platform-typing'], $group['id']);
         self::assertSame('Assign student Test', $results['items'][0]['name']);
         self::assertSame(100.0, $results['items'][0]['accuracy']);
 
@@ -265,7 +265,7 @@ final class StudentPortalTest extends TestCase
         $this->store->grantTeacher($this->organization, $otherAccount, $otherTeacherPerson);
         $otherIdentity = new AuthenticatedIdentity($otherAccount, $otherTeacherPerson, $this->id(), ['education.teacher'], [], 'en-US', 'UTC');
         $otherScope = $this->access->scope($otherIdentity, $this->organization, 'education.activities.manage');
-        $this->assertError(404, fn() => $this->service->read('group_activity_results', $otherScope, ['activity' => 'kiberone-typing'], $group['id']));
+        $this->assertError(404, fn() => $this->service->read('group_activity_results', $otherScope, ['activity' => 'platform-typing'], $group['id']));
     }
 
     private function fixedClock(): ClockInterface

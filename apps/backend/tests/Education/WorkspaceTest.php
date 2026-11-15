@@ -29,6 +29,7 @@ use App\Education\Infrastructure\RetentionCandidateContributor;
 use App\Education\Infrastructure\WorkspaceErasureHandler;
 use App\Core\Organization\Application\OrganizationRepository;
 use App\Core\Rbac\Application\PermissionService;
+use App\Tests\Storage02\EducationS3Fixture;
 use App\Environment;
 use DateTimeImmutable;
 use HttpSoft\Message\StreamFactory;
@@ -38,6 +39,8 @@ use Psr\Container\ContainerInterface;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Transaction\TransactionInterface;
 use Yiisoft\Yii\Runner\Http\HttpApplicationRunner;
+
+require_once dirname(__DIR__).'/Storage02/EducationS3Fixture.php';
 
 final class WorkspaceTest extends TestCase
 {
@@ -83,10 +86,8 @@ final class WorkspaceTest extends TestCase
 
     protected function tearDown(): void
     {
-        foreach ($this->storedFiles as $key) {
-            $this->files->remove($key);
-        }
         $this->transaction->rollBack();
+        EducationS3Fixture::removeOwned($this->storedFiles);
     }
 
     public function testOrganizationDomainRoleAndCurrentPermissionsAreAllRequired(): void
@@ -305,7 +306,7 @@ final class WorkspaceTest extends TestCase
         $this->service->write('complete_lesson', $this->scope, [], $lesson['id']);
         self::assertSame($file['id'], $this->service->read('materials', $this->scope, [], $lesson['id'])['items'][0]['id']);
         self::assertSame('completed', $this->service->read('materials', $this->scope, [], $lesson['id'])['items'][0]['lessonStatus']);
-        self::assertSame($bytes, file_get_contents($this->service->download($this->scope, $file['id'])['path']));
+        self::assertSame($bytes, EducationS3Fixture::bytes($this->service->download($this->scope, $file['id'])));
         $this->assertError(409, fn() => $this->service->write('delete_file', $this->scope, [], $file['id']), 'lesson_locked');
         self::assertNotNull($this->store->file($this->scope, $file['id']));
 
@@ -319,7 +320,8 @@ final class WorkspaceTest extends TestCase
         $this->service->write('cancel_lesson', $this->scope, [], $scheduled['id']);
         self::assertSame(true, $this->service->write('delete_file', $this->scope, [], $cancelledFile['id'])['deleted']);
         self::assertNull($this->store->file($this->scope, $cancelledFile['id']));
-        $this->assertError(404, fn() => $this->files->path($cancelledRow['storageKey']));
+        self::assertSame(1,(int)$this->db->createCommand('SELECT count(*) FROM education.object_cleanup WHERE object_key=:key',
+            [':key'=>'objects/'.$cancelledRow['storageKey']])->queryScalar());
 
         $unattached = $this->service->upload($this->scope, new UploadedFile(
             (new StreamFactory())->createStream($bytes), strlen($bytes), UPLOAD_ERR_OK, 'unattached.pdf', 'application/pdf',
@@ -424,7 +426,7 @@ final class WorkspaceTest extends TestCase
         $this->storedFiles[] = $row['storageKey'];
         self::assertSame('application/pdf', $file['mime']);
         $download = $this->service->download($this->scope, $file['id']);
-        self::assertSame($bytes, file_get_contents($download['path']));
+        self::assertSame($bytes, EducationS3Fixture::bytes($download));
         self::assertSame(hash('sha256', $bytes), $download['sha256']);
         $other = $this->teacher('Other');
         $otherScope = $this->access->scope($other, $this->organization, 'education.files.manage');
@@ -638,8 +640,9 @@ final class WorkspaceTest extends TestCase
         self::assertSame(0, $count('SELECT count(*) FROM education.lesson_results WHERE lesson_id = CAST(:lesson AS uuid) OR student_id = CAST(:student AS uuid)',
             [':lesson' => $lesson['id'], ':student' => $student['id']]));
         self::assertSame(0, $count('SELECT count(*) FROM education.lesson_reports WHERE lesson_id = CAST(:lesson AS uuid)', [':lesson' => $lesson['id']]));
-        self::assertSame(0, $count('SELECT count(*) FROM education.result_revisions'));
-        self::assertSame(1, $count('SELECT count(*) FROM education.privacy_receipts'));
+        self::assertSame(0, $count('SELECT count(*) FROM education.result_revisions WHERE owner_account_id=CAST(:actor AS uuid)',
+            [':actor' => $this->scope->accountId]));
+        self::assertSame(1, $count('SELECT count(*) FROM education.privacy_receipts WHERE item_id=CAST(:item AS uuid)', [':item' => $item]));
         self::assertSame(1, $count('SELECT count(*) FROM education.groups WHERE id = CAST(:group AS uuid)', [':group' => $otherGroup['id']]));
         self::assertSame(1, $count('SELECT count(*) FROM education.teachers WHERE person_id = CAST(:person AS uuid)', [':person' => $recipient->personId]));
         self::assertSame(0, $count('SELECT count(*) FROM education.notifications WHERE person_id = CAST(:person AS uuid)', [':person' => $recipient->personId]));
@@ -648,12 +651,10 @@ final class WorkspaceTest extends TestCase
             [':thread' => $thread['id'], ':person' => $recipient->personId],
         ));
         self::assertSame(1, $count('SELECT count(*) FROM education.threads WHERE id = CAST(:thread AS uuid)', [':thread' => $thread['id']]));
-        try {
-            $this->files->path($fileRow['storageKey']);
-            self::fail('Erased Education file bytes still exist.');
-        } catch (EducationError) {
-            self::assertTrue(true);
-        }
+        // The erasure transaction removes authorization and queues bytes. Physical deletion
+        // waits until commit so rollback retains the only copy of a user's data.
+        self::assertSame(1,(int)$this->db->createCommand('SELECT count(*) FROM education.object_cleanup WHERE object_key=:key',
+            [':key'=>'objects/'.$fileRow['storageKey']])->queryScalar());
 
         $second = (string) $this->db->createCommand('SELECT uuidv7()')->queryScalar();
         self::assertSame('deleted', $handler->execute(

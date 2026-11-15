@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { coreAdminHttp } from '@/shared/api/core/adminHttp';
 import { ApiResponseError } from '@/shared/api/errors';
-import { deviceApi } from './api';
+import { canDevice, deviceApi } from './api';
 
 vi.mock('@/shared/api/core/adminHttp', () => ({
   coreAdminHttp: {
@@ -46,11 +46,55 @@ describe('device management api', () => {
   it('loads device detail with sessions', async () => {
     vi.mocked(coreAdminHttp.request).mockResolvedValue({
       ...device,
+      stateVersion: 1, availableActions: ['end_session'], commands: [], progress: null, lastError: null, recovery: null,
       sessions: [{ id, deviceId: id, studentId: id, studentPersonId: id, studentName: 'Student Test', status: 'ACTIVE', desiredStatus: null, startedAt: '2026-03-08T10:00:00.000000+00:00' }],
     });
     const detail = await deviceApi.device(org, id);
     expect(detail.sessions[0]?.status).toBe('ACTIVE');
+    expect(canDevice(detail, 'end_session')).toBe(true);
+    expect(canDevice(detail, 'assign')).toBe(false);
     vi.mocked(coreAdminHttp.request).mockResolvedValue({ ...device, sessions: 'broken' });
     await expect(deviceApi.device(org, id)).rejects.toBeInstanceOf(ApiResponseError);
+  });
+  it('supports classroom management and device updates', async () => {
+    const classroom = { id, name: 'Room 101', createdAt: '2026-03-08T10:00:00.000000+00:00' };
+    vi.mocked(coreAdminHttp.request).mockResolvedValue(classroom);
+    await deviceApi.updateClassroom(org, id, 'Room 102');
+    expect(coreAdminHttp.request).toHaveBeenLastCalledWith(
+      `/api/device-management/classrooms/${id}`,
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ name: 'Room 102' }) }),
+    );
+    await deviceApi.archiveClassroom(org, id);
+    expect(coreAdminHttp.request).toHaveBeenLastCalledWith(
+      `/api/device-management/classrooms/${id}/archive`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    vi.mocked(coreAdminHttp.request).mockResolvedValue(device);
+    await deviceApi.updateDevice(org, id, { name: 'PC 1 Renamed', number: '10' });
+    expect(coreAdminHttp.request).toHaveBeenLastCalledWith(
+      `/api/device-management/devices/${id}`,
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ name: 'PC 1 Renamed', number: '10' }) }),
+    );
+  });
+  it('loads every classroom page without a hidden selection limit', async () => {
+    const classroom = { id, name: 'Room', createdAt: '2026-03-08T10:00:00Z' };
+    vi.mocked(coreAdminHttp.request).mockResolvedValueOnce({ items: [classroom], limit: 50, offset: 0, nextOffset: 50 }).mockResolvedValueOnce({ items: [{ ...classroom, id: org }], limit: 50, offset: 50, nextOffset: null });
+    expect((await deviceApi.allClassrooms(org)).items).toHaveLength(2);
+    expect(coreAdminHttp.request).toHaveBeenLastCalledWith('/api/device-management/classrooms?offset=50', expect.anything());
+  });
+  it('rejects a detail without authoritative actions and malformed progress', async () => {
+    const detail = { ...device, sessions: [], stateVersion: 1, availableActions: [], commands: [], progress: null, lastError: null, recovery: null };
+    vi.mocked(coreAdminHttp.request).mockResolvedValue(detail);
+    expect(canDevice(await deviceApi.device(org, id), 'assign')).toBe(false);
+    vi.mocked(coreAdminHttp.request).mockResolvedValue({ ...detail, progress: { stage: 'sync_in', completed: 5, total: 1 } });
+    await expect(deviceApi.device(org, id)).rejects.toBeInstanceOf(ApiResponseError);
+  });
+  it('sends the observed state version when cancelling or retrying', async () => {
+    vi.mocked(coreAdminHttp.request).mockResolvedValue({ sessionId: id, cancelled: true });
+    await deviceApi.cancelAssignment(org, id, id, 4);
+    expect(coreAdminHttp.request).toHaveBeenLastCalledWith(`/api/device-management/devices/${id}/session/cancel`, expect.objectContaining({ body: JSON.stringify({ sessionId: id, stateVersion: 4 }) }));
+    vi.mocked(coreAdminHttp.request).mockResolvedValue({ sessionId: id, retrying: true });
+    await deviceApi.retryRecovery(org, id, 5);
+    expect(coreAdminHttp.request).toHaveBeenLastCalledWith(`/api/device-management/devices/${id}/recovery/retry`, expect.objectContaining({ body: JSON.stringify({ stateVersion: 5 }) }));
   });
 });

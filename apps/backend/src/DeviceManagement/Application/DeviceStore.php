@@ -6,24 +6,36 @@ namespace App\DeviceManagement\Application;
 
 interface DeviceStore
 {
-    /** @return array{id:string,name:string,studentId:string,organizationId:string,status:string}|null */
+    /** @return array<string,mixed>|null */
     public function classroom(Scope $scope, string $id): ?array;
     /** @return list<array<string,mixed>> */
-    public function classrooms(Scope $scope): array;
+    public function classrooms(Scope $scope, int $offset = 0, ?string $search = null, bool $archived = false): array;
     /**
      * @return array<string,mixed>
      */
     public function createClassroom(Scope $scope, string $name): array;
+    /**
+     * @return array<string,mixed>
+     */
+    public function updateClassroom(Scope $scope, string $id, string $name): array;
+    /**
+     * @return array<string,mixed>
+     */
+    public function archiveClassroom(Scope $scope, string $id): array;
     /** @return list<array<string,mixed>> */
-    public function devices(Scope $scope, int $offset): array;
+    public function devices(Scope $scope, int $offset, ?string $classroomId = null, ?string $status = null, ?string $search = null): array;
     /** @return array<string,mixed>|null */
     public function device(Scope $scope, string $id): ?array;
     /** @return list<array<string,mixed>> */
-    public function deviceSessions(Scope $scope, string $deviceId): array;
+    public function deviceSessions(Scope $scope, string $deviceId, int $offset = 0): array;
     /**
      * @return array<string,mixed>
      */
     public function createDevice(Scope $scope, ?string $classroomId, string $name, string $number): array;
+    /**
+     * @return array<string,mixed>
+     */
+    public function updateDevice(Scope $scope, string $id, ?string $classroomId, string $name, string $number): array;
     /**
      * @return array<string,mixed>
      */
@@ -43,7 +55,7 @@ interface DeviceStore
     /**
      * @return array<string,mixed>
      */
-    public function startSession(Scope $scope, string $deviceId, string $studentId, array $student): array;
+    public function startSession(Scope $scope, string $deviceId, string $studentId, array $student, ?int $stateVersion = null): array;
     /**
      * @return array<string,mixed>|null
      */
@@ -52,7 +64,7 @@ interface DeviceStore
     /**
      * @return array<string,mixed>
      */
-    public function transitionSession(string $deviceId, string $sessionId, string $status): array;
+    public function transitionSession(string $deviceId, string $sessionId, string $status, array $evidence = []): array;
     /**
      * @return array<string,mixed>
      */
@@ -69,4 +81,11 @@ interface DeviceStore
     /** @return list<array<string,mixed>> */
     public function deviceEvents(Scope $scope, string $deviceId, int $offset): array;
     public function markSeen(string $deviceId): void;
+    public function agentInfo(string $deviceId): array;
+    public function restoreClassroom(Scope $scope, string $id): array;
+    public function lifecycleDetails(Scope $scope, string $deviceId): array;
+    public function commands(Scope $scope, string $deviceId, int $offset = 0): array;
+    public function cancelAssignment(Scope $scope, string $deviceId, string $sessionId, ?int $stateVersion): array;
+    public function retryRecovery(Scope $scope, string $deviceId, ?int $stateVersion): array;
+    public function requestLocalSessionEnd(string $deviceId, string $sessionId): array;
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Core\Auth\Infrastructure\RequireAuthentication;
 use App\Education\Api\EducationAction;
+use App\Education\Api\CurriculumAction;
 use App\Education\Api\PrivateResponse;
 use Yiisoft\Router\Route;
 
@@ -28,9 +29,17 @@ $definitions = [
     ['GET', '/students/{id}', 'student'], ['GET', '/students/{id}/attendance', 'student_attendance'],
     ['GET', '/students/{id}/results', 'student_results'], ['GET', '/students/{id}/progress', 'student_progress'],
     ['POST', '/student-activate', 'activate_invite'],
+    ['GET', '/activities', 'activity_catalog'],
+    ['GET', '/groups/{id}/activity-progress', 'group_activity_progress'],
+    ['PUT', '/attempts/{id}/revoke', 'revoke_activity_attempt'],
+    ['GET', '/student/achievements', 'student_achievements'],
+    ['GET', '/student/activity-progress', 'student_activity_progress'],
+    ['GET', '/student/attempts/{id}', 'student_attempt'],
+    ['PUT', '/student/attempts/{id}/state', 'student_save_attempt_state'],
     ['GET', '/activities/assignments', 'activity_assignments'], ['POST', '/activities/{id}/assignments', 'activities_assign'],
     ['GET', '/groups/{id}/activity-results', 'group_activity_results'],
     ['GET', '/student/home', 'student_home'], ['GET', '/student/schedule', 'student_schedule'],
+    ['GET', '/student/notifications', 'student_notifications'], ['POST', '/student/notifications/{id}/read', 'student_read_notification'],
     ['GET', '/student/lessons', 'student_lessons'], ['GET', '/student/lessons/{id}', 'student_lesson'],
     ['GET', '/student/activities', 'student_activity_catalog'], ['GET', '/student/activities/{id}', 'student_activity_config'],
     ['GET', '/student/attempts', 'student_attempt_history'], ['POST', '/student/activities/{id}/attempts', 'student_start_attempt'],
@@ -43,7 +52,28 @@ $definitions = [
     ['POST', '/threads/{id}/messages', 'send_message'], ['POST', '/threads/{id}/read', 'read_thread'],
     ['GET', '/notifications', 'notifications'], ['POST', '/notifications/{id}/read', 'read_notification'],
 ];
-$routes = [];
+$routes = (static fn(): array => require __DIR__ . '/parent-routes.php')();
+$curriculumDefinitions = [
+    ['GET', '/programs', 'programs'], ['POST', '/programs', 'create_program'],
+    ['GET', '/programs/{id}', 'program'], ['PUT', '/programs/{id}', 'update_program'],
+    ['POST', '/programs/{id}/modules', 'create_curriculum_module'],
+    ['GET', '/curriculum-modules/{id}', 'curriculum_module'], ['PUT', '/curriculum-modules/{id}', 'update_curriculum_module'],
+    ['POST', '/curriculum-modules/{id}/lessons', 'create_curriculum_lesson'],
+    ['GET', '/curriculum-lessons/{id}', 'curriculum_lesson'], ['PUT', '/curriculum-lessons/{id}', 'update_curriculum_lesson'],
+    ['GET', '/groups/{id}/programs', 'group_programs'], ['POST', '/groups/{id}/programs', 'assign_program'],
+    ['GET', '/groups/{id}/progress', 'group_progress'], ['GET', '/students/{id}/curriculum-progress', 'student_curriculum_progress'],
+    ['GET', '/student/curriculum-progress', 'own_curriculum_progress'],
+    ['GET', '/groups/{id}/teachers', 'group_teachers'], ['PUT', '/groups/{id}/teachers', 'set_group_teachers'],
+    ['POST', '/students/new', 'create_student'],
+];
+foreach ($curriculumDefinitions as [$method, $path, $operation]) {
+    $route = match ($method) {
+        'GET' => Route::get('/api/education' . $path), 'POST' => Route::post('/api/education' . $path),
+        'PUT' => Route::put('/api/education' . $path),
+    };
+    $routes[] = $route->defaults(['operation' => $operation])->middleware(PrivateResponse::class, RequireAuthentication::class)
+        ->action(CurriculumAction::class)->name('education/curriculum/' . $operation);
+}
 foreach ($definitions as [$method, $path, $operation]) {
     $route = match ($method) {
         'GET' => Route::get('/api/education' . $path),
@@ -53,4 +83,4 @@ foreach ($definitions as [$method, $path, $operation]) {
     $routes[] = $route->defaults(['operation' => $operation])->middleware(PrivateResponse::class, RequireAuthentication::class)
         ->action(EducationAction::class)->name('education/' . $operation);
 }
-return $routes;
+return [...$routes, ...(require __DIR__ . '/education-transfer-routes.php')];

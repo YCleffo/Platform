@@ -14,5 +14,9 @@ final readonly class Scope
         public string $locale,
         public string $timezone,
         public ?string $studentId = null,
+        /** The authenticated actor remains distinct from a delegated record owner. */
+        public ?string $actorAccountId = null,
     ) {}
+
+    public function actor(): string { return $this->actorAccountId ?? $this->accountId; }
 }

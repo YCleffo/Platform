@@ -8,6 +8,9 @@ import { useEducationWorkspace } from './workspace';
 import { useEducationResource } from './resources';
 import { useEducationI18n } from './i18n';
 import EducationState from './EducationState.vue';
+import StudentCurriculumProgress from './StudentCurriculumProgress.vue';
+import HomeworkSummary from './homework/HomeworkSummary.vue';
+import StudentFamilyPanel from './parent/StudentFamilyPanel.vue';
 const route = useRoute();
 const workspace = useEducationWorkspace();
 const { t, locale } = useEducationI18n();
@@ -20,8 +23,8 @@ const periodInvalid = computed(() => !!from.value && !!to.value && from.value > 
 const period = computed(() => ({ from: from.value, to: to.value }));
 const { data, loading, error, refresh } = useEducationResource(
   async (org, signal) => {
-    const card = await educationApi.student(org, id.value, signal);
-    const [results, attendance, progress] = await Promise.all([
+    const [card, results, attendance, progress] = await Promise.all([
+      educationApi.student(org, id.value, signal),
       educationApi.studentResults(org, id.value, resultsOffset.value, signal),
       from.value && to.value && !periodInvalid.value
         ? educationApi.studentAttendance(
@@ -84,6 +87,8 @@ async function revoke(): Promise<void> {
 </script>
 <template>
   <section>
+    <HomeworkSummary :student-id="id" />
+    <StudentCurriculumProgress :student-id="id" />
     <header class="edu-page-title">
       <h1>{{ data?.card.name ?? t('education.studentCard') }}</h1>
       <RouterLink
@@ -99,6 +104,7 @@ async function revoke(): Promise<void> {
       @retry="refresh"
     />
     <template v-if="data">
+      <StudentFamilyPanel :student-id="id" />
       <article class="edu-card">
         <h2>{{ t('education.groups') }}</h2>
         <ul class="edu-list">

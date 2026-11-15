@@ -10,6 +10,7 @@ use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Education\Application\EducationAccess;
 use App\Education\Application\EducationError;
 use App\Education\Application\EducationService;
+use App\Education\Application\CurriculumStore;
 use App\Education\Application\Input;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -24,6 +25,7 @@ final readonly class EducationAction
         CurrentRoute $route,
         EducationAccess $access,
         EducationService $education,
+        CurriculumStore $curriculum,
         ResponseFactory $responses,
         StreamFactoryInterface $streams,
     ): ResponseInterface {
@@ -52,29 +54,33 @@ final readonly class EducationAction
                 'upload_file', 'file_download', 'files', 'materials', 'delete_file' => 'education.files.manage',
                 'threads', 'thread', 'messages', 'colleagues', 'start_thread', 'send_message', 'read_thread',
                 'read_notification', 'notifications' => 'education.messages.use',
-                'activities_assign', 'activity_assignments', 'group_activity_results' => 'education.activities.manage',
+                'activities_assign', 'activity_assignments', 'group_activity_results', 'activity_catalog', 'group_activity_progress', 'revoke_activity_attempt' => 'education.activities.manage',
                 default => 'education.access',
             };
             $studentOperations = ['student_home', 'student_schedule', 'student_lessons', 'student_lesson',
                 'student_activity_catalog', 'student_activity_config', 'student_attempt_history',
-                'student_typing_history', 'student_start_attempt', 'student_finish_attempt'];
+                'student_attempt','student_save_attempt_state','student_achievements','student_activity_progress',
+                'student_typing_history', 'student_start_attempt', 'student_finish_attempt', 'student_notifications', 'student_read_notification'];
             $scope = in_array($operation, $studentOperations, true)
                 ? $access->studentScope($identity, $request->getHeaderLine('X-Education-Organization'),
                     in_array($operation, ['student_activity_catalog', 'student_activity_config', 'student_start_attempt',
-                        'student_finish_attempt', 'student_attempt_history', 'student_typing_history'], true)
+                        'student_finish_attempt', 'student_attempt_history', 'student_typing_history','student_attempt',
+                        'student_save_attempt_state','student_achievements','student_activity_progress'], true)
                         ? 'education.activities.use' : 'education.student.use')
-                : $access->scope($identity, $request->getHeaderLine('X-Education-Organization'), $permission);
+                : ($operation === 'header'
+                    ? $this->headerScope($access, $identity, $request->getHeaderLine('X-Education-Organization'))
+                    : $access->scope($identity, $request->getHeaderLine('X-Education-Organization'), $permission));
             $argument = $route->getArgument('id');
-            $id = is_string($argument) ? $argument : null;
+            $id = is_string($argument) ? \App\Education\Application\ActivityCode::canonical($argument) : null;
             if ($operation === 'file_download') {
                 $file = $education->download($scope, Input::uuid($id));
-                return $responses->success()->withBody($streams->createStreamFromFile($file['path']))
+                return $responses->success()->withBody($streams->createStreamFromResource($file['stream']))
                     ->withHeader('Content-Type', $file['mime'])->withHeader('Content-Length', (string) $file['size'])
                     ->withHeader('Content-Security-Policy', "default-src 'none'; sandbox")
                     ->withHeader('Content-Disposition', "attachment; filename=\"download\"; filename*=UTF-8''" . rawurlencode($file['name']));
             }
             if ($request->getMethod() === 'GET') {
-                return $responses->success($education->read($operation, $scope, $request->getQueryParams(), $id));
+                return $responses->success($education->read($operation, $scope, array_map(static fn(mixed $value): mixed => is_string($value) ? \App\Education\Application\ActivityCode::canonical($value) : $value, $request->getQueryParams()), $id));
             }
             $body = $request->getParsedBody();
             if ($body !== null && !is_array($body)) {
@@ -82,6 +88,7 @@ final readonly class EducationAction
             }
             /** @var array<string,mixed> $body */
             $body = $body ?? [];
+            if ($operation === 'student_read_notification') $operation = 'read_notification';
             if ($operation === 'upload_file') {
                 if (array_diff(array_keys($body), ['lessonId', 'purpose']) !== []) {
                     throw new EducationError(422, 'invalid_input');
@@ -95,6 +102,7 @@ final readonly class EducationAction
                     throw new EducationError(422, 'invalid_file');
                 }
                 $lessonId = ($body['lessonId'] ?? '') === '' ? null : Input::uuid($body['lessonId']);
+                if ($lessonId !== null) $scope = $curriculum->delegatedScope($scope, 'lesson', $lessonId);
                 return $responses->success($education->upload($scope, $upload, $lessonId, $purpose === 'avatar'))->withStatus(201);
             }
             $studentId = $route->getArgument('studentId');
@@ -111,6 +119,17 @@ final readonly class EducationAction
                 503 => ApiMessage::HTTP_SERVICE_UNAVAILABLE, default => ApiMessage::VALIDATION_FAILED,
             };
             return $responses->error($code, httpCode: $error->status, meta: ['educationCode' => $error->reason]);
+        }
+    }
+
+    /** The shared shell header exposes only the authenticated person's metadata. */
+    private function headerScope(EducationAccess $access, AuthenticatedIdentity $identity, string $organization): \App\Education\Application\Scope
+    {
+        try {
+            return $access->scope($identity, $organization, 'education.access');
+        } catch (EducationError $error) {
+            if ($error->status !== 403 || $error->reason !== 'access_denied') throw $error;
+            return $access->studentScope($identity, $organization, 'education.student.use');
         }
     }
 }

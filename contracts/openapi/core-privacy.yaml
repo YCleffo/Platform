@@ -1098,7 +1098,12 @@ components:
                         type: string
                         format: uuid
     PersonalData:
-      description: Исходный документ JSON UTF-8 без оболочки успеха
+      description: >-
+        Исходный документ JSON UTF-8 без оболочки успеха. Страницы и бинарное содержимое Storage собираются
+        в проверенный временный файл внутри авторизованной транзакции, затем ответ передаётся потоком.
+        Лимит потокового документа по умолчанию 1 ГиБ; при превышении возвращается 413 без частичного документа.
+        Бинарное содержимое представлено последовательными base64-записями content_chunk с versionId и chunk.
+        Один contributorCode может повторяться в sections для следующих страниц того же contributor.
       headers:
         Cache-Control:
           schema:
@@ -1106,6 +1111,15 @@ components:
         X-Content-Type-Options:
           schema:
             const: nosniff
+        Content-Length:
+          schema:
+            type: integer
+            minimum: 1
+        X-Content-Sha256:
+          description: SHA-256 полного документа JSON в том же байтовом представлении, что и ответ
+          schema:
+            type: string
+            pattern: '^[a-f0-9]{64}$'
       content:
         application/json:
           schema:

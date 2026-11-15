@@ -9,6 +9,19 @@ const header = { displayName: 'Teacher', avatarFileId: null, personId: id, date:
 
 describe('Education response boundary', () => {
   beforeEach(() => vi.mocked(coreAdminHttp.request).mockReset());
+  it('accepts the paginated curriculum catalog and immutable group assignment snapshot', async () => {
+    const program = { id, name: 'Program', description: '', version: 1, archivedAt: null };
+    const page = { items: [program], limit: 50, offset: 0, nextOffset: null };
+    vi.mocked(coreAdminHttp.request).mockResolvedValue(page);
+    await expect(educationApi.programs(id)).resolves.toEqual(page);
+    const assigned = { items: [{ ...program, programId: id, assignedAt: header.now, endedAt: null,
+      modules: [{ id, name: 'Module', description: '', position: 0, archivedAt: null,
+        lessons: [{ id, title: 'Lesson', description: '', position: 0, archivedAt: null }] }] }] };
+    vi.mocked(coreAdminHttp.request).mockResolvedValue(assigned);
+    await expect(educationApi.groupPrograms(id, id)).resolves.toEqual(assigned);
+    vi.mocked(coreAdminHttp.request).mockResolvedValue({ items: [program], nextOffset: null });
+    await expect(educationApi.programs(id)).rejects.toBeInstanceOf(ApiResponseError);
+  });
   it('accepts genuine empty data and carries the explicit organization scope', async () => {
     vi.mocked(coreAdminHttp.request).mockResolvedValue(null);
     await expect(educationApi.next(id)).resolves.toBeNull();

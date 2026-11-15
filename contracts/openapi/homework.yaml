@@ -1,0 +1,3551 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Platform Education Homework",
+    "version": "1.0.0",
+    "description": "Core Bearer identity and live Education organization/relationship access. No-store. Immutable answer revisions and transactional notifications/files. DRAFT > PUBLISHED > CLOSED > ARCHIVED. Draft edits survive deadline expiry; late submission requires allowLate. Published recipients are frozen and survive group removal. Client version conflicts use HTTP409 meta.homeworkCode=version_conflict; reused idempotency key with another payload uses idempotency_conflict. Only IN_PROGRESS/RETURNED answers are editable. Returned exercise work requires a fresh verified Activities attempt. Exercise metrics are never accepted in a Homework request."
+  },
+  "servers": [
+    {
+      "url": "/api/education"
+    }
+  ],
+  "security": [
+    {
+      "CoreBearer": []
+    }
+  ],
+  "paths": {
+    "/homework": {
+      "get": {
+        "operationId": "education_homework_teacher_list",
+        "summary": "teacher list",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "PUBLISHED",
+                "CLOSED",
+                "ARCHIVED"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "overdue",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string",
+              "maxLength": 160
+            }
+          },
+          {
+            "in": "query",
+            "name": "groupId",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "dueAt",
+                "assignedAt",
+                "createdAt",
+                "deadline",
+                "newest",
+                "oldest"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TeacherList"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "education_homework_create",
+        "summary": "create",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TeacherDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssignment"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/homework/progress": {
+      "get": {
+        "operationId": "education_homework_teacher_summary",
+        "summary": "teacher summary",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "query",
+            "name": "studentId",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "groupId",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Summary"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/homework/{id}": {
+      "get": {
+        "operationId": "education_homework_teacher_detail",
+        "summary": "teacher detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TeacherDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "education_homework_update",
+        "summary": "Versioned conditions edit; published binding/config fixed, maxAttempts can only increase",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TeacherDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAssignment"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/homework/{id}/publish": {
+      "post": {
+        "operationId": "education_homework_publish",
+        "summary": "publish",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TeacherDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionCommand"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/homework/{id}/close": {
+      "post": {
+        "operationId": "education_homework_close",
+        "summary": "close",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TeacherDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionCommand"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/homework/{id}/archive": {
+      "post": {
+        "operationId": "education_homework_archive",
+        "summary": "archive",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TeacherDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionCommand"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/homework/{id}/recipients": {
+      "post": {
+        "operationId": "education_homework_add_recipients",
+        "summary": "add recipients",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TeacherDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipientsCommand"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/homework/{id}/history": {
+      "get": {
+        "operationId": "education_homework_teacher_history",
+        "summary": "teacher history",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/HistoryList"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/homework/{id}/submissions": {
+      "get": {
+        "operationId": "education_homework_teacher_submissions",
+        "summary": "teacher submissions",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RecipientList"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/homework/submissions/{id}": {
+      "get": {
+        "operationId": "education_homework_teacher_submission_detail",
+        "summary": "teacher submission detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SubmissionDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/homework/submissions/{id}/review": {
+      "post": {
+        "operationId": "education_homework_review",
+        "summary": "review",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SubmissionDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewCommand"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/homework": {
+      "get": {
+        "operationId": "education_homework_student_list",
+        "summary": "student list",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NOT_STARTED",
+                "IN_PROGRESS",
+                "SUBMITTED",
+                "RESUBMITTED",
+                "RETURNED",
+                "REVIEWED"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string",
+              "maxLength": 160
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "dueAt",
+                "assignedAt",
+                "createdAt",
+                "deadline",
+                "newest",
+                "oldest"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StudentList"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/student/homework/{id}": {
+      "get": {
+        "operationId": "education_homework_student_detail",
+        "summary": "student detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SubmissionDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/student/homework/{id}/draft": {
+      "put": {
+        "operationId": "education_homework_save_draft",
+        "summary": "save draft",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SubmissionDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftCommand"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/homework/{id}/submit": {
+      "post": {
+        "operationId": "education_homework_submit",
+        "summary": "Freeze permitted answer; exact replay returns original response",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SubmissionDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitCommand"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/homework/{id}/files": {
+      "post": {
+        "operationId": "education_homework_upload_material",
+        "summary": "Private material; DRAFT only",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "201": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/File"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Content-sniffed PDF/PNG/JPEG/WebP/plain text; 1..10 MiB, maximum20 files."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/homework/{id}/files": {
+      "post": {
+        "operationId": "education_homework_upload_submission",
+        "summary": "Own editable draft; immutable bytes retained by submitted revisions",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "201": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/File"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Content-sniffed PDF/PNG/JPEG/WebP/plain text; 1..10 MiB, maximum20 files."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/homework/{id}/files/{fileId}": {
+      "delete": {
+        "operationId": "education_homework_unlink_draft_file",
+        "summary": "Unlink own draft file; retain all submitted revision attachments",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          },
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SubmissionDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/student/homework/progress": {
+      "get": {
+        "operationId": "education_homework_student_summary",
+        "summary": "Own factual Homework progress",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Summary"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/student/homework/{id}/activity/start": {
+      "post": {
+        "operationId": "education_homework_start_activity",
+        "summary": "Start existing Typing with server assignment config and locked total attempt limit",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "attempt",
+                        "exercise"
+                      ],
+                      "properties": {
+                        "attempt": {
+                          "type": "object"
+                        },
+                        "exercise": {
+                          "type": "object",
+                          "required": [
+                            "text",
+                            "durationSeconds",
+                            "language"
+                          ],
+                          "properties": {
+                            "text": {
+                              "type": "string"
+                            },
+                            "durationSeconds": {
+                              "type": "integer",
+                              "enum": [
+                                15,
+                                30,
+                                60
+                              ]
+                            },
+                            "language": {
+                              "type": "string",
+                              "enum": [
+                                "ru",
+                                "en"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/student/homework/{id}/activity/attach": {
+      "post": {
+        "operationId": "education_homework_attach_activity",
+        "summary": "Own finished assigned attempt only; no client metrics",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SubmissionDetail"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "attemptId"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "attemptId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/student/notifications": {
+      "get": {
+        "operationId": "education_homework_student_notifications",
+        "summary": "Existing notification center for the current student",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/student/notifications/{id}/read": {
+      "post": {
+        "operationId": "education_homework_student_notification_read",
+        "summary": "Mark only own notification as read",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "updated": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/homework/files/{id}": {
+      "get": {
+        "operationId": "education_homework_download_file",
+        "summary": "Concrete authorized material/answer only; never personal Documents",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organization"
+          },
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private result. now uses the server UTC clock.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "CoreBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "parameters": {
+      "Organization": {
+        "in": "header",
+        "name": "X-Education-Organization",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "Id": {
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Authorization, tenant isolation, invalid lifecycle/version/idempotency, deadline or input error.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "File": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "mime",
+          "sizeBytes"
+        ]
+      },
+      "ActivityConfig": {
+        "type": "object",
+        "properties": {
+          "durationSeconds": {
+            "type": "integer",
+            "enum": [
+              15,
+              30,
+              60
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "words",
+              "sentences",
+              "numbers",
+              "code",
+              "accuracy"
+            ]
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "roundCount": {
+            "type": "integer",
+            "enum": [
+              5,
+              10
+            ]
+          },
+          "minAccuracy": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "targetWpm": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 500
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "additionalProperties": false,
+        "description": "Activity handler validates code-specific fields. Existing two-field Typing configurations stay supported."
+      },
+      "Assignment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorPersonId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 8000
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 20000
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "files",
+              "typing",
+              "activity"
+            ]
+          },
+          "groupId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "lessonId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "dueAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "allowLate": {
+            "type": "boolean"
+          },
+          "activityCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "activityConfig": {
+            "$ref": "#/components/schemas/ActivityConfig"
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "attemptPolicy": {
+            "type": "string",
+            "enum": [
+              "first",
+              "latest",
+              "best"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "CLOSED",
+              "ARCHIVED"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "closedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "archivedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/File"
+            }
+          },
+          "studentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "organizationId",
+          "title",
+          "type",
+          "status",
+          "version",
+          "dueAt",
+          "allowLate",
+          "activityConfig"
+        ]
+      },
+      "Recipient": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assignedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "assignmentId",
+          "studentId",
+          "personId"
+        ]
+      },
+      "ActivityResult": {
+        "type": "object",
+        "properties": {
+          "attemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "minimum": 15
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ]
+          },
+          "wpm": {
+            "type": "number"
+          },
+          "accuracy": {
+            "type": "number"
+          },
+          "keystrokes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "errors": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "correctAnswers": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalRounds": {
+            "type": "integer",
+            "enum": [
+              5,
+              10
+            ]
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "typedCharacters": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "words",
+              "sentences",
+              "numbers",
+              "code",
+              "accuracy"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "AnswerVersion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "assignmentVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "assignmentSnapshot": {
+            "$ref": "#/components/schemas/Assignment"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 20000
+          },
+          "activityAttemptId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "late": {
+            "type": "boolean"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/File"
+            }
+          },
+          "activityResult": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActivityResult"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "sequence",
+          "assignmentVersion",
+          "assignmentSnapshot",
+          "text",
+          "submittedAt",
+          "late",
+          "files"
+        ]
+      },
+      "Review": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submissionVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teacherAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "returned"
+            ]
+          },
+          "resultStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "mastered",
+              "developing",
+              "needs_support"
+            ]
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "teacherName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "submissionVersionId",
+          "teacherAccountId",
+          "decision",
+          "comment",
+          "createdAt"
+        ]
+      },
+      "Submission": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NOT_STARTED",
+              "IN_PROGRESS",
+              "SUBMITTED",
+              "RESUBMITTED",
+              "RETURNED",
+              "REVIEWED"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "text": {
+            "type": "string"
+          },
+          "currentVersion": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AnswerVersion"
+              }
+            ],
+            "nullable": true
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnswerVersion"
+            }
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Review"
+            }
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/File"
+            }
+          },
+          "selectedActivityAttemptId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "activityResult": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActivityResult"
+              }
+            ],
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "recipientId",
+          "studentId",
+          "personId",
+          "state",
+          "version",
+          "text",
+          "currentVersion",
+          "versions",
+          "reviews",
+          "files"
+        ]
+      },
+      "Counts": {
+        "type": "object",
+        "properties": {
+          "assigned": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pendingReview": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "returned": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "overdue": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "notStarted": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "inProgress": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "assigned",
+          "completed",
+          "pendingReview",
+          "returned",
+          "overdue",
+          "notStarted",
+          "inProgress"
+        ]
+      },
+      "TeacherDetail": {
+        "type": "object",
+        "properties": {
+          "assignment": {
+            "$ref": "#/components/schemas/Assignment"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/Counts"
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "assignment",
+          "counts",
+          "now"
+        ]
+      },
+      "SubmissionDetail": {
+        "type": "object",
+        "properties": {
+          "assignment": {
+            "$ref": "#/components/schemas/Assignment"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/Recipient"
+          },
+          "submission": {
+            "$ref": "#/components/schemas/Submission"
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "assignment",
+          "recipient",
+          "submission",
+          "now"
+        ]
+      },
+      "Summary": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Counts"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "now": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "now"
+            ]
+          }
+        ]
+      },
+      "CreateAssignment": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 8000
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 20000
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "files",
+              "typing",
+              "activity"
+            ]
+          },
+          "groupId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "lessonId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "dueAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "allowLate": {
+            "type": "boolean"
+          },
+          "activityCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "activityConfig": {
+            "$ref": "#/components/schemas/ActivityConfig"
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "attemptPolicy": {
+            "type": "string",
+            "enum": [
+              "first",
+              "latest",
+              "best"
+            ]
+          },
+          "studentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "maxItems": 1000
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ]
+      },
+      "UpdateAssignment": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 8000
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 20000
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "files",
+              "typing",
+              "activity"
+            ]
+          },
+          "groupId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "lessonId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "dueAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "allowLate": {
+            "type": "boolean"
+          },
+          "activityCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "activityConfig": {
+            "$ref": "#/components/schemas/ActivityConfig"
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "attemptPolicy": {
+            "type": "string",
+            "enum": [
+              "first",
+              "latest",
+              "best"
+            ]
+          },
+          "studentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "maxItems": 1000
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "version"
+        ]
+      },
+      "VersionCommand": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "version"
+        ]
+      },
+      "RecipientsCommand": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "studentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "studentIds"
+        ]
+      },
+      "DraftCommand": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 20000
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "text"
+        ]
+      },
+      "SubmitCommand": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "idempotencyKey"
+        ]
+      },
+      "ReviewCommand": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "returned"
+            ]
+          },
+          "resultStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "mastered",
+              "developing",
+              "needs_support"
+            ]
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 5000
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "idempotencyKey",
+          "decision"
+        ],
+        "description": "Return requires a nonempty comment. Accepted is the completion fact; resultStatus is optional and reuses Education result statuses."
+      },
+      "RecipientRow": {
+        "type": "object",
+        "properties": {
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "submissionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NOT_STARTED",
+              "IN_PROGRESS",
+              "SUBMITTED",
+              "RESUBMITTED",
+              "RETURNED",
+              "REVIEWED"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "submittedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "late": {
+            "type": "boolean"
+          },
+          "resultStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "mastered",
+              "developing",
+              "needs_support"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "recipientId",
+          "studentId",
+          "personId",
+          "state",
+          "version",
+          "submittedAt",
+          "late"
+        ]
+      },
+      "StudentAssignment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorPersonId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 8000
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 20000
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "files",
+              "typing",
+              "activity"
+            ]
+          },
+          "groupId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "lessonId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "dueAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "allowLate": {
+            "type": "boolean"
+          },
+          "activityCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "activityConfig": {
+            "$ref": "#/components/schemas/ActivityConfig"
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "attemptPolicy": {
+            "type": "string",
+            "enum": [
+              "first",
+              "latest",
+              "best"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "CLOSED",
+              "ARCHIVED"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "closedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "archivedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/File"
+            }
+          },
+          "studentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "recipientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submissionId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "submissionVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NOT_STARTED",
+              "IN_PROGRESS",
+              "SUBMITTED",
+              "RESUBMITTED",
+              "RETURNED",
+              "REVIEWED"
+            ]
+          },
+          "submittedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "late": {
+            "type": "boolean"
+          },
+          "resultStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "overdue": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "organizationId",
+          "title",
+          "type",
+          "status",
+          "version",
+          "dueAt",
+          "allowLate",
+          "activityConfig",
+          "recipientId",
+          "submissionId",
+          "submissionVersion",
+          "state",
+          "submittedAt",
+          "late",
+          "resultStatus",
+          "overdue"
+        ]
+      },
+      "TeacherAssignment": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Assignment"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "assigned": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "submitted": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pendingReview": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "returned": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "completed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "overdue": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      },
+      "Revision": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "action": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": true
+          },
+          "actorAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "action",
+          "payload",
+          "actorAccountId",
+          "createdAt"
+        ]
+      },
+      "TeacherList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeacherAssignment"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "nextOffset",
+          "now"
+        ]
+      },
+      "StudentList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StudentAssignment"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/Counts"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "nextOffset",
+          "now",
+          "counts"
+        ]
+      },
+      "RecipientList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipientRow"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/Counts"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "nextOffset",
+          "now",
+          "counts"
+        ]
+      },
+      "HistoryList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Revision"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "nextOffset",
+          "now"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "homeworkCode": {
+                "type": "string"
+              },
+              "educationCode": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

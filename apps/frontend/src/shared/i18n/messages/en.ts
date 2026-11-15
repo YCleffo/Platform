@@ -1,6 +1,12 @@
 import {operatorEn} from '../operator';
 import {workbenchEn} from '../workbench';
 export default {
+  branding: {
+    title: 'Platform branding', name: 'Platform name', favicon: 'Favicon',
+    iconHint: 'PNG or ICO, up to 512 KB and 1024 × 1024 pixels.', chooseIcon: 'Choose an icon',
+    upload: 'Upload icon', uploadProgress: 'Uploading icon', removeIcon: 'Restore default icon',
+    invalidIcon: 'Choose a PNG or ICO file up to 512 KB.', saved: 'Changes saved.',
+  },
   picker: { chooseDate: 'Choose a date', chooseTime: 'Choose a time', date: 'Date', time: 'Time', dateTime: 'Date and time', dateFormatEn: 'MM/DD/YYYY', dateFormatRu: 'DD.MM.YYYY', invalid: 'Enter a valid date or time.', range: 'Choose a value within the allowed range.', previousMonth: 'Previous month', nextMonth: 'Next month', month: 'Month', year: 'Year', hours: 'Hours', minutes: 'Minutes', seconds: 'Seconds', today: 'Today', clear: 'Clear', apply: 'Apply', example: 'Calendar and time', hint: 'Choose with the picker or type a date and time. The field uses your local time.', disabled: 'Unavailable date', disclosure: 'Expandable section', disclosureHint: 'Show or hide extra information.' },
   navigation: { path: 'Breadcrumbs', hidden: 'Show hidden levels', core: 'Core', account: 'Account', mfa: 'Two-factor authentication', sessions: 'Devices and sessions', passkeys: 'Passkeys', identities: 'External accounts', profile: 'My account', consents: 'Consents', privacy: 'Privacy', privacyRegistry: 'Privacy registry', request: 'Request', security: 'Security', components: 'Components', operator: 'Operator workspace', overview: 'Overview', members: 'Members', billing: 'Billing', usage: 'Usage', analytics: 'Analytics', audit: 'Audit', invitations: 'Invitations', comparePlans: 'Compare plans' },
   operator: operatorEn,

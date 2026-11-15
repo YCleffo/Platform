@@ -11,8 +11,8 @@ DBML получен из каталога PostgreSQL после применен
 
 Core DBML описывает схему `core`; общий JSON Core содержит также `platform_runtime`. Оба файла генерируются из фактического PostgreSQL после миграций, а не поддерживаются вручную.
 
-Текущий сохранённый срез: **Core 50 / Runtime 3 / Commercial 62 / Education 24 / DeviceManagement 10 / Storage 8 таблиц**.
-Education включает технический журнал `education.module_migrations`; бизнес-таблиц 23. DeviceManagement и Storage включают собственные технические журналы `module_migrations`; бизнес-таблиц 9 и 7 соответственно.
+Текущий сохранённый срез: **Core 50 / Runtime 3 / Commercial 62 / Education 45 / DeviceManagement 10 / Storage 8 таблиц**.
+Education включает технический журнал `education.module_migrations`; бизнес-таблиц 44. DeviceManagement и Storage включают собственные технические журналы `module_migrations`; бизнес-таблиц 9 и 7 соответственно.
 Опциональный Education устанавливается отдельными миграциями в схему `education`;
 его каталог, DBML и покрытие публикуются отдельно и не входят в срез Core/Runtime.
 Проверка среза подтверждает сохранённый каталог и хеши миграций Education, но не
@@ -36,6 +36,8 @@ python scripts/documentation/build-education-coverage.py
 npm run check:dbml --prefix scripts/documentation
 python scripts/documentation/check-links.py
 ```
+
+Для изолированного стенда: `python scripts/database/export_schema.py --plane education --container platform-education-local-postgres-test-1 --database platform_test --user education_fixture`. Срез Education обновлён из этого стенда после миграций 001–013; он не подтверждает обновление рабочей БД. Внешние таблицы Core на диаграмме представлены только реальными столбцами, на которые ссылаются FK, и не входят в число таблиц Education.
 
 Экспорт читает метаданные и историю миграций, не меняя данные БД. `--check` проверяет совпадение без записи; `--from-snapshot --check` сверяет сохранённые DBML без подключения к PostgreSQL. Состав миграций и их SHA-256 входят в каталог.
 

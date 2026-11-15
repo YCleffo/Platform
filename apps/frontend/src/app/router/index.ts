@@ -212,7 +212,10 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
     if (to.matched.some(record => record.meta.requiresEducationAuth === true) && !adminAuth.isAuthenticated) {
       return { name: 'education-login', query: { redirect: to.fullPath } };
     }
-    if (to.name === 'education-login' && adminAuth.isAuthenticated) return { name: 'education-today' };
+    if (to.name === 'education-login' && adminAuth.isAuthenticated) {
+      const target = typeof to.query.redirect === 'string' ? to.query.redirect : '';
+      return /^\/parent\/activate(?:[?#]|$)/.test(target) ? target : { name: 'education-contexts' };
+    }
     if (to.matched.some(record => record.meta.requiresAdminAuth === true) && !adminAuth.isAuthenticated) {
       return { name: 'admin-login', query: { redirect: to.fullPath } };
     }

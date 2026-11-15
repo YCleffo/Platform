@@ -1,0 +1,4 @@
+LIBRARY Platform.CredentialProvider
+EXPORTS
+    DllGetClassObject PRIVATE
+    DllCanUnloadNow PRIVATE

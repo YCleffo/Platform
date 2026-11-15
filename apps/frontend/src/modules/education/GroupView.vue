@@ -11,6 +11,8 @@ import { useEducationWorkspace } from './workspace';
 import { useEducationError, useEducationMutation, useEducationResource } from './resources';
 import { useEducationI18n } from './i18n';
 import EducationState from './EducationState.vue';
+import GroupCurriculumPanel from './GroupCurriculumPanel.vue';
+import GroupTeachersPanel from './GroupTeachersPanel.vue';
 const route = useRoute();
 const workspace = useEducationWorkspace();
 const { t, students } = useEducationI18n();
@@ -19,8 +21,8 @@ const id = computed(() => String(route.params.id ?? ''));
 const offset = ref(0);
 const { data, loading, error, refresh } = useEducationResource(
   async (org, signal) => {
-    const group = await educationApi.group(org, id.value, signal);
-    const [roster, groups] = await Promise.all([
+    const [group, roster, groups] = await Promise.all([
+      educationApi.group(org, id.value, signal),
       educationApi.groupStudents(org, id.value, offset.value, signal),
       educationApi.groups(org, 0, signal),
     ]);
@@ -178,9 +180,11 @@ async function reconcile(): Promise<void> {
           </div>
         </form>
       </article>
+      <div class="edu-detail-grid"><GroupCurriculumPanel :group-id="id" :archived="archived" /><GroupTeachersPanel :group-id="id" :archived="archived" /></div>
       <div class="edu-section-title">
         <h2>{{ t('education.groupStudents') }}</h2>
         <div class="edu-form-actions">
+          <RouterLink :to="`/groups/${data.group.id}/attendance`" class="edu-button">{{ t('education.attendance') }}</RouterLink>
           <RouterLink
             :to="`/groups/${data.group.id}/journal`"
             class="edu-button"

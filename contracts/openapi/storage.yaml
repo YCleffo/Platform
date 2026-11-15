@@ -77,7 +77,8 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/storage/space"
     },
     "/files": {
       "get": {
@@ -238,7 +239,93 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      }
+      },
+      "delete": {
+        "operationId": "storage_delete_file",
+        "summary": "Удалить файл",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Файл удалён",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/FileDeleteResult"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/storage/files"
     },
     "/tickets": {
       "post": {
@@ -321,7 +408,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/storage/tickets"
     },
     "/file": {
       "get": {
@@ -376,7 +464,8 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/storage/file"
     },
     "/agent/storage/manifest": {
       "post": {
@@ -510,7 +599,8 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-agent/storage/manifest"
     },
     "/agent/storage/ticket": {
       "post": {
@@ -583,7 +673,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-agent/storage/ticket"
     },
     "/agent/storage/sync": {
       "post": {
@@ -656,7 +747,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-agent/storage/sync"
     },
     "/agent/storage/space": {
       "get": {
@@ -729,7 +821,8 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-agent/storage/space"
     },
     "/agent/storage/file": {
       "put": {
@@ -845,7 +938,1528 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-agent/storage/file"
+    },
+    "/files/versions": {
+      "get": {
+        "operationId": "storage_file_versions",
+        "summary": "История версий файла",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список версий файла",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/FileVersionList"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/storage/files/versions"
+    },
+    "/files/restore": {
+      "post": {
+        "operationId": "storage_restore_file",
+        "summary": "Восстановить версию файла",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRestoreRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Файл восстановлен",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StorageFile"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/storage/files/restore"
+    },
+    "/files/rename": {
+      "post": {
+        "operationId": "storage_rename_file",
+        "summary": "Восстановить версию файла",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRenameRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Файл восстановлен",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StorageFile"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/storage/files/rename"
+    },
+    "/conflicts": {
+      "get": {
+        "operationId": "storage_conflicts",
+        "summary": "Файлы пространства",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/FileConflictPage"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/storage/conflicts"
+    },
+    "/conflicts/{id}/resolve": {
+      "post": {
+        "operationId": "storage_resolve_conflict",
+        "summary": "Восстановить версию файла",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileConflictResolution"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Файл восстановлен",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/FileConflict"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/storage/conflicts/{id}/resolve"
+    },
+    "/agent/storage/manifest/rebase": {
+      "post": {
+        "operationId": "agent_storage_manifest_rebase",
+        "summary": "Rebase an explicitly resolved recovery manifest without deleting bytes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ManifestRebaseResult"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManifestRebaseRequest"
+              }
+            }
+          }
+        },
+        "description": "Requires the authenticated device active session, a teacher-authorized retry end command, desiredStatus ENDING and persisted sessionEnded evidence. Every conflict entry must have a matching latest resolved keep_server decision. The old pending manifest moves to existing status accepted; tickets expire and conflict/version history remains. Repeating the archived version is idempotent and returns MAX(all manifest versions)+1. Other-device pending manifests block rebasing. The agent must preserve local unique bytes and submit a fresh diff; this operation never confirms sync or deletes a file."
+      },
+      "x-runtime-path": "/api/device-agent/storage/manifest/rebase"
+    },
+    "/transfers": {
+      "post": {
+        "operationId": "storage_transfer_start",
+        "summary": "Start or resume an authenticated S3 transfer",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized transfer result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StorageTransfer"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferStartRequest"
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/storage/transfers"
+    },
+    "/transfers/{id}": {
+      "get": {
+        "operationId": "storage_transfer_read",
+        "summary": "Read durable transfer status",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized transfer result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StorageTransfer"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/storage/transfers/{id}"
+    },
+    "/transfers/{id}/refresh": {
+      "post": {
+        "operationId": "storage_transfer_refresh",
+        "summary": "Renew short-lived S3 requests",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized transfer result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StorageTransfer"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/storage/transfers/{id}/refresh"
+    },
+    "/transfers/{id}/parts": {
+      "post": {
+        "operationId": "storage_transfer_parts",
+        "summary": "Sign fixed-size multipart parts with SHA-256",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized transfer result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TransferPartSignatures"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferPartRequest"
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/storage/transfers/{id}/parts"
+    },
+    "/transfers/{id}/complete": {
+      "post": {
+        "operationId": "storage_transfer_complete",
+        "summary": "Verify and commit the immutable object",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized transfer result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StorageTransfer"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/storage/transfers/{id}/complete"
+    },
+    "/transfers/{id}/abort": {
+      "post": {
+        "operationId": "storage_transfer_abort",
+        "summary": "Cancel the transfer and queue physical cleanup",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized transfer result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StorageTransfer"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/storage/transfers/{id}/abort"
+    },
+    "/agent/storage/transfers": {
+      "post": {
+        "operationId": "agent_storage_transfer_start",
+        "summary": "Start or resume an authenticated S3 transfer",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Authorized transfer result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StorageTransfer"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferStartRequest"
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-agent/storage/transfers"
+    },
+    "/agent/storage/transfers/{id}": {
+      "get": {
+        "operationId": "agent_storage_transfer_read",
+        "summary": "Read durable transfer status",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized transfer result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StorageTransfer"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-agent/storage/transfers/{id}"
+    },
+    "/agent/storage/transfers/{id}/refresh": {
+      "post": {
+        "operationId": "agent_storage_transfer_refresh",
+        "summary": "Renew short-lived S3 requests",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized transfer result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StorageTransfer"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-agent/storage/transfers/{id}/refresh"
+    },
+    "/agent/storage/transfers/{id}/parts": {
+      "post": {
+        "operationId": "agent_storage_transfer_parts",
+        "summary": "Sign fixed-size multipart parts with SHA-256",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized transfer result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TransferPartSignatures"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferPartRequest"
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-agent/storage/transfers/{id}/parts"
+    },
+    "/agent/storage/transfers/{id}/complete": {
+      "post": {
+        "operationId": "agent_storage_transfer_complete",
+        "summary": "Verify and commit the immutable object",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized transfer result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StorageTransfer"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-agent/storage/transfers/{id}/complete"
+    },
+    "/agent/storage/transfers/{id}/abort": {
+      "post": {
+        "operationId": "agent_storage_transfer_abort",
+        "summary": "Cancel the transfer and queue physical cleanup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized transfer result.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StorageTransfer"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-agent/storage/transfers/{id}/abort"
     }
   },
   "components": {
@@ -913,6 +2527,11 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "subjectPersonId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "required": [
@@ -1004,12 +2623,22 @@
           "path": {
             "type": "string",
             "maxLength": 1024
+          },
+          "expectedSize": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5497558138880
+          },
+          "expectedSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
           }
         },
         "required": [
           "purpose",
           "path"
-        ]
+        ],
+        "description": "Direct upload requires expectedSize and expectedSha256 as a pair. Final content is independently verified by the server."
       },
       "TransferTicket": {
         "type": "object",
@@ -1062,12 +2691,16 @@
           },
           "sha256": {
             "type": "string"
+          },
+          "size": {
+            "type": "integer"
           }
         },
         "required": [
           "path",
           "version",
-          "sha256"
+          "sha256",
+          "size"
         ]
       },
       "ManifestEntry": {
@@ -1104,10 +2737,6 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "spaceId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "version": {
             "type": "integer",
             "minimum": 1
@@ -1120,7 +2749,6 @@
           }
         },
         "required": [
-          "spaceId",
           "version",
           "entries"
         ]
@@ -1154,6 +2782,9 @@
                 },
                 "expectedSize": {
                   "type": "integer"
+                },
+                "expectedSha256": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -1181,13 +2812,28 @@
                 },
                 "deviceSha256": {
                   "type": "string"
+                },
+                "resolution": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "keep_server",
+                    null
+                  ],
+                  "description": "Latest resolved choice for this exact manifest and path; null until explicitly resolved."
+                },
+                "serverDeleted": {
+                  "type": "boolean",
+                  "description": "The current server path is absent or soft-deleted. Local unique bytes still need preservation before rebasing."
                 }
               },
               "required": [
                 "path",
                 "serverSha256",
                 "serverVersion",
-                "deviceSha256"
+                "deviceSha256",
+                "resolution",
+                "serverDeleted"
               ]
             }
           },
@@ -1195,12 +2841,27 @@
             "type": "array",
             "items": {
               "type": "object",
-              "additionalProperties": false
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "path",
+                "version"
+              ]
             }
           },
           "acceptedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "confirmed": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -1209,17 +2870,14 @@
           "uploads",
           "conflicts",
           "upToDate",
-          "acceptedAt"
+          "acceptedAt",
+          "confirmed"
         ]
       },
       "AgentTicketRequest": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "spaceId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "purpose": {
             "type": "string",
             "enum": [
@@ -1238,7 +2896,6 @@
           }
         },
         "required": [
-          "spaceId",
           "purpose",
           "path"
         ]
@@ -1247,18 +2904,20 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "spaceId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "version": {
             "type": "integer",
-            "minimum": 1
+            "minimum": 0
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManifestEntry"
+            }
           }
         },
         "required": [
-          "spaceId",
-          "version"
+          "version",
+          "entries"
         ]
       },
       "ManifestConfirm": {
@@ -1332,6 +2991,494 @@
           "version",
           "entries"
         ]
+      },
+      "FileVersion": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "sizeBytes",
+          "sha256",
+          "createdAt"
+        ]
+      },
+      "FileVersionList": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileVersion"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "FileRestoreRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "path",
+          "version"
+        ]
+      },
+      "FileDeleteResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "path",
+          "deleted"
+        ]
+      },
+      "FileRenameRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "newPath": {
+            "type": "string",
+            "maxLength": 1024
+          }
+        },
+        "required": [
+          "path",
+          "newPath"
+        ]
+      },
+      "FileConflict": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "path": {
+            "type": "string"
+          },
+          "serverVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          },
+          "deviceVersion": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          },
+          "serverSha256": {
+            "type": "string",
+            "nullable": true
+          },
+          "deviceSha256": {
+            "type": "string",
+            "nullable": true
+          },
+          "resolution": {
+            "type": "string",
+            "nullable": true
+          },
+          "resolvedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "serverVersion",
+          "deviceVersion",
+          "serverSha256",
+          "deviceSha256",
+          "resolution",
+          "resolvedAt",
+          "createdAt"
+        ]
+      },
+      "FileConflictPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileConflict"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "enum": [
+              50
+            ]
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "nextOffset"
+        ]
+      },
+      "FileConflictResolution": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resolution": {
+            "type": "string",
+            "enum": [
+              "keep_server"
+            ]
+          }
+        },
+        "required": [
+          "resolution"
+        ]
+      },
+      "ManifestRebaseRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 999999
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "ManifestRebaseResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "nextVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 999999
+          },
+          "rebased": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "nextVersion",
+          "rebased"
+        ]
+      },
+      "SignedRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "PUT"
+            ]
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "method",
+          "headers",
+          "expiresAt"
+        ],
+        "additionalProperties": false,
+        "description": "Short-lived bearer permission. Use the URL unchanged and the returned headers. Public endpoint is selected before SigV4 signing. Existing URLs may remain valid until expiry after access is revoked."
+      },
+      "StorageTransfer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "download"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "uploading",
+              "verifying",
+              "confirmed",
+              "aborted",
+              "expired"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "single",
+              "multipart"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expectedSize": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expectedSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "partSize": {
+            "type": "integer",
+            "minimum": 5242880,
+            "nullable": true
+          },
+          "totalParts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000,
+            "nullable": true
+          },
+          "request": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SignedRequest"
+              }
+            ]
+          },
+          "completedParts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "partNumber": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000
+                },
+                "sizeBytes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "etag": {
+                  "type": "string"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              },
+              "required": [
+                "partNumber",
+                "sizeBytes",
+                "etag"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "result": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UploadResult"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "ticketId",
+          "direction",
+          "status",
+          "mode",
+          "expiresAt",
+          "expectedSize",
+          "expectedSha256",
+          "partSize",
+          "totalParts",
+          "request",
+          "completedParts",
+          "result"
+        ],
+        "additionalProperties": false,
+        "description": "A durable operation bound to one ticket, space and authenticated account or device. Confirmed result is idempotent. Signed PUT only targets staging. Immutable final copy is streamed and SHA-256 checked before the existing version and manifest transaction commits."
+      },
+      "TransferStartRequest": {
+        "type": "object",
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "token": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{48}$"
+          }
+        },
+        "required": [
+          "ticketId",
+          "token"
+        ],
+        "additionalProperties": false
+      },
+      "TransferPartRequest": {
+        "type": "object",
+        "properties": {
+          "parts": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": {
+              "type": "object",
+              "properties": {
+                "partNumber": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "sizeBytes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 5368709120
+                }
+              },
+              "required": [
+                "partNumber",
+                "sha256",
+                "sizeBytes"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "parts"
+        ],
+        "additionalProperties": false
+      },
+      "TransferPartSignatures": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "partNumber": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000
+                },
+                "request": {
+                  "$ref": "#/components/schemas/SignedRequest"
+                }
+              },
+              "required": [
+                "partNumber",
+                "request"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "EmptyRequest": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
       }
     }
   }

@@ -16,6 +16,8 @@ final readonly class PostgresEducationStore implements EducationStore
     private const string LESSON = 'SELECT l.id::text, l.group_id::text AS "groupId", g.name AS "groupName", l.title,
         l.starts_at::text AS "startsAt", l.ends_at::text AS "endsAt", l.location, l.status,
         l.completed_at::text AS "completedAt", l.cancelled_at::text AS "cancelledAt",
+        l.curriculum_lesson_id::text AS "curriculumLessonId",l.group_program_id::text AS "groupProgramId",
+        l.curriculum_snapshot::text AS "curriculumSnapshot",
         (SELECT count(*) FROM education.attendance a WHERE a.lesson_id=l.id) AS "studentCount"
         FROM education.lessons l JOIN education.groups g ON g.id=l.group_id WHERE ';
 
@@ -131,7 +133,7 @@ final readonly class PostgresEducationStore implements EducationStore
         return $this->all(
             'SELECT s.id::text,s.person_id::text AS "personId",s.created_at::text AS "createdAt"
             FROM education.group_students gs JOIN education.students s ON s.id=gs.student_id
-            WHERE gs.organization_id=CAST(:org AS uuid) AND gs.owner_account_id=CAST(:actor AS uuid)
+            WHERE gs.organization_id=CAST(:org AS uuid) AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id)
             AND gs.group_id=CAST(:group AS uuid) ORDER BY s.created_at,s.id LIMIT 51 OFFSET :offset',
             [...self::owner($scope), ':group' => $groupId, ':offset' => $offset],
         );
@@ -189,7 +191,7 @@ final readonly class PostgresEducationStore implements EducationStore
             );
             $this->db->createCommand(
                 'DELETE FROM education.group_students gs WHERE gs.organization_id=CAST(:org AS uuid)
-                AND gs.owner_account_id=CAST(:actor AS uuid) AND gs.group_id=CAST(:group AS uuid)
+                AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id) AND gs.group_id=CAST(:group AS uuid)
                 AND gs.student_id=CAST(:student AS uuid)',
                 [...self::owner($scope), ':group' => $groupId, ':student' => $studentId],
             )->execute();
@@ -218,7 +220,7 @@ final readonly class PostgresEducationStore implements EducationStore
             );
             $this->required(
                 'SELECT gs.student_id::text FROM education.group_students gs WHERE gs.organization_id=CAST(:org AS uuid)
-                AND gs.owner_account_id=CAST(:actor AS uuid) AND gs.group_id=CAST(:group AS uuid)
+                AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id) AND gs.group_id=CAST(:group AS uuid)
                 AND gs.student_id=CAST(:student AS uuid)',
                 [...self::owner($scope), ':group' => $sourceGroupId, ':student' => $studentId],
             );
@@ -229,7 +231,7 @@ final readonly class PostgresEducationStore implements EducationStore
             )->execute();
             $this->db->createCommand(
                 'DELETE FROM education.group_students gs WHERE gs.organization_id=CAST(:org AS uuid)
-                AND gs.owner_account_id=CAST(:actor AS uuid) AND gs.group_id=CAST(:source AS uuid)
+                AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id) AND gs.group_id=CAST(:source AS uuid)
                 AND gs.student_id=CAST(:student AS uuid)',
                 [...self::owner($scope), ':source' => $sourceGroupId, ':student' => $studentId],
             )->execute();
@@ -306,6 +308,9 @@ final readonly class PostgresEducationStore implements EducationStore
                 }
                 throw new EducationError(409, 'lesson_locked');
             }
+            $previousStudents = $this->db->createCommand('SELECT student_id::text FROM education.attendance
+                WHERE lesson_id=CAST(:id AS uuid) AND organization_id=CAST(:org AS uuid)',
+                [':id' => $id, ':org' => $scope->organizationId])->queryColumn();
             $groupChanged = $current['groupId'] !== $values['groupId'];
             if ($groupChanged) {
                 $this->lockGroup($scope, $values['groupId']);
@@ -337,7 +342,7 @@ final readonly class PostgresEducationStore implements EducationStore
                 $this->db->createCommand(
                     'DELETE FROM education.attendance a WHERE ' . self::where('a') . ' AND a.lesson_id=CAST(:id AS uuid)
                     AND a.student_id NOT IN (SELECT gs.student_id FROM education.group_students gs
-                        WHERE gs.organization_id=CAST(:org AS uuid) AND gs.owner_account_id=CAST(:actor AS uuid)
+                        WHERE gs.organization_id=CAST(:org AS uuid) AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id)
                         AND gs.group_id=CAST(:group AS uuid))',
                     [...self::owner($scope), ':id' => $id, ':group' => $values['groupId']],
                 )->execute();
@@ -345,12 +350,16 @@ final readonly class PostgresEducationStore implements EducationStore
                     'INSERT INTO education.attendance(lesson_id,student_id,organization_id,owner_account_id)
                     SELECT CAST(:id AS uuid),gs.student_id,gs.organization_id,gs.owner_account_id
                     FROM education.group_students gs WHERE gs.organization_id=CAST(:org AS uuid)
-                    AND gs.owner_account_id=CAST(:actor AS uuid) AND gs.group_id=CAST(:group AS uuid)
+                    AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id) AND gs.group_id=CAST(:group AS uuid)
                     ON CONFLICT DO NOTHING',
                     [...self::owner($scope), ':id' => $id, ':group' => $values['groupId']],
                 )->execute();
             }
-            return $this->lesson($scope, $id) ?? throw new EducationError(409, 'write_not_confirmed');
+            $lesson = $this->lesson($scope, $id) ?? throw new EducationError(409, 'write_not_confirmed');
+            if (!self::sameLessonValues($current, $values)) {
+                (new ParentNotifications($this->db))->schedule($scope, $lesson, $previousStudents);
+            }
+            return $lesson;
         });
     }
 
@@ -390,7 +399,9 @@ final readonly class PostgresEducationStore implements EducationStore
                 [...self::owner($scope), ':id' => $id],
             );
             if ($updated !== null) {
-                return $this->lesson($scope, $id) ?? throw new EducationError(409, 'write_not_confirmed');
+                $lesson = $this->lesson($scope, $id) ?? throw new EducationError(409, 'write_not_confirmed');
+                (new ParentNotifications($this->db))->schedule($scope, $lesson);
+                return $lesson;
             }
             $current = $this->lesson($scope, $id);
             if ($current === null) {
@@ -452,7 +463,7 @@ final readonly class PostgresEducationStore implements EducationStore
     public function file(Scope $scope, string $id): ?array
     {
         return $this->one('SELECT f.id::text,f.lesson_id::text AS "lessonId",f.name,f.mime,f.purpose,f.size_bytes AS "sizeBytes",f.sha256,f.storage_key::text AS "storageKey"
-            FROM education.files f WHERE f.owner_account_id=CAST(:actor AS uuid) AND (f.organization_id=CAST(:org AS uuid) OR f.purpose=\'avatar\') AND f.id=CAST(:id AS uuid)', [...self::owner($scope), ':id' => $id]);
+            FROM education.files f WHERE ((f.owner_account_id=CAST(:actor AS uuid) AND (f.organization_id=CAST(:org AS uuid) OR f.purpose=\'avatar\')) OR (f.organization_id=CAST(:org AS uuid) AND f.purpose=\'material\' AND EXISTS(SELECT 1 FROM education.lessons scope_l WHERE scope_l.id=f.lesson_id AND education.can_teach_group(scope_l.organization_id,CAST(:actor AS uuid),scope_l.group_id)))) AND f.id=CAST(:id AS uuid)', [...self::owner($scope), ':id' => $id]);
     }
 
     public function createFile(Scope $scope, array $values): array
@@ -620,9 +631,10 @@ final readonly class PostgresEducationStore implements EducationStore
     public function notifications(Scope $scope, int $offset): array
     {
         return $this->all(
-            'SELECT n.id::text,n.thread_id::text AS "threadId",t.subject,n.created_at::text AS "createdAt",n.read_at::text AS "readAt"
-            FROM education.notifications n JOIN education.threads t ON t.id=n.thread_id WHERE n.organization_id=CAST(:org AS uuid)
-            AND n.person_id=CAST(:person AS uuid) ORDER BY n.created_at DESC,n.id LIMIT 51 OFFSET :offset',
+            'SELECT n.id::text,n.thread_id::text AS "threadId",COALESCE(n.subject,t.subject) AS subject,n.kind,
+            n.resource_id::text AS "resourceId",n.resource_path AS "resourcePath",n.body,n.created_at::text AS "createdAt",n.read_at::text AS "readAt"
+            FROM education.notifications n LEFT JOIN education.threads t ON t.id=n.thread_id WHERE n.organization_id=CAST(:org AS uuid)
+            AND n.person_id=CAST(:person AS uuid) AND n.parent_student_id IS NULL ORDER BY n.created_at DESC,n.id LIMIT 51 OFFSET :offset',
             [...self::recipient($scope), ':offset' => $offset],
         );
     }
@@ -630,14 +642,14 @@ final readonly class PostgresEducationStore implements EducationStore
     public function unreadCount(Scope $scope): int
     {
         return (int) $this->db->createCommand('SELECT count(*) FROM education.notifications
-            WHERE organization_id=CAST(:org AS uuid) AND person_id=CAST(:person AS uuid) AND read_at IS NULL', self::recipient($scope))->queryScalar();
+            WHERE organization_id=CAST(:org AS uuid) AND person_id=CAST(:person AS uuid) AND read_at IS NULL AND parent_student_id IS NULL', self::recipient($scope))->queryScalar();
     }
 
     public function readNotification(Scope $scope, string $id): void
     {
         $this->required(
             'UPDATE education.notifications SET read_at=COALESCE(read_at,now())
-            WHERE organization_id=CAST(:org AS uuid) AND person_id=CAST(:person AS uuid) AND id=CAST(:id AS uuid) RETURNING id::text',
+            WHERE organization_id=CAST(:org AS uuid) AND person_id=CAST(:person AS uuid) AND parent_student_id IS NULL AND id=CAST(:id AS uuid) RETURNING id::text',
             [...self::recipient($scope), ':id' => $id],
         );
     }
@@ -745,8 +757,9 @@ final readonly class PostgresEducationStore implements EducationStore
             );
             $this->db->createCommand(
                 'INSERT INTO education.result_revisions(organization_id,owner_account_id,result_id,status,comment,revised_by_account_id)
-                VALUES(CAST(:org AS uuid),CAST(:actor AS uuid),CAST(:result AS uuid),:status,:comment,CAST(:actor AS uuid))',
-                [...self::owner($scope), ':result' => (string) $row['id'], ':status' => $status, ':comment' => $comment],
+                VALUES(CAST(:org AS uuid),CAST(:actor AS uuid),CAST(:result AS uuid),:status,:comment,CAST(:reviser AS uuid))',
+                [...self::owner($scope), ':result' => (string) $row['id'], ':status' => $status, ':comment' => $comment,
+                    ':reviser' => $scope->actor()],
             )->execute();
             return $row;
         });
@@ -758,7 +771,9 @@ final readonly class PostgresEducationStore implements EducationStore
             'SELECT v.id::text,v.result_id::text AS "resultId",v.status,v.comment,v.revised_at::text AS "revisedAt",
             v.revised_by_account_id::text AS "revisedByAccountId" FROM education.result_revisions v
             JOIN education.lesson_results r ON r.id=v.result_id
-            WHERE v.organization_id=CAST(:org AS uuid) AND v.owner_account_id=CAST(:actor AS uuid)
+            WHERE v.organization_id=CAST(:org AS uuid) AND (v.owner_account_id=CAST(:actor AS uuid)
+                OR EXISTS(SELECT 1 FROM education.lessons scope_l WHERE scope_l.id=r.lesson_id
+                    AND education.can_teach_group(scope_l.organization_id,CAST(:actor AS uuid),scope_l.group_id)))
             AND r.lesson_id=CAST(:lesson AS uuid) AND r.student_id=CAST(:student AS uuid)
             ORDER BY v.revised_at,v.id LIMIT 501',
             [...self::owner($scope), ':lesson' => $lessonId, ':student' => $studentId],
@@ -771,7 +786,7 @@ final readonly class PostgresEducationStore implements EducationStore
         $params = [...self::owner($scope), ':group' => $groupId, ':from' => $from, ':to' => $to, ':offset' => $offset];
         if ($studentId !== null) {
             $filters .= ' AND EXISTS(SELECT 1 FROM education.attendance a2 WHERE a2.lesson_id=l.id AND a2.organization_id=CAST(:org AS uuid)
-                AND a2.owner_account_id=CAST(:actor AS uuid) AND a2.student_id=CAST(:student AS uuid))';
+                AND (a2.owner_account_id=CAST(:actor AS uuid) OR EXISTS(SELECT 1 FROM education.lessons scope_l WHERE scope_l.id=a2.lesson_id AND education.can_teach_group(scope_l.organization_id,CAST(:actor AS uuid),scope_l.group_id))) AND a2.student_id=CAST(:student AS uuid))';
             $params[':student'] = $studentId;
         }
         return $this->all(
@@ -795,7 +810,7 @@ final readonly class PostgresEducationStore implements EducationStore
         return $this->all(
             'SELECT g.id::text,g.name,g.archived_at::text AS "archivedAt" FROM education.groups g
             JOIN education.group_students gs ON gs.group_id=g.id
-            WHERE gs.organization_id=CAST(:org AS uuid) AND gs.owner_account_id=CAST(:actor AS uuid)
+            WHERE gs.organization_id=CAST(:org AS uuid) AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id)
             AND gs.student_id=CAST(:student AS uuid) ORDER BY g.created_at,g.id',
             [...self::owner($scope), ':student' => $studentId],
         );
@@ -806,7 +821,7 @@ final readonly class PostgresEducationStore implements EducationStore
         return $this->all(
             'SELECT a.lesson_id::text AS "lessonId",l.title,l.starts_at::text AS "startsAt",l.status,a.status AS "attendance"
             FROM education.attendance a JOIN education.lessons l ON l.id=a.lesson_id
-            WHERE a.organization_id=CAST(:org AS uuid) AND a.owner_account_id=CAST(:actor AS uuid)
+            WHERE a.organization_id=CAST(:org AS uuid) AND (a.owner_account_id=CAST(:actor AS uuid) OR EXISTS(SELECT 1 FROM education.lessons scope_l WHERE scope_l.id=a.lesson_id AND education.can_teach_group(scope_l.organization_id,CAST(:actor AS uuid),scope_l.group_id)))
             AND a.student_id=CAST(:student AS uuid) AND l.status<>\'cancelled\'
             AND l.starts_at>=CAST(:from AS timestamptz) AND l.starts_at<CAST(:to AS timestamptz)
             ORDER BY l.starts_at DESC,l.id DESC LIMIT 51 OFFSET :offset',
@@ -820,7 +835,7 @@ final readonly class PostgresEducationStore implements EducationStore
             'SELECT r.id::text,r.lesson_id::text AS "lessonId",l.title AS "lessonTitle",l.starts_at::text AS "startsAt",
             r.status,r.comment,r.updated_at::text AS "updatedAt"
             FROM education.lesson_results r JOIN education.lessons l ON l.id=r.lesson_id
-            WHERE r.organization_id=CAST(:org AS uuid) AND r.owner_account_id=CAST(:actor AS uuid)
+            WHERE r.organization_id=CAST(:org AS uuid) AND (r.owner_account_id=CAST(:actor AS uuid) OR EXISTS(SELECT 1 FROM education.lessons scope_l WHERE scope_l.id=r.lesson_id AND education.can_teach_group(scope_l.organization_id,CAST(:actor AS uuid),scope_l.group_id)))
             AND r.student_id=CAST(:student AS uuid) AND l.status=\'completed\'
             ORDER BY l.starts_at DESC,l.id DESC LIMIT 51 OFFSET :offset',
             [...self::owner($scope), ':student' => $studentId, ':offset' => $offset],
@@ -831,7 +846,7 @@ final readonly class PostgresEducationStore implements EducationStore
     {
         $results = $this->all(
             'SELECT r.status,count(*) AS "count" FROM education.lesson_results r JOIN education.lessons l ON l.id=r.lesson_id
-            WHERE r.organization_id=CAST(:org AS uuid) AND r.owner_account_id=CAST(:actor AS uuid)
+            WHERE r.organization_id=CAST(:org AS uuid) AND (r.owner_account_id=CAST(:actor AS uuid) OR EXISTS(SELECT 1 FROM education.lessons scope_l WHERE scope_l.id=r.lesson_id AND education.can_teach_group(scope_l.organization_id,CAST(:actor AS uuid),scope_l.group_id)))
             AND r.student_id=CAST(:student AS uuid) AND l.status=\'completed\' AND r.status<>\'pending\'
             AND l.starts_at>=CAST(:from AS timestamptz) AND l.starts_at<CAST(:to AS timestamptz)
             GROUP BY r.status',
@@ -840,7 +855,7 @@ final readonly class PostgresEducationStore implements EducationStore
         $results = array_column($results, 'count', 'status');
         $attendance = $this->all(
             'SELECT a.status,count(*) AS "count" FROM education.attendance a JOIN education.lessons l ON l.id=a.lesson_id
-            WHERE a.organization_id=CAST(:org AS uuid) AND a.owner_account_id=CAST(:actor AS uuid)
+            WHERE a.organization_id=CAST(:org AS uuid) AND (a.owner_account_id=CAST(:actor AS uuid) OR EXISTS(SELECT 1 FROM education.lessons scope_l WHERE scope_l.id=a.lesson_id AND education.can_teach_group(scope_l.organization_id,CAST(:actor AS uuid),scope_l.group_id)))
             AND a.student_id=CAST(:student AS uuid) AND l.status<>\'cancelled\' AND a.status<>\'pending\'
             AND l.starts_at>=CAST(:from AS timestamptz) AND l.starts_at<CAST(:to AS timestamptz)
             GROUP BY a.status',
@@ -1070,7 +1085,7 @@ final readonly class PostgresEducationStore implements EducationStore
     {
         return $this->all(
             'SELECT id::text,code,name,kind,contract_version AS "contractVersion",enabled,config,metrics,required_permission AS "requiredPermission"
-            FROM education.activity_definitions WHERE enabled ORDER BY name,code',
+            FROM education.activity_definitions WHERE enabled ORDER BY CASE WHEN code=\'platform-typing\' THEN 0 ELSE 1 END,name,code',
             [],
         );
     }
@@ -1132,10 +1147,12 @@ final readonly class PostgresEducationStore implements EducationStore
             'SELECT a.id::text,a.student_id::text AS "studentId",a.account_id::text AS "accountId",
             a.activity_id::text AS "activityId",d.code AS "activityCode",a.assignment_id::text AS "assignmentId",
             a.status,a.source,a.contract_version AS "contractVersion",a.exercise_text AS "exercise",a.config,
-            a.started_at::text AS "startedAt",a.finished_at::text AS "finishedAt"
+            a.started_at::text AS "startedAt",a.finished_at::text AS "finishedAt",a.exercise_payload AS "exercisePayload",
+            a.client_state AS "state",a.state_version AS "stateVersion",a.revoked_at::text AS "revokedAt",r.metrics AS "result"
             FROM education.activity_attempts a JOIN education.activity_definitions d ON d.id=a.activity_id
-            WHERE a.id=CAST(:id AS uuid) AND a.organization_id=CAST(:org AS uuid) AND a.student_id=CAST(:student AS uuid)',
-            [':org' => $scope->organizationId, ':id' => $attemptId, ':student' => (string) $scope->studentId],
+            LEFT JOIN education.activity_results r ON r.attempt_id=a.id
+            WHERE a.account_id=CAST(:account AS uuid) AND a.id=CAST(:id AS uuid) AND a.organization_id=CAST(:org AS uuid) AND a.student_id=CAST(:student AS uuid)',
+            [':org' => $scope->organizationId, ':id' => $attemptId, ':student' => (string) $scope->studentId, ':account' => $scope->accountId],
         );
     }
 
@@ -1160,7 +1177,8 @@ final readonly class PostgresEducationStore implements EducationStore
                 );
                 $stored = is_string($attempt['payload'] ?? null) ? json_decode((string) $attempt['payload'], true) : null;
                 if ($existing === null || $existing['durationSeconds'] !== $durationSeconds
-                    || (int) ($stored['typedLength'] ?? -1) !== strlen($typed)) {
+                    || (isset($stored['typedSha256']) ? !hash_equals((string) $stored['typedSha256'], hash('sha256', $typed))
+                        : (int) ($stored['typedLength'] ?? -1) !== strlen($typed))) {
                     throw new EducationError(409, 'attempt_finished');
                 }
                 return $existing;
@@ -1189,14 +1207,125 @@ final readonly class PostgresEducationStore implements EducationStore
         });
     }
 
+    public function guardAssignmentAttempt(Scope $scope,string $assignmentId,int $maxAttempts,bool $fromHomework):void
+    {
+        $assignment=$this->required('SELECT a.opens_at::text AS "opensAt",a.due_at::text AS "dueAt",
+            EXISTS(SELECT 1 FROM education.homework_recipients r WHERE r.activity_assignment_id=a.id) AS homework
+            FROM education.activity_assignments a WHERE a.id=CAST(:id AS uuid) AND a.organization_id=CAST(:org AS uuid)
+            AND (a.student_id=CAST(:student AS uuid) OR EXISTS(SELECT 1 FROM education.group_students gs WHERE gs.group_id=a.group_id
+                AND gs.organization_id=a.organization_id AND gs.student_id=CAST(:student AS uuid))) FOR UPDATE OF a',
+            [':id'=>$assignmentId,':org'=>$scope->organizationId,':student'=>$scope->studentId]);
+        $isHomework=in_array($assignment['homework'],[true,'t',1],true);
+        if($isHomework&&!$fromHomework)throw new EducationError(409,'use_homework_route');
+        if(!$isHomework&&$fromHomework)throw new EducationError(422,'invalid_input');
+        if(!$isHomework){
+            $now=new DateTimeImmutable();
+            if(($assignment['opensAt']!==null&&new DateTimeImmutable($assignment['opensAt'])>$now)
+                ||($assignment['dueAt']!==null&&new DateTimeImmutable($assignment['dueAt'])<$now))throw new EducationError(409,'assignment_unavailable');
+            $count=(int)$this->db->createCommand('SELECT count(*) FROM education.activity_attempts WHERE assignment_id=CAST(:id AS uuid)
+                AND organization_id=CAST(:org AS uuid) AND student_id=CAST(:student AS uuid)',
+                [':id'=>$assignmentId,':org'=>$scope->organizationId,':student'=>$scope->studentId])->queryScalar();
+            if($count>=$maxAttempts)throw new EducationError(409,'attempt_limit_reached');
+        }
+    }
+
+    public function exerciseSet(string $code, string $language, string $mode, int $difficulty): ?array
+    {
+        return $this->one('SELECT code,version,content FROM education.activity_exercise_sets
+            WHERE activity_code=:code AND language=:language AND mode=:mode AND difficulty=:difficulty
+            ORDER BY version DESC LIMIT 1', [':code'=>$code, ':language'=>$language, ':mode'=>$mode, ':difficulty'=>$difficulty]);
+    }
+
+    public function snapshotAttempt(Scope $scope, string $attemptId, int $version, array $exercise): void
+    {
+        $this->db->createCommand('UPDATE education.activity_attempts SET contract_version=:version,exercise_payload=CAST(:exercise AS jsonb)
+            WHERE id=CAST(:id AS uuid) AND organization_id=CAST(:org AS uuid) AND student_id=CAST(:student AS uuid)
+            AND account_id=CAST(:account AS uuid) AND status=\'running\'', [':id'=>$attemptId,':org'=>$scope->organizationId,
+                ':student'=>$scope->studentId,':account'=>$scope->accountId,':version'=>$version,':exercise'=>json_encode($exercise,JSON_THROW_ON_ERROR)])->execute();
+    }
+
+    public function saveAttemptState(Scope $scope, string $attemptId, int $version, array $state): void
+    {
+        $changed=$this->db->createCommand('UPDATE education.activity_attempts SET client_state=CAST(:state AS jsonb),state_version=state_version+1
+            WHERE id=CAST(:id AS uuid) AND organization_id=CAST(:org AS uuid) AND student_id=CAST(:student AS uuid)
+            AND account_id=CAST(:account AS uuid) AND status=\'running\' AND revoked_at IS NULL AND state_version=:version',
+            [':id'=>$attemptId,':org'=>$scope->organizationId,':student'=>$scope->studentId,':account'=>$scope->accountId,
+                ':state'=>json_encode($state,JSON_THROW_ON_ERROR),':version'=>$version])->execute();
+        if($changed!==1)throw new EducationError(409,'state_conflict');
+    }
+
+    public function completeActivityAttempt(Scope $scope, string $attemptId, array $evaluation): array
+    {
+        return $this->db->transaction(function()use($scope,$attemptId,$evaluation):array{
+            $row=$this->required('SELECT a.status,a.revoked_at::text AS "revokedAt",a.result_payload,a.contract_version AS "contractVersion"
+                FROM education.activity_attempts a WHERE a.id=CAST(:id AS uuid) AND a.organization_id=CAST(:org AS uuid) AND a.student_id=CAST(:student AS uuid)
+                AND a.account_id=CAST(:account AS uuid) FOR UPDATE OF a',
+                [':id'=>$attemptId,':org'=>$scope->organizationId,':student'=>$scope->studentId,':account'=>$scope->accountId]);
+            // Re-read the result AFTER the attempt row lock. A joined SELECT can retain
+            // the pre-wait snapshot of the absent result during concurrent finishes.
+            $stored=$this->one('SELECT request_hash AS "requestHash",metrics FROM education.activity_results WHERE attempt_id=CAST(:id AS uuid)',[':id'=>$attemptId]);
+            $row=[...$row,'requestHash'=>$stored['requestHash']??null,'metrics'=>$stored['metrics']??null];
+            if($row['revokedAt']!==null)throw new EducationError(409,'attempt_revoked');
+            if($row['status']==='finished'){
+                if(is_string($row['requestHash']??null)&&hash_equals($row['requestHash'],$evaluation['requestHash']))
+                    return ['attemptId'=>$attemptId,...\App\Education\Application\ActivityHandlerRegistry::json($row['metrics'])];
+                // Completed v1 typing attempts retain their historical finish contract.
+                if($row['requestHash']===null&&$evaluation['type']==='typing'&&(int)$row['contractVersion']===1){
+                    $payload=\App\Education\Application\ActivityHandlerRegistry::json($row['result_payload']);
+                    if(isset($payload['typedSha256'])&&hash_equals($payload['typedSha256'],$evaluation['evidence']['typedSha256'])
+                        &&(int)($payload['durationSeconds']??0)===$evaluation['metrics']['durationSeconds']){
+                        return $this->required('SELECT attempt_id::text AS "attemptId",duration_seconds AS "durationSeconds",language,keystrokes,
+                            correct_chars AS "correctChars",errors,wpm::float,accuracy::float FROM education.typing_results WHERE attempt_id=CAST(:id AS uuid)',[':id'=>$attemptId]);
+                    }
+                }
+                throw new EducationError(409,'attempt_finished');
+            }
+            if($row['status']!=='running')throw new EducationError(409,'attempt_not_running');
+            $metrics=$evaluation['metrics'];$params=[':attempt'=>$attemptId,':org'=>$scope->organizationId,':student'=>$scope->studentId];
+            $this->db->createCommand('INSERT INTO education.activity_results(attempt_id,organization_id,student_id,type,version,request_hash,metrics,passed)
+                VALUES(CAST(:attempt AS uuid),CAST(:org AS uuid),CAST(:student AS uuid),:type,:version,:hash,CAST(:metrics AS jsonb),:passed)',
+                [...$params,':type'=>$evaluation['type'],':version'=>$evaluation['version'],':hash'=>$evaluation['requestHash'],
+                    ':metrics'=>json_encode($metrics,JSON_THROW_ON_ERROR),':passed'=>$metrics['passed']?'true':'false'])->execute();
+            if($evaluation['type']==='typing'){
+                $this->db->createCommand('INSERT INTO education.typing_results(attempt_id,organization_id,student_id,duration_seconds,language,keystrokes,correct_chars,errors,wpm,accuracy)
+                    VALUES(CAST(:attempt AS uuid),CAST(:org AS uuid),CAST(:student AS uuid),:duration,:language,:chars,:correct,:errors,:wpm,:accuracy)',
+                    [...$params,':duration'=>$metrics['durationSeconds'],':language'=>$metrics['language'],':chars'=>$metrics['typedCharacters'],
+                        ':correct'=>$metrics['correctChars'],':errors'=>$metrics['errors'],':wpm'=>$metrics['wpm'],':accuracy'=>$metrics['accuracy']])->execute();
+            }else{
+                $this->db->createCommand('INSERT INTO education.logic_results(attempt_id,organization_id,student_id,correct_answers,total_rounds,score,accuracy)
+                    VALUES(CAST(:attempt AS uuid),CAST(:org AS uuid),CAST(:student AS uuid),:correct,:total,:score,:accuracy)',
+                    [...$params,':correct'=>$metrics['correctAnswers'],':total'=>$metrics['totalRounds'],':score'=>$metrics['score'],':accuracy'=>$metrics['accuracy']])->execute();
+            }
+            $this->db->createCommand('UPDATE education.activity_attempts SET status=\'finished\',finished_at=now(),client_state=\'{}\'::jsonb,
+                result_payload=CAST(:payload AS jsonb),result_version=:version WHERE id=CAST(:id AS uuid)',
+                [':id'=>$attemptId,':payload'=>json_encode($evaluation['evidence'],JSON_THROW_ON_ERROR),':version'=>$evaluation['version']])->execute();
+            return ['attemptId'=>$attemptId,...$metrics];
+        });
+    }
+
+    public function revokeActivityAttempt(Scope $scope, string $attemptId): array
+    {
+        return $this->required('UPDATE education.activity_attempts a SET revoked_at=COALESCE(a.revoked_at,now())
+            FROM education.students s WHERE a.id=CAST(:id AS uuid) AND a.student_id=s.id AND a.organization_id=s.organization_id
+            AND a.organization_id=CAST(:org AS uuid) AND (s.owner_account_id=CAST(:actor AS uuid) OR EXISTS(
+                SELECT 1 FROM education.group_students gs WHERE gs.student_id=s.id AND gs.organization_id=s.organization_id
+                AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id)))
+            RETURNING a.id::text,a.student_id::text AS "studentId",a.revoked_at::text AS "revokedAt"',
+            [':id'=>$attemptId,':org'=>$scope->organizationId,':actor'=>$scope->actor()]);
+    }
+
     public function studentAttempts(Scope $scope, int $offset): array
     {
         return $this->all(
             'SELECT a.id::text,a.activity_id::text AS "activityId",d.code AS "activityCode",d.name AS "activityName",
             a.status,a.source,a.started_at::text AS "startedAt",a.finished_at::text AS "finishedAt",
-            t.duration_seconds AS "durationSeconds",t.language,t.wpm::float,t.accuracy::float,t.errors
+            t.duration_seconds AS "durationSeconds",COALESCE(t.language,r.metrics->>\'language\') AS language,t.wpm::float,
+            COALESCE(t.accuracy,(r.metrics->>\'accuracy\')::numeric)::float AS accuracy,t.errors,
+            (r.metrics->>\'correctAnswers\')::int AS "correctAnswers",(r.metrics->>\'totalRounds\')::int AS "totalRounds",
+            (r.metrics->>\'score\')::int AS score,r.passed,a.revoked_at::text AS "revokedAt"
             FROM education.activity_attempts a JOIN education.activity_definitions d ON d.id=a.activity_id
             LEFT JOIN education.typing_results t ON t.attempt_id=a.id
+            LEFT JOIN education.activity_results r ON r.attempt_id=a.id
             WHERE a.organization_id=CAST(:org AS uuid) AND a.student_id=CAST(:student AS uuid)
             ORDER BY a.started_at DESC,a.id DESC LIMIT 51 OFFSET :offset',
             [':org' => $scope->organizationId, ':student' => (string) $scope->studentId, ':offset' => $offset],
@@ -1208,8 +1337,9 @@ final readonly class PostgresEducationStore implements EducationStore
         return $this->all(
             'SELECT t.attempt_id::text AS "attemptId",t.duration_seconds AS "durationSeconds",t.language,
             t.keystrokes,t.correct_chars AS "correctChars",t.errors,t.wpm::float,t.accuracy::float,t.created_at::text AS "createdAt"
-            FROM education.typing_results t
-            WHERE t.organization_id=CAST(:org AS uuid) AND t.student_id=CAST(:student AS uuid)
+            FROM education.typing_results t JOIN education.activity_attempts a ON a.id=t.attempt_id
+            WHERE a.status=\'finished\' AND a.revoked_at IS NULL
+            AND t.organization_id=CAST(:org AS uuid) AND t.student_id=CAST(:student AS uuid)
             ORDER BY t.created_at DESC,t.attempt_id DESC LIMIT 51 OFFSET :offset',
             [':org' => $scope->organizationId, ':student' => (string) $scope->studentId, ':offset' => $offset],
         );
@@ -1220,8 +1350,9 @@ final readonly class PostgresEducationStore implements EducationStore
         return $this->one(
             'SELECT t.attempt_id::text AS "attemptId",t.duration_seconds AS "durationSeconds",t.language,
             t.wpm::float,t.accuracy::float,t.errors,t.created_at::text AS "createdAt"
-            FROM education.typing_results t
-            WHERE t.organization_id=CAST(:org AS uuid) AND t.student_id=CAST(:student AS uuid)
+            FROM education.typing_results t JOIN education.activity_attempts a ON a.id=t.attempt_id
+            WHERE a.status=\'finished\' AND a.revoked_at IS NULL
+            AND t.organization_id=CAST(:org AS uuid) AND t.student_id=CAST(:student AS uuid)
             ORDER BY t.wpm DESC,t.created_at LIMIT 1',
             [':org' => $scope->organizationId, ':student' => (string) $scope->studentId],
         );
@@ -1261,29 +1392,32 @@ final readonly class PostgresEducationStore implements EducationStore
             FROM education.activity_assignments a JOIN education.activity_definitions d ON d.id=a.activity_id
             LEFT JOIN education.groups g ON g.id=a.group_id
             LEFT JOIN education.students s ON s.id=a.student_id
-            WHERE a.organization_id=CAST(:org AS uuid) AND a.owner_account_id=CAST(:actor AS uuid)
+            WHERE a.organization_id=CAST(:org AS uuid) AND (a.owner_account_id=CAST(:actor AS uuid)
+                OR education.can_teach_group(a.organization_id,CAST(:actor AS uuid),a.group_id)
+                OR (a.group_id IS NULL AND EXISTS(SELECT 1 FROM education.group_students scope_gs
+                    WHERE scope_gs.student_id=a.student_id AND education.can_teach_group(scope_gs.organization_id,CAST(:actor AS uuid),scope_gs.group_id))))
             ORDER BY a.created_at DESC,a.id DESC LIMIT 51 OFFSET :offset',
             [...self::owner($scope), ':offset' => $offset],
         );
     }
 
-    public function groupActivityResults(Scope $scope, string $groupId, string $activityCode, int $offset): array
+    public function groupActivityResults(Scope $scope, string $groupId, string $activityCode, int $offset, ?string $from = null, ?string $to = null): array
     {
-        return $this->all(
-            'SELECT a.id::text,a.student_id::text AS "studentId",s.person_id::text AS "personId",a.status,a.source,
-            a.started_at::text AS "startedAt",a.finished_at::text AS "finishedAt",
-            t.duration_seconds AS "durationSeconds",t.language,t.keystrokes,t.correct_chars AS "correctChars",
-            t.errors,t.wpm::float,t.accuracy::float
-            FROM education.activity_attempts a
-            JOIN education.activity_definitions d ON d.id=a.activity_id
-            JOIN education.students s ON s.id=a.student_id
+        $range='';$params=[...self::owner($scope),':group'=>$groupId,':code'=>$activityCode,':offset'=>$offset];
+        if($from!==null){$range.=' AND a.started_at>=CAST(:from AS timestamptz)';$params[':from']=$from;}
+        if($to!==null){$range.=' AND a.started_at<CAST(:to AS timestamptz)';$params[':to']=$to;}
+        return $this->all('SELECT a.id::text,a.student_id::text AS "studentId",s.person_id::text AS "personId",a.status,a.source,
+            a.started_at::text AS "startedAt",a.finished_at::text AS "finishedAt",a.revoked_at::text AS "revokedAt",
+            t.duration_seconds AS "durationSeconds",COALESCE(t.language,r.metrics->>\'language\') AS language,t.keystrokes,t.correct_chars AS "correctChars",
+            COALESCE(t.errors,(r.metrics->>\'errors\')::int) AS errors,t.wpm::float,COALESCE(t.accuracy,(r.metrics->>\'accuracy\')::numeric)::float AS accuracy,
+            (r.metrics->>\'correctAnswers\')::int AS "correctAnswers",(r.metrics->>\'totalRounds\')::int AS "totalRounds",(r.metrics->>\'score\')::int AS score,r.passed
+            FROM education.activity_attempts a JOIN education.activity_definitions d ON d.id=a.activity_id
+            JOIN education.students s ON s.id=a.student_id AND s.organization_id=a.organization_id
             JOIN education.group_students gs ON gs.student_id=a.student_id AND gs.group_id=CAST(:group AS uuid)
-            LEFT JOIN education.typing_results t ON t.attempt_id=a.id
+            LEFT JOIN education.typing_results t ON t.attempt_id=a.id LEFT JOIN education.activity_results r ON r.attempt_id=a.id
             WHERE a.organization_id=CAST(:org AS uuid) AND d.code=:code
-            AND gs.organization_id=CAST(:org AS uuid) AND gs.owner_account_id=CAST(:actor AS uuid)
-            ORDER BY a.started_at DESC,a.id DESC LIMIT 51 OFFSET :offset',
-            [...self::owner($scope), ':group' => $groupId, ':code' => $activityCode, ':offset' => $offset],
-        );
+            AND gs.organization_id=CAST(:org AS uuid) AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id)'.$range.'
+            ORDER BY a.started_at DESC,a.id DESC LIMIT 51 OFFSET :offset',$params);
     }
 
     private function lockLesson(Scope $scope, string $lessonId): void
@@ -1350,7 +1484,7 @@ final readonly class PostgresEducationStore implements EducationStore
     {
         $this->db->createCommand(
             'DELETE FROM education.attendance a USING education.lessons l
-            WHERE a.lesson_id=l.id AND a.organization_id=CAST(:org AS uuid) AND a.owner_account_id=CAST(:actor AS uuid)
+            WHERE a.lesson_id=l.id AND a.organization_id=CAST(:org AS uuid) AND (a.owner_account_id=CAST(:actor AS uuid) OR EXISTS(SELECT 1 FROM education.lessons scope_l WHERE scope_l.id=a.lesson_id AND education.can_teach_group(scope_l.organization_id,CAST(:actor AS uuid),scope_l.group_id)))
             AND a.student_id=CAST(:student AS uuid) AND l.group_id=CAST(:group AS uuid)
             AND l.status=\'scheduled\' AND l.starts_at>now()',
             [...self::owner($scope), ':student' => $studentId, ':group' => $groupId],
@@ -1381,7 +1515,17 @@ final readonly class PostgresEducationStore implements EducationStore
 
     private static function where(string $alias): string
     {
-        return "$alias.organization_id=CAST(:org AS uuid) AND $alias.owner_account_id=CAST(:actor AS uuid)";
+        $own = "$alias.owner_account_id=CAST(:actor AS uuid)";
+        $assigned = match ($alias) {
+            'g' => "education.can_teach_group($alias.organization_id,CAST(:actor AS uuid),$alias.id)",
+            'l' => "education.can_teach_group($alias.organization_id,CAST(:actor AS uuid),$alias.group_id)",
+            's' => "EXISTS(SELECT 1 FROM education.group_students scope_gs WHERE scope_gs.student_id=$alias.id
+                AND education.can_teach_group(scope_gs.organization_id,CAST(:actor AS uuid),scope_gs.group_id))",
+            'a', 'r', 'f' => "EXISTS(SELECT 1 FROM education.lessons scope_l WHERE scope_l.id=$alias.lesson_id
+                AND education.can_teach_group(scope_l.organization_id,CAST(:actor AS uuid),scope_l.group_id))",
+            default => 'FALSE',
+        };
+        return "$alias.organization_id=CAST(:org AS uuid) AND ($own OR $assigned)";
     }
 
     /**
@@ -1454,6 +1598,9 @@ final readonly class PostgresEducationStore implements EducationStore
     private static function normalize(array $row): array
     {
         foreach ($row as $key => $value) {
+            if ($key === 'curriculumSnapshot' && is_string($value)) {
+                $row[$key] = json_decode($value, true, flags: JSON_THROW_ON_ERROR);
+            }
             if (str_ends_with($key, 'At') && is_string($value)) {
                 $row[$key] = (new DateTimeImmutable($value))->format('Y-m-d\TH:i:s.uP');
             }

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 import { coreAdminSession, coreAdminSessionEpoch } from '@/core/admin/session';
+import { clearEducationCache, invalidateEducationCache, scopeEducationCache } from './cache';
 import { setLocale } from '@/shared/i18n';
 import { educationApi, type EducationContext, type Header } from './api';
 
@@ -16,27 +17,29 @@ export const useEducationWorkspace = defineStore('educationWorkspace', () => {
   let headerController: AbortController | null = null;
 
   function reset(): void {
-    contextController?.abort(); headerController?.abort();
+    clearEducationCache(); contextController?.abort(); headerController?.abort();
     revision.value++; context.value = null; organizationId.value = ''; header.value = null;
     error.value = null; headerError.value = null; loading.value = false;
   }
   watch(coreAdminSessionEpoch, reset, { flush: 'sync' });
   function chooseOrganization(id: string): void {
     if (!context.value?.organizations.some(item => item.id === id)) return;
-    headerController?.abort(); revision.value++; header.value = null; headerError.value = null; organizationId.value = id;
+    scopeEducationCache(id); headerController?.abort(); revision.value++; header.value = null; headerError.value = null; organizationId.value = id;
   }
-  async function refreshHeader(): Promise<void> {
+  async function refreshHeader(force = false): Promise<void> {
+    if (force) invalidateEducationCache(['lessons']);
     headerController?.abort(); const controller = new AbortController(); headerController = controller;
     const org = organizationId.value; const version = revision.value; const epoch = coreAdminSession.epoch();
     if (!org) return;
+    if (context.value?.organizations.find(item => item.id === org)?.parent && !context.value.organizations.some(item => item.id === org && (item.teacher || item.student))) return;
     headerError.value = null;
     try {
       const result = await educationApi.header(org, controller.signal);
       if (controller.signal.aborted || version !== revision.value || epoch !== coreAdminSession.epoch()) return;
       header.value = result; setLocale(result.locale.toLowerCase().startsWith('ru') ? 'ru' : 'en');
-    } catch (caught) { if (!controller.signal.aborted && version === revision.value && epoch === coreAdminSession.epoch()) { header.value = null; headerError.value = caught; } }
+    } catch (caught) { if (!controller.signal.aborted && version === revision.value && epoch === coreAdminSession.epoch()) { headerError.value = caught; } }
   }
-  watch(organizationId, () => { void refreshHeader(); });
+  watch(organizationId, () => { void refreshHeader(); }, { flush: 'sync' });
   async function loadContext(): Promise<void> {
     contextController?.abort(); const controller = new AbortController(); contextController = controller;
     const epoch = coreAdminSession.epoch(); loading.value = true; error.value = null; context.value = null; header.value = null;

@@ -36,11 +36,14 @@ final readonly class DeviceAccess
     public function scope(AuthenticatedIdentity $identity, string $organizationId): Scope
     {
         $personId = $this->assertAvailable($identity);
-        if (!preg_match('/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i', $organizationId) === 1
+        if (preg_match('/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i', $organizationId) !== 1
             || !$this->organizations->activeMember($personId, $organizationId)) {
             throw new DeviceError(403, 'access_denied');
         }
         $timezone = $identity->timezone ?? 'UTC';
+        if ($timezone === '') {
+            $timezone = 'UTC';
+        }
         try {
             new DateTimeZone($timezone);
         } catch (\Exception) {

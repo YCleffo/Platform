@@ -26,7 +26,7 @@ for (const [schema, catalogFile, dbmlFile] of cases) {
         "dbml",
     );
     const parsed = db.schemas.flatMap((s) =>
-        s.tables.map((t) => ({ schema: s.name, table: t })),
+        s.name === schema ? s.tables.map((t) => ({ schema: s.name, table: t })) : [],
     );
     const expected = catalog.tables.filter((t) => t.schema === schema);
     assert.equal(parsed.length, expected.length, dbmlFile + " table count");

@@ -85,7 +85,7 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
     let response: Response | undefined;
     for (let attempt = 1; response === undefined; attempt += 1) {
       try {
-        response = await fetch(url, { method, headers, body, signal: options.signal, credentials: config.credentials ?? 'same-origin' });
+        response = await fetch(url, { method, headers, body, signal: options.signal, credentials: config.credentials ?? 'same-origin', cache: 'no-store' });
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
           throw new RequestAbortedError();

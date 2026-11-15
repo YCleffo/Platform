@@ -2,8 +2,22 @@ import type { RouteRecordRaw } from 'vue-router';
 
 const create = () => import('./CreateView.vue');
 export const educationRoutes: RouteRecordRaw[] = [
+  { path: '/education/contexts', name: 'education-contexts', component: () => import('./EducationContextView.vue'), meta: { requiresEducationAuth: true } },
+  { path: '/parent/activate', name: 'education-parent-activate', component: () => import('./parent/ParentActivationView.vue') },
+  { path: '/parent', component: () => import('./parent/ParentLayout.vue'), meta: { requiresEducationAuth: true }, children: [
+    { path: '', redirect: '/parent/home' },
+    ...['home', 'schedule', 'diary', 'homework', 'progress', 'notifications'].map(section => ({ path: section, name: `education-parent-${section}`, component: () => import('./parent/ParentSectionView.vue'), meta: { parentSection: section } })),
+  ] },
+
   { path: '/education/login', name: 'education-login', component: () => import('./EducationLoginView.vue') },
   { path: '/education', redirect: '/today', component: () => import('./EducationLayout.vue'), meta: { requiresEducationAuth: true }, children: [
+    { path: '/homework', name: 'education-homework', component: () => import('./homework/HomeworkListView.vue'), meta: { educationTab: 'homework' } },
+    { path: '/homework/new', name: 'education-homework-create', component: () => import('./homework/HomeworkCreateView.vue'), meta: { educationTab: 'homework' } },
+    { path: '/homework/submissions/:id', name: 'education-homework-review', component: () => import('./homework/HomeworkReviewView.vue'), meta: { educationTab: 'homework' } },
+    { path: '/homework/:id', name: 'education-homework-detail', component: () => import('./homework/HomeworkDetailView.vue'), meta: { educationTab: 'homework' } },
+    { path: '/programs', name: 'education-programs', component: () => import('./ProgramsView.vue'), meta: { educationTab: 'more' } },
+    { path: '/programs/:id', name: 'education-program', component: () => import('./ProgramView.vue'), meta: { educationTab: 'more' } },
+    { path: '/programs/:id/modules/:moduleId', name: 'education-curriculum-module', component: () => import('./ProgramView.vue'), meta: { educationTab: 'more' } },
     { path: '/today', name: 'education-today', component: () => import('./TodayView.vue'), meta: { educationTab: 'today' } },
     { path: '/calendar', name: 'education-calendar', component: () => import('./CalendarView.vue'), meta: { educationTab: 'calendar' } },
     { path: '/calendar/new', name: 'education-create-event', component: create, props: { kind: 'event' }, meta: { educationTab: 'calendar' } },
@@ -21,15 +35,21 @@ export const educationRoutes: RouteRecordRaw[] = [
     { path: '/lessons/:id/materials', name: 'education-lesson-materials', component: () => import('./LessonView.vue'), props: { mode: 'materials' }, meta: { educationTab: 'calendar' } },
     { path: '/groups/new', name: 'education-create-group', component: create, props: { kind: 'group' }, meta: { educationTab: 'people' } },
     { path: '/groups/:id', name: 'education-group', component: () => import('./GroupView.vue'), meta: { educationTab: 'people' } },
+    { path: '/groups/:id/attendance', name: 'education-group-attendance', component: () => import('./AttendanceView.vue'), meta: { educationTab: 'people' } },
     { path: '/groups/:id/journal', name: 'education-group-journal', component: () => import('./JournalView.vue'), meta: { educationTab: 'people' } },
     { path: '/groups/:id/activities', name: 'education-group-activities', component: () => import('./GroupActivitiesView.vue'), meta: { educationTab: 'people' } },
     { path: '/student', name: 'education-student-portal', component: () => import('./student/StudentLayout.vue'), meta: { educationTab: 'none' }, children: [
       { path: '', redirect: { name: 'education-student-home' } },
+      { path: 'homework', name: 'education-student-homework', component: () => import('./homework/HomeworkListView.vue'), props: { student: true }, meta: { educationTab: 'none' } },
+      { path: 'homework/:id', name: 'education-student-homework-detail', component: () => import('./homework/StudentHomeworkView.vue'), meta: { educationTab: 'none' } },
+      { path: 'notifications', name: 'education-student-notifications', component: () => import('./NotificationsView.vue'), props: { student: true }, meta: { educationTab: 'none' } },
       { path: 'home', name: 'education-student-home', component: () => import('./student/StudentHomeView.vue'), meta: { educationTab: 'none' } },
       { path: 'diary', name: 'education-student-diary', component: () => import('./student/StudentDiaryView.vue'), meta: { educationTab: 'none' } },
       { path: 'diary/:id', name: 'education-student-lesson', component: () => import('./student/StudentLessonView.vue'), meta: { educationTab: 'none' } },
       { path: 'activities', name: 'education-student-activities', component: () => import('./student/StudentActivitiesView.vue'), meta: { educationTab: 'none' } },
       { path: 'typing/:code', name: 'education-student-typing', component: () => import('./student/StudentTypingView.vue'), meta: { educationTab: 'none' } },
+      { path: 'logic/:code', name: 'education-student-logic', component: () => import('./student/StudentLogicView.vue'), meta: { educationTab: 'none' } },
+      { path: 'achievements', name: 'education-student-achievements', component: () => import('./student/StudentAchievementsView.vue'), meta: { educationTab: 'none' } },
       { path: 'progress', name: 'education-student-progress', component: () => import('./student/StudentProgressView.vue'), meta: { educationTab: 'none' } },
       { path: 'documents', name: 'education-student-documents', component: () => import('./student/StudentDocumentsView.vue'), meta: { educationTab: 'none' } },
     ] },

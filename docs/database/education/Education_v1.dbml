@@ -5,6 +5,70 @@ Project education {
   Note: 'Каталог PostgreSQL после миграций. Межбазовые идентификаторы не являются внешними ключами.'
 }
 
+// External reference: only the actual FK target columns are shown.
+Table core.accounts {
+  id uuid [not null]
+  Note: 'External FK target; full definition belongs to its own schema catalog.'
+}
+
+// External reference: only the actual FK target columns are shown.
+Table core.organizations {
+  id uuid [not null]
+  Note: 'External FK target; full definition belongs to its own schema catalog.'
+}
+
+// External reference: only the actual FK target columns are shown.
+Table core.persons {
+  id uuid [not null]
+  Note: 'External FK target; full definition belongs to its own schema catalog.'
+}
+
+Table education.achievement_definitions {
+  id uuid [pk, not null, default: `uuidv7()`]
+  code "character varying(80)" [not null]
+  rule_version integer [not null]
+  name "character varying(160)" [not null]
+  description text [not null]
+  rule jsonb [not null]
+  enabled boolean [not null, default: `true`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (code, rule_version) [name: 'achievement_definitions_code_rule_version_key', type: btree, unique]
+  }
+  Note: 'achievement_definitions_code_not_null: NOT NULL code\nachievement_definitions_code_rule_version_key: UNIQUE (code, rule_version)\nachievement_definitions_created_at_not_null: NOT NULL created_at\nachievement_definitions_description_not_null: NOT NULL description\nachievement_definitions_enabled_not_null: NOT NULL enabled\nachievement_definitions_id_not_null: NOT NULL id\nachievement_definitions_name_not_null: NOT NULL name\nachievement_definitions_rule_check: CHECK (jsonb_typeof(rule) = \'object\'::text)\nachievement_definitions_rule_not_null: NOT NULL rule\nachievement_definitions_rule_version_check: CHECK (rule_version > 0)\nachievement_definitions_rule_version_not_null: NOT NULL rule_version\nCREATE UNIQUE INDEX achievement_definitions_code_rule_version_key ON education.achievement_definitions USING btree (code, rule_version)'
+}
+
+Table education.achievement_events {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  student_id uuid [not null]
+  source_type "character varying(20)" [not null]
+  source_id uuid [not null]
+  occurred_at "timestamp with time zone" [not null]
+  payload jsonb [not null]
+  revoked_at "timestamp with time zone" [null]
+  indexes {
+    (id, organization_id, student_id) [name: 'achievement_events_id_organization_id_student_id_key', type: btree, unique]
+    (organization_id, student_id, source_type, source_id) [name: 'achievement_events_organization_id_student_id_source_type_s_key', type: btree, unique]
+    (organization_id, student_id, occurred_at, id) [name: 'achievement_events_student', type: btree]
+  }
+  Note: 'achievement_events_id_not_null: NOT NULL id\nachievement_events_id_organization_id_student_id_key: UNIQUE (id, organization_id, student_id)\nachievement_events_occurred_at_not_null: NOT NULL occurred_at\nachievement_events_organization_id_not_null: NOT NULL organization_id\nachievement_events_organization_id_student_id_source_type_s_key: UNIQUE (organization_id, student_id, source_type, source_id)\nachievement_events_payload_check: CHECK (jsonb_typeof(payload) = \'object\'::text)\nachievement_events_payload_not_null: NOT NULL payload\nachievement_events_source_id_not_null: NOT NULL source_id\nachievement_events_source_type_check: CHECK (source_type::text = ANY (ARRAY[\'attempt\'::character varying, \'homework\'::character varying]::text[]))\nachievement_events_source_type_not_null: NOT NULL source_type\nachievement_events_student_id_not_null: NOT NULL student_id\nachievement_events_student_id_organization_id_fkey: FOREIGN KEY (student_id, organization_id) REFERENCES education.students(id, organization_id)\nCREATE UNIQUE INDEX achievement_events_id_organization_id_student_id_key ON education.achievement_events USING btree (id, organization_id, student_id)\nCREATE UNIQUE INDEX achievement_events_organization_id_student_id_source_type_s_key ON education.achievement_events USING btree (organization_id, student_id, source_type, source_id)\nCREATE INDEX achievement_events_student ON education.achievement_events USING btree (organization_id, student_id, occurred_at, id)'
+}
+
+Table education.achievement_unlocks {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  student_id uuid [not null]
+  definition_id uuid [not null]
+  source_event_id uuid [not null]
+  unlocked_at "timestamp with time zone" [not null, default: `now()`]
+  revoked_at "timestamp with time zone" [null]
+  indexes {
+    (organization_id, student_id, definition_id) [name: 'achievement_unlocks_organization_id_student_id_definition_i_key', type: btree, unique]
+  }
+  Note: 'achievement_unlocks_definition_id_fkey: FOREIGN KEY (definition_id) REFERENCES education.achievement_definitions(id)\nachievement_unlocks_definition_id_not_null: NOT NULL definition_id\nachievement_unlocks_id_not_null: NOT NULL id\nachievement_unlocks_organization_id_not_null: NOT NULL organization_id\nachievement_unlocks_organization_id_student_id_definition_i_key: UNIQUE (organization_id, student_id, definition_id)\nachievement_unlocks_source_event_id_not_null: NOT NULL source_event_id\nachievement_unlocks_source_event_id_organization_id_studen_fkey: FOREIGN KEY (source_event_id, organization_id, student_id) REFERENCES education.achievement_events(id, organization_id, student_id)\nachievement_unlocks_student_id_not_null: NOT NULL student_id\nachievement_unlocks_student_id_organization_id_fkey: FOREIGN KEY (student_id, organization_id) REFERENCES education.students(id, organization_id)\nachievement_unlocks_unlocked_at_not_null: NOT NULL unlocked_at\nCREATE UNIQUE INDEX achievement_unlocks_organization_id_student_id_definition_i_key ON education.achievement_unlocks USING btree (organization_id, student_id, definition_id)'
+}
+
 Table education.activity_assignments {
   id uuid [pk, not null, default: `uuidv7()`]
   organization_id uuid [not null]
@@ -39,10 +103,15 @@ Table education.activity_attempts {
   result_payload jsonb [null]
   result_version integer [null]
   config jsonb [not null, default: `'{}'::jsonb`]
+  exercise_payload jsonb [not null, default: `'{}'::jsonb`]
+  client_state jsonb [not null, default: `'{}'::jsonb`]
+  state_version integer [not null, default: `0`]
+  revoked_at "timestamp with time zone" [null]
   indexes {
+    (id, organization_id, student_id) [name: 'activity_attempt_tenant', type: btree, unique]
     (organization_id, student_id, started_at, id) [name: 'activity_attempts_student', type: btree]
   }
-  Note: 'activity_attempts_account_id_not_null: NOT NULL account_id\nactivity_attempts_activity_id_fkey: FOREIGN KEY (activity_id) REFERENCES education.activity_definitions(id)\nactivity_attempts_activity_id_not_null: NOT NULL activity_id\nactivity_attempts_assignment_id_fkey: FOREIGN KEY (assignment_id) REFERENCES education.activity_assignments(id)\nactivity_attempts_check: CHECK (finished_at IS NULL OR finished_at >= started_at)\nactivity_attempts_config_not_null: NOT NULL config\nactivity_attempts_contract_version_not_null: NOT NULL contract_version\nactivity_attempts_id_not_null: NOT NULL id\nactivity_attempts_organization_id_not_null: NOT NULL organization_id\nactivity_attempts_source_check: CHECK (source::text = ANY (ARRAY[\'browser\'::character varying, \'managed-device\'::character varying, \'native-app\'::character varying]::text[]))\nactivity_attempts_source_not_null: NOT NULL source\nactivity_attempts_started_at_not_null: NOT NULL started_at\nactivity_attempts_status_check: CHECK (status::text = ANY (ARRAY[\'running\'::character varying, \'finished\'::character varying, \'expired\'::character varying, \'failed\'::character varying]::text[]))\nactivity_attempts_status_not_null: NOT NULL status\nactivity_attempts_student_id_fkey: FOREIGN KEY (student_id) REFERENCES education.students(id)\nactivity_attempts_student_id_not_null: NOT NULL student_id\nCREATE INDEX activity_attempts_student ON education.activity_attempts USING btree (organization_id, student_id, started_at DESC, id)'
+  Note: 'activity_attempt_tenant: UNIQUE (id, organization_id, student_id)\nactivity_attempts_account_id_not_null: NOT NULL account_id\nactivity_attempts_activity_id_fkey: FOREIGN KEY (activity_id) REFERENCES education.activity_definitions(id)\nactivity_attempts_activity_id_not_null: NOT NULL activity_id\nactivity_attempts_assignment_id_fkey: FOREIGN KEY (assignment_id) REFERENCES education.activity_assignments(id)\nactivity_attempts_check: CHECK (finished_at IS NULL OR finished_at >= started_at)\nactivity_attempts_client_state_not_null: NOT NULL client_state\nactivity_attempts_config_not_null: NOT NULL config\nactivity_attempts_contract_version_not_null: NOT NULL contract_version\nactivity_attempts_exercise_payload_not_null: NOT NULL exercise_payload\nactivity_attempts_id_not_null: NOT NULL id\nactivity_attempts_organization_id_not_null: NOT NULL organization_id\nactivity_attempts_source_check: CHECK (source::text = ANY (ARRAY[\'browser\'::character varying, \'managed-device\'::character varying, \'native-app\'::character varying]::text[]))\nactivity_attempts_source_not_null: NOT NULL source\nactivity_attempts_started_at_not_null: NOT NULL started_at\nactivity_attempts_state_version_check: CHECK (state_version >= 0)\nactivity_attempts_state_version_not_null: NOT NULL state_version\nactivity_attempts_status_check: CHECK (status::text = ANY (ARRAY[\'running\'::character varying, \'finished\'::character varying, \'expired\'::character varying, \'failed\'::character varying]::text[]))\nactivity_attempts_status_not_null: NOT NULL status\nactivity_attempts_student_id_fkey: FOREIGN KEY (student_id) REFERENCES education.students(id)\nactivity_attempts_student_id_not_null: NOT NULL student_id\nCREATE UNIQUE INDEX activity_attempt_tenant ON education.activity_attempts USING btree (id, organization_id, student_id)\nCREATE INDEX activity_attempts_student ON education.activity_attempts USING btree (organization_id, student_id, started_at DESC, id)'
 }
 
 Table education.activity_definitions {
@@ -62,6 +131,38 @@ Table education.activity_definitions {
   Note: 'activity_definitions_code_key: UNIQUE (code)\nactivity_definitions_code_not_null: NOT NULL code\nactivity_definitions_config_not_null: NOT NULL config\nactivity_definitions_contract_version_check: CHECK (contract_version > 0)\nactivity_definitions_contract_version_not_null: NOT NULL contract_version\nactivity_definitions_created_at_not_null: NOT NULL created_at\nactivity_definitions_enabled_not_null: NOT NULL enabled\nactivity_definitions_id_not_null: NOT NULL id\nactivity_definitions_kind_check: CHECK (kind::text = ANY (ARRAY[\'typing\'::character varying, \'web-game\'::character varying, \'test\'::character varying, \'programming\'::character varying, \'native-app\'::character varying]::text[]))\nactivity_definitions_kind_not_null: NOT NULL kind\nactivity_definitions_metrics_not_null: NOT NULL metrics\nactivity_definitions_name_check: CHECK (btrim(name::text) <> \'\'::text)\nactivity_definitions_name_not_null: NOT NULL name\nactivity_definitions_required_permission_not_null: NOT NULL required_permission\nCREATE UNIQUE INDEX activity_definitions_code_key ON education.activity_definitions USING btree (code)'
 }
 
+Table education.activity_exercise_sets {
+  code "character varying(80)" [not null]
+  version integer [not null]
+  activity_code "character varying(60)" [not null]
+  language "character varying(2)" [not null]
+  mode "character varying(20)" [not null]
+  difficulty integer [not null]
+  content jsonb [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (code, version) [pk]
+    (activity_code, version, language, mode, difficulty) [name: 'activity_exercise_sets_activity_code_version_language_mode__key', type: btree, unique]
+  }
+  Note: 'activity_exercise_sets_activity_code_fkey: FOREIGN KEY (activity_code) REFERENCES education.activity_definitions(code)\nactivity_exercise_sets_activity_code_not_null: NOT NULL activity_code\nactivity_exercise_sets_activity_code_version_language_mode__key: UNIQUE (activity_code, version, language, mode, difficulty)\nactivity_exercise_sets_code_not_null: NOT NULL code\nactivity_exercise_sets_content_check: CHECK (jsonb_typeof(content) = \'array\'::text)\nactivity_exercise_sets_content_not_null: NOT NULL content\nactivity_exercise_sets_created_at_not_null: NOT NULL created_at\nactivity_exercise_sets_difficulty_check: CHECK (difficulty >= 1 AND difficulty <= 3)\nactivity_exercise_sets_difficulty_not_null: NOT NULL difficulty\nactivity_exercise_sets_language_check: CHECK (language::text = ANY (ARRAY[\'ru\'::character varying, \'en\'::character varying]::text[]))\nactivity_exercise_sets_language_not_null: NOT NULL language\nactivity_exercise_sets_mode_not_null: NOT NULL mode\nactivity_exercise_sets_version_check: CHECK (version > 0)\nactivity_exercise_sets_version_not_null: NOT NULL version\nCREATE UNIQUE INDEX activity_exercise_sets_activity_code_version_language_mode__key ON education.activity_exercise_sets USING btree (activity_code, version, language, mode, difficulty)'
+}
+
+Table education.activity_results {
+  attempt_id uuid [pk, not null]
+  organization_id uuid [not null]
+  student_id uuid [not null]
+  type "character varying(20)" [not null]
+  version integer [not null]
+  request_hash character(64) [not null]
+  metrics jsonb [not null]
+  passed boolean [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (organization_id, student_id, created_at, attempt_id) [name: 'activity_results_student', type: btree]
+  }
+  Note: 'activity_results_attempt_id_not_null: NOT NULL attempt_id\nactivity_results_attempt_id_organization_id_student_id_fkey: FOREIGN KEY (attempt_id, organization_id, student_id) REFERENCES education.activity_attempts(id, organization_id, student_id)\nactivity_results_created_at_not_null: NOT NULL created_at\nactivity_results_metrics_check: CHECK (jsonb_typeof(metrics) = \'object\'::text)\nactivity_results_metrics_not_null: NOT NULL metrics\nactivity_results_organization_id_not_null: NOT NULL organization_id\nactivity_results_passed_not_null: NOT NULL passed\nactivity_results_request_hash_not_null: NOT NULL request_hash\nactivity_results_student_id_not_null: NOT NULL student_id\nactivity_results_type_check: CHECK (type::text = ANY (ARRAY[\'typing\'::character varying, \'logic\'::character varying]::text[]))\nactivity_results_type_not_null: NOT NULL type\nactivity_results_version_check: CHECK (version > 0)\nactivity_results_version_not_null: NOT NULL version\nCREATE INDEX activity_results_student ON education.activity_results USING btree (organization_id, student_id, created_at DESC, attempt_id)'
+}
+
 Table education.attendance {
   lesson_id uuid [not null]
   student_id uuid [not null]
@@ -73,6 +174,55 @@ Table education.attendance {
     (lesson_id, student_id) [pk]
   }
   Note: 'attendance_lesson_id_not_null: NOT NULL lesson_id\nattendance_lesson_id_organization_id_owner_account_id_fkey: FOREIGN KEY (lesson_id, organization_id, owner_account_id) REFERENCES education.lessons(id, organization_id, owner_account_id)\nattendance_organization_id_not_null: NOT NULL organization_id\nattendance_owner_account_id_not_null: NOT NULL owner_account_id\nattendance_status_check: CHECK (status::text = ANY (ARRAY[\'pending\'::character varying, \'present\'::character varying, \'absent\'::character varying]::text[]))\nattendance_status_not_null: NOT NULL status\nattendance_student_id_not_null: NOT NULL student_id\nattendance_student_id_organization_id_owner_account_id_fkey: FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)\nattendance_updated_at_not_null: NOT NULL updated_at'
+}
+
+Table education.curriculum_lessons {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  module_id uuid [not null]
+  title "character varying(160)" [not null]
+  description text [not null, default: `''::text`]
+  position integer [not null]
+  version integer [not null, default: `1`]
+  archived_at "timestamp with time zone" [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (id, organization_id) [name: 'curriculum_lessons_id_organization_id_key', type: btree, unique]
+  }
+  Note: 'curriculum_lessons_created_at_not_null: NOT NULL created_at\ncurriculum_lessons_description_check: CHECK (length(description) <= 8000)\ncurriculum_lessons_description_not_null: NOT NULL description\ncurriculum_lessons_id_not_null: NOT NULL id\ncurriculum_lessons_id_organization_id_key: UNIQUE (id, organization_id)\ncurriculum_lessons_module_id_not_null: NOT NULL module_id\ncurriculum_lessons_module_id_organization_id_fkey: FOREIGN KEY (module_id, organization_id) REFERENCES education.curriculum_modules(id, organization_id)\ncurriculum_lessons_organization_id_not_null: NOT NULL organization_id\ncurriculum_lessons_position_check: CHECK ("position" >= 0 AND "position" <= 10000)\ncurriculum_lessons_position_not_null: NOT NULL "position"\ncurriculum_lessons_title_check: CHECK (btrim(title::text) <> \'\'::text)\ncurriculum_lessons_title_not_null: NOT NULL title\ncurriculum_lessons_updated_at_not_null: NOT NULL updated_at\ncurriculum_lessons_version_check: CHECK (version > 0)\ncurriculum_lessons_version_not_null: NOT NULL version\nCREATE UNIQUE INDEX curriculum_lessons_id_organization_id_key ON education.curriculum_lessons USING btree (id, organization_id)\nCREATE INDEX curriculum_lessons_module ON education.curriculum_lessons USING btree (module_id, "position", id)'
+}
+
+Table education.curriculum_modules {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  program_id uuid [not null]
+  name "character varying(160)" [not null]
+  description text [not null, default: `''::text`]
+  position integer [not null]
+  version integer [not null, default: `1`]
+  archived_at "timestamp with time zone" [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (id, organization_id) [name: 'curriculum_modules_id_organization_id_key', type: btree, unique]
+  }
+  Note: 'curriculum_modules_created_at_not_null: NOT NULL created_at\ncurriculum_modules_description_check: CHECK (length(description) <= 8000)\ncurriculum_modules_description_not_null: NOT NULL description\ncurriculum_modules_id_not_null: NOT NULL id\ncurriculum_modules_id_organization_id_key: UNIQUE (id, organization_id)\ncurriculum_modules_name_check: CHECK (btrim(name::text) <> \'\'::text)\ncurriculum_modules_name_not_null: NOT NULL name\ncurriculum_modules_organization_id_not_null: NOT NULL organization_id\ncurriculum_modules_position_check: CHECK ("position" >= 0 AND "position" <= 10000)\ncurriculum_modules_position_not_null: NOT NULL "position"\ncurriculum_modules_program_id_not_null: NOT NULL program_id\ncurriculum_modules_program_id_organization_id_fkey: FOREIGN KEY (program_id, organization_id) REFERENCES education.programs(id, organization_id)\ncurriculum_modules_updated_at_not_null: NOT NULL updated_at\ncurriculum_modules_version_check: CHECK (version > 0)\ncurriculum_modules_version_not_null: NOT NULL version\nCREATE UNIQUE INDEX curriculum_modules_id_organization_id_key ON education.curriculum_modules USING btree (id, organization_id)\nCREATE INDEX curriculum_modules_program ON education.curriculum_modules USING btree (program_id, "position", id)'
+}
+
+Table education.curriculum_revisions {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  entity_type "character varying(20)" [not null]
+  entity_id uuid [not null]
+  version integer [not null]
+  payload jsonb [not null]
+  revised_by_account_id uuid [not null]
+  revised_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (entity_type, entity_id, version) [name: 'curriculum_revisions_entity_type_entity_id_version_key', type: btree, unique]
+  }
+  Note: 'curriculum_revisions_entity_id_not_null: NOT NULL entity_id\ncurriculum_revisions_entity_type_check: CHECK (entity_type::text = ANY (ARRAY[\'program\'::character varying, \'module\'::character varying, \'lesson\'::character varying]::text[]))\ncurriculum_revisions_entity_type_entity_id_version_key: UNIQUE (entity_type, entity_id, version)\ncurriculum_revisions_entity_type_not_null: NOT NULL entity_type\ncurriculum_revisions_id_not_null: NOT NULL id\ncurriculum_revisions_organization_id_not_null: NOT NULL organization_id\ncurriculum_revisions_payload_not_null: NOT NULL payload\ncurriculum_revisions_revised_at_not_null: NOT NULL revised_at\ncurriculum_revisions_revised_by_account_id_not_null: NOT NULL revised_by_account_id\ncurriculum_revisions_version_not_null: NOT NULL version\nCREATE UNIQUE INDEX curriculum_revisions_entity_type_entity_id_version_key ON education.curriculum_revisions USING btree (entity_type, entity_id, version)'
 }
 
 Table education.events {
@@ -89,6 +239,50 @@ Table education.events {
     (organization_id, owner_account_id, starts_at, id) [name: 'events_owner_time', type: btree]
   }
   Note: 'events_check: CHECK (ends_at > starts_at AND ends_at <= (starts_at + \'24:00:00\'::interval))\nevents_ends_at_not_null: NOT NULL ends_at\nevents_id_not_null: NOT NULL id\nevents_kind_check: CHECK (kind::text = ANY (ARRAY[\'meeting\'::character varying, \'birthday\'::character varying, \'other\'::character varying]::text[]))\nevents_kind_not_null: NOT NULL kind\nevents_location_not_null: NOT NULL location\nevents_organization_id_not_null: NOT NULL organization_id\nevents_owner_account_id_not_null: NOT NULL owner_account_id\nevents_owner_person_id_not_null: NOT NULL owner_person_id\nevents_starts_at_not_null: NOT NULL starts_at\nevents_title_check: CHECK (btrim(title::text) <> \'\'::text)\nevents_title_not_null: NOT NULL title\nCREATE INDEX events_owner_time ON education.events USING btree (organization_id, owner_account_id, starts_at, id)'
+}
+
+Table education.family_history {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  student_id uuid [not null]
+  guardian_person_id uuid [not null]
+  actor_account_id uuid [null]
+  action "character varying(32)" [not null]
+  relationship "character varying(12)" [not null]
+  status "character varying(12)" [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (organization_id, student_id, created_at, id) [name: 'family_history_student', type: btree]
+  }
+  Note: 'family_history_action_not_null: NOT NULL action\nfamily_history_actor_account_id_fkey: FOREIGN KEY (actor_account_id) REFERENCES core.accounts(id)\nfamily_history_created_at_not_null: NOT NULL created_at\nfamily_history_guardian_person_id_fkey: FOREIGN KEY (guardian_person_id) REFERENCES core.persons(id)\nfamily_history_guardian_person_id_not_null: NOT NULL guardian_person_id\nfamily_history_id_not_null: NOT NULL id\nfamily_history_organization_id_not_null: NOT NULL organization_id\nfamily_history_relationship_check: CHECK (relationship::text = ANY (ARRAY[\'mother\'::character varying, \'father\'::character varying, \'guardian\'::character varying]::text[]))\nfamily_history_relationship_not_null: NOT NULL relationship\nfamily_history_status_check: CHECK (status::text = ANY (ARRAY[\'pending\'::character varying, \'confirmed\'::character varying, \'revoked\'::character varying]::text[]))\nfamily_history_status_not_null: NOT NULL status\nfamily_history_student_id_not_null: NOT NULL student_id\nfamily_history_student_id_organization_id_fkey: FOREIGN KEY (student_id, organization_id) REFERENCES education.students(id, organization_id)\nCREATE INDEX family_history_student ON education.family_history USING btree (organization_id, student_id, created_at DESC, id)\nCREATE TRIGGER family_history_immutable BEFORE DELETE OR UPDATE ON education.family_history FOR EACH ROW EXECUTE FUNCTION education.family_history_immutable()'
+}
+
+Table education.file_transfers {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  account_id uuid [not null]
+  person_id uuid [not null]
+  student_id uuid [null]
+  kind "character varying(16)" [not null]
+  resource_id uuid [null]
+  lesson_id uuid [null]
+  avatar boolean [not null, default: `false`]
+  name "character varying(240)" [not null]
+  expected_size bigint [not null]
+  expected_sha256 character(64) [not null]
+  staging_key "character varying(160)" [not null]
+  final_key uuid [not null]
+  status "character varying(16)" [not null, default: `'pending'::character varying`]
+  result jsonb [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  expires_at "timestamp with time zone" [not null, default: `(now() + '1 day'::interval)`]
+  confirmed_at "timestamp with time zone" [null]
+  indexes {
+    (organization_id, account_id, created_at) [name: 'education_file_transfer_actor', type: btree]
+    final_key [name: 'file_transfers_final_key_key', type: btree, unique]
+    staging_key [name: 'file_transfers_staging_key_key', type: btree, unique]
+  }
+  Note: 'file_transfers_account_id_fkey: FOREIGN KEY (account_id) REFERENCES core.accounts(id)\nfile_transfers_account_id_not_null: NOT NULL account_id\nfile_transfers_avatar_not_null: NOT NULL avatar\nfile_transfers_check: CHECK (kind::text = \'homework\'::text AND resource_id IS NOT NULL AND NOT avatar AND lesson_id IS NULL OR kind::text = \'file\'::text AND resource_id IS NULL)\nfile_transfers_check1: CHECK ((status::text = \'confirmed\'::text) = (result IS NOT NULL))\nfile_transfers_created_at_not_null: NOT NULL created_at\nfile_transfers_expected_sha256_check: CHECK (expected_sha256 ~ \'^[a-f0-9]{64}$\'::text)\nfile_transfers_expected_sha256_not_null: NOT NULL expected_sha256\nfile_transfers_expected_size_check: CHECK (expected_size >= 1 AND expected_size <= 10485760)\nfile_transfers_expected_size_not_null: NOT NULL expected_size\nfile_transfers_expires_at_not_null: NOT NULL expires_at\nfile_transfers_final_key_key: UNIQUE (final_key)\nfile_transfers_final_key_not_null: NOT NULL final_key\nfile_transfers_id_not_null: NOT NULL id\nfile_transfers_kind_check: CHECK (kind::text = ANY (ARRAY[\'file\'::character varying, \'homework\'::character varying]::text[]))\nfile_transfers_kind_not_null: NOT NULL kind\nfile_transfers_name_not_null: NOT NULL name\nfile_transfers_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES core.organizations(id)\nfile_transfers_organization_id_not_null: NOT NULL organization_id\nfile_transfers_person_id_fkey: FOREIGN KEY (person_id) REFERENCES core.persons(id)\nfile_transfers_person_id_not_null: NOT NULL person_id\nfile_transfers_staging_key_key: UNIQUE (staging_key)\nfile_transfers_staging_key_not_null: NOT NULL staging_key\nfile_transfers_status_check: CHECK (status::text = ANY (ARRAY[\'pending\'::character varying, \'confirmed\'::character varying, \'aborted\'::character varying]::text[]))\nfile_transfers_status_not_null: NOT NULL status\nCREATE INDEX education_file_transfer_actor ON education.file_transfers USING btree (organization_id, account_id, created_at)\nCREATE UNIQUE INDEX file_transfers_final_key_key ON education.file_transfers USING btree (final_key)\nCREATE UNIQUE INDEX file_transfers_staging_key_key ON education.file_transfers USING btree (staging_key)'
 }
 
 Table education.files {
@@ -111,6 +305,23 @@ Table education.files {
   Note: 'files_created_at_not_null: NOT NULL created_at\nfiles_id_not_null: NOT NULL id\nfiles_id_owner_account_id_key: UNIQUE (id, owner_account_id)\nfiles_lesson_id_organization_id_owner_account_id_fkey: FOREIGN KEY (lesson_id, organization_id, owner_account_id) REFERENCES education.lessons(id, organization_id, owner_account_id)\nfiles_mime_not_null: NOT NULL mime\nfiles_name_not_null: NOT NULL name\nfiles_organization_id_not_null: NOT NULL organization_id\nfiles_owner_account_id_not_null: NOT NULL owner_account_id\nfiles_owner_person_id_not_null: NOT NULL owner_person_id\nfiles_purpose_check: CHECK (purpose::text = ANY (ARRAY[\'avatar\'::character varying, \'material\'::character varying]::text[]))\nfiles_purpose_not_null: NOT NULL purpose\nfiles_sha256_not_null: NOT NULL sha256\nfiles_size_bytes_check: CHECK (size_bytes > 0 AND size_bytes <= 10485760)\nfiles_size_bytes_not_null: NOT NULL size_bytes\nfiles_storage_key_key: UNIQUE (storage_key)\nfiles_storage_key_not_null: NOT NULL storage_key\nCREATE UNIQUE INDEX files_id_owner_account_id_key ON education.files USING btree (id, owner_account_id)\nCREATE UNIQUE INDEX files_storage_key_key ON education.files USING btree (storage_key)'
 }
 
+Table education.group_programs {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  group_id uuid [not null]
+  program_id uuid [not null]
+  program_version integer [not null]
+  snapshot jsonb [not null]
+  assigned_by_account_id uuid [not null]
+  assigned_at "timestamp with time zone" [not null, default: `now()`]
+  ended_at "timestamp with time zone" [null]
+  indexes {
+    (organization_id, group_id, assigned_at, id) [name: 'group_programs_history', type: btree]
+    (id, organization_id) [name: 'group_programs_id_organization_id_key', type: btree, unique]
+  }
+  Note: 'group_programs_assigned_at_not_null: NOT NULL assigned_at\ngroup_programs_assigned_by_account_id_not_null: NOT NULL assigned_by_account_id\ngroup_programs_group_id_not_null: NOT NULL group_id\ngroup_programs_group_id_organization_id_fkey: FOREIGN KEY (group_id, organization_id) REFERENCES education.groups(id, organization_id)\ngroup_programs_id_not_null: NOT NULL id\ngroup_programs_id_organization_id_key: UNIQUE (id, organization_id)\ngroup_programs_organization_id_not_null: NOT NULL organization_id\ngroup_programs_program_id_not_null: NOT NULL program_id\ngroup_programs_program_id_organization_id_fkey: FOREIGN KEY (program_id, organization_id) REFERENCES education.programs(id, organization_id)\ngroup_programs_program_version_not_null: NOT NULL program_version\ngroup_programs_snapshot_check: CHECK (jsonb_typeof(snapshot) = \'object\'::text)\ngroup_programs_snapshot_not_null: NOT NULL snapshot\nCREATE UNIQUE INDEX group_programs_active ON education.group_programs USING btree (group_id) WHERE (ended_at IS NULL)\nCREATE INDEX group_programs_history ON education.group_programs USING btree (organization_id, group_id, assigned_at, id)\nCREATE UNIQUE INDEX group_programs_id_organization_id_key ON education.group_programs USING btree (id, organization_id)'
+}
+
 Table education.group_students {
   group_id uuid [not null]
   student_id uuid [not null]
@@ -123,6 +334,19 @@ Table education.group_students {
   Note: 'group_students_group_id_not_null: NOT NULL group_id\ngroup_students_group_id_organization_id_owner_account_id_fkey: FOREIGN KEY (group_id, organization_id, owner_account_id) REFERENCES education.groups(id, organization_id, owner_account_id)\ngroup_students_organization_id_not_null: NOT NULL organization_id\ngroup_students_owner_account_id_not_null: NOT NULL owner_account_id\ngroup_students_student_id_not_null: NOT NULL student_id\ngroup_students_student_id_organization_id_owner_account_id_fkey: FOREIGN KEY (student_id, organization_id, owner_account_id) REFERENCES education.students(id, organization_id, owner_account_id)\nCREATE INDEX group_students_student ON education.group_students USING btree (student_id, group_id)'
 }
 
+Table education.group_teachers {
+  group_id uuid [not null]
+  organization_id uuid [not null]
+  account_id uuid [not null]
+  assigned_by_account_id uuid [not null]
+  assigned_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (group_id, account_id) [pk]
+    (organization_id, account_id, group_id) [name: 'group_teachers_account', type: btree]
+  }
+  Note: 'group_teachers_account_id_not_null: NOT NULL account_id\ngroup_teachers_assigned_at_not_null: NOT NULL assigned_at\ngroup_teachers_assigned_by_account_id_not_null: NOT NULL assigned_by_account_id\ngroup_teachers_group_id_not_null: NOT NULL group_id\ngroup_teachers_group_id_organization_id_fkey: FOREIGN KEY (group_id, organization_id) REFERENCES education.groups(id, organization_id)\ngroup_teachers_organization_id_account_id_fkey: FOREIGN KEY (organization_id, account_id) REFERENCES education.teachers(organization_id, account_id)\ngroup_teachers_organization_id_not_null: NOT NULL organization_id\nCREATE INDEX group_teachers_account ON education.group_teachers USING btree (organization_id, account_id, group_id)'
+}
+
 Table education.groups {
   id uuid [pk, not null, default: `uuidv7()`]
   organization_id uuid [not null]
@@ -132,9 +356,193 @@ Table education.groups {
   created_at "timestamp with time zone" [not null, default: `now()`]
   archived_at "timestamp with time zone" [null]
   indexes {
+    (id, organization_id) [name: 'groups_id_organization', type: btree, unique]
     (id, organization_id, owner_account_id) [name: 'groups_id_organization_id_owner_account_id_key', type: btree, unique]
   }
-  Note: 'groups_created_at_not_null: NOT NULL created_at\ngroups_id_not_null: NOT NULL id\ngroups_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\ngroups_name_check: CHECK (btrim(name::text) <> \'\'::text)\ngroups_name_not_null: NOT NULL name\ngroups_organization_id_not_null: NOT NULL organization_id\ngroups_owner_account_id_not_null: NOT NULL owner_account_id\ngroups_owner_person_id_not_null: NOT NULL owner_person_id\nCREATE UNIQUE INDEX groups_id_organization_id_owner_account_id_key ON education.groups USING btree (id, organization_id, owner_account_id)'
+  Note: 'groups_created_at_not_null: NOT NULL created_at\ngroups_id_not_null: NOT NULL id\ngroups_id_organization: UNIQUE (id, organization_id)\ngroups_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\ngroups_name_check: CHECK (btrim(name::text) <> \'\'::text)\ngroups_name_not_null: NOT NULL name\ngroups_organization_id_not_null: NOT NULL organization_id\ngroups_owner_account_id_not_null: NOT NULL owner_account_id\ngroups_owner_person_id_not_null: NOT NULL owner_person_id\nCREATE UNIQUE INDEX groups_id_organization ON education.groups USING btree (id, organization_id)\nCREATE UNIQUE INDEX groups_id_organization_id_owner_account_id_key ON education.groups USING btree (id, organization_id, owner_account_id)'
+}
+
+Table education.homework_assignments {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  author_account_id uuid [not null]
+  author_person_id uuid [not null]
+  title "character varying(160)" [not null]
+  description text [not null, default: `''::text`]
+  instructions text [not null, default: `''::text`]
+  type "character varying(12)" [not null]
+  group_id uuid [null]
+  lesson_id uuid [null]
+  due_at "timestamp with time zone" [null]
+  allow_late boolean [not null, default: `false`]
+  activity_code "character varying(60)" [null]
+  activity_config jsonb [not null, default: `'{}'::jsonb`]
+  max_attempts integer [not null, default: `3`]
+  attempt_policy "character varying(10)" [not null, default: `'latest'::character varying`]
+  status "character varying(12)" [not null, default: `'DRAFT'::character varying`]
+  version integer [not null, default: `1`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  published_at "timestamp with time zone" [null]
+  closed_at "timestamp with time zone" [null]
+  archived_at "timestamp with time zone" [null]
+  indexes {
+    (organization_id, author_account_id, created_at, id) [name: 'homework_assignment_author', type: btree]
+    (organization_id, status, due_at, id) [name: 'homework_assignment_lists', type: btree]
+    (id, organization_id) [name: 'homework_assignments_id_organization_id_key', type: btree, unique]
+  }
+  Note: 'homework_assignments_activity_code_fkey: FOREIGN KEY (activity_code) REFERENCES education.activity_definitions(code)\nhomework_assignments_activity_config_check: CHECK (jsonb_typeof(activity_config) = \'object\'::text)\nhomework_assignments_activity_config_not_null: NOT NULL activity_config\nhomework_assignments_allow_late_not_null: NOT NULL allow_late\nhomework_assignments_attempt_policy_check: CHECK (attempt_policy::text = ANY (ARRAY[\'first\'::character varying, \'latest\'::character varying, \'best\'::character varying]::text[]))\nhomework_assignments_attempt_policy_not_null: NOT NULL attempt_policy\nhomework_assignments_author_account_id_not_null: NOT NULL author_account_id\nhomework_assignments_author_person_id_not_null: NOT NULL author_person_id\nhomework_assignments_check: CHECK ((type::text = ANY (ARRAY[\'text\'::character varying, \'files\'::character varying]::text[])) AND activity_code IS NULL OR (type::text = ANY (ARRAY[\'typing\'::character varying, \'activity\'::character varying]::text[])) AND activity_code IS NOT NULL)\nhomework_assignments_created_at_not_null: NOT NULL created_at\nhomework_assignments_description_check: CHECK (length(description) <= 8000)\nhomework_assignments_description_not_null: NOT NULL description\nhomework_assignments_group_id_organization_id_fkey: FOREIGN KEY (group_id, organization_id) REFERENCES education.groups(id, organization_id)\nhomework_assignments_id_not_null: NOT NULL id\nhomework_assignments_id_organization_id_key: UNIQUE (id, organization_id)\nhomework_assignments_instructions_check: CHECK (length(instructions) <= 20000)\nhomework_assignments_instructions_not_null: NOT NULL instructions\nhomework_assignments_lesson_id_organization_id_fkey: FOREIGN KEY (lesson_id, organization_id) REFERENCES education.lessons(id, organization_id)\nhomework_assignments_max_attempts_check: CHECK (max_attempts >= 1 AND max_attempts <= 20)\nhomework_assignments_max_attempts_not_null: NOT NULL max_attempts\nhomework_assignments_organization_id_not_null: NOT NULL organization_id\nhomework_assignments_status_check: CHECK (status::text = ANY (ARRAY[\'DRAFT\'::character varying, \'PUBLISHED\'::character varying, \'CLOSED\'::character varying, \'ARCHIVED\'::character varying]::text[]))\nhomework_assignments_status_not_null: NOT NULL status\nhomework_assignments_title_check: CHECK (btrim(title::text) <> \'\'::text)\nhomework_assignments_title_not_null: NOT NULL title\nhomework_assignments_type_check: CHECK (type::text = ANY (ARRAY[\'text\'::character varying, \'files\'::character varying, \'typing\'::character varying, \'activity\'::character varying]::text[]))\nhomework_assignments_type_not_null: NOT NULL type\nhomework_assignments_version_check: CHECK (version > 0)\nhomework_assignments_version_not_null: NOT NULL version\nCREATE INDEX homework_assignment_author ON education.homework_assignments USING btree (organization_id, author_account_id, created_at DESC, id)\nCREATE INDEX homework_assignment_lists ON education.homework_assignments USING btree (organization_id, status, due_at, id)\nCREATE UNIQUE INDEX homework_assignments_id_organization_id_key ON education.homework_assignments USING btree (id, organization_id)'
+}
+
+Table education.homework_attempt_links {
+  attempt_id uuid [pk, not null]
+  organization_id uuid [not null]
+  recipient_id uuid [not null]
+  answer_sequence integer [not null]
+  linked_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (recipient_id, linked_at, attempt_id) [name: 'homework_attempts_recipient', type: btree]
+  }
+  Note: 'homework_attempt_links_answer_sequence_check: CHECK (answer_sequence > 0)\nhomework_attempt_links_answer_sequence_not_null: NOT NULL answer_sequence\nhomework_attempt_links_attempt_id_fkey: FOREIGN KEY (attempt_id) REFERENCES education.activity_attempts(id)\nhomework_attempt_links_attempt_id_not_null: NOT NULL attempt_id\nhomework_attempt_links_linked_at_not_null: NOT NULL linked_at\nhomework_attempt_links_organization_id_not_null: NOT NULL organization_id\nhomework_attempt_links_recipient_id_fkey: FOREIGN KEY (recipient_id) REFERENCES education.homework_recipients(id)\nhomework_attempt_links_recipient_id_not_null: NOT NULL recipient_id\nCREATE INDEX homework_attempts_recipient ON education.homework_attempt_links USING btree (recipient_id, linked_at, attempt_id)\nCREATE TRIGGER homework_attempt_scope BEFORE INSERT OR UPDATE ON education.homework_attempt_links FOR EACH ROW EXECUTE FUNCTION education.check_homework_integration()'
+}
+
+Table education.homework_draft_files {
+  recipient_id uuid [not null]
+  file_id uuid [not null]
+  indexes {
+    (recipient_id, file_id) [pk]
+  }
+  Note: 'homework_draft_files_file_id_fkey: FOREIGN KEY (file_id) REFERENCES education.homework_files(id)\nhomework_draft_files_file_id_not_null: NOT NULL file_id\nhomework_draft_files_recipient_id_fkey: FOREIGN KEY (recipient_id) REFERENCES education.homework_recipients(id)\nhomework_draft_files_recipient_id_not_null: NOT NULL recipient_id\nCREATE TRIGGER homework_draft_file_scope BEFORE INSERT OR UPDATE ON education.homework_draft_files FOR EACH ROW EXECUTE FUNCTION education.check_homework_file_link()'
+}
+
+Table education.homework_files {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  assignment_id uuid [not null]
+  recipient_id uuid [null]
+  owner_person_id uuid [not null]
+  purpose "character varying(20)" [not null]
+  name "character varying(240)" [not null]
+  mime "character varying(100)" [not null]
+  size_bytes integer [not null]
+  sha256 character(64) [not null]
+  storage_key uuid [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (organization_id, assignment_id, created_at, id) [name: 'homework_files_assignment', type: btree]
+    (recipient_id, created_at, id) [name: 'homework_files_recipient', type: btree]
+    storage_key [name: 'homework_files_storage_key_key', type: btree, unique]
+  }
+  Note: 'homework_files_assignment_id_fkey: FOREIGN KEY (assignment_id) REFERENCES education.homework_assignments(id)\nhomework_files_assignment_id_not_null: NOT NULL assignment_id\nhomework_files_check: CHECK (purpose::text = \'material\'::text AND recipient_id IS NULL OR purpose::text = \'submission\'::text AND recipient_id IS NOT NULL)\nhomework_files_created_at_not_null: NOT NULL created_at\nhomework_files_id_not_null: NOT NULL id\nhomework_files_mime_not_null: NOT NULL mime\nhomework_files_name_not_null: NOT NULL name\nhomework_files_organization_id_not_null: NOT NULL organization_id\nhomework_files_owner_person_id_not_null: NOT NULL owner_person_id\nhomework_files_purpose_check: CHECK (purpose::text = ANY (ARRAY[\'material\'::character varying, \'submission\'::character varying]::text[]))\nhomework_files_purpose_not_null: NOT NULL purpose\nhomework_files_recipient_id_fkey: FOREIGN KEY (recipient_id) REFERENCES education.homework_recipients(id)\nhomework_files_sha256_not_null: NOT NULL sha256\nhomework_files_size_bytes_check: CHECK (size_bytes >= 1 AND size_bytes <= 10485760)\nhomework_files_size_bytes_not_null: NOT NULL size_bytes\nhomework_files_storage_key_key: UNIQUE (storage_key)\nhomework_files_storage_key_not_null: NOT NULL storage_key\nCREATE INDEX homework_files_assignment ON education.homework_files USING btree (organization_id, assignment_id, created_at, id)\nCREATE INDEX homework_files_recipient ON education.homework_files USING btree (recipient_id, created_at, id)\nCREATE UNIQUE INDEX homework_files_storage_key_key ON education.homework_files USING btree (storage_key)\nCREATE TRIGGER homework_file_scope BEFORE INSERT OR UPDATE ON education.homework_files FOR EACH ROW EXECUTE FUNCTION education.check_homework_integration()'
+}
+
+Table education.homework_idempotency {
+  organization_id uuid [not null]
+  actor_account_id uuid [not null]
+  operation "character varying(16)" [not null]
+  idempotency_key uuid [not null]
+  resource_id uuid [not null]
+  request jsonb [not null]
+  response jsonb [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (organization_id, actor_account_id, operation, idempotency_key) [pk]
+  }
+  Note: 'homework_idempotency_actor_account_id_not_null: NOT NULL actor_account_id\nhomework_idempotency_created_at_not_null: NOT NULL created_at\nhomework_idempotency_idempotency_key_not_null: NOT NULL idempotency_key\nhomework_idempotency_operation_not_null: NOT NULL operation\nhomework_idempotency_organization_id_not_null: NOT NULL organization_id\nhomework_idempotency_request_not_null: NOT NULL request\nhomework_idempotency_resource_id_not_null: NOT NULL resource_id\nhomework_idempotency_response_not_null: NOT NULL response'
+}
+
+Table education.homework_recipients {
+  id uuid [pk, not null, default: `uuidv7()`]
+  assignment_id uuid [not null]
+  organization_id uuid [not null]
+  student_id uuid [not null]
+  person_id uuid [not null]
+  assigned_at "timestamp with time zone" [not null, default: `now()`]
+  activity_assignment_id uuid [null]
+  indexes {
+    (organization_id, student_id, assigned_at, id) [name: 'homework_recipient_student', type: btree]
+    (assignment_id, student_id) [name: 'homework_recipients_assignment_id_student_id_key', type: btree, unique]
+    (id, organization_id) [name: 'homework_recipients_id_organization_id_key', type: btree, unique]
+  }
+  Note: 'homework_recipients_activity_assignment_id_fkey: FOREIGN KEY (activity_assignment_id) REFERENCES education.activity_assignments(id)\nhomework_recipients_assigned_at_not_null: NOT NULL assigned_at\nhomework_recipients_assignment_id_not_null: NOT NULL assignment_id\nhomework_recipients_assignment_id_organization_id_fkey: FOREIGN KEY (assignment_id, organization_id) REFERENCES education.homework_assignments(id, organization_id)\nhomework_recipients_assignment_id_student_id_key: UNIQUE (assignment_id, student_id)\nhomework_recipients_id_not_null: NOT NULL id\nhomework_recipients_id_organization_id_key: UNIQUE (id, organization_id)\nhomework_recipients_organization_id_not_null: NOT NULL organization_id\nhomework_recipients_person_id_not_null: NOT NULL person_id\nhomework_recipients_student_id_not_null: NOT NULL student_id\nhomework_recipients_student_id_organization_id_fkey: FOREIGN KEY (student_id, organization_id) REFERENCES education.students(id, organization_id)\nCREATE UNIQUE INDEX homework_recipient_activity ON education.homework_recipients USING btree (activity_assignment_id) WHERE (activity_assignment_id IS NOT NULL)\nCREATE INDEX homework_recipient_student ON education.homework_recipients USING btree (organization_id, student_id, assigned_at DESC, id)\nCREATE UNIQUE INDEX homework_recipients_assignment_id_student_id_key ON education.homework_recipients USING btree (assignment_id, student_id)\nCREATE UNIQUE INDEX homework_recipients_id_organization_id_key ON education.homework_recipients USING btree (id, organization_id)\nCREATE TRIGGER homework_recipient_identity_guard BEFORE INSERT OR UPDATE OF student_id, person_id, organization_id ON education.homework_recipients FOR EACH ROW EXECUTE FUNCTION education.homework_recipient_identity()'
+}
+
+Table education.homework_reviews {
+  id uuid [pk, not null, default: `uuidv7()`]
+  submission_id uuid [not null]
+  submission_version_id uuid [not null]
+  organization_id uuid [not null]
+  teacher_account_id uuid [not null]
+  decision "character varying(10)" [not null]
+  result_status "character varying(20)" [null]
+  comment text [not null, default: `''::text`]
+  created_at "timestamp with time zone" [not null]
+  idempotency_key uuid [not null]
+  indexes {
+    (submission_id, idempotency_key) [name: 'homework_reviews_submission_id_idempotency_key_key', type: btree, unique]
+    submission_version_id [name: 'homework_reviews_submission_version_id_key', type: btree, unique]
+  }
+  Note: 'homework_reviews_check: CHECK (decision::text = \'accepted\'::text OR result_status IS NULL)\nhomework_reviews_comment_check: CHECK (length(comment) <= 5000)\nhomework_reviews_comment_not_null: NOT NULL comment\nhomework_reviews_created_at_not_null: NOT NULL created_at\nhomework_reviews_decision_check: CHECK (decision::text = ANY (ARRAY[\'accepted\'::character varying, \'returned\'::character varying]::text[]))\nhomework_reviews_decision_not_null: NOT NULL decision\nhomework_reviews_id_not_null: NOT NULL id\nhomework_reviews_idempotency_key_not_null: NOT NULL idempotency_key\nhomework_reviews_organization_id_not_null: NOT NULL organization_id\nhomework_reviews_result_status_check: CHECK (result_status::text = ANY (ARRAY[\'mastered\'::character varying, \'developing\'::character varying, \'needs_support\'::character varying]::text[]))\nhomework_reviews_submission_id_idempotency_key_key: UNIQUE (submission_id, idempotency_key)\nhomework_reviews_submission_id_not_null: NOT NULL submission_id\nhomework_reviews_submission_version_id_key: UNIQUE (submission_version_id)\nhomework_reviews_submission_version_id_not_null: NOT NULL submission_version_id\nhomework_reviews_submission_version_id_submission_id_organ_fkey: FOREIGN KEY (submission_version_id, submission_id, organization_id) REFERENCES education.homework_submission_versions(id, submission_id, organization_id)\nhomework_reviews_teacher_account_id_not_null: NOT NULL teacher_account_id\nCREATE UNIQUE INDEX homework_reviews_submission_id_idempotency_key_key ON education.homework_reviews USING btree (submission_id, idempotency_key)\nCREATE UNIQUE INDEX homework_reviews_submission_version_id_key ON education.homework_reviews USING btree (submission_version_id)\nCREATE TRIGGER homework_review_immutable BEFORE DELETE OR UPDATE ON education.homework_reviews FOR EACH ROW EXECUTE FUNCTION education.homework_immutable()'
+}
+
+Table education.homework_revisions {
+  assignment_id uuid [not null]
+  organization_id uuid [not null]
+  version integer [not null]
+  action "character varying(30)" [not null]
+  payload jsonb [not null]
+  actor_account_id uuid [not null]
+  created_at "timestamp with time zone" [not null]
+  indexes {
+    (assignment_id, version) [pk]
+  }
+  Note: 'homework_revisions_action_not_null: NOT NULL action\nhomework_revisions_actor_account_id_not_null: NOT NULL actor_account_id\nhomework_revisions_assignment_id_not_null: NOT NULL assignment_id\nhomework_revisions_assignment_id_organization_id_fkey: FOREIGN KEY (assignment_id, organization_id) REFERENCES education.homework_assignments(id, organization_id)\nhomework_revisions_created_at_not_null: NOT NULL created_at\nhomework_revisions_organization_id_not_null: NOT NULL organization_id\nhomework_revisions_payload_not_null: NOT NULL payload\nhomework_revisions_version_not_null: NOT NULL version\nCREATE TRIGGER homework_revision_immutable BEFORE DELETE OR UPDATE ON education.homework_revisions FOR EACH ROW EXECUTE FUNCTION education.homework_immutable()'
+}
+
+Table education.homework_submission_versions {
+  id uuid [pk, not null, default: `uuidv7()`]
+  submission_id uuid [not null]
+  organization_id uuid [not null]
+  sequence integer [not null]
+  assignment_version integer [not null]
+  assignment_snapshot jsonb [not null]
+  text text [not null]
+  activity_attempt_id uuid [null]
+  submitted_at "timestamp with time zone" [not null]
+  late boolean [not null]
+  idempotency_key uuid [not null]
+  indexes {
+    (id, submission_id, organization_id) [name: 'homework_submission_versions_id_submission_id_organization__key', type: btree, unique]
+    (submission_id, idempotency_key) [name: 'homework_submission_versions_submission_id_idempotency_key_key', type: btree, unique]
+    (submission_id, sequence) [name: 'homework_submission_versions_submission_id_sequence_key', type: btree, unique]
+  }
+  Note: 'homework_submission_versions_activity_attempt_id_fkey: FOREIGN KEY (activity_attempt_id) REFERENCES education.activity_attempts(id)\nhomework_submission_versions_assignment_snapshot_check: CHECK (jsonb_typeof(assignment_snapshot) = \'object\'::text)\nhomework_submission_versions_assignment_snapshot_not_null: NOT NULL assignment_snapshot\nhomework_submission_versions_assignment_version_check: CHECK (assignment_version > 0)\nhomework_submission_versions_assignment_version_not_null: NOT NULL assignment_version\nhomework_submission_versions_id_not_null: NOT NULL id\nhomework_submission_versions_id_submission_id_organization__key: UNIQUE (id, submission_id, organization_id)\nhomework_submission_versions_idempotency_key_not_null: NOT NULL idempotency_key\nhomework_submission_versions_late_not_null: NOT NULL late\nhomework_submission_versions_organization_id_not_null: NOT NULL organization_id\nhomework_submission_versions_sequence_check: CHECK (sequence > 0)\nhomework_submission_versions_sequence_not_null: NOT NULL sequence\nhomework_submission_versions_submission_id_idempotency_key_key: UNIQUE (submission_id, idempotency_key)\nhomework_submission_versions_submission_id_not_null: NOT NULL submission_id\nhomework_submission_versions_submission_id_organization_id_fkey: FOREIGN KEY (submission_id, organization_id) REFERENCES education.homework_submissions(id, organization_id)\nhomework_submission_versions_submission_id_sequence_key: UNIQUE (submission_id, sequence)\nhomework_submission_versions_submitted_at_not_null: NOT NULL submitted_at\nhomework_submission_versions_text_check: CHECK (length(text) <= 20000)\nhomework_submission_versions_text_not_null: NOT NULL text\nCREATE UNIQUE INDEX homework_submission_versions_id_submission_id_organization__key ON education.homework_submission_versions USING btree (id, submission_id, organization_id)\nCREATE UNIQUE INDEX homework_submission_versions_submission_id_idempotency_key_key ON education.homework_submission_versions USING btree (submission_id, idempotency_key)\nCREATE UNIQUE INDEX homework_submission_versions_submission_id_sequence_key ON education.homework_submission_versions USING btree (submission_id, sequence)\nCREATE UNIQUE INDEX homework_version_activity_unique ON education.homework_submission_versions USING btree (activity_attempt_id) WHERE (activity_attempt_id IS NOT NULL)\nCREATE TRIGGER homework_version_immutable BEFORE DELETE OR UPDATE ON education.homework_submission_versions FOR EACH ROW EXECUTE FUNCTION education.homework_immutable()'
+}
+
+Table education.homework_submissions {
+  id uuid [pk, not null, default: `uuidv7()`]
+  recipient_id uuid [not null]
+  organization_id uuid [not null]
+  state "character varying(16)" [not null, default: `'IN_PROGRESS'::character varying`]
+  version integer [not null, default: `1`]
+  draft_text text [not null, default: `''::text`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+  selected_activity_attempt_id uuid [null]
+  indexes {
+    (organization_id, state, updated_at, id) [name: 'homework_submission_states', type: btree]
+    (id, organization_id) [name: 'homework_submissions_id_organization_id_key', type: btree, unique]
+    recipient_id [name: 'homework_submissions_recipient_id_key', type: btree, unique]
+  }
+  Note: 'homework_submissions_created_at_not_null: NOT NULL created_at\nhomework_submissions_draft_text_check: CHECK (length(draft_text) <= 20000)\nhomework_submissions_draft_text_not_null: NOT NULL draft_text\nhomework_submissions_id_not_null: NOT NULL id\nhomework_submissions_id_organization_id_key: UNIQUE (id, organization_id)\nhomework_submissions_organization_id_not_null: NOT NULL organization_id\nhomework_submissions_recipient_id_key: UNIQUE (recipient_id)\nhomework_submissions_recipient_id_not_null: NOT NULL recipient_id\nhomework_submissions_recipient_id_organization_id_fkey: FOREIGN KEY (recipient_id, organization_id) REFERENCES education.homework_recipients(id, organization_id)\nhomework_submissions_selected_activity_attempt_id_fkey: FOREIGN KEY (selected_activity_attempt_id) REFERENCES education.activity_attempts(id)\nhomework_submissions_state_check: CHECK (state::text = ANY (ARRAY[\'IN_PROGRESS\'::character varying, \'SUBMITTED\'::character varying, \'RETURNED\'::character varying, \'RESUBMITTED\'::character varying, \'REVIEWED\'::character varying]::text[]))\nhomework_submissions_state_not_null: NOT NULL state\nhomework_submissions_updated_at_not_null: NOT NULL updated_at\nhomework_submissions_version_check: CHECK (version > 0)\nhomework_submissions_version_not_null: NOT NULL version\nCREATE INDEX homework_submission_states ON education.homework_submissions USING btree (organization_id, state, updated_at, id)\nCREATE UNIQUE INDEX homework_submissions_id_organization_id_key ON education.homework_submissions USING btree (id, organization_id)\nCREATE UNIQUE INDEX homework_submissions_recipient_id_key ON education.homework_submissions USING btree (recipient_id)'
+}
+
+Table education.homework_version_files {
+  version_id uuid [not null]
+  file_id uuid [not null]
+  indexes {
+    (version_id, file_id) [pk]
+  }
+  Note: 'homework_version_files_file_id_fkey: FOREIGN KEY (file_id) REFERENCES education.homework_files(id)\nhomework_version_files_file_id_not_null: NOT NULL file_id\nhomework_version_files_version_id_fkey: FOREIGN KEY (version_id) REFERENCES education.homework_submission_versions(id)\nhomework_version_files_version_id_not_null: NOT NULL version_id\nCREATE TRIGGER homework_version_file_scope BEFORE INSERT OR UPDATE ON education.homework_version_files FOR EACH ROW EXECUTE FUNCTION education.check_homework_file_link()'
 }
 
 Table education.lesson_reports {
@@ -185,12 +593,32 @@ Table education.lessons {
   created_at "timestamp with time zone" [not null, default: `now()`]
   completed_at "timestamp with time zone" [null]
   cancelled_at "timestamp with time zone" [null]
+  group_program_id uuid [null]
+  curriculum_lesson_id uuid [null]
+  curriculum_snapshot jsonb [null]
   indexes {
+    (group_program_id, curriculum_lesson_id, status) [name: 'lessons_curriculum', type: btree]
     (group_id, status, starts_at, id) [name: 'lessons_group_status_time', type: btree]
+    (id, organization_id) [name: 'lessons_homework_tenant', type: btree, unique]
     (id, organization_id, owner_account_id) [name: 'lessons_id_organization_id_owner_account_id_key', type: btree, unique]
     (organization_id, owner_account_id, starts_at, id) [name: 'lessons_owner_time', type: btree]
   }
-  Note: 'lessons_check: CHECK (ends_at > starts_at AND ends_at <= (starts_at + \'24:00:00\'::interval))\nlessons_created_at_not_null: NOT NULL created_at\nlessons_ends_at_not_null: NOT NULL ends_at\nlessons_group_id_not_null: NOT NULL group_id\nlessons_group_id_organization_id_owner_account_id_fkey: FOREIGN KEY (group_id, organization_id, owner_account_id) REFERENCES education.groups(id, organization_id, owner_account_id)\nlessons_id_not_null: NOT NULL id\nlessons_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\nlessons_location_not_null: NOT NULL location\nlessons_organization_id_not_null: NOT NULL organization_id\nlessons_owner_account_id_not_null: NOT NULL owner_account_id\nlessons_owner_person_id_not_null: NOT NULL owner_person_id\nlessons_starts_at_not_null: NOT NULL starts_at\nlessons_status_check: CHECK (status::text = ANY (ARRAY[\'scheduled\'::character varying, \'completed\'::character varying, \'cancelled\'::character varying]::text[]))\nlessons_status_not_null: NOT NULL status\nlessons_title_check: CHECK (btrim(title::text) <> \'\'::text)\nlessons_title_not_null: NOT NULL title\nCREATE INDEX lessons_group_status_time ON education.lessons USING btree (group_id, status, starts_at, id)\nCREATE UNIQUE INDEX lessons_id_organization_id_owner_account_id_key ON education.lessons USING btree (id, organization_id, owner_account_id)\nCREATE INDEX lessons_owner_time ON education.lessons USING btree (organization_id, owner_account_id, starts_at, id)'
+  Note: 'lesson_curriculum_binding: CHECK (group_program_id IS NULL AND curriculum_lesson_id IS NULL AND curriculum_snapshot IS NULL OR group_program_id IS NOT NULL AND curriculum_lesson_id IS NOT NULL AND curriculum_snapshot IS NOT NULL)\nlesson_curriculum_lesson_fk: FOREIGN KEY (curriculum_lesson_id, organization_id) REFERENCES education.curriculum_lessons(id, organization_id)\nlesson_group_program_fk: FOREIGN KEY (group_program_id, organization_id) REFERENCES education.group_programs(id, organization_id)\nlessons_check: CHECK (ends_at > starts_at AND ends_at <= (starts_at + \'24:00:00\'::interval))\nlessons_created_at_not_null: NOT NULL created_at\nlessons_ends_at_not_null: NOT NULL ends_at\nlessons_group_id_not_null: NOT NULL group_id\nlessons_group_id_organization_id_owner_account_id_fkey: FOREIGN KEY (group_id, organization_id, owner_account_id) REFERENCES education.groups(id, organization_id, owner_account_id)\nlessons_homework_tenant: UNIQUE (id, organization_id)\nlessons_id_not_null: NOT NULL id\nlessons_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\nlessons_location_not_null: NOT NULL location\nlessons_organization_id_not_null: NOT NULL organization_id\nlessons_owner_account_id_not_null: NOT NULL owner_account_id\nlessons_owner_person_id_not_null: NOT NULL owner_person_id\nlessons_starts_at_not_null: NOT NULL starts_at\nlessons_status_check: CHECK (status::text = ANY (ARRAY[\'scheduled\'::character varying, \'completed\'::character varying, \'cancelled\'::character varying]::text[]))\nlessons_status_not_null: NOT NULL status\nlessons_title_check: CHECK (btrim(title::text) <> \'\'::text)\nlessons_title_not_null: NOT NULL title\nCREATE INDEX lessons_curriculum ON education.lessons USING btree (group_program_id, curriculum_lesson_id, status)\nCREATE INDEX lessons_group_status_time ON education.lessons USING btree (group_id, status, starts_at, id)\nCREATE UNIQUE INDEX lessons_homework_tenant ON education.lessons USING btree (id, organization_id)\nCREATE UNIQUE INDEX lessons_id_organization_id_owner_account_id_key ON education.lessons USING btree (id, organization_id, owner_account_id)\nCREATE INDEX lessons_owner_time ON education.lessons USING btree (organization_id, owner_account_id, starts_at, id)\nCREATE TRIGGER lesson_curriculum_binding_guard BEFORE INSERT OR UPDATE OF group_id, organization_id, group_program_id, curriculum_lesson_id ON education.lessons FOR EACH ROW EXECUTE FUNCTION education.check_lesson_curriculum_binding()'
+}
+
+Table education.logic_results {
+  attempt_id uuid [pk, not null]
+  organization_id uuid [not null]
+  student_id uuid [not null]
+  correct_answers integer [not null]
+  total_rounds integer [not null]
+  score integer [not null]
+  accuracy numeric(5,2) [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (organization_id, student_id, created_at, attempt_id) [name: 'logic_results_student', type: btree]
+  }
+  Note: 'logic_results_accuracy_check: CHECK (accuracy >= 0::numeric AND accuracy <= 100::numeric)\nlogic_results_accuracy_not_null: NOT NULL accuracy\nlogic_results_attempt_id_fkey: FOREIGN KEY (attempt_id) REFERENCES education.activity_results(attempt_id)\nlogic_results_attempt_id_not_null: NOT NULL attempt_id\nlogic_results_check: CHECK (correct_answers <= total_rounds)\nlogic_results_correct_answers_check: CHECK (correct_answers >= 0)\nlogic_results_correct_answers_not_null: NOT NULL correct_answers\nlogic_results_created_at_not_null: NOT NULL created_at\nlogic_results_organization_id_not_null: NOT NULL organization_id\nlogic_results_score_check: CHECK (score >= 0 AND score <= 1000)\nlogic_results_score_not_null: NOT NULL score\nlogic_results_student_id_not_null: NOT NULL student_id\nlogic_results_total_rounds_check: CHECK (total_rounds = ANY (ARRAY[5, 10]))\nlogic_results_total_rounds_not_null: NOT NULL total_rounds\nCREATE INDEX logic_results_student ON education.logic_results USING btree (organization_id, student_id, created_at DESC, attempt_id)'
 }
 
 Table education.messages {
@@ -217,15 +645,63 @@ Table education.notifications {
   id uuid [pk, not null, default: `uuidv7()`]
   organization_id uuid [not null]
   person_id uuid [not null]
-  thread_id uuid [not null]
+  thread_id uuid [null]
   created_at "timestamp with time zone" [not null, default: `now()`]
   read_at "timestamp with time zone" [null]
   message_id uuid [null]
+  kind "character varying(40)" [not null, default: `'message'::character varying`]
+  resource_id uuid [null]
+  resource_path "character varying(240)" [null]
+  subject "character varying(160)" [null]
+  body text [null]
+  event_key "character varying(240)" [null]
+  parent_student_id uuid [null]
   indexes {
     message_id [name: 'notifications_message', type: btree]
     (organization_id, person_id, created_at, id) [name: 'notifications_recipient', type: btree]
   }
-  Note: 'notifications_created_at_not_null: NOT NULL created_at\nnotifications_id_not_null: NOT NULL id\nnotifications_message_id_fkey: FOREIGN KEY (message_id) REFERENCES education.messages(id)\nnotifications_organization_id_not_null: NOT NULL organization_id\nnotifications_person_id_not_null: NOT NULL person_id\nnotifications_thread_id_fkey: FOREIGN KEY (thread_id) REFERENCES education.threads(id)\nnotifications_thread_id_not_null: NOT NULL thread_id\nCREATE INDEX notifications_message ON education.notifications USING btree (message_id)\nCREATE INDEX notifications_recipient ON education.notifications USING btree (organization_id, person_id, created_at, id)'
+  Note: 'education_notification_target: CHECK (kind::text = \'message\'::text AND thread_id IS NOT NULL AND parent_student_id IS NULL OR (kind::text = ANY (ARRAY[\'homework_published\'::character varying, \'homework_deadline_changed\'::character varying, \'homework_submitted\'::character varying, \'homework_returned\'::character varying, \'homework_reviewed\'::character varying, \'achievement_unlocked\'::character varying]::text[])) AND resource_id IS NOT NULL AND resource_path IS NOT NULL AND subject IS NOT NULL AND parent_student_id IS NULL OR (kind::text = ANY (ARRAY[\'parent_homework_published\'::character varying, \'parent_homework_reviewed\'::character varying, \'parent_homework_returned\'::character varying, \'parent_homework_deadline_changed\'::character varying, \'parent_schedule_changed\'::character varying, \'parent_family_confirmed\'::character varying, \'parent_family_revoked\'::character varying, \'parent_family_invited\'::character varying, \'parent_family_invitation_revoked\'::character varying, \'parent_family_relationship_changed\'::character varying, \'parent_family_added\'::character varying, \'parent_family_updated\'::character varying, \'parent_activity_finished\'::character varying, \'parent_achievement_unlocked\'::character varying]::text[])) AND parent_student_id IS NOT NULL AND resource_id IS NOT NULL AND resource_path IS NOT NULL AND subject IS NOT NULL AND thread_id IS NULL)\nnotifications_created_at_not_null: NOT NULL created_at\nnotifications_id_not_null: NOT NULL id\nnotifications_kind_not_null: NOT NULL kind\nnotifications_message_id_fkey: FOREIGN KEY (message_id) REFERENCES education.messages(id)\nnotifications_organization_id_not_null: NOT NULL organization_id\nnotifications_person_id_not_null: NOT NULL person_id\nnotifications_thread_id_fkey: FOREIGN KEY (thread_id) REFERENCES education.threads(id)\nparent_notification_student: FOREIGN KEY (parent_student_id, organization_id) REFERENCES education.students(id, organization_id)\nCREATE UNIQUE INDEX education_notification_event ON education.notifications USING btree (organization_id, person_id, event_key) WHERE (event_key IS NOT NULL)\nCREATE INDEX notifications_message ON education.notifications USING btree (message_id)\nCREATE INDEX notifications_recipient ON education.notifications USING btree (organization_id, person_id, created_at, id)\nCREATE INDEX parent_notification_list ON education.notifications USING btree (organization_id, person_id, parent_student_id, created_at DESC, id) WHERE (parent_student_id IS NOT NULL)'
+}
+
+Table education.object_cleanup {
+  object_key "character varying(160)" [pk, not null]
+  queued_at "timestamp with time zone" [not null, default: `now()`]
+  attempts integer [not null, default: `0`]
+  last_error "character varying(64)" [null]
+  completed_at "timestamp with time zone" [null]
+  Note: 'object_cleanup_attempts_not_null: NOT NULL attempts\nobject_cleanup_object_key_not_null: NOT NULL object_key\nobject_cleanup_queued_at_not_null: NOT NULL queued_at'
+}
+
+Table education.parent_accounts {
+  organization_id uuid [not null]
+  guardian_person_id uuid [not null]
+  account_id uuid [not null]
+  activated_at "timestamp with time zone" [not null, default: `now()`]
+  revoked_at "timestamp with time zone" [null]
+  indexes {
+    (organization_id, guardian_person_id) [pk]
+    (organization_id, account_id) [name: 'parent_accounts_organization_id_account_id_key', type: btree, unique]
+  }
+  Note: 'parent_accounts_account_id_fkey: FOREIGN KEY (account_id) REFERENCES core.accounts(id)\nparent_accounts_account_id_not_null: NOT NULL account_id\nparent_accounts_activated_at_not_null: NOT NULL activated_at\nparent_accounts_guardian_person_id_fkey: FOREIGN KEY (guardian_person_id) REFERENCES core.persons(id)\nparent_accounts_guardian_person_id_not_null: NOT NULL guardian_person_id\nparent_accounts_organization_id_account_id_key: UNIQUE (organization_id, account_id)\nparent_accounts_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES core.organizations(id)\nparent_accounts_organization_id_not_null: NOT NULL organization_id\nCREATE UNIQUE INDEX parent_accounts_organization_id_account_id_key ON education.parent_accounts USING btree (organization_id, account_id)\nCREATE TRIGGER parent_account_identity_guard BEFORE INSERT OR UPDATE ON education.parent_accounts FOR EACH ROW EXECUTE FUNCTION education.parent_account_identity()'
+}
+
+Table education.parent_invites {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  student_id uuid [not null]
+  guardian_person_id uuid [not null]
+  code_hash character(64) [not null]
+  expires_at "timestamp with time zone" [not null]
+  used_at "timestamp with time zone" [null]
+  used_account_id uuid [null]
+  revoked_at "timestamp with time zone" [null]
+  created_by_account_id uuid [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (expires_at, id) [name: 'parent_invite_retention', type: btree]
+    code_hash [name: 'parent_invites_code_hash_key', type: btree, unique]
+  }
+  Note: 'parent_invites_check: CHECK (expires_at > created_at)\nparent_invites_check1: CHECK ((used_at IS NULL) = (used_account_id IS NULL))\nparent_invites_check2: CHECK (used_at IS NULL OR revoked_at IS NULL)\nparent_invites_code_hash_key: UNIQUE (code_hash)\nparent_invites_code_hash_not_null: NOT NULL code_hash\nparent_invites_created_at_not_null: NOT NULL created_at\nparent_invites_created_by_account_id_fkey: FOREIGN KEY (created_by_account_id) REFERENCES core.accounts(id)\nparent_invites_created_by_account_id_not_null: NOT NULL created_by_account_id\nparent_invites_expires_at_not_null: NOT NULL expires_at\nparent_invites_guardian_person_id_fkey: FOREIGN KEY (guardian_person_id) REFERENCES core.persons(id)\nparent_invites_guardian_person_id_not_null: NOT NULL guardian_person_id\nparent_invites_id_not_null: NOT NULL id\nparent_invites_organization_id_not_null: NOT NULL organization_id\nparent_invites_student_id_guardian_person_id_fkey: FOREIGN KEY (student_id, guardian_person_id) REFERENCES education.student_guardians(student_id, guardian_person_id)\nparent_invites_student_id_not_null: NOT NULL student_id\nparent_invites_student_id_organization_id_fkey: FOREIGN KEY (student_id, organization_id) REFERENCES education.students(id, organization_id)\nparent_invites_used_account_id_fkey: FOREIGN KEY (used_account_id) REFERENCES core.accounts(id)\nCREATE UNIQUE INDEX parent_invite_pending ON education.parent_invites USING btree (student_id, guardian_person_id) WHERE ((used_at IS NULL) AND (revoked_at IS NULL))\nCREATE INDEX parent_invite_retention ON education.parent_invites USING btree (expires_at, id)\nCREATE UNIQUE INDEX parent_invites_code_hash_key ON education.parent_invites USING btree (code_hash)'
 }
 
 Table education.privacy_receipts {
@@ -245,6 +721,23 @@ Table education.profiles {
     account_id [name: 'profiles_account_id_key', type: btree, unique]
   }
   Note: 'profiles_account_id_key: UNIQUE (account_id)\nprofiles_account_id_not_null: NOT NULL account_id\nprofiles_avatar_file_id_account_id_fkey: FOREIGN KEY (avatar_file_id, account_id) REFERENCES education.files(id, owner_account_id)\nprofiles_id_not_null: NOT NULL id\nprofiles_person_id_not_null: NOT NULL person_id\nCREATE UNIQUE INDEX profiles_account_id_key ON education.profiles USING btree (account_id)'
+}
+
+Table education.programs {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  name "character varying(160)" [not null]
+  description text [not null, default: `''::text`]
+  version integer [not null, default: `1`]
+  archived_at "timestamp with time zone" [null]
+  created_by_account_id uuid [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (id, organization_id) [name: 'programs_id_organization_id_key', type: btree, unique]
+    (organization_id, created_at, id) [name: 'programs_organization', type: btree]
+  }
+  Note: 'programs_created_at_not_null: NOT NULL created_at\nprograms_created_by_account_id_not_null: NOT NULL created_by_account_id\nprograms_description_check: CHECK (length(description) <= 8000)\nprograms_description_not_null: NOT NULL description\nprograms_id_not_null: NOT NULL id\nprograms_id_organization_id_key: UNIQUE (id, organization_id)\nprograms_name_check: CHECK (btrim(name::text) <> \'\'::text)\nprograms_name_not_null: NOT NULL name\nprograms_organization_id_not_null: NOT NULL organization_id\nprograms_updated_at_not_null: NOT NULL updated_at\nprograms_version_check: CHECK (version > 0)\nprograms_version_not_null: NOT NULL version\nCREATE UNIQUE INDEX programs_id_organization_id_key ON education.programs USING btree (id, organization_id)\nCREATE INDEX programs_organization ON education.programs USING btree (organization_id, created_at, id)'
 }
 
 Table education.result_revisions {
@@ -276,6 +769,25 @@ Table education.student_accounts {
   Note: 'student_accounts_account_id_not_null: NOT NULL account_id\nstudent_accounts_activated_at_not_null: NOT NULL activated_at\nstudent_accounts_organization_id_account_id_key: UNIQUE (organization_id, account_id)\nstudent_accounts_organization_id_not_null: NOT NULL organization_id\nstudent_accounts_person_id_not_null: NOT NULL person_id\nstudent_accounts_student_id_fkey: FOREIGN KEY (student_id) REFERENCES education.students(id)\nstudent_accounts_student_id_not_null: NOT NULL student_id\nCREATE INDEX student_accounts_account ON education.student_accounts USING btree (account_id, organization_id) WHERE (revoked_at IS NULL)\nCREATE UNIQUE INDEX student_accounts_organization_id_account_id_key ON education.student_accounts USING btree (organization_id, account_id)'
 }
 
+Table education.student_guardians {
+  organization_id uuid [not null]
+  student_id uuid [not null]
+  guardian_person_id uuid [not null]
+  relationship "character varying(12)" [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  status "character varying(12)" [not null, default: `'pending'::character varying`]
+  confirmed_at "timestamp with time zone" [null]
+  confirmed_by_account_id uuid [null]
+  revoked_at "timestamp with time zone" [null]
+  revoked_by_account_id uuid [null]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (student_id, guardian_person_id) [pk]
+    (guardian_person_id, organization_id) [name: 'student_guardian_person', type: btree]
+  }
+  Note: 'guardian_confirmation_evidence: CHECK (status::text = \'pending\'::text AND confirmed_at IS NULL AND revoked_at IS NULL OR status::text = \'confirmed\'::text AND confirmed_at IS NOT NULL AND confirmed_by_account_id IS NOT NULL AND revoked_at IS NULL OR status::text = \'revoked\'::text AND revoked_at IS NOT NULL AND revoked_by_account_id IS NOT NULL)\nstudent_guardians_confirmed_by_account_id_fkey: FOREIGN KEY (confirmed_by_account_id) REFERENCES core.accounts(id)\nstudent_guardians_created_at_not_null: NOT NULL created_at\nstudent_guardians_guardian_person_id_fkey: FOREIGN KEY (guardian_person_id) REFERENCES core.persons(id)\nstudent_guardians_guardian_person_id_not_null: NOT NULL guardian_person_id\nstudent_guardians_organization_id_not_null: NOT NULL organization_id\nstudent_guardians_relationship_check: CHECK (relationship::text = ANY (ARRAY[\'mother\'::character varying, \'father\'::character varying, \'guardian\'::character varying]::text[]))\nstudent_guardians_relationship_not_null: NOT NULL relationship\nstudent_guardians_revoked_by_account_id_fkey: FOREIGN KEY (revoked_by_account_id) REFERENCES core.accounts(id)\nstudent_guardians_status_check: CHECK (status::text = ANY (ARRAY[\'pending\'::character varying, \'confirmed\'::character varying, \'revoked\'::character varying]::text[]))\nstudent_guardians_status_not_null: NOT NULL status\nstudent_guardians_student_id_not_null: NOT NULL student_id\nstudent_guardians_student_id_organization_id_fkey: FOREIGN KEY (student_id, organization_id) REFERENCES education.students(id, organization_id)\nstudent_guardians_updated_at_not_null: NOT NULL updated_at\nCREATE INDEX student_guardian_person ON education.student_guardians USING btree (guardian_person_id, organization_id)'
+}
+
 Table education.student_invites {
   id uuid [pk, not null, default: `uuidv7()`]
   organization_id uuid [not null]
@@ -299,10 +811,11 @@ Table education.students {
   person_id uuid [not null]
   created_at "timestamp with time zone" [not null, default: `now()`]
   indexes {
+    (id, organization_id) [name: 'students_homework_tenant', type: btree, unique]
     (id, organization_id, owner_account_id) [name: 'students_id_organization_id_owner_account_id_key', type: btree, unique]
     (organization_id, owner_account_id, person_id) [name: 'students_organization_id_owner_account_id_person_id_key', type: btree, unique]
   }
-  Note: 'students_created_at_not_null: NOT NULL created_at\nstudents_id_not_null: NOT NULL id\nstudents_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\nstudents_organization_id_not_null: NOT NULL organization_id\nstudents_organization_id_owner_account_id_person_id_key: UNIQUE (organization_id, owner_account_id, person_id)\nstudents_owner_account_id_not_null: NOT NULL owner_account_id\nstudents_person_id_not_null: NOT NULL person_id\nCREATE UNIQUE INDEX students_id_organization_id_owner_account_id_key ON education.students USING btree (id, organization_id, owner_account_id)\nCREATE UNIQUE INDEX students_organization_id_owner_account_id_person_id_key ON education.students USING btree (organization_id, owner_account_id, person_id)'
+  Note: 'students_created_at_not_null: NOT NULL created_at\nstudents_homework_tenant: UNIQUE (id, organization_id)\nstudents_id_not_null: NOT NULL id\nstudents_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\nstudents_organization_id_not_null: NOT NULL organization_id\nstudents_organization_id_owner_account_id_person_id_key: UNIQUE (organization_id, owner_account_id, person_id)\nstudents_owner_account_id_not_null: NOT NULL owner_account_id\nstudents_person_id_not_null: NOT NULL person_id\nCREATE UNIQUE INDEX students_homework_tenant ON education.students USING btree (id, organization_id)\nCREATE UNIQUE INDEX students_id_organization_id_owner_account_id_key ON education.students USING btree (id, organization_id, owner_account_id)\nCREATE UNIQUE INDEX students_organization_id_owner_account_id_person_id_key ON education.students USING btree (organization_id, owner_account_id, person_id)'
 }
 
 Table education.teachers {
@@ -360,27 +873,81 @@ Table education.typing_results {
   Note: 'typing_results_accuracy_check: CHECK (accuracy >= 0::numeric AND accuracy <= 100::numeric)\ntyping_results_accuracy_not_null: NOT NULL accuracy\ntyping_results_attempt_id_fkey: FOREIGN KEY (attempt_id) REFERENCES education.activity_attempts(id)\ntyping_results_attempt_id_not_null: NOT NULL attempt_id\ntyping_results_check: CHECK (correct_chars >= 0 AND correct_chars <= keystrokes)\ntyping_results_check1: CHECK (errors >= 0 AND errors <= keystrokes)\ntyping_results_correct_chars_not_null: NOT NULL correct_chars\ntyping_results_created_at_not_null: NOT NULL created_at\ntyping_results_duration_seconds_check: CHECK (duration_seconds = ANY (ARRAY[15, 30, 60]))\ntyping_results_duration_seconds_not_null: NOT NULL duration_seconds\ntyping_results_errors_not_null: NOT NULL errors\ntyping_results_keystrokes_check: CHECK (keystrokes >= 0 AND keystrokes <= 10000)\ntyping_results_keystrokes_not_null: NOT NULL keystrokes\ntyping_results_language_check: CHECK (language::text = ANY (ARRAY[\'ru\'::character varying, \'en\'::character varying]::text[]))\ntyping_results_language_not_null: NOT NULL language\ntyping_results_organization_id_not_null: NOT NULL organization_id\ntyping_results_student_id_fkey: FOREIGN KEY (student_id) REFERENCES education.students(id)\ntyping_results_student_id_not_null: NOT NULL student_id\ntyping_results_wpm_check: CHECK (wpm >= 0::numeric AND wpm <= 500::numeric)\ntyping_results_wpm_not_null: NOT NULL wpm\nCREATE INDEX typing_results_student ON education.typing_results USING btree (organization_id, student_id, wpm DESC)'
 }
 
+Ref: education.achievement_events.(student_id, organization_id) > education.students.(id, organization_id) [delete: no action, update: no action]
+Ref: education.achievement_unlocks.definition_id > education.achievement_definitions.id [delete: no action, update: no action]
+Ref: education.achievement_unlocks.(source_event_id, organization_id, student_id) > education.achievement_events.(id, organization_id, student_id) [delete: no action, update: no action]
+Ref: education.achievement_unlocks.(student_id, organization_id) > education.students.(id, organization_id) [delete: no action, update: no action]
 Ref: education.activity_assignments.activity_id > education.activity_definitions.id [delete: no action, update: no action]
 Ref: education.activity_assignments.(group_id, organization_id, owner_account_id) > education.groups.(id, organization_id, owner_account_id) [delete: no action, update: no action]
 Ref: education.activity_assignments.(student_id, organization_id, owner_account_id) > education.students.(id, organization_id, owner_account_id) [delete: no action, update: no action]
 Ref: education.activity_attempts.activity_id > education.activity_definitions.id [delete: no action, update: no action]
 Ref: education.activity_attempts.assignment_id > education.activity_assignments.id [delete: no action, update: no action]
 Ref: education.activity_attempts.student_id > education.students.id [delete: no action, update: no action]
+Ref: education.activity_exercise_sets.activity_code > education.activity_definitions.code [delete: no action, update: no action]
+Ref: education.activity_results.(attempt_id, organization_id, student_id) > education.activity_attempts.(id, organization_id, student_id) [delete: no action, update: no action]
 Ref: education.attendance.(lesson_id, organization_id, owner_account_id) > education.lessons.(id, organization_id, owner_account_id) [delete: no action, update: no action]
 Ref: education.attendance.(student_id, organization_id, owner_account_id) > education.students.(id, organization_id, owner_account_id) [delete: no action, update: no action]
+Ref: education.curriculum_lessons.(module_id, organization_id) > education.curriculum_modules.(id, organization_id) [delete: no action, update: no action]
+Ref: education.curriculum_modules.(program_id, organization_id) > education.programs.(id, organization_id) [delete: no action, update: no action]
+Ref: education.family_history.actor_account_id > core.accounts.id [delete: no action, update: no action]
+Ref: education.family_history.guardian_person_id > core.persons.id [delete: no action, update: no action]
+Ref: education.family_history.(student_id, organization_id) > education.students.(id, organization_id) [delete: no action, update: no action]
+Ref: education.file_transfers.account_id > core.accounts.id [delete: no action, update: no action]
+Ref: education.file_transfers.organization_id > core.organizations.id [delete: no action, update: no action]
+Ref: education.file_transfers.person_id > core.persons.id [delete: no action, update: no action]
 Ref: education.files.(lesson_id, organization_id, owner_account_id) > education.lessons.(id, organization_id, owner_account_id) [delete: no action, update: no action]
+Ref: education.group_programs.(group_id, organization_id) > education.groups.(id, organization_id) [delete: no action, update: no action]
+Ref: education.group_programs.(program_id, organization_id) > education.programs.(id, organization_id) [delete: no action, update: no action]
 Ref: education.group_students.(group_id, organization_id, owner_account_id) > education.groups.(id, organization_id, owner_account_id) [delete: no action, update: no action]
 Ref: education.group_students.(student_id, organization_id, owner_account_id) > education.students.(id, organization_id, owner_account_id) [delete: no action, update: no action]
+Ref: education.group_teachers.(group_id, organization_id) > education.groups.(id, organization_id) [delete: no action, update: no action]
+Ref: education.group_teachers.(organization_id, account_id) > education.teachers.(organization_id, account_id) [delete: no action, update: no action]
+Ref: education.homework_assignments.activity_code > education.activity_definitions.code [delete: no action, update: no action]
+Ref: education.homework_assignments.(group_id, organization_id) > education.groups.(id, organization_id) [delete: no action, update: no action]
+Ref: education.homework_assignments.(lesson_id, organization_id) > education.lessons.(id, organization_id) [delete: no action, update: no action]
+Ref: education.homework_attempt_links.attempt_id > education.activity_attempts.id [delete: no action, update: no action]
+Ref: education.homework_attempt_links.recipient_id > education.homework_recipients.id [delete: no action, update: no action]
+Ref: education.homework_draft_files.file_id > education.homework_files.id [delete: no action, update: no action]
+Ref: education.homework_draft_files.recipient_id > education.homework_recipients.id [delete: no action, update: no action]
+Ref: education.homework_files.assignment_id > education.homework_assignments.id [delete: no action, update: no action]
+Ref: education.homework_files.recipient_id > education.homework_recipients.id [delete: no action, update: no action]
+Ref: education.homework_recipients.activity_assignment_id > education.activity_assignments.id [delete: no action, update: no action]
+Ref: education.homework_recipients.(assignment_id, organization_id) > education.homework_assignments.(id, organization_id) [delete: no action, update: no action]
+Ref: education.homework_recipients.(student_id, organization_id) > education.students.(id, organization_id) [delete: no action, update: no action]
+Ref: education.homework_reviews.(submission_version_id, submission_id, organization_id) > education.homework_submission_versions.(id, submission_id, organization_id) [delete: no action, update: no action]
+Ref: education.homework_revisions.(assignment_id, organization_id) > education.homework_assignments.(id, organization_id) [delete: no action, update: no action]
+Ref: education.homework_submission_versions.activity_attempt_id > education.activity_attempts.id [delete: no action, update: no action]
+Ref: education.homework_submission_versions.(submission_id, organization_id) > education.homework_submissions.(id, organization_id) [delete: no action, update: no action]
+Ref: education.homework_submissions.(recipient_id, organization_id) > education.homework_recipients.(id, organization_id) [delete: no action, update: no action]
+Ref: education.homework_submissions.selected_activity_attempt_id > education.activity_attempts.id [delete: no action, update: no action]
+Ref: education.homework_version_files.file_id > education.homework_files.id [delete: no action, update: no action]
+Ref: education.homework_version_files.version_id > education.homework_submission_versions.id [delete: no action, update: no action]
 Ref: education.lesson_reports.(lesson_id, organization_id, owner_account_id) > education.lessons.(id, organization_id, owner_account_id) [delete: no action, update: no action]
 Ref: education.lesson_results.(lesson_id, organization_id, owner_account_id) > education.lessons.(id, organization_id, owner_account_id) [delete: no action, update: no action]
 Ref: education.lesson_results.(student_id, organization_id, owner_account_id) > education.students.(id, organization_id, owner_account_id) [delete: no action, update: no action]
+Ref: education.lessons.(curriculum_lesson_id, organization_id) > education.curriculum_lessons.(id, organization_id) [delete: no action, update: no action]
+Ref: education.lessons.(group_program_id, organization_id) > education.group_programs.(id, organization_id) [delete: no action, update: no action]
 Ref: education.lessons.(group_id, organization_id, owner_account_id) > education.groups.(id, organization_id, owner_account_id) [delete: no action, update: no action]
+Ref: education.logic_results.attempt_id > education.activity_results.attempt_id [delete: no action, update: no action]
 Ref: education.messages.(thread_id, organization_id) > education.threads.(id, organization_id) [delete: no action, update: no action]
 Ref: education.notifications.message_id > education.messages.id [delete: no action, update: no action]
 Ref: education.notifications.thread_id > education.threads.id [delete: no action, update: no action]
+Ref: education.notifications.(parent_student_id, organization_id) > education.students.(id, organization_id) [delete: no action, update: no action]
+Ref: education.parent_accounts.account_id > core.accounts.id [delete: no action, update: no action]
+Ref: education.parent_accounts.guardian_person_id > core.persons.id [delete: no action, update: no action]
+Ref: education.parent_accounts.organization_id > core.organizations.id [delete: no action, update: no action]
+Ref: education.parent_invites.created_by_account_id > core.accounts.id [delete: no action, update: no action]
+Ref: education.parent_invites.guardian_person_id > core.persons.id [delete: no action, update: no action]
+Ref: education.parent_invites.(student_id, guardian_person_id) > education.student_guardians.(student_id, guardian_person_id) [delete: no action, update: no action]
+Ref: education.parent_invites.(student_id, organization_id) > education.students.(id, organization_id) [delete: no action, update: no action]
+Ref: education.parent_invites.used_account_id > core.accounts.id [delete: no action, update: no action]
 Ref: education.profiles.(avatar_file_id, account_id) > education.files.(id, owner_account_id) [delete: no action, update: no action]
 Ref: education.result_revisions.result_id > education.lesson_results.id [delete: no action, update: no action]
 Ref: education.student_accounts.student_id > education.students.id [delete: no action, update: no action]
+Ref: education.student_guardians.confirmed_by_account_id > core.accounts.id [delete: no action, update: no action]
+Ref: education.student_guardians.guardian_person_id > core.persons.id [delete: no action, update: no action]
+Ref: education.student_guardians.revoked_by_account_id > core.accounts.id [delete: no action, update: no action]
+Ref: education.student_guardians.(student_id, organization_id) > education.students.(id, organization_id) [delete: no action, update: no action]
 Ref: education.student_invites.(student_id, organization_id, owner_account_id) > education.students.(id, organization_id, owner_account_id) [delete: no action, update: no action]
 Ref: education.thread_members.(thread_id, organization_id) > education.threads.(id, organization_id) [delete: no action, update: no action]
 Ref: education.typing_results.attempt_id > education.activity_attempts.id [delete: no action, update: no action]

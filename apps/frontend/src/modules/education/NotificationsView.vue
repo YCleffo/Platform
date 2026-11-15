@@ -3,28 +3,32 @@ import { ref } from 'vue';
 import { formatZonedTime } from '@/shared/formatting/calendar';
 import { educationApi } from './api';
 import { useEducationWorkspace } from './workspace';
-import { useEducationMutation, useEducationResource, useEducationError } from './resources';
+import { useEducationError } from './resources';
+import { useHomeworkMutation, useHomeworkResource } from './homework/resources';
+import { notificationTarget } from './homework/notifications';
+import { studentSession } from './student/session';
 import { useEducationI18n } from './i18n';
 import EducationState from './EducationState.vue';
-const props = withDefaults(defineProps<{ attention?: boolean }>(), { attention: false });
+const props = withDefaults(defineProps<{ attention?: boolean; student?: boolean }>(), { attention: false, student: false });
 const workspace = useEducationWorkspace();
 const { t, locale } = useEducationI18n();
 const offset = ref(0);
 const issue = useEducationError();
-const { data, loading, error, refresh } = useEducationResource(
+const org = () => props.student ? studentSession.organizationId : workspace.organizationId;
+const { data, loading, error, refresh } = useHomeworkResource(org,
   async (org, signal) => ({
     attention: props.attention ? await educationApi.attention(org, signal) : null,
     notifications: props.attention
       ? null
-      : await educationApi.notifications(org, offset.value, signal),
+      : props.student ? await educationApi.studentNotifications(org, offset.value, signal) : await educationApi.notifications(org, offset.value, signal),
   }),
   [offset],
 );
-const mutation = useEducationMutation();
+const mutation = useHomeworkMutation(org);
 const { busy, error: actionError } = mutation;
 async function read(id: string): Promise<void> {
   await mutation.run(
-    () => educationApi.readNotification(workspace.organizationId, id),
+    () => props.student ? educationApi.readStudentNotification(org(), id) : educationApi.readNotification(org(), id),
     async () => {
       await refresh();
       await workspace.refreshHeader();
@@ -37,7 +41,7 @@ async function read(id: string): Promise<void> {
     <header class="edu-page-title">
       <h1>{{ t(attention ? 'education.attention' : 'education.notifications') }}</h1>
       <RouterLink
-        to="/today"
+        :to="student ? '/student/home' : '/today'"
         class="edu-link"
       >
         {{ t('education.today') }}
@@ -88,13 +92,16 @@ async function read(id: string): Promise<void> {
       >
         <div>
           <RouterLink
-            :to="`/messages/${item.threadId}`"
+            v-if="notificationTarget(item, student)"
+            :to="notificationTarget(item, student)!"
             class="edu-link"
           >
-            {{ item.subject }}
+            {{ item.kind === 'achievement_unlocked' ? t('education.achievements') : item.subject }}
           </RouterLink>
+          <strong v-else>{{ item.kind === 'achievement_unlocked' ? t('education.achievements') : item.subject }}</strong>
+          <p v-if="item.body">{{ item.kind === 'achievement_unlocked' ? t('education.activityAwardNotice') : item.body }}</p>
           <p class="edu-subtle">
-            {{ formatZonedTime(item.createdAt, locale, workspace.header!.timezone) }}
+            {{ formatZonedTime(item.createdAt, locale, workspace.header?.timezone ?? 'UTC') }}
           </p>
         </div>
         <button

@@ -1,21 +1,50 @@
-<script setup lang="ts">
-import { computed, ref } from 'vue';
+﻿<script setup lang="ts">
+import { ref } from 'vue';
 import { studentPortalApi } from './api';
 import { studentSession } from './session';
-import { useEducationResource } from '../resources';
+import { activityApi } from '../activityApi';
+import { useHomeworkResource } from '../homework/resources';
 import { useEducationI18n } from '../i18n';
 import EducationState from '../EducationState.vue';
+import StudentCurriculumProgress from '../StudentCurriculumProgress.vue';
+import HomeworkSummary from '../homework/HomeworkSummary.vue';
+import ActivityProgressPanel from '../ActivityProgressPanel.vue';
 const { t } = useEducationI18n();
-const org = computed(() => studentSession.organizationId);
 const offset = ref(0);
-const { data, loading, error, refresh } = useEducationResource(
-  async (_org, signal) => studentPortalApi.attempts(org.value, offset.value, signal),
-  [org, offset],
+const progress = useHomeworkResource(() => studentSession.organizationId, activityApi.progress);
+const { data, loading, error, refresh } = useHomeworkResource(
+  () => studentSession.organizationId,
+  (org, signal) => studentPortalApi.attempts(org, offset.value, signal),
+  [offset],
 );
 </script>
 <template>
   <section>
-    <h2>{{ t('education.myProgress') }}</h2>
+    <header class="edu-page-title">
+      <h2>{{ t('education.myProgress') }}</h2>
+      <RouterLink
+        to="/student/achievements"
+        class="edu-link"
+      >
+        {{ t('education.achievements') }}
+      </RouterLink>
+    </header>
+    <EducationState
+      :loading="progress.loading.value"
+      :error="progress.error.value"
+      @retry="progress.refresh"
+    />
+    <ActivityProgressPanel
+      v-if="progress.data.value"
+      :progress="progress.data.value"
+      show-achievements
+    />
+    <HomeworkSummary
+      student
+      compact
+    />
+    <StudentCurriculumProgress />
+    <h2>{{ t('education.trainingHistory') }}</h2>
     <EducationState
       :loading="loading"
       :error="error"
@@ -24,7 +53,7 @@ const { data, loading, error, refresh } = useEducationResource(
     <template v-if="data">
       <EducationState
         v-if="!data.items.length"
-        :empty="t('education.noActivities')"
+        :empty="t('education.noTrainingResults')"
       />
       <ul
         v-else
@@ -37,12 +66,31 @@ const { data, loading, error, refresh } = useEducationResource(
         >
           <div class="edu-list__main">
             <strong>{{ attempt.activityName }}</strong>
-            <p class="edu-subtle">{{ attempt.startedAt }}</p>
+            <p class="edu-subtle">
+              <time :datetime="attempt.startedAt">
+                {{ new Date(attempt.startedAt).toLocaleString() }}
+              </time>
+            </p>
           </div>
           <span v-if="attempt.wpm !== null && attempt.wpm !== undefined">
-            {{ attempt.wpm }} {{ t('education.wpm') }} · {{ attempt.accuracy }}%
+            {{ attempt.wpm }} WPM · {{ attempt.accuracy }}%
           </span>
-          <span v-else>{{ attempt.status }}</span>
+          <span v-else-if="attempt.score !== null && attempt.score !== undefined">
+            {{ attempt.correctAnswers }} / {{ attempt.totalRounds }} · {{ attempt.accuracy }}% ·
+            {{ attempt.score }}
+          </span>
+          <RouterLink
+            v-else-if="attempt.status === 'running' && attempt.activityCode === 'platform-logic'"
+            :to="{
+              name: 'education-student-logic',
+              params: { code: 'platform-logic' },
+              query: { attempt: attempt.id },
+            }"
+            class="edu-link"
+          >
+            {{ t('education.restoreAttempt') }}
+          </RouterLink>
+          <span v-else>{{ t(`education.attempt_${attempt.status}`) }}</span>
         </li>
       </ul>
       <div class="edu-form-actions">

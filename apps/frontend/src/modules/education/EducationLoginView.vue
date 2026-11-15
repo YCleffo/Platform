@@ -7,6 +7,8 @@ import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppPasswordInput from '@/shared/ui/fields/AppPasswordInput.vue';
 import { useEducationI18n } from './i18n';
 import { useEducationError } from './resources';
+import { educationApi } from './api';
+import { educationLanding } from './contexts';
 import './education.css';
 const auth = useAdminAuthStore();
 const router = useRouter();
@@ -50,12 +52,19 @@ async function submit(): Promise<void> {
     repeated.value = '';
     if (active && auth.isAuthenticated) {
       const target = typeof route.query.redirect === 'string' ? route.query.redirect : '';
+      // Existing Core accounts acquire Education permissions only after accepting the invitation.
+      if (/^\/parent\/activate(?:[?#]|$)/.test(target)) {
+        await router.replace(target);
+        return;
+      }
+      const context = await educationApi.context();
+      const home = educationLanding(context);
       await router.replace(
-        /^\/(today|calendar|people|messages|more|lessons|groups|students|materials|notifications|attention)(?:[/?#]|$)/.test(
+        /^\/(parent|education\/parent-activate|education\/contexts|today|calendar|people|messages|more|lessons|groups|students|student|programs|devices|materials|notifications|attention|homework)(?:[/?#]|$)/.test(
           target,
         )
           ? target
-          : '/today',
+          : home,
       );
     }
   } catch (caught) {

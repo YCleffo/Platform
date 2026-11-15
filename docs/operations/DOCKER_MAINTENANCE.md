@@ -55,3 +55,21 @@ docker volume inspect ИМЯ_ТОМА
 Образы отключённых возможностей резервирования и provisioner после проверки сборки можно удалить локально: Compose пересоберёт их при явном включении соответствующего профиля. Образ PostgreSQL основного проекта нужен постоянной установке. Образы, на которые ссылаются работающие контейнеры, сохраняются независимо от наличия тега: `<none>` само по себе не означает мусор.
 
 Кэш сборки не является томом с данными приложения. При очистке 6 ноября освобождено 4,116 ГБ кэша с сохранением резерва 1 ГБ для повторных сборок.
+
+## Локальная очистка 14 ноября 2026
+
+После проверок EDUCATION_05 удалены три контейнера `platform-education-local`, его отдельный тестовый том и сети, старый `platform-classroom02-http` и шесть неиспользуемых сетей остановленных проектов. Основные четыре тома из таблицы выше сохранены. Неиспользуемых dangling images и build cache не было; необходимые основным контейнерам и Compose восемь образов сохранены. Остановленные проекты запускаются через Compose с повторным созданием сетей. Полный фактический результат и команды повторного запуска: [EDUCATION_05_LOCAL](EDUCATION_05_LOCAL.md).
+
+Эта очистка выявила ошибку: глобальный `docker network prune` удалил сети, ID которых сохранились в остановленных контейнерах. Запуск из Docker Desktop завершался `network ... not found`; обычного `compose up` оказалось недостаточно для контейнеров с неизменившейся конфигурацией. Глобальную очистку сетей при сохранённых контейнерах не выполнять. Временный стенд удалять только по его явному Compose project/file; сети постоянных и посторонних проектов сохранять.
+
+Восстановление выполнено без удаления томов и без миграций рабочей БД:
+
+```powershell
+docker compose --profile control up -d --no-build --pull never --force-recreate --wait --wait-timeout 90
+```
+
+Все 11 сервисов Platform после восстановления имеют `healthy`. На этой машине порт 8080 занят Apache из OSPanel, поэтому локальные `.env` и `apps/frontend/.env.local` согласованы на dev API `http://127.0.0.1:8083`. Core fast остаётся на 8082, Commercial — на 8090; `/health/ready` всех трёх отвечает HTTP 200. Исходные локальные конфигурации сохранены в игнорируемом `runtime/education05/recovery-config-backup`. Сеть и контейнеры MyBots пересозданы в остановленном состоянии с прежним томом; его приложение и миграции не запускались.
+
+## STORAGE_02 cleanup (2026-11-15)
+
+Removed 11 retired test containers, 6 test volumes and 8 exclusively owned empty test networks after encrypted backup verification. Removed 1.714 GB of unused build cache. Main PostgreSQL/Redis/S3 volumes and MyBots were preserved. The successful exited s3-init container is expected by Compose dependencies. [Current procedure and evidence](STORAGE_02.md).

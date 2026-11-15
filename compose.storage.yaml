@@ -1,0 +1,22 @@
+# Local S3 dependencies. External S3 installations use compose.yaml with S3_* env only.
+services:
+  backend:
+    depends_on:
+      seaweedfs: {condition: service_healthy}
+      s3-init: {condition: service_completed_successfully}
+    networks: [backend_net, s3_net]
+  backend-fast:
+    depends_on:
+      seaweedfs: {condition: service_healthy}
+      s3-init: {condition: service_completed_successfully}
+    networks: [backend_net, s3_net]
+  backend-email-worker:
+    depends_on:
+      seaweedfs: {condition: service_healthy}
+      s3-init: {condition: service_completed_successfully}
+    networks: [backend_net, s3_net]
+  backend-scheduler:
+    depends_on:
+      seaweedfs: {condition: service_healthy}
+      s3-init: {condition: service_completed_successfully}
+    networks: [backend_net, s3_net]

@@ -96,6 +96,11 @@ $permission = static fn(string $code): array => [
 ];
 
 return [
+    ...(require __DIR__ . '/branding-routes.php'),
+    ...((getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\Education\Api\HomeworkAction::class))
+        ? require __DIR__ . '/homework-integration-routes.php' : []),
+    ...((getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\Education\Api\HomeworkAction::class))
+        ? require __DIR__ . '/homework-routes.php' : []),
     ...((getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\Education\Api\EducationAction::class))
         ? require __DIR__ . '/education-routes.php' : []),
     ...((getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\DeviceManagement\Api\DeviceAction::class))
@@ -141,6 +146,9 @@ return [
     Route::get('/health/ready')
         ->action(Api\ReadyHealthAction::class)
         ->name('app/health/ready'),
+    Route::get('/health/storage')
+        ->action(Api\StorageHealthAction::class)
+        ->name('app/health/storage'),
 
     Route::get('/metrics')
         ->action(Api\MetricsAction::class)

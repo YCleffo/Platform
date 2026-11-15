@@ -31,6 +31,7 @@ const name = ref('');
 const initialGroupId = typeof route.query.group === 'string' ? route.query.group : '';
 const groupId = ref(initialGroupId);
 const personId = ref('');
+const studentMode = ref('new'); const givenName = ref(''); const familyName = ref(''); const middleName = ref(''); const birthDate = ref(''); const curriculumLessonId = ref('');
 const recipientId = ref('');
 const body = ref('');
 const location = ref('');
@@ -43,17 +44,18 @@ const selectedDate =
 const startsAt = ref(`${selectedDate}T10:00`);
 const endsAt = ref(`${selectedDate}T11:00`);
 const localError = ref('');
-const choices = useEducationResource(async (org, signal) => ({
-  groups: ['lesson', 'student'].includes(props.kind)
-    ? await educationApi.groups(org, 0, signal)
-    : null,
-  selectedGroup:
-    ['lesson', 'student'].includes(props.kind) && initialGroupId !== ''
-      ? await educationApi.group(org, initialGroupId, signal).catch(() => null)
-      : null,
-  candidates: props.kind === 'student' ? await educationApi.candidates(org, 0, signal) : null,
-  colleagues: props.kind === 'message' ? await educationApi.colleagues(org, 0, signal) : null,
-}));
+const choices = useEducationResource(async (org, signal) => {
+  const [groups, selectedGroup, candidates, colleagues] = await Promise.all([
+    ['lesson', 'student'].includes(props.kind) ? educationApi.groups(org, 0, signal) : null,
+    ['lesson', 'student'].includes(props.kind) && initialGroupId ? educationApi.group(org, initialGroupId, signal).catch(() => null) : null,
+    props.kind === 'student' ? educationApi.candidates(org, 0, signal) : null,
+    props.kind === 'message' ? educationApi.colleagues(org, 0, signal) : null,
+  ]);
+  return { groups, selectedGroup, candidates, colleagues };
+});
+const curriculum = useEducationResource((org, signal) => props.kind === 'lesson' && groupId.value ? educationApi.groupPrograms(org, groupId.value, signal) : Promise.resolve({ items: [] }), [groupId]);
+const curriculumOptions = computed(() => [{ value: '', label: t('education.noCurriculumLesson') }, ...(curriculum.data.value?.items ?? []).filter(p => !p.endedAt).flatMap(p => p.modules.flatMap(m => m.lessons.map(l => ({ value: l.id, label: `${p.name} / ${m.name} / ${l.title}` }))))]);
+watch(groupId, () => { curriculumLessonId.value = ''; });
 const { data, loading, error, refresh } = choices;
 const groupOptions = computed(() => {
   const items = (data.value?.groups?.items ?? []).filter((item) => !item.archivedAt);
@@ -135,7 +137,7 @@ async function submit(): Promise<void> {
         case 'group':
           return educationApi.createGroup(org, name.value);
         case 'student':
-          return educationApi.enroll(org, personId.value, groupId.value);
+          return studentMode.value === 'new' ? educationApi.createStudent(org, { givenName: givenName.value, familyName: familyName.value, ...(middleName.value ? { middleName: middleName.value } : {}), ...(birthDate.value ? { birthDate: birthDate.value } : {}), groupId: groupId.value }) : educationApi.enroll(org, personId.value, groupId.value);
         case 'lesson':
           return educationApi.createLesson(org, {
             title: name.value,
@@ -143,6 +145,7 @@ async function submit(): Promise<void> {
             startsAt: start,
             endsAt: end,
             location: location.value,
+            curriculumLessonId: curriculumLessonId.value || null,
           });
         case 'event':
           return educationApi.createEvent(org, {
@@ -163,7 +166,9 @@ async function submit(): Promise<void> {
       }
     },
     async (result) => {
-      if (props.kind === 'lesson') await router.push(`/lessons/${result.id}`);
+      if (props.kind === 'group') await router.push(`/groups/${result.id}`);
+      else if (props.kind === 'student') await router.push(groupId.value ? `/groups/${groupId.value}` : `/students/${result.id}`);
+      else if (props.kind === 'lesson') await router.push(`/lessons/${result.id}`);
       else if (props.kind === 'message') await router.push(`/messages/${result.id}`);
       else if (props.kind === 'material' && typeof route.query.lesson === 'string')
         await router.push(`/lessons/${route.query.lesson}/materials`);
@@ -203,10 +208,6 @@ async function submit(): Promise<void> {
         </RouterLink>
       </div>
       <EducationState
-        v-else-if="data.candidates && !data.candidates.items.length"
-        :empty="t('education.noCandidates')"
-      />
-      <EducationState
         v-else-if="data.colleagues && !data.colleagues.items.length"
         :empty="t('education.noRecipients')"
       />
@@ -224,6 +225,10 @@ async function submit(): Promise<void> {
           required
           :disabled="busy || uncertain"
         />
+        <template v-if="kind === 'student'">
+          <div class="edu-pills" role="group" :aria-label="t('education.addStudent')"><button type="button" :aria-pressed="studentMode === 'new'" @click="studentMode = 'new'">{{ t('education.newStudent') }}</button><button type="button" :aria-pressed="studentMode === 'existing'" @click="studentMode = 'existing'">{{ t('education.existingStudent') }}</button></div>
+          <template v-if="studentMode === 'new'"><AppInput id="student-family-name" v-model="familyName" :label="t('education.familyName')" :maxlength="160" required :disabled="busy || uncertain" /><AppInput id="student-given-name" v-model="givenName" :label="t('education.givenName')" :maxlength="160" required :disabled="busy || uncertain" /><AppInput id="student-middle-name" v-model="middleName" :label="t('education.middleName')" :maxlength="160" :disabled="busy || uncertain" /><AppInput id="student-birth-date" v-model="birthDate" type="date" :label="t('education.birthDate')" :disabled="busy || uncertain" /></template>
+        </template>
         <div v-if="data.groups">
           <AppDropdown
             id="education-create-group"
@@ -243,7 +248,8 @@ async function submit(): Promise<void> {
             {{ t('education.loadMore') }}
           </button>
         </div>
-        <div v-if="data.candidates">
+        <div v-if="data.candidates && studentMode === 'existing'">
+          <EducationState v-if="!data.candidates.items.length" :empty="t('education.noCandidates')" />
           <AppDropdown
             id="education-create-person"
             v-model="personId"
@@ -279,6 +285,8 @@ async function submit(): Promise<void> {
             {{ t('education.loadMore') }}
           </button>
         </div>
+        <AppDropdown v-if="kind === 'lesson' && groupId" id="education-curriculum-lesson" v-model="curriculumLessonId" :label="t('education.curriculumLesson')" :options="curriculumOptions" :disabled="busy || uncertain || curriculum.loading.value" />
+        <EducationState v-if="kind === 'lesson' && curriculum.error.value" :error="curriculum.error.value" @retry="curriculum.refresh" />
         <template v-if="kind === 'lesson' || kind === 'event'">
           <p class="edu-subtle">{{ t('education.timezone') }}: {{ workspace.header!.timezone }}</p>
           <AppInput

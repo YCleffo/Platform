@@ -19,6 +19,32 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "archived",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "0",
+                "1"
+              ]
+            }
           }
         ],
         "responses": {
@@ -158,7 +184,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-management/classrooms"
     },
     "/devices": {
       "get": {
@@ -322,7 +349,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-management/devices"
     },
     "/devices/{id}": {
       "get": {
@@ -404,7 +432,88 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      }
+      },
+      "put": {
+        "operationId": "device_update_device",
+        "summary": "Обновить параметры устройства или переместить между классами",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceSave"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Устройство обновлено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Device"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-management/devices/{id}"
     },
     "/devices/{id}/enroll": {
       "post": {
@@ -498,7 +607,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-management/devices/{id}/enroll"
     },
     "/devices/{id}/revoke": {
       "post": {
@@ -592,7 +702,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-management/devices/{id}/revoke"
     },
     "/devices/{id}/events": {
       "get": {
@@ -684,7 +795,8 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-management/devices/{id}/events"
     },
     "/devices/{id}/session": {
       "post": {
@@ -776,7 +888,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-management/devices/{id}/session"
     },
     "/devices/{id}/session/end": {
       "post": {
@@ -868,7 +981,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-management/devices/{id}/session/end"
     },
     "/agent/enroll": {
       "post": {
@@ -941,7 +1055,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-agent/enroll"
     },
     "/agent/heartbeat": {
       "post": {
@@ -1014,7 +1129,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-agent/heartbeat"
     },
     "/agent/commands": {
       "get": {
@@ -1077,7 +1193,8 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-agent/commands"
     },
     "/agent/commands/{id}/ack": {
       "post": {
@@ -1162,7 +1279,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-agent/commands/{id}/ack"
     },
     "/agent/session": {
       "get": {
@@ -1225,7 +1343,8 @@
             "$ref": "#/components/responses/Error"
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-agent/session"
     },
     "/agent/session/{id}/state": {
       "post": {
@@ -1308,7 +1427,8 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-agent/session/{id}/state"
     },
     "/agent/events": {
       "post": {
@@ -1381,7 +1501,708 @@
             }
           }
         }
-      }
+      },
+      "x-runtime-path": "/api/device-agent/events"
+    },
+    "/classrooms/{id}": {
+      "put": {
+        "operationId": "device_update_classroom",
+        "summary": "Обновить учебный класс",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassroomSave"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Класс успешно обновлён",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Classroom"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-management/classrooms/{id}"
+    },
+    "/classrooms/{id}/archive": {
+      "post": {
+        "operationId": "device_archive_classroom",
+        "summary": "Архивировать учебный класс",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Класс архивирован",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Classroom"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-management/classrooms/{id}/archive"
+    },
+    "/devices/{id}/sessions": {
+      "get": {
+        "operationId": "device_sessions",
+        "summary": "История сессий устройства",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список сессий устройства",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DeviceSessionPage"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-management/devices/{id}/sessions"
+    },
+    "/devices/{id}/commands": {
+      "get": {
+        "operationId": "device_commands",
+        "summary": "Журнал событий компьютера",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Разрешённый результат. Пустая коллекция означает реальные отсутствующие данные.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DeviceCommandPage"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-management/devices/{id}/commands"
+    },
+    "/devices/{id}/session/cancel": {
+      "post": {
+        "operationId": "device_cancel_assignment",
+        "summary": "Штатно завершить сессию",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Изменение применено целиком; повторные сообщения агента идемпотентны.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionCancelled"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelAssignmentRequest"
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-management/devices/{id}/session/cancel"
+    },
+    "/devices/{id}/recovery/retry": {
+      "post": {
+        "operationId": "device_retry_recovery",
+        "summary": "Штатно завершить сессию",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Изменение применено целиком; повторные сообщения агента идемпотентны.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RecoveryRetrying"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoveryRetryRequest"
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-management/devices/{id}/recovery/retry"
+    },
+    "/classrooms/{id}/restore": {
+      "post": {
+        "operationId": "device_restore_classroom",
+        "summary": "Архивировать учебный класс",
+        "parameters": [
+          {
+            "name": "X-Education-Organization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Класс архивирован",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Classroom"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-management/classrooms/{id}/restore"
+    },
+    "/agent/session/{id}/end": {
+      "post": {
+        "operationId": "agent_session_end",
+        "summary": "Переход состояния сессии",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Изменение применено целиком; повторные сообщения агента идемпотентны.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionEnding"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {},
+                "required": []
+              }
+            }
+          }
+        }
+      },
+      "x-runtime-path": "/api/device-agent/session/{id}/end"
     }
   },
   "components": {
@@ -1443,6 +2264,11 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "required": [
@@ -1474,10 +2300,28 @@
             "items": {
               "$ref": "#/components/schemas/Classroom"
             }
+          },
+          "limit": {
+            "type": "integer",
+            "enum": [
+              50
+            ]
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
           }
         },
         "required": [
-          "items"
+          "items",
+          "limit",
+          "offset",
+          "nextOffset"
         ]
       },
       "Device": {
@@ -1534,6 +2378,23 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "stateVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ownerAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workstationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "required": [
@@ -1664,6 +2525,20 @@
           "startedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "classroomId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "required": [
@@ -1737,6 +2612,79 @@
             "items": {
               "$ref": "#/components/schemas/DeviceSession"
             }
+          },
+          "stateVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ownerAccountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workstationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "availableActions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "assign",
+                "enroll",
+                "revoke",
+                "edit",
+                "end_session",
+                "cancel_assignment",
+                "retry_recovery"
+              ]
+            }
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceCommand"
+            }
+          },
+          "progress": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionProgress"
+              }
+            ],
+            "nullable": true
+          },
+          "lastError": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionError"
+              }
+            ],
+            "nullable": true
+          },
+          "recovery": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecoveryStatus"
+              }
+            ],
+            "nullable": true
+          },
+          "online": {
+            "type": "boolean"
+          },
+          "agentVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "testAdapter": {
+            "type": "boolean",
+            "description": "Explicit safe test adapter mode; this is not proof of Windows interactive logon."
           }
         },
         "required": [
@@ -1749,7 +2697,15 @@
           "enrollmentState",
           "lastSeenAt",
           "createdAt",
-          "sessions"
+          "sessions",
+          "availableActions",
+          "commands",
+          "progress",
+          "lastError",
+          "recovery",
+          "stateVersion",
+          "online",
+          "agentVersion"
         ]
       },
       "DeviceEnrollment": {
@@ -1937,7 +2893,8 @@
         "additionalProperties": false,
         "properties": {
           "state": {
-            "type": "object"
+            "type": "object",
+            "description": "Agent state: version, machineReady, hasUnfinishedDocuments, optional progress. Readiness is distinct from registration and logon."
           }
         }
       },
@@ -1956,6 +2913,36 @@
               {
                 "type": "null"
               }
+            ]
+          },
+          "device": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "number": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "enrollmentState": {
+                "type": "string"
+              },
+              "classroomName": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "number",
+              "name",
+              "enrollmentState",
+              "classroomName"
             ]
           }
         },
@@ -2104,6 +3091,34 @@
               "RECOVERY_REQUIRED",
               "FAILED"
             ]
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/SessionEvidence"
+          },
+          "progress": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionProgress"
+              }
+            ],
+            "nullable": true
+          },
+          "error": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -2175,6 +3190,272 @@
         "required": [
           "recorded"
         ]
+      },
+      "DeviceSessionPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceSession"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "enum": [
+              50
+            ]
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "nextOffset"
+        ]
+      },
+      "DeviceCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "delivered",
+              "acknowledged",
+              "expired"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "acknowledgedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "payload",
+          "status",
+          "createdAt",
+          "expiresAt",
+          "acknowledgedAt"
+        ]
+      },
+      "DeviceCommandPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceCommand"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "enum": [
+              50
+            ]
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "nextOffset"
+        ]
+      },
+      "SessionProgress": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "stage": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "stage",
+          "completed",
+          "total"
+        ]
+      },
+      "SessionError": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "at"
+        ]
+      },
+      "RecoveryStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "required": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "retryAllowed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "required",
+          "reason",
+          "retryAllowed"
+        ]
+      },
+      "SessionEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "profilePrepared": {
+            "type": "boolean"
+          },
+          "windowsLogonConfirmed": {
+            "type": "boolean"
+          },
+          "testAdapter": {
+            "type": "boolean"
+          },
+          "sessionEnded": {
+            "type": "boolean"
+          },
+          "storageConfirmed": {
+            "type": "boolean"
+          },
+          "cleanupDone": {
+            "type": "boolean"
+          }
+        },
+        "required": []
+      },
+      "SessionCancelled": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cancelled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sessionId",
+          "cancelled"
+        ]
+      },
+      "RecoveryRetrying": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "retrying": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sessionId",
+          "retrying"
+        ]
+      },
+      "CancelAssignmentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stateVersion": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "RecoveryRetryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "stateVersion": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": []
       }
     }
   }

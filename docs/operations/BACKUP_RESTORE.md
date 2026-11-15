@@ -34,3 +34,7 @@
 Порядок и критерии: [этап 2 масштабирования](../roadmap/SCALING_PLAN.md),
 [хранилище Education](../architecture/EDUCATION_BACKEND.md),
 [уничтожение после восстановления](../architecture/RETENTION_ERASURE.md).
+
+## S3 object backups (STORAGE_02)
+
+The current executable PostgreSQL + S3 encrypted snapshot and restore procedure is documented in [STORAGE_02](STORAGE_02.md). A database-only dump does not back up object bytes. The local restore exercise passed with seven objects on 2026-11-15; external offsite scheduling remains an installation requirement.

@@ -10,10 +10,17 @@ use Yiisoft\Router\Route;
 
 $definitions = [
     ['GET', '/classrooms', 'classrooms'], ['POST', '/classrooms', 'create_classroom'],
+    ['PUT', '/classrooms/{id}', 'update_classroom'], ['POST', '/classrooms/{id}/archive', 'archive_classroom'],
+    ['POST', '/classrooms/{id}/restore', 'restore_classroom'],
+    ['POST', '/devices/{id}/session/cancel', 'cancel_assignment'],
+    ['POST', '/devices/{id}/recovery/retry', 'retry_recovery'],
+    ['GET', '/devices/{id}/commands', 'device_commands'],
     ['GET', '/devices', 'devices'], ['POST', '/devices', 'create_device'],
-    ['GET', '/devices/{id}', 'device'], ['POST', '/devices/{id}/enroll', 'device_enroll'],
+    ['GET', '/devices/{id}', 'device'], ['PUT', '/devices/{id}', 'update_device'],
+    ['POST', '/devices/{id}/enroll', 'device_enroll'],
     ['POST', '/devices/{id}/revoke', 'revoke_device'],
     ['GET', '/devices/{id}/events', 'device_events'],
+    ['GET', '/devices/{id}/sessions', 'device_sessions'],
     ['POST', '/devices/{id}/session', 'device_session'], ['POST', '/devices/{id}/session/end', 'device_session_end'],
 ];
 $routes = [];
@@ -33,6 +40,7 @@ $agentDefinitions = [
     ['POST', '/api/device-agent/commands/{id}/ack', 'agent_command_ack'],
     ['GET', '/api/device-agent/session', 'agent_session'],
     ['POST', '/api/device-agent/session/{id}/state', 'agent_session_state'],
+    ['POST', '/api/device-agent/session/{id}/end', 'agent_session_end'],
     ['POST', '/api/device-agent/events', 'agent_event'],
 ];
 foreach ($agentDefinitions as [$method, $path, $operation]) {

@@ -1,0 +1,121 @@
+.education-parent {
+  display: block;
+}
+.edu-parent-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px max(18px, calc((100vw - 1100px) / 2));
+  border-bottom: 1px solid var(--border);
+}
+.edu-parent-topbar .edu-sidebar__brand {
+  padding: 0;
+  margin: 0;
+}
+.edu-parent-child {
+  max-width: 560px;
+  margin-bottom: 12px;
+}
+.edu-parent-nav {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin: 22px 0;
+}
+.edu-parent-nav a {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control-m);
+  color: var(--text-2);
+  text-decoration: none;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.edu-parent-nav a[aria-current='page'] {
+  color: var(--accent-text);
+  background: var(--edu-accent-surface);
+  border-color: var(--accent);
+}
+.edu-parent-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.edu-parent-grid > *,
+.edu-parent-section,
+.edu-family {
+  min-width: 0;
+}
+.edu-parent-section > .edu-card,
+.edu-family {
+  margin-top: 16px;
+}
+.edu-parent-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.edu-parent-stats strong {
+  display: block;
+  font-size: var(--type-h2-size);
+}
+.edu-parent-section .edu-list__item {
+  align-items: flex-start;
+}
+.edu-parent-section .edu-list__item > div {
+  flex-basis: 180px;
+}
+.edu-family .edu-form {
+  max-width: none;
+}
+.edu-family .edu-form-actions > .app-field {
+  min-width: 0;
+}
+.edu-family-invite {
+  padding: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card-m);
+  overflow-wrap: anywhere;
+}
+.edu-family-invite code {
+  user-select: all;
+  white-space: pre-wrap;
+}
+.edu-family-row {
+  display: grid;
+  gap: 12px;
+}
+.edu-family-history {
+  max-height: 360px;
+  overflow: auto;
+}
+@media (max-width: 767px) {
+  .edu-parent-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .edu-parent-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .edu-parent-topbar {
+    padding: 16px 18px;
+  }
+}
+@media (max-width: 400px) {
+  .education-parent .edu-main {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .edu-parent-nav {
+    gap: 4px;
+  }
+  .edu-parent-nav a {
+    font-size: var(--type-body-caption-size);
+  }
+}

@@ -32,6 +32,11 @@
 
 # .NET
 **/bin/
+!apps/backend/bin/
+/apps/backend/bin/*
+!/apps/backend/bin/s3-init.php
+!/apps/backend/bin/storage-crypt.php
+!/apps/backend/bin/storage-backup-bridge.php
 !apps/control-plane/bin/
 !apps/control-plane/bin/console
 **/obj/

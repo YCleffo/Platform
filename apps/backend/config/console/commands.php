@@ -7,6 +7,7 @@ use App\Console;
 return [
     ...(class_exists(\App\Education\Console\MigrateCommand::class) ? [
         'education:migrate' => \App\Education\Console\MigrateCommand::class,
+        'education:cleanup-objects' => \App\Education\Console\CleanupObjectsCommand::class,
         'education:teacher:assign' => \App\Education\Console\AssignTeacherCommand::class,
     ] : []),
     ...(class_exists(\App\DeviceManagement\Console\MigrateCommand::class) ? [
@@ -14,6 +15,8 @@ return [
     ] : []),
     ...(class_exists(\App\Storage\Console\MigrateCommand::class) ? [
         'storage:migrate' => \App\Storage\Console\MigrateCommand::class,
+        'storage:cleanup' => \App\Storage\Console\CleanupCommand::class,
+        'storage:migrate-objects' => \App\Storage\Console\MigrateObjectsCommand::class,
     ] : []),
     'scheduler:run' => Console\SchedulerRunCommand::class,
     'ops:status' => Console\OpsStatusCommand::class,

@@ -1,0 +1,247 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Platform installation branding",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/branding": {
+      "get": {
+        "operationId": "branding_read",
+        "description": "Public name and relative favicon URL.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        }
+      },
+      "put": {
+        "operationId": "branding_name",
+        "description": "Save {name}: 1-100 characters, no markup or controls. Requires core.settings.manage.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/branding/favicon": {
+      "post": {
+        "operationId": "branding_start",
+        "description": "Start {sizeBytes, sha256}, max 512 KiB. Signed PUT, then server content verification: PNG or ICO, max 1024px. Requires core.settings.manage.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "branding_remove",
+        "description": "Remove current icon. Requires core.settings.manage.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/branding/favicon/{id}": {
+      "get": {
+        "operationId": "branding_icon",
+        "description": "Current verified public icon bytes.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/branding/favicon/{id}/refresh": {
+      "post": {
+        "operationId": "branding_refresh",
+        "description": "Refresh signed upload request during durable one-hour session. Requires core.settings.manage.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/branding/favicon/{id}/complete": {
+      "post": {
+        "operationId": "branding_complete",
+        "description": "Verify full S3 content and publish; replay returns durable receipt. Requires core.settings.manage.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/branding/favicon/{id}/abort": {
+      "post": {
+        "operationId": "branding_abort",
+        "description": "Cancel pending publication, preserving committed icon. Requires core.settings.manage.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "422": {
+            "description": "Invalid input"
+          },
+          "503": {
+            "description": "Object storage unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

@@ -95,6 +95,10 @@ final readonly class RetentionCandidateContributor implements Contributor
                 UNION SELECT sender_person_id FROM education.messages
                 UNION SELECT person_id FROM education.thread_members
                 UNION SELECT person_id FROM education.notifications
+                UNION SELECT guardian_person_id FROM education.student_guardians
+                UNION SELECT guardian_person_id FROM education.parent_accounts
+                UNION SELECT guardian_person_id FROM education.parent_invites
+                UNION SELECT guardian_person_id FROM education.family_history
             ) subjects ORDER BY person_id LIMIT :limit
             SQL, [':limit' => $limit])->queryAll();
         return array_map(static fn(array $row): string => (string) $row['person_id'], $rows);
@@ -114,6 +118,10 @@ final readonly class RetentionCandidateContributor implements Contributor
             UNION ALL SELECT 1 FROM education.messages WHERE sender_person_id = CAST(:subject AS uuid)
             UNION ALL SELECT 1 FROM education.thread_members WHERE person_id = CAST(:subject AS uuid)
             UNION ALL SELECT 1 FROM education.notifications WHERE person_id = CAST(:subject AS uuid)
+            UNION ALL SELECT 1 FROM education.student_guardians WHERE guardian_person_id = CAST(:subject AS uuid)
+            UNION ALL SELECT 1 FROM education.parent_accounts WHERE guardian_person_id = CAST(:subject AS uuid)
+            UNION ALL SELECT 1 FROM education.parent_invites WHERE guardian_person_id = CAST(:subject AS uuid)
+            UNION ALL SELECT 1 FROM education.family_history WHERE guardian_person_id = CAST(:subject AS uuid)
             LIMIT 1
             SQL, [':subject' => $subject])->queryScalar() !== false;
     }
@@ -142,7 +150,10 @@ final readonly class RetentionCandidateContributor implements Contributor
                     (SELECT max(created_at) FROM education.lessons WHERE owner_person_id = CAST(:subject AS uuid)),
                     (SELECT max(created_at) FROM education.files WHERE owner_person_id = CAST(:subject AS uuid)),
                     (SELECT max(created_at) FROM education.messages WHERE sender_person_id = CAST(:subject AS uuid)),
-                    (SELECT max(created_at) FROM education.notifications WHERE person_id = CAST(:subject AS uuid))
+                    (SELECT max(created_at) FROM education.notifications WHERE person_id = CAST(:subject AS uuid)),
+                    (SELECT max(updated_at) FROM education.student_guardians WHERE guardian_person_id = CAST(:subject AS uuid)),
+                    (SELECT max(created_at) FROM education.parent_invites WHERE guardian_person_id = CAST(:subject AS uuid)),
+                    (SELECT max(created_at) FROM education.family_history WHERE guardian_person_id = CAST(:subject AS uuid))
                 )::text
                 SQL, [':subject' => $subject])->queryScalar(),
             default => null,
