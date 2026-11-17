@@ -180,11 +180,25 @@ async function reconcile(): Promise<void> {
           </div>
         </form>
       </article>
-      <div class="edu-detail-grid"><GroupCurriculumPanel :group-id="id" :archived="archived" /><GroupTeachersPanel :group-id="id" :archived="archived" /></div>
+      <div class="edu-detail-grid">
+        <GroupCurriculumPanel
+          :group-id="id"
+          :archived="archived"
+        />
+        <GroupTeachersPanel
+          :group-id="id"
+          :archived="archived"
+        />
+      </div>
       <div class="edu-section-title">
         <h2>{{ t('education.groupStudents') }}</h2>
         <div class="edu-form-actions">
-          <RouterLink :to="`/groups/${data.group.id}/attendance`" class="edu-button">{{ t('education.attendance') }}</RouterLink>
+          <RouterLink
+            :to="`/groups/${data.group.id}/attendance`"
+            class="edu-button"
+          >
+            {{ t('education.attendance') }}
+          </RouterLink>
           <RouterLink
             :to="`/groups/${data.group.id}/journal`"
             class="edu-button"

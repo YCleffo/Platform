@@ -24,18 +24,40 @@ const navigation = [
   { path: '/more', key: 'more', icon: LayoutGrid, routeName: 'education-more' },
 ];
 const mobileItems = computed(() =>
-  navigation.map((item) => item.key === 'messages' ? { path: '/homework', key: 'homework', icon: Book, routeName: 'education-homework', label: t('education.homework') } : ({ ...item, label: t(`education.${item.key}`) })),
+  navigation.map((item) =>
+    item.key === 'messages'
+      ? {
+          path: '/homework',
+          key: 'homework',
+          icon: Book,
+          routeName: 'education-homework',
+          label: t('education.homework'),
+        }
+      : { ...item, label: t(`education.${item.key}`) },
+  ),
 );
-const activeRouteName = computed(
-  () => route.meta.educationTab === 'homework' ? 'education-homework' : navigation.find((item) => item.key === route.meta.educationTab)?.routeName,
+const activeRouteName = computed(() =>
+  route.meta.educationTab === 'homework'
+    ? 'education-homework'
+    : navigation.find((item) => item.key === route.meta.educationTab)?.routeName,
 );
 const currentOrganization = computed(() =>
   workspace.context?.organizations.find((item) => item.id === workspace.organizationId),
 );
-const workspaceOrganizations = computed(() => workspace.context?.organizations.filter(item => item.teacher || item.student) ?? []);
-watch(() => workspace.context, context => {
-  if (context && !context.organizations.some(item => item.teacher || item.student) && context.organizations.some(item => item.parent)) void router.replace('/parent/home');
-});
+const workspaceOrganizations = computed(
+  () => workspace.context?.organizations.filter((item) => item.teacher || item.student) ?? [],
+);
+watch(
+  () => workspace.context,
+  (context) => {
+    if (
+      context &&
+      !context.organizations.some((item) => item.teacher || item.student) &&
+      context.organizations.some((item) => item.parent)
+    )
+      void router.replace('/parent/home');
+  },
+);
 const studentPortal = computed(
   () => route.path === '/student' || route.path.startsWith('/student/'),
 );
@@ -109,7 +131,16 @@ onBeforeUnmount(() => {
         :aria-label="t('education.workspace')"
         class="edu-sidebar__nav"
       >
-        <RouterLink to="/homework" :aria-current="route.meta.educationTab === 'homework' ? 'page' : undefined"><Book :size="21" aria-hidden="true" /><span>{{ t('education.homework') }}</span></RouterLink>
+        <RouterLink
+          to="/homework"
+          :aria-current="route.meta.educationTab === 'homework' ? 'page' : undefined"
+        >
+          <Book
+            :size="21"
+            aria-hidden="true"
+          />
+          <span>{{ t('education.homework') }}</span>
+        </RouterLink>
         <RouterLink
           v-for="item in navigation.slice(0, 3)"
           :key="item.key"
@@ -156,7 +187,12 @@ onBeforeUnmount(() => {
         </RouterLink>
       </nav>
       <div class="edu-sidebar__footer">
-        <RouterLink to="/education/contexts" class="edu-link">{{ t('education.changeContext') }}</RouterLink>
+        <RouterLink
+          to="/education/contexts"
+          class="edu-link"
+        >
+          {{ t('education.changeContext') }}
+        </RouterLink>
         <strong>{{ workspace.header?.displayName ?? workspace.context?.displayName }}</strong>
         <button
           type="button"
@@ -170,7 +206,12 @@ onBeforeUnmount(() => {
     <div class="edu-workspace">
       <header class="edu-topbar">
         <div class="edu-topbar__context">
-          <RouterLink to="/education/contexts" class="edu-link">{{ t('education.changeContext') }}</RouterLink>
+          <RouterLink
+            to="/education/contexts"
+            class="edu-link"
+          >
+            {{ t('education.changeContext') }}
+          </RouterLink>
           <strong>{{ studentPortal ? t('education.studentCabinet') : sectionLabel }}</strong>
         </div>
         <AppDropdown
@@ -178,9 +219,7 @@ onBeforeUnmount(() => {
           id="education-organization"
           :label="t('education.organization')"
           :model-value="workspace.organizationId"
-          :options="
-            workspaceOrganizations.map((item) => ({ value: item.id, label: item.name }))
-          "
+          :options="workspaceOrganizations.map((item) => ({ value: item.id, label: item.name }))"
           @update:model-value="(value) => workspace.chooseOrganization(String(value))"
         />
         <span

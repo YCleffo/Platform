@@ -1,0 +1,4 @@
+LIBRARY KiberOne.CredentialProvider
+EXPORTS
+    DllGetClassObject PRIVATE
+    DllCanUnloadNow PRIVATE

@@ -29,7 +29,10 @@ function statusLabel(lesson: StudentDiaryLesson): string {
 <template>
   <section>
     <h2>{{ t('education.myDiary') }}</h2>
-    <HomeworkSummary student compact />
+    <HomeworkSummary
+      student
+      compact
+    />
     <EducationState
       :loading="loading"
       :error="error"

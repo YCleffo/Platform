@@ -1205,8 +1205,9 @@ function formatDate(iso: string | null): string {
   gap: 0.75rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+    transform var(--motion-fast-duration) var(--motion-ease),
+    box-shadow var(--motion-fast-duration) var(--motion-ease),
+    var(--theme-transition);
 }
 
 .edu-seat-card:hover {
@@ -1226,29 +1227,34 @@ function formatDate(iso: string | null): string {
 }
 
 .edu-seat-number {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--primary, #2563eb);
+  font-size: var(--type-h2-size);
+  line-height: var(--type-h2-line);
+  font-weight: var(--type-h2-weight);
+  color: var(--accent-text);
 }
 
 .edu-seat-name {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--type-body-large-size);
+  line-height: var(--type-body-large-line);
+  font-weight: var(--type-body-large-emphasis-weight);
 }
 
 .edu-seat-meta {
   display: flex;
   gap: 0.5rem;
-  font-size: 0.8125rem;
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-weight);
   margin-top: 0.25rem;
 }
 
 .edu-badge {
   padding: 0.25rem 0.5rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
+  font-weight: var(--type-body-small-emphasis-weight);
   text-transform: uppercase;
 }
 
@@ -1287,7 +1293,9 @@ function formatDate(iso: string | null): string {
   padding: 0.25rem 0.5rem;
   background: var(--surface-hover, var(--surface));
   border-radius: 4px;
-  font-size: 0.8125rem;
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-weight);
   display: flex;
   justify-content: space-between;
 }
@@ -1295,8 +1303,9 @@ function formatDate(iso: string | null): string {
 .edu-error-badge {
   margin-top: 0.5rem;
   color: #b91c1c;
-  font-size: 0.8125rem;
-  font-weight: 600;
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
 }
 
 .edu-seat-card__actions {
@@ -1309,7 +1318,9 @@ function formatDate(iso: string | null): string {
 
 .edu-button--small {
   padding: 0.25rem 0.5rem;
-  font-size: 0.8125rem;
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
 }
 
 .edu-modal-backdrop {

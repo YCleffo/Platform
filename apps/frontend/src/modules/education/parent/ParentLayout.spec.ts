@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { defineComponent, reactive, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { coreAdminSession } from '@/core/admin/session';
+import { i18n } from '@/shared/i18n';
 import { parentApi, type ParentChild, type ParentContext } from './api';
 import { parentChildKey, useParentWorkspace } from './workspace';
 import ParentLayout from './ParentLayout.vue';
@@ -52,6 +53,7 @@ const wrappers: VueWrapper[] = [];
 function open() {
   const wrapper = mount(ParentLayout, {
     global: {
+      plugins: [i18n],
       stubs: {
         AppDropdown: dropdown,
         RouterLink: { template: '<a><slot /></a>' },

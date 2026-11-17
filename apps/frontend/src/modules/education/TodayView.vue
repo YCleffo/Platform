@@ -132,8 +132,54 @@ const dateLine = computed(() =>
       @retry="refresh"
     />
     <template v-if="data">
-      <article v-if="!data.next && !data.schedule.lessons.length" class="edu-card edu-onboarding"><h2>{{ t('education.getStarted') }}</h2><p class="edu-subtle">{{ t('education.onboardingHint') }}</p><ol><li><RouterLink to="/groups/new" class="edu-link">{{ t('education.createGroup') }}</RouterLink></li><li><RouterLink to="/students/new" class="edu-link">{{ t('education.addStudent') }}</RouterLink></li><li><RouterLink to="/programs" class="edu-link">{{ t('education.programs') }}</RouterLink></li><li><RouterLink to="/lessons/new" class="edu-link">{{ t('education.createLesson') }}</RouterLink></li></ol></article>
-      <p v-if="loading" class="edu-subtle" role="status">{{ t('education.refreshing') }}</p>
+      <article
+        v-if="!data.next && !data.schedule.lessons.length"
+        class="edu-card edu-onboarding"
+      >
+        <h2>{{ t('education.getStarted') }}</h2>
+        <p class="edu-subtle">{{ t('education.onboardingHint') }}</p>
+        <ol>
+          <li>
+            <RouterLink
+              to="/groups/new"
+              class="edu-link"
+            >
+              {{ t('education.createGroup') }}
+            </RouterLink>
+          </li>
+          <li>
+            <RouterLink
+              to="/students/new"
+              class="edu-link"
+            >
+              {{ t('education.addStudent') }}
+            </RouterLink>
+          </li>
+          <li>
+            <RouterLink
+              to="/programs"
+              class="edu-link"
+            >
+              {{ t('education.programs') }}
+            </RouterLink>
+          </li>
+          <li>
+            <RouterLink
+              to="/lessons/new"
+              class="edu-link"
+            >
+              {{ t('education.createLesson') }}
+            </RouterLink>
+          </li>
+        </ol>
+      </article>
+      <p
+        v-if="loading"
+        class="edu-subtle"
+        role="status"
+      >
+        {{ t('education.refreshing') }}
+      </p>
       <div class="edu-today-columns">
         <div class="edu-today-primary">
           <article

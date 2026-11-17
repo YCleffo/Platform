@@ -479,8 +479,7 @@ onBeforeUnmount(deactivateOverlay);
       color-mix(in srgb, var(--accent) 6%, transparent) 0%,
       transparent 60%
     );
-  padding: var(--space-16) var(--page-pad-x)
-    max(var(--space-20), env(safe-area-inset-bottom));
+  padding: var(--space-16) var(--page-pad-x) max(var(--space-20), env(safe-area-inset-bottom));
   overflow-y: auto;
   outline: none;
   box-shadow: -8px 0 32px rgba(0, 0, 0, 0.24);

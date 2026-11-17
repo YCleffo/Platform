@@ -9,18 +9,24 @@ import { notificationTarget } from './homework/notifications';
 import { studentSession } from './student/session';
 import { useEducationI18n } from './i18n';
 import EducationState from './EducationState.vue';
-const props = withDefaults(defineProps<{ attention?: boolean; student?: boolean }>(), { attention: false, student: false });
+const props = withDefaults(defineProps<{ attention?: boolean; student?: boolean }>(), {
+  attention: false,
+  student: false,
+});
 const workspace = useEducationWorkspace();
 const { t, locale } = useEducationI18n();
 const offset = ref(0);
 const issue = useEducationError();
-const org = () => props.student ? studentSession.organizationId : workspace.organizationId;
-const { data, loading, error, refresh } = useHomeworkResource(org,
+const org = () => (props.student ? studentSession.organizationId : workspace.organizationId);
+const { data, loading, error, refresh } = useHomeworkResource(
+  org,
   async (org, signal) => ({
     attention: props.attention ? await educationApi.attention(org, signal) : null,
     notifications: props.attention
       ? null
-      : props.student ? await educationApi.studentNotifications(org, offset.value, signal) : await educationApi.notifications(org, offset.value, signal),
+      : props.student
+        ? await educationApi.studentNotifications(org, offset.value, signal)
+        : await educationApi.notifications(org, offset.value, signal),
   }),
   [offset],
 );
@@ -28,7 +34,10 @@ const mutation = useHomeworkMutation(org);
 const { busy, error: actionError } = mutation;
 async function read(id: string): Promise<void> {
   await mutation.run(
-    () => props.student ? educationApi.readStudentNotification(org(), id) : educationApi.readNotification(org(), id),
+    () =>
+      props.student
+        ? educationApi.readStudentNotification(org(), id)
+        : educationApi.readNotification(org(), id),
     async () => {
       await refresh();
       await workspace.refreshHeader();
@@ -98,8 +107,14 @@ async function read(id: string): Promise<void> {
           >
             {{ item.kind === 'achievement_unlocked' ? t('education.achievements') : item.subject }}
           </RouterLink>
-          <strong v-else>{{ item.kind === 'achievement_unlocked' ? t('education.achievements') : item.subject }}</strong>
-          <p v-if="item.body">{{ item.kind === 'achievement_unlocked' ? t('education.activityAwardNotice') : item.body }}</p>
+          <strong v-else>
+            {{ item.kind === 'achievement_unlocked' ? t('education.achievements') : item.subject }}
+          </strong>
+          <p v-if="item.body">
+            {{
+              item.kind === 'achievement_unlocked' ? t('education.activityAwardNotice') : item.body
+            }}
+          </p>
           <p class="edu-subtle">
             {{ formatZonedTime(item.createdAt, locale, workspace.header?.timezone ?? 'UTC') }}
           </p>

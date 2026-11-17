@@ -32,7 +32,8 @@ watch(
       typeof route.query.organization === 'string' ? route.query.organization : '';
     if (child && organization && workspace.context) {
       const key = `${organization}:${child}`;
-      if (workspace.context.children.some(item => parentChildKey(item) === key)) workspace.chooseChild(key);
+      if (workspace.context.children.some((item) => parentChildKey(item) === key))
+        workspace.chooseChild(key);
       else workspace.clearSelection();
     }
   },
@@ -198,7 +199,12 @@ onBeforeUnmount(() => {
           </nav>
           <RouterView :key="`${workspace.revision}:${workspace.selectedKey}:${route.path}`" />
         </template>
-        <EducationState v-else :empty="t(choices.length ? 'education.parentChildUnavailable' : 'education.noParentChildren')" />
+        <EducationState
+          v-else
+          :empty="
+            t(choices.length ? 'education.parentChildUnavailable' : 'education.noParentChildren')
+          "
+        />
       </template>
     </main>
   </div>

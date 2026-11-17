@@ -251,8 +251,12 @@ async function upload(event: Event): Promise<void> {
   actionMessage.value = '';
   try {
     transferProgress.value = { loaded: 0, total: file.size, phase: 'hashing' };
-    await storageApi.uploadFile(ctx.org, path, file, { signal: request.signal,
-      progress: value => { if (ctx.current()) transferProgress.value = value; } });
+    await storageApi.uploadFile(ctx.org, path, file, {
+      signal: request.signal,
+      progress: (value) => {
+        if (ctx.current()) transferProgress.value = value;
+      },
+    });
     if (ctx.current()) {
       input.value = '';
       actionMessage.value = t('education.uploaded');
@@ -269,7 +273,6 @@ async function download(path: string): Promise<void> {
   uploadError.value = '';
   try {
     await storageApi.downloadFile(ctx.org, path);
-
   } catch (failure) {
     if (ctx.current()) uploadError.value = issue(failure);
   }
@@ -371,11 +374,29 @@ function formatDate(value: string | null): string {
             @change="upload"
           />
         </label>
-        <div v-if="uploadBusy && transferProgress" class="edu-transfer-progress" role="status">
-          <label for="document-transfer-progress">{{ t(`education.transfer_${transferProgress.phase}`) }}</label>
-          <progress id="document-transfer-progress" :value="transferProgress.loaded" :max="transferProgress.total || 1"></progress>
-          <span>{{ formatBytes(transferProgress.loaded) }} / {{ formatBytes(transferProgress.total) }}</span>
-          <button class="edu-button" type="button" @click="transferController?.abort()">{{ t('education.cancelTransfer') }}</button>
+        <div
+          v-if="uploadBusy && transferProgress"
+          class="edu-transfer-progress"
+          role="status"
+        >
+          <label for="document-transfer-progress">
+            {{ t(`education.transfer_${transferProgress.phase}`) }}
+          </label>
+          <progress
+            id="document-transfer-progress"
+            :value="transferProgress.loaded"
+            :max="transferProgress.total || 1"
+          ></progress>
+          <span>
+            {{ formatBytes(transferProgress.loaded) }} / {{ formatBytes(transferProgress.total) }}
+          </span>
+          <button
+            class="edu-button"
+            type="button"
+            @click="transferController?.abort()"
+          >
+            {{ t('education.cancelTransfer') }}
+          </button>
         </div>
       </div>
       <button
@@ -653,17 +674,19 @@ function formatDate(value: string | null): string {
 }
 progress {
   width: 100%;
-  accent-color: var(--primary);
+  accent-color: var(--accent);
 }
 .edu-success-banner {
-  color: var(--text-primary);
+  color: var(--text-1);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.5rem 1rem;
 }
 .edu-button--small {
   padding: 0.25rem 0.5rem;
-  font-size: 0.8125rem;
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
 }
 .edu-modal-backdrop {
   position: fixed;

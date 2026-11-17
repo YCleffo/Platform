@@ -13,11 +13,68 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
-from typing import BinaryIO
+from typing import IO, NotRequired, Protocol, TypedDict, cast
 
 ROOT = Path(__file__).resolve().parents[2]
 CRYPT = ROOT / 'apps/backend/bin/storage-crypt.php'
 BRIDGE = '/app/bin/storage-backup-bridge.php'
+
+
+class BackupArguments(argparse.Namespace):
+    operation: str
+    backend: str
+    postgres: str
+    database: str
+    user: str
+    directory: Path
+    key_file: Path
+    retention_days: int
+
+
+class ByteSource(Protocol):
+    def read(self, size: int, /) -> bytes: ...
+
+
+class EncryptedMetadata(TypedDict):
+    size: int
+    sha256: str
+    encryptedSha256: str
+
+
+class BackupArtifact(EncryptedMetadata):
+    file: str
+
+
+class Manifest(TypedDict):
+    format: int
+    database: str
+    objects: int
+    createdAt: str
+    retainUntil: str
+    dump: BackupArtifact
+    inventory: BackupArtifact
+
+
+class Snapshot(TypedDict):
+    database: str
+    snapshot: str
+
+
+class InventoryItem(TypedDict):
+    kind: str
+    id: str
+    size: int
+    sha256: str
+    inventoryComplete: NotRequired[bool]
+
+
+class InventoryEntry(InventoryItem, BackupArtifact):
+    pass
+
+
+class BridgeResult(TypedDict, total=False):
+    database: str
+    verified: bool
 
 
 def digest_file(path: Path) -> str:
@@ -28,7 +85,7 @@ def digest_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def encrypt(source: BinaryIO, target: Path, key: Path) -> dict[str, int | str]:
+def encrypt(source: ByteSource, target: Path, key: Path) -> EncryptedMetadata:
     digest = hashlib.sha256()
     size = 0
     partial = target.with_suffix(target.suffix + '.partial')
@@ -51,11 +108,20 @@ def encrypt(source: BinaryIO, target: Path, key: Path) -> dict[str, int | str]:
     return {'size': size, 'sha256': digest.hexdigest(), 'encryptedSha256': digest_file(target)}
 
 
-def bridge(backend: str, mode: str, *arguments: str, **options):
-    return subprocess.Popen(['docker', 'exec', '-i', backend, 'php', BRIDGE, mode, *arguments], **options)
+def bridge(
+    backend: str,
+    mode: str,
+    *arguments: str,
+    stdin: int | IO[bytes] | None = None,
+    stdout: int | None = None,
+) -> subprocess.Popen[bytes]:
+    return subprocess.Popen(
+        ['docker', 'exec', '-i', backend, 'php', BRIDGE, mode, *arguments],
+        stdin=stdin, stdout=stdout,
+    )
 
 
-def encrypt_command(command: list[str], target: Path, key: Path) -> dict[str, int | str]:
+def encrypt_command(command: list[str], target: Path, key: Path) -> EncryptedMetadata:
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
     assert process.stdout
     try:
@@ -70,7 +136,7 @@ def encrypt_command(command: list[str], target: Path, key: Path) -> dict[str, in
             process.wait()
 
 
-def backup(args) -> None:
+def backup(args: BackupArguments) -> None:
     destination = args.directory.resolve()
     destination.mkdir(parents=True, exist_ok=False)
     (destination / 'objects').mkdir()
@@ -78,13 +144,13 @@ def backup(args) -> None:
     assert snapshot.stdin and snapshot.stdout
     completed = False
     try:
-        descriptor = json.loads(snapshot.stdout.readline())
+        descriptor = cast(Snapshot, json.loads(snapshot.stdout.readline()))
         if descriptor['database'] != args.database or not re.fullmatch(r'[A-Fa-f0-9-]+', descriptor['snapshot']):
             raise RuntimeError('The requested database does not match the backend snapshot')
         count = 0
         with tempfile.TemporaryFile() as inventory:
             while line := snapshot.stdout.readline():
-                item = json.loads(line)
+                item = cast(InventoryItem, json.loads(line))
                 if item.get('inventoryComplete'):
                     completed = True
                     break
@@ -108,7 +174,7 @@ def backup(args) -> None:
                 '-d', args.database, '-Fc', '--snapshot', descriptor['snapshot']], destination / 'database.dump.enc', args.key_file)
             inventory.seek(0)
             inventory_metadata = encrypt(inventory, destination / 'inventory.jsonl.enc', args.key_file)
-        manifest = {'format': 1, 'database': args.database, 'objects': count,
+        manifest: Manifest = {'format': 1, 'database': args.database, 'objects': count,
             'createdAt': dt.datetime.now(dt.timezone.utc).isoformat(),
             'retainUntil': (dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=args.retention_days)).isoformat(),
             'dump': {'file': 'database.dump.enc', **database},
@@ -135,17 +201,17 @@ def artifact(directory: Path, relative: str) -> Path:
     return candidate
 
 
-def decrypt(path: Path, key: Path):
+def decrypt(path: Path, key: Path) -> subprocess.Popen[bytes]:
     source = path.open('rb')
     process = subprocess.Popen(['php', str(CRYPT), 'decrypt', str(key)], stdin=source, stdout=subprocess.PIPE)
     source.close()
     return process
 
 
-def restore(args) -> None:
+def restore(args: BackupArguments) -> None:
     configuration = bridge(args.backend, 'config', stdout=subprocess.PIPE)
     configured, _ = configuration.communicate(timeout=15)
-    if configuration.returncode != 0 or json.loads(configured).get('database') != args.database:
+    if configuration.returncode != 0 or cast(BridgeResult, json.loads(configured)).get('database') != args.database:
         raise RuntimeError('The restore backend must point to the explicitly named new database')
     directory = args.directory.resolve()
     if not (directory / 'READY').is_file():
@@ -157,11 +223,10 @@ def restore(args) -> None:
     payload, _ = process.communicate(timeout=30)
     if process.returncode != 0 or len(payload) > 1048576:
         raise RuntimeError('Cannot authenticate backup manifest')
-    manifest = json.loads(payload)
+    manifest = cast(Manifest, json.loads(payload))
     if manifest.get('format') != 1:
         raise RuntimeError('Unsupported backup format')
-    for section in ['dump', 'inventory']:
-        entry = manifest[section]
+    for entry in (manifest['dump'], manifest['inventory']):
         if digest_file(artifact(directory, entry['file'])) != entry['encryptedSha256']:
             raise RuntimeError('Backup ciphertext integrity mismatch')
     if not re.fullmatch(r'[a-zA-Z_][a-zA-Z0-9_]{0,62}', args.database):
@@ -180,7 +245,7 @@ def restore(args) -> None:
     count = 0
     try:
         for line in inventory.stdout:
-            item = json.loads(line)
+            item = cast(InventoryEntry, json.loads(line))
             path = artifact(directory, item['file'])
             if digest_file(path) != item['encryptedSha256']:
                 raise RuntimeError('Object backup ciphertext integrity mismatch')
@@ -190,7 +255,7 @@ def restore(args) -> None:
                 stdin=plaintext.stdout, stdout=subprocess.PIPE)
             plaintext.stdout.close()
             result, _ = writer.communicate()
-            receipt = json.loads(result) if writer.returncode == 0 else {}
+            receipt: BridgeResult = cast(BridgeResult, json.loads(result)) if writer.returncode == 0 else {}
             if writer.returncode != 0 or plaintext.wait() != 0 or receipt.get('verified') is not True or receipt.get('database') != args.database:
                 raise RuntimeError('Restored object failed its full SHA-256 verification')
             count += 1
@@ -213,7 +278,7 @@ def main() -> None:
     parser.add_argument('--directory', type=Path, required=True)
     parser.add_argument('--key-file', type=Path, required=True)
     parser.add_argument('--retention-days', type=int, default=30)
-    args = parser.parse_args()
+    args = parser.parse_args(namespace=BackupArguments())
     if not args.key_file.is_file() or args.key_file.stat().st_size != 32:
         parser.error('Supply a separate private 32-byte encryption key file')
     if not 1 <= args.retention_days <= 3650:

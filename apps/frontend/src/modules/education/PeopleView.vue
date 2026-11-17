@@ -18,8 +18,18 @@ const { data, loading, error, refresh } = useEducationResource(
   }),
   [groups, offset],
 );
-const filteredGroups = computed(() => data.value?.groups?.items.filter(item => item.name.toLocaleLowerCase().includes(search.value.toLocaleLowerCase().trim())) ?? []);
-const filteredStudents = computed(() => data.value?.students?.items.filter(item => (item.name ?? '').toLocaleLowerCase().includes(search.value.toLocaleLowerCase().trim())) ?? []);
+const filteredGroups = computed(
+  () =>
+    data.value?.groups?.items.filter((item) =>
+      item.name.toLocaleLowerCase().includes(search.value.toLocaleLowerCase().trim()),
+    ) ?? [],
+);
+const filteredStudents = computed(
+  () =>
+    data.value?.students?.items.filter((item) =>
+      (item.name ?? '').toLocaleLowerCase().includes(search.value.toLocaleLowerCase().trim()),
+    ) ?? [],
+);
 </script>
 <template>
   <section>
@@ -59,7 +69,11 @@ const filteredStudents = computed(() => data.value?.students?.items.filter(item 
         {{ t('education.groups') }}
       </RouterLink>
     </nav>
-    <AppInput id="education-people-search" v-model="search" :label="t('education.search')" />
+    <AppInput
+      id="education-people-search"
+      v-model="search"
+      :label="t('education.search')"
+    />
     <EducationState
       :loading="loading && !data"
       :error="error"

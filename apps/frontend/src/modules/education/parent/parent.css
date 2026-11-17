@@ -65,6 +65,8 @@
 .edu-parent-stats strong {
   display: block;
   font-size: var(--type-h2-size);
+  line-height: var(--type-h2-line);
+  font-weight: var(--type-h2-weight);
 }
 .edu-parent-section .edu-list__item {
   align-items: flex-start;
@@ -117,5 +119,7 @@
   }
   .edu-parent-nav a {
     font-size: var(--type-body-caption-size);
+    line-height: var(--type-body-caption-line);
+    font-weight: var(--type-body-caption-weight);
   }
 }

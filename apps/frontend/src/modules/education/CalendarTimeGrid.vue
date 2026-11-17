@@ -203,6 +203,7 @@ function time(instant: string): string {
   overscroll-behavior-inline: contain;
 }
 .edu-time-grid {
+  --edu-day-count: 1;
   display: grid;
   grid-template-columns: 56px repeat(var(--edu-day-count), minmax(145px, 1fr));
   min-width: calc(56px + var(--edu-day-count) * 145px);
@@ -223,6 +224,8 @@ function time(instant: string): string {
   background: var(--surface-2);
   border-bottom: 1px solid var(--border);
   font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
+  font-weight: var(--type-body-small-emphasis-weight);
   margin: 0;
 }
 .edu-time-heading[aria-current='date'] {
@@ -248,6 +251,8 @@ function time(instant: string): string {
   padding: 4px 0;
   color: var(--text-2);
   font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
 }
 .edu-time-line {
   position: absolute;
@@ -269,10 +274,14 @@ function time(instant: string): string {
   color: var(--text-1);
   text-decoration: none;
   font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
   overflow-wrap: anywhere;
 }
 .edu-time-event strong {
   font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
+  font-weight: var(--type-body-small-emphasis-weight);
 }
 .edu-time-event :is(time, small) {
   color: var(--text-2);

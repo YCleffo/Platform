@@ -11,9 +11,7 @@ import { useEducationI18n } from '../i18n';
 const props = defineProps<{ device: DeviceDetail; busy: boolean; enrollment?: DeviceEnrollment }>();
 const emit = defineEmits<{ action: [action: DeviceAction] }>();
 const { t, locale } = useEducationI18n();
-const session = computed(() =>
-  props.device.sessions.find((item) => item.status !== 'CLOSED'),
-);
+const session = computed(() => props.device.sessions.find((item) => item.status !== 'CLOSED'));
 const lastConfirmed = computed(() =>
   props.device.commands.find((command) => command.acknowledgedAt),
 );
@@ -161,7 +159,7 @@ dl {
   margin: 0;
 }
 dt {
-  color: var(--text-secondary);
+  color: var(--text-2);
 }
 dd {
   margin: 0;
@@ -169,7 +167,7 @@ dd {
 }
 progress {
   width: 100%;
-  accent-color: var(--primary);
+  accent-color: var(--accent);
 }
 @media (max-width: 420px) {
   dl {

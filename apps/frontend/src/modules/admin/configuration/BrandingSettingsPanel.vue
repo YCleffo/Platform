@@ -22,10 +22,24 @@ const saved = ref(false);
 let controller: AbortController | null = null;
 let active = true;
 
-watch(() => platformBranding.name, value => { name.value = value; });
-watch(coreAdminSessionEpoch, () => { controller?.abort(); error.value = ''; saved.value = false; });
-onScopeDispose(() => { active = false; controller?.abort(); });
-void loadPlatformBranding().catch(caught => { if (active) error.value = resolveErrorMessage(caught); });
+watch(
+  () => platformBranding.name,
+  (value) => {
+    name.value = value;
+  },
+);
+watch(coreAdminSessionEpoch, () => {
+  controller?.abort();
+  error.value = '';
+  saved.value = false;
+});
+onScopeDispose(() => {
+  active = false;
+  controller?.abort();
+});
+void loadPlatformBranding().catch((caught) => {
+  if (active) error.value = resolveErrorMessage(caught);
+});
 
 async function run(action: () => Promise<unknown>): Promise<void> {
   if (!canManage.value || busy.value) return;
@@ -37,7 +51,8 @@ async function run(action: () => Promise<unknown>): Promise<void> {
     if (active) saved.value = true;
   } catch (caught) {
     if (active && !(caught instanceof DOMException && caught.name === 'AbortError')) {
-      error.value = caught instanceof TypeError ? t('branding.invalidIcon') : resolveErrorMessage(caught);
+      error.value =
+        caught instanceof TypeError ? t('branding.invalidIcon') : resolveErrorMessage(caught);
     }
   } finally {
     if (active) busy.value = false;
@@ -49,7 +64,10 @@ function choose(event: Event): void {
   file.value = null;
   error.value = '';
   saved.value = false;
-  if (candidate && (candidate.size < 1 || candidate.size > 524288 || !/\.(png|ico)$/i.test(candidate.name))) {
+  if (
+    candidate &&
+    (candidate.size < 1 || candidate.size > 524288 || !/\.(png|ico)$/i.test(candidate.name))
+  ) {
     error.value = t('branding.invalidIcon');
     return;
   }
@@ -64,7 +82,11 @@ async function upload(): Promise<void> {
   progress.value = 0;
   uploading.value = true;
   try {
-    await run(() => brandingApi.uploadIcon(selected, signal, value => { if (active) progress.value = value; }));
+    await run(() =>
+      brandingApi.uploadIcon(selected, signal, (value) => {
+        if (active) progress.value = value;
+      }),
+    );
   } finally {
     uploading.value = false;
   }
@@ -74,35 +96,109 @@ async function upload(): Promise<void> {
 <template>
   <section class="config-page branding-settings">
     <h2>{{ t('branding.title') }}</h2>
-    <form class="config-card" @submit.prevent="run(() => brandingApi.rename(name.trim()))">
-      <AppInput id="platform-display-name" v-model="name" :label="t('branding.name')" required maxlength="100" :disabled="busy || !canManage" />
-      <AppButton type="submit" :loading="busy" :disabled="!canManage || !name.trim() || name.trim() === platformBranding.name">
+    <form
+      class="config-card"
+      @submit.prevent="run(() => brandingApi.rename(name.trim()))"
+    >
+      <AppInput
+        id="platform-display-name"
+        v-model="name"
+        :label="t('branding.name')"
+        required
+        maxlength="100"
+        :disabled="busy || !canManage"
+      />
+      <AppButton
+        type="submit"
+        :loading="busy"
+        :disabled="!canManage || !name.trim() || name.trim() === platformBranding.name"
+      >
         {{ t('common.save') }}
       </AppButton>
     </form>
     <article class="config-card branding-settings__icon">
       <h3>{{ t('branding.favicon') }}</h3>
-      <img v-if="platformBranding.favicon" :src="platformBranding.favicon.url" alt="" width="48" height="48" />
+      <img
+        v-if="platformBranding.favicon"
+        :src="platformBranding.favicon.url"
+        alt=""
+        width="48"
+        height="48"
+      />
       <p>{{ t('branding.iconHint') }}</p>
       <label for="platform-favicon-file">{{ t('branding.chooseIcon') }}</label>
-      <input id="platform-favicon-file" type="file" accept=".png,.ico,image/png,image/x-icon,image/vnd.microsoft.icon" :disabled="busy || !canManage" @change="choose" />
-      <progress v-if="busy && uploading" :value="progress" max="100" :aria-label="t('branding.uploadProgress')" />
+      <input
+        id="platform-favicon-file"
+        type="file"
+        accept=".png,.ico,image/png,image/x-icon,image/vnd.microsoft.icon"
+        :disabled="busy || !canManage"
+        @change="choose"
+      />
+      <progress
+        v-if="busy && uploading"
+        :value="progress"
+        max="100"
+        :aria-label="t('branding.uploadProgress')"
+      />
       <div class="config-actions">
-        <AppButton :disabled="!file || busy || !canManage" @click="upload">{{ t('branding.upload') }}</AppButton>
-        <AppButton v-if="busy && uploading" variant="secondary" @click="controller?.abort()">{{ t('common.cancel') }}</AppButton>
-        <AppButton v-if="platformBranding.favicon" variant="secondary" :disabled="busy || !canManage" @click="run(() => brandingApi.removeIcon())">{{ t('branding.removeIcon') }}</AppButton>
+        <AppButton
+          :disabled="!file || busy || !canManage"
+          @click="upload"
+        >
+          {{ t('branding.upload') }}
+        </AppButton>
+        <AppButton
+          v-if="busy && uploading"
+          variant="secondary"
+          @click="controller?.abort()"
+        >
+          {{ t('common.cancel') }}
+        </AppButton>
+        <AppButton
+          v-if="platformBranding.favicon"
+          variant="secondary"
+          :disabled="busy || !canManage"
+          @click="run(() => brandingApi.removeIcon())"
+        >
+          {{ t('branding.removeIcon') }}
+        </AppButton>
       </div>
     </article>
-    <p v-if="error" role="alert">{{ error }}</p>
-    <p v-if="saved" role="status">{{ t('branding.saved') }}</p>
+    <p
+      v-if="error"
+      role="alert"
+    >
+      {{ error }}
+    </p>
+    <p
+      v-if="saved"
+      role="status"
+    >
+      {{ t('branding.saved') }}
+    </p>
   </section>
 </template>
 
 <style scoped>
-.branding-settings { max-width: 48rem; }
-.branding-settings .config-card { display: grid; gap: 1rem; }
-.branding-settings__icon img { object-fit: contain; }
-.branding-settings input[type='file'] { max-width: 100%; }
-.branding-settings progress { width: 100%; }
-.branding-settings .config-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.branding-settings {
+  max-width: 48rem;
+}
+.branding-settings .config-card {
+  display: grid;
+  gap: 1rem;
+}
+.branding-settings__icon img {
+  object-fit: contain;
+}
+.branding-settings input[type='file'] {
+  max-width: 100%;
+}
+.branding-settings progress {
+  width: 100%;
+}
+.branding-settings .config-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
 </style>

@@ -87,14 +87,43 @@ function time(value: string): string {
   return formatZonedTime(value, locale.value, workspace.header!.timezone);
 }
 async function attendance(id: string, value: unknown): Promise<void> {
-  const lesson = data.value?.lesson; const participant = data.value?.participants?.items.find(item => item.id === id);
-  if (!lesson || !participant || busy.value || uncertain.value || !['pending', 'present', 'absent'].includes(String(value))) return;
-  const previous = participant.status; const snapshot = data.value!;
-  data.value = { ...snapshot, participants: { items: snapshot.participants!.items.map(item => item.id === id ? { ...item, status: String(value) as typeof previous } : item) } };
-  await mutation.run(() => educationApi.attendance(workspace.organizationId, lesson.id, id, String(value)), async () => {
-    await refresh(); await nextTick(); document.getElementById(`education-attendance-${id}`)?.focus();
-  });
-  if (actionError.value && data.value?.lesson?.id === lesson.id && data.value.participants) data.value = { ...data.value, participants: { items: data.value.participants.items.map(item => item.id === id ? { ...item, status: previous } : item) } };
+  const lesson = data.value?.lesson;
+  const participant = data.value?.participants?.items.find((item) => item.id === id);
+  if (
+    !lesson ||
+    !participant ||
+    busy.value ||
+    uncertain.value ||
+    !['pending', 'present', 'absent'].includes(String(value))
+  )
+    return;
+  const previous = participant.status;
+  const snapshot = data.value!;
+  data.value = {
+    ...snapshot,
+    participants: {
+      items: snapshot.participants!.items.map((item) =>
+        item.id === id ? { ...item, status: String(value) as typeof previous } : item,
+      ),
+    },
+  };
+  await mutation.run(
+    () => educationApi.attendance(workspace.organizationId, lesson.id, id, String(value)),
+    async () => {
+      await refresh();
+      await nextTick();
+      document.getElementById(`education-attendance-${id}`)?.focus();
+    },
+  );
+  if (actionError.value && data.value?.lesson?.id === lesson.id && data.value.participants)
+    data.value = {
+      ...data.value,
+      participants: {
+        items: data.value.participants.items.map((item) =>
+          item.id === id ? { ...item, status: previous } : item,
+        ),
+      },
+    };
 }
 async function reconcile(): Promise<void> {
   await refresh();

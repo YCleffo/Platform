@@ -64,7 +64,10 @@ function statusLabel(status: string): string {
 </script>
 <template>
   <section>
-    <HomeworkSummary :group-id="id" :student-id="studentId || undefined" />
+    <HomeworkSummary
+      :group-id="id"
+      :student-id="studentId || undefined"
+    />
     <header class="edu-page-title">
       <h1>{{ data?.group.name ?? t('education.journal') }} · {{ t('education.journal') }}</h1>
       <RouterLink

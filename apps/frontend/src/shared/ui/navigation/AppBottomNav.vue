@@ -381,7 +381,9 @@ const pillStyle = computed(() => {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-badge-pill);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), var(--shadow-popover);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    var(--shadow-popover);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   padding: var(--space-4) var(--space-6);

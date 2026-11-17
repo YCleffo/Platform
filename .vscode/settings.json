@@ -4,6 +4,7 @@
     "editor.formatOnSave": true
   },
   "prettier.prettierPath": "./apps/frontend/node_modules/prettier",
+  "vitest.configSearchPatternInclude": "apps/frontend/vitest.config.ts",
   "yaml.customTags": [
     "!override sequence:array",
     "!reset sequence:array"

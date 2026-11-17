@@ -111,15 +111,27 @@ const when = (value: string) =>
     timeZone: timezone.value,
   }).format(new Date(value));
 const parentNotificationKinds = new Set([
-  'parent_homework_published', 'parent_homework_reviewed', 'parent_homework_returned',
-  'parent_homework_deadline_changed', 'parent_schedule_changed', 'parent_family_added',
-  'parent_family_updated', 'parent_family_relationship_changed', 'parent_family_confirmed',
-  'parent_activity_finished', 'parent_achievement_unlocked',
-  'parent_family_revoked', 'parent_family_invited', 'parent_family_invitation_revoked',
+  'parent_homework_published',
+  'parent_homework_reviewed',
+  'parent_homework_returned',
+  'parent_homework_deadline_changed',
+  'parent_schedule_changed',
+  'parent_family_added',
+  'parent_family_updated',
+  'parent_family_relationship_changed',
+  'parent_family_confirmed',
+  'parent_activity_finished',
+  'parent_achievement_unlocked',
+  'parent_family_revoked',
+  'parent_family_invited',
+  'parent_family_invitation_revoked',
 ]);
 const notificationLabel = (notification: Notification) =>
-  t(parentNotificationKinds.has(notification.kind ?? '')
-    ? `education.parentNotice_${notification.kind}` : 'education.notifications');
+  t(
+    parentNotificationKinds.has(notification.kind ?? '')
+      ? `education.parentNotice_${notification.kind}`
+      : 'education.notifications',
+  );
 </script>
 <template>
   <section class="edu-parent-section">
@@ -323,7 +335,10 @@ const notificationLabel = (notification: Notification) =>
             </p>
           </article>
         </div>
-        <ActivityProgressPanel :progress="data.progress.activityProgress" show-achievements />
+        <ActivityProgressPanel
+          :progress="data.progress.activityProgress"
+          show-achievements
+        />
       </template>
       <template v-if="data.notifications">
         <EducationState
