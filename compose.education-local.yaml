@@ -1,5 +1,11 @@
 name: platform-education-local
 
+x-education-s3: &education-s3
+  S3_ENDPOINT_INTERNAL: http://seaweedfs-test:8333
+  S3_REGION: us-east-1
+  S3_BUCKET_STORAGE: education-local-test-storage
+  S3_BUCKET_EDUCATION: education-local-test-education
+
 # Explicit local fixture environment. Never combines with compose.yaml.
 services:
   postgres-test:
@@ -28,11 +34,47 @@ services:
       retries: 30
     networks: [education_local]
 
+  seaweedfs-test:
+    image: chrislusf/seaweedfs:4.53@sha256:ccad23e18639c8b98cee17e7100b95830a06077b56d8e5b006d6dcf8ec5e94a0
+    command: ["server", "-dir=/data", "-ip=seaweedfs-test", "-ip.bind=0.0.0.0", "-master.volumeSizeLimitMB=128", "-volume.max=0", "-filer", "-filer.exposeDirectoryData=false", "-filer.disableDirListing", "-s3", "-s3.port=8333", "-s3.port.iceberg=0", "-s3.port.lance=0", "-s3.config=/etc/seaweedfs/s3.json"]
+    volumes:
+      - education_local_s3:/data
+      - type: bind
+        source: ./runtime/education-local/s3/seaweedfs.json
+        target: /etc/seaweedfs/s3.json
+        read_only: true
+        bind:
+          create_host_path: false
+    ports: ['127.0.0.1:${EDUCATION_LOCAL_S3_PORT:-18338}:8333']
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:9333/cluster/status']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks: [education_local, education_browser]
+
+  s3-init-test:
+    image: platform-backend:latest
+    pull_policy: never
+    restart: 'no'
+    entrypoint: [php, /app/bin/s3-init.php]
+    volumes:
+      - ./apps/backend:/app:ro
+    environment:
+      <<: *education-s3
+      S3_INIT_ACCESS_KEY_ID: ${S3_INIT_ACCESS_KEY_ID:?Run scripts/dev/education-local.py start}
+      S3_INIT_SECRET_ACCESS_KEY: ${S3_INIT_SECRET_ACCESS_KEY:?Run scripts/dev/education-local.py start}
+      S3_CORS_ORIGINS: http://127.0.0.1:${EDUCATION_LOCAL_VITE_PORT:-5178},http://localhost:${EDUCATION_LOCAL_VITE_PORT:-5178}
+    depends_on:
+      seaweedfs-test: {condition: service_healthy}
+    networks: [education_local]
+
   backend:
     image: platform-backend:latest
     pull_policy: never
     working_dir: /app
     environment:
+      <<: *education-s3
       APP_ENV: test
       APP_DEBUG: 'false'
       TEST_ISOLATED_RUNTIME: '1'
@@ -52,11 +94,16 @@ services:
       DEVICE_FINGERPRINT_KEY: ${EDUCATION_LOCAL_HMAC_KEY:?}
       AUTH_IDENTIFIER_HMAC_KEY: ${EDUCATION_LOCAL_HMAC_KEY:?}
       AUTH_TOTP_ENCRYPTION_KEY: ${EDUCATION_LOCAL_TOTP_KEY:?}
-      AUTH_PUBLIC_BASE_URL: http://localhost:5178
+      AUTH_PUBLIC_BASE_URL: http://127.0.0.1:${EDUCATION_LOCAL_VITE_PORT:-5178}
       APP_DEFAULT_LOCALE: ru-RU
       APP_DEFAULT_TIMEZONE: Asia/Yekaterinburg
-      EDUCATION_FILE_DIRECTORY: /education-data/materials
-      STORAGE_FILE_DIRECTORY: /education-data/documents
+      S3_PUBLIC_ENDPOINT: http://127.0.0.1:${EDUCATION_LOCAL_S3_PORT:-18338}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?Run scripts/dev/education-local.py start}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?Run scripts/dev/education-local.py start}
+      S3_PATH_STYLE: 'true'
+      S3_PRESIGN_TTL_SECONDS: '120'
+      S3_REQUEST_TIMEOUT_SECONDS: '8'
+      S3_MAX_ATTEMPTS: '1'
       SMTP_HOST: 127.0.0.1
       SMTP_PORT: '1025'
       SMTP_ENCRYPTION: none
@@ -64,19 +111,27 @@ services:
       MAIL_FROM_NAME: Education Local
       CORE_SCHEDULER_ENABLED: 'false'
       CORE_EMAIL_WORKER_ENABLED: 'false'
-    ports: ['127.0.0.1:8088:80']
+    ports: ['127.0.0.1:${EDUCATION_LOCAL_API_PORT:-8088}:80']
     volumes:
-      - ./apps/backend:/app
+      - ./apps/backend:/app:ro
       - ./runtime/education-local/backend:/app/runtime
       - ./runtime/education-local/data:/education-data
       - ./scripts/dev/education:/education-tools:ro
+      - ./contracts:/contracts:ro
     depends_on:
       postgres-test: {condition: service_healthy}
       redis-test: {condition: service_healthy}
+      s3-init-test: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, '2', 'http://127.0.0.1/health/live']
+      interval: 2s
+      timeout: 3s
+      retries: 30
     networks: [education_local, education_browser]
 
 volumes:
   education_local_postgres:
+  education_local_s3:
 
 networks:
   education_local:

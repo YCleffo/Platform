@@ -24,6 +24,19 @@ final class S3ClientFactory
         return $this->publicClient ??= $this->create($this->config->publicEndpoint);
     }
 
+    public function assertBucket(string $bucket): void
+    {
+        try {
+            $this->internal()->headBucket([
+                'Bucket' => $bucket,
+                '@http' => ['connect_timeout' => 1, 'timeout' => 2],
+                '@retries' => 0,
+            ]);
+        } catch (\Throwable $error) {
+            throw S3Failure::storage($error, bucketProbe: true);
+        }
+    }
+
     private function create(string $endpoint): S3Client
     {
         return new S3Client([
@@ -32,12 +45,12 @@ final class S3ClientFactory
             'endpoint' => $endpoint,
             'use_path_style_endpoint' => $this->config->pathStyle,
             'signature_version' => 'v4',
-            'credentials' => [
-                'key' => $this->config->accessKeyId,
-                'secret' => $this->config->secretAccessKey,
+            'credentials' => $this->config->credentials(),
+            'http' => [
+                'connect_timeout' => min(5, $this->config->requestTimeoutSeconds),
+                'timeout' => $this->config->requestTimeoutSeconds,
             ],
-            'http' => ['connect_timeout' => 5, 'timeout' => 120],
-            'retries' => ['mode' => 'standard', 'max_attempts' => 3],
+            'retries' => ['mode' => 'standard', 'max_attempts' => $this->config->maxAttempts],
         ]);
     }
 }

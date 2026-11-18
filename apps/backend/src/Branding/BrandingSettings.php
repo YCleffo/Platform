@@ -30,17 +30,24 @@ final readonly class BrandingSettings
         ];
     }
 
+    /** @return array{id:string,mime:'image/png'|'image/vnd.microsoft.icon',sha256:string,sizeBytes:int}|null */
     public function favicon(): ?array
     {
         $icon = $this->settings->getSystemSetting(self::FAVICON);
-        if (!is_array($icon) || !self::uuid($icon['id'] ?? null)
-            || !in_array($icon['mime'] ?? null, ['image/png', 'image/vnd.microsoft.icon'], true)
-            || !is_string($icon['sha256'] ?? null)
-            || preg_match('/^[a-f0-9]{64}$/D', $icon['sha256']) !== 1
-            || !is_int($icon['sizeBytes'] ?? null) || $icon['sizeBytes'] < 1 || $icon['sizeBytes'] > BrandingFiles::MAX_BYTES) {
+        if (!is_array($icon)) {
             return null;
         }
-        return array_intersect_key($icon, array_flip(['id', 'mime', 'sha256', 'sizeBytes']));
+        $id = $icon['id'] ?? null;
+        $mime = $icon['mime'] ?? null;
+        $sha256 = $icon['sha256'] ?? null;
+        $size = $icon['sizeBytes'] ?? null;
+        if (!is_string($id) || !self::uuid($id)
+            || ($mime !== 'image/png' && $mime !== 'image/vnd.microsoft.icon')
+            || !is_string($sha256) || preg_match('/^[a-f0-9]{64}$/D', $sha256) !== 1
+            || !is_int($size) || $size < 1 || $size > BrandingFiles::MAX_BYTES) {
+            return null;
+        }
+        return ['id' => $id, 'mime' => $mime, 'sha256' => $sha256, 'sizeBytes' => $size];
     }
 
     public function rename(array $input, string $actor, ClientContext $context): array

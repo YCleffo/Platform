@@ -222,7 +222,9 @@ function toApiError(status: number, payload: unknown, retryAfterHeader: string |
   const envelope = isErrorEnvelope(payload) ? payload : null;
   const code = envelope?.error.code ?? 'http_error';
   const message = envelope?.error.message ?? 'The request failed.';
-  return new ApiError(status, code, message, parseRetryAfter(retryAfterHeader));
+  const meta = envelope?.error.meta;
+  return new ApiError(status, code, message, parseRetryAfter(retryAfterHeader),
+    typeof meta === 'object' && meta !== null && !Array.isArray(meta) ? meta as Record<string, unknown> : undefined);
 }
 
 function isErrorEnvelope(payload: unknown): payload is ApiErrorEnvelope {

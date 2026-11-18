@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Storage\Infrastructure;
 
 use App\Storage\Application\StorageError;
-use Aws\Exception\AwsException;
 use Aws\S3\ObjectCopier;
 use Aws\S3\ObjectUploader;
 use DateTimeImmutable;
+use DateTimeInterface;
+use Psr\Http\Message\StreamInterface;
+use Throwable;
 
 /** Bounded SDK operations shared by transfer verification and the Storage adapter. */
 final readonly class S3Objects
@@ -26,8 +28,8 @@ final readonly class S3Objects
                 'params' => ['ContentType' => $contentType],
             ]);
             $uploader->upload();
-        } catch (\Throwable) {
-            throw new StorageError(503, 's3_unavailable');
+        } catch (Throwable $error) {
+            throw S3Failure::storage($error);
         }
     }
 
@@ -38,14 +40,17 @@ final readonly class S3Objects
             $result = $this->clients->internal()->getObject([
                 'Bucket' => $bucket, 'Key' => $key, '@http' => ['stream' => true],
             ]);
-            $stream = $result['Body']->detach();
+            $body = $result['Body'] ?? null;
+            if (!$body instanceof StreamInterface) {
+                throw new StorageError(503, 's3_unavailable');
+            }
+            $stream = $body->detach();
             if (!is_resource($stream)) {
                 throw new StorageError(503, 's3_unavailable');
             }
             return $stream;
-        } catch (AwsException $error) {
-            throw new StorageError($error->getStatusCode() === 404 ? 404 : 503,
-                $error->getStatusCode() === 404 ? 'object_missing' : 's3_unavailable');
+        } catch (Throwable $error) {
+            throw S3Failure::storage($error);
         }
     }
 
@@ -54,12 +59,18 @@ final readonly class S3Objects
     {
         try {
             $result = $this->clients->internal()->headObject(['Bucket' => $bucket, 'Key' => $key]);
-            return ['sizeBytes' => (int) $result['ContentLength'], 'etag' => (string) ($result['ETag'] ?? '')];
-        } catch (AwsException $error) {
-            if ($error->getStatusCode() === 404) {
+            $length = $result['ContentLength'] ?? null;
+            $etag = $result['ETag'] ?? '';
+            if ((!is_int($length) && (!is_string($length) || !ctype_digit($length))) || !is_string($etag)) {
+                throw new StorageError(503, 's3_unavailable');
+            }
+            return ['sizeBytes' => (int) $length, 'etag' => $etag];
+        } catch (Throwable $error) {
+            $failure = S3Failure::storage($error);
+            if ($failure->reason === 'object_missing') {
                 return null;
             }
-            throw new StorageError(503, 's3_unavailable');
+            throw $failure;
         }
     }
 
@@ -97,8 +108,8 @@ final readonly class S3Objects
                     'concurrency' => $this->config->transferConcurrency,
                 ]);
             $copier->copy();
-        } catch (\Throwable) {
-            throw new StorageError(503, 's3_unavailable');
+        } catch (Throwable $error) {
+            throw S3Failure::storage($error);
         }
     }
 
@@ -111,19 +122,29 @@ final readonly class S3Objects
                     'Bucket' => $bucket, 'Prefix' => $key, 'MaxKeys' => 1000,
                 ]);
                 foreach ($pages as $page) {
-                    foreach ([...($page['Versions'] ?? []), ...($page['DeleteMarkers'] ?? [])] as $version) {
-                        if ($version['Key'] === $key) {
-                            $this->clients->internal()->deleteObject([
-                                'Bucket' => $bucket, 'Key' => $key, 'VersionId' => $version['VersionId'],
-                            ]);
+                    foreach (['Versions', 'DeleteMarkers'] as $field) {
+                        $versions = $page[$field] ?? [];
+                        if (!is_array($versions)) {
+                            throw new StorageError(503, 's3_unavailable');
+                        }
+                        foreach ($versions as $version) {
+                            if (!is_array($version) || !is_string($version['Key'] ?? null)
+                                || !is_string($version['VersionId'] ?? null)) {
+                                throw new StorageError(503, 's3_unavailable');
+                            }
+                            if ($version['Key'] === $key) {
+                                $this->clients->internal()->deleteObject([
+                                    'Bucket' => $bucket, 'Key' => $key, 'VersionId' => $version['VersionId'],
+                                ]);
+                            }
                         }
                     }
                 }
                 return;
             }
             $this->clients->internal()->deleteObject(['Bucket' => $bucket, 'Key' => $key]);
-        } catch (\Throwable) {
-            throw new StorageError(503, 's3_unavailable');
+        } catch (Throwable $error) {
+            throw S3Failure::storage($error);
         }
     }
 
@@ -135,15 +156,31 @@ final readonly class S3Objects
                 'Bucket' => $bucket, 'Prefix' => $prefix, 'MaxKeys' => 1000,
             ]);
             foreach ($pages as $page) {
-                foreach ($page['Contents'] ?? [] as $object) {
-                    $modified = new DateTimeImmutable((string) $object['LastModified']);
+                $objects = $page['Contents'] ?? [];
+                if (!is_array($objects)) {
+                    throw new StorageError(503, 's3_unavailable');
+                }
+                foreach ($objects as $object) {
+                    if (!is_array($object)) {
+                        throw new StorageError(503, 's3_unavailable');
+                    }
+                    $key = $object['Key'] ?? null;
+                    if (!is_string($key)) {
+                        throw new StorageError(503, 's3_unavailable');
+                    }
+                    $time = $object['LastModified'] ?? null;
+                    $modified = match (true) {
+                        $time instanceof DateTimeInterface => DateTimeImmutable::createFromInterface($time),
+                        is_string($time) => new DateTimeImmutable($time),
+                        default => throw new StorageError(503, 's3_unavailable'),
+                    };
                     if ($modified < $cutoff) {
-                        yield ['key' => (string) $object['Key'], 'lastModified' => $modified];
+                        yield ['key' => $key, 'lastModified' => $modified];
                     }
                 }
             }
-        } catch (\Throwable) {
-            throw new StorageError(503, 's3_unavailable');
+        } catch (Throwable $error) {
+            throw S3Failure::storage($error);
         }
     }
 

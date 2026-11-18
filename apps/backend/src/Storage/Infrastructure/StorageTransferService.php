@@ -220,6 +220,7 @@ final readonly class StorageTransferService
     private function publish(StorageScope $scope, array $row, ?string $deviceId): array
     {
         $bucket = $this->config->bucketStorage;
+        $this->clients->assertBucket($bucket);
         $this->db->createCommand("UPDATE storage.transfers SET status='verifying',updated_at=now()
             WHERE id=CAST(:id AS uuid)", [':id' => $row['id']])->execute();
         if ($row['mode'] === 'multipart' && $this->objects->head($bucket, $row['stagingKey']) === null) {

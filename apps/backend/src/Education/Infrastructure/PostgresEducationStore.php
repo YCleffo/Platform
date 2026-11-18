@@ -462,6 +462,17 @@ final readonly class PostgresEducationStore implements EducationStore
 
     public function file(Scope $scope, string $id): ?array
     {
+        if ($scope->studentId !== null) {
+            return $this->one(
+                'SELECT f.id::text,f.lesson_id::text AS "lessonId",f.name,f.mime,f.purpose,f.size_bytes AS "sizeBytes",
+                f.sha256,f.storage_key::text AS "storageKey"
+                FROM education.files f JOIN education.lessons l ON l.id=f.lesson_id AND l.organization_id=f.organization_id
+                JOIN education.group_students gs ON gs.group_id=l.group_id AND gs.organization_id=l.organization_id
+                WHERE f.organization_id=CAST(:org AS uuid) AND f.purpose=\'material\' AND f.id=CAST(:id AS uuid)
+                AND gs.student_id=CAST(:student AS uuid)',
+                [':org' => $scope->organizationId, ':id' => $id, ':student' => $scope->studentId],
+            );
+        }
         return $this->one('SELECT f.id::text,f.lesson_id::text AS "lessonId",f.name,f.mime,f.purpose,f.size_bytes AS "sizeBytes",f.sha256,f.storage_key::text AS "storageKey"
             FROM education.files f WHERE ((f.owner_account_id=CAST(:actor AS uuid) AND (f.organization_id=CAST(:org AS uuid) OR f.purpose=\'avatar\')) OR (f.organization_id=CAST(:org AS uuid) AND f.purpose=\'material\' AND EXISTS(SELECT 1 FROM education.lessons scope_l WHERE scope_l.id=f.lesson_id AND education.can_teach_group(scope_l.organization_id,CAST(:actor AS uuid),scope_l.group_id)))) AND f.id=CAST(:id AS uuid)', [...self::owner($scope), ':id' => $id]);
     }
@@ -1035,9 +1046,13 @@ final readonly class PostgresEducationStore implements EducationStore
     {
         return $this->all(
             'SELECT l.id::text,l.group_id::text AS "groupId",g.name AS "groupName",l.title,l.starts_at::text AS "startsAt",
-            l.ends_at::text AS "endsAt",l.location,l.status
+            l.ends_at::text AS "endsAt",l.location,l.status,
+            COALESCE(a.status,\'pending\') AS "attendance",
+            COALESCE(r.status,\'pending\') AS "resultStatus",r.comment AS "resultComment"
             FROM education.lessons l JOIN education.groups g ON g.id=l.group_id
             JOIN education.group_students gs ON gs.group_id=l.group_id
+            LEFT JOIN education.attendance a ON a.lesson_id=l.id AND a.student_id=gs.student_id
+            LEFT JOIN education.lesson_results r ON r.lesson_id=l.id AND r.student_id=gs.student_id
             WHERE gs.student_id=CAST(:student AS uuid) AND gs.organization_id=CAST(:org AS uuid)
             AND l.organization_id=CAST(:org AS uuid)
             AND l.starts_at>=CAST(:from AS timestamptz) AND l.starts_at<CAST(:to AS timestamptz)
@@ -1051,7 +1066,7 @@ final readonly class PostgresEducationStore implements EducationStore
         return $this->all(
             'SELECT l.id::text,l.group_id::text AS "groupId",g.name AS "groupName",l.title,l.starts_at::text AS "startsAt",
             l.ends_at::text AS "endsAt",l.location,l.status,
-            a.status AS "attendance",
+            COALESCE(a.status,\'pending\') AS "attendance",
             COALESCE(r.status,\'pending\') AS "resultStatus",r.comment AS "resultComment"
             FROM education.lessons l JOIN education.groups g ON g.id=l.group_id
             JOIN education.group_students gs ON gs.group_id=l.group_id
@@ -1069,7 +1084,7 @@ final readonly class PostgresEducationStore implements EducationStore
         return $this->one(
             'SELECT l.id::text,l.group_id::text AS "groupId",g.name AS "groupName",l.title,l.starts_at::text AS "startsAt",
             l.ends_at::text AS "endsAt",l.location,l.status,
-            a.status AS "attendance",
+            COALESCE(a.status,\'pending\') AS "attendance",
             COALESCE(r.status,\'pending\') AS "resultStatus",r.comment AS "resultComment"
             FROM education.lessons l JOIN education.groups g ON g.id=l.group_id
             JOIN education.group_students gs ON gs.group_id=l.group_id

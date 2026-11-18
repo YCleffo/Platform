@@ -2,6 +2,7 @@ export interface ApiErrorEnvelope {
   error: {
     code: string;
     message: string;
+    meta?: unknown;
   };
 }
 

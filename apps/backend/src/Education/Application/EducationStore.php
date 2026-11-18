@@ -61,7 +61,7 @@ interface EducationStore
     public function createEvent(Scope $scope, array $values): array;
     /** @return list<array<string,mixed>> */
     public function files(Scope $scope, ?string $lessonId, int $offset): array;
-    /** @return array<string,mixed>|null */
+    /** @return array{id:string,lessonId:?string,name:string,mime:string,purpose:string,sizeBytes:int|string,sha256:string,storageKey:string}|null */
     public function file(Scope $scope, string $id): ?array;
     /**
      * @param array<string,string|int|null> $values
@@ -127,7 +127,7 @@ interface EducationStore
     public function studentGroups(Scope $scope, string $studentId): array;
     /** @return list<array{id:string,name:string,archivedAt:string|null}> */
     public function studentGroupList(Scope $scope): array;
-    /** @return list<array<string,mixed>> */
+    /** @return list<array{id:string,name:string,mime:string,sizeBytes:int|string,createdAt:string}> */
     public function studentMaterials(Scope $scope, string $lessonId): array;
     /** @return list<array<string,mixed>> */
     public function studentAttendance(Scope $scope, string $studentId, string $from, string $to, int $offset): array;

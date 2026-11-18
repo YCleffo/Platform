@@ -689,7 +689,11 @@ final readonly class EducationService
         if (!$this->access->resourceAllowed($scope->personId, 'lesson', $id)) {
             throw new EducationError(403, 'processing_restricted');
         }
-        return [...$lesson, 'materials' => $this->store->studentMaterials($scope, $id)];
+        $materials = array_values(array_filter(
+            $this->store->studentMaterials($scope, $id),
+            fn(array $material): bool => $this->access->resourceAllowed($scope->personId, 'file', $material['id']),
+        ));
+        return [...$lesson, 'materials' => $materials];
     }
 
     /** @return array<string,mixed> */
@@ -1190,11 +1194,18 @@ final readonly class EducationService
         return $result;
     }
 
+    /** @return array{id:string,lessonId:?string,name:string,mime:string,purpose:string,sizeBytes:int|string,sha256:string,storageKey:string} */
     public function fileForDownload(Scope $scope, string $id): array
     {
         $file = $this->store->file($scope, Input::uuid($id)) ?? throw new EducationError(404, 'not_found');
         $this->access->assertResource($scope, 'file', $id);
-        if (is_string($file['lessonId'] ?? null)) $this->lesson($scope, $file['lessonId']);
+        if ($file['lessonId'] !== null) {
+            if ($scope->studentId === null) {
+                $this->lesson($scope, $file['lessonId']);
+            } else {
+                $this->access->assertResource($scope, 'lesson', $file['lessonId']);
+            }
+        }
         return $file;
     }
 

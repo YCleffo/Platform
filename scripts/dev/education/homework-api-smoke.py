@@ -2,16 +2,26 @@
 
 from __future__ import annotations
 
+import argparse
 import datetime
 from dataclasses import dataclass
+import hashlib
 from http.client import HTTPResponse
 import json
 from pathlib import Path
-import subprocess
 from typing import TypeAlias, TypedDict, cast
 import urllib.error
 import urllib.request
 import uuid
+
+from smoke_runtime import (
+    DEFAULT_RUNTIME,
+    FixtureRuntime,
+    SignedRequest,
+    SmokeEnvironmentError,
+    opener,
+    verify_fixture,
+)
 
 JsonValue: TypeAlias = (
     str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
@@ -108,7 +118,7 @@ class ApiClient:
             self.base + path, data=encoded, headers=headers, method=method,
         )
         try:
-            response = cast(HTTPResponse, urllib.request.urlopen(request, timeout=20))
+            response = cast(HTTPResponse, opener.open(request, timeout=30))
         except urllib.error.HTTPError as error:
             with error:
                 result = ApiResponse(error.code, error.headers.get_content_type(), error.read())
@@ -158,16 +168,51 @@ class ApiClient:
         return {"token": string_field(value, "accessToken"), "client": str(uuid.uuid4())}
 
 
+def upload_signed(
+    client: ApiClient, runtime: FixtureRuntime, actor: Actor, path: str, content: bytes,
+    name: str, *, lesson_id: str | None = None,
+) -> JsonObject:
+    sha256 = hashlib.sha256(content).hexdigest()
+    body: JsonObject = {"name": name, "sizeBytes": len(content), "sha256": sha256}
+    if lesson_id is not None:
+        body["lessonId"] = lesson_id
+    transfer = client.request(path, actor, "POST", body, 201)
+    target = f"/api/education/file-transfers/{string_field(transfer, 'id')}/complete"
+    assert transfer["status"] == "pending"
+    assert transfer["expectedSize"] == len(content) and transfer["expectedSha256"] == sha256
+    status, _, _ = runtime.signed(cast(SignedRequest, transfer["request"]), content)
+    assert status == 200, f"Signed upload returned {status}."
+    complete = client.request(target, actor, "POST", {})
+    assert complete["status"] == "confirmed"
+    assert client.request(target, actor, "POST", {}) == complete
+    return object_value(complete["result"], "confirmed Education file")
+
+
+def check_signed_download(
+    client: ApiClient, runtime: FixtureRuntime, actor: Actor, path: str, content: bytes,
+) -> None:
+    transfer = client.request(path, actor)
+    expected = hashlib.sha256(content).hexdigest()
+    status, received, _ = runtime.signed(cast(SignedRequest, transfer["request"]))
+    assert status == 200 and received == content, f"Signed download returned {status} or mismatched bytes."
+    assert transfer["sizeBytes"] == len(received) and transfer["sha256"] == expected
+
+
+class Arguments(argparse.Namespace):
+    runtime: Path
+    evidence: Path | None
+
+
 def main() -> None:
-    root = Path(__file__).resolve().parents[3]
-    data_dir = root / "runtime/education-local/data"
-    subprocess.run([
-        "docker", "exec", "platform-education-local-backend-1", "php", "-r",
-        "require '/education-tools/guard.php'; educationFixtureDatabase();",
-    ], check=True, capture_output=True)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--runtime", type=Path, default=DEFAULT_RUNTIME)
+    parser.add_argument("--evidence", type=Path)
+    args = parser.parse_args(namespace=Arguments())
+    runtime = verify_fixture(args.runtime, with_s3=True)
+    data_dir = args.runtime / "data"
     fixture = decode_object((data_dir / "access.json").read_text(encoding="utf-8"), "fixture")
     demo = decode_object((data_dir / "education04-demo.json").read_text(encoding="utf-8"), "demo")
-    client = ApiClient("http://127.0.0.1:8088", string_field(fixture, "organizationId"))
+    client = ApiClient(runtime.api_origin, string_field(fixture, "organizationId"))
     request = client.request
     accounts = object_value(fixture["accounts"], "accounts")
     students = array_value(demo["studentAccounts"], "studentAccounts")
@@ -176,8 +221,28 @@ def main() -> None:
     peer = client.login(object_value(students[1], "studentAccounts[1]"))
     groups = array_value(fixture["groups"], "groups")
     group = string_field(object_value(groups[0], "groups[0]"), "id")
-    due = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=2)).isoformat()
+    now = datetime.datetime.now(datetime.timezone.utc)
+    due = (now + datetime.timedelta(days=2)).isoformat()
     evidence: JsonObject = {}
+    teacher_group = request(f"/api/education/groups/{group}", teacher)
+    assert teacher_group
+    curriculum = object_value(fixture["curriculum"], "curriculum")
+    lessons = array_value(curriculum["scheduled"], "scheduled lessons")
+    lesson = string_field(object_value(lessons[0], "first lesson"), "id")
+    lesson_material = b"Isolated classroom S3 material.\n"
+    material = upload_signed(client, runtime, teacher, "/api/education/file-transfers", lesson_material,
+                             "classroom-smoke.txt", lesson_id=lesson)
+    material_id = string_field(material, "id")
+    lesson_detail = request(f"/api/education/student/lessons/{lesson}", student)
+    assert any(object_value(item, "lesson material")["id"] == material_id
+               for item in array_value(lesson_detail["materials"], "lesson materials"))
+    material_path = f"/api/education/files/{material_id}/transfer"
+    check_signed_download(client, runtime, teacher, material_path, lesson_material)
+    check_signed_download(client, runtime, student, material_path, lesson_material)
+    request(material_path, student, expected=(403, 404), org=string_field(fixture, "otherOrganizationId"))
+    outsider = client.login(object_value(students[2], "studentAccounts[2]"))
+    request(material_path, outsider, expected=(403, 404))
+    evidence["lessonMaterial"] = material_id
 
     detail = request("/api/education/homework", teacher, "POST", {
         "title": "API smoke · revision and files", "type": "text",
@@ -187,25 +252,31 @@ def main() -> None:
     assignment_data = object_value(detail["assignment"], "assignment")
     assignment = string_field(assignment_data, "id")
     evidence["created"] = detail
-    request(f"/api/education/homework/{assignment}/files", teacher, "POST", expected=201, upload="Teacher material")
+    teacher_material = b"Isolated homework S3 material.\n"
+    material = upload_signed(client, runtime, teacher, f"/api/education/homework/{assignment}/file-transfers",
+                             teacher_material, "teacher-material.txt")
     detail = request(f"/api/education/homework/{assignment}/publish", teacher, "POST", {
         "version": integer_field(assignment_data, "version"),
     })
     evidence["published"] = detail
     answer = request(f"/api/education/student/homework/{assignment}", student)
     evidence["notStarted"] = answer
+    check_signed_download(client, runtime, student,
+                          f"/api/education/homework/files/{string_field(material, 'id')}/transfer", teacher_material)
     request(f"/api/education/student/homework/{assignment}/draft", student, "PUT", {
         "version": 0, "text": "A real API answer.",
     })
-    file = request(f"/api/education/student/homework/{assignment}/files", student, "POST", expected=201, upload="Immutable submitted file")
+    submitted_bytes = b"Immutable submitted file.\n"
+    file = upload_signed(client, runtime, student, f"/api/education/student/homework/{assignment}/file-transfers",
+                         submitted_bytes, "answer.txt")
     answer = request(f"/api/education/student/homework/{assignment}", student)
     submit: JsonObject = {"version": answer_version(answer), "idempotencyKey": str(uuid.uuid4())}
     answer = request(f"/api/education/student/homework/{assignment}/submit", student, "POST", submit)
     evidence["submitted"] = answer
     assert request(f"/api/education/student/homework/{assignment}/submit", student, "POST", submit) == answer
     file_id = string_field(file, "id")
-    assert client.download(f"/api/education/homework/files/{file_id}", teacher) == b"Immutable submitted file"
-    request(f"/api/education/homework/files/{file_id}", peer, expected=404)
+    check_signed_download(client, runtime, teacher, f"/api/education/homework/files/{file_id}/transfer", submitted_bytes)
+    request(f"/api/education/homework/files/{file_id}/transfer", peer, expected=404)
     request(f"/api/education/homework/{assignment}", teacher, expected=(403, 404), org=string_field(fixture, "otherOrganizationId"))
     submission = string_field(object_value(answer["submission"], "submission"), "id")
     answer = request(f"/api/education/homework/submissions/{submission}/review", teacher, "POST", {
@@ -261,11 +332,14 @@ def main() -> None:
     for key, path, actor in scenarios:
         evidence[key] = request("/api/education" + path, actor)
     assert object_value(evidence["studentCard"], "studentCard")["guardians"]
-    target = root / "runtime/education04/api-contract-evidence.json"
+    target = args.evidence or args.runtime / "smoke/homework-api-evidence.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
     print("API PASS: teacher -> student -> return -> resubmit -> accepted; immutable files/IDOR/tenant, Typing, notifications, progress, parents.")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SmokeEnvironmentError as error:
+        raise SystemExit(str(error)) from None

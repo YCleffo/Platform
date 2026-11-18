@@ -1,26 +1,43 @@
-import { onScopeDispose, ref, shallowRef } from 'vue';
-import { coreAdminSession } from '@/core/admin/session';
+import { onScopeDispose, ref, shallowRef, watch } from 'vue';
+import { coreAdminSessionEpoch } from '@/core/admin/session';
 import { ApiResponseError } from '@/shared/api/errors';
 import { educationApi, type Material } from './api';
-import { useEducationWorkspace } from './workspace';
+export function useEducationDownload(organization: () => string, scope: () => string | number) {
+  const busy = ref('');
+  const error = shallowRef<unknown>(null);
+  let controller: AbortController | undefined;
 
-export function useEducationDownload() {
-  const workspace = useEducationWorkspace(); const busy = ref(''); const error = shallowRef<unknown>(null); let active = true;
-  onScopeDispose(() => { active = false; });
+  function cancel(): void {
+    controller?.abort();
+    controller = undefined;
+    busy.value = '';
+    error.value = null;
+  }
+
+  watch([organization, scope, coreAdminSessionEpoch], cancel, { flush: 'sync' });
+  onScopeDispose(cancel);
+
   async function download(file: Material): Promise<void> {
     if (busy.value) return;
-    const revision = workspace.revision; const epoch = coreAdminSession.epoch(); const org = workspace.organizationId;
-    const current = () => active && revision === workspace.revision && epoch === coreAdminSession.epoch();
-    busy.value = file.id; error.value = null;
+    const request = new AbortController();
+    controller = request;
+    busy.value = file.id;
+    error.value = null;
     try {
-      const blob = await educationApi.download(org, file.id);
-      if (!current()) return;
+      const blob = await educationApi.download(organization(), file.id, request.signal);
+      if (controller !== request) return;
       if (blob.size !== file.sizeBytes || blob.type.split(';')[0] !== file.mime) throw new ApiResponseError('/education/files');
       const url = URL.createObjectURL(blob); const anchor = document.createElement('a');
       anchor.href = url; anchor.download = file.name; document.body.append(anchor); anchor.click(); anchor.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (caught) { if (current()) error.value = caught; }
-    finally { if (current()) busy.value = ''; }
+    } catch (caught) {
+      if (controller === request) error.value = caught;
+    } finally {
+      if (controller === request) {
+        controller = undefined;
+        busy.value = '';
+      }
+    }
   }
   return { busy, error, download };
 }

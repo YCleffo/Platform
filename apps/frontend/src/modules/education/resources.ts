@@ -9,7 +9,29 @@ export function useEducationError() {
   const { t } = useEducationI18n();
   return (error: unknown): string => {
     if (error instanceof ApiResponseError) return t('education.unexpected');
-    if (error instanceof ApiError) return t(`education.${error.status === 403 ? 'denied' : error.status === 404 ? 'notFound' : error.status === 409 ? 'conflict' : error.status < 500 ? 'invalid' : 'error'}`);
+    if (error instanceof ApiError) {
+      const reason = error.meta?.storageCode ?? error.meta?.educationCode ?? error.code;
+      switch (reason) {
+        case 'quota_exceeded': return t('education.storageQuotaExceeded');
+        case 'checksum_mismatch':
+        case 'file_integrity_failed':
+        case 'storage.integrity_failed': return t('education.storageIntegrityFailed');
+        case 's3_signature_invalid':
+        case 'storage.signed_request_rejected': return t('education.storagePermissionExpired');
+        case 's3_configuration_missing':
+        case 's3_configuration_invalid':
+        case 's3_https_required':
+        case 's3_credentials_rejected':
+        case 's3_access_denied':
+        case 's3_bucket_missing': return t('education.storageConfigurationFailed');
+        case 's3_unavailable':
+        case 'file_store_unavailable':
+        case 'storage_unavailable':
+        case 'storage.unavailable': return t('education.storageUnavailable');
+        case 'storage.object_transfer_failed': return t('education.storageTransferFailed');
+        default: return t(`education.${error.status === 403 ? 'denied' : error.status === 404 ? 'notFound' : error.status === 409 ? 'conflict' : error.status < 500 ? 'invalid' : 'error'}`);
+      }
+    }
     return t('education.error');
   };
 }

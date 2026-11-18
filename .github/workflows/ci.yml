@@ -779,6 +779,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
+      COMPOSE_PROJECT_NAME: platform-core-browser-ci
       POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
       POSTGRES_USER: platform_app
@@ -832,9 +833,18 @@ jobs:
       - name: Install Core dependencies
         working-directory: apps/backend
         run: composer install --no-interaction --prefer-dist
+      - name: Prepare isolated Education object storage
+        run: |
+          python3 scripts/dev/storage02/s3-config.py --test-suite ci --port 18339 \
+            --directory runtime/ci-s3 --cors-origin https://e2e.platform.test:4175
+          compose_file=compose.yaml:compose.ci.yaml:compose.ci.s3.yaml
+          compose_env_files=runtime/ci-s3/s3.env
+          COMPOSE_FILE="$compose_file" COMPOSE_ENV_FILES="$compose_env_files" docker compose --profile test config --quiet
+          printf 'COMPOSE_FILE=%s\nCOMPOSE_ENV_FILES=%s\n' "$compose_file" "$compose_env_files" >> "$GITHUB_ENV"
       - name: Start isolated Core and SMTP runtime
         run: |
           echo '127.0.0.1 e2e.platform.test' | sudo tee -a /etc/hosts
+          docker compose --profile test build backend-test
           docker compose --profile test up -d --wait mailpit-core-test
           bash scripts/ci/test-start.sh
           docker compose --profile test exec -d -e CORE_AUTH_BROWSER_SMTP=1 backend-test php yii communication:process-email --loop

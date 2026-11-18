@@ -1,5 +1,5 @@
 import { coreAdminHttp } from '@/shared/api/core/adminHttp';
-import { educationUpload, educationDownload } from '../fileTransfer';
+import { educationUpload, educationDownload, type TransferOptions } from '../fileTransfer';
 import { ApiError, ApiResponseError } from '@/shared/api/errors';
 import { invalidateEducationCache } from '../cache';
 import type { Page, ResultStatus } from '../api';
@@ -83,8 +83,8 @@ export const homeworkApi = {
   studentDetail: (org: string, id: string, signal?: AbortSignal) => request(org, `/student/homework/${pathId(id)}`, answerGuard, 'GET', undefined, signal),
   draft: (org: string, id: string, version: number, text: string) => request(org, `/student/homework/${pathId(id)}/draft`, answerGuard, 'PUT', { version, text }),
   submit: (org: string, id: string, version: number, idempotencyKey: string) => request(org, `/student/homework/${pathId(id)}/submit`, answerGuard, 'POST', { version, idempotencyKey }),
-  upload: async (org: string, id: string, file: File, student = false) => {
-    try { return await educationUpload(org, `/education${student ? '/student' : ''}/homework/${pathId(id)}/file-transfers`, file); }
+  upload: async (org: string, id: string, file: File, student = false, options?: TransferOptions) => {
+    try { return await educationUpload(org, `/education${student ? '/student' : ''}/homework/${pathId(id)}/file-transfers`, file, {}, options); }
     finally { invalidateEducationCache(['homework', 'student', 'students', 'groups', 'lessons', 'header']); }
   },
   removeFile: (org: string, id: string, fileId: string) => request(org, `/student/homework/${pathId(id)}/files/${pathId(fileId)}`, anyRecord, 'DELETE'),

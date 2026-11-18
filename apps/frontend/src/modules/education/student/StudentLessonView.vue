@@ -4,13 +4,23 @@ import { useRoute } from 'vue-router';
 import { formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
 import { studentPortalApi } from './api';
 import { studentSession } from './session';
-import { useEducationResource } from '../resources';
+import { useEducationError, useEducationResource } from '../resources';
+import { useEducationDownload } from '../downloads';
 import { useEducationI18n } from '../i18n';
 import EducationState from '../EducationState.vue';
 const route = useRoute();
 const { t, locale } = useEducationI18n();
 const id = computed(() => String(route.params.id ?? ''));
 const org = computed(() => studentSession.organizationId);
+const issue = useEducationError();
+const {
+  busy: downloading,
+  error: downloadError,
+  download,
+} = useEducationDownload(
+  () => org.value,
+  () => id.value,
+);
 const { data, loading, error, refresh } = useEducationResource(
   async (_org, signal) => studentPortalApi.lesson(org.value, id.value, signal),
   [org, id],
@@ -71,6 +81,13 @@ function date(value: string): string {
       </article>
       <article class="edu-card">
         <h2>{{ t('education.materials') }}</h2>
+        <p
+          v-if="downloadError"
+          class="edu-error"
+          role="alert"
+        >
+          {{ issue(downloadError) }}
+        </p>
         <EducationState
           v-if="!data.materials.length"
           :empty="t('education.noMaterials')"
@@ -86,6 +103,14 @@ function date(value: string): string {
           >
             <strong>{{ material.name }}</strong>
             <span>{{ material.sizeBytes }}</span>
+            <button
+              type="button"
+              class="edu-button"
+              :disabled="!!downloading"
+              @click="download(material)"
+            >
+              {{ t(downloading === material.id ? 'education.loading' : 'education.download') }}
+            </button>
           </li>
         </ul>
       </article>

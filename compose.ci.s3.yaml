@@ -1,0 +1,53 @@
+# Apply only to the disposable Core test project alongside compose.ci.yaml.
+x-ci-s3: &ci-s3
+  S3_ENDPOINT_INTERNAL: http://seaweedfs-test:8333
+  S3_REGION: us-east-1
+  S3_BUCKET_STORAGE: ci-test-storage
+  S3_BUCKET_EDUCATION: ci-test-education
+
+services:
+  seaweedfs-test:
+    extends: {file: compose.s3.yaml, service: seaweedfs}
+    profiles: [test]
+    restart: 'no'
+    volumes: !override
+      - ci_s3_data:/data
+      - type: bind
+        source: ${S3_CONFIG_FILE:?Generate the isolated CI S3 settings}
+        target: /etc/seaweedfs/s3.json
+        read_only: true
+        bind:
+          create_host_path: false
+    ports: !override ['127.0.0.1:${S3_PORT:-18339}:8333']
+    networks: !override
+      test_net:
+        aliases: [seaweedfs]
+
+  s3-init-test:
+    extends: {file: compose.s3.yaml, service: s3-init}
+    profiles: [test]
+    image: ${COMPOSE_PROJECT_NAME:-platform}-backend-test:latest
+    pull_policy: never
+    volumes: !override [./apps/backend:/app:ro]
+    environment:
+      <<: *ci-s3
+      S3_INIT_ACCESS_KEY_ID: ${S3_INIT_ACCESS_KEY_ID:?Generate the isolated CI S3 settings}
+      S3_INIT_SECRET_ACCESS_KEY: ${S3_INIT_SECRET_ACCESS_KEY:?Generate the isolated CI S3 settings}
+      S3_CORS_ORIGINS: ${S3_CORS_ORIGINS:?Set explicit isolated browser origins}
+    depends_on: !override
+      seaweedfs-test: {condition: service_healthy}
+    networks: !override [test_net]
+
+  backend-test:
+    image: ${COMPOSE_PROJECT_NAME:-platform}-backend-test:latest
+    environment:
+      <<: *ci-s3
+      S3_PUBLIC_ENDPOINT: http://127.0.0.1:${S3_PORT:-18339}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?Generate the isolated CI S3 settings}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?Generate the isolated CI S3 settings}
+      S3_PATH_STYLE: 'true'
+    depends_on:
+      s3-init-test: {condition: service_completed_successfully}
+
+volumes:
+  ci_s3_data:

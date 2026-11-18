@@ -31,6 +31,7 @@ const loading = ref(false),
   uploadError = ref(''),
   actionMessage = ref('');
 const transferProgress = ref<TransferProgress | null>(null);
+const downloading = ref<string | null>(null);
 const folder = ref(''),
   uploadFolder = ref(''),
   offset = ref(0),
@@ -45,7 +46,8 @@ let active = true,
   generation = 0,
   versionGeneration = 0;
 let controller: AbortController | null = null,
-  transferController: AbortController | null = null;
+  transferController: AbortController | null = null,
+  downloadController: AbortController | null = null;
 function context() {
   const id = org.value,
     epoch = coreAdminSession.epoch(),
@@ -85,6 +87,11 @@ watch(
     versionGeneration++;
     controller?.abort();
     transferController?.abort();
+    downloadController?.abort();
+    transferController = null;
+    downloadController = null;
+    transferProgress.value = null;
+    downloading.value = null;
     data.value = null;
     versionFile.value = null;
     renameTarget.value = null;
@@ -113,6 +120,7 @@ onScopeDispose(() => {
   active = false;
   controller?.abort();
   transferController?.abort();
+  downloadController?.abort();
 });
 const quotaPercent = computed(() =>
   data.value?.space.maxBytes
@@ -231,6 +239,7 @@ async function resolveConflict(conflict: FileConflict): Promise<void> {
 async function upload(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement,
     file = input.files?.[0];
+  input.value = '';
   if (!file || uploadBusy.value) return;
   const path = [uploadFolder.value.trim().replace(/^\/+|\/+$/g, ''), file.name]
     .filter(Boolean)
@@ -238,10 +247,8 @@ async function upload(event: Event): Promise<void> {
   if (
     data.value?.files.some((item) => item.path === path) &&
     !window.confirm(t('education.overwriteFileConfirm'))
-  ) {
-    input.value = '';
+  )
     return;
-  }
   const ctx = context();
   transferController?.abort();
   const request = new AbortController();
@@ -254,27 +261,39 @@ async function upload(event: Event): Promise<void> {
     await storageApi.uploadFile(ctx.org, path, file, {
       signal: request.signal,
       progress: (value) => {
-        if (ctx.current()) transferProgress.value = value;
+        if (ctx.current() && !request.signal.aborted) transferProgress.value = value;
       },
     });
     if (ctx.current()) {
-      input.value = '';
       actionMessage.value = t('education.uploaded');
       await refresh();
     }
   } catch (failure) {
     if (ctx.current() && !request.signal.aborted) uploadError.value = issue(failure);
   } finally {
+    if (transferController === request) {
+      transferController = null;
+      transferProgress.value = null;
+    }
     if (ctx.current()) uploadBusy.value = false;
   }
 }
 async function download(path: string): Promise<void> {
+  if (uploadBusy.value || downloadController) return;
   const ctx = context();
+  const request = new AbortController();
+  downloadController = request;
+  downloading.value = path;
   uploadError.value = '';
   try {
-    await storageApi.downloadFile(ctx.org, path);
+    await storageApi.downloadFile(ctx.org, path, request.signal);
   } catch (failure) {
-    if (ctx.current()) uploadError.value = issue(failure);
+    if (ctx.current() && !request.signal.aborted) uploadError.value = issue(failure);
+  } finally {
+    if (downloadController === request) {
+      downloadController = null;
+      downloading.value = null;
+    }
   }
 }
 function formatBytes(value: number): string {
@@ -391,6 +410,7 @@ function formatDate(value: string | null): string {
             {{ formatBytes(transferProgress.loaded) }} / {{ formatBytes(transferProgress.total) }}
           </span>
           <button
+            v-if="transferProgress.phase !== 'verifying'"
             class="edu-button"
             type="button"
             @click="transferController?.abort()"
@@ -446,10 +466,10 @@ function formatDate(value: string | null): string {
             <button
               type="button"
               class="edu-button edu-button--small"
-              :disabled="uploadBusy"
+              :disabled="uploadBusy || downloading !== null"
               @click="download(file.path)"
             >
-              {{ t('education.download') }}
+              {{ t(downloading === file.path ? 'education.loading' : 'education.download') }}
             </button>
             <button
               type="button"

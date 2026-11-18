@@ -9,6 +9,7 @@ use App\Core\Settings\Application\SettingsService;
 use App\Storage\Application\StorageError;
 use App\Storage\Infrastructure\S3ClientFactory;
 use App\Storage\Infrastructure\S3Config;
+use App\Storage\Infrastructure\S3Failure;
 use App\Storage\Infrastructure\S3Objects;
 use DateTimeImmutable;
 use Yiisoft\Db\Connection\ConnectionInterface;
@@ -27,20 +28,23 @@ final readonly class BrandingFiles
         private S3Objects $objects,
     ) {}
 
+    /** @param array<array-key,mixed> $input */
     public function start(array $input, string $actor, ClientContext $context): array
     {
+        $size = $input['sizeBytes'] ?? null;
+        $sha256 = $input['sha256'] ?? null;
         if (array_diff(array_keys($input), ['sizeBytes', 'sha256']) !== []
-            || !is_int($input['sizeBytes'] ?? null) || $input['sizeBytes'] < 1 || $input['sizeBytes'] > self::MAX_BYTES
-            || !is_string($input['sha256'] ?? null) || preg_match('/^[a-f0-9]{64}$/D', $input['sha256']) !== 1) {
+            || !is_int($size) || $size < 1 || $size > self::MAX_BYTES
+            || !is_string($sha256) || preg_match('/^[a-f0-9]{64}$/D', $sha256) !== 1) {
             throw new StorageError(422, 'invalid_favicon');
         }
         $id = (string) $this->db->createCommand('SELECT uuidv7()::text')->queryScalar();
         $pending = [
             'id' => $id, 'actor' => $actor, 'status' => 'pending',
-            'sizeBytes' => $input['sizeBytes'], 'sha256' => $input['sha256'],
+            'sizeBytes' => $size, 'sha256' => $sha256,
             'expiresAt' => (new DateTimeImmutable('+1 hour'))->format(DATE_ATOM),
         ];
-        $request = $this->sign($pending);
+        $request = $this->sign($id, $size);
         $this->db->transaction(function () use ($pending, $actor, $context): void {
             $this->lock();
             $this->settings->putSystemSetting(BrandingSettings::UPLOAD, $pending, false,
@@ -52,7 +56,7 @@ final readonly class BrandingFiles
     public function refresh(string $id, string $actor): array
     {
         $pending = $this->pending($id, $actor);
-        return ['id' => $id, 'expiresAt' => $pending['expiresAt'], 'request' => $this->sign($pending)];
+        return ['id' => $id, 'expiresAt' => $pending['expiresAt'], 'request' => $this->sign($id, $pending['sizeBytes'])];
     }
 
     public function complete(string $id, string $actor, ClientContext $context): array
@@ -61,7 +65,7 @@ final readonly class BrandingFiles
             $this->lock();
             $pending = $this->pending($id, $actor, true);
             if ($pending['status'] === 'confirmed') {
-                return $pending['result'];
+                return self::confirmedResult($pending['result'] ?? null);
             }
             $stream = $this->objects->open($this->config->bucketStorage, $this->stagingKey($id));
             try {
@@ -137,10 +141,10 @@ final readonly class BrandingFiles
                 || ($pending['actor'] ?? null) !== $actor) {
                 throw new StorageError(404, 'not_found');
             }
-            if ($pending['status'] === 'confirmed') {
-                return $pending['result'];
+            if (($pending['status'] ?? null) === 'confirmed') {
+                return self::confirmedResult($pending['result'] ?? null);
             }
-            if ($pending['status'] !== 'aborted') {
+            if (($pending['status'] ?? null) !== 'aborted') {
                 $pending['status'] = 'aborted';
                 $this->settings->putSystemSetting(BrandingSettings::UPLOAD, $pending, false,
                     'Cancelled installation icon upload', $actor, $context);
@@ -150,6 +154,7 @@ final readonly class BrandingFiles
         });
     }
 
+    /** @return array{id:string,mime:string,sha256:string,sizeBytes:int,stream:resource} */
     public function open(string $id): array
     {
         $icon = $this->branding->favicon();
@@ -159,6 +164,7 @@ final readonly class BrandingFiles
         return [...$icon, 'stream' => $this->objects->open($this->config->bucketStorage, 'branding/' . $id)];
     }
 
+    /** @return array{id:string,actor:string,status:'pending'|'confirmed',sizeBytes:int,sha256:string,expiresAt:string,result?:mixed} */
     private function pending(string $id, string $actor, bool $allowConfirmed = false): array
     {
         $pending = $this->settings->getSystemSetting(BrandingSettings::UPLOAD);
@@ -166,36 +172,52 @@ final readonly class BrandingFiles
             || ($pending['actor'] ?? null) !== $actor) {
             throw new StorageError(404, 'not_found');
         }
-        if ($allowConfirmed && ($pending['status'] ?? null) === 'confirmed') {
-            return $pending;
-        }
-        if (($pending['status'] ?? null) !== 'pending'
-            || new DateTimeImmutable($pending['expiresAt']) <= new DateTimeImmutable()) {
+        $status = $pending['status'] ?? null;
+        $size = $pending['sizeBytes'] ?? null;
+        $sha256 = $pending['sha256'] ?? null;
+        $expiresAt = $pending['expiresAt'] ?? null;
+        if (!is_int($size) || $size < 1 || $size > self::MAX_BYTES || !is_string($sha256) || !is_string($expiresAt)) {
             throw new StorageError(409, 'favicon_upload_expired');
         }
-        return $pending;
+        $value = ['id' => $id, 'actor' => $actor, 'sizeBytes' => $size, 'sha256' => $sha256, 'expiresAt' => $expiresAt];
+        if ($allowConfirmed && $status === 'confirmed') {
+            return [...$value, 'status' => 'confirmed', 'result' => $pending['result'] ?? null];
+        }
+        if ($status !== 'pending' || new DateTimeImmutable($expiresAt) <= new DateTimeImmutable()) {
+            throw new StorageError(409, 'favicon_upload_expired');
+        }
+        return [...$value, 'status' => 'pending'];
     }
 
-    private function sign(array $pending): array
+    /** @return array<array-key,mixed> */
+    private static function confirmedResult(mixed $value): array
+    {
+        if (!is_array($value) || !is_string($value['name'] ?? null) || !array_key_exists('favicon', $value)) {
+            throw new StorageError(503, 'favicon_integrity_mismatch');
+        }
+        return $value;
+    }
+
+    private function sign(string $id, int $size): array
     {
         try {
-            $this->clients->internal()->headBucket(['Bucket' => $this->config->bucketStorage]);
+            $this->clients->assertBucket($this->config->bucketStorage);
             $expires = new DateTimeImmutable('+' . $this->config->presignTtlSeconds . ' seconds');
             $command = $this->clients->public()->getCommand('PutObject', [
-                'Bucket' => $this->config->bucketStorage, 'Key' => $this->stagingKey($pending['id']),
-                'ContentLength' => $pending['sizeBytes'], 'ContentType' => 'application/octet-stream',
+                'Bucket' => $this->config->bucketStorage, 'Key' => $this->stagingKey($id),
+                'ContentLength' => $size, 'ContentType' => 'application/octet-stream',
             ]);
             $request = $this->clients->public()->createPresignedRequest($command, $expires);
             $headers = [];
             foreach ($request->getHeaders() as $name => $values) {
-                if (!in_array(strtolower($name), ['host', 'content-length', 'user-agent'], true)) {
-                    $headers[$name] = implode(', ', $values);
+                if (!in_array(strtolower((string) $name), ['host', 'content-length', 'user-agent'], true)) {
+                    $headers[(string) $name] = implode(', ', $values);
                 }
             }
             return ['url' => (string) $request->getUri(), 'method' => 'PUT',
                 'headers' => (object) $headers, 'expiresAt' => $expires->format(DATE_ATOM)];
-        } catch (\Throwable) {
-            throw new StorageError(503, 's3_unavailable');
+        } catch (\Throwable $error) {
+            throw S3Failure::storage($error);
         }
     }
 

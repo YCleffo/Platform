@@ -21,11 +21,8 @@ trait S3Fixture
 
     private function startS3Fixture(): void
     {
-        self::assertSame('1', getenv('STORAGE02_TEST_RUNTIME'));
-        self::assertSame('test', getenv('APP_ENV'));
         $this->s3Config = new S3Config();
-        self::assertStringStartsWith('storage02-test-', $this->s3Config->bucketStorage);
-        self::assertStringStartsWith('storage02-test-', $this->s3Config->bucketEducation);
+        IsolatedS3Runtime::assertConfigured($this->s3Config);
         $this->clients = new S3ClientFactory($this->s3Config);
         $this->objects = new S3Objects($this->clients, $this->s3Config);
         $this->testPrefix = 'qa/' . bin2hex(random_bytes(12)) . '/';

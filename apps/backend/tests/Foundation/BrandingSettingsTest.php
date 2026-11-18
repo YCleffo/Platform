@@ -8,6 +8,7 @@ use App\Branding\BrandingSettings;
 use App\Core\Client\Application\ClientContextResolver;
 use App\Core\Settings\Application\SettingsService;
 use App\Storage\Application\StorageError;
+use App\Tests\Storage02\IsolatedS3Runtime;
 use HttpSoft\Message\ServerRequest;
 
 require_once __DIR__ . '/HomeworkFixture.php';
@@ -16,9 +17,8 @@ final class BrandingSettingsTest extends HomeworkFixture
 {
     public function testRealS3FaviconPublicationReceiptAndRemoval(): void
     {
-        self::assertSame('1', getenv('STORAGE02_TEST_RUNTIME'));
         $config = $this->container->get(\App\Storage\Infrastructure\S3Config::class);
-        self::assertStringStartsWith('storage02-test-', $config->bucketStorage);
+        IsolatedS3Runtime::assertConfigured($config);
         $objects = $this->container->get(\App\Storage\Infrastructure\S3Objects::class);
         $files = $this->container->get(\App\Branding\BrandingFiles::class);
         $context = $this->container->get(ClientContextResolver::class)->resolve(new ServerRequest());

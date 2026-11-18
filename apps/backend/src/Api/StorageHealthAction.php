@@ -12,8 +12,10 @@ final readonly class StorageHealthAction
 {
     public function __invoke(DataResponseFactoryInterface $responses, StorageReadiness $storage): ResponseInterface
     {
-        $ready = $storage->ready();
-        return $responses->createResponse(['status' => $ready ? 'ok' : 'not_ready'])
-            ->withStatus($ready ? 200 : 503)->withHeader('Cache-Control', 'no-store');
+        $reason = $storage->failureReason();
+        return $responses->createResponse($reason === null
+            ? ['status' => 'ok']
+            : ['status' => 'not_ready', 'reason' => $reason])
+            ->withStatus($reason === null ? 200 : 503)->withHeader('Cache-Control', 'no-store');
     }
 }

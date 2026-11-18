@@ -23,6 +23,15 @@ final readonly class EducationTransferAction
             if (in_array($operation, ['read', 'complete', 'abort'], true)) {
                 $kind = $transfers->accessKind(Input::uuid($id), $identity->accountId, $organization);
                 $scope = $this->scope($access, $identity, $organization, $kind['kind'], $kind['studentId'] !== null);
+            } elseif ($operation === 'download') {
+                try {
+                    $scope = $access->scope($identity, $organization, 'education.files.manage');
+                } catch (EducationError $error) {
+                    if ($error->status !== 403 || $error->reason !== 'access_denied') {
+                        throw $error;
+                    }
+                    $scope = $access->studentScope($identity, $organization, 'education.student.use');
+                }
             } elseif ($operation === 'homework_download') {
                 try { $scope = $access->studentScope($identity, $organization, 'education.student.use'); }
                 catch (EducationError $error) {

@@ -12,16 +12,24 @@ final readonly class StorageReadiness
 
     public function ready(): bool
     {
+        return $this->failureReason() === null;
+    }
+
+    public function failureReason(): ?string
+    {
         try {
             $config = $this->container->get(S3Config::class);
-            $client = $this->container->get(S3ClientFactory::class)->internal();
-            foreach (array_unique([$config->bucketStorage, $config->bucketEducation]) as $bucket) {
-                $client->headBucket(['Bucket' => $bucket,
-                    '@http' => ['connect_timeout' => 1, 'timeout' => 2], '@retries' => 0]);
+            $clients = $this->container->get(S3ClientFactory::class);
+            if (!$config instanceof S3Config || !$clients instanceof S3ClientFactory) {
+                return 's3_configuration_invalid';
             }
-            return true;
-        } catch (\Throwable) {
-            return false;
+            foreach (array_unique([$config->bucketStorage, $config->bucketEducation]) as $bucket) {
+                $clients->assertBucket($bucket);
+            }
+            return null;
+        } catch (\Throwable $error) {
+            // The container can wrap constructor exceptions while resolving dependencies.
+            return S3Failure::storage($error, bucketProbe: true)->reason;
         }
     }
 }

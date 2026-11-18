@@ -7758,6 +7758,7 @@
     "/files/{id}/transfer": {
       "get": {
         "operationId": "education_transfer_download",
+        "description": "Issues a signed download for an authorized teacher or for a student with access to the lesson material. Lesson and file processing restrictions apply before a URL is issued.",
         "description": "Current actor, organization and resource permissions required. Upload: name, sizeBytes (1..10485760), sha256, optional avatar or lessonId. Complete and abort accept {}. Direct S3 requests never carry Core credentials.",
         "responses": {
           "200": {

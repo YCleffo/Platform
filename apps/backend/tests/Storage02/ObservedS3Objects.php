@@ -10,7 +10,6 @@ use App\Storage\Infrastructure\S3Config;
 use App\Storage\Infrastructure\S3Objects;
 use App\Storage\Infrastructure\S3StorageFileAdapter;
 use DateTimeImmutable;
-use RuntimeException;
 
 /** Tracks only this test's UUIDs, so teardown never enumerates or deletes another test's objects. */
 final class ObservedS3Objects implements StorageObjectAdapter
@@ -21,9 +20,8 @@ final class ObservedS3Objects implements StorageObjectAdapter
 
     public function __construct()
     {
-        if (getenv('STORAGE02_TEST_RUNTIME') !== '1') throw new RuntimeException('Dedicated S3 test runtime required.');
         $config = new S3Config();
-        if (!str_starts_with($config->bucketStorage, 'storage02-test-')) throw new RuntimeException('Test bucket required.');
+        IsolatedS3Runtime::assertConfigured($config);
         $this->adapter = new S3StorageFileAdapter(new S3Objects(new S3ClientFactory($config), $config), $config);
     }
     public function write(string $key, $stream): void { $this->owned[$key] = true; $this->adapter->write($key, $stream); }

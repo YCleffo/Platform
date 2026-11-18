@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Education\Infrastructure;
 
 use App\Education\Application\{EducationError, FileStore, Input, StoredFile};
-use App\Storage\Infrastructure\{S3Config, S3ClientFactory};
+use App\Storage\Infrastructure\{S3Config, S3ClientFactory, S3Failure};
+use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UploadedFileInterface;
+use Throwable;
 use Yiisoft\Db\Connection\ConnectionInterface;
 
 /** Education objects share the S3 infrastructure; only bounded, automatically deleted verification spools are local. */
@@ -41,23 +43,30 @@ final readonly class S3FileStore implements FileStore
             $verified = $this->open($stored->key, $stored->size, $stored->sha256); fclose($verified);
             return $stored;
         } catch (EducationError $error) { throw $error; }
-        catch (\Throwable) { throw new EducationError(503, 'file_store_unavailable'); }
+        catch (Throwable $error) { throw self::s3Error($error); }
         finally { fclose($spool); }
     }
 
-    /** Server creates this key; browsers can replace staging bytes, never committed objects. */
+    /**
+     * Server creates this key; browsers can replace staging bytes, never committed objects.
+     * @return array{url:string,method:'PUT',headers:object,expiresAt:string}
+     */
     public function uploadRequest(string $stagingKey, int $size, string $sha256): array
     {
+        if (preg_match('/^[a-f0-9]{64}$/D', $sha256) !== 1 || ($checksum = hex2bin($sha256)) === false) {
+            throw new EducationError(422, 'invalid_file');
+        }
         $expires = new \DateTimeImmutable('+' . $this->config->presignTtlSeconds . ' seconds');
         try {
+            $this->clients->assertBucket($this->config->bucketEducation);
             $client = $this->clients->public();
             $command = $client->getCommand('PutObject', ['Bucket'=>$this->config->bucketEducation,'Key'=>$stagingKey,
                 'ContentType'=>'application/octet-stream','ContentLength'=>$size,
-                'ChecksumSHA256'=>base64_encode(hex2bin($sha256))]);
+                'ChecksumSHA256'=>base64_encode($checksum)]);
             $request = $client->createPresignedRequest($command, $expires);
             $headers = $request->getHeaders(); unset($headers['Host'], $headers['host'], $headers['Content-Length'], $headers['content-length']);
             return ['url'=>(string)$request->getUri(),'method'=>'PUT','headers'=>(object)array_map(static fn(array $v):string=>implode(',',$v),$headers),'expiresAt'=>$expires->format(DATE_ATOM)];
-        } catch (\Throwable) { throw new EducationError(503, 'file_store_unavailable'); }
+        } catch (Throwable $error) { throw self::s3Error($error); }
     }
 
     /** Checks the actual object, including MIME/image validation, before copying into an immutable final key. */
@@ -72,15 +81,17 @@ final readonly class S3FileStore implements FileStore
             $verified = $this->open($stored->key, $stored->size, $stored->sha256); fclose($verified);
             return $stored;
         } catch (EducationError $error) { throw $error; }
-        catch (\Throwable) { throw new EducationError(503, 'file_store_unavailable'); }
+        catch (Throwable $error) { throw self::s3Error($error); }
         finally { fclose($spool); }
     }
 
+    /** @return resource */
     public function open(string $key, int $expectedSize, string $expectedSha256)
     {
         return $this->verifiedObject(self::objectKey($key), $expectedSize, $expectedSha256, false);
     }
 
+    /** @return array{url:string,method:'GET',headers:object,expiresAt:string} */
     public function downloadRequest(string $key, string $name, string $mime, int $size): array
     {
         try {
@@ -92,7 +103,7 @@ final readonly class S3FileStore implements FileStore
                 'ResponseContentDisposition'=>"attachment; filename=\"download\"; filename*=UTF-8''".rawurlencode($name)]),$expires);
             return ['url'=>(string)$request->getUri(),'method'=>'GET','headers'=>(object)[],'expiresAt'=>$expires->format(DATE_ATOM)];
         } catch (EducationError $error) { throw $error; }
-        catch (\Throwable) { throw new EducationError(503, 'file_store_unavailable'); }
+        catch (Throwable $error) { throw self::s3Error($error); }
     }
 
     public function remove(string $key): void { $this->queue(self::objectKey($key)); }
@@ -106,9 +117,10 @@ final readonly class S3FileStore implements FileStore
             ON CONFLICT(object_key) DO UPDATE SET completed_at=NULL', [':key'=>$objectKey])->execute();
     }
 
+    /** @param resource $stream */
     private function inspect($stream, string $name, bool $avatar, string $key): StoredFile
     {
-        $size = (int)(fstat($stream)['size'] ?? 0);
+        $size = fstat($stream)['size'] ?? 0;
         if ($size < 1 || $size > self::limit($avatar)) throw new EducationError(422, 'invalid_file');
         rewind($stream); $sample = fread($stream, min($size,262144));
         if (!is_string($sample)) throw new EducationError(503, 'file_store_unavailable');
@@ -116,7 +128,12 @@ final readonly class S3FileStore implements FileStore
         $allowed=$avatar?['image/png','image/jpeg','image/webp']:['image/png','image/jpeg','image/webp','application/pdf','text/plain'];
         if (!is_string($mime)||!in_array($mime,$allowed,true)) throw new EducationError(422,'invalid_file');
         if ($avatar) {
-            rewind($stream); $image=getimagesizefromstring(stream_get_contents($stream));
+            rewind($stream);
+            $bytes = stream_get_contents($stream);
+            if ($bytes === false) {
+                throw new EducationError(503, 'file_store_unavailable');
+            }
+            $image = getimagesizefromstring($bytes);
             if ($image===false || $image[0]<1 || $image[1]<1 || $image[0]*$image[1]>20000000) throw new EducationError(422,'invalid_file');
         }
         rewind($stream); $hash=hash_init('sha256'); hash_update_stream($hash,$stream); $digest=hash_final($hash); rewind($stream);
@@ -124,6 +141,7 @@ final readonly class S3FileStore implements FileStore
         return new StoredFile($key,$name,$mime,$size,$digest);
     }
 
+    /** @return resource */
     private function verifiedObject(string $objectKey, int $expectedSize, string $sha256, bool $upload)
     {
         if ($expectedSize<1 || $expectedSize>self::limit(false) || !preg_match('/^[a-f0-9]{64}$/D',$sha256)) throw new EducationError(422,'invalid_file');
@@ -131,17 +149,44 @@ final readonly class S3FileStore implements FileStore
         $body=null;
         try {
             $result=$this->clients->internal()->getObject(['Bucket'=>$this->config->bucketEducation,'Key'=>$objectKey,'@http'=>['stream'=>true]]);
-            $body=$result['Body']; $hash=hash_init('sha256'); $size=0;
+            $stream = $result['Body'] ?? null;
+            if (!$stream instanceof StreamInterface) {
+                throw new EducationError(503, 'file_store_unavailable');
+            }
+            $body = $stream;
+            $hash = hash_init('sha256');
+            $size = 0;
             while (!$body->eof()) {
                 $chunk=$body->read(65536); $size+=strlen($chunk);
-                if ($size>$expectedSize || fwrite($target,$chunk)!==strlen($chunk)) throw new EducationError($upload?422:503,$upload?'size_mismatch':'file_integrity_failed');
+                if ($size > $expectedSize) {
+                    throw new EducationError($upload ? 422 : 503, $upload ? 'size_mismatch' : 'file_integrity_failed');
+                }
+                if (($chunk === '' && !$body->eof()) || fwrite($target, $chunk) !== strlen($chunk)) {
+                    throw new EducationError(503, 'file_store_unavailable');
+                }
                 hash_update($hash,$chunk);
             }
-            if ($size!==$expectedSize || !hash_equals($sha256,hash_final($hash))) throw new EducationError($upload?422:503,$upload?'checksum_mismatch':'file_integrity_failed');
+            if ($size !== $expectedSize) {
+                throw new EducationError($upload ? 422 : 503, $upload ? 'size_mismatch' : 'file_integrity_failed');
+            }
+            if (!hash_equals($sha256, hash_final($hash))) {
+                throw new EducationError($upload ? 422 : 503, $upload ? 'checksum_mismatch' : 'file_integrity_failed');
+            }
             rewind($target); return $target;
-        } catch (\Throwable $error) {
+        } catch (Throwable $error) {
             fclose($target); if ($error instanceof EducationError) throw $error;
-            throw new EducationError(503,'file_store_unavailable');
+            throw self::s3Error($error, $upload);
         } finally { $body?->close(); }
+    }
+
+    private static function s3Error(Throwable $error, bool $upload = false): EducationError
+    {
+        $failure = S3Failure::storage($error);
+        if ($failure->reason === 'object_missing') {
+            return $upload
+                ? new EducationError(409, 'object_missing')
+                : new EducationError(503, 'file_integrity_failed');
+        }
+        return new EducationError($failure->status, $failure->reason);
     }
 }

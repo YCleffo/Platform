@@ -41,6 +41,7 @@ $result = $db->transaction(function () use ($db, $container): array {
             VALUES('education.local.other','Другая организация · проверка доступа') RETURNING id::text")->queryScalar()];
     });
     $container->get(ModuleRepository::class)->setEnabled('education', true);
+    $container->get(ModuleRepository::class)->setEnabled('storage', true);
     $accounts = [];
     foreach (['teacher' => 'Мария Александровна', 'colleague' => 'Алексей Сергеевич', 'outsider' => 'Преподаватель другой организации'] as $kind => $name) {
         $org = $kind === 'outsider' ? $otherOrganization['id'] : $organization['id'];

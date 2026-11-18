@@ -14,9 +14,8 @@ final class EducationS3Fixture
     /** @param list<string> $keys All keys must have been created by the calling test. */
     public static function removeOwned(array $keys): void
     {
-        if (getenv('STORAGE02_TEST_RUNTIME') !== '1') throw new RuntimeException('Dedicated S3 test runtime required.');
         $config = new S3Config();
-        if (!str_starts_with($config->bucketEducation, 'storage02-test-')) throw new RuntimeException('Test bucket required.');
+        IsolatedS3Runtime::assertConfigured($config);
         $client = (new S3ClientFactory($config))->internal();
         foreach (array_unique($keys) as $key) {
             $client->deleteObject(['Bucket'=>$config->bucketEducation,'Key'=>S3Objects::objectKey($key)]);

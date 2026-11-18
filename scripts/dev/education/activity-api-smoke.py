@@ -7,9 +7,10 @@ from concurrent.futures import ThreadPoolExecutor
 import importlib.util
 import json
 from pathlib import Path
-import subprocess
 import sys
 from typing import Any, TypeAlias
+
+from smoke_runtime import DEFAULT_RUNTIME, loopback, read_proof, verify_fixture, verify_http_origin
 
 JsonValue: TypeAlias = (
     str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
@@ -36,22 +37,24 @@ def no_solutions(value: JsonValue) -> None:
 
 
 def main() -> None:
-    root = Path(__file__).resolve().parents[3]
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--base", default="http://127.0.0.1:8088")
-    parser.add_argument("--container", default="platform-education06-local-backend-1")
-    parser.add_argument("--data-dir", type=Path, default=root / "runtime/education-local/data")
-    parser.add_argument("--evidence", type=Path, default=root / "runtime/education06/activity-api-evidence.json")
+    parser.add_argument("--runtime", type=Path, default=DEFAULT_RUNTIME)
+    parser.add_argument("--base", help="Optional Vite loopback origin serving this fixture")
+    parser.add_argument("--data-dir", type=Path)
+    parser.add_argument("--evidence", type=Path)
     args = parser.parse_args()
-    assert args.base.startswith("http://127.0.0.1:"), "Only the explicit local fixture HTTP endpoint is allowed."
-    assert args.container.startswith("platform-education06-local-"), "Use the separate EDUCATION_06 fixture stack."
-    subprocess.run(["docker", "exec", args.container, "php", "-r",
-                    "require '/education-tools/guard.php'; educationFixtureDatabase();"],
-                   check=True, capture_output=True)
+    runtime = verify_fixture(args.runtime)
+    origin = runtime.api_origin
+    if args.base is not None:
+        parsed = loopback(args.base, origin_only=True)
+        origin = f"{parsed.scheme}://{parsed.netloc}"
+        verify_http_origin(origin, read_proof(args.runtime))
+    data = args.data_dir or args.runtime / "data"
+    args.evidence = args.evidence or args.runtime / "smoke/activity-api-evidence.json"
     helper = load_homework_client()
-    fixture = helper.decode_object((args.data_dir / "access.json").read_text(encoding="utf-8"), "fixture")
-    demo = helper.decode_object((args.data_dir / "education04-demo.json").read_text(encoding="utf-8"), "demo")
-    client = helper.ApiClient(args.base, helper.string_field(fixture, "organizationId"))
+    fixture = helper.decode_object((data / "access.json").read_text(encoding="utf-8"), "fixture")
+    demo = helper.decode_object((data / "education04-demo.json").read_text(encoding="utf-8"), "demo")
+    client = helper.ApiClient(origin, helper.string_field(fixture, "organizationId"))
     student = client.login(demo["studentAccounts"][0])
     peer = client.login(demo["studentAccounts"][1])
     request = client.request

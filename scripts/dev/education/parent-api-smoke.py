@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import argparse
 import datetime
 import importlib.util
 import json
 from pathlib import Path
 import secrets
-import subprocess
 import sys
 from typing import TypedDict
 import uuid
+
+from smoke_runtime import DEFAULT_RUNTIME, SmokeEnvironmentError, verify_fixture
 
 
 class SmokeEvidence(TypedDict):
@@ -18,8 +20,17 @@ class SmokeEvidence(TypedDict):
     ids: dict[str, str]
 
 
+class Arguments(argparse.Namespace):
+    runtime: Path
+    evidence_dir: Path | None
+
+
 def main() -> None:
-    root = Path(__file__).resolve().parents[3]
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--runtime", type=Path, default=DEFAULT_RUNTIME)
+    parser.add_argument("--evidence-dir", type=Path)
+    args = parser.parse_args(namespace=Arguments())
+    runtime = verify_fixture(args.runtime)
     source = Path(__file__).with_name("homework-api-smoke.py")
     spec = importlib.util.spec_from_file_location("education_homework_smoke", source)
     if spec is None or spec.loader is None:
@@ -27,15 +38,10 @@ def main() -> None:
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-    # This guard validates DB name, isolated-runtime flag and local fixture identity.
-    subprocess.run([
-        "docker", "exec", "platform-education-local-backend-1", "php", "-r",
-        "require '/education-tools/guard.php'; educationFixtureDatabase();",
-    ], check=True, capture_output=True)
-    data = root / "runtime/education-local/data"
+    data = args.runtime / "data"
     access = json.loads((data / "access.json").read_text(encoding="utf-8"))
     demo = json.loads((data / "education04-demo.json").read_text(encoding="utf-8"))
-    client = module.ApiClient("http://127.0.0.1:8088", access["organizationId"])
+    client = module.ApiClient(runtime.api_origin, access["organizationId"])
     request = client.request
     teacher = client.login(access["accounts"]["teacher"])
     first = demo["students"][0]
@@ -66,14 +72,18 @@ def main() -> None:
     first_invite = request(family_path(first, True) + "/invite", teacher, "POST", {}, (200, 201))
     invite = request(family_path(first, True) + "/invite", teacher, "POST", {}, (200, 201))
     # Keep login material in one ignored local file for manual visual checks and safe reruns.
-    output = root / "runtime/education05"
+    output = args.evidence_dir or args.runtime / "smoke"
     output.mkdir(parents=True, exist_ok=True)
     credential_file = output / "local-parent-access.json"
-    saved_credentials = json.loads(credential_file.read_text(encoding="utf-8")) if credential_file.exists() else None
+    previous = args.runtime.parent / "education05/local-parent-access.json"
+    previous_access = credential_file if credential_file.exists() else previous
+    saved_credentials = json.loads(previous_access.read_text(encoding="utf-8")) if previous_access.is_file() else None
     if saved_credentials is not None and saved_credentials.get("personId") == guardian:
         credentials = saved_credentials
         parent = client.login(credentials)
         request("/api/education/parent/activate", parent, "POST", {"code": invite["code"]})
+        if previous_access != credential_file:
+            credential_file.write_text(json.dumps(credentials, indent=2), encoding="utf-8")
     else:
         credentials = {"personId": guardian, "email": "parent-education05-" + uuid.uuid4().hex + "@example.test", "password": secrets.token_urlsafe(24)}
         registered = request("/api/education/parent/register", method="POST", body={"code": invite["code"], "email": credentials["email"], "password": credentials["password"]}, expected=(200, 201))
@@ -190,4 +200,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SmokeEnvironmentError as error:
+        raise SystemExit(str(error)) from None

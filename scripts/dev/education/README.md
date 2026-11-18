@@ -1,16 +1,16 @@
 # Isolated local Education
 
-This environment is opt-in. It uses the standalone `compose.education-local.yaml`, project `platform-education-local`, a dedicated PostgreSQL volume, separate Redis, isolated files and API port 8088. It never combines with the working Compose file and never seeds or resets the working organization. Native Windows operations are not part of this environment.
+This environment uses the standalone `compose.education-local.yaml` and project `platform-education-local`. PostgreSQL, Redis and SeaweedFS have their own containers. PostgreSQL and SeaweedFS use dedicated project volumes. The application identity can access only `education-local-test-storage` and `education-local-test-education`. The working installation and its data are outside the project. Native Windows operations are outside this environment.
 
-The existing `platform-backend:latest` development image, `postgres:18` and `redis:8-alpine` must be available. The backend image can be built explicitly with `docker build --target dev -t platform-backend:latest apps/backend`; this does not start or change a working database. Existing Composer and frontend dependencies are reused.
+The launcher uses the existing development image `platform-backend:latest`, `postgres:18`, `redis:8-alpine` and the pinned SeaweedFS image. Install the Composer dependencies in `apps/backend` and npm dependencies in `apps/frontend` before running it.
 
-From `C:\Platform`:
+From the repository root:
 
 ```powershell
 python scripts/dev/education-local.py start
 ```
 
-The launcher generates local random credentials/keys under ignored `runtime/education-local`, applies migrations with checksum verification and invokes the guarded, idempotent curriculum, homework and parent fixtures. Accounts, groups and subsequent user edits survive reruns while the test volume exists. No seed operation deletes a user's records. Redis is independent and is not flushed by the seed. The fictional primary teacher receives the additional `education.family_verifier` role; other teachers do not. Existing family records remain pending until explicitly confirmed.
+The launcher generates random development keys under ignored `runtime/education-local` and keeps existing keys on rerun. The one-shot S3 initializer creates both buckets and configures CORS for the local Vite origin. The launcher checks S3, applies migrations with checksum verification, checks backend readiness, and seeds the curriculum, homework and parent fixtures. The fixtures preserve existing accounts and edits on rerun. The fictional primary teacher can verify representations. Existing family records remain pending until explicitly confirmed.
 
 Open `runtime/education-local/data/access.json` locally for the generated teacher, colleague and outsider credentials; the student's credentials are under `curriculum.studentAccount`. Do not publish this file. Seed data includes two groups, four students created through the Core application port, three teachers in two organizations, a program with two modules/four catalog lessons, four actual sessions, saved attendance/results and progress, a private lesson material, an activated student account and two explicitly offline test computers. Test computers never claim native Windows readiness.
 
@@ -24,6 +24,21 @@ npm run dev -- --host 127.0.0.1 --port 5178 --strictPort
 ```
 
 Open `http://127.0.0.1:5178/education/login`. Sign in with the local teacher. Create a group, add a new or existing Core person, create a program/module/lesson, assign the program to the group and schedule a linked lesson. Once the scheduled start has passed, mark attendance, complete the session, save its report/results and open group/student progress. The colleague sees only the explicitly shared group. The outsider's organization demonstrates the initial empty state. The student's separate Core login opens their own cabinet and progress.
+
+The backend uses `http://seaweedfs-test:8333` for server calls and signs browser URLs for `http://127.0.0.1:18338`. Use the signed URL exactly as issued. To change loopback ports, add decimal `EDUCATION_LOCAL_API_PORT`, `EDUCATION_LOCAL_S3_PORT` or `EDUCATION_LOCAL_VITE_PORT` to `runtime/education-local/local.env` and restart the isolated project. Use the new API and Vite ports in your frontend command. `/health/storage` reports a safe reason on failure, and `/health/ready` covers the backend dependencies.
+
+Addressed HTTP checks run from the repository root. They verify the isolated runtime before creating fixtures or uploading objects.
+
+```powershell
+python scripts/dev/education/homework-api-smoke.py
+python scripts/dev/education/parent-api-smoke.py
+python scripts/dev/education/activity-api-smoke.py
+python scripts/dev/storage02/backend-transfer-smoke.py
+```
+
+Use `python scripts/dev/storage02/backend-transfer-smoke.py --exercise-outage` to restart the verified test SeaweedFS and retry publication of the same previously uploaded bytes.
+
+The tracked launcher and these checks replace the old generated Storage 02 test manifests in `runtime/storage02` for active development. The CI overlay `compose.ci.s3.yaml` declares an independent test S3 for the Core browser job and uses generated CI-only credentials.
 
 Focused automated checks:
 

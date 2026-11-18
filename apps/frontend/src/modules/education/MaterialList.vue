@@ -14,7 +14,10 @@ withDefaults(defineProps<{ page: Page<Material>; deletable?: boolean }>(), {
 const emit = defineEmits<{ more: [offset: number]; refresh: [] }>();
 const workspace = useEducationWorkspace();
 const { t, locale } = useEducationI18n();
-const { busy, error, download } = useEducationDownload();
+const { busy, error, download } = useEducationDownload(
+  () => workspace.organizationId,
+  () => workspace.revision,
+);
 const issue = useEducationError();
 const mutation = useEducationMutation();
 const confirmOpen = ref(false);

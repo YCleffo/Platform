@@ -1,16 +1,16 @@
-"""Bounded real HTTP transfer checks against the dedicated STORAGE_02 test stack."""
+"""Bounded Storage 02 signed HTTP transfers in the isolated Education project."""
 from __future__ import annotations
 
 import argparse
+from contextlib import AbstractContextManager
 import hashlib
 import importlib.util
 import json
 from pathlib import Path
-import subprocess
 import sys
+import time
 from typing import Protocol, TypeAlias, TypedDict, cast
-import urllib.error
-import urllib.request
+from urllib.parse import urlencode
 import uuid
 
 
@@ -20,7 +20,8 @@ JsonObject: TypeAlias = dict[str, JsonValue]
 
 class SmokeArguments(argparse.Namespace):
     runtime: Path
-    evidence: Path
+    evidence: Path | None
+    exercise_outage: bool
 
 
 class Actor(TypedDict):
@@ -42,12 +43,25 @@ class HttpHelper(Protocol):
     def decode_object(self, raw: str | bytes, context: str) -> JsonObject: ...
     def object_value(self, value: JsonValue, context: str) -> JsonObject: ...
     def string_field(self, value: JsonObject, key: str) -> str: ...
+    def integer_field(self, value: JsonObject, key: str) -> int: ...
+    def array_value(self, value: JsonValue, context: str) -> list[JsonValue]: ...
+    def verify_fixture(self, runtime: Path, *, with_s3: bool) -> FixtureRuntime: ...
 
 
 class SignedRequest(TypedDict):
     url: str
     method: str
     headers: dict[str, str]
+
+
+class FixtureRuntime(Protocol):
+    @property
+    def api_origin(self) -> str: ...
+
+    def s3_offline(self) -> AbstractContextManager[None]: ...
+
+    def signed(self, descriptor: SignedRequest, data: bytes | None = None,
+               extra_headers: dict[str, str] | None = None) -> tuple[int, bytes, dict[str, str]]: ...
 
 
 class SignedPart(TypedDict):
@@ -111,42 +125,37 @@ class RestoredFile(TypedDict):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--runtime', type=Path, required=True)
-    parser.add_argument('--evidence', type=Path, required=True)
+    parser.add_argument('--runtime', type=Path, default=Path(__file__).resolve().parents[3] / 'runtime/education-local')
+    parser.add_argument('--evidence', type=Path)
+    parser.add_argument('--exercise-outage', action='store_true', help='Restart only the verified isolated S3 service')
     args = parser.parse_args(namespace=SmokeArguments())
-    subprocess.run(['docker', 'exec', 'storage02-test-backend-1', 'php', '-r',
-        "if(getenv('STORAGE02_TEST_RUNTIME')!=='1'||getenv('DB_NAME')!=='platform_test'||!str_starts_with((string)getenv('S3_BUCKET_STORAGE'),'storage02-test-'))exit(2);"],
-        check=True, capture_output=True)
     helper_path = Path(__file__).parents[1] / 'education/homework-api-smoke.py'
     spec = importlib.util.spec_from_file_location('storage02_http_helper', helper_path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    sys.path.insert(0, str(helper_path.parent))
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.pop(0)
     helper = cast(HttpHelper, module)
+    runtime = helper.verify_fixture(args.runtime, with_s3=True)
     fixture = helper.decode_object((args.runtime / 'data/access.json').read_text(encoding='utf-8'), 'fixture')
-    client = helper.ApiClient('http://127.0.0.1:8089', helper.string_field(fixture, 'organizationId'))
+    demo = helper.decode_object((args.runtime / 'data/education04-demo.json').read_text(encoding='utf-8'), 'demo')
+    client = helper.ApiClient(runtime.api_origin, helper.string_field(fixture, 'organizationId'))
     curriculum = helper.object_value(fixture['curriculum'], 'curriculum')
     accounts = helper.object_value(fixture['accounts'], 'accounts')
     student = client.login(helper.object_value(curriculum['studentAccount'], 'studentAccount'))
     teacher = client.login(helper.object_value(accounts['teacher'], 'teacher'))
+    students = helper.array_value(demo['studentAccounts'], 'studentAccounts')
+    peer = client.login(helper.object_value(students[1], 'second student'))
     req = client.request
     prefix = '/api/storage'
     namespace = 'platform-storage02-smoke/' + uuid.uuid4().hex
     checks: list[str] = []
 
-    def raw(request: SignedRequest, data: bytes | None = None, extra_headers: dict[str, str] | None = None) -> tuple[int, bytes, dict[str, str]]:
-        url = request['url']
-        assert url.startswith(('http://localhost:18333/', 'http://127.0.0.1:18333/'))
-        headers = {**request['headers'], **(extra_headers or {})}
-        wire = urllib.request.Request(url, data=data, method=request['method'], headers=headers)
-        try:
-            with urllib.request.urlopen(wire, timeout=60) as response:
-                return response.status, response.read(), {k.lower(): v for k, v in response.headers.items()}
-        except urllib.error.HTTPError as error:
-            return error.code, b'', {}
-        except urllib.error.URLError:
-            raise AssertionError('The isolated signed object request could not connect.') from None
+    raw = runtime.signed
 
     def ticket(purpose: str, path: str, content: bytes) -> Ticket:
         return cast(Ticket, req(prefix + '/tickets', student, 'POST', {'purpose': purpose, 'path': path,
@@ -180,8 +189,14 @@ def main() -> None:
     status, body, headers = raw(down['request'], extra_headers={'Range': 'bytes=7-31'})
     assert status == 206 and body == small[7:32]
     assert headers['content-range'] == f'bytes 7-31/{len(small)}'
+    unsigned_request: SignedRequest = {**down['request'], 'url': down['request']['url'].split('?', 1)[0]}
+    assert raw(unsigned_request)[0] == 403
     checks.append('stale upload URL leaves final version immutable and download supports Range')
+    checks.append('private S3 object rejects unsigned requests')
     req(prefix + f"/transfers/{single['id']}", teacher, expected=(403, 404))
+    req(prefix + f"/transfers/{single['id']}", peer, expected=(403, 404))
+    history_path = prefix + '/files/versions?' + urlencode({'path': path})
+    assert req(history_path, peer)['items'] == []
     req(prefix + f"/transfers/{single['id']}", student, expected=(403, 404),
         org=helper.string_field(fixture, 'otherOrganizationId'))
     checks.append('current account and organization scope')
@@ -231,9 +246,43 @@ def main() -> None:
     restored = cast(RestoredFile, req(prefix + '/files/restore', student, 'POST', {'path': path, 'version': 1}))
     assert restored['version'] >= 2 and restored['sha256'] == hashlib.sha256(small).hexdigest()
     download(path, small)
-    checks.append('restore copies a verified historical S3 version')
-    args.evidence.parent.mkdir(parents=True, exist_ok=True)
-    args.evidence.write_text(json.dumps({'checks': checks, 'multipartBytes': len(large)}, indent=2) + '\n', encoding='utf-8')
+    version_history = req(history_path, student)
+    items = helper.array_value(version_history['items'], 'versions')
+    assert {1, restored['version']} <= {
+        helper.integer_field(helper.object_value(item, 'version'), 'version') for item in items
+    }
+    deleted = req(prefix + '/files', student, 'DELETE', {'path': path})
+    assert deleted.get('deleted') is True
+    req(prefix + '/tickets', student, 'POST', {'purpose': 'download', 'path': path}, expected=404)
+    checks.append('verified historical S3 version, deletion and download revocation')
+    if args.exercise_outage:
+        recovery_path = namespace + '/recover.txt'
+        recovery = cast(DirectTransfer, begin(ticket('upload', recovery_path, small)))
+        assert raw(recovery['request'], small)[0] == 200
+        with runtime.s3_offline():
+            rejected = req(prefix + f"/transfers/{recovery['id']}/complete", student, 'POST', {}, expected=503)
+            error = helper.object_value(rejected['error'], 'outage response')
+            details = helper.object_value(error.get('meta'), 'outage reason')
+            assert details.get('storageCode') == 's3_unavailable'
+            req(prefix + '/tickets', student, 'POST', {'purpose': 'download', 'path': recovery_path}, expected=404)
+        deadline = time.monotonic() + 45
+        while True:
+            confirmation = req(
+                prefix + f"/transfers/{recovery['id']}/complete", student, 'POST', {}, expected=(200, 503),
+            )
+            if confirmation.get('status') == 'confirmed':
+                break
+            error = helper.object_value(confirmation.get('error'), 'recovery response')
+            details = helper.object_value(error.get('meta'), 'recovery reason')
+            assert details.get('storageCode') == 's3_unavailable'
+            if time.monotonic() >= deadline:
+                raise AssertionError('The same staged transfer was still unavailable after S3 recovery.')
+            time.sleep(2)
+        download(recovery_path, small)
+        checks.append('S3 outage postpones publication and retries the same staged bytes after recovery')
+    evidence = args.evidence or args.runtime / 'smoke/storage-transfer-evidence.json'
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    evidence.write_text(json.dumps({'checks': checks, 'multipartBytes': len(large)}, indent=2) + '\n', encoding='utf-8')
     print(f'Transfer API PASS {len(checks)} scenarios, signed single/multipart/resume/integrity/quota/conflict/restore.')
 
 
