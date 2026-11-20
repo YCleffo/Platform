@@ -12,7 +12,7 @@ DBML служит представлением для диаграммы, а н�
 | `core` | 50 | 561 | 86 | 195 | 161 | 19 |
 | `platform_runtime` | 3 | 36 | 1 | 18 | 7 | 2 |
 | `commercial` | 62 | 619 | 98 | 273 | 177 | 53 |
-| `education` | 51 | 425 | 76 | 98 | 134 | 11 |
+| `education` | 53 | 449 | 79 | 104 | 139 | 11 |
 
 Технические `public.platform_migrations` и `public.doctrine_migration_versions` не являются бизнес-таблицами и не включены в инвентарь.
 Межсистемный идентификатор в подписанном документе не создаёт внешний ключ между базами.
@@ -3151,6 +3151,40 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 
 Проверок CHECK: 2; индексов: 2; пользовательских триггеров: 1.
 
+## education.file_transfers
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `account_id` | `uuid` | нет | — | — |
+| `person_id` | `uuid` | нет | — | — |
+| `student_id` | `uuid` | да | — | — |
+| `kind` | `character varying(16)` | нет | — | — |
+| `resource_id` | `uuid` | да | — | — |
+| `lesson_id` | `uuid` | да | — | — |
+| `avatar` | `boolean` | нет | false | — |
+| `name` | `character varying(240)` | нет | — | — |
+| `expected_size` | `bigint` | нет | — | — |
+| `expected_sha256` | `character(64)` | нет | — | — |
+| `staging_key` | `character varying(160)` | нет | — | — |
+| `final_key` | `uuid` | нет | — | — |
+| `status` | `character varying(16)` | нет | 'pending'::character varying | — |
+| `result` | `jsonb` | да | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+| `expires_at` | `timestamp with time zone` | нет | (now() + '1 day'::interval) | — |
+| `confirmed_at` | `timestamp with time zone` | да | — | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `file_transfers_account_id_fkey`: `FOREIGN KEY (account_id) REFERENCES core.accounts(id)`.
+- `file_transfers_organization_id_fkey`: `FOREIGN KEY (organization_id) REFERENCES core.organizations(id)`.
+- `file_transfers_person_id_fkey`: `FOREIGN KEY (person_id) REFERENCES core.persons(id)`.
+
+Проверок CHECK: 6; индексов: 4; пользовательских триггеров: 0.
+
 ## education.files
 
 | Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
@@ -3657,6 +3691,22 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 - `parent_notification_student`: `FOREIGN KEY (parent_student_id, organization_id) REFERENCES education.students(id, organization_id)`.
 
 Проверок CHECK: 1; индексов: 5; пользовательских триггеров: 0.
+
+## education.object_cleanup
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `object_key` | `character varying(160)` | нет | — | — |
+| `queued_at` | `timestamp with time zone` | нет | now() | — |
+| `attempts` | `integer` | нет | 0 | — |
+| `last_error` | `character varying(64)` | да | — | — |
+| `completed_at` | `timestamp with time zone` | да | — | — |
+
+**Первичный ключ:** `PRIMARY KEY (object_key)`.
+
+Внешние ключи SQL из этой таблицы отсутствуют.
+
+Проверок CHECK: 0; индексов: 1; пользовательских триггеров: 0.
 
 ## education.parent_accounts
 

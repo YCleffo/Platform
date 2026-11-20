@@ -128,16 +128,23 @@ jobs:
   windows-agent:
     name: Windows agent
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
+      - uses: microsoft/setup-msbuild@v2
+      - name: Build Credential Provider DLL
+        run: msbuild apps/agent/Platform.CredentialProvider/Platform.CredentialProvider.vcxproj /p:Configuration=Release /p:Platform=x64
       - name: Build all agent components
         run: dotnet build apps/agent/Platform.Agent.sln --configuration Release
       - name: Run agent protocol and recovery tests
         run: dotnet run --project apps/agent/Platform.Agent.Tests --configuration Release --no-build
+      - name: Run agent regression and safe IPC tests
+        run: dotnet run --project apps/agent/Platform.Agent.RegressionTests --configuration Release --no-build
+      - name: Run agent S3 transfer and storage resilience tests
+        run: dotnet run --project apps/agent/Platform.Agent.StorageTests --configuration Release --no-build
 
   backend-fast:
     name: Core В· fast feedback
@@ -691,6 +698,8 @@ jobs:
           python scripts/database/export_schema.py --plane core --from-snapshot --check
           python scripts/database/export_schema.py --plane commercial --from-snapshot --check
           python scripts/database/export_schema.py --plane education --from-snapshot --check
+          python scripts/database/export_schema.py --plane device_management --from-snapshot --check
+          python scripts/database/export_schema.py --plane storage --from-snapshot --check
           python scripts/documentation/build-reference.py --check
           python scripts/documentation/build-coverage.py --check
           python scripts/documentation/build-education-coverage.py --check

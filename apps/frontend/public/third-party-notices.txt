@@ -1,0 +1,15 @@
+Platform Frontend - Third-Party Notices
+
+This package includes third-party software subject to the following licenses:
+
+1. Inter Font Family
+   Copyright (c) 2016-2024 The Inter Project Authors
+   Licensed under the SIL Open Font License, Version 1.1 (licenses/Inter-OFL.txt).
+
+2. Space Mono Font Family
+   Copyright (c) 2016 Google Inc.
+   Licensed under the SIL Open Font License, Version 1.1 (licenses/SpaceMono-OFL.txt).
+
+3. Solar Icons
+   Icons from the Solar icon set.
+   Used in accordance with applicable terms.

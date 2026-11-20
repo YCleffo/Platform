@@ -12,6 +12,7 @@ Table device_management.classrooms {
   owner_person_id uuid [not null]
   name "character varying(160)" [not null]
   created_at "timestamp with time zone" [not null, default: `now()`]
+  archived_at "timestamp with time zone" [null]
   indexes {
     (id, organization_id, owner_account_id) [name: 'classrooms_id_organization_id_owner_account_id_key', type: btree, unique]
   }
@@ -93,7 +94,12 @@ Table device_management.device_sessions {
   created_at "timestamp with time zone" [not null, default: `now()`]
   started_at "timestamp with time zone" [not null, default: `now()`]
   ended_at "timestamp with time zone" [null]
-  Note: 'device_sessions_created_at_not_null: NOT NULL created_at\ndevice_sessions_desired_status_check: CHECK (desired_status IS NULL OR (desired_status::text = ANY (ARRAY[\'AUTHORIZED\'::character varying, \'PREPARING\'::character varying, \'WINDOWS_PROFILE_READY\'::character varying, \'SYNCING_IN\'::character varying, \'ACTIVE\'::character varying, \'ENDING\'::character varying, \'SYNCING_OUT\'::character varying, \'STORAGE_CONFIRMED\'::character varying, \'CLEANUP\'::character varying, \'CLOSED\'::character varying, \'SYNC_PENDING\'::character varying, \'RECOVERY_REQUIRED\'::character varying, \'FAILED\'::character varying]::text[])))\ndevice_sessions_device_id_fkey: FOREIGN KEY (device_id) REFERENCES device_management.devices(id)\ndevice_sessions_device_id_not_null: NOT NULL device_id\ndevice_sessions_id_not_null: NOT NULL id\ndevice_sessions_organization_id_not_null: NOT NULL organization_id\ndevice_sessions_owner_account_id_not_null: NOT NULL owner_account_id\ndevice_sessions_started_at_not_null: NOT NULL started_at\ndevice_sessions_status_check: CHECK (status::text = ANY (ARRAY[\'AUTHORIZED\'::character varying, \'PREPARING\'::character varying, \'WINDOWS_PROFILE_READY\'::character varying, \'SYNCING_IN\'::character varying, \'ACTIVE\'::character varying, \'ENDING\'::character varying, \'SYNCING_OUT\'::character varying, \'STORAGE_CONFIRMED\'::character varying, \'CLEANUP\'::character varying, \'CLOSED\'::character varying, \'SYNC_PENDING\'::character varying, \'RECOVERY_REQUIRED\'::character varying, \'FAILED\'::character varying]::text[]))\ndevice_sessions_status_not_null: NOT NULL status\ndevice_sessions_student_id_not_null: NOT NULL student_id\nCREATE UNIQUE INDEX device_sessions_active ON device_management.device_sessions USING btree (device_id) WHERE ((status)::text <> ALL ((ARRAY[\'CLOSED\'::character varying, \'FAILED\'::character varying])::text[]))'
+  evidence jsonb [not null, default: `'{}'::jsonb`]
+  classroom_id uuid [null]
+  indexes {
+    (device_id, created_at, id) [name: 'device_sessions_history', type: btree]
+  }
+  Note: 'device_sessions_created_at_not_null: NOT NULL created_at\ndevice_sessions_desired_status_check: CHECK (desired_status IS NULL OR (desired_status::text = ANY (ARRAY[\'AUTHORIZED\'::character varying, \'PREPARING\'::character varying, \'WINDOWS_PROFILE_READY\'::character varying, \'SYNCING_IN\'::character varying, \'ACTIVE\'::character varying, \'ENDING\'::character varying, \'SYNCING_OUT\'::character varying, \'STORAGE_CONFIRMED\'::character varying, \'CLEANUP\'::character varying, \'CLOSED\'::character varying, \'SYNC_PENDING\'::character varying, \'RECOVERY_REQUIRED\'::character varying, \'FAILED\'::character varying]::text[])))\ndevice_sessions_device_id_fkey: FOREIGN KEY (device_id) REFERENCES device_management.devices(id)\ndevice_sessions_device_id_not_null: NOT NULL device_id\ndevice_sessions_evidence_not_null: NOT NULL evidence\ndevice_sessions_id_not_null: NOT NULL id\ndevice_sessions_organization_id_not_null: NOT NULL organization_id\ndevice_sessions_owner_account_id_not_null: NOT NULL owner_account_id\ndevice_sessions_started_at_not_null: NOT NULL started_at\ndevice_sessions_status_check: CHECK (status::text = ANY (ARRAY[\'AUTHORIZED\'::character varying, \'PREPARING\'::character varying, \'WINDOWS_PROFILE_READY\'::character varying, \'SYNCING_IN\'::character varying, \'ACTIVE\'::character varying, \'ENDING\'::character varying, \'SYNCING_OUT\'::character varying, \'STORAGE_CONFIRMED\'::character varying, \'CLEANUP\'::character varying, \'CLOSED\'::character varying, \'SYNC_PENDING\'::character varying, \'RECOVERY_REQUIRED\'::character varying, \'FAILED\'::character varying]::text[]))\ndevice_sessions_status_not_null: NOT NULL status\ndevice_sessions_student_id_not_null: NOT NULL student_id\nCREATE UNIQUE INDEX device_sessions_active ON device_management.device_sessions USING btree (device_id) WHERE ((status)::text <> ALL ((ARRAY[\'CLOSED\'::character varying, \'FAILED\'::character varying])::text[]))\nCREATE INDEX device_sessions_history ON device_management.device_sessions USING btree (device_id, created_at DESC, id DESC)'
 }
 
 Table device_management.devices {
@@ -109,11 +115,13 @@ Table device_management.devices {
   enrollment_state "character varying(20)" [not null, default: `'pending'::character varying`]
   last_seen_at "timestamp with time zone" [null]
   created_at "timestamp with time zone" [not null, default: `now()`]
+  state_version bigint [not null, default: `0`]
+  agent_state jsonb [not null, default: `'{}'::jsonb`]
   indexes {
     (id, organization_id, owner_account_id) [name: 'devices_id_organization_id_owner_account_id_key', type: btree, unique]
     (organization_id, owner_account_id, created_at, id) [name: 'devices_owner', type: btree]
   }
-  Note: 'devices_classroom_id_organization_id_owner_account_id_fkey: FOREIGN KEY (classroom_id, organization_id, owner_account_id) REFERENCES device_management.classrooms(id, organization_id, owner_account_id)\ndevices_created_at_not_null: NOT NULL created_at\ndevices_enrollment_state_check: CHECK (enrollment_state::text = ANY (ARRAY[\'pending\'::character varying, \'confirmed\'::character varying, \'revoked\'::character varying]::text[]))\ndevices_enrollment_state_not_null: NOT NULL enrollment_state\ndevices_id_not_null: NOT NULL id\ndevices_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\ndevices_name_not_null: NOT NULL name\ndevices_number_not_null: NOT NULL number\ndevices_organization_id_not_null: NOT NULL organization_id\ndevices_owner_account_id_not_null: NOT NULL owner_account_id\ndevices_owner_person_id_not_null: NOT NULL owner_person_id\ndevices_status_check: CHECK (status::text = ANY (ARRAY[\'OFFLINE\'::character varying, \'AVAILABLE\'::character varying, \'RESERVED\'::character varying, \'PREPARING\'::character varying, \'SYNCING_IN\'::character varying, \'ACTIVE\'::character varying, \'SYNCING_OUT\'::character varying, \'CLEANUP\'::character varying, \'RECOVERY_REQUIRED\'::character varying, \'ERROR\'::character varying]::text[]))\ndevices_status_not_null: NOT NULL status\ndevices_workstation_id_fkey: FOREIGN KEY (workstation_id) REFERENCES device_management.workstations(id)\nCREATE UNIQUE INDEX devices_id_organization_id_owner_account_id_key ON device_management.devices USING btree (id, organization_id, owner_account_id)\nCREATE INDEX devices_owner ON device_management.devices USING btree (organization_id, owner_account_id, created_at, id)'
+  Note: 'devices_agent_state_not_null: NOT NULL agent_state\ndevices_classroom_id_organization_id_owner_account_id_fkey: FOREIGN KEY (classroom_id, organization_id, owner_account_id) REFERENCES device_management.classrooms(id, organization_id, owner_account_id)\ndevices_created_at_not_null: NOT NULL created_at\ndevices_enrollment_state_check: CHECK (enrollment_state::text = ANY (ARRAY[\'pending\'::character varying, \'confirmed\'::character varying, \'revoked\'::character varying]::text[]))\ndevices_enrollment_state_not_null: NOT NULL enrollment_state\ndevices_id_not_null: NOT NULL id\ndevices_id_organization_id_owner_account_id_key: UNIQUE (id, organization_id, owner_account_id)\ndevices_name_not_null: NOT NULL name\ndevices_number_not_null: NOT NULL number\ndevices_organization_id_not_null: NOT NULL organization_id\ndevices_owner_account_id_not_null: NOT NULL owner_account_id\ndevices_owner_person_id_not_null: NOT NULL owner_person_id\ndevices_state_version_not_null: NOT NULL state_version\ndevices_status_check: CHECK (status::text = ANY (ARRAY[\'OFFLINE\'::character varying, \'AVAILABLE\'::character varying, \'RESERVED\'::character varying, \'PREPARING\'::character varying, \'SYNCING_IN\'::character varying, \'ACTIVE\'::character varying, \'SYNCING_OUT\'::character varying, \'CLEANUP\'::character varying, \'RECOVERY_REQUIRED\'::character varying, \'ERROR\'::character varying]::text[]))\ndevices_status_not_null: NOT NULL status\ndevices_workstation_id_fkey: FOREIGN KEY (workstation_id) REFERENCES device_management.workstations(id)\nCREATE UNIQUE INDEX devices_classroom_number ON device_management.devices USING btree (classroom_id, number) WHERE ((classroom_id IS NOT NULL) AND ((number)::text <> \'\'::text))\nCREATE UNIQUE INDEX devices_id_organization_id_owner_account_id_key ON device_management.devices USING btree (id, organization_id, owner_account_id)\nCREATE INDEX devices_owner ON device_management.devices USING btree (organization_id, owner_account_id, created_at, id)'
 }
 
 Table device_management.module_migrations {
@@ -121,6 +129,13 @@ Table device_management.module_migrations {
   sha256 character(64) [not null]
   applied_at "timestamp with time zone" [not null, default: `now()`]
   Note: 'module_migrations_applied_at_not_null: NOT NULL applied_at\nmodule_migrations_name_not_null: NOT NULL name\nmodule_migrations_sha256_not_null: NOT NULL sha256'
+}
+
+Table device_management.privacy_receipts {
+  item_id uuid [pk, not null]
+  result "character varying(32)" [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  Note: 'privacy_receipts_created_at_not_null: NOT NULL created_at\nprivacy_receipts_item_id_not_null: NOT NULL item_id\nprivacy_receipts_result_not_null: NOT NULL result'
 }
 
 Table device_management.workstations {

@@ -8,11 +8,13 @@ DBML получен из каталога PostgreSQL после применен
 | Runtime | [Platform_Runtime_v1.dbml](runtime/Platform_Runtime_v1.dbml) | Общий с Core |
 | Commercial | [Commercial_ControlPlane_v2.dbml](commercial/Commercial_ControlPlane_v2.dbml) | [schema.catalog.json](commercial/schema.catalog.json) |
 | Education, явно включаемый | [Education_v1.dbml](education/Education_v1.dbml) | [schema.catalog.json](education/schema.catalog.json) |
+| DeviceManagement | [DeviceManagement_v1.dbml](device_management/DeviceManagement_v1.dbml) | [schema.catalog.json](device_management/schema.catalog.json) |
+| Storage | [Storage_v1.dbml](storage/Storage_v1.dbml) | [schema.catalog.json](storage/schema.catalog.json) |
 
 Core DBML описывает схему `core`; общий JSON Core содержит также `platform_runtime`. Оба файла генерируются из фактического PostgreSQL после миграций, а не поддерживаются вручную.
 
-Текущий сохранённый срез: **Core 50 / Runtime 3 / Commercial 62 / Education 45 / DeviceManagement 10 / Storage 8 таблиц**.
-Education включает технический журнал `education.module_migrations`; бизнес-таблиц 44. DeviceManagement и Storage включают собственные технические журналы `module_migrations`; бизнес-таблиц 9 и 7 соответственно.
+Текущий сохранённый срез: **Core 50 / Runtime 3 / Commercial 62 / Education 53 / DeviceManagement 11 / Storage 15 таблиц**.
+Education включает технический журнал `education.module_migrations`; бизнес-таблиц 52. DeviceManagement и Storage включают собственные технические журналы `module_migrations`; бизнес-таблиц 10 и 14 соответственно.
 Опциональный Education устанавливается отдельными миграциями в схему `education`;
 его каталог, DBML и покрытие публикуются отдельно и не входят в срез Core/Runtime.
 Проверка среза подтверждает сохранённый каталог и хеши миграций Education, но не

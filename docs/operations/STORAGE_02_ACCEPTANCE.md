@@ -32,6 +32,20 @@ VERDICT: PARTIAL. Локальный код и основное окружени
 | GIT_STATUS | main, без commit/push/reset/clean/stash. Начальные 306 изменений сохранены, поздние форматирование/type alias объединены, 11 внешних удалений сохранены. Изолированные worktrees и private manifest оставлены для проверки/восстановления. |
 | REMAINING | Native Windows acceptance; внешний VPS/DNS/TLS/CORS/offsite restore; end-to-end Agent large-file faults и cold-scan performance; включение оператором backup/cleanup расписания; классификация 62 orphan legacy files. Удаление старых ignored Agent bin/obj заблокировано автоматической политикой. |
 
+## CLASSROOM_03: актуализация приёмки 2026-11-20
+
+| Компонент | Статус CLASSROOM_03 | Подтверждение |
+|---|---|---|
+| DB & Snapshots | PASS | Все 5 срезов (Core, Commercial, Education, DeviceManagement, Storage) проверены без дрифта (`--from-snapshot --check`). Дрифт миграций 002-004 `device_management` устранён. Справочники и покрытие обновлены. |
+| Contracts & Routes | PASS | 101 операция Education сопоставлена с OpenAPI (`education-contract.test.mjs`), все 19 фронтенд-контрактных тестов пройдены. |
+| S3 & Transfers | PASS | Разделение internal/public endpoint; SigV4 подписанные URL для Agent; 15/15 тестов `Platform.Agent.StorageTests` пройдены (MPU, resume, recovery, refresh). |
+| Windows Agent | PASS | Сборка Release .NET 10 (0 ошибок, 0 предупреждений); 31/31 `Platform.Agent.Tests` PASS; 20/20 `Platform.Agent.RegressionTests` PASS. |
+| Credential Provider | PASS | Сборка MSVC v145 x64 Release DLL успешна (`Platform.CredentialProvider.dll`). |
+| Windows VM Native | NOT_VERIFIED | Нативная приёмка в гостевой VM требует выделенного гипервизора с авторизацией. Хостовая система сохранена в безопасности. |
+| Frontend Suite | PASS | 102 файла / 505 тестов Vitest PASS; `typecheck`, `check:icons`, `check:tokens`, `check:styles`, `lint`, `format:check` пройдены. |
+| Legacy Cleanup | PASS | Удалены мёртвые адаптеры `LocalFilesystemStorageAdapter.php` и `PrivateFileStore.php`. Проекты `KiberOne.Agent.*` сохранены в рабочем состоянии для обратной совместимости DesignTimeBuild IDE и тестов миграции устаревших инсталляций. |
+| CI Workflow | PASS | `.github/workflows/ci.yml` обновлён сборкой Credential Provider DLL, регрессионными тестами агента и проверками срезов DeviceManagement/Storage. |
+
 Доступ и команды эксплуатации: [STORAGE_02.md](STORAGE_02.md).
 Прежний общий `education-contract-smoke.mjs` привязан к отдельному стенду 8088 и
 `runtime/education-local`; его запуск без этого стенда завершился connection refused.

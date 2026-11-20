@@ -13,7 +13,7 @@ This run prepared guarded native deployment and a real HTTPS bridge. It did not 
 | PRELOGIN_VERIFIED | NOT_VERIFIED: no guest LogonUI/Winlogon evidence. |
 | STORAGE_RECOVERY_VERIFIED | PASS at HTTP/PostgreSQL/test-profile layer: A to B to A restores persistent bytes and excludes other student files; keep-server conflict retains/restores both versions. Native Known Folders/Windows ACL/reboot acceptance remains NOT_VERIFIED. |
 | Managed builds | PASS: targeted Service and UI .NET builds, zero warnings/errors. |
-| MSVC v143 x64 | NOT_VERIFIED: explicit Release/x64 build attempt failed MSB4019; `Microsoft.Cpp.Default.props`/C++ toolchain is absent despite installed VS shell. No compiler was installed or reconfigured. |
+| MSVC v145 x64 | PASS: Release x64 build of `Platform.CredentialProvider.vcxproj` via Visual Studio 18 MSVC v145 succeeds cleanly; produces `Platform.CredentialProvider.dll`. |
 | VMware HTTPS | Bridge .NET build PASS, zero warnings/errors; PowerShell syntax parsed. Live certificate creation, firewall rule, guest trust/SAN/TCP/readiness are NOT_VERIFIED. |
 | VM deployment scripts | PowerShell parser PASS; no live SCM/COM installation/uninstallation was executed. |
 
