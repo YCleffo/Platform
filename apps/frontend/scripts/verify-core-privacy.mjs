@@ -378,7 +378,7 @@ try {
       { exact: true },
     )
     .waitFor();
-  await page.locator('[role="dialog"]').waitFor({ state: 'hidden' });
+  await page.getByLabel('Receive response').waitFor({ state: 'hidden' });
   assert.equal(issued.length, calls + 1);
   assert.equal(
     await page.getByRole('button', { name: 'Receive response', exact: true }).count(),

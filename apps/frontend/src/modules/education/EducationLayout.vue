@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import { Calendar, Home, People, Message, LayoutGrid, Book, Bell } from '@/shared/ui/icons';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
-import AppBottomNav from '@/shared/ui/navigation/AppBottomNav.vue';
 import { useEducationWorkspace } from './workspace';
 import { useEducationI18n } from './i18n';
 import EducationState from './EducationState.vue';
@@ -23,24 +22,6 @@ const navigation = [
   { path: '/messages', key: 'messages', icon: Message, routeName: 'education-messages' },
   { path: '/more', key: 'more', icon: LayoutGrid, routeName: 'education-more' },
 ];
-const mobileItems = computed(() =>
-  navigation.map((item) =>
-    item.key === 'messages'
-      ? {
-          path: '/homework',
-          key: 'homework',
-          icon: Book,
-          routeName: 'education-homework',
-          label: t('education.homework'),
-        }
-      : { ...item, label: t(`education.${item.key}`) },
-  ),
-);
-const activeRouteName = computed(() =>
-  route.meta.educationTab === 'homework'
-    ? 'education-homework'
-    : navigation.find((item) => item.key === route.meta.educationTab)?.routeName,
-);
 const currentOrganization = computed(() =>
   workspace.context?.organizations.find((item) => item.id === workspace.organizationId),
 );
@@ -310,10 +291,35 @@ onBeforeUnmount(() => {
         </template>
       </main>
     </div>
-    <AppBottomNav
+    <nav
       v-if="!studentPortal"
-      :items="mobileItems"
-      :active-route-name="activeRouteName"
-    />
+      class="edu-navigation"
+      :aria-label="t('education.today')"
+    >
+      <RouterLink
+        v-for="item in navigation"
+        :key="item.key"
+        :to="item.path"
+        class="edu-navigation__link"
+        :class="{ 'edu-navigation__link--active': route.meta.educationTab === item.key }"
+        :aria-current="route.meta.educationTab === item.key ? 'page' : undefined"
+      >
+        <span class="edu-navigation__icon">
+          <component
+            :is="item.icon"
+            :size="23"
+            aria-hidden="true"
+          />
+          <span
+            v-if="item.key === 'messages' && workspace.header?.unreadCount"
+            class="edu-dot"
+            aria-hidden="true"
+          >
+            {{ Math.min(workspace.header.unreadCount, 99) }}
+          </span>
+        </span>
+        <span>{{ t(`education.${item.key}`) }}</span>
+      </RouterLink>
+    </nav>
   </div>
 </template>
