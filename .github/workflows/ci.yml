@@ -128,7 +128,7 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - uses: microsoft/setup-msbuild@v2
+      - uses: microsoft/setup-msbuild@v3
       - name: Build Credential Provider DLL
         run: msbuild apps/agent/Platform.CredentialProvider/Platform.CredentialProvider.vcxproj /p:Configuration=Release /p:Platform=x64
       - name: Build all agent components
@@ -186,7 +186,7 @@ jobs:
           extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
           tools: composer:v2
       - name: Cache Composer downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cache/composer
@@ -235,7 +235,7 @@ jobs:
           extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
           tools: composer:v2
       - name: Cache Composer downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cache/composer
@@ -298,7 +298,7 @@ jobs:
           extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
           tools: composer:v2
       - name: Cache Composer downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cache/composer
@@ -453,7 +453,7 @@ jobs:
           extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
           tools: composer:v2
       - name: Cache Composer downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cache/composer
@@ -818,7 +818,7 @@ jobs:
           extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
           tools: composer:v2
       - name: Cache Composer downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cache/composer

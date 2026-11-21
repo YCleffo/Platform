@@ -82,7 +82,7 @@ if destination := os.environ.get("GITHUB_STEP_SUMMARY"):
     with Path(destination).open("a", encoding="utf-8") as output:
         output.write(summary)
 if unfixed_critical := total["CRITICAL"] - fixable["CRITICAL"]:
-    print(f"::warning::{args.plane} image has {unfixed_critical} CRITICAL finding(s) without a released fix; see the full inventory.")
+    print(f"{args.plane} image has {unfixed_critical} CRITICAL finding(s) without a released fix; see the full inventory.")
 if args.fail_on_fixable and blocking:
     print(
         f"::error::{args.plane} image has {len(blocking)} HIGH/CRITICAL vulnerability finding(s) with a released fix.",
