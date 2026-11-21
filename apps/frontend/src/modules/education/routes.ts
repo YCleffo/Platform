@@ -38,7 +38,7 @@ export const educationRoutes: RouteRecordRaw[] = [
     { path: '/groups/:id/attendance', name: 'education-group-attendance', component: () => import('./AttendanceView.vue'), meta: { educationTab: 'people' } },
     { path: '/groups/:id/journal', name: 'education-group-journal', component: () => import('./JournalView.vue'), meta: { educationTab: 'people' } },
     { path: '/groups/:id/activities', name: 'education-group-activities', component: () => import('./GroupActivitiesView.vue'), meta: { educationTab: 'people' } },
-    { path: '/student', name: 'education-student-portal', component: () => import('./student/StudentLayout.vue'), meta: { educationTab: 'none' }, children: [
+    { path: '/student', component: () => import('./student/StudentLayout.vue'), meta: { educationTab: 'none' }, children: [
       { path: '', redirect: { name: 'education-student-home' } },
       { path: 'homework', name: 'education-student-homework', component: () => import('./homework/HomeworkListView.vue'), props: { student: true }, meta: { educationTab: 'none' } },
       { path: 'homework/:id', name: 'education-student-homework-detail', component: () => import('./homework/StudentHomeworkView.vue'), meta: { educationTab: 'none' } },

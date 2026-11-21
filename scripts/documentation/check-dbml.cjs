@@ -16,6 +16,12 @@ const cases = [
         "commercial/Commercial_ControlPlane_v2.dbml",
     ],
     ["education", "education/schema.catalog.json", "education/Education_v1.dbml"],
+    [
+        "device_management",
+        "device_management/schema.catalog.json",
+        "device_management/DeviceManagement_v1.dbml",
+    ],
+    ["storage", "storage/schema.catalog.json", "storage/Storage_v1.dbml"],
 ];
 for (const [schema, catalogFile, dbmlFile] of cases) {
     const catalog = JSON.parse(

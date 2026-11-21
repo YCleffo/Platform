@@ -24,7 +24,12 @@ final class PersonalDataExportArtifact
         $this->stream = $stream;
     }
 
-    /** Transfer ownership to the response, whose stream closes the temporary file. @return resource */
+    /**
+     * Transfer ownership to the response, whose stream closes the temporary file.
+     *
+     * @return resource
+     * @psalm-return resource
+     */
     public function detachStream()
     {
         if (!is_resource($this->stream)) {
@@ -37,6 +42,8 @@ final class PersonalDataExportArtifact
 
     public function __destruct()
     {
-        if (is_resource($this->stream)) fclose($this->stream);
+        if (is_resource($this->stream)) {
+            fclose($this->stream);
+        }
     }
 }

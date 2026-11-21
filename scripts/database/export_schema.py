@@ -290,7 +290,7 @@ def migration_manifest(plane: str) -> list[MigrationSource]:
     return [
         {
             "path": p.relative_to(ROOT).as_posix(),
-            "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
+            "sha256": hashlib.sha256(p.read_bytes().replace(b"\r\n", b"\n")).hexdigest(),
         }
         for p in sorted((ROOT / directory).glob(pattern))
     ]

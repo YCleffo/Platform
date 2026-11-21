@@ -19743,7 +19743,7 @@
     },
     {
       "path": "apps/backend/migrations/education/014_activities_achievements.sql",
-      "sha256": "75f8fd5ab221a69b773cd86cb006406c263d00e57acbb0c2786ff3c96f33c20d"
+      "sha256": "1673e0884668a916e97cdd0126c5679d127327786bf29616c4c1121a3d32224f"
     },
     {
       "path": "apps/backend/migrations/education/015_s3_file_transfers.sql",

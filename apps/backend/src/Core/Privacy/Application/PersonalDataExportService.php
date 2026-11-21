@@ -54,6 +54,9 @@ final readonly class PersonalDataExportService
         return $this->export($actor, $requestId, null, true, stream: true);
     }
 
+    /**
+     * @return ($stream is true ? PersonalDataExportArtifact : PersonalDataExportResult)
+     */
     private function export(
         AuthenticatedIdentity $actor,
         string $requestId,

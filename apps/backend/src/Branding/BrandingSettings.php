@@ -52,10 +52,11 @@ final readonly class BrandingSettings
 
     public function rename(array $input, string $actor, ClientContext $context): array
     {
-        if (array_diff(array_keys($input), ['name']) !== [] || !is_string($input['name'] ?? null)) {
+        $rawName = $input['name'] ?? null;
+        if (array_diff(array_keys($input), ['name']) !== [] || !is_string($rawName)) {
             throw new StorageError(422, 'invalid_brand_name');
         }
-        $name = trim($input['name']);
+        $name = trim($rawName);
         if (!self::validName($name)) {
             throw new StorageError(422, 'invalid_brand_name');
         }
