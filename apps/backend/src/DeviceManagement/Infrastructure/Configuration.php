@@ -23,7 +23,7 @@ final class Configuration
                 'device_enroll',
                 'start_session',
                 'end_session',
-                'revoke_device'
+                'revoke_device',
             ] as $operation
         ) {
             $audit[] = new AuditEventDefinition('device_management.' . $operation, metadataFields: ['organizationId' => 'uuid']);

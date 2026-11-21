@@ -20,39 +20,65 @@ use Yiisoft\Router\CurrentRoute;
 
 final readonly class ParentAction
 {
-    public function __invoke(ServerRequestInterface $request,CurrentRoute $route,EducationAccess $access,
-        ParentFamily $family,ParentReadService $parents,ResponseFactory $responses):ResponseInterface
-    {
-        try{
-            $operation=(string)$route->getArgument('operation');$body=$request->getParsedBody()??[];
-            if(!is_array($body)||(array_is_list($body)&&$body!==[]))throw new EducationError(422,'invalid_input');
-            if($operation==='register')return $responses->success($family->register($body,ClientContext::fromRequest($request)));
-            $identity=AuthenticatedIdentity::fromRequest($request);
-            if($operation==='context')return $responses->success($parents->context($identity));
-            if($operation==='activate')return $responses->success($family->activate($identity,$body));
-            $organization=$request->getHeaderLine('X-Education-Organization');
-            if(str_starts_with($operation,'staff_')){
-                $scope=$access->scope($identity,$organization,'education.people.manage');
-                $student=$route->getArgument('studentId');
-                $result=match($operation){
-                    'staff_candidates'=>$family->candidates($scope,$request->getQueryParams()),
-                    'staff_list'=>$family->list($scope,Input::uuid($student)),
-                    'staff_history'=>$family->history($scope,Input::uuid($student),$request->getQueryParams()),
-                    default=>$family->write(substr($operation,6),$scope,Input::uuid($student),
-                        is_string($route->getArgument('personId'))?$route->getArgument('personId'):null,$body)};
-                return $responses->success($result)->withStatus($operation==='staff_add'?201:200);
+    public function __invoke(
+        ServerRequestInterface $request,
+        CurrentRoute $route,
+        EducationAccess $access,
+        ParentFamily $family,
+        ParentReadService $parents,
+        ResponseFactory $responses,
+    ): ResponseInterface {
+        try {
+            $operation = (string) $route->getArgument('operation');
+            $rawBody = $request->getParsedBody() ?? [];
+            if (!is_array($rawBody) || (array_is_list($rawBody) && $rawBody !== [])) {
+                throw new EducationError(422, 'invalid_input');
             }
-            $scope=$access->parentScope($identity,$organization,Input::uuid($route->getArgument('studentId')));
-            if($operation==='read_notification'){
-                if($body!==[])throw new EducationError(422,'invalid_input');
-                return $responses->success($parents->readNotification($scope,Input::uuid($route->getArgument('id'))));
+            /** @var array<string, mixed> $body */
+            $body = $rawBody;
+            if ($operation === 'register') {
+                return $responses->success($family->register($body, ClientContext::fromRequest($request)));
             }
-            return $responses->success($parents->read($operation,$scope,$request->getQueryParams()));
-        }catch(EducationError $error){
-            return $responses->error(match($error->status){403=>ApiMessage::AUTH_PERMISSION_DENIED,404=>ApiMessage::HTTP_NOT_FOUND,
-                default=>ApiMessage::VALIDATION_FAILED},httpCode:$error->status,meta:['educationCode'=>$error->reason,'parentCode'=>$error->reason]);
-        }catch(ConflictException){
-            return $responses->error(ApiMessage::VALIDATION_FAILED,httpCode:409,meta:['educationCode'=>'identity_conflict','parentCode'=>'identity_conflict']);
+            $identity = AuthenticatedIdentity::fromRequest($request);
+            if ($operation === 'context') {
+                return $responses->success($parents->context($identity));
+            }
+            if ($operation === 'activate') {
+                return $responses->success($family->activate($identity, $body));
+            }
+            $organization = $request->getHeaderLine('X-Education-Organization');
+            if (str_starts_with($operation, 'staff_')) {
+                $scope = $access->scope($identity, $organization, 'education.people.manage');
+                $student = $route->getArgument('studentId');
+                $result = match ($operation) {
+                    'staff_candidates' => $family->candidates($scope, $request->getQueryParams()),
+                    'staff_list' => $family->list($scope, Input::uuid($student)),
+                    'staff_history' => $family->history($scope, Input::uuid($student), $request->getQueryParams()),
+                    default => $family->write(
+                        substr($operation, 6),
+                        $scope,
+                        Input::uuid($student),
+                        is_string($route->getArgument('personId')) ? $route->getArgument('personId') : null,
+                        $body,
+                    ),
+                };
+                return $responses->success($result)->withStatus($operation === 'staff_add' ? 201 : 200);
+            }
+            $scope = $access->parentScope($identity, $organization, Input::uuid($route->getArgument('studentId')));
+            if ($operation === 'read_notification') {
+                if ($body !== []) {
+                    throw new EducationError(422, 'invalid_input');
+                }
+                return $responses->success($parents->readNotification($scope, Input::uuid($route->getArgument('id'))));
+            }
+            return $responses->success($parents->read($operation, $scope, $request->getQueryParams()));
+        } catch (EducationError $error) {
+            return $responses->error(match ($error->status) {
+                403 => ApiMessage::AUTH_PERMISSION_DENIED,404 => ApiMessage::HTTP_NOT_FOUND,
+                default => ApiMessage::VALIDATION_FAILED,
+            }, httpCode: $error->status, meta: ['educationCode' => $error->reason,'parentCode' => $error->reason]);
+        } catch (ConflictException) {
+            return $responses->error(ApiMessage::VALIDATION_FAILED, httpCode: 409, meta: ['educationCode' => 'identity_conflict','parentCode' => 'identity_conflict']);
         }
     }
 }

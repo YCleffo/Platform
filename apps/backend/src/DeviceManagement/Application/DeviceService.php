@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\DeviceManagement\Application;
 
-use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Education\Application\EducationAccess;
 use App\Education\Application\EducationStore;
 use DateTimeImmutable;
@@ -24,8 +23,12 @@ final readonly class DeviceService
     {
         $offset = max(0, (int) ($query['offset'] ?? 0));
         return match ($operation) {
-            'classrooms' => $this->pageOf(fn(): array => $this->store->classrooms($scope, $offset,
-                empty($query['search']) ? null : self::text($query['search'], 80), ($query['archived'] ?? '') === '1'), $offset),
+            'classrooms' => $this->pageOf(fn(): array => $this->store->classrooms(
+                $scope,
+                $offset,
+                empty($query['search']) ? null : self::text($query['search'], 80),
+                ($query['archived'] ?? '') === '1',
+            ), $offset),
             'devices' => $this->pageOf(fn(): array => $this->store->devices(
                 $scope,
                 $offset,
@@ -59,34 +62,68 @@ final readonly class DeviceService
     public function write(string $operation, Scope $scope, array $body, ?string $id = null): array
     {
         return match ($operation) {
-            'create_classroom' => $this->mutations->run($scope, 'create_classroom',
-                fn(): array => $this->store->createClassroom($scope, self::text($body['name'] ?? null, 160))),
-            'update_classroom' => $this->mutations->run($scope, 'update_classroom',
-                fn(): array => $this->store->updateClassroom($scope, self::uuid($id), self::text($body['name'] ?? null, 160))),
-            'archive_classroom' => $this->mutations->run($scope, 'archive_classroom',
-                fn(): array => $this->store->archiveClassroom($scope, self::uuid($id))),
-            'restore_classroom' => $this->mutations->run($scope, 'restore_classroom',
-                fn(): array => $this->store->restoreClassroom($scope, self::uuid($id))),
-            'cancel_assignment' => $this->mutations->run($scope, 'cancel_assignment',
-                fn(): array => $this->store->cancelAssignment($scope, self::uuid($id), self::uuid($body['sessionId'] ?? null), self::stateVersion($body))),
-            'retry_recovery' => $this->mutations->run($scope, 'retry_recovery',
-                fn(): array => $this->store->retryRecovery($scope, self::uuid($id), self::stateVersion($body))),
-            'create_device' => $this->mutations->run($scope, 'create_device',
-                fn(): array => $this->store->createDevice($scope,
+            'create_classroom' => $this->mutations->run(
+                $scope,
+                'create_classroom',
+                fn(): array => $this->store->createClassroom($scope, self::text($body['name'] ?? null, 160)),
+            ),
+            'update_classroom' => $this->mutations->run(
+                $scope,
+                'update_classroom',
+                fn(): array => $this->store->updateClassroom($scope, self::uuid($id), self::text($body['name'] ?? null, 160)),
+            ),
+            'archive_classroom' => $this->mutations->run(
+                $scope,
+                'archive_classroom',
+                fn(): array => $this->store->archiveClassroom($scope, self::uuid($id)),
+            ),
+            'restore_classroom' => $this->mutations->run(
+                $scope,
+                'restore_classroom',
+                fn(): array => $this->store->restoreClassroom($scope, self::uuid($id)),
+            ),
+            'cancel_assignment' => $this->mutations->run(
+                $scope,
+                'cancel_assignment',
+                fn(): array => $this->store->cancelAssignment($scope, self::uuid($id), self::uuid($body['sessionId'] ?? null), self::stateVersion($body)),
+            ),
+            'retry_recovery' => $this->mutations->run(
+                $scope,
+                'retry_recovery',
+                fn(): array => $this->store->retryRecovery($scope, self::uuid($id), self::stateVersion($body)),
+            ),
+            'create_device' => $this->mutations->run(
+                $scope,
+                'create_device',
+                fn(): array => $this->store->createDevice(
+                    $scope,
                     empty($body['classroomId']) ? null : self::uuid($body['classroomId']),
-                    self::text($body['name'] ?? '', 160, false), self::text($body['number'] ?? '', 40, false))),
-            'update_device' => $this->mutations->run($scope, 'update_device',
-                fn(): array => $this->store->updateDevice($scope, self::uuid($id),
+                    self::text($body['name'] ?? '', 160, false),
+                    self::text($body['number'] ?? '', 40, false),
+                ),
+            ),
+            'update_device' => $this->mutations->run(
+                $scope,
+                'update_device',
+                fn(): array => $this->store->updateDevice(
+                    $scope,
+                    self::uuid($id),
                     empty($body['classroomId']) ? null : self::uuid($body['classroomId']),
-                    self::text($body['name'] ?? '', 160, false), self::text($body['number'] ?? '', 40, false))),
+                    self::text($body['name'] ?? '', 160, false),
+                    self::text($body['number'] ?? '', 40, false),
+                ),
+            ),
             'device_enroll' => $this->enroll($scope, self::uuid($id)),
             'device_session' => $this->startSession($scope, self::uuid($id), $body),
             'device_session_end' => $this->endSession($scope, self::uuid($id), $body),
-            'revoke_device' => $this->mutations->run($scope, 'revoke_device',
+            'revoke_device' => $this->mutations->run(
+                $scope,
+                'revoke_device',
                 function () use ($scope, $id): array {
                     $this->store->revokeDevice($scope, self::uuid($id));
                     return ['id' => $id, 'revoked' => true];
-                }),
+                },
+            ),
             default => throw new DeviceError(404, 'not_found'),
         };
     }
@@ -120,8 +157,13 @@ final readonly class DeviceService
     private function startSession(Scope $scope, string $deviceId, array $body): array
     {
         $studentId = self::uuid($body['studentId'] ?? null);
-        $educationScope = new \App\Education\Application\Scope($scope->organizationId, $scope->accountId,
-            $scope->personId, $scope->locale, $scope->timezone);
+        $educationScope = new \App\Education\Application\Scope(
+            $scope->organizationId,
+            $scope->accountId,
+            $scope->personId,
+            $scope->locale,
+            $scope->timezone,
+        );
         $student = $this->educationStore->student($educationScope, $studentId) ?? throw new DeviceError(404, 'not_found');
         $personId = (string) $student['personId'];
         if (!$this->educationAccess->member($personId, $scope->organizationId)
@@ -129,8 +171,11 @@ final readonly class DeviceService
             throw new DeviceError(403, 'access_denied');
         }
         $name = $this->educationAccess->personName($personId) ?? '';
-        return $this->mutations->run($scope, 'start_session',
-            fn(): array => $this->store->startSession($scope, $deviceId, $studentId, ['personId' => $personId, 'name' => $name], self::stateVersion($body)));
+        return $this->mutations->run(
+            $scope,
+            'start_session',
+            fn(): array => $this->store->startSession($scope, $deviceId, $studentId, ['personId' => $personId, 'name' => $name], self::stateVersion($body)),
+        );
     }
 
     /**
@@ -244,8 +289,12 @@ final readonly class DeviceService
 
     private static function stateVersion(array $body): ?int
     {
-        if (!array_key_exists('stateVersion', $body)) return null;
-        if (!is_int($body['stateVersion']) || $body['stateVersion'] < 0) throw new DeviceError(422, 'invalid_input');
+        if (!array_key_exists('stateVersion', $body)) {
+            return null;
+        }
+        if (!is_int($body['stateVersion']) || $body['stateVersion'] < 0) {
+            throw new DeviceError(422, 'invalid_input');
+        }
         return $body['stateVersion'];
     }
 

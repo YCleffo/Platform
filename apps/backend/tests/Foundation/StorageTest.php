@@ -53,8 +53,10 @@ final class StorageTest extends TestCase
         TestRuntimeGuard::assertDestructiveOperationsAllowed($this->db);
         $this->transaction = $this->db->beginTransaction();
         foreach (['education', 'storage', 'device_management'] as $module) {
-            $this->db->createCommand("UPDATE core.modules SET enabled=true,enabled_at=now(),disabled_at=NULL WHERE code=:code",
-                [':code' => $module])->execute();
+            $this->db->createCommand(
+                "UPDATE core.modules SET enabled=true,enabled_at=now(),disabled_at=NULL WHERE code=:code",
+                [':code' => $module],
+            )->execute();
         }
         $this->store = $container->get(StorageStore::class);
         $this->access = $container->get(StorageAccess::class);
@@ -68,9 +70,15 @@ final class StorageTest extends TestCase
                 return new DateTimeImmutable('2026-03-08T14:00:00Z');
             }
         };
-        $this->education = new EducationService($educationStore, $this->educationAccess, $clock,
-            $container->get(FileStore::class), $container->get(\App\Education\Application\Mutation::class),
-            $container->get(PermissionService::class), $container->get(OrganizationRepository::class));
+        $this->education = new EducationService(
+            $educationStore,
+            $this->educationAccess,
+            $clock,
+            $container->get(FileStore::class),
+            $container->get(\App\Education\Application\Mutation::class),
+            $container->get(PermissionService::class),
+            $container->get(OrganizationRepository::class),
+        );
         $this->organization = (string) $this->db->createCommand("INSERT INTO core.organizations(code,name)
             VALUES(:code,'Storage test') RETURNING id::text", [':code' => 'storage.test.' . bin2hex(random_bytes(8))])->queryScalar();
         $person = $this->person('Storage teacher');
@@ -107,8 +115,10 @@ final class StorageTest extends TestCase
         $this->assertError(404, fn() => $this->service->uploadWithTicket($uploadTicket['token'], $this->stream($content), null));
 
         $files = $this->service->read('files', $this->studentScope, []);
-        self::assertSame([['path' => 'docs/hello.txt', 'version' => 1]],
-            array_map(static fn(array $row): array => ['path' => $row['path'], 'version' => $row['version']], $files['items']));
+        self::assertSame(
+            [['path' => 'docs/hello.txt', 'version' => 1]],
+            array_map(static fn(array $row): array => ['path' => $row['path'], 'version' => $row['version']], $files['items']),
+        );
 
         $downloadTicket = $this->service->write('ticket', $this->studentScope, ['purpose' => 'download', 'path' => 'docs/hello.txt']);
         $download = $this->service->downloadWithTicket($downloadTicket['token']);
@@ -125,16 +135,31 @@ final class StorageTest extends TestCase
 
     public function testPathTraversalAndLimitsAreRejected(): void
     {
-        $this->assertError(422, fn() => $this->service->write('ticket', $this->studentScope,
-            ['purpose' => 'upload', 'path' => '../secret.txt']));
-        $this->assertError(422, fn() => $this->service->write('ticket', $this->studentScope,
-            ['purpose' => 'upload', 'path' => '/absolute.txt']));
-        $this->assertError(422, fn() => $this->service->write('ticket', $this->studentScope,
-            ['purpose' => 'upload', 'path' => 'a/../b.txt']));
-        $this->assertError(422, fn() => $this->service->write('ticket', $this->studentScope,
-            ['purpose' => 'upload', 'path' => '']));
-        $this->assertError(422, fn() => $this->service->write('ticket', $this->studentScope,
-            ['purpose' => 'nonsense', 'path' => 'a.txt']));
+        $this->assertError(422, fn() => $this->service->write(
+            'ticket',
+            $this->studentScope,
+            ['purpose' => 'upload', 'path' => '../secret.txt'],
+        ));
+        $this->assertError(422, fn() => $this->service->write(
+            'ticket',
+            $this->studentScope,
+            ['purpose' => 'upload', 'path' => '/absolute.txt'],
+        ));
+        $this->assertError(422, fn() => $this->service->write(
+            'ticket',
+            $this->studentScope,
+            ['purpose' => 'upload', 'path' => 'a/../b.txt'],
+        ));
+        $this->assertError(422, fn() => $this->service->write(
+            'ticket',
+            $this->studentScope,
+            ['purpose' => 'upload', 'path' => ''],
+        ));
+        $this->assertError(422, fn() => $this->service->write(
+            'ticket',
+            $this->studentScope,
+            ['purpose' => 'nonsense', 'path' => 'a.txt'],
+        ));
         $ticket = $this->service->write('ticket', $this->studentScope, ['purpose' => 'upload', 'path' => 'nested\\folder\\a.txt']);
         $content = str_repeat('x', 1024);
         $this->service->uploadWithTicket($ticket['token'], $this->stream($content), hash('sha256', $content));

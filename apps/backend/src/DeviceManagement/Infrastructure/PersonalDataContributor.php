@@ -67,8 +67,10 @@ final readonly class PersonalDataContributor implements Contributor
         ];
         $records = [];
         foreach ($queries as $type => $sql) {
-            $rows = $this->db->createCommand($sql . ' ORDER BY 1 LIMIT 1001',
-                [':subject' => $context->subjectPersonId])->queryAll();
+            $rows = $this->db->createCommand(
+                $sql . ' ORDER BY 1 LIMIT 1001',
+                [':subject' => $context->subjectPersonId],
+            )->queryAll();
             if (count($rows) > 1000) {
                 throw new DomainException('DeviceManagement export requires a dedicated large-export workflow.');
             }

@@ -16,9 +16,13 @@ use Yiisoft\Router\CurrentRoute;
 
 final readonly class HomeworkAction
 {
-    public function __invoke(ServerRequestInterface $request, CurrentRoute $route, EducationAccess $access,
-        HomeworkService $homework, ResponseFactory $responses): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        CurrentRoute $route,
+        EducationAccess $access,
+        HomeworkService $homework,
+        ResponseFactory $responses,
+    ): ResponseInterface {
         try {
             $operation = (string) $route->getArgument('operation');
             $student = str_starts_with($operation, 'student_') || in_array($operation, ['save_draft', 'submit'], true);
@@ -28,9 +32,15 @@ final readonly class HomeworkAction
                 : $access->scope($identity, $organization, $operation === 'review' ? 'education.homework.review' : 'education.homework.manage');
             $id = $route->getArgument('id');
             $id = is_string($id) ? $id : null;
-            if ($request->getMethod() === 'GET') return $responses->success($homework->read($operation, $scope, $request->getQueryParams(), $id));
-            $body = $request->getParsedBody() ?? [];
-            if (!is_array($body) || (array_is_list($body) && $body !== [])) throw new EducationError(422, 'invalid_input');
+            if ($request->getMethod() === 'GET') {
+                return $responses->success($homework->read($operation, $scope, $request->getQueryParams(), $id));
+            }
+            $rawBody = $request->getParsedBody() ?? [];
+            if (!is_array($rawBody) || (array_is_list($rawBody) && $rawBody !== [])) {
+                throw new EducationError(422, 'invalid_input');
+            }
+            /** @var array<string, mixed> $body */
+            $body = $rawBody;
             return $responses->success($homework->write($operation, $scope, $body, $id))->withStatus($operation === 'create' ? 201 : 200);
         } catch (EducationError $error) {
             return $responses->error(match ($error->status) {

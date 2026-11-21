@@ -11,7 +11,8 @@ use App\Storage\Application\StorageScope;
 use App\Storage\Application\StorageService;
 use App\Storage\Application\StorageStore;
 use App\Tests\Storage02\MemoryObjects;
-require_once dirname(__DIR__,2).'/Storage02/MemoryObjects.php';
+
+require_once dirname(__DIR__, 2) . '/Storage02/MemoryObjects.php';
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -38,7 +39,12 @@ final class ClassroomStorageRegressionTest extends TestCase
         $this->files = new MemoryObjects();
         $this->store = $this->createMock(StorageStore::class);
         $this->devices = $this->createMock(DeviceStore::class);
-        $this->service = new StorageService($this->store, $this->files, new class implements Mutation { public function run(StorageScope $scope, string $operation, callable $action): array { return $action(); } }, $this->devices);
+        $this->service = new StorageService($this->store, $this->files, new class implements Mutation {
+            public function run(StorageScope $scope, string $operation, callable $action): array
+            {
+                return $action();
+            }
+        }, $this->devices);
         $this->scope = new StorageScope(self::ORGANIZATION, '', '', 'en-US', 'UTC', self::STUDENT);
         $this->store->method('spaceById')->with(self::SPACE)->willReturn([
             'organizationId' => self::ORGANIZATION, 'studentId' => self::STUDENT,

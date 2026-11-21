@@ -12,8 +12,12 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 /** Runs inside the existing finish mutation. Unique event keys make HTTP replays harmless. */
 final readonly class EducationActivityEvents implements ActivityResultSink
 {
-    public function __construct(private ConnectionInterface $db, private HomeworkAttemptLinker $homework,
-        private ParentNotifications $parents, private ActivityAwardNotifications $awards) {}
+    public function __construct(
+        private ConnectionInterface $db,
+        private HomeworkAttemptLinker $homework,
+        private ParentNotifications $parents,
+        private ActivityAwardNotifications $awards,
+    ) {}
 
     public function finished(Scope $scope, string $attemptId): void
     {

@@ -42,7 +42,9 @@ final readonly class HomeworkPrivacy
             'DELETE FROM education.notifications WHERE resource_id IN (' . $assignments . ')',
             'DELETE FROM education.homework_revisions WHERE assignment_id IN (' . $assignments . ')',
             'DELETE FROM education.homework_assignments WHERE id IN (' . $assignments . ')',
-        ] as $sql) $this->db->createCommand($sql, $params)->execute();
+        ] as $sql) {
+            $this->db->createCommand($sql, $params)->execute();
+        }
         $this->db->createCommand("SELECT set_config('education.homework_erasure','off',true)")->queryScalar();
         foreach ($activityIds as $activity) {
             $this->db->createCommand('DELETE FROM education.typing_results WHERE attempt_id IN
@@ -60,7 +62,9 @@ final readonly class HomeworkPrivacy
             'DELETE FROM education.activity_assignments WHERE id IN (' . $activities . ')',
             'DELETE FROM education.student_invites WHERE student_id IN (' . $students . ')',
             'DELETE FROM education.student_accounts WHERE student_id IN (' . $students . ')',
-        ] as $sql) $this->db->createCommand($sql, $params)->execute();
+        ] as $sql) {
+            $this->db->createCommand($sql, $params)->execute();
+        }
         return $keys;
     }
 }

@@ -14,7 +14,7 @@ use HttpSoft\Message\StreamFactory;
 use HttpSoft\Message\UploadedFile;
 
 require_once __DIR__ . '/HomeworkFixture.php';
-require_once dirname(__DIR__).'/Storage02/EducationS3Fixture.php';
+require_once dirname(__DIR__) . '/Storage02/EducationS3Fixture.php';
 
 final class HomeworkFilesTest extends HomeworkFixture
 {
@@ -25,10 +25,12 @@ final class HomeworkFilesTest extends HomeworkFixture
     protected function setUp(): void
     {
         parent::setUp();
-        self::assertSame('1',getenv('STORAGE02_TEST_RUNTIME'));
+        self::assertSame('1', getenv('STORAGE02_TEST_RUNTIME'));
         $this->privateFiles = $this->container->get(S3FileStore::class);
-        $this->files = $this->withClock(HomeworkFileService::class,
-            [FileStore::class => $this->privateFiles, HomeworkService::class => $this->homework]);
+        $this->files = $this->withClock(
+            HomeworkFileService::class,
+            [FileStore::class => $this->privateFiles, HomeworkService::class => $this->homework],
+        );
     }
 
     protected function tearDown(): void
@@ -51,8 +53,12 @@ final class HomeworkFilesTest extends HomeworkFixture
         self::assertSame('First answer file', EducationS3Fixture::bytes($this->files->download($this->teacher, $first['id'])));
         $this->rejection(409, fn() => $this->files->unlink($this->learner['scope'], $assignment['id'], $first['id']));
 
-        $this->homework->write('review', $this->teacher,
-            ['version' => $submitted['version'], 'idempotencyKey' => $this->id(), 'decision' => 'returned', 'comment' => 'Attach an improved file.'], $submitted['id']);
+        $this->homework->write(
+            'review',
+            $this->teacher,
+            ['version' => $submitted['version'], 'idempotencyKey' => $this->id(), 'decision' => 'returned', 'comment' => 'Attach an improved file.'],
+            $submitted['id'],
+        );
         $this->files->unlink($this->learner['scope'], $assignment['id'], $first['id']);
         $second = $this->upload($this->learner['scope'], $assignment['id'], 'Improved answer file');
         $this->submit($assignment['id']);
@@ -82,14 +88,23 @@ final class HomeworkFilesTest extends HomeworkFixture
     {
         $assignment = $this->publish(['type' => 'files']);
         $html = '<!doctype html><html><script>alert(document.cookie)</script></html>';
-        $this->rejection(422, fn() => $this->files->upload($this->learner['scope'], $assignment['id'],
-            $this->uploadValue($html, 'safe.pdf', 'application/pdf')), 'invalid_file');
-        $this->rejection(422, fn() => $this->files->upload($this->learner['scope'], $assignment['id'],
-            $this->uploadValue('small bytes', 'large.txt', 'text/plain', 10 * 1024 * 1024 + 1)), 'invalid_file');
-        $this->rejection(422, fn() => $this->files->upload($this->learner['scope'], $assignment['id'],
-            $this->uploadValue(str_repeat('x', 10 * 1024 * 1024 + 1), 'lying-size.txt', 'text/plain', 1)), 'invalid_file');
+        $this->rejection(422, fn() => $this->files->upload(
+            $this->learner['scope'],
+            $assignment['id'],
+            $this->uploadValue($html, 'safe.pdf', 'application/pdf'),
+        ), 'invalid_file');
+        $this->rejection(422, fn() => $this->files->upload(
+            $this->learner['scope'],
+            $assignment['id'],
+            $this->uploadValue('small bytes', 'large.txt', 'text/plain', 10 * 1024 * 1024 + 1),
+        ), 'invalid_file');
+        $this->rejection(422, fn() => $this->files->upload(
+            $this->learner['scope'],
+            $assignment['id'],
+            $this->uploadValue(str_repeat('x', 10 * 1024 * 1024 + 1), 'lying-size.txt', 'text/plain', 1),
+        ), 'invalid_file');
         self::assertSame(0, $this->rowCount('homework_files', 'assignment_id', $assignment['id']));
-        $this->rejection(422, fn() => $this->privateFiles->open('../outside.txt',1,str_repeat('0',64)));
+        $this->rejection(422, fn() => $this->privateFiles->open('../outside.txt', 1, str_repeat('0', 64)));
         $this->rejection(422, fn() => $this->files->download($this->learner['scope'], '../../storage/documents'));
     }
 

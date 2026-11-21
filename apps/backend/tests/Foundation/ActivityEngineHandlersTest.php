@@ -27,10 +27,13 @@ final class ActivityEngineHandlersTest extends TestCase
         self::assertEquals(71.43, $metrics['accuracy']);
         self::assertFalse($metrics['telemetryVerified']);
         $telemetry = $handler->evaluate($attempt, ['typed' => 'абX гд!', 'durationSeconds' => 15, 'corrections' => 99999, 'inputErrors' => 99999]);
-        foreach (['typedCharacters', 'correctChars', 'wpm', 'accuracy', 'passed', 'errors'] as $field) self::assertSame($metrics[$field], $telemetry['metrics'][$field]);
+        foreach (['typedCharacters', 'correctChars', 'wpm', 'accuracy', 'passed', 'errors'] as $field) {
+            self::assertSame($metrics[$field], $telemetry['metrics'][$field]);
+        }
         self::assertNotSame($verified['requestHash'], $telemetry['requestHash'], 'Changed input evidence must conflict on replay.');
         $empty = $handler->evaluate($attempt, ['typed' => '', 'durationSeconds' => 15]);
-        self::assertFalse($empty['metrics']['passed']); self::assertEquals(0, $empty['metrics']['accuracy']);
+        self::assertFalse($empty['metrics']['passed']);
+        self::assertEquals(0, $empty['metrics']['accuracy']);
     }
 
     public static function invalidTypingFinish(): iterable
@@ -55,7 +58,11 @@ final class ActivityEngineHandlersTest extends TestCase
 
     public static function localesAndLevels(): iterable
     {
-        foreach (['ru', 'en'] as $language) foreach ([1, 2, 3] as $difficulty) yield "$language/$difficulty" => [$language, $difficulty];
+        foreach (['ru', 'en'] as $language) {
+            foreach ([1, 2, 3] as $difficulty) {
+                yield "$language/$difficulty" => [$language, $difficulty];
+            }
+        }
     }
 
     #[DataProvider('localesAndLevels')]
@@ -69,7 +76,9 @@ final class ActivityEngineHandlersTest extends TestCase
         self::assertSame(['sequence', 'pattern', 'logic', 'order', 'algorithm'], array_column($public['rounds'], 'kind'));
         $answers = [];
         foreach ($private['rounds'] as $round) {
-            if ($language === 'ru') self::assertMatchesRegularExpression('/[А-Яа-яЁё]/u', $round['prompt'], 'Russian prompts were corrupted during file creation.');
+            if ($language === 'ru') {
+                self::assertMatchesRegularExpression('/[А-Яа-яЁё]/u', $round['prompt'], 'Russian prompts were corrupted during file creation.');
+            }
             self::assertDoesNotMatchRegularExpression('/\?{2,}/', $round['prompt']);
             self::assertDoesNotMatchRegularExpression('/\?{2,}/', $round['explanation']);
             self::assertContains($round['correctOptionId'], array_column($round['options'], 'id'));
@@ -85,11 +94,15 @@ final class ActivityEngineHandlersTest extends TestCase
                 };
                 $labels = array_column($round['options'], 'label', 'id');
                 self::assertSame((string) $expected, $labels[$round['correctOptionId']], 'The server answer key does not solve the displayed question.');
-                if ($round['kind'] === 'order') self::assertMatchesRegularExpression('/\d+\s*[×*]\s*\d+/u', $round['prompt'], 'The order-of-operations task must show its multiplication operator.');
+                if ($round['kind'] === 'order') {
+                    self::assertMatchesRegularExpression('/\d+\s*[×*]\s*\d+/u', $round['prompt'], 'The order-of-operations task must show its multiplication operator.');
+                }
             }
             $answers[] = ['roundId' => $round['id'], 'optionId' => $round['correctOptionId']];
         }
-        array_walk_recursive($public, static function (mixed $value, string|int $key): void { self::assertNotContains($key, ['correctOptionId', 'explanation']); });
+        array_walk_recursive($public, static function (mixed $value, string|int $key): void {
+            self::assertNotContains($key, ['correctOptionId', 'explanation']);
+        });
         $evaluated = $handler->evaluate($attempt, ['answers' => $answers]);
         self::assertSame(5, $evaluated['metrics']['correctAnswers']);
         self::assertSame(0, $evaluated['metrics']['errors']);
@@ -98,12 +111,14 @@ final class ActivityEngineHandlersTest extends TestCase
         self::assertSame($evaluated['requestHash'], $handler->evaluate($attempt, ['answers' => array_reverse($answers)])['requestHash'], 'Equivalent answer order should be idempotent.');
         $answers[0]['optionId'] = array_values(array_filter(array_column($private['rounds'][0]['options'], 'id'), static fn(string $id): bool => $id !== $private['rounds'][0]['correctOptionId']))[0];
         $wrong = $handler->evaluate($attempt, ['answers' => $answers]);
-        self::assertSame(4, $wrong['metrics']['correctAnswers']); self::assertSame(1, $wrong['metrics']['errors']);
+        self::assertSame(4, $wrong['metrics']['correctAnswers']);
+        self::assertSame(1, $wrong['metrics']['errors']);
     }
 
     public function testIncompleteLogicAnswersMayBeSavedButCannotFinish(): void
     {
-        $handler = new LogicActivityHandler(); $config = $handler->validateConfig([]);
+        $handler = new LogicActivityHandler();
+        $config = $handler->validateConfig([]);
         $attempt = ['config' => $config, 'exercisePayload' => $handler->createExercise($config)];
         self::assertSame(['answers' => [], 'currentRound' => 0], $handler->validateState($attempt, ['answers' => []]));
         $this->expectException(EducationError::class);

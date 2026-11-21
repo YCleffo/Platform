@@ -23,12 +23,16 @@ final class ActivityHandlerRegistry
 
     public static function only(array $input, array $keys): void
     {
-        if (array_diff(array_keys($input), $keys) !== []) throw new EducationError(422, 'invalid_input');
+        if (array_diff(array_keys($input), $keys) !== []) {
+            throw new EducationError(422, 'invalid_input');
+        }
     }
 
     public static function integer(mixed $value, int $min, int $max): int
     {
-        if (!is_int($value) || $value < $min || $value > $max) throw new EducationError(422, 'invalid_input');
+        if (!is_int($value) || $value < $min || $value > $max) {
+            throw new EducationError(422, 'invalid_input');
+        }
         return $value;
     }
 

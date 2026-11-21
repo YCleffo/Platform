@@ -172,7 +172,7 @@ interface EducationStore
     public function attempt(Scope $scope, string $attemptId): ?array;
     /** @return array<string,mixed> */
     public function finishAttempt(Scope $scope, string $attemptId, string $typed, int $durationSeconds, array $metrics, array $payload): array;
-    public function guardAssignmentAttempt(Scope $scope,string $assignmentId,int $maxAttempts,bool $fromHomework):void;
+    public function guardAssignmentAttempt(Scope $scope, string $assignmentId, int $maxAttempts, bool $fromHomework): void;
     public function exerciseSet(string $code, string $language, string $mode, int $difficulty): ?array;
     public function snapshotAttempt(Scope $scope, string $attemptId, int $version, array $exercise): void;
     public function saveAttemptState(Scope $scope, string $attemptId, int $version, array $state): void;

@@ -12,7 +12,6 @@ use App\Education\Application\HomeworkExtensions;
 use App\Education\Application\ActivityResultSink;
 use App\Education\Infrastructure\PostgresHomeworkStore;
 use App\Education\Infrastructure\PostgresHomeworkExtensions;
-use App\Education\Application\HomeworkAttemptLinker;
 use App\Education\Application\FileStore;
 use App\Education\Application\Mutation;
 use App\Education\Infrastructure\MigrationRunner;

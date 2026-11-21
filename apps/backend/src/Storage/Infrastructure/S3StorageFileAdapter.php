@@ -59,8 +59,11 @@ final readonly class S3StorageFileAdapter implements StorageObjectAdapter
 
     public function copy(string $sourceKey, string $destinationKey): void
     {
-        $this->objects->copy($this->config->bucketStorage,
-            S3Objects::objectKey($sourceKey), S3Objects::objectKey($destinationKey));
+        $this->objects->copy(
+            $this->config->bucketStorage,
+            S3Objects::objectKey($sourceKey),
+            S3Objects::objectKey($destinationKey),
+        );
     }
 
     public function keysBefore(DateTimeImmutable $cutoff): iterable

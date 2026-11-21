@@ -15,7 +15,9 @@ final readonly class LegacyObjectMigration
 
     public function run(string $module, string $sourceDirectory, bool $apply = false): array
     {
-        if (!in_array($module, ['storage', 'education'], true)) throw new DomainException('Unknown migration module.');
+        if (!in_array($module, ['storage', 'education'], true)) {
+            throw new DomainException('Unknown migration module.');
+        }
         $root = realpath($sourceDirectory);
         if ($root === false || !is_dir($root) || is_link($sourceDirectory)) {
             throw new DomainException('The explicit legacy source directory is unavailable.');
@@ -42,7 +44,9 @@ final readonly class LegacyObjectMigration
         $keys = array_fill_keys(array_column($references, 'key'), true);
         $untracked = [];
         foreach (new \DirectoryIterator($root) as $file) {
-            if ($file->isDot()) continue;
+            if ($file->isDot()) {
+                continue;
+            }
             if (!isset($keys[$file->getFilename()])) {
                 $untracked[] = ['name' => $file->getFilename(), 'regularFile' => $file->isFile() && !$file->isLink()];
             }
@@ -53,9 +57,15 @@ final readonly class LegacyObjectMigration
         $report = ['module' => $module, 'mode' => $apply ? 'apply' : 'dry-run',
             'referencedObjects' => count($references), 'verifiedSourceObjects' => count($items),
             'errors' => $errors, 'untrackedSources' => $untracked, 'objects' => [], 'sourcesDeleted' => 0];
-        if ($errors !== []) return [...$report, 'success' => false];
-        if (!$apply) return [...$report, 'success' => true, 'objects' => $items];
-        if ($this->db->getTransaction() !== null) throw new DomainException('Object migration requires committed source metadata.');
+        if ($errors !== []) {
+            return [...$report, 'success' => false];
+        }
+        if (!$apply) {
+            return [...$report, 'success' => true, 'objects' => $items];
+        }
+        if ($this->db->getTransaction() !== null) {
+            throw new DomainException('Object migration requires committed source metadata.');
+        }
         foreach ($items as $item) {
             try {
                 $this->migrate($module, $root, $item);
@@ -71,26 +81,35 @@ final readonly class LegacyObjectMigration
     private function migrate(string $module, string $root, array $item): void
     {
         $this->db->transaction(function () use ($module, $root, $item): void {
-            $this->db->createCommand('SELECT pg_advisory_xact_lock(hashtextextended(:key,0))',
-                [':key' => 'platform.storage.migrate.' . $module . '.' . $item['key']])->queryScalar();
+            $this->db->createCommand(
+                'SELECT pg_advisory_xact_lock(hashtextextended(:key,0))',
+                [':key' => 'platform.storage.migrate.' . $module . '.' . $item['key']],
+            )->queryScalar();
             $bucket = $module === 'storage' ? $this->config->bucketStorage : $this->config->bucketEducation;
             $key = S3Objects::objectKey($item['key']);
             if ($this->objects->head($bucket, $key) === null) {
                 $source = fopen($this->source($root, $item['key']), 'rb');
-                if ($source === false) throw new DomainException('Cannot open the verified legacy source.');
-                try { $this->objects->put($bucket, $key, $source); }
-                finally { fclose($source); }
+                if ($source === false) {
+                    throw new DomainException('Cannot open the verified legacy source.');
+                }
+                try {
+                    $this->objects->put($bucket, $key, $source);
+                } finally {
+                    fclose($source);
+                }
             }
             $verified = $this->objects->verify($bucket, $key, $item['sizeBytes']);
             if ($verified['sizeBytes'] !== $item['sizeBytes'] || !hash_equals($verified['sha256'], $item['sha256'])) {
                 throw new StorageError(409, 'migration_checksum_mismatch');
             }
-            $this->db->createCommand('INSERT INTO storage.object_migrations(module,storage_key,size_bytes,sha256,source_fingerprint)
+            $this->db->createCommand(
+                'INSERT INTO storage.object_migrations(module,storage_key,size_bytes,sha256,source_fingerprint)
                 VALUES(:module,CAST(:key AS uuid),:size,:sha,:fingerprint)
                 ON CONFLICT(module,storage_key) DO UPDATE SET size_bytes=EXCLUDED.size_bytes,sha256=EXCLUDED.sha256,
                     source_fingerprint=EXCLUDED.source_fingerprint,verified_at=now()',
                 [':module' => $module, ':key' => $item['key'], ':size' => $verified['sizeBytes'],
-                    ':sha' => $verified['sha256'], ':fingerprint' => $item['sourceFingerprint']])->execute();
+                    ':sha' => $verified['sha256'], ':fingerprint' => $item['sourceFingerprint']],
+            )->execute();
         });
     }
 

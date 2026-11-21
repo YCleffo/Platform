@@ -31,7 +31,9 @@ final readonly class StorageMigrationRunner
                     throw new RuntimeException('Cannot hash Storage migration.');
                 }
                 $previous = $this->db->createCommand(
-                    'SELECT sha256 FROM storage.module_migrations WHERE name=:name', [':name' => $name])->queryScalar();
+                    'SELECT sha256 FROM storage.module_migrations WHERE name=:name',
+                    [':name' => $name],
+                )->queryScalar();
                 if (is_string($previous)) {
                     if (!hash_equals($previous, $hash)) {
                         throw new RuntimeException('Applied Storage migration has changed.');
@@ -46,8 +48,10 @@ final readonly class StorageMigrationRunner
                     throw new RuntimeException('Storage requires the PostgreSQL PDO adapter.');
                 }
                 $this->db->getActivePdo()->exec($sql);
-                $this->db->createCommand('INSERT INTO storage.module_migrations(name,sha256) VALUES(:name,:hash)',
-                    [':name' => $name, ':hash' => $hash])->execute();
+                $this->db->createCommand(
+                    'INSERT INTO storage.module_migrations(name,sha256) VALUES(:name,:hash)',
+                    [':name' => $name, ':hash' => $hash],
+                )->execute();
             }
         });
     }

@@ -12,17 +12,22 @@ use Yiisoft\Router\CurrentRoute;
 
 final readonly class EducationTransferAction
 {
-    public function __invoke(ServerRequestInterface $request, CurrentRoute $route, EducationAccess $access,
-        EducationFileTransfers $transfers, ResponseFactory $responses): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        CurrentRoute $route,
+        EducationAccess $access,
+        EducationFileTransfers $transfers,
+        ResponseFactory $responses,
+    ): ResponseInterface {
         try {
-            $operation = (string)$route->getArgument('operation');
+            $operation = (string) $route->getArgument('operation');
             $identity = AuthenticatedIdentity::fromRequest($request);
             $organization = Input::uuid($request->getHeaderLine('X-Education-Organization'));
             $id = $route->getArgument('id');
             if (in_array($operation, ['read', 'complete', 'abort'], true)) {
                 $kind = $transfers->accessKind(Input::uuid($id), $identity->accountId, $organization);
-                $scope = $this->scope($access, $identity, $organization, $kind['kind'], $kind['studentId'] !== null);
+                $kindKind = is_string($kind['kind']) ? $kind['kind'] : 'file';
+                $scope = $this->scope($access, $identity, $organization, $kindKind, $kind['studentId'] !== null);
             } elseif ($operation === 'download') {
                 try {
                     $scope = $access->scope($identity, $organization, 'education.files.manage');
@@ -33,17 +38,27 @@ final readonly class EducationTransferAction
                     $scope = $access->studentScope($identity, $organization, 'education.student.use');
                 }
             } elseif ($operation === 'homework_download') {
-                try { $scope = $access->studentScope($identity, $organization, 'education.student.use'); }
-                catch (EducationError $error) {
-                    if ($error->status !== 403) throw $error;
+                try {
+                    $scope = $access->studentScope($identity, $organization, 'education.student.use');
+                } catch (EducationError $error) {
+                    if ($error->status !== 403) {
+                        throw $error;
+                    }
                     $scope = $access->scope($identity, $organization, 'education.people.manage');
                 }
             } else {
-                $scope = $this->scope($access, $identity, $organization,
-                    str_contains($operation, 'homework') ? 'homework' : 'file', $operation === 'student_homework_start');
+                $scope = $this->scope(
+                    $access,
+                    $identity,
+                    $organization,
+                    str_contains($operation, 'homework') ? 'homework' : 'file',
+                    $operation === 'student_homework_start',
+                );
             }
             $input = $request->getParsedBody() ?? [];
-            if (!is_array($input)) throw new EducationError(422, 'invalid_input');
+            if (!is_array($input)) {
+                throw new EducationError(422, 'invalid_input');
+            }
             if (in_array($operation, ['read', 'complete', 'abort', 'download', 'homework_download'], true) && $input !== []) {
                 throw new EducationError(422, 'invalid_input');
             }
@@ -53,7 +68,8 @@ final readonly class EducationTransferAction
                 'read' => $transfers->read($scope, Input::uuid($id)),
                 'complete' => $transfers->complete($scope, Input::uuid($id)),
                 'abort' => $transfers->abort($scope, Input::uuid($id)),
-                'download', 'homework_download' => $transfers->download($scope, Input::uuid($id), $operation === 'homework_download'),
+                'download' => $transfers->download($scope, Input::uuid($id), false),
+                'homework_download' => $transfers->download($scope, Input::uuid($id), true),
                 default => throw new EducationError(404, 'not_found'),
             };
             return $responses->success($result)->withStatus(str_ends_with($operation, 'start') ? 201 : 200);

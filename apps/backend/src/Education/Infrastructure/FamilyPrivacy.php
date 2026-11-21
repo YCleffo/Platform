@@ -27,8 +27,10 @@ final readonly class FamilyPrivacy
             $this->db->createCommand('DELETE FROM education.family_history WHERE guardian_person_id=CAST(:subject AS uuid)
                 OR student_id IN (' . $students . ') OR actor_account_id IN (' . $accounts . ')', $params)->execute();
         } finally {
-            $this->db->createCommand("SELECT set_config('education.family_erasure',:previous,true)",
-                [':previous' => is_string($previous) ? $previous : 'off'])->queryScalar();
+            $this->db->createCommand(
+                "SELECT set_config('education.family_erasure',:previous,true)",
+                [':previous' => is_string($previous) ? $previous : 'off'],
+            )->queryScalar();
         }
         $this->db->createCommand('DELETE FROM education.parent_accounts WHERE guardian_person_id=CAST(:subject AS uuid)
             OR account_id IN (' . $accounts . ')', $params)->execute();

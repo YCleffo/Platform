@@ -14,8 +14,12 @@ final class HomeworkWorkflowTest extends HomeworkFixture
     public function testDraftRecipientEditsReplaceTargetsBeforePublication(): void
     {
         $draft = $this->draft(['groupId' => null, 'studentIds' => [$this->learner['id']]]);
-        $detail = $this->homework->write('update', $this->teacher,
-            ['version' => $draft['version'], 'studentIds' => [$this->peer['id']]], $draft['id']);
+        $detail = $this->homework->write(
+            'update',
+            $this->teacher,
+            ['version' => $draft['version'], 'studentIds' => [$this->peer['id']]],
+            $draft['id'],
+        );
         self::assertSame([$this->peer['id']], $detail['assignment']['studentIds']);
         $this->homework->write('publish', $this->teacher, ['version' => $detail['assignment']['version']], $draft['id']);
         $this->rejection(404, fn() => $this->detail($draft['id']));
@@ -39,8 +43,12 @@ final class HomeworkWorkflowTest extends HomeworkFixture
         self::assertSame($published['id'], $this->detail($published['id'])['assignment']['id']);
         self::assertSame(3, $this->rowCount('homework_recipients', 'assignment_id', $published['id']));
 
-        $this->homework->write('add_recipients', $this->teacher,
-            ['version' => $published['version'], 'studentIds' => [$later['id'], $later['id'], $individual['id']]], $published['id']);
+        $this->homework->write(
+            'add_recipients',
+            $this->teacher,
+            ['version' => $published['version'], 'studentIds' => [$later['id'], $later['id'], $individual['id']]],
+            $published['id'],
+        );
         self::assertSame(4, $this->rowCount('homework_recipients', 'assignment_id', $published['id']));
         self::assertSame($published['id'], $this->detail($published['id'], $later['scope'])['assignment']['id']);
         self::assertGreaterThanOrEqual(3, $this->rowCount('homework_revisions', 'assignment_id', $published['id']));
@@ -61,10 +69,18 @@ final class HomeworkWorkflowTest extends HomeworkFixture
         self::assertSame('Explain a loop', $first['currentVersion']['assignmentSnapshot']['title']);
         $this->rejection(409, fn() => $this->answer($assignment['id'], 'Silently overwritten answer'));
 
-        $updated = $this->homework->write('update', $this->teacher,
-            ['version' => $assignment['version'], 'title' => 'Updated conditions', 'instructions' => 'Now show two examples.'], $assignment['id'])['assignment'];
-        $this->homework->write('review', $this->teacher,
-            ['version' => $first['version'], 'idempotencyKey' => $this->id(), 'decision' => 'returned', 'comment' => 'Show how it stops.'], $first['id']);
+        $updated = $this->homework->write(
+            'update',
+            $this->teacher,
+            ['version' => $assignment['version'], 'title' => 'Updated conditions', 'instructions' => 'Now show two examples.'],
+            $assignment['id'],
+        )['assignment'];
+        $this->homework->write(
+            'review',
+            $this->teacher,
+            ['version' => $first['version'], 'idempotencyKey' => $this->id(), 'decision' => 'returned', 'comment' => 'Show how it stops.'],
+            $first['id'],
+        );
         $returned = $this->detail($assignment['id'])['submission'];
         self::assertSame('RETURNED', $returned['state']);
         self::assertSame('Show how it stops.', $returned['reviews'][0]['comment']);
@@ -79,8 +95,12 @@ final class HomeworkWorkflowTest extends HomeworkFixture
         self::assertSame('Updated conditions', $versions[2]['assignmentSnapshot']['title']);
         self::assertSame($updated['version'], $versions[2]['assignmentVersion']);
 
-        $this->homework->write('review', $this->teacher,
-            ['version' => $second['version'], 'idempotencyKey' => $this->id(), 'decision' => 'accepted', 'resultStatus' => 'mastered', 'comment' => 'Good explanation.'], $second['id']);
+        $this->homework->write(
+            'review',
+            $this->teacher,
+            ['version' => $second['version'], 'idempotencyKey' => $this->id(), 'decision' => 'accepted', 'resultStatus' => 'mastered', 'comment' => 'Good explanation.'],
+            $second['id'],
+        );
         $reviewed = $this->detail($assignment['id'])['submission'];
         self::assertSame('REVIEWED', $reviewed['state']);
         self::assertCount(2, $reviewed['reviews']);
@@ -120,10 +140,14 @@ final class HomeworkWorkflowTest extends HomeworkFixture
         $firstReview = $this->homework->write('review', $this->teacher, $review, $submitted['id']);
         $this->sameResponse($firstReview, $this->homework->write('review', $this->teacher, $review, $submitted['id']));
         self::assertSame(1, $this->rowCount('homework_reviews', 'submission_id', $submitted['id']));
-        $events = $this->db->createCommand("SELECT person_id::text,kind,count(*)::int AS total FROM education.notifications WHERE organization_id=CAST(:org AS uuid) AND resource_id=CAST(:id AS uuid) GROUP BY person_id,kind",
-            [':org' => $this->teacher->organizationId, ':id' => $assignment['id']])->queryAll();
+        $events = $this->db->createCommand(
+            "SELECT person_id::text,kind,count(*)::int AS total FROM education.notifications WHERE organization_id=CAST(:org AS uuid) AND resource_id=CAST(:id AS uuid) GROUP BY person_id,kind",
+            [':org' => $this->teacher->organizationId, ':id' => $assignment['id']],
+        )->queryAll();
         self::assertNotEmpty($events);
-        foreach ($events as $event) self::assertSame(1, (int) $event['total'], 'A replay must not send the same event twice to one person.');
+        foreach ($events as $event) {
+            self::assertSame(1, (int) $event['total'], 'A replay must not send the same event twice to one person.');
+        }
     }
 
     public function testStaleAssignmentAndAnswerEditorsCannotOverwriteNewerChanges(): void
@@ -146,17 +170,29 @@ final class HomeworkWorkflowTest extends HomeworkFixture
         $this->rejection(404, fn() => $this->detail($assignment['id'], $this->peer['scope']));
         $this->rejection([403, 404], fn() => $this->homework->read('teacher_detail', $this->colleague, [], $assignment['id']));
         $this->rejection(404, fn() => $this->homework->read('teacher_detail', $this->outsider, [], $assignment['id']));
-        $this->rejection(404, fn() => $this->homework->write('add_recipients', $this->outsider,
-            ['version' => $assignment['version'], 'studentIds' => [$this->learner['id']]], $assignment['id']));
-        $this->rejection(422, fn() => $this->homework->write('save_draft', $this->learner['scope'],
-            ['version' => 0, 'text' => 'Spoof', 'studentId' => $this->peer['id']], $assignment['id']));
+        $this->rejection(404, fn() => $this->homework->write(
+            'add_recipients',
+            $this->outsider,
+            ['version' => $assignment['version'], 'studentIds' => [$this->learner['id']]],
+            $assignment['id'],
+        ));
+        $this->rejection(422, fn() => $this->homework->write(
+            'save_draft',
+            $this->learner['scope'],
+            ['version' => 0, 'text' => 'Spoof', 'studentId' => $this->peer['id']],
+            $assignment['id'],
+        ));
         $this->answer($assignment['id']);
         $this->submit($assignment['id']);
         $submission = $this->detail($assignment['id'])['submission'];
         $this->rejection(404, fn() => $this->homework->read('submission_detail', $this->outsider, [], $submission['id']));
         $this->db->createCommand('DELETE FROM core.account_roles WHERE account_id=CAST(:id AS uuid)', [':id' => $this->teacher->accountId])->execute();
-        $this->rejection(403, fn() => $this->homework->write('review', $this->teacher,
-            ['version' => $submission['version'], 'idempotencyKey' => $this->id(), 'decision' => 'accepted', 'resultStatus' => 'mastered', 'comment' => 'Revoked teacher'], $submission['id']));
+        $this->rejection(403, fn() => $this->homework->write(
+            'review',
+            $this->teacher,
+            ['version' => $submission['version'], 'idempotencyKey' => $this->id(), 'decision' => 'accepted', 'resultStatus' => 'mastered', 'comment' => 'Revoked teacher'],
+            $submission['id'],
+        ));
         self::assertSame('SUBMITTED', $this->detail($assignment['id'])['submission']['state']);
         self::assertSame(0, $this->rowCount('homework_reviews', 'submission_id', $submission['id']));
     }

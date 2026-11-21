@@ -23,14 +23,19 @@ final class BrandingSettingsTest extends HomeworkFixture
         $files = $this->container->get(\App\Branding\BrandingFiles::class);
         $context = $this->container->get(ClientContextResolver::class)->resolve(new ServerRequest());
         $bytes = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aAYsAAAAASUVORK5CYII=', true);
-        $pending = $files->start(['sizeBytes' => strlen($bytes), 'sha256' => hash('sha256', $bytes)],
-            $this->teacher->accountId, $context);
+        $pending = $files->start(
+            ['sizeBytes' => strlen($bytes), 'sha256' => hash('sha256', $bytes)],
+            $this->teacher->accountId,
+            $context,
+        );
         try {
             $internal = parse_url($config->internalEndpoint);
             $public = parse_url($pending['request']['url']);
             $curl = curl_init($pending['request']['url']);
             $headers = [];
-            foreach ((array) $pending['request']['headers'] as $name => $value) $headers[] = $name . ': ' . $value;
+            foreach ((array) $pending['request']['headers'] as $name => $value) {
+                $headers[] = $name . ': ' . $value;
+            }
             curl_setopt_array($curl, [CURLOPT_CUSTOMREQUEST => 'PUT', CURLOPT_POSTFIELDS => $bytes,
                 CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => $headers, CURLOPT_TIMEOUT => 10,
                 CURLOPT_CONNECT_TO => [$public['host'] . ':' . ($public['port'] ?? 80) . ':'
@@ -42,11 +47,18 @@ final class BrandingSettingsTest extends HomeworkFixture
             self::assertSame($result, $files->complete($pending['id'], $this->teacher->accountId, $context));
             self::assertSame('image/png', $result['favicon']['mime']);
             $download = $files->open($pending['id']);
-            try { self::assertSame($bytes, stream_get_contents($download['stream'])); }
-            finally { fclose($download['stream']); }
+            try {
+                self::assertSame($bytes, stream_get_contents($download['stream']));
+            } finally {
+                fclose($download['stream']);
+            }
             self::assertNull($files->remove($this->teacher->accountId, $context)['favicon']);
-            try { $files->open($pending['id']); self::fail('A removed icon is still public.'); }
-            catch (StorageError $error) { self::assertSame(404, $error->status); }
+            try {
+                $files->open($pending['id']);
+                self::fail('A removed icon is still public.');
+            } catch (StorageError $error) {
+                self::assertSame(404, $error->status);
+            }
         } finally {
             $objects->delete($config->bucketStorage, 'staging/' . $pending['id'] . '/branding');
             $objects->delete($config->bucketStorage, 'branding/' . $pending['id']);
@@ -84,15 +96,23 @@ final class BrandingSettingsTest extends HomeworkFixture
     {
         $settings = $this->container->get(SettingsService::class);
         $context = $this->container->get(ClientContextResolver::class)->resolve(new ServerRequest());
-        $settings->putSystemSetting('platform.favicon', ['id' => 'https://outside.example/private', 'mime' => 'image/png'],
-            true, null, $this->teacher->accountId, $context);
+        $settings->putSystemSetting(
+            'platform.favicon',
+            ['id' => 'https://outside.example/private', 'mime' => 'image/png'],
+            true,
+            null,
+            $this->teacher->accountId,
+            $context,
+        );
         self::assertNull($this->container->get(BrandingSettings::class)->read()['favicon']);
     }
 
     public function testBrandingRoutesApplySettingsPermissionToEveryMutation(): void
     {
         foreach (require dirname(__DIR__, 2) . '/config/common/branding-routes.php' as $route) {
-            if ($route->getData('methods') === ['GET']) continue;
+            if ($route->getData('methods') === ['GET']) {
+                continue;
+            }
             $middleware = $route->getData('enabledMiddlewares');
             self::assertContains(\App\Core\Auth\Infrastructure\RequireAuthentication::class, $middleware);
             $permissions = array_filter($middleware, static fn(mixed $item): bool => is_array($item)

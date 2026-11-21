@@ -440,14 +440,14 @@ onBeforeUnmount(deactivateOverlay);
 <style scoped>
 .mobile-menu {
   position: fixed;
-  top: 60px;
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   width: 100vw;
   width: 100dvw;
-  height: calc(100vh - 60px);
-  height: calc(100dvh - 60px);
+  height: 100vh;
+  height: 100dvh;
   z-index: 850;
   display: flex;
   justify-content: flex-end;

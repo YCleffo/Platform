@@ -13,7 +13,6 @@ use App\DeviceManagement\Application\DeviceAccess;
 use App\DeviceManagement\Application\DeviceError;
 use App\DeviceManagement\Application\DeviceService;
 use App\DeviceManagement\Application\DeviceStore;
-use App\DeviceManagement\Application\Mutation;
 use App\DeviceManagement\Application\Scope;
 use App\Education\Application\EducationAccess;
 use App\Education\Application\EducationService;
@@ -51,8 +50,10 @@ final class DeviceManagementTest extends TestCase
         TestRuntimeGuard::assertDestructiveOperationsAllowed($this->db);
         $this->transaction = $this->db->beginTransaction();
         foreach (['education', 'device_management'] as $module) {
-            $this->db->createCommand("UPDATE core.modules SET enabled=true,enabled_at=now(),disabled_at=NULL WHERE code=:code",
-                [':code' => $module])->execute();
+            $this->db->createCommand(
+                "UPDATE core.modules SET enabled=true,enabled_at=now(),disabled_at=NULL WHERE code=:code",
+                [':code' => $module],
+            )->execute();
         }
         $this->store = $container->get(DeviceStore::class);
         $this->access = $container->get(DeviceAccess::class);
@@ -66,9 +67,15 @@ final class DeviceManagementTest extends TestCase
                 return new DateTimeImmutable('2026-03-08T14:00:00Z');
             }
         };
-        $this->education = new EducationService($educationStore, $this->educationAccess, $clock,
-            $container->get(FileStore::class), $container->get(\App\Education\Application\Mutation::class),
-            $container->get(PermissionService::class), $container->get(OrganizationRepository::class));
+        $this->education = new EducationService(
+            $educationStore,
+            $this->educationAccess,
+            $clock,
+            $container->get(FileStore::class),
+            $container->get(\App\Education\Application\Mutation::class),
+            $container->get(PermissionService::class),
+            $container->get(OrganizationRepository::class),
+        );
         $this->organization = (string) $this->db->createCommand("INSERT INTO core.organizations(code,name)
             VALUES(:code,'Device test') RETURNING id::text", [':code' => 'device.test.' . bin2hex(random_bytes(8))])->queryScalar();
         $person = $this->person('Device teacher');
@@ -194,8 +201,10 @@ final class DeviceManagementTest extends TestCase
         $otherScope = $this->access->scope($otherIdentity, $this->organization);
         $this->assertError(404, fn() => $this->service->read('device', $otherScope, [], $device['id']));
         $this->assertError(404, fn() => $this->service->write('device_enroll', $otherScope, [], $device['id']));
-        self::assertSame([], array_filter($this->service->read('devices', $otherScope, [])['items'],
-            static fn(array $row): bool => $row['id'] === $device['id']));
+        self::assertSame([], array_filter(
+            $this->service->read('devices', $otherScope, [])['items'],
+            static fn(array $row): bool => $row['id'] === $device['id'],
+        ));
     }
 
     private function educationScope(): \App\Education\Application\Scope

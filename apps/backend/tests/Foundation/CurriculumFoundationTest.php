@@ -55,19 +55,34 @@ final class CurriculumFoundationTest extends TestCase
         $this->outsider = $this->teacher($this->organization());
         $this->group = $this->education->write('create_group', $this->teacher, ['name' => 'Curriculum group']);
         $this->program = $this->curriculum->write('create_program', $this->teacher, ['name' => 'Programming', 'description' => 'Original program']);
-        $this->module = $this->curriculum->write('create_curriculum_module', $this->teacher,
-            ['name' => 'Foundations', 'description' => '', 'position' => 2], $this->program['id']);
-        $this->entry = $this->curriculum->write('create_curriculum_lesson', $this->teacher,
-            ['title' => 'Variables', 'description' => 'Original lesson', 'position' => 1], $this->module['id']);
+        $this->module = $this->curriculum->write(
+            'create_curriculum_module',
+            $this->teacher,
+            ['name' => 'Foundations', 'description' => '', 'position' => 2],
+            $this->program['id'],
+        );
+        $this->entry = $this->curriculum->write(
+            'create_curriculum_lesson',
+            $this->teacher,
+            ['title' => 'Variables', 'description' => 'Original lesson', 'position' => 1],
+            $this->module['id'],
+        );
     }
 
-    protected function tearDown(): void { $this->transaction->rollBack(); }
+    protected function tearDown(): void
+    {
+        $this->transaction->rollBack();
+    }
 
     public function testAssignmentSnapshotsSurviveEditsArchivalAndReassignment(): void
     {
         $first = $this->assign();
-        $this->curriculum->write('update_curriculum_lesson', $this->teacher,
-            ['title' => 'Renamed', 'description' => 'Changed content', 'position' => 1, 'version' => 1], $this->entry['id']);
+        $this->curriculum->write(
+            'update_curriculum_lesson',
+            $this->teacher,
+            ['title' => 'Renamed', 'description' => 'Changed content', 'position' => 1, 'version' => 1],
+            $this->entry['id'],
+        );
         $saved = $this->curriculum->read('group_programs', $this->teacher, $this->group['id'])['items'][0];
         self::assertSame('Variables', $saved['modules'][0]['lessons'][0]['title']);
         self::assertSame('Original lesson', $saved['modules'][0]['lessons'][0]['description']);
@@ -77,12 +92,18 @@ final class CurriculumFoundationTest extends TestCase
         $history = $this->curriculum->read('group_programs', $this->teacher, $this->group['id'])['items'];
         self::assertCount(2, $history);
         self::assertNotNull($history[1]['endedAt']);
-        $this->curriculum->write('update_program', $this->teacher,
-            ['name' => 'Programming', 'description' => 'Archived catalog', 'archived' => true], $this->program['id']);
+        $this->curriculum->write(
+            'update_program',
+            $this->teacher,
+            ['name' => 'Programming', 'description' => 'Archived catalog', 'archived' => true],
+            $this->program['id'],
+        );
         self::assertSame('Renamed', $this->curriculum->read('group_programs', $this->teacher, $this->group['id'])['items'][0]['modules'][0]['lessons'][0]['title']);
         $this->error(409, fn() => $this->assign(), 'program_archived');
-        self::assertSame(2, (int) $this->db->createCommand('SELECT count(*) FROM education.curriculum_revisions WHERE organization_id=CAST(:org AS uuid)',
-            [':org' => $this->teacher->organizationId])->queryScalar());
+        self::assertSame(2, (int) $this->db->createCommand(
+            'SELECT count(*) FROM education.curriculum_revisions WHERE organization_id=CAST(:org AS uuid)',
+            [':org' => $this->teacher->organizationId],
+        )->queryScalar());
     }
 
     public function testResultsDriveStudentProgressAndRepeatedSessionsCountOnce(): void
@@ -116,11 +137,16 @@ final class CurriculumFoundationTest extends TestCase
         $this->curriculum->write('set_group_teachers', $this->teacher, ['accountIds' => [$this->colleague->accountId]], $this->group['id']);
         self::assertNotNull($this->store->group($this->colleague, $this->group['id']));
         self::assertNull($this->store->group($this->colleague, $private['id']));
-        $newStudent = $this->curriculum->write('create_student', $this->colleague,
-            ['givenName' => 'Shared', 'familyName' => 'Student', 'groupId' => $this->group['id']]);
+        $newStudent = $this->curriculum->write(
+            'create_student',
+            $this->colleague,
+            ['givenName' => 'Shared', 'familyName' => 'Student', 'groupId' => $this->group['id']],
+        );
         self::assertNotNull($this->store->student($this->teacher, $newStudent['id']));
         self::assertSame($this->teacher->accountId, $this->db->createCommand(
-            'SELECT owner_account_id::text FROM education.students WHERE id=CAST(:id AS uuid)', [':id' => $newStudent['id']])->queryScalar());
+            'SELECT owner_account_id::text FROM education.students WHERE id=CAST(:id AS uuid)',
+            [':id' => $newStudent['id']],
+        )->queryScalar());
         $lesson = $this->education->write('create_lesson', $this->colleague, $this->lessonValues('2001-01-01'));
         $this->education->write('mark_attendance', $this->colleague, ['status' => 'present'], $lesson['id'], $student['id']);
         $this->education->write('complete_lesson', $this->colleague, [], $lesson['id']);
@@ -138,10 +164,18 @@ final class CurriculumFoundationTest extends TestCase
     public function testCrossOrganizationBindingsAndStaleCatalogWritesAreRejected(): void
     {
         $this->error(404, fn() => $this->curriculum->read('program', $this->outsider, $this->program['id']));
-        $this->error(404, fn() => $this->curriculum->write('assign_program', $this->outsider,
-            ['programId' => $this->program['id']], $this->group['id']));
-        $this->error(409, fn() => $this->curriculum->write('update_curriculum_lesson', $this->teacher,
-            ['title' => 'Stale', 'position' => 1, 'version' => 99], $this->entry['id']), 'catalog_version_conflict');
+        $this->error(404, fn() => $this->curriculum->write(
+            'assign_program',
+            $this->outsider,
+            ['programId' => $this->program['id']],
+            $this->group['id'],
+        ));
+        $this->error(409, fn() => $this->curriculum->write(
+            'update_curriculum_lesson',
+            $this->teacher,
+            ['title' => 'Stale', 'position' => 1, 'version' => 99],
+            $this->entry['id'],
+        ), 'catalog_version_conflict');
         // Failed validation must roll back a new scheduled lesson as well.
         $this->error(422, fn() => $this->lesson('2001-01-01'), 'curriculum_lesson_not_assigned');
         self::assertSame([], $this->store->lessons($this->teacher, '2001-01-01T00:00:00Z', '2001-01-03T00:00:00Z'));
@@ -156,19 +190,34 @@ final class CurriculumFoundationTest extends TestCase
         self::assertTrue($this->container->get(\App\Core\Organization\Application\OrganizationRepository::class)
             ->activeMember($student['personId'], $this->teacher->organizationId));
         self::assertNotNull($this->container->get(\App\Core\Person\Application\GetPerson::class)->execute($student['personId']));
-        $this->error(404, fn() => $this->curriculum->write('create_student', $this->outsider,
-            ['givenName' => 'Other', 'familyName' => 'Student', 'groupId' => $this->group['id']]));
-        $this->error(422, fn() => $this->curriculum->write('create_student', $this->teacher,
-            ['givenName' => 'Test', 'familyName' => 'Student', 'birthDate' => '3000-01-01', 'groupId' => $this->group['id']]));
+        $this->error(404, fn() => $this->curriculum->write(
+            'create_student',
+            $this->outsider,
+            ['givenName' => 'Other', 'familyName' => 'Student', 'groupId' => $this->group['id']],
+        ));
+        $this->error(422, fn() => $this->curriculum->write(
+            'create_student',
+            $this->teacher,
+            ['givenName' => 'Test', 'familyName' => 'Student', 'birthDate' => '3000-01-01', 'groupId' => $this->group['id']],
+        ));
     }
 
-    private function assign(): array { return $this->curriculum->write('assign_program', $this->teacher, ['programId' => $this->program['id']], $this->group['id']); }
+    private function assign(): array
+    {
+        return $this->curriculum->write('assign_program', $this->teacher, ['programId' => $this->program['id']], $this->group['id']);
+    }
     private function student(): array
     {
-        return $this->curriculum->write('create_student', $this->teacher,
-            ['givenName' => 'New', 'familyName' => 'Student', 'groupId' => $this->group['id']]);
+        return $this->curriculum->write(
+            'create_student',
+            $this->teacher,
+            ['givenName' => 'New', 'familyName' => 'Student', 'groupId' => $this->group['id']],
+        );
     }
-    private function lesson(string $date): array { return $this->education->write('create_lesson', $this->teacher, $this->lessonValues($date)); }
+    private function lesson(string $date): array
+    {
+        return $this->education->write('create_lesson', $this->teacher, $this->lessonValues($date));
+    }
     private function lessonValues(string $date): array
     {
         return ['groupId' => $this->group['id'], 'title' => 'Variables', 'location' => '',
@@ -176,25 +225,41 @@ final class CurriculumFoundationTest extends TestCase
     }
     private function organization(): string
     {
-        return (string) $this->db->createCommand("INSERT INTO core.organizations(code,name) VALUES(:code,'Curriculum test') RETURNING id::text",
-            [':code' => 'curriculum.' . bin2hex(random_bytes(8))])->queryScalar();
+        return (string) $this->db->createCommand(
+            "INSERT INTO core.organizations(code,name) VALUES(:code,'Curriculum test') RETURNING id::text",
+            [':code' => 'curriculum.' . bin2hex(random_bytes(8))],
+        )->queryScalar();
     }
     private function teacher(string $org): Scope
     {
         $person = (string) $this->db->createCommand("INSERT INTO core.persons(given_name,family_name) VALUES('Curriculum','Teacher') RETURNING id::text")->queryScalar();
         $account = (string) $this->db->createCommand("INSERT INTO core.accounts(person_id,account_type,status,label)
             VALUES(CAST(:person AS uuid),'human','active','Curriculum teacher') RETURNING id::text", [':person' => $person])->queryScalar();
-        $this->db->createCommand('INSERT INTO core.organization_memberships(organization_id,person_id) VALUES(CAST(:org AS uuid),CAST(:person AS uuid))',
-            [':org' => $org, ':person' => $person])->execute();
-        $this->db->createCommand("INSERT INTO core.account_roles(account_id,role_id) SELECT CAST(:id AS uuid),id FROM core.roles WHERE code='education.teacher'",
-            [':id' => $account])->execute();
+        $this->db->createCommand(
+            'INSERT INTO core.organization_memberships(organization_id,person_id) VALUES(CAST(:org AS uuid),CAST(:person AS uuid))',
+            [':org' => $org, ':person' => $person],
+        )->execute();
+        $this->db->createCommand(
+            "INSERT INTO core.account_roles(account_id,role_id) SELECT CAST(:id AS uuid),id FROM core.roles WHERE code='education.teacher'",
+            [':id' => $account],
+        )->execute();
         $this->store->grantTeacher($org, $account, $person);
         return $this->container->get(EducationAccess::class)->scope(new AuthenticatedIdentity($account, $person, $this->id(), [], [], 'en-US', 'UTC'), $org, 'education.access');
     }
-    private function id(): string { return (string) $this->db->createCommand('SELECT uuidv7()::text')->queryScalar(); }
+    private function id(): string
+    {
+        return (string) $this->db->createCommand('SELECT uuidv7()::text')->queryScalar();
+    }
     private function error(int $status, callable $action, ?string $reason = null): void
     {
-        try { $action(); self::fail('Expected Education rejection.'); }
-        catch (EducationError $e) { self::assertSame($status, $e->status); if ($reason !== null) self::assertSame($reason, $e->reason); }
+        try {
+            $action();
+            self::fail('Expected Education rejection.');
+        } catch (EducationError $e) {
+            self::assertSame($status, $e->status);
+            if ($reason !== null) {
+                self::assertSame($reason, $e->reason);
+            }
+        }
     }
 }

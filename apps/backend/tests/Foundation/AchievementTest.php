@@ -61,8 +61,10 @@ final class AchievementTest extends ActivityEngineFixture
         $foreign = $this->finishTyping(scope: $this->peer['scope']);
         $this->rejection([403,404], fn() => $this->achievements->recordAttempt($this->learner['scope'], $foreign['attemptId']));
         self::assertSame([], $this->activeCodes());
-        self::assertSame(0, (int) $this->db->createCommand('SELECT count(*) FROM education.achievement_events WHERE student_id=CAST(:student AS uuid) AND source_id=CAST(:source AS uuid)',
-            [':student' => $this->learner['id'], ':source' => $foreign['attemptId']])->queryScalar());
+        self::assertSame(0, (int) $this->db->createCommand(
+            'SELECT count(*) FROM education.achievement_events WHERE student_id=CAST(:student AS uuid) AND source_id=CAST(:source AS uuid)',
+            [':student' => $this->learner['id'], ':source' => $foreign['attemptId']],
+        )->queryScalar());
     }
 
     public function testRuleVersionDoesNotRewritePreviousAwardAndNewVersionHasItsOwnIdentity(): void
@@ -74,9 +76,13 @@ final class AchievementTest extends ActivityEngineFixture
         self::assertSame($old, $this->unlockRows(), 'Changing a rule is not an implicit historical backfill.');
         $this->achievements->recordAttempt($this->learner['scope'], $first['attemptId']);
         $rows = $this->unlockRows();
-        foreach ($old as $row) self::assertContains($row, $rows, 'A new rule version silently rewrote an old unlock.');
-        self::assertSame(1, (int) $this->db->createCommand('SELECT count(*) FROM education.achievement_unlocks WHERE student_id=CAST(:student AS uuid) AND definition_id=CAST(:definition AS uuid)',
-            [':student' => $this->learner['id'], ':definition' => $definition])->queryScalar());
+        foreach ($old as $row) {
+            self::assertContains($row, $rows, 'A new rule version silently rewrote an old unlock.');
+        }
+        self::assertSame(1, (int) $this->db->createCommand(
+            'SELECT count(*) FROM education.achievement_unlocks WHERE student_id=CAST(:student AS uuid) AND definition_id=CAST(:definition AS uuid)',
+            [':student' => $this->learner['id'], ':definition' => $definition],
+        )->queryScalar());
         $this->achievements->recordAttempt($this->learner['scope'], $first['attemptId']);
         self::assertSame($rows, $this->unlockRows());
     }
@@ -88,7 +94,9 @@ final class AchievementTest extends ActivityEngineFixture
         $this->education->write('revoke_activity_attempt', $this->teacher, [], $first['attemptId']);
         self::assertSame([], $this->activeCodes());
         self::assertNotEmpty($this->unlockRows(), 'Revoked unlocks must retain the audit record.');
-        foreach ($this->unlockRows() as $row) self::assertNotNull($row['revoked_at']);
+        foreach ($this->unlockRows() as $row) {
+            self::assertNotNull($row['revoked_at']);
+        }
         $this->achievements->recordAttempt($this->learner['scope'], $first['attemptId']);
         self::assertSame([], $this->activeCodes(), 'Replaying a revoked result restored an invalid award.');
         $this->finishTyping(30);
@@ -99,7 +107,8 @@ final class AchievementTest extends ActivityEngineFixture
 
     public function testConfirmedHomeworkCorrectionRetractsItsAwardAndReplayedOldDecisionCannotRestoreIt(): void
     {
-        $assignment = $this->publish(); $this->answer($assignment['id']);
+        $assignment = $this->publish();
+        $this->answer($assignment['id']);
         $submission = $this->submit($assignment['id'])['submission'];
         $accepted = $this->homework->write('review', $this->teacher, ['version' => $submission['version'],
             'idempotencyKey' => $this->id(), 'decision' => 'accepted', 'resultStatus' => 'mastered'], $submission['id']);
@@ -108,8 +117,10 @@ final class AchievementTest extends ActivityEngineFixture
         // source withdrawal must nevertheless retract awards, and cannot be undone by replaying an event.
         $this->rejection(409, fn() => $this->homework->write('review', $this->teacher, ['version' => $accepted['submission']['version'],
             'idempotencyKey' => $this->id(), 'decision' => 'returned', 'comment' => 'Corrected after review.'], $submission['id']));
-        $this->db->createCommand("UPDATE education.homework_submissions SET state='RETURNED' WHERE id=CAST(:id AS uuid)",
-            [':id' => $submission['id']])->execute();
+        $this->db->createCommand(
+            "UPDATE education.homework_submissions SET state='RETURNED' WHERE id=CAST(:id AS uuid)",
+            [':id' => $submission['id']],
+        )->execute();
         $this->achievements->recordHomework($this->teacher, $submission['id']);
         self::assertNotContains('first-homework', $this->activeCodes());
         $this->achievements->recordHomework($this->teacher, $submission['id']);
@@ -140,7 +151,9 @@ final class AchievementTest extends ActivityEngineFixture
         $unique = array_filter($constraints, static fn(array $row): bool => str_contains($row['indexdef'], 'UNIQUE'));
         self::assertNotEmpty(array_filter($unique, static fn(array $row): bool => $row['tablename'] === 'achievement_unlocks' && str_contains($row['indexdef'], '(organization_id, student_id, definition_id)')));
         self::assertNotEmpty(array_filter($unique, static fn(array $row): bool => $row['tablename'] === 'achievement_events' && str_contains($row['indexdef'], '(organization_id, student_id, source_type, source_id)')));
-        for ($i = 0; $i < 5; $i++) $this->achievements->recordAttempt($this->learner['scope'], $first['attemptId']);
+        for ($i = 0; $i < 5; $i++) {
+            $this->achievements->recordAttempt($this->learner['scope'], $first['attemptId']);
+        }
         self::assertSame(1, $this->rowCount('achievement_events', 'source_id', $first['attemptId']));
         self::assertCount(count(array_unique($this->activeCodes())), $this->activeCodes());
         // The HTTP smoke sends actual simultaneous finishes; these DB constraints are its race backstop.
@@ -148,8 +161,10 @@ final class AchievementTest extends ActivityEngineFixture
 
     private function activeCodes(?string $student = null): array
     {
-        return $this->db->createCommand('SELECT d.code FROM education.achievement_unlocks u JOIN education.achievement_definitions d ON d.id=u.definition_id WHERE u.organization_id=CAST(:org AS uuid) AND u.student_id=CAST(:student AS uuid) AND u.revoked_at IS NULL ORDER BY d.code',
-            [':org' => $this->teacher->organizationId, ':student' => $student ?? $this->learner['id']])->queryColumn();
+        return $this->db->createCommand(
+            'SELECT d.code FROM education.achievement_unlocks u JOIN education.achievement_definitions d ON d.id=u.definition_id WHERE u.organization_id=CAST(:org AS uuid) AND u.student_id=CAST(:student AS uuid) AND u.revoked_at IS NULL ORDER BY d.code',
+            [':org' => $this->teacher->organizationId, ':student' => $student ?? $this->learner['id']],
+        )->queryColumn();
     }
 
     private function unlockRows(): array

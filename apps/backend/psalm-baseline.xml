@@ -1,0 +1,1098 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<files psalm-version="6.17.2@dd625545733d24633e5d386a26c13004dae80e19">
+  <file src="src/Education/Application/AchievementService.php">
+    <MixedArgument>
+      <code><![CDATA[$definition]]></code>
+      <code><![CDATA[$definition]]></code>
+      <code><![CDATA[$row['createdAt']]]></code>
+      <code><![CDATA[$row['finishedAt']]]></code>
+      <code><![CDATA[$row['reviewedAt']]]></code>
+      <code><![CDATA[$row['studentId']]]></code>
+      <code><![CDATA[$row['studentId']]]></code>
+      <code><![CDATA[$row['studentId']]]></code>
+      <code><![CDATA[$row['studentId']]]></code>
+      <code><![CDATA[$row['studentId']]]></code>
+      <code><![CDATA[$row['studentId']]]></code>
+      <code><![CDATA[$unlock['unlockedAt']]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[[$c['language'] ?? 'en',$c['mode'] ?? 'words',$c['difficulty'] ?? 1,$c['durationSeconds'] ?? 30]]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedArrayAccess>
+      <code><![CDATA[$c['difficulty']]]></code>
+      <code><![CDATA[$c['durationSeconds']]]></code>
+      <code><![CDATA[$c['language']]]></code>
+      <code><![CDATA[$c['mode']]]></code>
+      <code><![CDATA[$cursor['attemptId']]]></code>
+      <code><![CDATA[$cursor['createdAt']]]></code>
+      <code><![CDATA[$event['id']]]></code>
+      <code><![CDATA[$event['payload']]]></code>
+      <code><![CDATA[$event['sourceType']]]></code>
+      <code><![CDATA[$event['sourceType']]]></code>
+      <code><![CDATA[$payload['accepted']]]></code>
+      <code><![CDATA[$payload['activityCode']]]></code>
+      <code><![CDATA[$payload['activityCode']]]></code>
+      <code><![CDATA[$payload['config']]]></code>
+      <code><![CDATA[$payload['result']]]></code>
+      <code><![CDATA[$result['accuracy']]]></code>
+      <code><![CDATA[$result['correctChars']]]></code>
+      <code><![CDATA[$result['keystrokes']]]></code>
+      <code><![CDATA[$result['passed']]]></code>
+      <code><![CDATA[$result['typedCharacters']]]></code>
+      <code><![CDATA[$result['wpm']]]></code>
+    </MixedArrayAccess>
+    <MixedArrayOffset>
+      <code><![CDATA[$assignments[$row['assignmentId']]]]></code>
+      <code><![CDATA[$byId[$definition['id']]]]></code>
+    </MixedArrayOffset>
+    <MixedReturnStatement>
+      <code><![CDATA[$allowed(
+                $event['sourceType'] === 'attempt' ? 'attempt' : 'homework',
+                $event['payload']['homeworkId'] ?? $event['sourceId'],
+            )]]></code>
+    </MixedReturnStatement>
+  </file>
+  <file src="src/Education/Application/ActivityHandlerRegistry.php">
+    <MixedReturnStatement>
+      <code><![CDATA[is_array($value) ? $value : (is_string($value) ? (json_decode($value, true, flags: JSON_THROW_ON_ERROR) ?: []) : [])]]></code>
+      <code><![CDATA[is_array($value) ? $value : (is_string($value) ? (json_decode($value, true, flags: JSON_THROW_ON_ERROR) ?: []) : [])]]></code>
+    </MixedReturnStatement>
+  </file>
+  <file src="src/Education/Application/CurriculumService.php">
+    <MixedArgument>
+      <code><![CDATA[$available['items']]]></code>
+      <code><![CDATA[$result['items']]]></code>
+      <code><![CDATA[$row['personId']]]></code>
+      <code><![CDATA[$row['personId']]]></code>
+      <code><![CDATA[$student['personId']]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[fn(): array => match ($operation) {
+            'create_program' => $this->store->saveProgram($scope, null, self::catalog($input, false, false)),
+            'update_program' => $this->store->saveProgram($scope, Input::uuid($id), self::catalog($input, false, false)),
+            'create_curriculum_module' => $this->store->saveModule($scope, null, Input::uuid($id), self::catalog($input, true, false)),
+            'update_curriculum_module' => $this->store->saveModule($scope, Input::uuid($id), null, self::catalog($input, true, false)),
+            'create_curriculum_lesson' => $this->store->saveCurriculumLesson($scope, null, Input::uuid($id), self::catalog($input, true, true)),
+            'update_curriculum_lesson' => $this->store->saveCurriculumLesson($scope, Input::uuid($id), null, self::catalog($input, true, true)),
+            'assign_program' => $this->assign($scope, Input::uuid($id), $input),
+            'set_group_teachers' => $this->setTeachers($scope, Input::uuid($id), $input),
+            'create_student' => $this->createStudent($scope, $input),
+            default => throw new EducationError(404, 'not_found'),
+        }]]></code>
+    </MixedArgumentTypeCoercion>
+  </file>
+  <file src="src/Education/Application/EducationAccess.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$this->assertTimezone($identity)]]></code>
+      <code><![CDATA[$timezone]]></code>
+    </ArgumentTypeCoercion>
+    <MixedArgument>
+      <code><![CDATA[$row['person_id']]]></code>
+      <code><![CDATA[$row['person_id']]]></code>
+      <code><![CDATA[$row['person_id']]]></code>
+    </MixedArgument>
+  </file>
+  <file src="src/Education/Application/EducationFileTransfers.php">
+    <MixedArgument>
+      <code><![CDATA[$file['mime']]]></code>
+      <code><![CDATA[$file['name']]]></code>
+      <code><![CDATA[$input['name']]]></code>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$result['id']]]></code>
+      <code><![CDATA[$result['id']]]></code>
+      <code><![CDATA[$row['expected_sha256']]]></code>
+      <code><![CDATA[$row['expected_sha256']]]></code>
+      <code><![CDATA[$row['expires_at']]]></code>
+      <code><![CDATA[$row['expires_at']]]></code>
+      <code><![CDATA[$row['expires_at']]]></code>
+      <code><![CDATA[$row['final_key']]]></code>
+      <code><![CDATA[$row['final_key']]]></code>
+      <code><![CDATA[$row['kind']]]></code>
+      <code><![CDATA[$row['kind']]]></code>
+      <code><![CDATA[$row['lesson_id']]]></code>
+      <code><![CDATA[$row['lesson_id']]]></code>
+      <code><![CDATA[$row['lesson_id']]]></code>
+      <code><![CDATA[$row['name']]]></code>
+      <code><![CDATA[$row['resource_id']]]></code>
+      <code><![CDATA[$row['resource_id']]]></code>
+      <code><![CDATA[$row['resource_id']]]></code>
+      <code><![CDATA[$row['result']]]></code>
+      <code><![CDATA[$row['result']]]></code>
+      <code><![CDATA[$row['staging_key']]]></code>
+      <code><![CDATA[$row['staging_key']]]></code>
+      <code><![CDATA[$row['staging_key']]]></code>
+      <code><![CDATA[$row['staging_key']]]></code>
+    </MixedArgument>
+    <MixedArrayAccess>
+      <code><![CDATA[$result['id']]]></code>
+      <code><![CDATA[$result['id']]]></code>
+    </MixedArrayAccess>
+    <MixedOperand>
+      <code><![CDATA[$row['final_key']]]></code>
+    </MixedOperand>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[str_replace('\\', '/', $input['name'])]]></code>
+    </PossiblyInvalidArgument>
+  </file>
+  <file src="src/Education/Application/EducationService.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$identity->timezone ?? 'UTC']]></code>
+    </ArgumentTypeCoercion>
+    <MixedArgument>
+      <code><![CDATA[$attempt['activityCode']]]></code>
+      <code><![CDATA[$attempt['activityCode']]]></code>
+      <code><![CDATA[$attempt['activityCode']]]></code>
+      <code><![CDATA[$attempt['id']]]></code>
+      <code><![CDATA[$attempt['id']]]></code>
+      <code><![CDATA[$code]]></code>
+      <code><![CDATA[$code]]></code>
+      <code><![CDATA[$config]]></code>
+      <code><![CDATA[$config['difficulty']]]></code>
+      <code><![CDATA[$config['language']]]></code>
+      <code><![CDATA[$config['maxAttempts']]]></code>
+      <code><![CDATA[$config['mode']]]></code>
+      <code><![CDATA[$end]]></code>
+      <code><![CDATA[$end]]></code>
+      <code><![CDATA[$exercise['text'] ?? '']]></code>
+      <code><![CDATA[$input['config'] ?? []]]></code>
+      <code><![CDATA[$input['state']]]></code>
+      <code><![CDATA[$lesson['id']]]></code>
+      <code><![CDATA[$lesson['id']]]></code>
+      <code><![CDATA[$row['studentId']]]></code>
+      <code><![CDATA[$start]]></code>
+      <code><![CDATA[$start]]></code>
+      <code><![CDATA[isset($query['from']) || isset($query['to']) ? $end : null]]></code>
+      <code><![CDATA[isset($query['from']) || isset($query['to']) ? $start : null]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[fn(): array => $this->startAttempt($scope, $code, $input, true)]]></code>
+      <code><![CDATA[fn(): array => match ($operation) {
+            'create_group' => $this->createGroup($scope, $input),
+            'update_group' => $this->updateGroup($scope, Input::uuid($id), $input),
+            'archive_group' => $this->archiveGroup($scope, Input::uuid($id)),
+            'enroll_student' => $this->enrollStudent($scope, $input),
+            'remove_group_student' => $this->removeGroupStudent($scope, Input::uuid($id), Input::uuid($studentId)),
+            'transfer_student' => $this->transferStudent($scope, Input::uuid($id), Input::uuid($studentId), $input),
+            'create_lesson' => $this->createLesson($scope, $input),
+            'update_lesson' => $this->updateLesson($scope, Input::uuid($id), $input),
+            'complete_lesson' => $this->completeLesson($scope, Input::uuid($id)),
+            'cancel_lesson' => $this->cancelLesson($scope, Input::uuid($id)),
+            'save_lesson_report' => $this->saveLessonReport($scope, Input::uuid($id), $input),
+            'save_lesson_result' => $this->saveLessonResult($scope, Input::uuid($id), Input::uuid($studentId), $input),
+            'invite_student' => $this->inviteStudent($scope, Input::uuid($id)),
+            'revoke_student_account' => $this->revokeStudentAccount($scope, Input::uuid($id)),
+            'activities_assign' => $this->assignActivity($scope, (string) $id, $input),
+            'student_start_attempt' => $this->startAttempt($scope, (string) $id, $input),
+            'student_finish_attempt' => $this->finishAttempt($scope, Input::uuid($id), $input),
+            'student_save_attempt_state' => $this->saveAttemptState($scope, Input::uuid($id), $input),
+            'revoke_activity_attempt' => $this->revokeActivityAttempt($scope, Input::uuid($id), $input),
+            'create_event' => $this->createEvent($scope, $input),
+            'mark_attendance' => $this->attendance($scope, Input::uuid($id), Input::uuid($studentId), $input),
+            'save_profile' => $this->profile($scope, $input),
+            'start_thread' => $this->startThread($scope, $input),
+            'send_message' => $this->sendMessage($scope, Input::uuid($id), $input),
+            'read_thread' => $this->readThread($scope, Input::uuid($id), $input),
+            'read_notification' => $this->readNotification($scope, Input::uuid($id)),
+            default => throw new EducationError(404, 'not_found'),
+        }]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedReturnTypeCoercion>
+      <code><![CDATA[$this->uploadStored($scope, $this->files->store($upload, $avatar), $lessonId, $avatar)]]></code>
+      <code><![CDATA[['stream' => $stream, 'name' => (string) $file['name'],
+            'mime' => (string) $file['mime'], 'size' => (int) $file['sizeBytes'], 'sha256' => (string) $file['sha256']]]]></code>
+      <code><![CDATA[array<string,mixed>]]></code>
+      <code><![CDATA[array<string,mixed>|null]]></code>
+      <code><![CDATA[array{stream:resource,name:string,mime:string,size:int,sha256:string}]]></code>
+      <code><![CDATA[match ($operation) {
+            'header', 'profile' => $this->header($scope, $now),
+            'groups' => $this->resourcePage($scope, $this->store->groups($scope, $offset), $offset, 'group'),
+            'group' => $this->group($scope, Input::uuid($id)),
+            'group_students' => $this->groupStudents($scope, Input::uuid($id), $offset),
+            'students' => $this->peoplePage($scope, $this->store->students($scope, $offset), $offset),
+            'candidates' => self::page(array_slice($this->access->candidates($scope), $offset, 51), $offset),
+            'colleagues' => self::page(array_slice($this->colleagues($scope), $offset, 51), $offset),
+            'schedule' => $this->schedule($scope, $query),
+            'timeline' => $this->timeline($scope, Input::date($query['date'] ?? null)),
+            'next' => $this->nextLesson($scope, $now, false),
+            'current' => $this->nextLesson($scope, $now, true),
+            'lesson' => $this->lesson($scope, Input::uuid($id)),
+            'participants' => $this->participants($scope, Input::uuid($id)),
+            'lesson_results' => $this->lessonResults($scope, Input::uuid($id)),
+            'materials' => $this->materials($scope, Input::uuid($id), $offset),
+            'files' => $this->resourcePage($scope, $this->store->files($scope, null, $offset), $offset, 'file'),
+            'attention' => $this->attention($scope, $now),
+            'threads' => $this->resourcePage($scope, $this->store->threads($scope, $offset), $offset, 'thread'),
+            'thread' => $this->thread($scope, Input::uuid($id)),
+            'messages' => $this->messages($scope, Input::uuid($id), $offset),
+            'notifications', 'student_notifications' => $this->notifications($scope, $offset),
+            'group_journal' => $this->journal($scope, Input::uuid($id), $query),
+            'student' => $this->student($scope, Input::uuid($id)),
+            'student_attendance' => $this->studentAttendance($scope, Input::uuid($id), $query, $offset),
+            'student_results' => $this->studentResults($scope, Input::uuid($id), $offset),
+            'student_progress' => $this->studentProgress($scope, Input::uuid($id), $query),
+            'activity_assignments' => $this->assignments($scope, $offset),
+            'group_activity_results' => $this->groupActivityResults($scope, Input::uuid($id), $query, $offset),
+            'student_home' => $this->studentHome($scope),
+            'student_schedule' => $this->studentSchedule($scope, $query),
+            'student_lessons' => $this->studentLessons($scope, $offset),
+            'student_lesson' => $this->studentLesson($scope, Input::uuid($id)),
+            'activity_catalog', 'student_activity_catalog' => ['items' => array_map(
+                static fn(array $row): array => self::jsonFields($row, ['config', 'metrics']),
+                $this->store->activityCatalog(),
+            )],
+            'student_activity_config' => $this->studentActivityConfig($scope, (string) $id),
+            'student_attempt' => $this->attemptView($scope, Input::uuid($id)),
+            'student_achievements' => ['items' => $this->achievements?->readForStudent($scope->organizationId, (string) $scope->studentId, fn(string $type, string $resource): bool => $this->access->resourceAllowed($scope->personId, $type, $resource)) ?? []],
+            'student_activity_progress' => $this->studentActivityProgress($scope, $query),
+            'group_activity_progress' => $this->groupActivityProgress($scope, Input::uuid($id), $query),
+            'student_attempt_history' => $this->attemptHistory($scope, $offset),
+            'student_typing_history' => $this->typingHistory($scope, $offset),
+            default => throw new EducationError(404, 'not_found'),
+        }]]></code>
+    </MixedReturnTypeCoercion>
+    <PossiblyNullArgument>
+      <code><![CDATA[$config]]></code>
+      <code><![CDATA[$input['config'] ?? []]]></code>
+    </PossiblyNullArgument>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$input['config']]]></code>
+      <code><![CDATA[$input['config']]]></code>
+    </PossiblyUndefinedArrayOffset>
+    <RedundantCastGivenDocblockType>
+      <code><![CDATA[(string) $file['mime']]]></code>
+      <code><![CDATA[(string) $file['name']]]></code>
+      <code><![CDATA[(string) $file['sha256']]]></code>
+      <code><![CDATA[(string) $file['sha256']]]></code>
+      <code><![CDATA[(string) $file['storageKey']]]></code>
+    </RedundantCastGivenDocblockType>
+  </file>
+  <file src="src/Education/Application/FileStore.php">
+    <MissingReturnType>
+      <code><![CDATA[open]]></code>
+    </MissingReturnType>
+  </file>
+  <file src="src/Education/Application/HomeworkActivityService.php">
+    <InvalidOperand>
+      <code><![CDATA[$detail['assignment']['activityConfig']]]></code>
+    </InvalidOperand>
+    <MixedArrayAccess>
+      <code><![CDATA[$detail['assignment']['activityCode']]]></code>
+      <code><![CDATA[$detail['assignment']['activityConfig']]]></code>
+      <code><![CDATA[$detail['assignment']['maxAttempts']]]></code>
+      <code><![CDATA[$detail['assignment']['status']]]></code>
+      <code><![CDATA[$detail['assignment']['type']]]></code>
+      <code><![CDATA[$detail['recipient']['id']]]></code>
+      <code><![CDATA[$detail['submission']['state']]]></code>
+    </MixedArrayAccess>
+  </file>
+  <file src="src/Education/Application/HomeworkAttemptLinker.php">
+    <MixedArgument>
+      <code><![CDATA[$assignedConfig]]></code>
+      <code><![CDATA[$attemptConfig]]></code>
+      <code><![CDATA[$row['activity_code']]]></code>
+      <code><![CDATA[$row['activity_code']]]></code>
+      <code><![CDATA[$row['activity_config']]]></code>
+      <code><![CDATA[$row['config']]]></code>
+    </MixedArgument>
+    <MixedArrayAccess>
+      <code><![CDATA[$detail['assignment']['status']]]></code>
+      <code><![CDATA[$detail['assignment']['status']]]></code>
+      <code><![CDATA[$detail['recipient']['id']]]></code>
+      <code><![CDATA[$detail['submission']['id']]]></code>
+      <code><![CDATA[$detail['submission']['state']]]></code>
+      <code><![CDATA[$detail['submission']['state']]]></code>
+    </MixedArrayAccess>
+  </file>
+  <file src="src/Education/Application/HomeworkFileService.php">
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[function () use ($scope, $id, $fileId): array {
+            $detail = $this->editable($scope, Input::uuid($id));
+            $this->db->createCommand(
+                'DELETE FROM education.homework_draft_files WHERE recipient_id=:recipient::uuid AND file_id=:file::uuid',
+                [':recipient' => $detail['recipient']['id'], ':file' => Input::uuid($fileId)],
+            )->execute();
+            // Submitted version links and immutable bytes survive removing the draft attachment.
+            return $this->homework->read('student_detail', $scope, [], $id);
+        }]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedArrayAccess>
+      <code><![CDATA[$detail['assignment']['status']]]></code>
+      <code><![CDATA[$detail['assignment']['status']]]></code>
+      <code><![CDATA[$detail['recipient']['id']]]></code>
+      <code><![CDATA[$detail['recipient']['id']]]></code>
+      <code><![CDATA[$detail['recipient']['id']]]></code>
+      <code><![CDATA[$detail['recipient']['id']]]></code>
+      <code><![CDATA[$detail['submission']['id']]]></code>
+      <code><![CDATA[$detail['submission']['state']]]></code>
+    </MixedArrayAccess>
+    <MixedPropertyFetch>
+      <code><![CDATA[$stored->key]]></code>
+      <code><![CDATA[$stored->mime]]></code>
+      <code><![CDATA[$stored->name]]></code>
+      <code><![CDATA[$stored->sha256]]></code>
+      <code><![CDATA[$stored->size]]></code>
+    </MixedPropertyFetch>
+  </file>
+  <file src="src/Education/Application/HomeworkService.php">
+    <MixedArgument>
+      <code><![CDATA[$assignment['dueAt']]]></code>
+      <code><![CDATA[$assignment['groupId']]]></code>
+      <code><![CDATA[$assignment['id']]]></code>
+      <code><![CDATA[$input['idempotencyKey']]]></code>
+      <code><![CDATA[$input['idempotencyKey']]]></code>
+      <code><![CDATA[$item['personId']]]></code>
+      <code><![CDATA[$recipient['assignmentId']]]></code>
+      <code><![CDATA[$recipient['assignmentId']]]></code>
+      <code><![CDATA[$recipient['assignmentId']]]></code>
+      <code><![CDATA[$recipient['id']]]></code>
+      <code><![CDATA[$recipient['id']]]></code>
+      <code><![CDATA[$recipient['personId']]]></code>
+      <code><![CDATA[$recipient['personId']]]></code>
+      <code><![CDATA[$recipient['studentId']]]></code>
+      <code><![CDATA[$recipient['studentId']]]></code>
+      <code><![CDATA[$student['id']]]></code>
+      <code><![CDATA[$student['personId']]]></code>
+      <code><![CDATA[$student['personId']]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[function () use ($operation, $scope, $input, $id): array {
+                $now = $this->now();
+                $result = match ($operation) {
+                    'create' => $this->create($scope, $input, $now),
+                    'update' => $this->update($scope, Input::uuid($id), $input, $now),
+                    'publish', 'close', 'archive' => $this->transition($scope, Input::uuid($id), $input, $operation, $now),
+                    'add_recipients' => $this->addRecipients($scope, Input::uuid($id), $input, $now),
+                    'save_draft' => $this->saveDraft($scope, Input::uuid($id), $input, $now),
+                    'submit' => $this->submit($scope, Input::uuid($id), $input, $now),
+                    'review' => $this->review($scope, Input::uuid($id), $input, $now),
+                    default => throw new EducationError(404, 'not_found'),
+                };
+                if (in_array($operation, ['submit', 'review'], true)) {
+                    $this->store->remember($scope, $operation, $input['idempotencyKey'], (string) $id, $input, $result);
+                }
+                return $result;
+            }]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedArrayAccess>
+      <code><![CDATA[$item['personId']]]></code>
+    </MixedArrayAccess>
+    <MixedArrayAssignment>
+      <code><![CDATA[$item['name']]]></code>
+    </MixedArrayAssignment>
+  </file>
+  <file src="src/Education/Application/LogicActivityHandler.php">
+    <MixedArgument>
+      <code><![CDATA[$choices]]></code>
+      <code><![CDATA[$choices]]></code>
+      <code><![CDATA[$exercise['configSnapshot'] ?? ActivityHandlerRegistry::json($attempt['config'] ?? [])]]></code>
+      <code><![CDATA[$exercise['rounds']]]></code>
+      <code><![CDATA[$exercise['rounds']]]></code>
+      <code><![CDATA[$exercise['rounds'] ?? []]]></code>
+      <code><![CDATA[$exercise['rounds'] ?? []]]></code>
+      <code><![CDATA[$rounds[$round]['options']]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[$values]]></code>
+      <code><![CDATA[$values]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedArrayAccess>
+      <code><![CDATA[$choices]]></code>
+      <code><![CDATA[$round['correctOptionId']]]></code>
+      <code><![CDATA[$round['correctOptionId']]]></code>
+      <code><![CDATA[$round['explanation']]]></code>
+      <code><![CDATA[$round['id']]]></code>
+      <code><![CDATA[$round['id']]]></code>
+      <code><![CDATA[$round['id']]]></code>
+      <code><![CDATA[$rounds[$round]['options']]]></code>
+    </MixedArrayAccess>
+    <MixedArrayOffset>
+      <code><![CDATA[$byId[$round['id']]]]></code>
+      <code><![CDATA[$byId[$round['id']]]]></code>
+    </MixedArrayOffset>
+    <MixedOperand>
+      <code><![CDATA[$answer + $step]]></code>
+      <code><![CDATA[$base * $factor]]></code>
+      <code><![CDATA[$difficulty]]></code>
+      <code><![CDATA[$difficulty]]></code>
+      <code><![CDATA[$difficulty]]></code>
+      <code><![CDATA[$factor]]></code>
+      <code><![CDATA[$factor]]></code>
+      <code><![CDATA[$factor]]></code>
+      <code><![CDATA[$factor ** 3]]></code>
+      <code><![CDATA[$step]]></code>
+      <code><![CDATA[$step]]></code>
+      <code><![CDATA[$step]]></code>
+      <code><![CDATA[$step]]></code>
+      <code><![CDATA[$step]]></code>
+      <code><![CDATA[$step]]></code>
+      <code><![CDATA[$step]]></code>
+      <code><![CDATA[$step]]></code>
+      <code><![CDATA[$step]]></code>
+      <code><![CDATA[$step * $difficulty]]></code>
+      <code><![CDATA[$step * $times]]></code>
+      <code><![CDATA[2 * $step]]></code>
+      <code><![CDATA[3 * $step]]></code>
+      <code><![CDATA[4 * $step]]></code>
+    </MixedOperand>
+    <PossiblyUndefinedVariable>
+      <code><![CDATA[$choices]]></code>
+    </PossiblyUndefinedVariable>
+  </file>
+  <file src="src/Education/Application/ParentFamily.php">
+    <MixedArgument>
+      <code><![CDATA[$invite['created_by_account_id']]]></code>
+      <code><![CDATA[$invite['expires_at']]]></code>
+      <code><![CDATA[$invite['guardian_person_id']]]></code>
+      <code><![CDATA[$invite['organization_id']]]></code>
+      <code><![CDATA[$person]]></code>
+      <code><![CDATA[$person]]></code>
+      <code><![CDATA[$row['activatedAt']]]></code>
+      <code><![CDATA[$row['confirmedAt']]]></code>
+      <code><![CDATA[$row['createdAt']]]></code>
+      <code><![CDATA[$row['expiresAt']]]></code>
+      <code><![CDATA[$row['expires_at']]]></code>
+      <code><![CDATA[$row['guardian_person_id']]]></code>
+      <code><![CDATA[$row['guardian_person_id']]]></code>
+      <code><![CDATA[$row['inviteRevokedAt']]]></code>
+      <code><![CDATA[$row['organization_id']]]></code>
+      <code><![CDATA[$row['organization_id']]]></code>
+      <code><![CDATA[$row['personId']]]></code>
+      <code><![CDATA[$row['personId']]]></code>
+      <code><![CDATA[$row['personId']]]></code>
+      <code><![CDATA[$row['personId']]]></code>
+      <code><![CDATA[$row['revokedAt']]]></code>
+      <code><![CDATA[$row['student_id']]]></code>
+      <code><![CDATA[$row['student_id']]]></code>
+      <code><![CDATA[$row['usedAt']]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion/>
+    <PossiblyNullArrayAccess>
+      <code><![CDATA[$invite['id']]]></code>
+      <code><![CDATA[$this->education->student($scope, $studentId)['personId']]]></code>
+    </PossiblyNullArrayAccess>
+  </file>
+  <file src="src/Education/Application/ParentReadService.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$scope->timezone]]></code>
+      <code><![CDATA[$scope->timezone]]></code>
+      <code><![CDATA[$scope->timezone]]></code>
+      <code><![CDATA[$scope->timezone]]></code>
+    </ArgumentTypeCoercion>
+    <MixedArgument>
+      <code><![CDATA[$a['id']]]></code>
+      <code><![CDATA[$end]]></code>
+      <code><![CDATA[$end]]></code>
+      <code><![CDATA[$end]]></code>
+      <code><![CDATA[$fact['id']]]></code>
+      <code><![CDATA[$g['id']]]></code>
+      <code><![CDATA[$games['typing']['history']]]></code>
+      <code><![CDATA[$lesson['endsAt']]]></code>
+      <code><![CDATA[$notice['resourceId']]]></code>
+      <code><![CDATA[$p['groupId']]]></code>
+      <code><![CDATA[$p['programId']]]></code>
+      <code><![CDATA[$page['items']]]></code>
+      <code><![CDATA[$programs]]></code>
+      <code><![CDATA[$row['groupId']]]></code>
+      <code><![CDATA[$row['groupId']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['organizationId']]]></code>
+      <code><![CDATA[$start]]></code>
+      <code><![CDATA[$start]]></code>
+      <code><![CDATA[$start]]></code>
+      <code><![CDATA[$this->homework($scope, 0)['items']]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[$key]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedArrayAccess>
+      <code><![CDATA[$fact['id']]]></code>
+      <code><![CDATA[$fact['state']]]></code>
+      <code><![CDATA[$fact['state']]]></code>
+      <code><![CDATA[$fact['state']]]></code>
+      <code><![CDATA[$games['typing']['history']]]></code>
+      <code><![CDATA[$lesson['endsAt']]]></code>
+      <code><![CDATA[$lesson['status']]]></code>
+      <code><![CDATA[$row['groupId']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['organizationId']]]></code>
+      <code><![CDATA[$row['reviewComment']]]></code>
+      <code><![CDATA[$row['reviewComment']]]></code>
+      <code><![CDATA[$row['reviewCreatedAt']]]></code>
+      <code><![CDATA[$row['reviewCreatedAt']]]></code>
+      <code><![CDATA[$row['reviewDecision']]]></code>
+      <code><![CDATA[$row['reviewDecision']]]></code>
+      <code><![CDATA[$row['reviewDecision']]]></code>
+      <code><![CDATA[$row['reviewResultStatus']]]></code>
+      <code><![CDATA[$row['reviewResultStatus']]]></code>
+      <code><![CDATA[$row['status']]]></code>
+    </MixedArrayAccess>
+    <MixedArrayAssignment>
+      <code><![CDATA[$row['review']]]></code>
+    </MixedArrayAssignment>
+    <MixedArrayOffset>
+      <code><![CDATA[$counts[$row['status']]]]></code>
+      <code><![CDATA[$counts[$row['status']]]]></code>
+    </MixedArrayOffset>
+  </file>
+  <file src="src/Education/Application/StudentFamily.php">
+    <MixedArgument>
+      <code><![CDATA[$row['personId']]]></code>
+      <code><![CDATA[$row['personId']]]></code>
+      <code><![CDATA[$row['personId']]]></code>
+    </MixedArgument>
+  </file>
+  <file src="src/Education/Application/TypingActivityHandler.php">
+    <MixedArgument>
+      <code><![CDATA[$config['difficulty']]]></code>
+      <code><![CDATA[$config['durationSeconds']]]></code>
+      <code><![CDATA[$config['durationSeconds']]]></code>
+      <code><![CDATA[$config['language']]]></code>
+      <code><![CDATA[$config['mode']]]></code>
+      <code><![CDATA[$correct / 5 / ($config['durationSeconds'] / 60)]]></code>
+      <code><![CDATA[$exercise['configSnapshot'] ?? ActivityHandlerRegistry::json($attempt['config'] ?? [])]]></code>
+      <code><![CDATA[$part]]></code>
+      <code><![CDATA[500 * 5 * $config['durationSeconds'] / 60]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[$parts]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedOperand>
+      <code><![CDATA[$config['durationSeconds']]]></code>
+      <code><![CDATA[$config['durationSeconds']]]></code>
+      <code><![CDATA[$config['durationSeconds'] / 60]]></code>
+      <code><![CDATA[500 * 5 * $config['durationSeconds']]]></code>
+    </MixedOperand>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$out[$key]]]></code>
+      <code><![CDATA[$out[$key]]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Education/Infrastructure/ActivityAwardNotifications.php">
+    <MixedArgument>
+      <code><![CDATA[$row['id']]]></code>
+    </MixedArgument>
+    <MixedOperand>
+      <code><![CDATA[$row['id']]]></code>
+    </MixedOperand>
+  </file>
+  <file src="src/Education/Infrastructure/EducationObjectCleanup.php">
+    <MixedArgument>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$row['final_key']]]></code>
+      <code><![CDATA[$row['staging_key']]]></code>
+    </MixedArgument>
+    <MixedArrayAccess>
+      <code><![CDATA[$object['Key']]]></code>
+      <code><![CDATA[$object['LastModified']]]></code>
+    </MixedArrayAccess>
+    <MixedOperand>
+      <code><![CDATA[$key]]></code>
+    </MixedOperand>
+    <PossiblyNullIterator>
+      <code><![CDATA[$page['Contents'] ?? []]]></code>
+    </PossiblyNullIterator>
+  </file>
+  <file src="src/Education/Infrastructure/HomeworkPrivacy.php">
+    <MixedReturnTypeCoercion>
+      <code><![CDATA[$keys]]></code>
+      <code><![CDATA[list<array{storage_key:string}>]]></code>
+    </MixedReturnTypeCoercion>
+  </file>
+  <file src="src/Education/Infrastructure/ParentNotifications.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$this->db->createCommand(
+            "SELECT DISTINCT g.guardian_person_id::text
+            FROM education.student_guardians g
+            JOIN education.parent_accounts pa ON pa.organization_id=g.organization_id
+                AND pa.guardian_person_id=g.guardian_person_id AND pa.revoked_at IS NULL
+            JOIN core.accounts a ON a.id=pa.account_id AND a.person_id=g.guardian_person_id
+                AND a.status='active' AND a.archived_at IS NULL
+            JOIN core.persons p ON p.id=g.guardian_person_id AND p.status='active'
+            JOIN education.students s ON s.id=g.student_id AND s.organization_id=g.organization_id
+            JOIN core.persons child ON child.id=s.person_id AND child.status='active'
+            WHERE g.organization_id=CAST(:org AS uuid) AND g.student_id=CAST(:student AS uuid) AND g.status='confirmed'
+            AND EXISTS(SELECT 1 FROM core.organization_memberships m WHERE m.organization_id=g.organization_id
+                AND m.person_id=g.guardian_person_id AND m.status='active')
+            AND EXISTS(SELECT 1 FROM core.organization_memberships m WHERE m.organization_id=g.organization_id
+                AND m.person_id=s.person_id AND m.status='active')",
+            [':org' => $actor->organizationId, ':student' => $student],
+        )->queryColumn()]]></code>
+    </LessSpecificReturnStatement>
+    <MixedOperand>
+      <code><![CDATA[$assignment['id']]]></code>
+      <code><![CDATA[$lesson['id']]]></code>
+      <code><![CDATA[$student]]></code>
+      <code><![CDATA[$submission['version'] ?? $assignment['version']]]></code>
+    </MixedOperand>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<string>]]></code>
+    </MoreSpecificReturnType>
+  </file>
+  <file src="src/Education/Infrastructure/PostgresCurriculumStore.php">
+    <InvalidOperand>
+      <code><![CDATA[$entry]]></code>
+    </InvalidOperand>
+    <MixedArgument>
+      <code><![CDATA[$active[0]['snapshot']]]></code>
+      <code><![CDATA[$lesson['groupId']]]></code>
+      <code><![CDATA[$module['lessons']]]></code>
+      <code><![CDATA[$module['lessons']]]></code>
+      <code><![CDATA[$module['programId']]]></code>
+      <code><![CDATA[$program['modules']]]></code>
+      <code><![CDATA[$row]]></code>
+      <code><![CDATA[$row['owner']]]></code>
+      <code><![CDATA[$row['snapshot']]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[$key]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedArrayAccess>
+      <code><![CDATA[$active[0]['programId']]]></code>
+      <code><![CDATA[$active[0]['snapshot']]]></code>
+      <code><![CDATA[$assignment['id']]]></code>
+      <code><![CDATA[$assignment['modules']]]></code>
+      <code><![CDATA[$assignment['name']]]></code>
+      <code><![CDATA[$entry['id']]]></code>
+      <code><![CDATA[$fact['completed']]]></code>
+      <code><![CDATA[$fact['id']]]></code>
+      <code><![CDATA[$fact['id']]]></code>
+      <code><![CDATA[$fact['mastered']]]></code>
+      <code><![CDATA[$module['id']]]></code>
+      <code><![CDATA[$module['id']]]></code>
+      <code><![CDATA[$module['id']]]></code>
+      <code><![CDATA[$module['lessons']]]></code>
+      <code><![CDATA[$module['lessons']]]></code>
+      <code><![CDATA[$module['lessons']]]></code>
+      <code><![CDATA[$module['name']]]></code>
+      <code><![CDATA[$module['name']]]></code>
+      <code><![CDATA[$snapshot['description']]]></code>
+      <code><![CDATA[$snapshot['modules']]]></code>
+      <code><![CDATA[$snapshot['name']]]></code>
+    </MixedArrayAccess>
+    <MixedArrayAssignment>
+      <code><![CDATA[$module['lessons']]]></code>
+      <code><![CDATA[$module['lessons']]]></code>
+    </MixedArrayAssignment>
+    <MixedArrayOffset>
+      <code><![CDATA[$completed[$fact['id']]]]></code>
+      <code><![CDATA[$mastered[$fact['id']]]]></code>
+    </MixedArrayOffset>
+    <MixedReturnStatement>
+      <code><![CDATA[$this->groupPrograms($scope, $groupId)[0]]]></code>
+      <code><![CDATA[$this->required("INSERT INTO education.$table($columns) VALUES($sqlValues) RETURNING id::text", $params)['id']]]></code>
+    </MixedReturnStatement>
+  </file>
+  <file src="src/Education/Infrastructure/PostgresEducationStore.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$params]]></code>
+      <code><![CDATA[$previousStudents]]></code>
+      <code><![CDATA[[...self::owner($scope), ...self::inParams(':lesson', $lessonIds)]]]></code>
+    </ArgumentTypeCoercion>
+    <InvalidOperand>
+      <code><![CDATA[$metrics]]></code>
+    </InvalidOperand>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$this->all(
+            'SELECT f.id::text,f.name,f.mime,f.size_bytes AS "sizeBytes",f.created_at::text AS "createdAt"
+            FROM education.files f WHERE f.lesson_id=CAST(:lesson AS uuid) AND f.organization_id=CAST(:org AS uuid)
+            AND f.purpose=\'material\' ORDER BY f.created_at,f.id',
+            [':org' => $scope->organizationId, ':lesson' => $lessonId],
+        )]]></code>
+      <code><![CDATA[$this->all(
+            'SELECT g.id::text,g.name,g.archived_at::text AS "archivedAt" FROM education.groups g
+            JOIN education.group_students gs ON gs.group_id=g.id
+            WHERE gs.organization_id=CAST(:org AS uuid) AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id)
+            AND gs.student_id=CAST(:student AS uuid) ORDER BY g.created_at,g.id',
+            [...self::owner($scope), ':student' => $studentId],
+        )]]></code>
+      <code><![CDATA[$this->all(
+            'SELECT g.id::text,g.name,g.archived_at::text AS "archivedAt" FROM education.groups g
+            JOIN education.group_students gs ON gs.group_id=g.id
+            WHERE gs.student_id=CAST(:student AS uuid) AND gs.organization_id=CAST(:org AS uuid)
+            ORDER BY g.created_at,g.id',
+            [':org' => $scope->organizationId, ':student' => (string) $scope->studentId],
+        )]]></code>
+      <code><![CDATA[$this->one(
+                'SELECT f.id::text,f.lesson_id::text AS "lessonId",f.name,f.mime,f.purpose,f.size_bytes AS "sizeBytes",
+                f.sha256,f.storage_key::text AS "storageKey"
+                FROM education.files f JOIN education.lessons l ON l.id=f.lesson_id AND l.organization_id=f.organization_id
+                JOIN education.group_students gs ON gs.group_id=l.group_id AND gs.organization_id=l.organization_id
+                WHERE f.organization_id=CAST(:org AS uuid) AND f.purpose=\'material\' AND f.id=CAST(:id AS uuid)
+                AND gs.student_id=CAST(:student AS uuid)',
+                [':org' => $scope->organizationId, ':id' => $id, ':student' => $scope->studentId],
+            )]]></code>
+      <code><![CDATA[$this->one(
+            'SELECT s.id::text,s.person_id::text AS "personId" FROM education.student_accounts sa
+            JOIN education.students s ON s.id=sa.student_id
+            WHERE sa.account_id=CAST(:account AS uuid) AND sa.organization_id=CAST(:org AS uuid)
+            AND s.person_id=CAST(:person AS uuid) AND sa.revoked_at IS NULL',
+            [':account' => $accountId, ':org' => $organizationId, ':person' => $personId],
+        )]]></code>
+      <code><![CDATA[$this->one('SELECT f.id::text,f.lesson_id::text AS "lessonId",f.name,f.mime,f.purpose,f.size_bytes AS "sizeBytes",f.sha256,f.storage_key::text AS "storageKey"
+            FROM education.files f WHERE ((f.owner_account_id=CAST(:actor AS uuid) AND (f.organization_id=CAST(:org AS uuid) OR f.purpose=\'avatar\')) OR (f.organization_id=CAST(:org AS uuid) AND f.purpose=\'material\' AND EXISTS(SELECT 1 FROM education.lessons scope_l WHERE scope_l.id=f.lesson_id AND education.can_teach_group(scope_l.organization_id,CAST(:actor AS uuid),scope_l.group_id)))) AND f.id=CAST(:id AS uuid)', [...self::owner($scope), ':id' => $id])]]></code>
+    </LessSpecificReturnStatement>
+    <MixedArgument>
+      <code><![CDATA[$assignment['dueAt']]]></code>
+      <code><![CDATA[$assignment['opensAt']]]></code>
+      <code><![CDATA[$evaluation['evidence']['typedSha256']]]></code>
+      <code><![CDATA[$evaluation['requestHash']]]></code>
+      <code><![CDATA[$payload['typedSha256']]]></code>
+      <code><![CDATA[$row['requestHash']]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[[':attempt' => $attemptId, ':org' => $scope->organizationId, ':student' => (string) $scope->studentId,
+                    ':duration' => $durationSeconds, ':language' => $metrics['language'],
+                    ':keystrokes' => $metrics['keystrokes'], ':correct' => $metrics['correct'],
+                    ':errors' => $metrics['errors'], ':wpm' => $metrics['wpm'], ':accuracy' => $metrics['accuracy']]]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedArrayAccess>
+      <code><![CDATA[$evaluation['evidence']['typedSha256']]]></code>
+      <code><![CDATA[$evaluation['metrics']['durationSeconds']]]></code>
+      <code><![CDATA[$metrics['accuracy']]]></code>
+      <code><![CDATA[$metrics['accuracy']]]></code>
+      <code><![CDATA[$metrics['correctAnswers']]]></code>
+      <code><![CDATA[$metrics['correctChars']]]></code>
+      <code><![CDATA[$metrics['durationSeconds']]]></code>
+      <code><![CDATA[$metrics['errors']]]></code>
+      <code><![CDATA[$metrics['language']]]></code>
+      <code><![CDATA[$metrics['passed']]]></code>
+      <code><![CDATA[$metrics['score']]]></code>
+      <code><![CDATA[$metrics['totalRounds']]]></code>
+      <code><![CDATA[$metrics['typedCharacters']]]></code>
+      <code><![CDATA[$metrics['wpm']]]></code>
+      <code><![CDATA[$stored['typedLength']]]></code>
+      <code><![CDATA[$stored['typedSha256']]]></code>
+    </MixedArrayAccess>
+    <MixedReturnTypeCoercion>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array_column($this->all(
+            'SELECT organization_id::text AS org FROM education.student_accounts
+            WHERE account_id=CAST(:account AS uuid) AND revoked_at IS NULL',
+            [':account' => $accountId],
+        ), 'org')]]></code>
+    </MixedReturnTypeCoercion>
+    <MoreSpecificReturnType>
+      <code><![CDATA[?array]]></code>
+      <code><![CDATA[?array]]></code>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyNullArgument>
+      <code><![CDATA[$row['requestHash']]]></code>
+    </PossiblyNullArgument>
+    <PossiblyNullArrayAccess>
+      <code><![CDATA[$stored['typedLength']]]></code>
+      <code><![CDATA[$stored['typedSha256']]]></code>
+    </PossiblyNullArrayAccess>
+    <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+    </RedundantFunctionCall>
+  </file>
+  <file src="src/Education/Infrastructure/PostgresHomeworkExtensions.php">
+    <MixedArgument>
+      <code><![CDATA[$assignment['activityConfig']]]></code>
+      <code><![CDATA[$assignment['activityConfig']]]></code>
+      <code><![CDATA[$assignment['activityConfig']]]></code>
+      <code><![CDATA[$config]]></code>
+      <code><![CDATA[$row['code']]]></code>
+      <code><![CDATA[$row['code']]]></code>
+      <code><![CDATA[$row['config']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$version['activityAttemptId'] ?? null]]></code>
+    </MixedArgument>
+    <MixedArrayAccess>
+      <code><![CDATA[$review['teacherAccountId']]]></code>
+      <code><![CDATA[$version['activityAttemptId']]]></code>
+      <code><![CDATA[$version['id']]]></code>
+      <code><![CDATA[$version['id']]]></code>
+      <code><![CDATA[$version['id']]]></code>
+      <code><![CDATA[$version['id']]]></code>
+    </MixedArrayAccess>
+    <MixedArrayAssignment>
+      <code><![CDATA[$submission['reviews'][$index]]]></code>
+      <code><![CDATA[$submission['reviews'][$index]['teacherName']]]></code>
+      <code><![CDATA[$submission['versions'][$index]]]></code>
+      <code><![CDATA[$version['activityResult']]]></code>
+      <code><![CDATA[$version['files']]]></code>
+    </MixedArrayAssignment>
+    <MixedArrayOffset>
+      <code><![CDATA[$submission['reviews'][$index]]]></code>
+      <code><![CDATA[$submission['versions'][$index]]]></code>
+    </MixedArrayOffset>
+    <MixedOperand>
+      <code><![CDATA[$assignment['version']]]></code>
+      <code><![CDATA[$recipient['id']]]></code>
+      <code><![CDATA[$submission['id']]]></code>
+      <code><![CDATA[$submission['version']]]></code>
+      <code><![CDATA[$version['id']]]></code>
+    </MixedOperand>
+  </file>
+  <file src="src/Education/Infrastructure/PostgresHomeworkStore.php">
+    <InvalidOperand>
+      <code><![CDATA[$params]]></code>
+      <code><![CDATA[$params]]></code>
+    </InvalidOperand>
+    <MixedArgument>
+      <code><![CDATA[$filters['search']]]></code>
+      <code><![CDATA[$params]]></code>
+      <code><![CDATA[$row[$key]]]></code>
+      <code><![CDATA[$row['request']]]></code>
+      <code><![CDATA[$submission['versions']]]></code>
+      <code><![CDATA[$value]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[$action]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedArrayAccess>
+      <code><![CDATA[$student['id']]]></code>
+      <code><![CDATA[$student['personId']]]></code>
+      <code><![CDATA[$submission['currentVersion']['id']]]></code>
+    </MixedArrayAccess>
+    <MixedArrayAssignment>
+      <code><![CDATA[$params[':assignment']]]></code>
+      <code><![CDATA[$params[':filterStudent']]]></code>
+      <code><![CDATA[$version['files']]]></code>
+    </MixedArrayAssignment>
+    <MixedOperand>
+      <code><![CDATA[$where]]></code>
+      <code><![CDATA[$where]]></code>
+      <code><![CDATA[$where]]></code>
+      <code><![CDATA[$where]]></code>
+    </MixedOperand>
+    <MixedReturnStatement>
+      <code><![CDATA[$row['response']]]></code>
+      <code><![CDATA[$this->db->transaction($action)]]></code>
+      <code><![CDATA[$this->required(
+            'INSERT INTO education.homework_assignments(organization_id,author_account_id,author_person_id,title,description,instructions,type,
+            group_id,lesson_id,due_at,allow_late,activity_code,activity_config,max_attempts,attempt_policy,created_at)
+            VALUES(CAST(:org AS uuid),CAST(:actor AS uuid),CAST(:person AS uuid),:title,:description,:instructions,:type,CAST(:groupId AS uuid),CAST(:lessonId AS uuid),
+            CAST(:dueAt AS timestamptz),CAST(:allowLate AS boolean),:activityCode,CAST(:activityConfig AS jsonb),:maxAttempts,:attemptPolicy,CAST(:now AS timestamptz)) RETURNING id::text',
+            [...self::teacher($scope), ':person' => $scope->personId, ':now' => $now, ...self::values($values)],
+        )['id']]]></code>
+    </MixedReturnStatement>
+    <PossiblyInvalidOperand>
+      <code><![CDATA[str_replace(['\\','%','_'], ['\\\\','\\%','\\_'], $filters['search'])]]></code>
+    </PossiblyInvalidOperand>
+  </file>
+  <file src="src/Education/Infrastructure/WorkspaceErasureHandler.php">
+    <MixedArgument>
+      <code><![CDATA[$transfer['final_key']]]></code>
+    </MixedArgument>
+  </file>
+  <file src="src/Storage/Application/StorageService.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[fn(): array => $this->store->conflicts($scope, $offset)]]></code>
+    </ArgumentTypeCoercion>
+    <MixedArgument>
+      <code><![CDATA[$size]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[fn(): array => $this->store->renameFile(
+            $scope,
+            self::path($body['path'] ?? null),
+            self::path($body['newPath'] ?? null),
+        )]]></code>
+      <code><![CDATA[fn(): array => $this->store->resolveConflict($scope, $id, 'keep_server')]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedReturnTypeCoercion>
+      <code><![CDATA[array<string,mixed>]]></code>
+      <code><![CDATA[match ($operation) {
+            'rename_file' => $this->renameFile($scope, $body),
+            'resolve_conflict' => $this->resolveConflict($scope, self::uuid($id), $body),
+            'ticket' => $this->ticket($scope, $body),
+            'restore_file' => $this->restoreFile($scope, $body),
+            'delete_file' => $this->deleteFile($scope, $body),
+            default => throw new StorageError(404, 'not_found'),
+        }]]></code>
+    </MixedReturnTypeCoercion>
+  </file>
+  <file src="src/Storage/Infrastructure/BinaryCleanup.php">
+    <MixedArgument>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['multipart_upload_id']]]></code>
+      <code><![CDATA[$row['staging_key']]]></code>
+    </MixedArgument>
+    <MixedArrayAccess>
+      <code><![CDATA[$upload['Initiated']]]></code>
+      <code><![CDATA[$upload['Key']]]></code>
+      <code><![CDATA[$upload['Key']]]></code>
+      <code><![CDATA[$upload['UploadId']]]></code>
+      <code><![CDATA[$upload['UploadId']]]></code>
+    </MixedArrayAccess>
+    <PossiblyNullArgument>
+      <code><![CDATA[$this->config->bucketStorage]]></code>
+    </PossiblyNullArgument>
+    <PossiblyNullIterator>
+      <code><![CDATA[$page['Uploads'] ?? []]]></code>
+    </PossiblyNullIterator>
+    <PossiblyNullPropertyFetch>
+      <code><![CDATA[$this->config->bucketStorage]]></code>
+      <code><![CDATA[$this->config->bucketStorage]]></code>
+    </PossiblyNullPropertyFetch>
+    <PossiblyNullReference>
+      <code><![CDATA[delete]]></code>
+      <code><![CDATA[internal]]></code>
+    </PossiblyNullReference>
+  </file>
+  <file src="src/Storage/Infrastructure/LegacyObjectMigration.php">
+    <DuplicateArrayKey>
+      <code><![CDATA['objects' => $items]]></code>
+    </DuplicateArrayKey>
+    <MixedArgument>
+      <code><![CDATA[$item['key']]]></code>
+      <code><![CDATA[$item['key']]]></code>
+      <code><![CDATA[$item['sha256']]]></code>
+      <code><![CDATA[$item['sizeBytes']]]></code>
+      <code><![CDATA[$key]]></code>
+      <code><![CDATA[$row['sha256']]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[array_column($references, 'key')]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedArrayAccess>
+      <code><![CDATA[$row['key']]]></code>
+      <code><![CDATA[$row['sha256']]]></code>
+      <code><![CDATA[$row['size']]]></code>
+    </MixedArrayAccess>
+    <MixedArrayOffset>
+      <code><![CDATA[$byKey[$row['key']]]]></code>
+      <code><![CDATA[$byKey[$row['key']]]]></code>
+      <code><![CDATA[$byKey[$row['key']]]]></code>
+      <code><![CDATA[$byKey[$row['key']]]]></code>
+    </MixedArrayOffset>
+    <MixedOperand>
+      <code><![CDATA[$item['key']]]></code>
+    </MixedOperand>
+  </file>
+  <file src="src/Storage/Infrastructure/PersonalDataContributor.php">
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[$records]]></code>
+      <code><![CDATA[$records]]></code>
+    </MixedArgumentTypeCoercion>
+    <RedundantCondition>
+      <code><![CDATA[$records !== []]]></code>
+      <code><![CDATA[$records !== []]]></code>
+    </RedundantCondition>
+  </file>
+  <file src="src/Storage/Infrastructure/PostgresStorageStore.php">
+    <MixedArgument>
+      <code><![CDATA[$prior['expires']]]></code>
+    </MixedArgument>
+  </file>
+  <file src="src/Storage/Infrastructure/S3Objects.php">
+    <NullArgument>
+      <code><![CDATA[null]]></code>
+      <code><![CDATA[null]]></code>
+    </NullArgument>
+  </file>
+  <file src="src/Storage/Infrastructure/S3StorageFileAdapter.php">
+    <DocblockTypeContradiction>
+      <code><![CDATA[!is_resource($stream)]]></code>
+      <code><![CDATA[is_resource($stream)]]></code>
+    </DocblockTypeContradiction>
+    <TypeDoesNotContainType>
+      <code><![CDATA[hash_update_stream($hash, $stream) === false]]></code>
+    </TypeDoesNotContainType>
+  </file>
+  <file src="src/Storage/Infrastructure/StorageTransferService.php">
+    <MixedArgument>
+      <code><![CDATA[$file['sha256']]]></code>
+      <code><![CDATA[$file['storageKey']]]></code>
+      <code><![CDATA[$file['storageKey']]]></code>
+      <code><![CDATA[$hashes[$number]]]></code>
+      <code><![CDATA[$row['expectedSha256']]]></code>
+      <code><![CDATA[$row['expectedSha256']]]></code>
+      <code><![CDATA[$row['expectedSha256']]]></code>
+      <code><![CDATA[$row['expectedSize']]]></code>
+      <code><![CDATA[$row['expiresAt']]]></code>
+      <code><![CDATA[$row['expiresAt']]]></code>
+      <code><![CDATA[$row['expiresAt']]]></code>
+      <code><![CDATA[$row['finalStorageKey']]]></code>
+      <code><![CDATA[$row['finalStorageKey']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['path']]]></code>
+      <code><![CDATA[$row['path']]]></code>
+      <code><![CDATA[$row['stagingKey']]]></code>
+      <code><![CDATA[$row['stagingKey']]]></code>
+      <code><![CDATA[$row['stagingKey']]]></code>
+      <code><![CDATA[$row['stagingKey']]]></code>
+      <code><![CDATA[$row['ticketId']]]></code>
+      <code><![CDATA[$saved['sha256']]]></code>
+      <code><![CDATA[$space['id']]]></code>
+      <code><![CDATA[$space['id']]]></code>
+      <code><![CDATA[$ticket['expiresAt']]]></code>
+      <code><![CDATA[$ticket['path']]]></code>
+      <code><![CDATA[$ticket['version']]]></code>
+    </MixedArgument>
+    <MixedArgumentTypeCoercion>
+      <code><![CDATA[$name]]></code>
+    </MixedArgumentTypeCoercion>
+    <MixedArrayAccess>
+      <code><![CDATA[$part['ChecksumSHA256']]]></code>
+      <code><![CDATA[$part['ETag']]]></code>
+      <code><![CDATA[$part['PartNumber']]]></code>
+      <code><![CDATA[$part['Size']]]></code>
+      <code><![CDATA[$result['UploadId']]]></code>
+    </MixedArrayAccess>
+    <MixedOperand>
+      <code><![CDATA[$row['expectedSize']]]></code>
+      <code><![CDATA[$row['expectedSize']]]></code>
+      <code><![CDATA[$row['partSize']]]></code>
+      <code><![CDATA[$row['partSize']]]></code>
+    </MixedOperand>
+    <MixedReturnStatement>
+      <code><![CDATA[$this->s3(function () use ($operation, $parameters): array {
+            $expires = new DateTimeImmutable('+' . $this->config->presignTtlSeconds . ' seconds');
+            $command = $this->clients->public()->getCommand($operation, $parameters);
+            $request = $this->clients->public()->createPresignedRequest($command, $expires);
+            $headers = [];
+            foreach ($request->getHeaders() as $name => $values) {
+                if (in_array(strtolower($name), ['host', 'content-length', 'user-agent'], true)) {
+                    continue;
+                }
+                $headers[$name] = implode(', ', $values);
+            }
+            return ['url' => (string) $request->getUri(), 'method' => $request->getMethod(),
+                'headers' => (object) $headers, 'expiresAt' => $expires->format(DATE_ATOM)];
+        })]]></code>
+    </MixedReturnStatement>
+    <MixedReturnTypeCoercion>
+      <code><![CDATA[$items]]></code>
+      <code><![CDATA[list<array{partNumber:int,sizeBytes:int,etag:string,sha256?:string,checksum?:string}>]]></code>
+    </MixedReturnTypeCoercion>
+    <PossiblyFalseArgument>
+      <code><![CDATA[hex2bin($hashes[$number])]]></code>
+      <code><![CDATA[hex2bin($row['expectedSha256'])]]></code>
+      <code><![CDATA[hex2bin($sha)]]></code>
+    </PossiblyFalseArgument>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[str_replace('\\', '/', $row['path'])]]></code>
+    </PossiblyInvalidArgument>
+    <PossiblyNullArrayAccess>
+      <code><![CDATA[$reserved['bytes']]]></code>
+      <code><![CDATA[$reserved['files']]]></code>
+    </PossiblyNullArrayAccess>
+    <PossiblyNullIterator>
+      <code><![CDATA[$page['Parts'] ?? []]]></code>
+    </PossiblyNullIterator>
+  </file>
+</files>

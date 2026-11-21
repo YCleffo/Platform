@@ -395,13 +395,19 @@ async function onSubmit(): Promise<void> {
   margin: 0 auto;
 }
 
+@media (max-width: 360px) {
+  .mfa-pin__cells {
+    gap: var(--space-4);
+  }
+}
+
 .mfa-pin__cell {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 1;
-  min-width: 40px;
+  flex: 1 1 0;
+  min-width: 0;
   max-width: 54px;
   height: 58px;
   border: 1px solid var(--border);
@@ -414,6 +420,12 @@ async function onSubmit(): Promise<void> {
     background-color var(--motion-fast-duration) var(--motion-ease),
     box-shadow var(--motion-fast-duration) var(--motion-ease),
     transform var(--motion-fast-duration) var(--motion-ease);
+}
+
+@media (max-width: 360px) {
+  .mfa-pin__cell {
+    height: 48px;
+  }
 }
 
 .mfa-pin__cell--active {

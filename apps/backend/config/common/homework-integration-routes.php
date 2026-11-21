@@ -15,8 +15,10 @@ foreach ([
     ['POST','/student/homework/{id}/activity/start','start_activity'],
     ['POST','/student/homework/{id}/activity/attach','attach_activity'],
 ] as [$method, $path, $operation]) {
-    $route = match ($method) { 'POST' => Route::post('/api/education' . $path),
-        'DELETE' => Route::delete('/api/education' . $path), default => Route::get('/api/education' . $path) };
+    $route = match ($method) {
+        'POST' => Route::post('/api/education' . $path),
+        'DELETE' => Route::delete('/api/education' . $path), default => Route::get('/api/education' . $path),
+    };
     $routes[] = $route->defaults(['operation' => $operation])->middleware(PrivateResponse::class, RequireAuthentication::class)
         ->action(HomeworkIntegrationAction::class)->name('education/homework-integration/' . $operation);
 }

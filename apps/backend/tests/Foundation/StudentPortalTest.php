@@ -47,9 +47,15 @@ final class StudentPortalTest extends TestCase
         $this->db->createCommand("UPDATE core.modules SET enabled=true,enabled_at=now(),disabled_at=NULL WHERE code='education'")->execute();
         $this->store = $container->get(EducationStore::class);
         $this->access = $container->get(EducationAccess::class);
-        $this->service = new EducationService($this->store, $this->access, $this->fixedClock(), $container->get(FileStore::class),
-            $container->get(Mutation::class), $container->get(PermissionService::class),
-            $container->get(OrganizationRepository::class));
+        $this->service = new EducationService(
+            $this->store,
+            $this->access,
+            $this->fixedClock(),
+            $container->get(FileStore::class),
+            $container->get(Mutation::class),
+            $container->get(PermissionService::class),
+            $container->get(OrganizationRepository::class),
+        );
         $this->organization = (string) $this->db->createCommand("INSERT INTO core.organizations(code,name)
             VALUES(:code,'Portal test') RETURNING id::text", [':code' => 'portal.test.' . bin2hex(random_bytes(8))])->queryScalar();
         $teacherPerson = $this->person('Portal teacher');
@@ -88,8 +94,10 @@ final class StudentPortalTest extends TestCase
         $scope = $this->access->studentScope($identity, $this->organization, 'education.student.use');
         self::assertSame($student['id'], $scope->studentId);
         $context = $this->access->context($identity);
-        self::assertSame([[ 'id' => $this->organization, 'student' => true, 'teacher' => false ]],
-            array_map(static fn(array $row): array => ['id' => $row['id'], 'student' => $row['student'], 'teacher' => $row['teacher']], $context['organizations']));
+        self::assertSame(
+            [[ 'id' => $this->organization, 'student' => true, 'teacher' => false ]],
+            array_map(static fn(array $row): array => ['id' => $row['id'], 'student' => $row['student'], 'teacher' => $row['teacher']], $context['organizations']),
+        );
         $card = $this->service->read('student', $this->teacherScope, [], $student['id']);
         self::assertSame($account, $card['account']['accountId']);
 
@@ -235,13 +243,25 @@ final class StudentPortalTest extends TestCase
         $person = $this->person('Assign student');
         $this->member($person);
         $student = $this->service->write('enroll_student', $this->teacherScope, ['groupId' => $group['id'], 'personId' => $person]);
-        $assignment = $this->service->write('activities_assign', $this->teacherScope,
-            ['groupId' => $group['id'], 'config' => ['durationSeconds' => 30]], 'platform-typing');
+        $assignment = $this->service->write(
+            'activities_assign',
+            $this->teacherScope,
+            ['groupId' => $group['id'], 'config' => ['durationSeconds' => 30]],
+            'platform-typing',
+        );
         self::assertSame('platform-typing', $assignment['activityCode']);
-        $this->assertError(422, fn() => $this->service->write('activities_assign', $this->teacherScope,
-            ['config' => []], 'platform-typing'));
-        $this->assertError(422, fn() => $this->service->write('activities_assign', $this->teacherScope,
-            ['groupId' => $group['id'], 'config' => ['durationSeconds' => 5]], 'platform-typing'));
+        $this->assertError(422, fn() => $this->service->write(
+            'activities_assign',
+            $this->teacherScope,
+            ['config' => []],
+            'platform-typing',
+        ));
+        $this->assertError(422, fn() => $this->service->write(
+            'activities_assign',
+            $this->teacherScope,
+            ['groupId' => $group['id'], 'config' => ['durationSeconds' => 5]],
+            'platform-typing',
+        ));
 
         $account = $this->account($person, 'Assign student');
         $identity = new AuthenticatedIdentity($account, $person, $this->id(), ['education.student'], [], 'en-US', 'UTC');

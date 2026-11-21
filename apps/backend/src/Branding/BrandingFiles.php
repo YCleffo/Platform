@@ -47,8 +47,14 @@ final readonly class BrandingFiles
         $request = $this->sign($id, $size);
         $this->db->transaction(function () use ($pending, $actor, $context): void {
             $this->lock();
-            $this->settings->putSystemSetting(BrandingSettings::UPLOAD, $pending, false,
-                'Pending installation icon upload', $actor, $context);
+            $this->settings->putSystemSetting(
+                BrandingSettings::UPLOAD,
+                $pending,
+                false,
+                'Pending installation icon upload',
+                $actor,
+                $context,
+            );
         });
         return ['id' => $id, 'expiresAt' => $pending['expiresAt'], 'request' => $request];
     }
@@ -109,8 +115,14 @@ final readonly class BrandingFiles
             $result = $this->branding->read();
             $pending['status'] = 'confirmed';
             $pending['result'] = $result;
-            $this->settings->putSystemSetting(BrandingSettings::UPLOAD, $pending, false,
-                'Confirmed installation icon upload', $actor, $context);
+            $this->settings->putSystemSetting(
+                BrandingSettings::UPLOAD,
+                $pending,
+                false,
+                'Confirmed installation icon upload',
+                $actor,
+                $context,
+            );
             if ($old !== null && $old['id'] !== $id) {
                 $this->queueIcon($old['id']);
             }
@@ -146,8 +158,14 @@ final readonly class BrandingFiles
             }
             if (($pending['status'] ?? null) !== 'aborted') {
                 $pending['status'] = 'aborted';
-                $this->settings->putSystemSetting(BrandingSettings::UPLOAD, $pending, false,
-                    'Cancelled installation icon upload', $actor, $context);
+                $this->settings->putSystemSetting(
+                    BrandingSettings::UPLOAD,
+                    $pending,
+                    false,
+                    'Cancelled installation icon upload',
+                    $actor,
+                    $context,
+                );
                 $this->queueStaging($id);
             }
             return $this->branding->read();
@@ -234,9 +252,11 @@ final readonly class BrandingFiles
 
     private function queueStaging(string $id): void
     {
-        $this->db->createCommand('INSERT INTO storage.object_cleanup(object_key,not_before)
+        $this->db->createCommand(
+            'INSERT INTO storage.object_cleanup(object_key,not_before)
             VALUES(:key,now()+make_interval(secs=>:ttl)) ON CONFLICT(object_key) DO NOTHING',
-            [':key' => $this->stagingKey($id), ':ttl' => $this->config->presignTtlSeconds + 60])->execute();
+            [':key' => $this->stagingKey($id), ':ttl' => $this->config->presignTtlSeconds + 60],
+        )->execute();
     }
 
     private function lock(): void

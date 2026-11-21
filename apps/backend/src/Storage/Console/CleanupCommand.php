@@ -11,8 +11,14 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 final class CleanupCommand extends Command
 {
-    public function __construct(private readonly BinaryCleanup $cleanup) { parent::__construct(); }
-    protected function configure(): void { $this->setName('storage:cleanup')->setDescription('Process committed Storage erasure and orphan binary cleanup.'); }
+    public function __construct(private readonly BinaryCleanup $cleanup)
+    {
+        parent::__construct();
+    }
+    protected function configure(): void
+    {
+        $this->setName('storage:cleanup')->setDescription('Process committed Storage erasure and orphan binary cleanup.');
+    }
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $queued = $this->cleanup->queueOrphans();

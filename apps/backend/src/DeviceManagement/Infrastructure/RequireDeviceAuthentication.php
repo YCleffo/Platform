@@ -33,7 +33,9 @@ final readonly class RequireDeviceAuthentication implements MiddlewareInterface
                 ->error(ApiMessage::AUTH_REQUIRED, httpCode: Status::UNAUTHORIZED)
                 ->withHeader('WWW-Authenticate', 'Bearer');
         }
-        return $handler->handle($request->withAttribute(DeviceIdentity::ATTRIBUTE,
-            new DeviceIdentity((string) $device['deviceId'], (string) $device['credentialId'], (string) $device['organizationId'])));
+        return $handler->handle($request->withAttribute(
+            DeviceIdentity::ATTRIBUTE,
+            new DeviceIdentity((string) $device['deviceId'], (string) $device['credentialId'], (string) $device['organizationId']),
+        ));
     }
 }

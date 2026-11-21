@@ -81,9 +81,16 @@ final readonly class StorageAction
                 $actorScope = $agentDevice !== null ? null
                     : $access->studentScope(AuthenticatedIdentity::fromRequest($request), $request->getHeaderLine('X-Education-Organization'));
                 try {
-                    return $responses->success($service->uploadWithTicket($token, $resource,
-                        $claimed === '' ? null : $claimed, $agentDevice, $actorScope));
-                } finally { fclose($resource); }
+                    return $responses->success($service->uploadWithTicket(
+                        $token,
+                        $resource,
+                        $claimed === '' ? null : $claimed,
+                        $agentDevice,
+                        $actorScope,
+                    ));
+                } finally {
+                    fclose($resource);
+                }
             }
             if (in_array($operation, ['download', 'agent_storage_download'], true)) {
                 $token = (string) ($request->getQueryParams()['ticket'] ?? '');
@@ -116,7 +123,8 @@ final readonly class StorageAction
                 return $responses->success($service->read($operation, $scope, $request->getQueryParams(), $id));
             }
             return $responses->success($service->write($operation, $scope, $body, $id))->withStatus(
-                $operation === 'ticket' ? 201 : 200);
+                $operation === 'ticket' ? 201 : 200,
+            );
         } catch (StorageError $error) {
             $code = match ($error->status) {
                 403 => ApiMessage::AUTH_PERMISSION_DENIED, 404 => ApiMessage::HTTP_NOT_FOUND,

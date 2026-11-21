@@ -24,21 +24,53 @@ final class ObservedS3Objects implements StorageObjectAdapter
         IsolatedS3Runtime::assertConfigured($config);
         $this->adapter = new S3StorageFileAdapter(new S3Objects(new S3ClientFactory($config), $config), $config);
     }
-    public function write(string $key, $stream): void { $this->owned[$key] = true; $this->adapter->write($key, $stream); }
-    public function open(string $key) { return $this->adapter->open($key); }
-    public function delete(string $key): void { $this->adapter->delete($key); }
-    public function exists(string $key): bool { return $this->adapter->exists($key); }
-    public function hash($stream): string { return $this->adapter->hash($stream); }
-    public function verify(string $key): array { return $this->adapter->verify($key); }
+    public function write(string $key, $stream): void
+    {
+        $this->owned[$key] = true;
+        $this->adapter->write($key, $stream);
+    }
+    public function open(string $key)
+    {
+        return $this->adapter->open($key);
+    }
+    public function delete(string $key): void
+    {
+        $this->adapter->delete($key);
+    }
+    public function exists(string $key): bool
+    {
+        return $this->adapter->exists($key);
+    }
+    public function hash($stream): string
+    {
+        return $this->adapter->hash($stream);
+    }
+    public function verify(string $key): array
+    {
+        return $this->adapter->verify($key);
+    }
     public function copy(string $sourceKey, string $destinationKey): void
     {
-        $this->owned[$destinationKey] = true; $this->adapter->copy($sourceKey, $destinationKey);
+        $this->owned[$destinationKey] = true;
+        $this->adapter->copy($sourceKey, $destinationKey);
     }
     public function keysBefore(DateTimeImmutable $cutoff): iterable
     {
-        foreach ($this->adapter->keysBefore($cutoff) as $key) if (isset($this->owned[$key])) yield $key;
+        foreach ($this->adapter->keysBefore($cutoff) as $key) {
+            if (isset($this->owned[$key])) {
+                yield $key;
+            }
+        }
     }
     /** @return list<string> */
-    public function keys(): array { return array_values(array_filter(array_keys($this->owned), fn(string $key): bool => $this->exists($key))); }
-    public function removeOwned(): void { foreach (array_keys($this->owned) as $key) $this->adapter->delete($key); }
+    public function keys(): array
+    {
+        return array_values(array_filter(array_keys($this->owned), fn(string $key): bool => $this->exists($key)));
+    }
+    public function removeOwned(): void
+    {
+        foreach (array_keys($this->owned) as $key) {
+            $this->adapter->delete($key);
+        }
+    }
 }

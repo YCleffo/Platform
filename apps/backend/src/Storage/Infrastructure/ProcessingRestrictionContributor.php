@@ -11,7 +11,10 @@ use App\Core\Privacy\Application\ProcessingRestrictionContributor as Contributor
 final readonly class ProcessingRestrictionContributor implements Contributor
 {
     public function __construct(private ProcessingPurposeRegistry $purposes) {}
-    public function code(): string { return 'storage.processing_restriction'; }
+    public function code(): string
+    {
+        return 'storage.processing_restriction';
+    }
     public function supports(string $scopeType, ?string $purposeCode, ?string $resourceType): bool
     {
         return ($scopeType === 'resource' && $resourceType === 'storage.space')

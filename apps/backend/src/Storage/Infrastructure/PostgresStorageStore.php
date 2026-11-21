@@ -10,7 +10,6 @@ use App\Storage\Application\StorageStore;
 use DateTimeImmutable;
 use DateTimeZone;
 use Yiisoft\Db\Connection\ConnectionInterface;
-use Yiisoft\Db\Driver\Pdo\PdoConnectionInterface;
 
 final readonly class PostgresStorageStore implements StorageStore
 {
@@ -60,8 +59,10 @@ final readonly class PostgresStorageStore implements StorageStore
 
     private function lockSpace(string $spaceId): void
     {
-        $this->db->createCommand('SELECT id FROM storage.spaces WHERE id=CAST(:id AS uuid) FOR UPDATE',
-            [':id' => $spaceId])->queryScalar();
+        $this->db->createCommand(
+            'SELECT id FROM storage.spaces WHERE id=CAST(:id AS uuid) FOR UPDATE',
+            [':id' => $spaceId],
+        )->queryScalar();
     }
 
     public function space(StorageScope $scope): array
@@ -85,7 +86,9 @@ final readonly class PostgresStorageStore implements StorageStore
                 ) ?? throw new StorageError(409, 'write_not_confirmed');
             }
             if ($this->privacy !== null && (!is_string($space['subjectPersonId'] ?? null)
-                || !$this->privacy->allowed((string) $space['subjectPersonId'], 'storage.space', (string) $space['id'], 'storage'))) throw new StorageError(403, 'processing_restricted');
+                || !$this->privacy->allowed((string) $space['subjectPersonId'], 'storage.space', (string) $space['id'], 'storage'))) {
+                throw new StorageError(403, 'processing_restricted');
+            }
             $usage = $this->one(
                 'SELECT count(*) AS "fileCount",coalesce(sum(v.size_bytes),0) AS "totalBytes"
                 FROM storage.files f JOIN storage.versions v ON v.id=f.current_version_id
@@ -140,14 +143,22 @@ final readonly class PostgresStorageStore implements StorageStore
             $expectedSize ??= (int) $file['sizeBytes'];
         }
         $ticket = $this->createDeviceTicket((string) $space['id'], $purpose, $path, $expectedSha256, $expectedSize, $versionId, null);
-        $this->db->createCommand('UPDATE storage.tickets SET actor_account_id=CAST(:actor AS uuid) WHERE id=CAST(:id AS uuid)',
-            [':actor' => $scope->accountId, ':id' => $ticket['id']])->execute();
+        $this->db->createCommand(
+            'UPDATE storage.tickets SET actor_account_id=CAST(:actor AS uuid) WHERE id=CAST(:id AS uuid)',
+            [':actor' => $scope->accountId, ':id' => $ticket['id']],
+        )->execute();
         return $ticket;
     }
 
-    public function createDeviceTicket(string $spaceId, string $purpose, string $path, ?string $expectedSha256,
-        ?int $expectedSize, ?string $fileVersionId = null, ?string $deviceId = null): array
-    {
+    public function createDeviceTicket(
+        string $spaceId,
+        string $purpose,
+        string $path,
+        ?string $expectedSha256,
+        ?int $expectedSize,
+        ?string $fileVersionId = null,
+        ?string $deviceId = null,
+    ): array {
         $token = bin2hex(random_bytes(24));
         $ticket = $this->one(
             'INSERT INTO storage.tickets(space_id,purpose,path,token_hash,expires_at,expected_sha256,expected_size,
@@ -313,9 +324,11 @@ final readonly class PostgresStorageStore implements StorageStore
         $this->db->transaction(function () use ($scope, $path): void {
             $space = $this->space($scope);
             $this->lockSpace((string) $space['id']);
-            $this->db->createCommand('UPDATE storage.files SET deleted_at=now(),deleted_by_manifest_id=NULL
+            $this->db->createCommand(
+                'UPDATE storage.files SET deleted_at=now(),deleted_by_manifest_id=NULL
                 WHERE space_id=CAST(:space AS uuid) AND path=:path AND deleted_at IS NULL',
-                [':space' => $space['id'], ':path' => $path])->execute();
+                [':space' => $space['id'], ':path' => $path],
+            )->execute();
         });
     }
 
@@ -333,7 +346,9 @@ final readonly class PostgresStorageStore implements StorageStore
                 [':space' => $spaceId, ':path' => $path],
             );
             $caseCollision = $this->one('SELECT id::text FROM storage.files WHERE space_id=CAST(:space AS uuid) AND lower(path)=lower(:path) AND path<>:path', [':space' => $spaceId, ':path' => $path]);
-            if ($caseCollision !== null) throw new StorageError(409, 'path_conflict');
+            if ($caseCollision !== null) {
+                throw new StorageError(409, 'path_conflict');
+            }
             if ($file === null) {
                 $file = $this->one(
                     'INSERT INTO storage.files(space_id,path) VALUES(CAST(:space AS uuid),:path)
@@ -356,7 +371,9 @@ final readonly class PostgresStorageStore implements StorageStore
             $usage = $this->one('SELECT count(*) AS count,coalesce(sum(v.size_bytes),0) AS bytes FROM storage.files f
                 JOIN storage.versions v ON v.id=f.current_version_id WHERE f.space_id=CAST(:space AS uuid)
                 AND f.deleted_at IS NULL AND f.id<>CAST(:file AS uuid)', [':space' => $spaceId, ':file' => $file['id']]) ?? [];
-            if ((int) ($usage['count'] ?? 0) + 1 > (int) $space['maxFiles'] || (int) ($usage['bytes'] ?? 0) + $size > (int) $space['maxBytes']) throw new StorageError(409, 'quota_exceeded');
+            if ((int) ($usage['count'] ?? 0) + 1 > (int) $space['maxFiles'] || (int) ($usage['bytes'] ?? 0) + $size > (int) $space['maxBytes']) {
+                throw new StorageError(409, 'quota_exceeded');
+            }
             $next = ($current === null ? 0 : (int) $current['version']) + 1;
             $versionRow = $this->one(
                 'INSERT INTO storage.versions(file_id,version,size_bytes,sha256,storage_key)
@@ -384,9 +401,14 @@ final readonly class PostgresStorageStore implements StorageStore
         });
     }
 
-    public function commitUpload(string $ticketId, StorageScope $scope, string $path, int $size, string $sha256,
-        string $storageKey): array
-    {
+    public function commitUpload(
+        string $ticketId,
+        StorageScope $scope,
+        string $path,
+        int $size,
+        string $sha256,
+        string $storageKey,
+    ): array {
         return $this->db->transaction(function () use ($ticketId, $scope, $path, $size, $sha256, $storageKey): array {
             $space = $this->space($scope);
             $spaceId = (string) $space['id'];
@@ -424,8 +446,10 @@ final readonly class PostgresStorageStore implements StorageStore
                     throw new StorageError(409, 'version_conflict');
                 }
             }
-            $this->db->createCommand('UPDATE storage.tickets SET used_at=now() WHERE id=CAST(:id AS uuid)',
-                [':id' => $ticketId])->execute();
+            $this->db->createCommand(
+                'UPDATE storage.tickets SET used_at=now() WHERE id=CAST(:id AS uuid)',
+                [':id' => $ticketId],
+            )->execute();
             $result = $this->storeVersion($scope, $path, $size, $sha256, $storageKey, null);
             $this->verifyManifestUpload($ticketId, $path, $sha256, $size, (string) $result['versionId']);
             return $result;
@@ -456,7 +480,9 @@ final readonly class PostgresStorageStore implements StorageStore
                 [':space' => $spaceId, ':version' => $version],
             );
             if ($existing !== null) {
-                if (($existing['deviceId'] ?? null) !== $deviceId) throw new StorageError(409, 'manifest_version_conflict');
+                if (($existing['deviceId'] ?? null) !== $deviceId) {
+                    throw new StorageError(409, 'manifest_version_conflict');
+                }
                 if ($existing['entriesSha256'] !== null && $existing['entriesSha256'] !== $entriesHash) {
                     throw new StorageError(409, 'manifest_version_conflict');
                 }
@@ -524,8 +550,15 @@ final readonly class PostgresStorageStore implements StorageStore
                     $this->recordConflict($spaceId, $manifestId, $path, $file, $entry['sha256']);
                 }
                 if ($entry['op'] !== 'delete' && $state === 'expected') {
-                    $ticket = $this->createDeviceTicket($spaceId, 'upload', $path, $entry['sha256'], $entry['size'],
-                        null, $deviceId);
+                    $ticket = $this->createDeviceTicket(
+                        $spaceId,
+                        'upload',
+                        $path,
+                        $entry['sha256'],
+                        $entry['size'],
+                        null,
+                        $deviceId,
+                    );
                     $ticketId = (string) $ticket['id'];
                 }
                 $this->db->createCommand(
@@ -548,46 +581,66 @@ final readonly class PostgresStorageStore implements StorageStore
 
     public function rebaseManifest(StorageScope $scope, int $version, string $deviceId): array
     {
-        if ($version < 1 || $version > 999999) throw new StorageError(422, 'invalid_input');
+        if ($version < 1 || $version > 999999) {
+            throw new StorageError(422, 'invalid_input');
+        }
         return $this->db->transaction(function () use ($scope, $version, $deviceId): array {
             $space = $this->space($scope);
             $spaceId = (string) $space['id'];
             $this->lockSpace($spaceId);
-            $session = $this->one("SELECT s.id::text,s.desired_status AS \"desiredStatus\",s.status,s.evidence
+            $session = $this->one(
+                "SELECT s.id::text,s.desired_status AS \"desiredStatus\",s.status,s.evidence
                 FROM device_management.device_sessions s JOIN device_management.devices d ON d.id=s.device_id
                 WHERE s.device_id=CAST(:device AS uuid) AND s.student_id=CAST(:student AS uuid)
                     AND s.organization_id=CAST(:org AS uuid) AND s.status<>'CLOSED' AND d.enrollment_state='confirmed'
                 ORDER BY s.created_at DESC LIMIT 1 FOR SHARE OF s",
-                [':device' => $deviceId, ':student' => $scope->studentId, ':org' => $scope->organizationId])
+                [':device' => $deviceId, ':student' => $scope->studentId, ':org' => $scope->organizationId],
+            )
                 ?? throw new StorageError(404, 'not_found');
             $evidence = is_string($session['evidence']) ? json_decode($session['evidence'], true) : $session['evidence'];
-            $authorizedRetry = $this->one("SELECT id::text FROM device_management.device_commands WHERE device_id=CAST(:device AS uuid)
+            $authorizedRetry = $this->one(
+                "SELECT id::text FROM device_management.device_commands WHERE device_id=CAST(:device AS uuid)
                 AND kind='end_session' AND payload->>'sessionId'=:session AND authorized_by_account_id IS NOT NULL LIMIT 1",
-                [':device' => $deviceId, ':session' => $session['id']]);
+                [':device' => $deviceId, ':session' => $session['id']],
+            );
             if ($authorizedRetry === null || $session['desiredStatus'] !== 'ENDING' || !is_array($evidence) || ($evidence['sessionEnded'] ?? false) !== true
                 || !in_array($session['status'], ['ENDING','SYNCING_OUT','SYNC_PENDING','RECOVERY_REQUIRED'], true)) {
                 throw new StorageError(409, 'recovery_not_authorized');
             }
-            $manifest = $this->one('SELECT id::text,status,device_id::text AS "deviceId"
+            $manifest = $this->one(
+                'SELECT id::text,status,device_id::text AS "deviceId"
                 FROM storage.manifests WHERE space_id=CAST(:space AS uuid) AND version=:version FOR UPDATE',
-                [':space' => $spaceId, ':version' => $version]);
-            if ($manifest === null || $manifest['deviceId'] !== $deviceId) throw new StorageError(404, 'not_found');
-            if (!in_array($manifest['status'], ['pending','accepted'], true)) throw new StorageError(409, 'manifest_not_pending');
+                [':space' => $spaceId, ':version' => $version],
+            );
+            if ($manifest === null || $manifest['deviceId'] !== $deviceId) {
+                throw new StorageError(404, 'not_found');
+            }
+            if (!in_array($manifest['status'], ['pending','accepted'], true)) {
+                throw new StorageError(409, 'manifest_not_pending');
+            }
             $manifestId = (string) $manifest['id'];
-            $otherPending = $this->one("SELECT id::text FROM storage.manifests WHERE space_id=CAST(:space AS uuid)
+            $otherPending = $this->one(
+                "SELECT id::text FROM storage.manifests WHERE space_id=CAST(:space AS uuid)
                 AND status='pending' AND id<>CAST(:manifest AS uuid)
                 AND (device_id IS DISTINCT FROM CAST(:device AS uuid) OR :is_pending=1) LIMIT 1 FOR UPDATE",
                 [':space' => $spaceId, ':manifest' => $manifestId, ':device' => $deviceId,
-                    ':is_pending' => $manifest['status'] === 'pending' ? 1 : 0]);
-            if ($otherPending !== null) throw new StorageError(409, 'sync_in_progress');
-            $conflicts = $this->all("SELECT e.path,choice.resolution,choice.resolved_at::text AS \"resolvedAt\"
+                    ':is_pending' => $manifest['status'] === 'pending' ? 1 : 0],
+            );
+            if ($otherPending !== null) {
+                throw new StorageError(409, 'sync_in_progress');
+            }
+            $conflicts = $this->all(
+                "SELECT e.path,choice.resolution,choice.resolved_at::text AS \"resolvedAt\"
                 FROM storage.manifest_entries e LEFT JOIN LATERAL (
                     SELECT c.resolution,c.resolved_at FROM storage.conflicts c
                     WHERE c.manifest_id=e.manifest_id AND c.path=e.path AND c.space_id=CAST(:space AS uuid)
                     ORDER BY c.created_at DESC,c.id DESC LIMIT 1
                 ) choice ON true WHERE e.manifest_id=CAST(:manifest AS uuid) AND e.state='conflict'",
-                [':manifest' => $manifestId, ':space' => $spaceId]);
-            if ($conflicts === []) throw new StorageError(409, 'unresolved_conflicts');
+                [':manifest' => $manifestId, ':space' => $spaceId],
+            );
+            if ($conflicts === []) {
+                throw new StorageError(409, 'unresolved_conflicts');
+            }
             foreach ($conflicts as $conflict) {
                 if ($conflict['resolution'] !== 'keep_server' || $conflict['resolvedAt'] === null) {
                     throw new StorageError(409, 'unresolved_conflicts');
@@ -595,15 +648,21 @@ final readonly class PostgresStorageStore implements StorageStore
             }
             $nextVersion = 1 + (int) $this->db->createCommand('SELECT coalesce(max(version),0) FROM storage.manifests
                 WHERE space_id=CAST(:space AS uuid)', [':space' => $spaceId])->queryScalar();
-            if ($nextVersion > 999999) throw new StorageError(409, 'manifest_version_exhausted');
+            if ($nextVersion > 999999) {
+                throw new StorageError(409, 'manifest_version_exhausted');
+            }
             if ($manifest['status'] === 'pending') {
                 // "accepted" is the existing non-pending archive state. History and versions remain intact.
-                $this->db->createCommand("UPDATE storage.manifests SET status='accepted' WHERE id=CAST(:manifest AS uuid)",
-                    [':manifest' => $manifestId])->execute();
+                $this->db->createCommand(
+                    "UPDATE storage.manifests SET status='accepted' WHERE id=CAST(:manifest AS uuid)",
+                    [':manifest' => $manifestId],
+                )->execute();
                 $this->expireManifestTickets($manifestId);
-                $this->db->createCommand("UPDATE storage.sync_sessions SET status='failed',finished_at=now()
+                $this->db->createCommand(
+                    "UPDATE storage.sync_sessions SET status='failed',finished_at=now()
                     WHERE space_id=CAST(:space AS uuid) AND device_id=CAST(:device AS uuid) AND direction='out' AND status='running'",
-                    [':space' => $spaceId, ':device' => $deviceId])->execute();
+                    [':space' => $spaceId, ':device' => $deviceId],
+                )->execute();
             }
             return ['nextVersion' => $nextVersion, 'rebased' => true];
         });
@@ -617,9 +676,13 @@ final readonly class PostgresStorageStore implements StorageStore
             $space = $this->space($scope);
             $spaceId = (string) $space['id'];
             $this->lockSpace($spaceId);
-            $requested = $this->one('SELECT status FROM storage.manifests WHERE space_id=CAST(:space AS uuid) AND version=:version',
-                [':space' => $spaceId, ':version' => $version]);
-            if (($requested['status'] ?? null) === 'accepted') throw new StorageError(409, 'manifest_not_submitted');
+            $requested = $this->one(
+                'SELECT status FROM storage.manifests WHERE space_id=CAST(:space AS uuid) AND version=:version',
+                [':space' => $spaceId, ':version' => $version],
+            );
+            if (($requested['status'] ?? null) === 'accepted') {
+                throw new StorageError(409, 'manifest_not_submitted');
+            }
             $latest = $this->one(
                 "SELECT id::text,version,device_id::text AS \"deviceId\",confirmed_at::text AS \"confirmedAt\",snapshot_sha256 AS \"snapshotSha256\" FROM storage.manifests
                 WHERE space_id=CAST(:space AS uuid) AND status='confirmed'
@@ -693,8 +756,10 @@ final readonly class PostgresStorageStore implements StorageStore
                         }
                     }
                 }
-                $effective = array_values(array_filter($live,
-                    static fn(array $file): bool => !isset($deletePaths[(string) $file['path']])));
+                $effective = array_values(array_filter(
+                    $live,
+                    static fn(array $file): bool => !isset($deletePaths[(string) $file['path']]),
+                ));
                 if (self::snapshotHash(self::canonicalSnapshot($effective)) !== $snapshotHash) {
                     throw new StorageError(409, 'manifest_stale');
                 }
@@ -814,8 +879,10 @@ final readonly class PostgresStorageStore implements StorageStore
 
     public function markTicketUsed(string $ticketId): void
     {
-        $this->db->createCommand('UPDATE storage.tickets SET used_at=now() WHERE id=CAST(:id AS uuid) AND used_at IS NULL',
-            [':id' => $ticketId])->execute();
+        $this->db->createCommand(
+            'UPDATE storage.tickets SET used_at=now() WHERE id=CAST(:id AS uuid) AND used_at IS NULL',
+            [':id' => $ticketId],
+        )->execute();
     }
 
     /**
@@ -920,9 +987,12 @@ final readonly class PostgresStorageStore implements StorageStore
      * @param list<array<string,mixed>> $canonical
      * @return array<string,mixed>
      */
-    private function manifestResponse(string $spaceId, array $manifest, array $canonical,
-        ?string $deviceId = null): array
-    {
+    private function manifestResponse(
+        string $spaceId,
+        array $manifest,
+        array $canonical,
+        ?string $deviceId = null,
+    ): array {
         $manifestId = (string) $manifest['id'];
         $rows = $this->all(
             'SELECT e.path,e.operation,e.sha256,e.size_bytes AS "sizeBytes",e.base_sha256 AS "baseSha256",e.state,
@@ -957,7 +1027,9 @@ final readonly class PostgresStorageStore implements StorageStore
             if ($row['operation'] === 'delete') {
                 continue;
             }
-            if ($manifest['status'] !== 'pending') continue; // Never renew tickets for a confirmed or rebased archive.
+            if ($manifest['status'] !== 'pending') {
+                continue;
+            } // Never renew tickets for a confirmed or rebased archive.
             $ticket = null;
             if ($row['ticketId'] !== null) {
                 $prior = $this->one("SELECT t.id::text,t.used_at::text AS used,tr.status,tr.expires_at::text AS expires
@@ -972,8 +1044,15 @@ final readonly class PostgresStorageStore implements StorageStore
                     $ticket = ['id' => $prior['id'], 'token' => $token];
                 }
             }
-            $ticket ??= $this->createDeviceTicket($spaceId, 'upload', (string) $row['path'],
-                (string) $row['sha256'], (int) $row['sizeBytes'], null, $deviceId);
+            $ticket ??= $this->createDeviceTicket(
+                $spaceId,
+                'upload',
+                (string) $row['path'],
+                (string) $row['sha256'],
+                (int) $row['sizeBytes'],
+                null,
+                $deviceId,
+            );
             $this->db->createCommand(
                 'UPDATE storage.manifest_entries SET ticket_id=CAST(:ticket AS uuid),updated_at=now()
                 WHERE manifest_id=CAST(:manifest AS uuid) AND path=:path',
@@ -1018,15 +1097,25 @@ final readonly class PostgresStorageStore implements StorageStore
             $space = $this->space($scope);
             $this->lockSpace((string) $space['id']);
             $file = $this->fileByPath($scope, $path) ?? throw new StorageError(404, 'not_found');
-            if ($path === $newPath) return array_intersect_key($file, array_flip(['id','path','version','sizeBytes','sha256','createdAt']));
-            $existing = $this->one('SELECT id::text FROM storage.files WHERE space_id=CAST(:space AS uuid) AND lower(path)=lower(:path)',
-                [':space' => $space['id'], ':path' => $newPath]);
-            if ($existing !== null) throw new StorageError(409, 'path_conflict');
-            $this->db->createCommand('UPDATE storage.files SET path=:new WHERE id=CAST(:id AS uuid)',
-                [':new' => $newPath, ':id' => $file['id']])->execute();
+            if ($path === $newPath) {
+                return array_intersect_key($file, array_flip(['id','path','version','sizeBytes','sha256','createdAt']));
+            }
+            $existing = $this->one(
+                'SELECT id::text FROM storage.files WHERE space_id=CAST(:space AS uuid) AND lower(path)=lower(:path)',
+                [':space' => $space['id'], ':path' => $newPath],
+            );
+            if ($existing !== null) {
+                throw new StorageError(409, 'path_conflict');
+            }
+            $this->db->createCommand(
+                'UPDATE storage.files SET path=:new WHERE id=CAST(:id AS uuid)',
+                [':new' => $newPath, ':id' => $file['id']],
+            )->execute();
             // Preserve an old-path tombstone so a stale device cannot recreate the renamed file silently.
-            $this->db->createCommand('INSERT INTO storage.files(space_id,path,deleted_at) VALUES(CAST(:space AS uuid),:path,now())',
-                [':space' => $space['id'], ':path' => $path])->execute();
+            $this->db->createCommand(
+                'INSERT INTO storage.files(space_id,path,deleted_at) VALUES(CAST(:space AS uuid),:path,now())',
+                [':space' => $space['id'], ':path' => $path],
+            )->execute();
             $renamed = $this->fileByPath($scope, $newPath) ?? throw new StorageError(409, 'write_not_confirmed');
             return array_intersect_key($renamed, array_flip(['id','path','version','sizeBytes','sha256','createdAt']));
         });
@@ -1035,11 +1124,13 @@ final readonly class PostgresStorageStore implements StorageStore
     public function conflicts(StorageScope $scope, int $offset): array
     {
         $space = $this->space($scope);
-        return $this->all('SELECT id::text,path,server_version AS "serverVersion",device_version AS "deviceVersion",
+        return $this->all(
+            'SELECT id::text,path,server_version AS "serverVersion",device_version AS "deviceVersion",
             server_sha256 AS "serverSha256",device_sha256 AS "deviceSha256",resolution,
             resolved_at::text AS "resolvedAt",created_at::text AS "createdAt" FROM storage.conflicts
             WHERE space_id=CAST(:space AS uuid) ORDER BY created_at DESC,id DESC LIMIT 51 OFFSET :offset',
-            [':space' => $space['id'], ':offset' => $offset]);
+            [':space' => $space['id'], ':offset' => $offset],
+        );
     }
 
     public function resolveConflict(StorageScope $scope, string $id, string $resolution): array
@@ -1047,13 +1138,17 @@ final readonly class PostgresStorageStore implements StorageStore
         return $this->db->transaction(function () use ($scope, $id, $resolution): array {
             $space = $this->space($scope);
             $this->lockSpace((string) $space['id']);
-            if ($resolution !== 'keep_server') throw new StorageError(422, 'invalid_input');
-            $conflict = $this->one('UPDATE storage.conflicts SET resolution=:resolution,resolved_at=coalesce(resolved_at,now())
+            if ($resolution !== 'keep_server') {
+                throw new StorageError(422, 'invalid_input');
+            }
+            $conflict = $this->one(
+                'UPDATE storage.conflicts SET resolution=:resolution,resolved_at=coalesce(resolved_at,now())
                 WHERE id=CAST(:id AS uuid) AND space_id=CAST(:space AS uuid)
                 RETURNING id::text,path,server_version AS "serverVersion",device_version AS "deviceVersion",
                     server_sha256 AS "serverSha256",device_sha256 AS "deviceSha256",resolution,
                     resolved_at::text AS "resolvedAt",created_at::text AS "createdAt",manifest_id::text AS "manifestId"',
-                [':id' => $id, ':space' => $space['id'], ':resolution' => $resolution]) ?? throw new StorageError(404, 'not_found');
+                [':id' => $id, ':space' => $space['id'], ':resolution' => $resolution],
+            ) ?? throw new StorageError(404, 'not_found');
             // Resolution records a server choice. Local unique bytes remain protected in the agent recovery store.
             // No confirmation is fabricated and no files are deleted here.
             return $conflict;

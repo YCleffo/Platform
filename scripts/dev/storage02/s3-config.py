@@ -9,8 +9,8 @@ import secrets
 from urllib.parse import urlparse
 
 
-def write_private(path: Path, content: str) -> None:
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+def write_private(path: Path, content: str, mode: int = 0o600) -> None:
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
     with os.fdopen(descriptor, 'w', encoding='utf-8', newline='\n') as stream:
         stream.write(content)
 
@@ -66,7 +66,7 @@ def main() -> None:
         {'name': prefix + '-initializer', 'credentials': [{'accessKey': init_key, 'secretKey': init_secret}],
          'actions': ['Admin', 'Read', 'Write', 'List', 'Tagging']},
     ]
-    write_private(config, json.dumps({'identities': identities}, indent=2) + '\n')
+    write_private(config, json.dumps({'identities': identities}, indent=2) + '\n', mode=0o644)
     values = {
         'S3_CONFIG_FILE': config.as_posix(),
         'S3_PORT': str(args.port), 'S3_ENDPOINT_INTERNAL': 'http://seaweedfs:8333',

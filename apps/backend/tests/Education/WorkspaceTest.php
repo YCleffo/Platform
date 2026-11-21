@@ -40,7 +40,7 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Transaction\TransactionInterface;
 use Yiisoft\Yii\Runner\Http\HttpApplicationRunner;
 
-require_once dirname(__DIR__).'/Storage02/EducationS3Fixture.php';
+require_once dirname(__DIR__) . '/Storage02/EducationS3Fixture.php';
 
 final class WorkspaceTest extends TestCase
 {
@@ -75,9 +75,15 @@ final class WorkspaceTest extends TestCase
                 return new DateTimeImmutable('2026-03-08T14:00:00Z');
             }
         };
-        $this->service = new EducationService($this->store, $this->access, $clock, $this->files,
-            $container->get(Mutation::class), $container->get(PermissionService::class),
-            $container->get(OrganizationRepository::class));
+        $this->service = new EducationService(
+            $this->store,
+            $this->access,
+            $clock,
+            $this->files,
+            $container->get(Mutation::class),
+            $container->get(PermissionService::class),
+            $container->get(OrganizationRepository::class),
+        );
         $this->organization = (string) $this->db->createCommand("INSERT INTO core.organizations(code,name)
             VALUES(:code,'Education test') RETURNING id::text", [':code' => 'education.test.' . bin2hex(random_bytes(8))])->queryScalar();
         $this->actor = $this->teacher('First');
@@ -299,7 +305,11 @@ final class WorkspaceTest extends TestCase
             'startsAt' => '2026-03-08T13:00:00Z', 'endsAt' => '2026-03-08T14:00:00Z']);
         $bytes = "%PDF-1.4\nEducation material lifecycle\n%%EOF\n";
         $file = $this->service->upload($this->scope, new UploadedFile(
-            (new StreamFactory())->createStream($bytes), strlen($bytes), UPLOAD_ERR_OK, 'lifecycle.pdf', 'text/plain',
+            (new StreamFactory())->createStream($bytes),
+            strlen($bytes),
+            UPLOAD_ERR_OK,
+            'lifecycle.pdf',
+            'text/plain',
         ), $lesson['id'], false);
         $lessonFile = $this->store->file($this->scope, $file['id']);
         $this->storedFiles[] = $lessonFile['storageKey'];
@@ -313,18 +323,28 @@ final class WorkspaceTest extends TestCase
         $scheduled = $this->service->write('create_lesson', $this->scope, ['groupId' => $group['id'], 'title' => 'Cancelled materials',
             'startsAt' => '2026-03-08T15:00:00Z', 'endsAt' => '2026-03-08T16:00:00Z']);
         $cancelledFile = $this->service->upload($this->scope, new UploadedFile(
-            (new StreamFactory())->createStream($bytes), strlen($bytes), UPLOAD_ERR_OK, 'cancelled.pdf', 'application/pdf',
+            (new StreamFactory())->createStream($bytes),
+            strlen($bytes),
+            UPLOAD_ERR_OK,
+            'cancelled.pdf',
+            'application/pdf',
         ), $scheduled['id'], false);
         $cancelledRow = $this->store->file($this->scope, $cancelledFile['id']);
         $this->storedFiles[] = $cancelledRow['storageKey'];
         $this->service->write('cancel_lesson', $this->scope, [], $scheduled['id']);
         self::assertSame(true, $this->service->write('delete_file', $this->scope, [], $cancelledFile['id'])['deleted']);
         self::assertNull($this->store->file($this->scope, $cancelledFile['id']));
-        self::assertSame(1,(int)$this->db->createCommand('SELECT count(*) FROM education.object_cleanup WHERE object_key=:key',
-            [':key'=>'objects/'.$cancelledRow['storageKey']])->queryScalar());
+        self::assertSame(1, (int) $this->db->createCommand(
+            'SELECT count(*) FROM education.object_cleanup WHERE object_key=:key',
+            [':key' => 'objects/' . $cancelledRow['storageKey']],
+        )->queryScalar());
 
         $unattached = $this->service->upload($this->scope, new UploadedFile(
-            (new StreamFactory())->createStream($bytes), strlen($bytes), UPLOAD_ERR_OK, 'unattached.pdf', 'application/pdf',
+            (new StreamFactory())->createStream($bytes),
+            strlen($bytes),
+            UPLOAD_ERR_OK,
+            'unattached.pdf',
+            'application/pdf',
         ), null, false);
         $unattachedRow = $this->store->file($this->scope, $unattached['id']);
         $this->storedFiles[] = $unattachedRow['storageKey'];
@@ -338,7 +358,11 @@ final class WorkspaceTest extends TestCase
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=', true);
         self::assertIsString($png);
         $avatar = $this->service->upload($this->scope, new UploadedFile(
-            (new StreamFactory())->createStream($png), strlen($png), UPLOAD_ERR_OK, 'avatar.png', 'image/png',
+            (new StreamFactory())->createStream($png),
+            strlen($png),
+            UPLOAD_ERR_OK,
+            'avatar.png',
+            'image/png',
         ), null, true);
         $avatarRow = $this->store->file($this->scope, $avatar['id']);
         $this->storedFiles[] = $avatarRow['storageKey'];
@@ -637,11 +661,15 @@ final class WorkspaceTest extends TestCase
             'SELECT count(*) FROM education.group_students WHERE group_id = CAST(:group AS uuid) OR student_id = CAST(:student AS uuid)',
             [':group' => $group['id'], ':student' => $student['id']],
         ));
-        self::assertSame(0, $count('SELECT count(*) FROM education.lesson_results WHERE lesson_id = CAST(:lesson AS uuid) OR student_id = CAST(:student AS uuid)',
-            [':lesson' => $lesson['id'], ':student' => $student['id']]));
+        self::assertSame(0, $count(
+            'SELECT count(*) FROM education.lesson_results WHERE lesson_id = CAST(:lesson AS uuid) OR student_id = CAST(:student AS uuid)',
+            [':lesson' => $lesson['id'], ':student' => $student['id']],
+        ));
         self::assertSame(0, $count('SELECT count(*) FROM education.lesson_reports WHERE lesson_id = CAST(:lesson AS uuid)', [':lesson' => $lesson['id']]));
-        self::assertSame(0, $count('SELECT count(*) FROM education.result_revisions WHERE owner_account_id=CAST(:actor AS uuid)',
-            [':actor' => $this->scope->accountId]));
+        self::assertSame(0, $count(
+            'SELECT count(*) FROM education.result_revisions WHERE owner_account_id=CAST(:actor AS uuid)',
+            [':actor' => $this->scope->accountId],
+        ));
         self::assertSame(1, $count('SELECT count(*) FROM education.privacy_receipts WHERE item_id=CAST(:item AS uuid)', [':item' => $item]));
         self::assertSame(1, $count('SELECT count(*) FROM education.groups WHERE id = CAST(:group AS uuid)', [':group' => $otherGroup['id']]));
         self::assertSame(1, $count('SELECT count(*) FROM education.teachers WHERE person_id = CAST(:person AS uuid)', [':person' => $recipient->personId]));
@@ -653,8 +681,10 @@ final class WorkspaceTest extends TestCase
         self::assertSame(1, $count('SELECT count(*) FROM education.threads WHERE id = CAST(:thread AS uuid)', [':thread' => $thread['id']]));
         // The erasure transaction removes authorization and queues bytes. Physical deletion
         // waits until commit so rollback retains the only copy of a user's data.
-        self::assertSame(1,(int)$this->db->createCommand('SELECT count(*) FROM education.object_cleanup WHERE object_key=:key',
-            [':key'=>'objects/'.$fileRow['storageKey']])->queryScalar());
+        self::assertSame(1, (int) $this->db->createCommand(
+            'SELECT count(*) FROM education.object_cleanup WHERE object_key=:key',
+            [':key' => 'objects/' . $fileRow['storageKey']],
+        )->queryScalar());
 
         $second = (string) $this->db->createCommand('SELECT uuidv7()')->queryScalar();
         self::assertSame('deleted', $handler->execute(
@@ -903,15 +933,21 @@ final class WorkspaceTest extends TestCase
 
     private function serviceAt(string $moment): EducationService
     {
-        $clock = new class($moment) implements ClockInterface {
+        $clock = new class ($moment) implements ClockInterface {
             public function __construct(private readonly string $moment) {}
             public function now(): DateTimeImmutable
             {
                 return new DateTimeImmutable($this->moment);
             }
         };
-        return new EducationService($this->store, $this->access, $clock, $this->files,
-            $this->container->get(Mutation::class), $this->container->get(PermissionService::class),
-            $this->container->get(OrganizationRepository::class));
+        return new EducationService(
+            $this->store,
+            $this->access,
+            $clock,
+            $this->files,
+            $this->container->get(Mutation::class),
+            $this->container->get(PermissionService::class),
+            $this->container->get(OrganizationRepository::class),
+        );
     }
 }

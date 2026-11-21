@@ -15,16 +15,20 @@ final class HomeworkActivitiesTest extends HomeworkFixture
 {
     public function testFirstPolicyCanUseTheFirstAttemptThatMeetsTheAssignedTarget(): void
     {
-        $assignment=$this->typing(['dueAt'=>null,'attemptPolicy'=>'first',
-            'activityConfig'=>['durationSeconds'=>15,'language'=>'en','minAccuracy'=>95]]);
-        $start=$this->activities->start($this->learner['scope'],$assignment['id']);
-        $failed=$this->education->write('student_finish_attempt',$this->learner['scope'],
-            ['typed'=>str_repeat('!',20),'durationSeconds'=>15],$start['attempt']['id']);
+        $assignment = $this->typing(['dueAt' => null,'attemptPolicy' => 'first',
+            'activityConfig' => ['durationSeconds' => 15,'language' => 'en','minAccuracy' => 95]]);
+        $start = $this->activities->start($this->learner['scope'], $assignment['id']);
+        $failed = $this->education->write(
+            'student_finish_attempt',
+            $this->learner['scope'],
+            ['typed' => str_repeat('!', 20),'durationSeconds' => 15],
+            $start['attempt']['id'],
+        );
         self::assertFalse($failed['passed']);
-        $this->rejection(422,fn()=>$this->submit($assignment['id']));
-        $passed=$this->finish($assignment['id'],$this->learner['scope'],25);
-        $submitted=$this->submit($assignment['id']);
-        self::assertSame($passed,$submitted['submission']['currentVersion']['activityAttemptId']);
+        $this->rejection(422, fn() => $this->submit($assignment['id']));
+        $passed = $this->finish($assignment['id'], $this->learner['scope'], 25);
+        $submitted = $this->submit($assignment['id']);
+        self::assertSame($passed, $submitted['submission']['currentVersion']['activityAttemptId']);
     }
 
     public function testRussianTypingCountsCharactersAndRejectsChangingAFinishedAnswer(): void
@@ -38,8 +42,12 @@ final class HomeworkActivitiesTest extends HomeworkFixture
         self::assertEquals(16.0, $result['wpm']);
         self::assertEquals(100.0, $result['accuracy']);
         self::assertEquals($result, $this->education->write('student_finish_attempt', $this->learner['scope'], $input, $started['attempt']['id']));
-        $this->rejection(409, fn() => $this->education->write('student_finish_attempt', $this->learner['scope'],
-            ['typed' => str_repeat('а', 20), 'durationSeconds' => 15], $started['attempt']['id']));
+        $this->rejection(409, fn() => $this->education->write(
+            'student_finish_attempt',
+            $this->learner['scope'],
+            ['typed' => str_repeat('а', 20), 'durationSeconds' => 15],
+            $started['attempt']['id'],
+        ));
     }
 
     private HomeworkActivityService $activities;
@@ -60,8 +68,12 @@ final class HomeworkActivitiesTest extends HomeworkFixture
         self::assertIsArray($bound);
         self::assertSame($bound['activity_assignment_id'], $bound['assignment_id']);
         self::assertEquals(['durationSeconds' => 15, 'language' => 'en'], json_decode($bound['config'], true));
-        $this->rejection(422, fn() => $this->education->write('student_start_attempt', $this->learner['scope'],
-            ['assignmentId' => $bound['assignment_id'], 'durationSeconds' => 60, 'language' => 'ru'], 'platform-typing'));
+        $this->rejection(422, fn() => $this->education->write(
+            'student_start_attempt',
+            $this->learner['scope'],
+            ['assignmentId' => $bound['assignment_id'], 'durationSeconds' => 60, 'language' => 'ru'],
+            'platform-typing',
+        ));
         $this->education->write('student_finish_attempt', $this->learner['scope'], ['typed' => $started['exercise']['text'], 'durationSeconds' => 15], $started['attempt']['id']);
         self::assertSame($started['attempt']['id'], $this->detail($assignment['id'])['submission']['selectedActivityAttemptId']);
 
@@ -70,8 +82,12 @@ final class HomeworkActivitiesTest extends HomeworkFixture
         $ordinary = $this->education->write('student_start_attempt', $this->learner['scope'], ['durationSeconds' => 15, 'language' => 'en'], 'platform-typing');
         $this->education->write('student_finish_attempt', $this->learner['scope'], ['typed' => $ordinary['exercise']['text'], 'durationSeconds' => 15], $ordinary['attempt']['id']);
         $this->rejection(404, fn() => $this->activities->attach($this->learner['scope'], $assignment['id'], $ordinary['attempt']['id']));
-        $this->rejection(422, fn() => $this->homework->write('save_draft', $this->learner['scope'],
-            ['version' => $this->detail($assignment['id'])['submission']['version'], 'text' => '', 'wpm' => 999, 'accuracy' => 100], $assignment['id']));
+        $this->rejection(422, fn() => $this->homework->write(
+            'save_draft',
+            $this->learner['scope'],
+            ['version' => $this->detail($assignment['id'])['submission']['version'], 'text' => '', 'wpm' => 999, 'accuracy' => 100],
+            $assignment['id'],
+        ));
     }
 
     public static function policies(): iterable
@@ -94,8 +110,12 @@ final class HomeworkActivitiesTest extends HomeworkFixture
         self::assertSame($attempts[$expected], $first['currentVersion']['activityAttemptId']);
         self::assertCount(1, $first['versions']);
         $this->clock->instant = new \DateTimeImmutable();
-        $this->homework->write('review', $this->teacher,
-            ['version' => $first['version'], 'idempotencyKey' => $this->id(), 'decision' => 'returned', 'comment' => 'Please try once more.'], $first['id']);
+        $this->homework->write(
+            'review',
+            $this->teacher,
+            ['version' => $first['version'], 'idempotencyKey' => $this->id(), 'decision' => 'returned', 'comment' => 'Please try once more.'],
+            $first['id'],
+        );
         // Replayed attachment is harmless, but already consumed evidence cannot create another answer version.
         $this->activities->attach($this->learner['scope'], $assignment['id'], $attempts[$expected]);
         // An unused attempt finished before the return is old work, not a new revision.

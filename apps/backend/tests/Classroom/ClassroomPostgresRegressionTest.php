@@ -12,7 +12,8 @@ use App\Storage\Application\StorageError;
 use App\Storage\Application\StorageScope;
 use App\Storage\Application\StorageService;
 use App\Tests\Storage02\ObservedS3Objects;
-require_once dirname(__DIR__).'/Storage02/ObservedS3Objects.php';
+
+require_once dirname(__DIR__) . '/Storage02/ObservedS3Objects.php';
 use App\Storage\Infrastructure\PostgresStorageStore;
 use PHPUnit\Framework\TestCase;
 use Yiisoft\Cache\ArrayCache;
@@ -61,16 +62,23 @@ final class ClassroomPostgresRegressionTest extends TestCase
         self::$db->createCommand('INSERT INTO core.persons(id,given_name,family_name) VALUES(CAST(:id AS uuid),\'Student\',\'Regression\')', [':id' => $this->scope->personId])->execute();
         self::$db->createCommand('INSERT INTO education.students(id,person_id,organization_id,owner_account_id)
             VALUES(CAST(:student AS uuid),CAST(:person AS uuid),CAST(:org AS uuid),CAST(:actor AS uuid))', [
-                ':student' => $this->student, ':person' => $this->scope->personId, ':org' => $this->scope->organizationId, ':actor' => $this->scope->accountId,
-            ])->execute();
+            ':student' => $this->student, ':person' => $this->scope->personId, ':org' => $this->scope->organizationId, ':actor' => $this->scope->accountId,
+        ])->execute();
         $this->storageScope = new StorageScope($this->scope->organizationId, $this->scope->accountId, $this->scope->personId, 'en-US', 'UTC', $this->student);
         $this->files = new ObservedS3Objects();
-        $this->service = new StorageService($this->storage, $this->files, new class implements Mutation { public function run(StorageScope $scope, string $operation, callable $action): array { return $action(); } }, $this->devices);
+        $this->service = new StorageService($this->storage, $this->files, new class implements Mutation {
+            public function run(StorageScope $scope, string $operation, callable $action): array
+            {
+                return $action();
+            }
+        }, $this->devices);
     }
 
     protected function tearDown(): void
     {
-        if ($this->transaction->isActive()) $this->transaction->rollBack();
+        if ($this->transaction->isActive()) {
+            $this->transaction->rollBack();
+        }
         $this->files->removeOwned();
     }
 
@@ -83,8 +91,12 @@ final class ClassroomPostgresRegressionTest extends TestCase
         $this->ready($device);
         $session = $this->start($device);
         self::assertSame('AUTHORIZED', $session['status']);
-        try { $this->start($device); self::fail('Second assignment was allowed.'); }
-        catch (DeviceError $error) { self::assertSame(409, $error->status); }
+        try {
+            $this->start($device);
+            self::fail('Second assignment was allowed.');
+        } catch (DeviceError $error) {
+            self::assertSame(409, $error->status);
+        }
         self::assertSame(1, (int) self::$db->createCommand('SELECT count(*) FROM device_management.device_sessions WHERE device_id=CAST(:id AS uuid)', [':id' => $device])->queryScalar());
     }
 
@@ -233,7 +245,9 @@ final class ClassroomPostgresRegressionTest extends TestCase
         $chunks = array_values(array_filter($records, static fn(array $record): bool => $record['type'] === 'content_chunk'));
         self::assertGreaterThan(1, count($chunks));
         $decoded = '';
-        foreach ($chunks as $chunk) $decoded .= base64_decode($chunk['content'], true);
+        foreach ($chunks as $chunk) {
+            $decoded .= base64_decode($chunk['content'], true);
+        }
         self::assertSame($content, $decoded);
         self::assertStringNotContainsString('storageKey', $export->json);
     }
@@ -257,7 +271,9 @@ final class ClassroomPostgresRegressionTest extends TestCase
             $expectedIndex = 0;
             foreach ($document['sections'] as $section) {
                 foreach ($section['records'] as $record) {
-                    if ($record['type'] !== 'content_chunk') continue;
+                    if ($record['type'] !== 'content_chunk') {
+                        continue;
+                    }
                     self::assertSame($expectedIndex++, $record['chunk']);
                     $decoded .= base64_decode($record['content'], true);
                 }
@@ -270,8 +286,11 @@ final class ClassroomPostgresRegressionTest extends TestCase
         // Simulate corruption of the test S3 object; no partial artifact may escape after checksum failure.
         $objects = $this->files->keys();
         self::assertCount(1, $objects);
-        $corrupt = tmpfile(); fwrite($corrupt, 'corrupted test object'); rewind($corrupt);
-        $this->files->write($objects[0], $corrupt); fclose($corrupt);
+        $corrupt = tmpfile();
+        fwrite($corrupt, 'corrupted test object');
+        rewind($corrupt);
+        $this->files->write($objects[0], $corrupt);
+        fclose($corrupt);
         $before = count(get_resources('stream'));
         try {
             $exporter->exportToStream($context);
@@ -336,7 +355,9 @@ final class ClassroomPostgresRegressionTest extends TestCase
         $copyPath = 'Conflicts/' . $case['session'] . '/' . hash('sha256', $case['localBytes']) . '.bin';
         $content = [$copyPath => $case['localBytes'], 'pending.txt' => $case['pendingBytes']];
         $entries = [];
-        foreach ($content as $path => $bytes) $entries[] = ['path' => $path, 'op' => 'add', 'sha256' => hash('sha256', $bytes), 'size' => strlen($bytes)];
+        foreach ($content as $path => $bytes) {
+            $entries[] = ['path' => $path, 'op' => 'add', 'sha256' => hash('sha256', $bytes), 'size' => strlen($bytes)];
+        }
         $replacement = $this->service->agentManifest($case['device'], ['version' => $rebased['nextVersion'], 'entries' => $entries]);
         self::assertSame([], $replacement['conflicts']);
         self::assertCount(2, $replacement['uploads']);
@@ -345,7 +366,9 @@ final class ClassroomPostgresRegressionTest extends TestCase
             $this->service->uploadWithTicket($upload['token'], $this->stream($bytes), hash('sha256', $bytes), $case['device']);
         }
         $snapshot = [['path' => 'work.txt', 'sha256' => $case['serverSha'], 'size' => strlen($case['serverBytes'])]];
-        foreach ($content as $path => $bytes) $snapshot[] = ['path' => $path, 'sha256' => hash('sha256', $bytes), 'size' => strlen($bytes)];
+        foreach ($content as $path => $bytes) {
+            $snapshot[] = ['path' => $path, 'sha256' => hash('sha256', $bytes), 'size' => strlen($bytes)];
+        }
         $confirmed = $this->service->agentSync($case['device'], ['version' => 2, 'entries' => $snapshot]);
         self::assertTrue($confirmed['confirmed']);
         self::assertSame(3, $confirmed['verifiedEntries']);
@@ -431,8 +454,12 @@ final class ClassroomPostgresRegressionTest extends TestCase
         self::assertSame('deleted', $handler->execute($this->scope->personId, $space['id'], 'delete', $item));
         self::assertCount(1, $this->files->keys() ?: [], 'Binary deletion must wait for committed erasure metadata.');
         $cleanup = new \App\Storage\Infrastructure\BinaryCleanup(self::$db, $this->files);
-        try { $cleanup->drain(); self::fail('Uncommitted erasure binaries were deleted.'); }
-        catch (\DomainException $error) { self::assertStringContainsString('committed', $error->getMessage()); }
+        try {
+            $cleanup->drain();
+            self::fail('Uncommitted erasure binaries were deleted.');
+        } catch (\DomainException $error) {
+            self::assertStringContainsString('committed', $error->getMessage());
+        }
         $this->transaction->commit();
         try {
             self::assertSame(1, $cleanup->drain());
@@ -478,7 +505,9 @@ final class ClassroomPostgresRegressionTest extends TestCase
         $this->devices->transitionSession($device, $session, 'PREPARING');
         $this->devices->transitionSession($device, $session, 'WINDOWS_PROFILE_READY', ['profilePrepared' => true]);
         $this->devices->transitionSession($device, $session, 'SYNCING_IN');
-        if ($afterSyncIn !== null) $afterSyncIn();
+        if ($afterSyncIn !== null) {
+            $afterSyncIn();
+        }
         $this->devices->transitionSession($device, $session, 'ACTIVE', ['profilePrepared' => true, 'testAdapter' => true]);
         $this->devices->requestSessionEnd($this->scope, $device, $session);
         $this->devices->transitionSession($device, $session, 'ENDING');
@@ -497,7 +526,9 @@ final class ClassroomPostgresRegressionTest extends TestCase
         $old = $this->upload('work.txt', 'old server version');
         $serverBytes = 'newer browser-selected server version';
         $current = $this->upload('work.txt', $serverBytes);
-        if ($deleted) $this->service->write('delete_file', $this->storageScope, ['path' => 'work.txt']);
+        if ($deleted) {
+            $this->service->write('delete_file', $this->storageScope, ['path' => 'work.txt']);
+        }
         [$device] = $this->enrolledDevice();
         $this->ready($device);
         $session = $this->start($device)['id'];
@@ -519,7 +550,9 @@ final class ClassroomPostgresRegressionTest extends TestCase
         $manifest = $this->service->agentManifest($device, ['version' => $manifestVersion, 'entries' => $entries]);
         self::assertCount(1, $manifest['conflicts']);
         self::assertCount(1, $manifest['uploads']);
-        if ($authorizeRecovery) $this->authorizeRecoveryForSync($device, $session);
+        if ($authorizeRecovery) {
+            $this->authorizeRecoveryForSync($device, $session);
+        }
         return ['device' => $device, 'session' => $session, 'entries' => $entries, 'manifest' => $manifest,
             'manifestVersion' => $manifestVersion, 'serverBytes' => $serverBytes, 'serverSha' => $current['sha256'], 'localBytes' => $localBytes, 'pendingBytes' => $pendingBytes];
     }
@@ -539,15 +572,26 @@ final class ClassroomPostgresRegressionTest extends TestCase
         return $stream;
     }
 
-    private function id(): string { return (string) self::$db->createCommand('SELECT uuidv7()::text')->queryScalar(); }
+    private function id(): string
+    {
+        return (string) self::$db->createCommand('SELECT uuidv7()::text')->queryScalar();
+    }
     private function deviceRejects(string $reason, callable $operation): void
     {
-        try { $operation(); self::fail('Expected device error: ' . $reason); }
-        catch (DeviceError $error) { self::assertSame($reason, $error->reason); }
+        try {
+            $operation();
+            self::fail('Expected device error: ' . $reason);
+        } catch (DeviceError $error) {
+            self::assertSame($reason, $error->reason);
+        }
     }
     private function storageRejects(string $reason, callable $operation): void
     {
-        try { $operation(); self::fail('Expected storage error: ' . $reason); }
-        catch (StorageError $error) { self::assertSame($reason, $error->reason); }
+        try {
+            $operation();
+            self::fail('Expected storage error: ' . $reason);
+        } catch (StorageError $error) {
+            self::assertSame($reason, $error->reason);
+        }
     }
 }

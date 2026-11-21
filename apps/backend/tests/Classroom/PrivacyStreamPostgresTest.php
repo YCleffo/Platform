@@ -54,7 +54,9 @@ final class PrivacyStreamPostgresTest extends TestCase
         $available = (new RuntimeMigrationArtifact(self::$db))->validateHistory($directory);
         self::$db->createCommand('CREATE TABLE IF NOT EXISTS public.platform_migrations(migration_name text PRIMARY KEY,applied_at timestamptz NOT NULL DEFAULT now())')->execute();
         foreach ($available as $name) {
-            if (self::$db->createCommand('SELECT 1 FROM public.platform_migrations WHERE migration_name=:name', [':name' => $name])->queryScalar()) continue;
+            if (self::$db->createCommand('SELECT 1 FROM public.platform_migrations WHERE migration_name=:name', [':name' => $name])->queryScalar()) {
+                continue;
+            }
             self::$db->transaction(static function () use ($directory, $name): void {
                 // Canonical multi-statement SQL, as used by the module migration fixtures.
                 self::$db->getActivePdo()->exec(file_get_contents($directory . '/' . $name));
@@ -76,7 +78,9 @@ final class PrivacyStreamPostgresTest extends TestCase
 
     protected function tearDown(): void
     {
-        if ($this->transaction->isActive()) $this->transaction->rollBack();
+        if ($this->transaction->isActive()) {
+            $this->transaction->rollBack();
+        }
     }
 
     public function testActionStreamsLargeResponseAndPersistsExactDigestEvidence(): void
@@ -91,7 +95,9 @@ final class PrivacyStreamPostgresTest extends TestCase
             self::assertTrue($stream->isSeekable());
             self::assertGreaterThan(1048576, $stream->getSize());
             $hash = hash_init('sha256');
-            while (!$stream->eof()) hash_update($hash, $stream->read(65536));
+            while (!$stream->eof()) {
+                hash_update($hash, $stream->read(65536));
+            }
             $sha256 = hash_final($hash);
             self::assertSame($sha256, $response->getHeaderLine('X-Content-Sha256'));
             self::assertSame((string) $stream->getSize(), $response->getHeaderLine('Content-Length'));
@@ -138,28 +144,49 @@ final class PrivacyStreamPostgresTest extends TestCase
     private function response(AuthenticatedIdentity $actor, PersonalDataExporter $exporter): ResponseInterface
     {
         $container = self::$container;
-        $service = new PersonalDataExportService(self::$db, $container->get(ClockInterface::class),
-            $container->get(RepresentativeAuthorityPolicy::class), $exporter,
-            $container->get(DataSubjectRequestExecutionService::class));
+        $service = new PersonalDataExportService(
+            self::$db,
+            $container->get(ClockInterface::class),
+            $container->get(RepresentativeAuthorityPolicy::class),
+            $exporter,
+            $container->get(DataSubjectRequestExecutionService::class),
+        );
         $route = new CurrentRoute();
         $route->setRouteWithArguments(Route::get('/test'), ['id' => $this->requestId]);
         $request = (new ServerRequest())->withAttribute(AuthenticatedIdentity::ATTRIBUTE, $actor);
-        return (new PersonalDataExportAction())($request, $route, $service,
-            new PsrResponseFactory(), new StreamFactory(), $container->get(ResponseFactory::class));
+        return (new PersonalDataExportAction())(
+            $request,
+            $route,
+            $service,
+            new PsrResponseFactory(),
+            new StreamFactory(),
+            $container->get(ResponseFactory::class)
+        );
     }
 
     private function exporter(int $limit = 1073741824, bool $fail = false): PersonalDataExporter
     {
         $contributor = new class ($fail) implements PagedPersonalDataContributor {
             public function __construct(private bool $fail) {}
-            public function code(): string { return 'test.stream'; }
-            public function categories(): array { return ['identity']; }
-            public function collect(PersonalDataExportContext $context): PersonalDataSection { throw new \LogicException('Use pages.'); }
+            public function code(): string
+            {
+                return 'test.stream';
+            }
+            public function categories(): array
+            {
+                return ['identity'];
+            }
+            public function collect(PersonalDataExportContext $context): PersonalDataSection
+            {
+                throw new \LogicException('Use pages.');
+            }
             public function pages(PersonalDataExportContext $context): iterable
             {
                 for ($i = 0; $i < 400; $i++) {
                     yield new PersonalDataSection($this->code(), $this->categories(), [['i' => $i, 'content' => str_repeat('x', 4096)]]);
-                    if ($this->fail) throw new DomainException('Binary checksum mismatch.');
+                    if ($this->fail) {
+                        throw new DomainException('Binary checksum mismatch.');
+                    }
                 }
             }
         };

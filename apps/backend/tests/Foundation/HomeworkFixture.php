@@ -143,8 +143,10 @@ abstract class HomeworkFixture extends TestCase
 
     protected function organization(): string
     {
-        return (string) $this->db->createCommand("INSERT INTO core.organizations(code,name) VALUES(:code,'Homework test') RETURNING id::text",
-            [':code' => 'homework.test.' . bin2hex(random_bytes(8))])->queryScalar();
+        return (string) $this->db->createCommand(
+            "INSERT INTO core.organizations(code,name) VALUES(:code,'Homework test') RETURNING id::text",
+            [':code' => 'homework.test.' . bin2hex(random_bytes(8))],
+        )->queryScalar();
     }
 
     private function person(string $name): string
@@ -154,8 +156,10 @@ abstract class HomeworkFixture extends TestCase
 
     private function member(string $organization, string $person): void
     {
-        $this->db->createCommand('INSERT INTO core.organization_memberships(organization_id,person_id) VALUES(CAST(:org AS uuid),CAST(:person AS uuid))',
-            [':org' => $organization, ':person' => $person])->execute();
+        $this->db->createCommand(
+            'INSERT INTO core.organization_memberships(organization_id,person_id) VALUES(CAST(:org AS uuid),CAST(:person AS uuid))',
+            [':org' => $organization, ':person' => $person],
+        )->execute();
     }
 
     private function account(string $person, string $role): string
@@ -177,7 +181,9 @@ abstract class HomeworkFixture extends TestCase
             self::fail('Expected the Education request to be rejected.');
         } catch (EducationError $error) {
             self::assertContains($error->status, (array) $status);
-            if ($reason !== null) self::assertSame($reason, $error->reason);
+            if ($reason !== null) {
+                self::assertSame($reason, $error->reason);
+            }
         }
     }
 
@@ -190,8 +196,10 @@ abstract class HomeworkFixture extends TestCase
     protected function sameResponse(array $expected, array $actual): void
     {
         // JSON object property order is immaterial; [] versus {} remains a contract difference.
-        self::assertEquals(json_decode(json_encode($expected, JSON_THROW_ON_ERROR), flags: JSON_THROW_ON_ERROR),
-            json_decode(json_encode($actual, JSON_THROW_ON_ERROR), flags: JSON_THROW_ON_ERROR));
+        self::assertEquals(
+            json_decode(json_encode($expected, JSON_THROW_ON_ERROR), flags: JSON_THROW_ON_ERROR),
+            json_decode(json_encode($actual, JSON_THROW_ON_ERROR), flags: JSON_THROW_ON_ERROR),
+        );
     }
 }
 
@@ -199,6 +207,12 @@ final class HomeworkClock implements ClockInterface
 {
     public DateTimeImmutable $instant;
 
-    public function __construct() { $this->instant = new DateTimeImmutable('2026-11-13T12:00:00Z'); }
-    public function now(): DateTimeImmutable { return $this->instant; }
+    public function __construct()
+    {
+        $this->instant = new DateTimeImmutable('2026-11-13T12:00:00Z');
+    }
+    public function now(): DateTimeImmutable
+    {
+        return $this->instant;
+    }
 }

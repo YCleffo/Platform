@@ -64,7 +64,9 @@ trait S3Fixture
         $headers = array_map(static fn(array $values): string => implode(',', $values), $request->getHeaders());
         // SDK SigV4 intentionally removes Range from presigned headers. The consumer
         // sends the desired range separately, as the Agent's resumable GET does.
-        if ($command->getName() === 'GetObject' && isset($command['Range'])) $headers['Range'] = $command['Range'];
+        if ($command->getName() === 'GetObject' && isset($command['Range'])) {
+            $headers['Range'] = $command['Range'];
+        }
         return $this->rawHttp((string) $request->getUri(), $method, $body, $headers);
     }
 
@@ -74,7 +76,8 @@ trait S3Fixture
     {
         $public = parse_url($this->s3Config->publicEndpoint);
         $internal = parse_url($this->s3Config->internalEndpoint);
-        self::assertIsArray($public); self::assertIsArray($internal);
+        self::assertIsArray($public);
+        self::assertIsArray($internal);
         $received = [];
         $curl = curl_init($url);
         // Docker reaches the exact public Host through the isolated service address.
@@ -83,8 +86,11 @@ trait S3Fixture
             CURLOPT_CUSTOMREQUEST => $method, CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 20,
             CURLOPT_CONNECT_TO => [($public['host'] . ':' . ($public['port'] ?? 80) . ':' . $internal['host'] . ':' . ($internal['port'] ?? 80))],
-            CURLOPT_HTTPHEADER => array_map(static fn(string $key, string $value): string => $key . ': ' . $value,
-                array_keys($headers), array_values($headers)),
+            CURLOPT_HTTPHEADER => array_map(
+                static fn(string $key, string $value): string => $key . ': ' . $value,
+                array_keys($headers),
+                array_values($headers),
+            ),
             CURLOPT_HEADERFUNCTION => static function ($handle, string $line) use (&$received): int {
                 if (str_contains($line, ':')) {
                     [$key, $value] = explode(':', $line, 2);
@@ -93,7 +99,9 @@ trait S3Fixture
                 return strlen($line);
             },
         ]);
-        if ($body !== null) curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
+        if ($body !== null) {
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
+        }
         $bytes = curl_exec($curl);
         $status = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
         curl_close($curl);

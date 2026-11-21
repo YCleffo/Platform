@@ -101,12 +101,16 @@ final readonly class S3Objects
     public function copy(string $bucket, string $sourceKey, string $destinationKey): void
     {
         try {
-            $copier = new ObjectCopier($this->clients->internal(),
+            $copier = new ObjectCopier(
+                $this->clients->internal(),
                 ['Bucket' => $bucket, 'Key' => $sourceKey],
-                ['Bucket' => $bucket, 'Key' => $destinationKey], null, [
+                ['Bucket' => $bucket, 'Key' => $destinationKey],
+                null,
+                [
                     'part_size' => $this->config->multipartPartSize,
                     'concurrency' => $this->config->transferConcurrency,
-                ]);
+                ],
+            );
             $copier->copy();
         } catch (Throwable $error) {
             throw S3Failure::storage($error);

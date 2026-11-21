@@ -63,8 +63,11 @@ final readonly class BrandingAction
                 503 => ApiMessage::HTTP_SERVICE_UNAVAILABLE,
                 default => ApiMessage::VALIDATION_FAILED,
             };
-            return $responses->error($code, httpCode: $error->status,
-                meta: ['brandingCode' => $error->reason])->withHeader('Cache-Control', 'no-store');
+            return $responses->error(
+                $code,
+                httpCode: $error->status,
+                meta: ['brandingCode' => $error->reason],
+            )->withHeader('Cache-Control', 'no-store');
         }
     }
 }

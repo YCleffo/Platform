@@ -26,7 +26,9 @@ final readonly class CurriculumService
 
     public function read(string $operation, Scope $scope, string|null $id, array $query = []): array
     {
-        if ($id !== null) Input::uuid($id);
+        if ($id !== null) {
+            Input::uuid($id);
+        }
         return match ($operation) {
             'programs' => $this->programs($scope, Input::page($query['offset'] ?? null)),
             'program' => $this->store->program($scope, Input::uuid($id)),
@@ -68,7 +70,9 @@ final readonly class CurriculumService
     {
         $student = $this->education->student($scope, $id) ?? throw new EducationError(404, 'not_found');
         $this->access->assertResource($scope, 'student', $id);
-        if (!$this->access->member($student['personId'], $scope->organizationId)) throw new EducationError(404, 'not_found');
+        if (!$this->access->member($student['personId'], $scope->organizationId)) {
+            throw new EducationError(404, 'not_found');
+        }
         return $this->store->progress($scope, null, $id);
     }
 
@@ -94,11 +98,19 @@ final readonly class CurriculumService
     {
         self::only($input, ['accountIds']);
         $ids = $input['accountIds'] ?? null;
-        if (!is_array($ids) || !array_is_list($ids) || count($ids) > 50) throw new EducationError(422, 'invalid_input');
-        foreach ($ids as $accountId) Input::uuid($accountId);
+        if (!is_array($ids) || !array_is_list($ids) || count($ids) > 50) {
+            throw new EducationError(422, 'invalid_input');
+        }
+        foreach ($ids as $accountId) {
+            Input::uuid($accountId);
+        }
         $available = $this->teachers($scope, $groupId);
         $availableIds = array_column($available['items'], 'accountId');
-        foreach ($ids as $accountId) if (!in_array($accountId, $availableIds, true)) throw new EducationError(403, 'teacher_outside_organization');
+        foreach ($ids as $accountId) {
+            if (!in_array($accountId, $availableIds, true)) {
+                throw new EducationError(403, 'teacher_outside_organization');
+            }
+        }
         $this->store->setTeachers($scope, $groupId, $ids);
         return $this->teachers($scope, $groupId);
     }
@@ -113,7 +125,9 @@ final readonly class CurriculumService
         $groupId = Input::uuid($input['groupId'] ?? null);
         $this->access->assertResource($scope, 'group', $groupId);
         $group = $this->education->group($scope, $groupId) ?? throw new EducationError(404, 'not_found');
-        if ($group['archivedAt'] !== null) throw new EducationError(409, 'group_archived');
+        if ($group['archivedAt'] !== null) {
+            throw new EducationError(409, 'group_archived');
+        }
         try {
             $given = ValueNormalizer::normalizePersonName(Input::text($input['givenName'] ?? null, 120), 120);
             $family = ValueNormalizer::normalizePersonName(Input::text($input['familyName'] ?? null, 120), 120);
@@ -121,13 +135,17 @@ final readonly class CurriculumService
                 : ValueNormalizer::normalizePersonName(Input::text($input['middleName'], 120), 120);
             $display = !isset($input['displayName']) || $input['displayName'] === '' ? null
                 : ValueNormalizer::normalizeDisplayName(Input::text($input['displayName'], 255), 255);
-        } catch (\InvalidArgumentException) { throw new EducationError(422, 'invalid_person_name'); }
+        } catch (\InvalidArgumentException) {
+            throw new EducationError(422, 'invalid_person_name');
+        }
         $birth = !isset($input['birthDate']) || $input['birthDate'] === '' ? null : Input::date($input['birthDate']);
         if ($birth !== null && ($birth < '1900-01-01' || $birth > $this->clock->now()->format('Y-m-d'))) {
             throw new EducationError(422, 'invalid_birth_date');
         }
         $person = $this->persons->execute(new CreatePersonCommand($given, $family, $middle, $display, $birth));
-        if ($this->organizations->addMember($scope->organizationId, $person->id) === null) throw new EducationError(409, 'membership_not_created');
+        if ($this->organizations->addMember($scope->organizationId, $person->id) === null) {
+            throw new EducationError(409, 'membership_not_created');
+        }
         $student = $this->education->enrollStudent($this->store->delegatedScope($scope, 'group', $groupId), $person->id, $groupId);
         return [...$student, 'name' => $person->displayName ?: trim($person->givenName . ' ' . $person->familyName)];
     }
@@ -140,15 +158,21 @@ final readonly class CurriculumService
             'description' => Input::text($input['description'] ?? '', 8000, false)];
         if ($ordered) {
             $position = $input['position'] ?? 0;
-            if (!is_int($position) || $position < 0 || $position > 10000) throw new EducationError(422, 'invalid_position');
+            if (!is_int($position) || $position < 0 || $position > 10000) {
+                throw new EducationError(422, 'invalid_position');
+            }
             $values['position'] = $position;
         }
         if (array_key_exists('archived', $input)) {
-            if (!is_bool($input['archived'])) throw new EducationError(422, 'invalid_input');
+            if (!is_bool($input['archived'])) {
+                throw new EducationError(422, 'invalid_input');
+            }
             $values['archived'] = $input['archived'];
         }
         if (array_key_exists('version', $input)) {
-            if (!is_int($input['version']) || $input['version'] < 1) throw new EducationError(422, 'invalid_input');
+            if (!is_int($input['version']) || $input['version'] < 1) {
+                throw new EducationError(422, 'invalid_input');
+            }
             $values['version'] = $input['version'];
         }
         return $values;
@@ -156,6 +180,8 @@ final readonly class CurriculumService
 
     private static function only(array $input, array $allowed): void
     {
-        if (array_diff(array_keys($input), $allowed) !== []) throw new EducationError(422, 'invalid_input');
+        if (array_diff(array_keys($input), $allowed) !== []) {
+            throw new EducationError(422, 'invalid_input');
+        }
     }
 }

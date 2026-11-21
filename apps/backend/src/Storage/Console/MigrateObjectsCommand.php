@@ -12,7 +12,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 final class MigrateObjectsCommand extends Command
 {
-    public function __construct(private readonly LegacyObjectMigration $migration) { parent::__construct(); }
+    public function __construct(private readonly LegacyObjectMigration $migration)
+    {
+        parent::__construct();
+    }
 
     protected function configure(): void
     {
@@ -26,16 +29,25 @@ final class MigrateObjectsCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         try {
-            $report = $this->migration->run((string) $input->getOption('module'),
-                (string) $input->getOption('source'), $input->getOption('apply') === true);
+            $report = $this->migration->run(
+                (string) $input->getOption('module'),
+                (string) $input->getOption('source'),
+                $input->getOption('apply') === true,
+            );
             $json = json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . PHP_EOL;
             $path = $input->getOption('report');
             if (is_string($path) && $path !== '') {
                 $handle = fopen($path, 'xb');
-                if ($handle === false) throw new \RuntimeException('The report path must be a new writable file.');
+                if ($handle === false) {
+                    throw new \RuntimeException('The report path must be a new writable file.');
+                }
                 try {
-                    if (fwrite($handle, $json) !== strlen($json)) throw new \RuntimeException('Could not write the report.');
-                } finally { fclose($handle); }
+                    if (fwrite($handle, $json) !== strlen($json)) {
+                        throw new \RuntimeException('Could not write the report.');
+                    }
+                } finally {
+                    fclose($handle);
+                }
                 chmod($path, 0600);
                 $output->writeln($report['success'] ? 'Object migration verified. Source bytes were preserved.' : 'Migration failed. Inspect the private report.');
             } else {

@@ -69,7 +69,13 @@ function codeFactory(secret) {
 async function login(nextCode) {
   await page.goto(APP + '/login'); await page.locator('#login-email').fill(email); await page.locator('#login-password').fill(env.E2E_PASSWORD);
   await page.locator('form button[type=submit]').click();
-  if (nextCode) { await page.locator('#mfa-code').fill(await nextCode()); await page.locator('form button[type=submit]').click(); }
+  if (nextCode) {
+    await page.locator('#mfa-code').fill(await nextCode());
+    const submitBtn = page.locator('form button[type=submit]');
+    if (await submitBtn.isVisible().catch(() => false)) {
+      await submitBtn.click().catch(() => {});
+    }
+  }
   await page.waitForURL(url => url.pathname === '/cabinet');
 }
 async function get(path) {

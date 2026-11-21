@@ -18,5 +18,8 @@ final readonly class Scope
         public ?string $actorAccountId = null,
     ) {}
 
-    public function actor(): string { return $this->actorAccountId ?? $this->accountId; }
+    public function actor(): string
+    {
+        return $this->actorAccountId ?? $this->accountId;
+    }
 }

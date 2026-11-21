@@ -6,6 +6,11 @@ if [[ "${CI:-}" != "true" ]]; then
   exit 2
 fi
 export COMPOSE_FILE="${COMPOSE_FILE:-compose.yaml:compose.ci.yaml}"
+if [[ -n "${COMPOSE_ENV_FILES:-}" && -f "${COMPOSE_ENV_FILES}" ]]; then
+  set -a
+  source "${COMPOSE_ENV_FILES}"
+  set +a
+fi
 
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

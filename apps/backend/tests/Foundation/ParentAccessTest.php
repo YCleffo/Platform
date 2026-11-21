@@ -24,47 +24,54 @@ final class ParentAccessTest extends HomeworkFixture
 {
     public function testParentSeesConfirmedGamesAndAwardsWithResourcePrivacyAndNoPrivateExercise(): void
     {
-        $parent = $this->parent(); $this->activate($parent); $scope = $this->scopeFor($parent);
-        $typing = $this->education->write('student_start_attempt', $this->learner['scope'], ['language'=>'en','durationSeconds'=>15], 'platform-typing');
-        $this->education->write('student_finish_attempt', $this->learner['scope'], ['typed'=>substr($typing['exercise']['text'],0,25),'durationSeconds'=>15], $typing['attempt']['id']);
-        $logic = $this->education->write('student_start_attempt', $this->learner['scope'], ['language'=>'en','difficulty'=>2,'roundCount'=>5], 'platform-logic');
-        $snapshot = json_decode($this->db->createCommand('SELECT exercise_payload FROM education.activity_attempts WHERE id=CAST(:id AS uuid)', [':id'=>$logic['attempt']['id']])->queryScalar(),true,flags:JSON_THROW_ON_ERROR);
-        $answers = array_map(static fn(array $round):array=>['roundId'=>$round['id'],'optionId'=>$round['correctOptionId']],$snapshot['rounds']);
-        $result = $this->education->write('student_finish_attempt',$this->learner['scope'],['answers'=>$answers],$logic['attempt']['id']);
-        $this->sameResponse($result,$this->education->write('student_finish_attempt',$this->learner['scope'],['answers'=>$answers],$logic['attempt']['id']));
-        $period=['from'=>gmdate('Y-m-d',time()-86400),'to'=>gmdate('Y-m-d',time()+86400)];
-        $progress=$this->parents->read('progress',$scope,$period);
-        self::assertSame(1,$progress['activityProgress']['typing']['attempts']);
-        self::assertSame(1,$progress['activityProgress']['logic']['attempts']);
-        self::assertEquals($result['score'],$progress['activityProgress']['logic']['bestScore']);
-        self::assertNotEmpty(array_filter($progress['achievements'],static fn(array $award):bool=>$award['code']==='first-logic'&&$award['unlockedAt']!==null));
-        $json=json_encode($progress,JSON_THROW_ON_ERROR);
-        foreach(['correctOptionId','exercise_payload','clientState','explanation','accountId'] as $secret)self::assertStringNotContainsString($secret,$json);
-        $notices=$this->parents->read('notifications',$scope)['items'];
-        self::assertContains('parent_activity_finished',array_column($notices,'kind'));
-        self::assertContains('parent_achievement_unlocked',array_column($notices,'kind'));
-        $keys=array_map(static fn(array $notice):string=>$notice['kind'].':'.$notice['resourceId'],$notices);
-        self::assertCount(count(array_unique($keys)),$keys);
-        $this->block($parent['personId'],'education.attempt',$logic['attempt']['id']);
-        $filtered=$this->parents->read('progress',$scope,$period);
-        self::assertSame(0,$filtered['activityProgress']['logic']['attempts']);
+        $parent = $this->parent();
+        $this->activate($parent);
+        $scope = $this->scopeFor($parent);
+        $typing = $this->education->write('student_start_attempt', $this->learner['scope'], ['language' => 'en','durationSeconds' => 15], 'platform-typing');
+        $this->education->write('student_finish_attempt', $this->learner['scope'], ['typed' => substr($typing['exercise']['text'], 0, 25),'durationSeconds' => 15], $typing['attempt']['id']);
+        $logic = $this->education->write('student_start_attempt', $this->learner['scope'], ['language' => 'en','difficulty' => 2,'roundCount' => 5], 'platform-logic');
+        $snapshot = json_decode($this->db->createCommand('SELECT exercise_payload FROM education.activity_attempts WHERE id=CAST(:id AS uuid)', [':id' => $logic['attempt']['id']])->queryScalar(), true, flags: JSON_THROW_ON_ERROR);
+        $answers = array_map(static fn(array $round): array => ['roundId' => $round['id'],'optionId' => $round['correctOptionId']], $snapshot['rounds']);
+        $result = $this->education->write('student_finish_attempt', $this->learner['scope'], ['answers' => $answers], $logic['attempt']['id']);
+        $this->sameResponse($result, $this->education->write('student_finish_attempt', $this->learner['scope'], ['answers' => $answers], $logic['attempt']['id']));
+        $period = ['from' => gmdate('Y-m-d', time() - 86400),'to' => gmdate('Y-m-d', time() + 86400)];
+        $progress = $this->parents->read('progress', $scope, $period);
+        self::assertSame(1, $progress['activityProgress']['typing']['attempts']);
+        self::assertSame(1, $progress['activityProgress']['logic']['attempts']);
+        self::assertEquals($result['score'], $progress['activityProgress']['logic']['bestScore']);
+        self::assertNotEmpty(array_filter($progress['achievements'], static fn(array $award): bool => $award['code'] === 'first-logic' && $award['unlockedAt'] !== null));
+        $json = json_encode($progress, JSON_THROW_ON_ERROR);
+        foreach (['correctOptionId','exercise_payload','clientState','explanation','accountId'] as $secret) {
+            self::assertStringNotContainsString($secret, $json);
+        }
+        $notices = $this->parents->read('notifications', $scope)['items'];
+        self::assertContains('parent_activity_finished', array_column($notices, 'kind'));
+        self::assertContains('parent_achievement_unlocked', array_column($notices, 'kind'));
+        $keys = array_map(static fn(array $notice): string => $notice['kind'] . ':' . $notice['resourceId'], $notices);
+        self::assertCount(count(array_unique($keys)), $keys);
+        $this->block($parent['personId'], 'education.attempt', $logic['attempt']['id']);
+        $filtered = $this->parents->read('progress', $scope, $period);
+        self::assertSame(0, $filtered['activityProgress']['logic']['attempts']);
         self::assertNull($filtered['activityProgress']['logic']['bestScore']);
-        self::assertStringNotContainsString($logic['attempt']['id'],json_encode($filtered,JSON_THROW_ON_ERROR));
-        $this->block($this->learner['personId'],'education.attempt',$typing['attempt']['id']);
-        self::assertSame(0,$this->parents->read('progress',$scope,$period)['activityProgress']['typing']['attempts']);
+        self::assertStringNotContainsString($logic['attempt']['id'], json_encode($filtered, JSON_THROW_ON_ERROR));
+        $this->block($this->learner['personId'], 'education.attempt', $typing['attempt']['id']);
+        self::assertSame(0, $this->parents->read('progress', $scope, $period)['activityProgress']['typing']['attempts']);
     }
 
     public function testActivityExportAndErasureIncludeNewEvidenceWithoutAnswerKeys(): void
     {
-        $typing=$this->education->write('student_start_attempt',$this->learner['scope'],['language'=>'en','durationSeconds'=>15],'platform-typing');
-        $this->education->write('student_finish_attempt',$this->learner['scope'],['typed'=>substr($typing['exercise']['text'],0,25),'durationSeconds'=>15],$typing['attempt']['id']);
-        $context=new PersonalDataExportContext($this->learner['personId'],$this->id(),$this->learner['personId'],$this->learner['accountId'],null,$this->clock->now());
-        $export=$this->container->get(PersonalDataContributor::class)->collect($context);
-        foreach(['activity_attempt','activity_result','achievement_event','achievement_unlock'] as $type)self::assertContains($type,array_column($export->records,'type'));
-        self::assertStringNotContainsString('exercise_payload',json_encode($export->toArray(),JSON_THROW_ON_ERROR));
-        $this->container->get(WorkspaceErasureHandler::class)->execute($this->learner['personId'],$this->learner['personId'],'delete',$this->id());
-        foreach(['activity_results'=>'attempt_id','achievement_unlocks'=>'student_id','achievement_events'=>'student_id'] as $table=>$column)
-            self::assertSame(0,$this->rowCount($table,$column,$table==='activity_results'?$typing['attempt']['id']:$this->learner['id']));
+        $typing = $this->education->write('student_start_attempt', $this->learner['scope'], ['language' => 'en','durationSeconds' => 15], 'platform-typing');
+        $this->education->write('student_finish_attempt', $this->learner['scope'], ['typed' => substr($typing['exercise']['text'], 0, 25),'durationSeconds' => 15], $typing['attempt']['id']);
+        $context = new PersonalDataExportContext($this->learner['personId'], $this->id(), $this->learner['personId'], $this->learner['accountId'], null, $this->clock->now());
+        $export = $this->container->get(PersonalDataContributor::class)->collect($context);
+        foreach (['activity_attempt','activity_result','achievement_event','achievement_unlock'] as $type) {
+            self::assertContains($type, array_column($export->records, 'type'));
+        }
+        self::assertStringNotContainsString('exercise_payload', json_encode($export->toArray(), JSON_THROW_ON_ERROR));
+        $this->container->get(WorkspaceErasureHandler::class)->execute($this->learner['personId'], $this->learner['personId'], 'delete', $this->id());
+        foreach (['activity_results' => 'attempt_id','achievement_unlocks' => 'student_id','achievement_events' => 'student_id'] as $table => $column) {
+            self::assertSame(0, $this->rowCount($table, $column, $table === 'activity_results' ? $typing['attempt']['id'] : $this->learner['id']));
+        }
     }
 
     private ParentFamily $family;
@@ -116,8 +123,10 @@ final class ParentAccessTest extends HomeworkFixture
         self::assertSame($this->teacher->organizationId, $activated['organizationId']);
         self::assertSame([$this->learner['id']], array_column($this->parents->context($parent['identity'])['children'], 'id'));
         $this->rejection([404, 409], fn() => $this->family->activate($parent['identity'], ['code' => $invitation['code']]));
-        $stored = $this->db->createCommand('SELECT row_to_json(i)::text FROM education.parent_invites i WHERE code_hash=:hash',
-            [':hash' => hash('sha256', $invitation['code'])])->queryScalar();
+        $stored = $this->db->createCommand(
+            'SELECT row_to_json(i)::text FROM education.parent_invites i WHERE code_hash=:hash',
+            [':hash' => hash('sha256', $invitation['code'])],
+        )->queryScalar();
         self::assertIsString($stored);
         self::assertStringNotContainsString($invitation['code'], $stored, 'The bearer invitation must never be stored in plaintext.');
     }
@@ -174,8 +183,10 @@ final class ParentAccessTest extends HomeworkFixture
         $this->rejection([403, 404], fn() => $this->scopeFor($parent, $otherChild['id']));
         $scope = $this->scopeFor($parent, $otherChild['id'], $otherTeacher->organizationId);
         self::assertSame($otherChild['id'], $scope->studentId);
-        $this->db->createCommand("UPDATE core.organization_memberships SET status='left',left_at=now() WHERE person_id=CAST(:person AS uuid) AND organization_id=CAST(:org AS uuid)",
-            [':person' => $parent['personId'], ':org' => $otherTeacher->organizationId])->execute();
+        $this->db->createCommand(
+            "UPDATE core.organization_memberships SET status='left',left_at=now() WHERE person_id=CAST(:person AS uuid) AND organization_id=CAST(:org AS uuid)",
+            [':person' => $parent['personId'], ':org' => $otherTeacher->organizationId],
+        )->execute();
         $this->rejection([403, 404], fn() => $this->parents->read('home', $scope));
         self::assertSame([$this->learner['id']], array_column($this->parents->context($parent['identity'])['children'], 'id'));
     }
@@ -321,17 +332,21 @@ final class ParentAccessTest extends HomeworkFixture
         $password = 'Education05-Parent-QA-' . bin2hex(random_bytes(8));
         $input = ['code' => $invite['code'], 'email' => 'parent-' . bin2hex(random_bytes(8)) . '@example.test', 'password' => $password];
         self::assertTrue($this->family->register($input, $client)['activated']);
-        $account = $this->db->createCommand('SELECT a.id::text,a.status,c.password_hash FROM core.accounts a
+        $account = $this->db->createCommand(
+            'SELECT a.id::text,a.status,c.password_hash FROM core.accounts a
             JOIN core.auth_password_credentials c ON c.account_id=a.id WHERE a.person_id=CAST(:person AS uuid)',
-            [':person' => $parent['personId']])->queryOne();
+            [':person' => $parent['personId']],
+        )->queryOne();
         self::assertIsArray($account);
         self::assertSame('active', $account['status']);
         self::assertTrue(password_verify($password, $account['password_hash']));
         $identity = new AuthenticatedIdentity($account['id'], $parent['personId'], $this->id(), [], [], 'en-US', 'UTC');
         self::assertSame([$this->learner['id']], array_column($this->parents->context($identity)['children'], 'id'));
         $this->rejection([404, 409], fn() => $this->family->register($input, $client));
-        self::assertSame(1, (int) $this->db->createCommand('SELECT count(*) FROM core.accounts WHERE person_id=CAST(:person AS uuid)',
-            [':person' => $parent['personId']])->queryScalar());
+        self::assertSame(1, (int) $this->db->createCommand(
+            'SELECT count(*) FROM core.accounts WHERE person_id=CAST(:person AS uuid)',
+            [':person' => $parent['personId']],
+        )->queryScalar());
     }
 
     public function testAnInvitationCannotReplaceAnExistingCoreAccountsCredentials(): void
@@ -342,8 +357,10 @@ final class ParentAccessTest extends HomeworkFixture
         $client = $this->container->get(ClientContextResolver::class)->resolve(new ServerRequest());
         $this->rejection(409, fn() => $this->family->register(['code' => $invite['code'], 'email' => 'parent-takeover@example.test',
             'password' => 'Changed-through-invitation-123'], $client));
-        self::assertSame(0, (int) $this->db->createCommand('SELECT count(*) FROM core.auth_password_credentials WHERE account_id=CAST(:account AS uuid)',
-            [':account' => $parent['accountId']])->queryScalar());
+        self::assertSame(0, (int) $this->db->createCommand(
+            'SELECT count(*) FROM core.auth_password_credentials WHERE account_id=CAST(:account AS uuid)',
+            [':account' => $parent['accountId']],
+        )->queryScalar());
         self::assertTrue($this->family->activate($parent['identity'], ['code' => $invite['code']])['activated']);
     }
 
@@ -473,42 +490,59 @@ final class ParentAccessTest extends HomeworkFixture
 
     private function block(string $person, ?string $resourceType = null, ?string $resourceId = null): void
     {
-        $this->db->createCommand("INSERT INTO core.privacy_processing_blocks
+        $this->db->createCommand(
+            "INSERT INTO core.privacy_processing_blocks
             (subject_person_id,scope_type,resource_type,resource_id,reason_code,created_by_account_id,started_at)
             VALUES(CAST(:person AS uuid),:scope,:type,CAST(:resource AS uuid),'subject_request',CAST(:actor AS uuid),now()-interval '1 minute')",
             [':person' => $person, ':scope' => $resourceType === null ? 'subject' : 'resource', ':type' => $resourceType,
-                ':resource' => $resourceId, ':actor' => $this->teacher->accountId])->execute();
+                ':resource' => $resourceId, ':actor' => $this->teacher->accountId],
+        )->execute();
     }
 
     private function parent(bool $withAccount = true): array
     {
         $person = (string) $this->db->createCommand("INSERT INTO core.persons(given_name,family_name) VALUES('Fictional parent','QA') RETURNING id::text")->queryScalar();
         $this->addMembership($person, $this->teacher->organizationId);
-        if (!$withAccount) return ['personId' => $person, 'accountId' => null, 'identity' => null];
+        if (!$withAccount) {
+            return ['personId' => $person, 'accountId' => null, 'identity' => null];
+        }
         $account = (string) $this->db->createCommand("INSERT INTO core.accounts(person_id,account_type,status,label) VALUES(CAST(:person AS uuid),'human','active','Parent QA') RETURNING id::text", [':person' => $person])->queryScalar();
         return ['personId' => $person, 'accountId' => $account, 'identity' => new AuthenticatedIdentity($account, $person, $this->id(), [], [], 'en-US', 'UTC')];
     }
 
     private function addMembership(string $person, string $organization): void
     {
-        $this->db->createCommand('INSERT INTO core.organization_memberships(organization_id,person_id) VALUES(CAST(:org AS uuid),CAST(:person AS uuid)) ON CONFLICT DO NOTHING',
-            [':org' => $organization, ':person' => $person])->execute();
+        $this->db->createCommand(
+            'INSERT INTO core.organization_memberships(organization_id,person_id) VALUES(CAST(:org AS uuid),CAST(:person AS uuid)) ON CONFLICT DO NOTHING',
+            [':org' => $organization, ':person' => $person],
+        )->execute();
     }
 
     private function link(array $parent, ?string $student = null, ?Scope $teacher = null): array
     {
-        return $this->family->write('add', $teacher ?? $this->teacher, $student ?? $this->learner['id'], null,
-            ['personId' => $parent['personId'], 'relationship' => 'guardian']);
+        return $this->family->write(
+            'add',
+            $teacher ?? $this->teacher,
+            $student ?? $this->learner['id'],
+            null,
+            ['personId' => $parent['personId'], 'relationship' => 'guardian'],
+        );
     }
 
     private function grantConfirmation(Scope $teacher): void
     {
-        $role = (string) $this->db->createCommand("INSERT INTO core.roles(code,name) VALUES(:code,'QA family verifier') RETURNING id::text",
-            [':code' => 'education.qa.family.' . bin2hex(random_bytes(8))])->queryScalar();
-        self::assertSame(1, $this->db->createCommand('INSERT INTO core.role_permissions(role_id,permission_id) SELECT CAST(:role AS uuid),id FROM core.permissions WHERE code=:permission',
-            [':role' => $role, ':permission' => 'education.family.confirm'])->execute());
-        $this->db->createCommand('INSERT INTO core.account_roles(account_id,role_id) VALUES(CAST(:account AS uuid),CAST(:role AS uuid))',
-            [':account' => $teacher->accountId, ':role' => $role])->execute();
+        $role = (string) $this->db->createCommand(
+            "INSERT INTO core.roles(code,name) VALUES(:code,'QA family verifier') RETURNING id::text",
+            [':code' => 'education.qa.family.' . bin2hex(random_bytes(8))],
+        )->queryScalar();
+        self::assertSame(1, $this->db->createCommand(
+            'INSERT INTO core.role_permissions(role_id,permission_id) SELECT CAST(:role AS uuid),id FROM core.permissions WHERE code=:permission',
+            [':role' => $role, ':permission' => 'education.family.confirm'],
+        )->execute());
+        $this->db->createCommand(
+            'INSERT INTO core.account_roles(account_id,role_id) VALUES(CAST(:account AS uuid),CAST(:role AS uuid))',
+            [':account' => $teacher->accountId, ':role' => $role],
+        )->execute();
     }
 
     private function confirmed(array $parent, ?string $student = null, ?Scope $teacher = null): void

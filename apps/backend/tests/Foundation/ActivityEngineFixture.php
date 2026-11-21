@@ -51,8 +51,12 @@ abstract class ActivityEngineFixture extends HomeworkFixture
     {
         $scope ??= $this->learner['scope'];
         $started = $this->startActivity('platform-logic', scope: $scope);
-        return $this->education->write('student_finish_attempt', $scope,
-            ['answers' => $this->correctLogicAnswers($started['attempt']['id'])], $started['attempt']['id']);
+        return $this->education->write(
+            'student_finish_attempt',
+            $scope,
+            ['answers' => $this->correctLogicAnswers($started['attempt']['id'])],
+            $started['attempt']['id'],
+        );
     }
 
     protected function assertNoSolutions(array $dto): void

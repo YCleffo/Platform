@@ -308,9 +308,11 @@ final readonly class PostgresEducationStore implements EducationStore
                 }
                 throw new EducationError(409, 'lesson_locked');
             }
-            $previousStudents = $this->db->createCommand('SELECT student_id::text FROM education.attendance
+            $previousStudents = $this->db->createCommand(
+                'SELECT student_id::text FROM education.attendance
                 WHERE lesson_id=CAST(:id AS uuid) AND organization_id=CAST(:org AS uuid)',
-                [':id' => $id, ':org' => $scope->organizationId])->queryColumn();
+                [':id' => $id, ':org' => $scope->organizationId],
+            )->queryColumn();
             $groupChanged = $current['groupId'] !== $values['groupId'];
             if ($groupChanged) {
                 $this->lockGroup($scope, $values['groupId']);
@@ -1222,25 +1224,37 @@ final readonly class PostgresEducationStore implements EducationStore
         });
     }
 
-    public function guardAssignmentAttempt(Scope $scope,string $assignmentId,int $maxAttempts,bool $fromHomework):void
+    public function guardAssignmentAttempt(Scope $scope, string $assignmentId, int $maxAttempts, bool $fromHomework): void
     {
-        $assignment=$this->required('SELECT a.opens_at::text AS "opensAt",a.due_at::text AS "dueAt",
+        $assignment = $this->required(
+            'SELECT a.opens_at::text AS "opensAt",a.due_at::text AS "dueAt",
             EXISTS(SELECT 1 FROM education.homework_recipients r WHERE r.activity_assignment_id=a.id) AS homework
             FROM education.activity_assignments a WHERE a.id=CAST(:id AS uuid) AND a.organization_id=CAST(:org AS uuid)
             AND (a.student_id=CAST(:student AS uuid) OR EXISTS(SELECT 1 FROM education.group_students gs WHERE gs.group_id=a.group_id
                 AND gs.organization_id=a.organization_id AND gs.student_id=CAST(:student AS uuid))) FOR UPDATE OF a',
-            [':id'=>$assignmentId,':org'=>$scope->organizationId,':student'=>$scope->studentId]);
-        $isHomework=in_array($assignment['homework'],[true,'t',1],true);
-        if($isHomework&&!$fromHomework)throw new EducationError(409,'use_homework_route');
-        if(!$isHomework&&$fromHomework)throw new EducationError(422,'invalid_input');
-        if(!$isHomework){
-            $now=new DateTimeImmutable();
-            if(($assignment['opensAt']!==null&&new DateTimeImmutable($assignment['opensAt'])>$now)
-                ||($assignment['dueAt']!==null&&new DateTimeImmutable($assignment['dueAt'])<$now))throw new EducationError(409,'assignment_unavailable');
-            $count=(int)$this->db->createCommand('SELECT count(*) FROM education.activity_attempts WHERE assignment_id=CAST(:id AS uuid)
+            [':id' => $assignmentId,':org' => $scope->organizationId,':student' => $scope->studentId],
+        );
+        $isHomework = in_array($assignment['homework'], [true,'t',1], true);
+        if ($isHomework && !$fromHomework) {
+            throw new EducationError(409, 'use_homework_route');
+        }
+        if (!$isHomework && $fromHomework) {
+            throw new EducationError(422, 'invalid_input');
+        }
+        if (!$isHomework) {
+            $now = new DateTimeImmutable();
+            if (($assignment['opensAt'] !== null && new DateTimeImmutable($assignment['opensAt']) > $now)
+                || ($assignment['dueAt'] !== null && new DateTimeImmutable($assignment['dueAt']) < $now)) {
+                throw new EducationError(409, 'assignment_unavailable');
+            }
+            $count = (int) $this->db->createCommand(
+                'SELECT count(*) FROM education.activity_attempts WHERE assignment_id=CAST(:id AS uuid)
                 AND organization_id=CAST(:org AS uuid) AND student_id=CAST(:student AS uuid)',
-                [':id'=>$assignmentId,':org'=>$scope->organizationId,':student'=>$scope->studentId])->queryScalar();
-            if($count>=$maxAttempts)throw new EducationError(409,'attempt_limit_reached');
+                [':id' => $assignmentId,':org' => $scope->organizationId,':student' => $scope->studentId],
+            )->queryScalar();
+            if ($count >= $maxAttempts) {
+                throw new EducationError(409, 'attempt_limit_reached');
+            }
         }
     }
 
@@ -1248,85 +1262,107 @@ final readonly class PostgresEducationStore implements EducationStore
     {
         return $this->one('SELECT code,version,content FROM education.activity_exercise_sets
             WHERE activity_code=:code AND language=:language AND mode=:mode AND difficulty=:difficulty
-            ORDER BY version DESC LIMIT 1', [':code'=>$code, ':language'=>$language, ':mode'=>$mode, ':difficulty'=>$difficulty]);
+            ORDER BY version DESC LIMIT 1', [':code' => $code, ':language' => $language, ':mode' => $mode, ':difficulty' => $difficulty]);
     }
 
     public function snapshotAttempt(Scope $scope, string $attemptId, int $version, array $exercise): void
     {
         $this->db->createCommand('UPDATE education.activity_attempts SET contract_version=:version,exercise_payload=CAST(:exercise AS jsonb)
             WHERE id=CAST(:id AS uuid) AND organization_id=CAST(:org AS uuid) AND student_id=CAST(:student AS uuid)
-            AND account_id=CAST(:account AS uuid) AND status=\'running\'', [':id'=>$attemptId,':org'=>$scope->organizationId,
-                ':student'=>$scope->studentId,':account'=>$scope->accountId,':version'=>$version,':exercise'=>json_encode($exercise,JSON_THROW_ON_ERROR)])->execute();
+            AND account_id=CAST(:account AS uuid) AND status=\'running\'', [':id' => $attemptId,':org' => $scope->organizationId,
+            ':student' => $scope->studentId,':account' => $scope->accountId,':version' => $version,':exercise' => json_encode($exercise, JSON_THROW_ON_ERROR)])->execute();
     }
 
     public function saveAttemptState(Scope $scope, string $attemptId, int $version, array $state): void
     {
-        $changed=$this->db->createCommand('UPDATE education.activity_attempts SET client_state=CAST(:state AS jsonb),state_version=state_version+1
+        $changed = $this->db->createCommand(
+            'UPDATE education.activity_attempts SET client_state=CAST(:state AS jsonb),state_version=state_version+1
             WHERE id=CAST(:id AS uuid) AND organization_id=CAST(:org AS uuid) AND student_id=CAST(:student AS uuid)
             AND account_id=CAST(:account AS uuid) AND status=\'running\' AND revoked_at IS NULL AND state_version=:version',
-            [':id'=>$attemptId,':org'=>$scope->organizationId,':student'=>$scope->studentId,':account'=>$scope->accountId,
-                ':state'=>json_encode($state,JSON_THROW_ON_ERROR),':version'=>$version])->execute();
-        if($changed!==1)throw new EducationError(409,'state_conflict');
+            [':id' => $attemptId,':org' => $scope->organizationId,':student' => $scope->studentId,':account' => $scope->accountId,
+                ':state' => json_encode($state, JSON_THROW_ON_ERROR),':version' => $version],
+        )->execute();
+        if ($changed !== 1) {
+            throw new EducationError(409, 'state_conflict');
+        }
     }
 
     public function completeActivityAttempt(Scope $scope, string $attemptId, array $evaluation): array
     {
-        return $this->db->transaction(function()use($scope,$attemptId,$evaluation):array{
-            $row=$this->required('SELECT a.status,a.revoked_at::text AS "revokedAt",a.result_payload,a.contract_version AS "contractVersion"
+        return $this->db->transaction(function () use ($scope, $attemptId, $evaluation): array {
+            $row = $this->required(
+                'SELECT a.status,a.revoked_at::text AS "revokedAt",a.result_payload,a.contract_version AS "contractVersion"
                 FROM education.activity_attempts a WHERE a.id=CAST(:id AS uuid) AND a.organization_id=CAST(:org AS uuid) AND a.student_id=CAST(:student AS uuid)
                 AND a.account_id=CAST(:account AS uuid) FOR UPDATE OF a',
-                [':id'=>$attemptId,':org'=>$scope->organizationId,':student'=>$scope->studentId,':account'=>$scope->accountId]);
+                [':id' => $attemptId,':org' => $scope->organizationId,':student' => $scope->studentId,':account' => $scope->accountId],
+            );
             // Re-read the result AFTER the attempt row lock. A joined SELECT can retain
             // the pre-wait snapshot of the absent result during concurrent finishes.
-            $stored=$this->one('SELECT request_hash AS "requestHash",metrics FROM education.activity_results WHERE attempt_id=CAST(:id AS uuid)',[':id'=>$attemptId]);
-            $row=[...$row,'requestHash'=>$stored['requestHash']??null,'metrics'=>$stored['metrics']??null];
-            if($row['revokedAt']!==null)throw new EducationError(409,'attempt_revoked');
-            if($row['status']==='finished'){
-                if(is_string($row['requestHash']??null)&&hash_equals($row['requestHash'],$evaluation['requestHash']))
-                    return ['attemptId'=>$attemptId,...\App\Education\Application\ActivityHandlerRegistry::json($row['metrics'])];
+            $stored = $this->one('SELECT request_hash AS "requestHash",metrics FROM education.activity_results WHERE attempt_id=CAST(:id AS uuid)', [':id' => $attemptId]);
+            $row = [...$row,'requestHash' => $stored['requestHash'] ?? null,'metrics' => $stored['metrics'] ?? null];
+            if ($row['revokedAt'] !== null) {
+                throw new EducationError(409, 'attempt_revoked');
+            }
+            if ($row['status'] === 'finished') {
+                if (is_string($row['requestHash'] ?? null) && hash_equals($row['requestHash'], $evaluation['requestHash'])) {
+                    return ['attemptId' => $attemptId,...\App\Education\Application\ActivityHandlerRegistry::json($row['metrics'])];
+                }
                 // Completed v1 typing attempts retain their historical finish contract.
-                if($row['requestHash']===null&&$evaluation['type']==='typing'&&(int)$row['contractVersion']===1){
-                    $payload=\App\Education\Application\ActivityHandlerRegistry::json($row['result_payload']);
-                    if(isset($payload['typedSha256'])&&hash_equals($payload['typedSha256'],$evaluation['evidence']['typedSha256'])
-                        &&(int)($payload['durationSeconds']??0)===$evaluation['metrics']['durationSeconds']){
+                if ($row['requestHash'] === null && $evaluation['type'] === 'typing' && (int) $row['contractVersion'] === 1) {
+                    $payload = \App\Education\Application\ActivityHandlerRegistry::json($row['result_payload']);
+                    if (isset($payload['typedSha256']) && hash_equals($payload['typedSha256'], $evaluation['evidence']['typedSha256'])
+                        && (int) ($payload['durationSeconds'] ?? 0) === $evaluation['metrics']['durationSeconds']) {
                         return $this->required('SELECT attempt_id::text AS "attemptId",duration_seconds AS "durationSeconds",language,keystrokes,
-                            correct_chars AS "correctChars",errors,wpm::float,accuracy::float FROM education.typing_results WHERE attempt_id=CAST(:id AS uuid)',[':id'=>$attemptId]);
+                            correct_chars AS "correctChars",errors,wpm::float,accuracy::float FROM education.typing_results WHERE attempt_id=CAST(:id AS uuid)', [':id' => $attemptId]);
                     }
                 }
-                throw new EducationError(409,'attempt_finished');
+                throw new EducationError(409, 'attempt_finished');
             }
-            if($row['status']!=='running')throw new EducationError(409,'attempt_not_running');
-            $metrics=$evaluation['metrics'];$params=[':attempt'=>$attemptId,':org'=>$scope->organizationId,':student'=>$scope->studentId];
-            $this->db->createCommand('INSERT INTO education.activity_results(attempt_id,organization_id,student_id,type,version,request_hash,metrics,passed)
+            if ($row['status'] !== 'running') {
+                throw new EducationError(409, 'attempt_not_running');
+            }
+            $metrics = $evaluation['metrics'];
+            $params = [':attempt' => $attemptId,':org' => $scope->organizationId,':student' => $scope->studentId];
+            $this->db->createCommand(
+                'INSERT INTO education.activity_results(attempt_id,organization_id,student_id,type,version,request_hash,metrics,passed)
                 VALUES(CAST(:attempt AS uuid),CAST(:org AS uuid),CAST(:student AS uuid),:type,:version,:hash,CAST(:metrics AS jsonb),:passed)',
-                [...$params,':type'=>$evaluation['type'],':version'=>$evaluation['version'],':hash'=>$evaluation['requestHash'],
-                    ':metrics'=>json_encode($metrics,JSON_THROW_ON_ERROR),':passed'=>$metrics['passed']?'true':'false'])->execute();
-            if($evaluation['type']==='typing'){
-                $this->db->createCommand('INSERT INTO education.typing_results(attempt_id,organization_id,student_id,duration_seconds,language,keystrokes,correct_chars,errors,wpm,accuracy)
+                [...$params,':type' => $evaluation['type'],':version' => $evaluation['version'],':hash' => $evaluation['requestHash'],
+                    ':metrics' => json_encode($metrics, JSON_THROW_ON_ERROR),':passed' => $metrics['passed'] ? 'true' : 'false'],
+            )->execute();
+            if ($evaluation['type'] === 'typing') {
+                $this->db->createCommand(
+                    'INSERT INTO education.typing_results(attempt_id,organization_id,student_id,duration_seconds,language,keystrokes,correct_chars,errors,wpm,accuracy)
                     VALUES(CAST(:attempt AS uuid),CAST(:org AS uuid),CAST(:student AS uuid),:duration,:language,:chars,:correct,:errors,:wpm,:accuracy)',
-                    [...$params,':duration'=>$metrics['durationSeconds'],':language'=>$metrics['language'],':chars'=>$metrics['typedCharacters'],
-                        ':correct'=>$metrics['correctChars'],':errors'=>$metrics['errors'],':wpm'=>$metrics['wpm'],':accuracy'=>$metrics['accuracy']])->execute();
-            }else{
-                $this->db->createCommand('INSERT INTO education.logic_results(attempt_id,organization_id,student_id,correct_answers,total_rounds,score,accuracy)
+                    [...$params,':duration' => $metrics['durationSeconds'],':language' => $metrics['language'],':chars' => $metrics['typedCharacters'],
+                        ':correct' => $metrics['correctChars'],':errors' => $metrics['errors'],':wpm' => $metrics['wpm'],':accuracy' => $metrics['accuracy']],
+                )->execute();
+            } else {
+                $this->db->createCommand(
+                    'INSERT INTO education.logic_results(attempt_id,organization_id,student_id,correct_answers,total_rounds,score,accuracy)
                     VALUES(CAST(:attempt AS uuid),CAST(:org AS uuid),CAST(:student AS uuid),:correct,:total,:score,:accuracy)',
-                    [...$params,':correct'=>$metrics['correctAnswers'],':total'=>$metrics['totalRounds'],':score'=>$metrics['score'],':accuracy'=>$metrics['accuracy']])->execute();
+                    [...$params,':correct' => $metrics['correctAnswers'],':total' => $metrics['totalRounds'],':score' => $metrics['score'],':accuracy' => $metrics['accuracy']],
+                )->execute();
             }
-            $this->db->createCommand('UPDATE education.activity_attempts SET status=\'finished\',finished_at=now(),client_state=\'{}\'::jsonb,
+            $this->db->createCommand(
+                'UPDATE education.activity_attempts SET status=\'finished\',finished_at=now(),client_state=\'{}\'::jsonb,
                 result_payload=CAST(:payload AS jsonb),result_version=:version WHERE id=CAST(:id AS uuid)',
-                [':id'=>$attemptId,':payload'=>json_encode($evaluation['evidence'],JSON_THROW_ON_ERROR),':version'=>$evaluation['version']])->execute();
-            return ['attemptId'=>$attemptId,...$metrics];
+                [':id' => $attemptId,':payload' => json_encode($evaluation['evidence'], JSON_THROW_ON_ERROR),':version' => $evaluation['version']],
+            )->execute();
+            return ['attemptId' => $attemptId,...$metrics];
         });
     }
 
     public function revokeActivityAttempt(Scope $scope, string $attemptId): array
     {
-        return $this->required('UPDATE education.activity_attempts a SET revoked_at=COALESCE(a.revoked_at,now())
+        return $this->required(
+            'UPDATE education.activity_attempts a SET revoked_at=COALESCE(a.revoked_at,now())
             FROM education.students s WHERE a.id=CAST(:id AS uuid) AND a.student_id=s.id AND a.organization_id=s.organization_id
             AND a.organization_id=CAST(:org AS uuid) AND (s.owner_account_id=CAST(:actor AS uuid) OR EXISTS(
                 SELECT 1 FROM education.group_students gs WHERE gs.student_id=s.id AND gs.organization_id=s.organization_id
                 AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id)))
             RETURNING a.id::text,a.student_id::text AS "studentId",a.revoked_at::text AS "revokedAt"',
-            [':id'=>$attemptId,':org'=>$scope->organizationId,':actor'=>$scope->actor()]);
+            [':id' => $attemptId,':org' => $scope->organizationId,':actor' => $scope->actor()],
+        );
     }
 
     public function studentAttempts(Scope $scope, int $offset): array
@@ -1418,9 +1454,16 @@ final readonly class PostgresEducationStore implements EducationStore
 
     public function groupActivityResults(Scope $scope, string $groupId, string $activityCode, int $offset, ?string $from = null, ?string $to = null): array
     {
-        $range='';$params=[...self::owner($scope),':group'=>$groupId,':code'=>$activityCode,':offset'=>$offset];
-        if($from!==null){$range.=' AND a.started_at>=CAST(:from AS timestamptz)';$params[':from']=$from;}
-        if($to!==null){$range.=' AND a.started_at<CAST(:to AS timestamptz)';$params[':to']=$to;}
+        $range = '';
+        $params = [...self::owner($scope),':group' => $groupId,':code' => $activityCode,':offset' => $offset];
+        if ($from !== null) {
+            $range .= ' AND a.started_at>=CAST(:from AS timestamptz)';
+            $params[':from'] = $from;
+        }
+        if ($to !== null) {
+            $range .= ' AND a.started_at<CAST(:to AS timestamptz)';
+            $params[':to'] = $to;
+        }
         return $this->all('SELECT a.id::text,a.student_id::text AS "studentId",s.person_id::text AS "personId",a.status,a.source,
             a.started_at::text AS "startedAt",a.finished_at::text AS "finishedAt",a.revoked_at::text AS "revokedAt",
             t.duration_seconds AS "durationSeconds",COALESCE(t.language,r.metrics->>\'language\') AS language,t.keystrokes,t.correct_chars AS "correctChars",
@@ -1431,8 +1474,8 @@ final readonly class PostgresEducationStore implements EducationStore
             JOIN education.group_students gs ON gs.student_id=a.student_id AND gs.group_id=CAST(:group AS uuid)
             LEFT JOIN education.typing_results t ON t.attempt_id=a.id LEFT JOIN education.activity_results r ON r.attempt_id=a.id
             WHERE a.organization_id=CAST(:org AS uuid) AND d.code=:code
-            AND gs.organization_id=CAST(:org AS uuid) AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id)'.$range.'
-            ORDER BY a.started_at DESC,a.id DESC LIMIT 51 OFFSET :offset',$params);
+            AND gs.organization_id=CAST(:org AS uuid) AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id)' . $range . '
+            ORDER BY a.started_at DESC,a.id DESC LIMIT 51 OFFSET :offset', $params);
     }
 
     private function lockLesson(Scope $scope, string $lessonId): void
@@ -1629,4 +1672,3 @@ final readonly class PostgresEducationStore implements EducationStore
         return $row;
     }
 }
-

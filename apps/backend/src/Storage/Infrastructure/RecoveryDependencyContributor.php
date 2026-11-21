@@ -11,9 +11,18 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 final readonly class RecoveryDependencyContributor implements RetentionDependencyContributor
 {
     public function __construct(private ConnectionInterface $db) {}
-    public function code(): string { return 'storage.recovery_dependency'; }
-    public function supports(string $resourceType): bool { return in_array($resourceType, ['storage.space', 'education.workspace'], true); }
-    public function resolved(RetentionCandidate $candidate): bool { return !$this->hasPendingRecovery($candidate->subjectPersonId); }
+    public function code(): string
+    {
+        return 'storage.recovery_dependency';
+    }
+    public function supports(string $resourceType): bool
+    {
+        return in_array($resourceType, ['storage.space', 'education.workspace'], true);
+    }
+    public function resolved(RetentionCandidate $candidate): bool
+    {
+        return !$this->hasPendingRecovery($candidate->subjectPersonId);
+    }
     public function hasPendingRecovery(string $subject): bool
     {
         $found = $this->db->createCommand(<<<'SQL'

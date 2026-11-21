@@ -832,6 +832,7 @@ jobs:
         run: |
           python3 scripts/dev/storage02/s3-config.py --test-suite ci --port 18339 \
             --directory runtime/ci-s3 --cors-origin https://e2e.platform.test:4175
+          cat runtime/ci-s3/s3.env >> "$GITHUB_ENV"
           compose_file=compose.yaml:compose.ci.yaml:compose.ci.s3.yaml
           compose_env_files=runtime/ci-s3/s3.env
           COMPOSE_FILE="$compose_file" COMPOSE_ENV_FILES="$compose_env_files" docker compose --profile test config --quiet
@@ -945,7 +946,7 @@ jobs:
       - name: Diagnose Core browser failure
         if: failure()
         run: |
-          docker compose --profile test logs --no-color --tail 100 backend-test postgres-test mailpit-core-test
+          docker compose --profile test logs --no-color --tail 100 backend-test postgres-test mailpit-core-test seaweedfs-test s3-init-test
           cat /tmp/vite-core-auth.log || true
           cat /tmp/vite-education.log || true
       - name: Remove disposable Core runtime

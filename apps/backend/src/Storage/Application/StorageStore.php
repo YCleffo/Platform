@@ -21,8 +21,15 @@ interface StorageStore
     /**
      * @return array<string,mixed>
      */
-    public function createDeviceTicket(string $spaceId, string $purpose, string $path, ?string $expectedSha256,
-        ?int $expectedSize, ?string $fileVersionId = null, ?string $deviceId = null): array;
+    public function createDeviceTicket(
+        string $spaceId,
+        string $purpose,
+        string $path,
+        ?string $expectedSha256,
+        ?int $expectedSize,
+        ?string $fileVersionId = null,
+        ?string $deviceId = null,
+    ): array;
     /** @return array<string,mixed>|null */
     public function findTicket(string $tokenHash): ?array;
     public function claimTicket(string $ticketId): bool;
@@ -49,8 +56,14 @@ interface StorageStore
      * Claims the ticket and stores the verified version atomically under the space lock.
      * @return array<string,mixed>
      */
-    public function commitUpload(string $ticketId, StorageScope $scope, string $path, int $size, string $sha256,
-        string $storageKey): array;
+    public function commitUpload(
+        string $ticketId,
+        StorageScope $scope,
+        string $path,
+        int $size,
+        string $sha256,
+        string $storageKey,
+    ): array;
     /**
      * @param list<array{path:string,op:string,sha256?:?string,size?:int,baseSha256?:?string}> $entries
      * @return array<string,mixed>

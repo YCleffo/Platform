@@ -25,8 +25,12 @@ final class ParentContractTest extends TestCase
         $registered = [];
         foreach (require $backend . '/config/common/education-routes.php' as $route) {
             $middlewares = $route->getData('enabledMiddlewares');
-            if (!in_array(ParentAction::class, $middlewares, true)) continue;
-            foreach ($route->getData('methods') as $method) $registered[] = $method . ' ' . $route->getData('pattern');
+            if (!in_array(ParentAction::class, $middlewares, true)) {
+                continue;
+            }
+            foreach ($route->getData('methods') as $method) {
+                $registered[] = $method . ' ' . $route->getData('pattern');
+            }
             self::assertContains(PrivateResponse::class, $middlewares, 'Family responses must be private even when they fail.');
             $isRegistration = $route->getData('pattern') === '/api/education/parent/register';
             self::assertSame(!$isRegistration, in_array(RequireAuthentication::class, $middlewares, true));
@@ -34,7 +38,9 @@ final class ParentContractTest extends TestCase
         $documented = [];
         foreach ($document['paths'] as $path => $definition) {
             foreach ($definition as $method => $operation) {
-                if (!in_array($method, ['get', 'post', 'put', 'patch', 'delete'], true)) continue;
+                if (!in_array($method, ['get', 'post', 'put', 'patch', 'delete'], true)) {
+                    continue;
+                }
                 $documented[] = strtoupper($method) . ' ' . $document['servers'][0]['url'] . $path;
                 self::assertArrayHasKey('responses', $operation);
                 self::assertNotEmpty($operation['operationId']);
@@ -51,9 +57,13 @@ final class ParentContractTest extends TestCase
         $backend = dirname(__DIR__, 2);
         foreach (require $backend . '/config/common/parent-routes.php' as $route) {
             $path = $route->getData('pattern');
-            if (!str_starts_with($path, '/api/education/parent/')) continue;
+            if (!str_starts_with($path, '/api/education/parent/')) {
+                continue;
+            }
             foreach ($route->getData('methods') as $method) {
-                if ($method === 'GET') continue;
+                if ($method === 'GET') {
+                    continue;
+                }
                 self::assertSame('POST', $method);
                 self::assertTrue(in_array($path, ['/api/education/parent/activate', '/api/education/parent/register'], true)
                     || $path === '/api/education/parent/children/{studentId}/notifications/{id}/read', $method . ' ' . $path);
@@ -64,7 +74,9 @@ final class ParentContractTest extends TestCase
     public function testTheCombinedEducationRouterCompilesAndKeepsTeacherAndStudentRoutes(): void
     {
         $collector = new RouteCollector();
-        foreach (require dirname(__DIR__, 2) . '/config/common/education-routes.php' as $route) $collector->addRoute($route);
+        foreach (require dirname(__DIR__, 2) . '/config/common/education-routes.php' as $route) {
+            $collector->addRoute($route);
+        }
         $matcher = new UrlMatcher(new RouteCollection($collector));
         foreach ([
             ['/api/education/parent/context', ParentAction::class, 'context'],
@@ -90,7 +102,9 @@ final class ParentContractTest extends TestCase
                     self::assertArrayHasKey($part, $target, 'Unresolved OpenAPI reference: ' . $value);
                     $target = $target[$part];
                 }
-            } elseif (is_array($value)) $this->assertReferencesResolve($value, $document);
+            } elseif (is_array($value)) {
+                $this->assertReferencesResolve($value, $document);
+            }
         }
     }
 }

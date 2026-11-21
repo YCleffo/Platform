@@ -7,7 +7,9 @@ use App\Storage\Application\StorageScope;
 
 require __DIR__ . '/http-bootstrap.php';
 
-if (PHP_SAPI !== 'cli') throw new RuntimeException('The classroom fixture is CLI-only.');
+if (PHP_SAPI !== 'cli') {
+    throw new RuntimeException('The classroom fixture is CLI-only.');
+}
 $runtime = classroomHttpRuntime();
 $db = $runtime['db'];
 $devices = $runtime['deviceStore'];
@@ -17,7 +19,9 @@ $command = $argv[1] ?? '';
 $uuid = static fn(): string => (string) $db->createCommand('SELECT uuidv7()::text')->queryScalar();
 
 if ($command === 'init') {
-    if (is_file($path)) throw new RuntimeException('Fixture already exists; reuse it or choose a fresh dedicated runtime.');
+    if (is_file($path)) {
+        throw new RuntimeException('Fixture already exists; reuse it or choose a fresh dedicated runtime.');
+    }
     // A minimal committed fixture in the explicitly named test database. The
     // production migrations remain the source of DeviceManagement/Storage DDL.
     $db->getActivePdo()->exec('CREATE SCHEMA IF NOT EXISTS core; CREATE SCHEMA IF NOT EXISTS education;
@@ -37,21 +41,33 @@ if ($command === 'init') {
         foreach (['A', 'B'] as $name) {
             $person = $uuid();
             $student = $uuid();
-            $db->createCommand('INSERT INTO core.persons(id,given_name,family_name,display_name) VALUES(CAST(:id AS uuid),:name,\'HTTP Test\',:display)',
-                [':id' => $person, ':name' => $name, ':display' => 'Student ' . $name])->execute();
-            $db->createCommand('INSERT INTO education.students(id,person_id,organization_id,owner_account_id)
+            $db->createCommand(
+                'INSERT INTO core.persons(id,given_name,family_name,display_name) VALUES(CAST(:id AS uuid),:name,\'HTTP Test\',:display)',
+                [':id' => $person, ':name' => $name, ':display' => 'Student ' . $name],
+            )->execute();
+            $db->createCommand(
+                'INSERT INTO education.students(id,person_id,organization_id,owner_account_id)
                 VALUES(CAST(:student AS uuid),CAST(:person AS uuid),CAST(:org AS uuid),CAST(:actor AS uuid))',
-                [':student' => $student, ':person' => $person, ':org' => $scope->organizationId, ':actor' => $scope->accountId])->execute();
+                [':student' => $student, ':person' => $person, ':org' => $scope->organizationId, ':actor' => $scope->accountId],
+            )->execute();
             $content = $name . ' original server document';
             $key = $uuid();
             $bytes = fopen('php://temp', 'w+b');
-            if ($bytes === false) throw new RuntimeException('Cannot prepare fixture bytes.');
+            if ($bytes === false) {
+                throw new RuntimeException('Cannot prepare fixture bytes.');
+            }
             fwrite($bytes, $content);
             rewind($bytes);
             $runtime['files']->write($key, $bytes);
             fclose($bytes);
-            $storage->storeVersion(new StorageScope($scope->organizationId, $scope->accountId, $person, 'en-US', 'UTC', $student),
-                'work.txt', strlen($content), hash('sha256', $content), $key, null);
+            $storage->storeVersion(
+                new StorageScope($scope->organizationId, $scope->accountId, $person, 'en-US', 'UTC', $student),
+                'work.txt',
+                strlen($content),
+                hash('sha256', $content),
+                $key,
+                null,
+            );
             $students[$name] = ['id' => $student, 'personId' => $person, 'name' => 'Student ' . $name,
                 'initialPath' => 'work.txt', 'initialContent' => $content];
         }
@@ -59,13 +75,17 @@ if ($command === 'init') {
             'classroomId' => $classroom['id'], 'organizationId' => $scope->organizationId,
             'teacherAccountId' => $scope->accountId, 'teacherPersonId' => $scope->personId, 'students' => $students];
     });
-    if (file_put_contents($path, json_encode($fixture, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)) === false) throw new RuntimeException('Cannot save fixture.');
+    if (file_put_contents($path, json_encode($fixture, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)) === false) {
+        throw new RuntimeException('Cannot save fixture.');
+    }
     chmod($path, 0600);
     echo json_encode(['created' => true, 'fixturePath' => $path, 'deviceId' => $fixture['deviceId']], JSON_THROW_ON_ERROR) . "\n";
     exit;
 }
 
-if (!is_file($path)) throw new RuntimeException('Initialize the dedicated HTTP fixture first.');
+if (!is_file($path)) {
+    throw new RuntimeException('Initialize the dedicated HTTP fixture first.');
+}
 $fixture = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
 $scope = new Scope($fixture['organizationId'], $fixture['teacherAccountId'], $fixture['teacherPersonId'], 'en-US', 'UTC');
 $device = $fixture['deviceId'];
@@ -85,10 +105,16 @@ $result = match ($command) {
         $ticket = $runtime['storageService']->write('ticket', $studentScope, ['purpose' => 'upload', 'path' => 'work.txt']);
         $content = 'A browser conflict version';
         $stream = fopen('php://temp', 'w+b');
-        if ($stream === false) throw new RuntimeException('Cannot prepare fixture content.');
-        fwrite($stream, $content); rewind($stream);
-        try { return $runtime['storageService']->uploadWithTicket($ticket['token'], $stream, hash('sha256', $content)); }
-        finally { fclose($stream); }
+        if ($stream === false) {
+            throw new RuntimeException('Cannot prepare fixture content.');
+        }
+        fwrite($stream, $content);
+        rewind($stream);
+        try {
+            return $runtime['storageService']->uploadWithTicket($ticket['token'], $stream, hash('sha256', $content));
+        } finally {
+            fclose($stream);
+        }
     })(),
     'resolve' => (static function () use ($fixture, $scope, $device, $devices, $storage): array {
         $session = $devices->activeSession($device) ?? throw new RuntimeException('No active fixture session.');
@@ -97,7 +123,10 @@ $result = match ($command) {
         $studentScope = new StorageScope($scope->organizationId, $scope->accountId, $student['personId'], 'en-US', 'UTC', $student['id']);
         $resolved = 0;
         foreach ($storage->conflicts($studentScope, 0) as $conflict) {
-            if ($conflict['resolvedAt'] === null) { $storage->resolveConflict($studentScope, $conflict['id'], 'keep_server'); $resolved++; }
+            if ($conflict['resolvedAt'] === null) {
+                $storage->resolveConflict($studentScope, $conflict['id'], 'keep_server');
+                $resolved++;
+            }
         }
         return ['resolved' => $resolved];
     })(),
@@ -112,4 +141,3 @@ $result = match ($command) {
     default => throw new RuntimeException('Allowed fixture commands: init, assign A|B, end, browser-edit A|B, resolve, retry, status, events, revoke.'),
 };
 echo json_encode($result, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE) . "\n";
-

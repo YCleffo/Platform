@@ -57,8 +57,11 @@ final readonly class DeviceAction
                 return $responses->success($service->read($operation, $scope, $request->getQueryParams(), $id));
             }
             $result = $service->write($operation, $scope, $body, $id);
-            return $responses->success($result)->withStatus(in_array($operation,
-                ['create_classroom', 'create_device'], true) ? 201 : 200);
+            return $responses->success($result)->withStatus(in_array(
+                $operation,
+                ['create_classroom', 'create_device'],
+                true,
+            ) ? 201 : 200);
         } catch (DeviceError $error) {
             $code = match ($error->status) {
                 403 => ApiMessage::AUTH_PERMISSION_DENIED, 404 => ApiMessage::HTTP_NOT_FOUND,

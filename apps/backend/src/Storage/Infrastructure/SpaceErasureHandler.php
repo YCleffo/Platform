@@ -12,9 +12,18 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 final readonly class SpaceErasureHandler implements PersonalDataErasureHandler
 {
     public function __construct(private ConnectionInterface $db, private RecoveryDependencyContributor $recovery) {}
-    public function code(): string { return 'storage.space_erasure'; }
-    public function resourceType(): string { return 'storage.space'; }
-    public function supportsAction(string $action): bool { return $action === 'delete'; }
+    public function code(): string
+    {
+        return 'storage.space_erasure';
+    }
+    public function resourceType(): string
+    {
+        return 'storage.space';
+    }
+    public function supportsAction(string $action): bool
+    {
+        return $action === 'delete';
+    }
     public function reconcile(string $itemId): ?string
     {
         $value = $this->db->createCommand('SELECT result FROM storage.privacy_receipts WHERE item_id=CAST(:item AS uuid)', [':item' => $itemId])->queryScalar();
@@ -22,18 +31,28 @@ final readonly class SpaceErasureHandler implements PersonalDataErasureHandler
     }
     public function owns(string $subjectPersonId, string $resourceId): bool
     {
-        $found = $this->db->createCommand('SELECT 1 FROM storage.spaces WHERE id=CAST(:id AS uuid) AND subject_person_id=CAST(:subject AS uuid) FOR UPDATE',
-            [':id' => $resourceId, ':subject' => $subjectPersonId])->queryScalar();
+        $found = $this->db->createCommand(
+            'SELECT 1 FROM storage.spaces WHERE id=CAST(:id AS uuid) AND subject_person_id=CAST(:subject AS uuid) FOR UPDATE',
+            [':id' => $resourceId, ':subject' => $subjectPersonId],
+        )->queryScalar();
         return $found !== false && $found !== null;
     }
     public function execute(string $subjectPersonId, string $resourceId, string $action, string $itemId): string
     {
-        if ($action !== 'delete') throw new DomainException('Unsupported Storage erasure action.');
+        if ($action !== 'delete') {
+            throw new DomainException('Unsupported Storage erasure action.');
+        }
         $receipt = $this->reconcile($itemId);
-        if ($receipt !== null) return $receipt;
+        if ($receipt !== null) {
+            return $receipt;
+        }
         return $this->db->transaction(function () use ($subjectPersonId, $resourceId, $itemId): string {
-            if (!$this->owns($subjectPersonId, $resourceId)) throw new DomainException('Storage ownership changed.');
-            if ($this->recovery->hasPendingRecovery($subjectPersonId)) throw new DomainException('Unfinished document recovery blocks erasure.');
+            if (!$this->owns($subjectPersonId, $resourceId)) {
+                throw new DomainException('Storage ownership changed.');
+            }
+            if ($this->recovery->hasPendingRecovery($subjectPersonId)) {
+                throw new DomainException('Unfinished document recovery blocks erasure.');
+            }
             $params = [':space' => $resourceId];
             $this->db->createCommand('INSERT INTO storage.object_cleanup(object_key,multipart_upload_id,transfer_id,not_before)
                 SELECT staging_key,multipart_upload_id,id,now()+interval \'16 minutes\' FROM storage.transfers
@@ -54,8 +73,10 @@ final readonly class SpaceErasureHandler implements PersonalDataErasureHandler
             $this->db->createCommand('DELETE FROM storage.files WHERE space_id=CAST(:space AS uuid)', $params)->execute();
             $this->db->createCommand('DELETE FROM storage.sync_sessions WHERE space_id=CAST(:space AS uuid)', $params)->execute();
             $this->db->createCommand('DELETE FROM storage.spaces WHERE id=CAST(:space AS uuid)', $params)->execute();
-            $this->db->createCommand("INSERT INTO storage.privacy_receipts(item_id,result) VALUES(CAST(:item AS uuid),'deleted') ON CONFLICT(item_id) DO NOTHING",
-                [':item' => $itemId])->execute();
+            $this->db->createCommand(
+                "INSERT INTO storage.privacy_receipts(item_id,result) VALUES(CAST(:item AS uuid),'deleted') ON CONFLICT(item_id) DO NOTHING",
+                [':item' => $itemId],
+            )->execute();
             return 'deleted';
         });
     }

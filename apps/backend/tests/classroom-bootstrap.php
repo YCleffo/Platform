@@ -14,8 +14,11 @@ $loader->addPsr4('App\\', $classroomSource, true);
 // Composer's optimized App classmap may point at the original checkout.
 // The explicit prepend loader makes reused vendors honor this worktree too.
 spl_autoload_register(static function (string $class) use ($classroomSource): void {
-    if (!str_starts_with($class, 'App\\')) return;
+    if (!str_starts_with($class, 'App\\')) {
+        return;
+    }
     $file = $classroomSource . '/' . str_replace('\\', '/', substr($class, 4)) . '.php';
-    if (is_file($file)) require $file;
+    if (is_file($file)) {
+        require $file;
+    }
 }, prepend: true);
-

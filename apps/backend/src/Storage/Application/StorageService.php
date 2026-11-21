@@ -74,14 +74,20 @@ final readonly class StorageService
             }
             $this->files->copy($sourceKey, $newKey);
             $copy = $this->files->verify($newKey);
-            if ($copy !== $verified) throw new StorageError(409, 'checksum_mismatch');
+            if ($copy !== $verified) {
+                throw new StorageError(409, 'checksum_mismatch');
+            }
         } else {
             $stream = $this->files->open($sourceKey);
             try {
                 if (!hash_equals((string) $historical['sha256'], $this->files->hash($stream))
-                    || $this->streamSize($stream) !== (int) $historical['sizeBytes']) throw new StorageError(409, 'checksum_mismatch');
+                    || $this->streamSize($stream) !== (int) $historical['sizeBytes']) {
+                    throw new StorageError(409, 'checksum_mismatch');
+                }
                 $this->files->write($newKey, $stream);
-            } finally { fclose($stream); }
+            } finally {
+                fclose($stream);
+            }
         }
         try {
             return $this->mutations->run($scope, 'restore', fn(): array => $this->store->restoreVersion($scope, $path, $version, $newKey));
@@ -112,14 +118,19 @@ final readonly class StorageService
     private function renameFile(StorageScope $scope, array $body): array
     {
         self::only($body, ['path', 'newPath']);
-        return $this->mutations->run($scope, 'rename', fn(): array => $this->store->renameFile($scope,
-            self::path($body['path'] ?? null), self::path($body['newPath'] ?? null)));
+        return $this->mutations->run($scope, 'rename', fn(): array => $this->store->renameFile(
+            $scope,
+            self::path($body['path'] ?? null),
+            self::path($body['newPath'] ?? null),
+        ));
     }
 
     private function resolveConflict(StorageScope $scope, string $id, array $body): array
     {
         self::only($body, ['resolution']);
-        if (($body['resolution'] ?? '') !== 'keep_server') throw new StorageError(422, 'invalid_input');
+        if (($body['resolution'] ?? '') !== 'keep_server') {
+            throw new StorageError(422, 'invalid_input');
+        }
         return $this->mutations->run($scope, 'resolve_conflict', fn(): array => $this->store->resolveConflict($scope, $id, 'keep_server'));
     }
 
@@ -133,8 +144,12 @@ final readonly class StorageService
         $path = self::path($body['path'] ?? null);
         $size = $body['expectedSize'] ?? null;
         $sha = isset($body['expectedSha256']) ? self::sha256($body['expectedSha256']) : null;
-        if ($size !== null && (!is_int($size) || $size < 0 || $size > $this->maxFileSize)) throw new StorageError(422, 'invalid_input');
-        if (($size === null) !== ($sha === null)) throw new StorageError(422, 'invalid_input');
+        if ($size !== null && (!is_int($size) || $size < 0 || $size > $this->maxFileSize)) {
+            throw new StorageError(422, 'invalid_input');
+        }
+        if (($size === null) !== ($sha === null)) {
+            throw new StorageError(422, 'invalid_input');
+        }
         return $this->store->createTicket($scope, $purpose, $path, $sha, $size);
     }
 
@@ -147,7 +162,9 @@ final readonly class StorageService
         $ticket = $this->store->findTicket(hash('sha256', $token));
         $this->assertTicketUsable($ticket, 'upload');
         $scope = $actorScope ?? $this->deviceScope((string) $ticket['spaceId']);
-        if ($actorScope !== null && (string) $this->store->space($actorScope)['id'] !== (string) $ticket['spaceId']) throw new StorageError(404, 'not_found');
+        if ($actorScope !== null && (string) $this->store->space($actorScope)['id'] !== (string) $ticket['spaceId']) {
+            throw new StorageError(404, 'not_found');
+        }
         $this->assertDeviceScope($scope, $deviceId, $ticket);
         $sha256 = $this->files->hash($stream);
         $size = $this->streamSize($stream);
@@ -167,8 +184,14 @@ final readonly class StorageService
         $key = $this->newKey();
         $this->files->write($key, $stream);
         try {
-            $result = $this->store->commitUpload((string) $ticket['id'], $scope, (string) $ticket['path'],
-                $size, $sha256, $key);
+            $result = $this->store->commitUpload(
+                (string) $ticket['id'],
+                $scope,
+                (string) $ticket['path'],
+                $size,
+                $sha256,
+                $key,
+            );
         } catch (\Throwable $failure) {
             $this->files->delete($key);
             throw $failure;
@@ -188,7 +211,9 @@ final readonly class StorageService
         $ticket = $this->store->findTicket(hash('sha256', $token));
         $this->assertTicketUsable($ticket, 'download');
         $scope = $actorScope ?? $this->deviceScope((string) $ticket['spaceId']);
-        if ($actorScope !== null && (string) $this->store->space($actorScope)['id'] !== (string) $ticket['spaceId']) throw new StorageError(404, 'not_found');
+        if ($actorScope !== null && (string) $this->store->space($actorScope)['id'] !== (string) $ticket['spaceId']) {
+            throw new StorageError(404, 'not_found');
+        }
         $this->assertDeviceScope($scope, $deviceId, $ticket);
         if (!$this->store->claimTicket((string) $ticket['id'])) {
             throw new StorageError(404, 'not_found');
@@ -287,11 +312,25 @@ final readonly class StorageService
             if ($file === null) {
                 throw new StorageError(409, 'ticket_stale');
             }
-            return $this->store->createDeviceTicket((string) $this->store->space($scope)['id'], $purpose, $path,
-                $sha256, $size, (string) $file['versionId'], $deviceId);
+            return $this->store->createDeviceTicket(
+                (string) $this->store->space($scope)['id'],
+                $purpose,
+                $path,
+                $sha256,
+                $size,
+                (string) $file['versionId'],
+                $deviceId,
+            );
         }
-        return $this->store->createDeviceTicket((string) $this->store->space($scope)['id'], $purpose, $path,
-            $sha256, $size, null, $deviceId);
+        return $this->store->createDeviceTicket(
+            (string) $this->store->space($scope)['id'],
+            $purpose,
+            $path,
+            $sha256,
+            $size,
+            null,
+            $deviceId,
+        );
     }
 
     /**
@@ -354,8 +393,14 @@ final readonly class StorageService
     private function deviceScope(string $spaceId): StorageScope
     {
         $space = $this->store->spaceById($spaceId) ?? throw new StorageError(404, 'not_found');
-        return new StorageScope((string) $space['organizationId'], '', '',
-            'ru-RU', 'UTC', (string) $space['studentId']);
+        return new StorageScope(
+            (string) $space['organizationId'],
+            '',
+            '',
+            'ru-RU',
+            'UTC',
+            (string) $space['studentId'],
+        );
     }
 
     private function deviceSpaceScope(string $deviceId): StorageScope
@@ -365,8 +410,14 @@ final readonly class StorageService
         if ($session === null) {
             throw new StorageError(404, 'not_found');
         }
-        return new StorageScope((string) $session['organizationId'], '', '',
-            'ru-RU', 'UTC', (string) $session['studentId']);
+        return new StorageScope(
+            (string) $session['organizationId'],
+            '',
+            '',
+            'ru-RU',
+            'UTC',
+            (string) $session['studentId'],
+        );
     }
 
     /**
@@ -470,7 +521,9 @@ final readonly class StorageService
         }
         foreach (explode('/', $normalized) as $segment) {
             if ($segment === '' || rtrim($segment, " .") !== $segment || preg_match('/[:*?"<>|]/', $segment) === 1
-                || preg_match('/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\\.|$)/i', $segment) === 1) throw new StorageError(422, 'invalid_input');
+                || preg_match('/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\\.|$)/i', $segment) === 1) {
+                throw new StorageError(422, 'invalid_input');
+            }
         }
         return $normalized;
     }

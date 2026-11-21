@@ -53,7 +53,9 @@ final class ActivityEngineTest extends ActivityEngineFixture
 
     public static function modes(): iterable
     {
-        foreach (['words', 'sentences', 'numbers', 'code', 'accuracy'] as $mode) yield $mode => [$mode];
+        foreach (['words', 'sentences', 'numbers', 'code', 'accuracy'] as $mode) {
+            yield $mode => [$mode];
+        }
     }
 
     #[DataProvider('modes')]
@@ -103,8 +105,10 @@ final class ActivityEngineTest extends ActivityEngineFixture
         $started = $this->startActivity('platform-logic');
         $id = $started['attempt']['id'];
         $answers = $this->correctLogicAnswers($id);
-        $bad = $answers; $bad[0]['optionId'] = 'nonexistent';
-        $unknown = $answers; $unknown[0]['roundId'] = 'not-a-round';
+        $bad = $answers;
+        $bad[0]['optionId'] = 'nonexistent';
+        $unknown = $answers;
+        $unknown[0]['roundId'] = 'not-a-round';
         foreach ([['answers' => $answers, 'score' => 99999], ['answers' => $bad], ['answers' => $unknown], ['answers' => [...$answers, $answers[0]]], ['typed' => 'answer', 'durationSeconds' => 15]] as $input) {
             $this->rejection(422, fn() => $this->education->write('student_finish_attempt', $this->learner['scope'], $input, $id));
         }
@@ -118,7 +122,8 @@ final class ActivityEngineTest extends ActivityEngineFixture
 
     public function testOwnershipUsesAccountOrganizationAndStudentAndRevocationIsImmediate(): void
     {
-        $started = $this->startActivity(); $id = $started['attempt']['id'];
+        $started = $this->startActivity();
+        $id = $started['attempt']['id'];
         $own = $this->learner['scope'];
         $scopes = [$this->peer['scope'], new Scope($own->organizationId, $this->peer['accountId'], $own->personId, $own->locale, $own->timezone, $own->studentId),
             new Scope($this->outsider->organizationId, $own->accountId, $own->personId, $own->locale, $own->timezone, $own->studentId)];
@@ -148,7 +153,8 @@ final class ActivityEngineTest extends ActivityEngineFixture
 
     public function testStartedExerciseAndFinishedHistoryKeepTheirVersionAfterCatalogChanges(): void
     {
-        $started = $this->startActivity(); $id = $started['attempt']['id'];
+        $started = $this->startActivity();
+        $id = $started['attempt']['id'];
         $this->db->createCommand("UPDATE education.activity_definitions SET contract_version=contract_version+1 WHERE code='platform-typing'")->execute();
         $this->db->createCommand("UPDATE education.activity_exercise_sets SET content=CAST(:content AS jsonb),version=version+100 WHERE activity_code='platform-typing'", [':content' => '["Newer catalog content"]'])->execute();
         $loaded = $this->education->read('student_attempt', $this->learner['scope'], [], $id);
@@ -164,7 +170,8 @@ final class ActivityEngineTest extends ActivityEngineFixture
 
     public function testAttemptRevocationAndDisabledActivityApplyToExistingStateAndFinishes(): void
     {
-        $started = $this->startActivity('platform-logic'); $id = $started['attempt']['id'];
+        $started = $this->startActivity('platform-logic');
+        $id = $started['attempt']['id'];
         $this->rejection([403,404], fn() => $this->education->write('revoke_activity_attempt', $this->outsider, [], $id));
         $this->education->write('revoke_activity_attempt', $this->teacher, [], $id);
         $this->rejection(409, fn() => $this->education->read('student_attempt', $this->learner['scope'], [], $id));

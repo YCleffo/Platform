@@ -18,17 +18,23 @@ final class EducationS3Fixture
         IsolatedS3Runtime::assertConfigured($config);
         $client = (new S3ClientFactory($config))->internal();
         foreach (array_unique($keys) as $key) {
-            $client->deleteObject(['Bucket'=>$config->bucketEducation,'Key'=>S3Objects::objectKey($key)]);
+            $client->deleteObject(['Bucket' => $config->bucketEducation,'Key' => S3Objects::objectKey($key)]);
         }
     }
 
     public static function bytes(array $download): string
     {
-        if (!is_resource($download['stream'] ?? null)) throw new RuntimeException('A verified stream is required.');
+        if (!is_resource($download['stream'] ?? null)) {
+            throw new RuntimeException('A verified stream is required.');
+        }
         try {
-            $content=stream_get_contents($download['stream']);
-            if (!is_string($content)) throw new RuntimeException('Cannot read verified download.');
+            $content = stream_get_contents($download['stream']);
+            if (!is_string($content)) {
+                throw new RuntimeException('Cannot read verified download.');
+            }
             return $content;
-        } finally { fclose($download['stream']); }
+        } finally {
+            fclose($download['stream']);
+        }
     }
 }

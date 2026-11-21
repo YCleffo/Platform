@@ -9,7 +9,8 @@ use App\DeviceManagement\Application\DeviceService;
 use App\DeviceManagement\Infrastructure\PostgresDeviceStore;
 use App\Storage\Application\StorageService;
 use App\Tests\Storage02\ObservedS3Objects;
-require_once dirname(__DIR__).'/Storage02/ObservedS3Objects.php';
+
+require_once dirname(__DIR__) . '/Storage02/ObservedS3Objects.php';
 use App\Storage\Infrastructure\PostgresStorageStore;
 use HttpSoft\Message\ResponseFactory as PsrResponseFactory;
 use Yiisoft\DataResponse\Formatter\JsonFormatter;
@@ -42,22 +43,44 @@ function classroomHttpRuntime(): array
         throw new RuntimeException('Unexpected database; refusing HTTP fixture operations.');
     }
     $runtime = getenv('CLASSROOM_HTTP_RUNTIME') ?: '/classroom-runtime';
-    if (!is_dir($runtime)) throw new RuntimeException('Create the dedicated HTTP harness runtime directory first.');
+    if (!is_dir($runtime)) {
+        throw new RuntimeException('Create the dedicated HTTP harness runtime directory first.');
+    }
     $deviceStore = new PostgresDeviceStore($db);
     // Agent endpoints do not use teacher mutation or access ports. Resolve the
     // actual production ports, but keep this scenario's binary data isolated.
-    $deviceService = new DeviceService($deviceStore,
+    $deviceService = new DeviceService(
+        $deviceStore,
         $container->get(App\DeviceManagement\Application\Mutation::class),
         $container->get(App\Education\Application\EducationStore::class),
-        $container->get(App\Education\Application\EducationAccess::class));
+        $container->get(App\Education\Application\EducationAccess::class),
+    );
     $files = new ObservedS3Objects();
     $storageStore = new PostgresStorageStore($db);
-    $storageService = new StorageService($storageStore, $files,
-        $container->get(App\Storage\Application\Mutation::class), $deviceStore);
+    $storageService = new StorageService(
+        $storageStore,
+        $files,
+        $container->get(App\Storage\Application\Mutation::class),
+        $deviceStore,
+    );
     $requestProvider = new RequestProvider();
-    $responses = new ResponseFactory(new JsonResponseFactory(new PsrResponseFactory(), new JsonFormatter()),
-        $container->get(TranslationService::class), $container->get(SupportedLocales::class), $requestProvider);
-    return compact('root', 'container', 'db', 'runtime', 'deviceStore', 'deviceService', 'files',
-        'storageStore', 'storageService', 'requestProvider', 'responses');
+    $responses = new ResponseFactory(
+        new JsonResponseFactory(new PsrResponseFactory(), new JsonFormatter()),
+        $container->get(TranslationService::class),
+        $container->get(SupportedLocales::class),
+        $requestProvider,
+    );
+    return compact(
+        'root',
+        'container',
+        'db',
+        'runtime',
+        'deviceStore',
+        'deviceService',
+        'files',
+        'storageStore',
+        'storageService',
+        'requestProvider',
+        'responses',
+    );
 }
-

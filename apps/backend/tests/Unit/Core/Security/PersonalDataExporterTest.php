@@ -74,13 +74,24 @@ final class PersonalDataExporterTest extends TestCase
         $contributor = new class implements PagedPersonalDataContributor {
             public int $count = 0;
             public ?\WeakReference $previous = null;
-            public function code(): string { return 'test.large'; }
-            public function categories(): array { return ['identity']; }
-            public function collect(PersonalDataExportContext $context): PersonalDataSection { throw new \LogicException('Use pages.'); }
+            public function code(): string
+            {
+                return 'test.large';
+            }
+            public function categories(): array
+            {
+                return ['identity'];
+            }
+            public function collect(PersonalDataExportContext $context): PersonalDataSection
+            {
+                throw new \LogicException('Use pages.');
+            }
             public function pages(PersonalDataExportContext $context): iterable
             {
                 for ($i = 0; $i < 600; $i++) {
-                    if ($this->previous?->get() !== null) throw new \LogicException('Exporter retained an older section.');
+                    if ($this->previous?->get() !== null) {
+                        throw new \LogicException('Exporter retained an older section.');
+                    }
                     $section = new PersonalDataSection($this->code(), $this->categories(), [['i' => $i, 'content' => str_repeat('x', 4096)]]);
                     yield $section;
                     $this->previous = \WeakReference::create($section);
@@ -109,13 +120,24 @@ final class PersonalDataExporterTest extends TestCase
     {
         $contributor = new class implements PagedPersonalDataContributor {
             public bool $closed = false;
-            public function code(): string { return 'test.limit'; }
-            public function categories(): array { return ['identity']; }
-            public function collect(PersonalDataExportContext $context): PersonalDataSection { throw new \LogicException('Use pages.'); }
+            public function code(): string
+            {
+                return 'test.limit';
+            }
+            public function categories(): array
+            {
+                return ['identity'];
+            }
+            public function collect(PersonalDataExportContext $context): PersonalDataSection
+            {
+                throw new \LogicException('Use pages.');
+            }
             public function pages(PersonalDataExportContext $context): iterable
             {
                 try {
-                    for ($i = 0; $i < 20; $i++) yield new PersonalDataSection($this->code(), $this->categories(), [['content' => str_repeat('x', 4096)]]);
+                    for ($i = 0; $i < 20; $i++) {
+                        yield new PersonalDataSection($this->code(), $this->categories(), [['content' => str_repeat('x', 4096)]]);
+                    }
                 } finally {
                     $this->closed = true;
                 }
@@ -134,9 +156,18 @@ final class PersonalDataExporterTest extends TestCase
     public function testStreamRejectsLateContributorFailureWithoutLeakingArtifact(): void
     {
         $contributor = new class implements PagedPersonalDataContributor {
-            public function code(): string { return 'test.failure'; }
-            public function categories(): array { return ['identity']; }
-            public function collect(PersonalDataExportContext $context): PersonalDataSection { throw new \LogicException('Use pages.'); }
+            public function code(): string
+            {
+                return 'test.failure';
+            }
+            public function categories(): array
+            {
+                return ['identity'];
+            }
+            public function collect(PersonalDataExportContext $context): PersonalDataSection
+            {
+                throw new \LogicException('Use pages.');
+            }
             public function pages(PersonalDataExportContext $context): iterable
             {
                 yield new PersonalDataSection($this->code(), $this->categories(), [['value' => 'valid first page']]);

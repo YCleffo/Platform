@@ -29,7 +29,9 @@ final readonly class PersonalDataContributor implements Contributor
     {
         $records = [];
         foreach ($this->pages($context) as $page) {
-            foreach ($page->records as $record) $records[] = $record;
+            foreach ($page->records as $record) {
+                $records[] = $record;
+            }
         }
         return new PersonalDataSection($this->code(), $this->categories(), $records);
     }
@@ -73,8 +75,10 @@ final readonly class PersonalDataContributor implements Contributor
         foreach ($queries as $type => $sql) {
             $offset = 0;
             do {
-                $rows = $this->db->createCommand($sql . ' ORDER BY 1 LIMIT 100 OFFSET :offset',
-                    [':subject' => $context->subjectPersonId, ':offset' => $offset])->queryAll();
+                $rows = $this->db->createCommand(
+                    $sql . ' ORDER BY 1 LIMIT 100 OFFSET :offset',
+                    [':subject' => $context->subjectPersonId, ':offset' => $offset],
+                )->queryAll();
                 $records = [];
                 foreach ($rows as $row) {
                     $key = $row['storageKey'] ?? null;
@@ -92,8 +96,12 @@ final readonly class PersonalDataContributor implements Contributor
                         try {
                             while (!feof($stream)) {
                                 $bytes = fread($stream, 4096);
-                                if ($bytes === false) throw new DomainException('Storage export read failed.');
-                                if ($bytes === '') break;
+                                if ($bytes === false) {
+                                    throw new DomainException('Storage export read failed.');
+                                }
+                                if ($bytes === '') {
+                                    break;
+                                }
                                 hash_update($hash, $bytes);
                                 $size += strlen($bytes);
                                 $records[] = ['type' => 'content_chunk', 'versionId' => $row['id'], 'chunk' => $chunk++,
@@ -111,11 +119,12 @@ final readonly class PersonalDataContributor implements Contributor
                         }
                     }
                 }
-                if ($records !== []) yield new PersonalDataSection($this->code(), $this->categories(), $records);
+                if ($records !== []) {
+                    yield new PersonalDataSection($this->code(), $this->categories(), $records);
+                }
                 $offset += count($rows);
             } while (count($rows) === 100);
         }
 
     }
 }
-

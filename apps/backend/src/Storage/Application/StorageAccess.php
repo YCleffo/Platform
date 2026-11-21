@@ -26,7 +26,13 @@ final readonly class StorageAccess
         } catch (EducationError $error) {
             throw new StorageError($error->status, $error->reason);
         }
-        return new StorageScope($scope->organizationId, $scope->accountId, $scope->personId,
-            $scope->locale, $scope->timezone, (string) $scope->studentId);
+        return new StorageScope(
+            $scope->organizationId,
+            $scope->accountId,
+            $scope->personId,
+            $scope->locale,
+            $scope->timezone,
+            (string) $scope->studentId,
+        );
     }
 }

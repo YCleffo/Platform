@@ -11,8 +11,14 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 final class CleanupObjectsCommand extends Command
 {
-    public function __construct(private readonly EducationObjectCleanup $cleanup) { parent::__construct(); }
-    protected function configure(): void { $this->setName('education:cleanup-objects')->setDescription('Reconcile expired transfers and delete unreferenced Education S3 objects.'); }
+    public function __construct(private readonly EducationObjectCleanup $cleanup)
+    {
+        parent::__construct();
+    }
+    protected function configure(): void
+    {
+        $this->setName('education:cleanup-objects')->setDescription('Reconcile expired transfers and delete unreferenced Education S3 objects.');
+    }
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln(json_encode($this->cleanup->run(), JSON_THROW_ON_ERROR));
