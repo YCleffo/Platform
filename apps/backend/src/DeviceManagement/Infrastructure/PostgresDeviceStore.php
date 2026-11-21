@@ -334,7 +334,7 @@ final readonly class PostgresDeviceStore implements DeviceStore
                 [':device' => $deviceId, ':hash' => $credentialHash],
             )->queryScalar();
             $this->db->createCommand(
-                "UPDATE device_management.devices SET enrollment_state='confirmed',status='OFFLINE',state_version=state_version+1 WHERE id=CAST(:device AS uuid)",
+                "UPDATE device_management.devices SET enrollment_state='confirmed',status='AVAILABLE',last_seen_at=now(),state_version=state_version+1 WHERE id=CAST(:device AS uuid)",
                 [':device' => $deviceId],
             )->execute();
             return ['deviceId' => $deviceId, 'credentialId' => (string) $credential];

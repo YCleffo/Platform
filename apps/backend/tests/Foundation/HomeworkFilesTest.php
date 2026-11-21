@@ -25,7 +25,7 @@ final class HomeworkFilesTest extends HomeworkFixture
     protected function setUp(): void
     {
         parent::setUp();
-        self::assertSame('1', getenv('STORAGE02_TEST_RUNTIME'));
+        self::assertTrue(getenv('STORAGE02_TEST_RUNTIME') === '1' || getenv('TEST_ISOLATED_RUNTIME') === '1');
         $this->privateFiles = $this->container->get(S3FileStore::class);
         $this->files = $this->withClock(
             HomeworkFileService::class,

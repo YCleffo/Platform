@@ -267,6 +267,11 @@ final readonly class ParentFamily
                 throw new EducationError(409, 'identity_conflict');
             }
             $token = $this->tokens->issue();
+            $expiresAt = new \DateTimeImmutable((string) $invite['expires_at']);
+            $now = new \DateTimeImmutable();
+            if ($expiresAt <= $now) {
+                $expiresAt = $now->modify('+72 hours');
+            }
             $this->challenges->storeChallenge(new CreateAuthChallengeCommand(
                 $account->id,
                 'account_activation',
@@ -274,7 +279,7 @@ final readonly class ParentFamily
                 $normalized,
                 ['purpose' => 'account_activation'],
                 5,
-                $invite['expires_at'],
+                $expiresAt->format(DATE_ATOM),
             ));
             if (!$this->activation->execute($token->raw, $password, $context)) {
                 throw new EducationError(409, 'core_activation_failed');

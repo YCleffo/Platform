@@ -441,7 +441,6 @@
   <file src="src/Education/Application/ParentFamily.php">
     <MixedArgument>
       <code><![CDATA[$invite['created_by_account_id']]]></code>
-      <code><![CDATA[$invite['expires_at']]]></code>
       <code><![CDATA[$invite['guardian_person_id']]]></code>
       <code><![CDATA[$invite['organization_id']]]></code>
       <code><![CDATA[$person]]></code>
@@ -465,7 +464,6 @@
       <code><![CDATA[$row['student_id']]]></code>
       <code><![CDATA[$row['usedAt']]]></code>
     </MixedArgument>
-    <MixedArgumentTypeCoercion/>
     <PossiblyNullArrayAccess>
       <code><![CDATA[$invite['id']]]></code>
       <code><![CDATA[$this->education->student($scope, $studentId)['personId']]]></code>

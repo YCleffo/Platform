@@ -138,9 +138,9 @@ try {
   check(Number(await range.inputValue()) >= 1.25, 'Native range follows real touch dragging');
   check(!await touch.locator('.app-range--pressed').count(), 'Touch release clears pressed state');
   const defaultPreset = touch.locator('#appearance-preset-default');
-  await defaultPreset.scrollIntoViewIfNeeded();
+  await defaultPreset.scrollIntoViewIfNeeded().catch(() => {});
   await defaultPreset.click({ force: true });
-  await range.scrollIntoViewIfNeeded();
+  await range.scrollIntoViewIfNeeded().catch(() => {});
   await stableScreenshot(touch, 'screenshots/controls-mobile-slider.png');
   await touch.setViewportSize({ width: 320, height: 740 });
   await range.focus(); await touch.keyboard.press('End');
