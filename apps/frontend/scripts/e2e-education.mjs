@@ -199,6 +199,10 @@ try {
   const group = (await api('/groups')).items.find((item) => item.name === 'Группа ВС 11:00');
   assert.ok(group);
   await page.getByRole('link', { name: 'Добавить ученика', exact: true }).click();
+  const existingTab = page.locator('button', { hasText: /Выбрать существующего|Choose existing/ });
+  if (await existingTab.isVisible()) {
+    await existingTab.click();
+  }
   await selectDropdown(page, 'education-create-person', seeded.candidates[0].id);
   await page.locator('form button[type=submit]').click();
   await page.waitForURL((url) => url.pathname === '/people' || url.pathname.startsWith('/groups/'));
@@ -473,13 +477,11 @@ try {
     /data:image\/png;base64,([A-Za-z0-9+/=\s]+)/,
   )?.[1];
   assert.ok(avatarData, 'Canonical profile image is missing.');
-  await page
-    .locator('#education-avatar-file')
-    .setInputFiles({
-      name: 'profile.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from(avatarData, 'base64'),
-    });
+  await page.locator('#education-avatar-file').setInputFiles({
+    name: 'profile.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(avatarData, 'base64'),
+  });
   await page.locator('#education-display-name').fill('Юрий');
   await page.locator('form').first().locator('button[type=submit]').click();
   await page.locator('.edu-avatar img').waitFor();
