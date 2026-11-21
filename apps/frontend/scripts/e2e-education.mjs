@@ -223,6 +223,7 @@ try {
   await page.locator('.edu-navigation a[href="/people"]').click();
   await page.getByRole('link', { name: 'Группы', exact: true }).click();
   await page.getByRole('link', { name: 'Открыть группу', exact: true }).click();
+  await page.reload();
   await page.locator('[data-student-id]').first().waitFor();
   assert.equal(await page.locator('[data-student-id]').count(), 12);
   assert.equal((await api(`/groups/${group.id}/students`)).items.length, 12);
@@ -410,6 +411,7 @@ try {
   await page.locator('.edu-navigation a[href="/people"]').click();
   await page.getByRole('link', { name: 'Группы', exact: true }).click();
   await page.getByRole('link', { name: 'Открыть группу', exact: true }).click();
+  await page.reload();
   await page.getByRole('button', { name: 'Архивировать', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Архивировать', exact: true }).click();
   await page.getByText('Группа в архиве. История занятий сохранена.', { exact: true }).waitFor();
