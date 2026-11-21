@@ -31,7 +31,11 @@ const name = ref('');
 const initialGroupId = typeof route.query.group === 'string' ? route.query.group : '';
 const groupId = ref(initialGroupId);
 const personId = ref('');
-const studentMode = ref('new');
+const studentMode = ref(
+  typeof route.query.mode === 'string' && ['new', 'existing'].includes(route.query.mode)
+    ? route.query.mode
+    : 'new',
+);
 const givenName = ref('');
 const familyName = ref('');
 const middleName = ref('');

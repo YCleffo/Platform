@@ -199,10 +199,16 @@ try {
   const group = (await api('/groups')).items.find((item) => item.name === 'Группа ВС 11:00');
   assert.ok(group);
   await page.getByRole('link', { name: 'Добавить ученика', exact: true }).click();
+  await page.waitForURL((url) => url.pathname.includes('/students/new'));
   const existingTab = page.locator('button', { hasText: /Выбрать существующего|Choose existing/ });
-  if (await existingTab.isVisible()) {
-    await existingTab.click();
-  }
+  await existingTab.waitFor({ state: 'visible' });
+  await existingTab.click();
+  await page.waitForFunction(() => {
+    const btn = Array.from(document.querySelectorAll('button')).find((b) =>
+      /Выбрать существующего|Choose existing/.test(b.textContent || ''),
+    );
+    return btn && btn.getAttribute('aria-pressed') === 'true';
+  });
   await selectDropdown(page, 'education-create-person', seeded.candidates[0].id);
   await page.locator('form button[type=submit]').click();
   await page.waitForURL((url) => url.pathname === '/people' || url.pathname.startsWith('/groups/'));
