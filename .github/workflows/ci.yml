@@ -6,12 +6,6 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      profile:
-        description: Full acceptance CI or fast feedback CI
-        type: choice
-        options: [full, fast]
-        default: full
 
 env:
   COMPOSE_FILE: compose.yaml:compose.ci.yaml
@@ -20,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: platform-ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.profile || 'full' }}
+  group: platform-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -148,7 +142,6 @@ jobs:
 
   backend-fast:
     name: Core В· fast feedback
-    if: github.event_name == 'workflow_dispatch' && inputs.profile == 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
@@ -228,7 +221,6 @@ jobs:
 
   control-fast:
     name: Commercial В· fast feedback
-    if: github.event_name == 'workflow_dispatch' && inputs.profile == 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
@@ -270,7 +262,6 @@ jobs:
 
   backend-qa:
     name: Core В· quality and tests
-    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -422,7 +413,6 @@ jobs:
 
   control-plane-qa:
     name: Commercial В· quality and tests
-    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -590,7 +580,6 @@ jobs:
 
   infrastructure-images:
     name: Image security В· ${{ matrix.plane }}
-    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
@@ -632,7 +621,6 @@ jobs:
 
   cross-plane-e2e:
     name: Core в†” Commercial В· E2E
-    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -764,7 +752,6 @@ jobs:
       - name: Production build
         run: npm run build
       - name: Verify appearance, accessibility, core and commercial UI in parallel
-        if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
         env:
           BASE_URL: http://127.0.0.1:4174
           VERIFY_CONCURRENCY: "4"
@@ -772,19 +759,18 @@ jobs:
           PLAYWRIGHT_DOCKER_NETWORK: bridge
         run: bash ../../scripts/ci/playwright-run.sh bash ../../scripts/ci/verify-browser-suite.sh
       - name: Upload browser verification evidence
-        if: always() && (github.event_name != 'workflow_dispatch' || inputs.profile != 'fast')
+        if: always()
         uses: actions/upload-artifact@v6
         with:
           name: frontend-browser-verification-${{ github.run_id }}
           path: apps/frontend/screenshots
           if-no-files-found: ignore
       - name: Diagnose failed preview
-        if: failure() && (github.event_name != 'workflow_dispatch' || inputs.profile != 'fast')
+        if: failure()
         run: cat screenshots/vite-verify.log || true
 
   core-auth-browser:
     name: Core В· account browser E2E
-    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -972,7 +958,6 @@ jobs:
 
   billing-periodic:
     name: Billing В· renewal and recovery
-    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -1080,7 +1065,6 @@ jobs:
 
   browser-e2e:
     name: Frontend В· browser E2E
-    if: github.event_name != 'workflow_dispatch' || inputs.profile != 'fast'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
