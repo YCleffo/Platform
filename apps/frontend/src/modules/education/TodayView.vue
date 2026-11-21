@@ -45,7 +45,7 @@ const resource = useEducationResource(
 );
 const { data, loading, error, refresh } = resource;
 const quick = [
-  { key: 'programs', path: '/programs', icon: Book, tone: 'primary' },
+  { key: 'currentLesson', path: '/lessons/current', icon: ChevronRight, tone: 'primary' },
   { key: 'createLesson', path: '/lessons/new', icon: Plus, tone: 'success' },
   { key: 'createGroup', path: '/groups/new', icon: People, tone: 'warning' },
   { key: 'addStudent', path: '/students/new', icon: UserPlus, tone: 'info' },
