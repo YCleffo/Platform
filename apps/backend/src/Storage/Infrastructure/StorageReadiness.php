@@ -10,8 +10,17 @@ final readonly class StorageReadiness
 {
     public function __construct(private ContainerInterface $container) {}
 
+    public function isConfigured(): bool
+    {
+        $key = getenv('S3_ACCESS_KEY_ID');
+        return is_string($key) && $key !== '';
+    }
+
     public function ready(): bool
     {
+        if (!$this->isConfigured()) {
+            return true;
+        }
         return $this->failureReason() === null;
     }
 

@@ -821,18 +821,22 @@ onBeforeUnmount(deactivateOverlay);
 }
 
 /* Animations */
-.mobile-menu-enter-active,
-.mobile-menu-leave-active {
+.mobile-menu-enter-active {
   transition:
     var(--theme-transition),
     opacity var(--motion-control-duration) var(--motion-ease);
 }
+.mobile-menu-leave-active {
+  transition: opacity var(--motion-leave-duration) var(--motion-ease);
+}
 
-.mobile-menu-enter-active .mobile-menu__panel,
-.mobile-menu-leave-active .mobile-menu__panel {
+.mobile-menu-enter-active .mobile-menu__panel {
   transition:
     var(--theme-transition),
     transform var(--motion-control-duration) var(--motion-ease);
+}
+.mobile-menu-leave-active .mobile-menu__panel {
+  transition: transform var(--motion-leave-duration) var(--motion-ease);
 }
 
 .mobile-menu-enter-from,

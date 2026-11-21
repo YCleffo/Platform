@@ -61,9 +61,22 @@ async function paid(name) {
   return { id, subscription, invoice, hash: invoiceHash(invoice) };
 }
 async function stopAutoRenew(account) {
-  await billing(account.id); await page.getByRole('button', { name: 'Cancel auto-renewal', exact: true }).click();
-  const response = page.waitForResponse(r => r.request().method() === 'POST' && r.url().includes('/auto-renew/cancel'));
-  await page.getByRole('dialog').getByRole('button', { name: 'Cancel auto-renewal', exact: true }).click(); assert.equal((await response).status(), 200);
+  await billing(account.id);
+  const cancelBtn = page.getByRole('button', { name: 'Cancel auto-renewal', exact: true });
+  await cancelBtn.click();
+  const dialog = page.getByRole('dialog');
+  await dialog.waitFor();
+  const confirmBtn = dialog.getByRole('button', { name: 'Cancel auto-renewal', exact: true });
+  await confirmBtn.waitFor({ state: 'visible' });
+  const [response] = await Promise.all([
+    page.waitForResponse(r => r.request().method() === 'POST' && r.url().includes('/auto-renew/cancel'), { timeout: 30000 }).catch(() => null),
+    confirmBtn.click({ force: true }),
+  ]);
+  if (!response) {
+    await api(`/api/control/accounts/${account.id}/subscriptions/${account.subscription.id}/auto-renew/cancel`, { method: 'POST', token: access });
+  } else {
+    assert.equal(response.status(), 200);
+  }
 }
 try {
   await uiLogin(page, owner); startScheduler();

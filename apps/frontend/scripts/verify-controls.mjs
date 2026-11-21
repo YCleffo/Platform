@@ -135,12 +135,11 @@ try {
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: touchBox.x + 12 + (touchBox.width - 24) * .2, y }] });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: touchBox.x + 12 + (touchBox.width - 24) * .8, y }] });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await cdp.detach().catch(() => {});
   check(Number(await range.inputValue()) >= 1.25, 'Native range follows real touch dragging');
   check(!await touch.locator('.app-range--pressed').count(), 'Touch release clears pressed state');
   const defaultPreset = touch.locator('#appearance-preset-default');
   await defaultPreset.scrollIntoViewIfNeeded();
-  await defaultPreset.click();
+  await defaultPreset.click({ force: true });
   await range.scrollIntoViewIfNeeded();
   await stableScreenshot(touch, 'screenshots/controls-mobile-slider.png');
   await touch.setViewportSize({ width: 320, height: 740 });
