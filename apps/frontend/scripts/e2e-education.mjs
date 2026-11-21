@@ -93,7 +93,7 @@ async function session(actor, width = 393) {
       }
     }
   });
-  await page.goto(`${env.APP_URL}/education/login`);
+  await page.goto(`${env.APP_URL}/education/login?redirect=/today`);
   await page.locator('#education-email').fill(actor.email);
   await page.locator('#education-password').fill(actor.password);
   await page.locator('form button[type=submit]').click();
