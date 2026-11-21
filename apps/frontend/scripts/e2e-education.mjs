@@ -195,8 +195,12 @@ try {
   await page.locator('[data-action="createGroup"]').click();
   await page.locator('#education-create-title').fill('Группа ВС 11:00');
   await page.locator('form button[type=submit]').click();
-  await page.waitForURL((url) => url.pathname === '/people' || url.pathname.startsWith('/groups/'));
-  const group = (await api('/groups')).items.find((item) => item.name === 'Группа ВС 11:00');
+  await page.waitForURL((url) => url.pathname !== '/groups/new' && (url.pathname === '/people' || /^\/groups\/[0-9a-f-]+$/.test(url.pathname)));
+  let group;
+  await eventually(async () => {
+    group = (await api('/groups')).items.find((item) => item.name === 'Группа ВС 11:00');
+    return Boolean(group);
+  }, 'Group was not found in /groups list');
   assert.ok(group);
   await page.getByRole('link', { name: 'Добавить ученика', exact: true }).click();
   await page.waitForURL((url) => url.pathname.includes('/students/new'));

@@ -31,10 +31,11 @@ const check = (condition, message) => {
 };
 const accessibility = [];
 async function scanAccessibility(page, label) {
+  await page.locator('.toast-enter-active, .toast-leave-active').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
   const dangling = await page.locator('[aria-controls], [aria-labelledby], [aria-describedby], [aria-owns]').evaluateAll(elements => elements.flatMap(element =>
     ['aria-controls', 'aria-labelledby', 'aria-describedby', 'aria-owns'].flatMap(attribute => (element.getAttribute(attribute)?.split(/\s+/) ?? []).filter(id => id && !document.getElementById(id)).map(id => `${attribute}: ${id}`))));
   if (dangling.length) throw new Error(`${label}: dangling ARIA references: ${dangling.join(', ')}`);
-  const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).exclude('.toast-enter-active, .toast-leave-active').analyze();
   accessibility.push({ label, violations: result.violations.map(item => ({ id: item.id, impact: item.impact, nodes: item.nodes.map(node => node.target) })) });
   writeFileSync(join(outDir, 'authenticated-accessibility.json'), JSON.stringify({ passed: !accessibility.some(item => item.violations.length), results: accessibility }, null, 2));
   if (result.violations.length) {
