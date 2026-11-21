@@ -64,7 +64,7 @@ async function savePreferences(): Promise<void> {
   await mutation.run(
     () => coreAccount.patchPreferences({ locale: locale.value, timezone: timezone.value }),
     async () => {
-      await workspace.refreshHeader();
+      await workspace.refreshHeader(true);
       saved.value = true;
     },
   );

@@ -27,7 +27,7 @@ export const useEducationWorkspace = defineStore('educationWorkspace', () => {
     scopeEducationCache(id); headerController?.abort(); revision.value++; header.value = null; headerError.value = null; organizationId.value = id;
   }
   async function refreshHeader(force = false): Promise<void> {
-    if (force) invalidateEducationCache(['lessons']);
+    if (force) invalidateEducationCache(['header', 'lessons', 'profile']);
     headerController?.abort(); const controller = new AbortController(); headerController = controller;
     const org = organizationId.value; const version = revision.value; const epoch = coreAdminSession.epoch();
     if (!org) return;
