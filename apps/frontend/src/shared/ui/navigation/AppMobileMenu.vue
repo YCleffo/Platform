@@ -827,7 +827,10 @@ onBeforeUnmount(deactivateOverlay);
     opacity var(--motion-control-duration) var(--motion-ease);
 }
 .mobile-menu-leave-active {
-  transition: opacity var(--motion-leave-duration) var(--motion-ease);
+  --motion-color-duration: var(--motion-leave-duration);
+  transition:
+    var(--theme-transition),
+    opacity var(--motion-leave-duration) var(--motion-ease);
 }
 
 .mobile-menu-enter-active .mobile-menu__panel {
@@ -836,7 +839,10 @@ onBeforeUnmount(deactivateOverlay);
     transform var(--motion-control-duration) var(--motion-ease);
 }
 .mobile-menu-leave-active .mobile-menu__panel {
-  transition: transform var(--motion-leave-duration) var(--motion-ease);
+  --motion-color-duration: var(--motion-leave-duration);
+  transition:
+    var(--theme-transition),
+    transform var(--motion-leave-duration) var(--motion-ease);
 }
 
 .mobile-menu-enter-from,

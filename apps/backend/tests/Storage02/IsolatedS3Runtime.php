@@ -25,9 +25,12 @@ final class IsolatedS3Runtime
             && $config->internalEndpoint === 'http://seaweedfs:8333'
             && $config->bucketStorage === 'storage02-test-storage'
             && $config->bucketEducation === 'storage02-test-education';
+        $ciTest = $config->bucketStorage === 'ci-test-storage'
+            && $config->bucketEducation === 'ci-test-education'
+            && in_array($config->internalEndpoint, ['http://seaweedfs-test:8333', 'http://seaweedfs:8333'], true);
 
         $public = parse_url($config->publicEndpoint);
-        if ((!$localEducation && !$storage02) || !is_array($public)
+        if ((!$localEducation && !$storage02 && !$ciTest) || !is_array($public)
             || ($public['scheme'] ?? null) !== 'http'
             || !in_array($public['host'] ?? null, ['127.0.0.1', 'localhost'], true)
             || !isset($public['port'])) {
