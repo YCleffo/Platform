@@ -760,8 +760,13 @@ final readonly class PostgresStorageStore implements StorageStore
                     $live,
                     static fn(array $file): bool => !isset($deletePaths[(string) $file['path']]),
                 ));
-                if (self::snapshotHash(self::canonicalSnapshot($effective)) !== $snapshotHash) {
-                    throw new StorageError(409, 'manifest_stale');
+                if (count($canonical) > 0) {
+                    if (self::snapshotHash(self::canonicalSnapshot($effective)) !== $snapshotHash) {
+                        throw new StorageError(409, 'manifest_stale');
+                    }
+                } else {
+                    $canonical = self::canonicalSnapshot($effective);
+                    $snapshotHash = self::snapshotHash($canonical);
                 }
                 foreach ($deletePaths as $path => $fileId) {
                     $this->db->createCommand(

@@ -2,8 +2,24 @@ import { chromium } from 'playwright';
 
 /** Exercise the real menu button and option; no DOM assignments or native select shortcuts. */
 export async function selectDropdown(page, id, value) {
-  await page.locator(`[id="${id}"]`).click();
-  await page.locator(`[id="${id}-menu"] [data-menu-id="${value}"]`).click();
+  const trigger = page.locator(`[id="${id}"]`);
+  await trigger.waitFor({ state: 'visible' });
+  const option = page.locator(`[id="${id}-menu"] [data-menu-id="${value}"]`);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const isExpanded = (await trigger.getAttribute('aria-expanded').catch(() => null)) === 'true';
+    if (!isExpanded) {
+      await trigger.click();
+    }
+    try {
+      await option.waitFor({ state: 'visible', timeout: 3000 });
+      await option.click();
+      return;
+    } catch {
+      // Retry opening if closed
+    }
+  }
+  await trigger.click();
+  await option.click();
 }
 
 export async function stableScreenshot(page, path) {
@@ -50,7 +66,10 @@ export async function waitForMailToken(
 }
 
 export async function waitForVerificationToken(mailpit, email) {
-  return waitForMailToken(mailpit, email, { pattern: /verify-email\?token=([^\s"'<>&]+)/, timeout: 60_000 });
+  return waitForMailToken(mailpit, email, {
+    pattern: /verify-email\?token=([^\s"'<>&]+)/,
+    timeout: 60_000,
+  });
 }
 
 export async function registerAndVerify({ api, mailpit, email, password }) {
@@ -59,7 +78,8 @@ export async function registerAndVerify({ api, mailpit, email, password }) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  if (registered.status !== 202) throw new Error(`Register ${email} failed: HTTP ${registered.status}`);
+  if (registered.status !== 202)
+    throw new Error(`Register ${email} failed: HTTP ${registered.status}`);
   const token = await waitForVerificationToken(mailpit, email);
   const verified = await fetch(`${api}/api/control/auth/verify`, {
     method: 'POST',
@@ -78,7 +98,9 @@ export async function submitLogin(page, email, password) {
 
 export async function createCommercialAccount(page, code, name) {
   await page.locator('button', { hasText: 'Create account' }).first().click();
-  const createDialog = page.locator('[role="dialog"]').filter({ hasText: 'Create a commercial account' });
+  const createDialog = page
+    .locator('[role="dialog"]')
+    .filter({ hasText: 'Create a commercial account' });
   await createDialog.waitFor({ state: 'visible' });
   await createDialog.locator('#account-code').fill(code);
   await createDialog.locator('#account-name').fill(name);
@@ -87,9 +109,12 @@ export async function createCommercialAccount(page, code, name) {
     await createDialog.waitFor({ state: 'hidden', timeout: 20_000 });
   } catch (error) {
     const messages = await createDialog.locator('[role="alert"]').allTextContents();
-    throw new Error(`Create account did not complete: ${messages.join('; ') || 'no API error displayed'}`, {
-      cause: error,
-    });
+    throw new Error(
+      `Create account did not complete: ${messages.join('; ') || 'no API error displayed'}`,
+      {
+        cause: error,
+      },
+    );
   }
 
   const link = page.locator('a[href^="/accounts/"]').filter({ hasText: name }).first();
@@ -107,14 +132,22 @@ export async function navigateClientSide(page, path) {
 }
 
 export async function assertPrimaryNavigation(page, path) {
-  const expected = path.startsWith('/settings') ? '/settings' : path.startsWith('/accounts/') ? '/cabinet' : path;
+  const expected = path.startsWith('/settings')
+    ? '/settings'
+    : path.startsWith('/accounts/')
+      ? '/cabinet'
+      : path;
   // history.pushState updates the URL before Vue Router resolves lazy views.
   // Wait for both navigation components, not a heading left on the previous page.
   const selectors = ['.app-layout__nav-link--active', '.app-bottom-nav__link--active'];
-  await page.waitForFunction(({ selectors, expected }) => selectors.every(selector => {
-    const active = document.querySelectorAll(selector);
-    return active.length === 1 && active[0].getAttribute('href') === expected;
-  }), { selectors, expected });
+  await page.waitForFunction(
+    ({ selectors, expected }) =>
+      selectors.every((selector) => {
+        const active = document.querySelectorAll(selector);
+        return active.length === 1 && active[0].getAttribute('href') === expected;
+      }),
+    { selectors, expected },
+  );
 }
 
 export async function verifySecuritySession(page) {
@@ -131,8 +164,15 @@ export async function assertAccountNavigation(page, path) {
   if ((await active.count()) !== 1 || (await active.getAttribute('href')) !== path) {
     throw new Error(`Account navigation does not select only ${path}.`);
   }
-  const indicators = await page.locator('.account-layout__tabs a').evaluateAll(tabs => tabs.filter(tab => !['none', 'normal'].includes(getComputedStyle(tab, '::after').content)).map(tab => tab.getAttribute('href')));
-  if (indicators.length !== 1 || indicators[0] !== path) throw new Error(`Account navigation has stale visual indicators: ${indicators}`);
+  const indicators = await page
+    .locator('.account-layout__tabs a')
+    .evaluateAll((tabs) =>
+      tabs
+        .filter((tab) => !['none', 'normal'].includes(getComputedStyle(tab, '::after').content))
+        .map((tab) => tab.getAttribute('href')),
+    );
+  if (indicators.length !== 1 || indicators[0] !== path)
+    throw new Error(`Account navigation has stale visual indicators: ${indicators}`);
 }
 
 export function dialog(page, title) {

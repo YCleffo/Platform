@@ -175,7 +175,11 @@ final class DeviceManagementTest extends TestCase
         $agent = $this->service->agentEnroll(['code' => $enrollment['code']]);
 
         $session = $this->service->write('device_session', $this->scope, ['studentId' => $student['id']], $device['id']);
-        foreach (['PREPARING', 'WINDOWS_PROFILE_READY', 'SYNCING_IN', 'ACTIVE', 'ENDING', 'SYNCING_OUT'] as $status) {
+        foreach (['PREPARING', 'WINDOWS_PROFILE_READY', 'SYNCING_IN', 'ACTIVE'] as $status) {
+            $this->service->agentSessionState($device['id'], $session['id'], ['status' => $status]);
+        }
+        $this->service->write('device_session_end', $this->scope, ['sessionId' => $session['id']], $device['id']);
+        foreach (['ENDING', 'SYNCING_OUT'] as $status) {
             $this->service->agentSessionState($device['id'], $session['id'], ['status' => $status]);
         }
         $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'SYNC_PENDING']);
