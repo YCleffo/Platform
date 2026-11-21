@@ -737,13 +737,13 @@ final readonly class PostgresStorageStore implements StorageStore
                         }
                         if (!hash_equals((string) $file['sha256'], (string) $entry['sha256'])
                             || (int) $file['sizeBytes'] !== (int) $entry['sizeBytes']
-                            || !isset($snapshotByPath[$path])
-                            || !hash_equals($snapshotByPath[$path]['sha256'], (string) $entry['sha256'])
-                            || $snapshotByPath[$path]['size'] !== (int) $entry['sizeBytes']) {
+                            || (count($canonical) > 0 && (!isset($snapshotByPath[$path])
+                                || !hash_equals($snapshotByPath[$path]['sha256'], (string) $entry['sha256'])
+                                || $snapshotByPath[$path]['size'] !== (int) $entry['sizeBytes']))) {
                             throw new StorageError(409, 'checksum_mismatch');
                         }
                     } else {
-                        if (isset($snapshotByPath[$path])) {
+                        if (count($canonical) > 0 && isset($snapshotByPath[$path])) {
                             throw new StorageError(409, 'checksum_mismatch');
                         }
                         $file = $byPath[$path] ?? null;

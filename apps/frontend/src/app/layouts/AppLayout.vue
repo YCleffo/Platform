@@ -67,6 +67,8 @@ let touchStartY = 0;
 let touchStartTime = 0;
 
 function onTouchStart(event: TouchEvent): void {
+  const target = event.target as HTMLElement | null;
+  if (target?.closest('input, textarea, select, [role="slider"], .app-range')) return;
   const touch = event.changedTouches[0];
   if (!touch) return;
   touchStartX = touch.clientX;
@@ -75,11 +77,20 @@ function onTouchStart(event: TouchEvent): void {
 }
 
 function onTouchEnd(event: TouchEvent): void {
+  if (touchStartX === 0 && touchStartY === 0) return;
+  const target = event.target as HTMLElement | null;
+  if (target?.closest('input, textarea, select, [role="slider"], .app-range')) {
+    touchStartX = 0;
+    touchStartY = 0;
+    return;
+  }
   const touch = event.changedTouches[0];
   if (!touch) return;
   const dx = touch.clientX - touchStartX;
   const dy = touch.clientY - touchStartY;
   const dt = performance.now() - touchStartTime;
+  touchStartX = 0;
+  touchStartY = 0;
 
   if (Math.abs(dx) >= 45 && Math.abs(dx) > Math.abs(dy) * 1.4 && dt < 500) {
     const currentIndex = bottomItems.value.findIndex(

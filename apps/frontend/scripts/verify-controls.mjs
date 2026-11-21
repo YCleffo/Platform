@@ -36,7 +36,7 @@ try {
   const formData = await nativeForm.evaluate(form => Object.fromEntries(new FormData(form).entries()));
   check(formData.username === 'Audit' && formData.updates === 'on', 'Native form attributes and values stay on the real controls');
   await page.locator('#demo-form-reset').click();
-  await page.waitForFunction(() => document.querySelector('#demo-form-name')?.value === '');
+  await page.waitForFunction(() => document.querySelector('#demo-form-model')?.textContent?.includes('—'));
   check(await formName.inputValue() === '' && !await page.locator('#demo-form-updates').isChecked(), 'Native reset restores the control state');
   const restored = (await page.locator('#demo-form-model').textContent())?.replace(/\s+/g, ' ').trim() ?? '';
   check(restored.includes('—') && restored.endsWith('off'), `Native reset restores the Vue state: ${restored}`);
@@ -129,20 +129,23 @@ try {
   }
   await touch.goto(`${base}/settings`, { waitUntil: 'networkidle' });
   const range = touch.locator('#appearance-font-scale'); await range.scrollIntoViewIfNeeded();
-  const touchBox = await range.boundingBox();
+  const touchBox = await range.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.left, y: r.top, width: r.width, height: r.height };
+  });
   const cdp = await mobile.newCDPSession(touch);
   const y = touchBox.y + touchBox.height / 2;
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: touchBox.x + 12 + (touchBox.width - 24) * .2, y }] });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: touchBox.x + 12 + (touchBox.width - 24) * .8, y }] });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await cdp.detach().catch(() => {});
   check(Number(await range.inputValue()) >= 1.25, 'Native range follows real touch dragging');
   check(!await touch.locator('.app-range--pressed').count(), 'Touch release clears pressed state');
-  const defaultPreset = touch.locator('#appearance-preset-default');
-  await defaultPreset.scrollIntoViewIfNeeded().catch(() => {});
-  await defaultPreset.click({ force: true });
-  await range.scrollIntoViewIfNeeded().catch(() => {});
+  await touch.evaluate(() => document.getElementById('appearance-preset-default')?.click());
+  await range.evaluate(el => el.scrollIntoView({ block: 'nearest' }));
   await stableScreenshot(touch, 'screenshots/controls-mobile-slider.png');
   await touch.setViewportSize({ width: 320, height: 740 });
+  await range.evaluate(el => el.scrollIntoView({ block: 'nearest' }));
   await range.focus(); await touch.keyboard.press('End');
   check(await touch.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), '320px with 140% text has no horizontal overflow');
   await stableScreenshot(touch, 'screenshots/controls-320-large-text.png');
