@@ -218,12 +218,13 @@ try {
       body: { groupId: group.id, personId: candidate.id },
       status: 201,
     });
+  await page.evaluate(() => window.__clearEducationCache?.());
   assert.equal((await api('/groups')).items.find((item) => item.id === group.id).studentCount, 12);
   const roster = (await api('/students')).items;
   await page.locator('.edu-navigation a[href="/people"]').click();
   await page.getByRole('link', { name: 'Группы', exact: true }).click();
   await page.getByRole('link', { name: 'Открыть группу', exact: true }).click();
-  await page.reload();
+  await page.waitForURL((url) => url.pathname === `/groups/${group.id}`);
   await page.locator('[data-student-id]').first().waitFor();
   assert.equal(await page.locator('[data-student-id]').count(), 12);
   assert.equal((await api(`/groups/${group.id}/students`)).items.length, 12);
@@ -411,7 +412,7 @@ try {
   await page.locator('.edu-navigation a[href="/people"]').click();
   await page.getByRole('link', { name: 'Группы', exact: true }).click();
   await page.getByRole('link', { name: 'Открыть группу', exact: true }).click();
-  await page.reload();
+  await page.waitForURL((url) => url.pathname === `/groups/${group.id}`);
   await page.getByRole('button', { name: 'Архивировать', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Архивировать', exact: true }).click();
   await page.getByText('Группа в архиве. История занятий сохранена.', { exact: true }).waitFor();
