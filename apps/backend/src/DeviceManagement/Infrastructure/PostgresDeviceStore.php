@@ -410,6 +410,9 @@ final readonly class PostgresDeviceStore implements DeviceStore
             if ($stateVersion !== null && (int) $device['stateVersion'] !== $stateVersion) {
                 throw new DeviceError(409, 'state_version_conflict');
             }
+            if ($device['enrollmentState'] === 'revoked') {
+                throw new DeviceError(409, 'device_revoked');
+            }
             if ($device['enrollmentState'] !== 'confirmed') {
                 throw new DeviceError(409, 'device_not_confirmed');
             }

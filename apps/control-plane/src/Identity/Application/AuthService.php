@@ -171,7 +171,8 @@ SQL, [$this->tokens->hash($token)]);
         /** @var array{status: string, access_token?: string, refresh_token?: string} $result */
         $result = $this->connection->transactional(function (Connection $connection) use ($hash, $ip, $userAgent, $correlationId): array {
             $session = $connection->fetchAssociative(<<<'SQL'
-SELECT s.*, u.email_normalized, u.status AS user_status
+SELECT s.*, u.email_normalized, u.status AS user_status,
+       (s.expires_at <= now())::int AS is_expired
 FROM commercial.control_sessions s
 JOIN commercial.control_users u ON u.id = s.control_user_id
 WHERE s.refresh_token_hash = decode(?, 'hex')
@@ -180,7 +181,8 @@ SQL, [$hash]);
             $reused = false;
             if ($session === false) {
                 $session = $connection->fetchAssociative(<<<'SQL'
-SELECT s.*, u.email_normalized, u.status AS user_status
+SELECT s.*, u.email_normalized, u.status AS user_status,
+       (s.expires_at <= now())::int AS is_expired
 FROM commercial.control_session_refresh_history h
 JOIN commercial.control_sessions s ON s.id = h.control_session_id
 JOIN commercial.control_users u ON u.id = s.control_user_id
@@ -201,7 +203,7 @@ SQL, [$hash]);
             if ($session['revoked_at'] !== null || $session['user_status'] !== 'active') {
                 return ['status' => 'revoked'];
             }
-            if (strtotime((string) $session['expires_at']) <= time()) {
+            if ((int) ($session['is_expired'] ?? 0) === 1 || strtotime((string) $session['expires_at']) <= time()) {
                 $connection->executeStatement("UPDATE commercial.control_sessions SET revoked_at = now(), revoke_reason = 'expired' WHERE id = ?", [$session['id']]);
 
                 return ['status' => 'expired'];
@@ -213,7 +215,7 @@ SQL, [$hash]);
 UPDATE commercial.control_sessions
 SET previous_refresh_token_hash = refresh_token_hash,
     refresh_token_hash = decode(?, 'hex'), access_token_hash = decode(?, 'hex'),
-    access_expires_at = now() + (? * interval '1 second'), generation = generation + 1,
+    access_expires_at = LEAST(expires_at, now() + (? * interval '1 second')), generation = generation + 1,
     rotated_at = now(), last_used_at = now(), ip_hash = decode(?, 'hex'), user_agent = ?
 WHERE id = ?
 SQL, [$this->tokens->hash($newRefreshToken), $this->tokens->hash($accessToken), $this->accessTokenTtlSeconds, $this->tokens->pseudonym($ip), mb_substr($userAgent, 0, 300), $session['id']]);

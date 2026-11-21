@@ -13,7 +13,16 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${ROOT_DIR}"
 
 echo "=== Stopping Isolated Test Infrastructure ==="
-docker compose --profile test rm --stop --force backend-production-smoke backend-test db-migrate-test postgres-test redis-test mailpit-core-test seaweedfs-test s3-init-test
+docker compose --profile test rm --stop --force backend-production-smoke backend-test db-migrate-test postgres-test redis-test mailpit-core-test
+
+if docker compose config --services 2>/dev/null | grep -q '^seaweedfs-test$'; then
+  docker compose --profile test rm --stop --force seaweedfs-test s3-init-test
+fi
+
+s3_containers="$(docker ps -a --filter "name=${test_project}-seaweedfs-test" --filter "name=${test_project}-s3-init-test" -q 2>/dev/null || true)"
+if [[ -n "${s3_containers}" ]]; then
+  docker rm -f ${s3_containers} >/dev/null 2>&1 || true
+fi
 
 # Remove only explicit test resources; never the runtime volumes.
 test_project="${COMPOSE_PROJECT_NAME:-platform}"
