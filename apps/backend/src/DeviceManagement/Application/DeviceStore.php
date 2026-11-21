@@ -81,11 +81,18 @@ interface DeviceStore
     /** @return list<array<string,mixed>> */
     public function deviceEvents(Scope $scope, string $deviceId, int $offset): array;
     public function markSeen(string $deviceId): void;
+    /** @return array<string,mixed> */
     public function agentInfo(string $deviceId): array;
+    /** @return array<string,mixed> */
     public function restoreClassroom(Scope $scope, string $id): array;
+    /** @return array<string,mixed> */
     public function lifecycleDetails(Scope $scope, string $deviceId): array;
+    /** @return list<array<string,mixed>> */
     public function commands(Scope $scope, string $deviceId, int $offset = 0): array;
+    /** @return array<string,mixed> */
     public function cancelAssignment(Scope $scope, string $deviceId, string $sessionId, ?int $stateVersion): array;
+    /** @return array<string,mixed> */
     public function retryRecovery(Scope $scope, string $deviceId, ?int $stateVersion): array;
+    /** @return array<string,mixed> */
     public function requestLocalSessionEnd(string $deviceId, string $sessionId): array;
 }

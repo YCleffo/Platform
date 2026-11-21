@@ -33,7 +33,9 @@ final readonly class PersonalDataExporter
         foreach ($this->sections($context) as $section) {
             $encoded = $this->encode($section->toArray());
             $estimatedBytes += strlen($encoded);
-            if ($estimatedBytes > $this->maxTotalBytes) throw new PersonalDataExportLimitException('Export exceeds total size limit.');
+            if ($estimatedBytes > $this->maxTotalBytes) {
+                throw new PersonalDataExportLimitException('Export exceeds total size limit.');
+            }
             $sections[] = $section;
         }
         $document = ['schemaVersion' => self::SCHEMA_VERSION,
@@ -66,7 +68,9 @@ final readonly class PersonalDataExporter
     {
         // PHP creates a private temporary file and removes it when the last stream owner closes it.
         $stream = tmpfile();
-        if ($stream === false) throw new DomainException('Export temporary storage is unavailable.');
+        if ($stream === false) {
+            throw new DomainException('Export temporary storage is unavailable.');
+        }
         $size = 0;
         $hash = hash_init('sha256');
         $write = function (string $bytes) use ($stream, $hash, &$size): void {
@@ -77,7 +81,9 @@ final readonly class PersonalDataExporter
             $offset = 0;
             while ($offset < $length) {
                 $written = fwrite($stream, substr($bytes, $offset));
-                if ($written === false || $written === 0) throw new DomainException('Export temporary storage write failed.');
+                if ($written === false || $written === 0) {
+                    throw new DomainException('Export temporary storage write failed.');
+                }
                 $offset += $written;
             }
             hash_update($hash, $bytes);
@@ -95,9 +101,17 @@ final readonly class PersonalDataExporter
                 $first = false;
             }
             $write('],"subjectPersonId":' . $this->encode($context->subjectPersonId) . '}');
-            if (!rewind($stream)) throw new DomainException('Export temporary storage rewind failed.');
-            return new PersonalDataExportArtifact(self::SCHEMA_VERSION, $generatedAt,
-                $context->subjectPersonId, hash_final($hash), $size, $stream);
+            if (!rewind($stream)) {
+                throw new DomainException('Export temporary storage rewind failed.');
+            }
+            return new PersonalDataExportArtifact(
+                self::SCHEMA_VERSION,
+                $generatedAt,
+                $context->subjectPersonId,
+                hash_final($hash),
+                $size,
+                $stream,
+            );
         } catch (Throwable $exception) {
             fclose($stream);
             throw $exception;
@@ -114,6 +128,7 @@ final readonly class PersonalDataExporter
         foreach ($contributors as $contributor) {
             $pages = $contributor instanceof PagedPersonalDataContributor ? $contributor->pages($context) : [$contributor->collect($context)];
             foreach ($pages as $section) {
+                /** @psalm-suppress DocblockTypeContradiction */
                 if (!$section instanceof PersonalDataSection || $section->contributorCode !== $contributor->code()
                     || $section->dataCategories !== $contributor->categories()
                     || count($section->records) > $this->maxRecordsPerSection) {

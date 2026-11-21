@@ -10,26 +10,38 @@ final class SessionEvidence
     public static function validate(array $body): array
     {
         $evidence = $body['evidence'] ?? [];
-        if (!is_array($evidence) || array_diff(array_keys($evidence),
-            ['profilePrepared', 'windowsLogonConfirmed', 'testAdapter', 'sessionEnded', 'storageConfirmed', 'cleanupDone']) !== []) {
+        if (!is_array($evidence) || array_diff(
+            array_keys($evidence),
+            ['profilePrepared', 'windowsLogonConfirmed', 'testAdapter', 'sessionEnded', 'storageConfirmed', 'cleanupDone'],
+        ) !== []) {
             throw new DeviceError(422, 'invalid_evidence');
         }
         foreach ($evidence as $value) {
-            if (!is_bool($value)) throw new DeviceError(422, 'invalid_evidence');
+            if (!is_bool($value)) {
+                throw new DeviceError(422, 'invalid_evidence');
+            }
         }
         if (isset($body['progress'])) {
             $progress = $body['progress'];
-            if (!is_array($progress) || !is_string($progress['stage'] ?? null)
-                || strlen($progress['stage']) > 40 || !is_int($progress['completed'] ?? null)
-                || !is_int($progress['total'] ?? null) || $progress['completed'] < 0
-                || $progress['total'] < $progress['completed']) throw new DeviceError(422, 'invalid_progress');
-            $evidence['progress'] = ['stage' => $progress['stage'], 'completed' => $progress['completed'], 'total' => $progress['total']];
+            $stage = is_array($progress) ? ($progress['stage'] ?? null) : null;
+            $completed = is_array($progress) ? ($progress['completed'] ?? null) : null;
+            $total = is_array($progress) ? ($progress['total'] ?? null) : null;
+            if (!is_string($stage) || strlen($stage) > 40 || !is_int($completed)
+                || !is_int($total) || $completed < 0
+                || $total < $completed) {
+                throw new DeviceError(422, 'invalid_progress');
+            }
+            $evidence['progress'] = ['stage' => $stage, 'completed' => $completed, 'total' => $total];
         }
         if (isset($body['error'])) {
             $error = $body['error'];
-            if (!is_array($error) || !is_string($error['code'] ?? null) || strlen($error['code']) > 60
-                || !is_string($error['message'] ?? null) || strlen($error['message']) > 500) throw new DeviceError(422, 'invalid_error');
-            $evidence['error'] = ['code' => $error['code'], 'message' => $error['message'], 'at' => SessionTransitions::now()];
+            $code = is_array($error) ? ($error['code'] ?? null) : null;
+            $message = is_array($error) ? ($error['message'] ?? null) : null;
+            if (!is_string($code) || strlen($code) > 60
+                || !is_string($message) || strlen($message) > 500) {
+                throw new DeviceError(422, 'invalid_error');
+            }
+            $evidence['error'] = ['code' => $code, 'message' => $message, 'at' => SessionTransitions::now()];
         }
         return $evidence;
     }

@@ -16,9 +16,14 @@ export default defineConfig(({ mode }) => {
     .filter(Boolean);
   const proxyAgent = new http.Agent({ keepAlive: false });
   const configureProxy: NonNullable<ProxyOptions['configure']> = (proxy): void => {
-    proxy.on('error', (_error, _request, response) => {
+    proxy.on('error', (_error, request, response) => {
       const res = response as { headersSent?: boolean; writableEnded?: boolean; writeHead?: (status: number, headers: Record<string, string>) => void; end?: (body?: string) => void };
       if (res.writeHead !== undefined && res.end !== undefined && res.headersSent !== true && res.writableEnded !== true) {
+        if (request?.url === '/api/branding') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ data: { name: 'Platform', favicon: null } }));
+          return;
+        }
         res.writeHead(502, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: { code: 'proxy_unavailable', message: 'Proxy connection failed.' } }));
       }

@@ -68,9 +68,15 @@ final readonly class PostgresDeviceStore implements DeviceStore
             }
         }
         foreach (['payload','agent_state','evidence'] as $jsonField) {
-            if (is_string($row[$jsonField] ?? null)) $row[$jsonField] = json_decode($row[$jsonField], true) ?: [];
+            $fieldVal = $row[$jsonField] ?? null;
+            if (is_string($fieldVal)) {
+                $decoded = json_decode($fieldVal, true);
+                $row[$jsonField] = is_array($decoded) ? $decoded : [];
+            }
         }
-        if (isset($row['stateVersion'])) $row['stateVersion'] = (int) $row['stateVersion'];
+        if (isset($row['stateVersion'])) {
+            $row['stateVersion'] = (int) $row['stateVersion'];
+        }
         return $row;
     }
 
@@ -84,11 +90,13 @@ final readonly class PostgresDeviceStore implements DeviceStore
 
     public function classrooms(Scope $scope, int $offset = 0, ?string $search = null, bool $archived = false): array
     {
-        return $this->all('SELECT c.id::text,c.name,c.created_at::text AS "createdAt",c.archived_at::text AS "archivedAt"
+        return $this->all(
+            'SELECT c.id::text,c.name,c.created_at::text AS "createdAt",c.archived_at::text AS "archivedAt"
             FROM device_management.classrooms c WHERE ' . self::where('c')
             . ($archived ? ' AND c.archived_at IS NOT NULL' : ' AND c.archived_at IS NULL')
             . ($search !== null ? ' AND c.name ILIKE :search' : '') . ' ORDER BY c.created_at,c.id LIMIT 51 OFFSET :offset',
-            [...self::owner($scope), ':offset' => $offset, ...($search !== null ? [':search' => '%' . $search . '%'] : [])]);
+            [...self::owner($scope), ':offset' => $offset, ...($search !== null ? [':search' => '%' . $search . '%'] : [])],
+        );
     }
 
     public function createClassroom(Scope $scope, string $name): array
@@ -120,20 +128,27 @@ final readonly class PostgresDeviceStore implements DeviceStore
             $devices = $this->all('SELECT d.id::text FROM device_management.devices d WHERE ' . self::where('d')
                 . ' AND d.classroom_id=CAST(:id AS uuid) ORDER BY d.id FOR UPDATE', [...self::owner($scope), ':id' => $id]);
             foreach ($devices as $device) {
-                if ($this->activeSession((string) $device['id']) !== null) throw new DeviceError(409, 'classroom_busy');
+                if ($this->activeSession((string) $device['id']) !== null) {
+                    throw new DeviceError(409, 'classroom_busy');
+                }
             }
             // Preserve historical placement. Archived classrooms cannot accept new assignments.
-            return $this->one('UPDATE device_management.classrooms SET archived_at=coalesce(archived_at,now())
+            return $this->one(
+                'UPDATE device_management.classrooms SET archived_at=coalesce(archived_at,now())
                 WHERE id=CAST(:id AS uuid) RETURNING id::text,name,created_at::text AS "createdAt",archived_at::text AS "archivedAt"',
-                [':id' => $id]) ?? throw new DeviceError(409, 'write_not_confirmed');
+                [':id' => $id],
+            ) ?? throw new DeviceError(409, 'write_not_confirmed');
         });
     }
 
+    /** @return array<string,mixed> */
     public function restoreClassroom(Scope $scope, string $id): array
     {
-        return $this->one('UPDATE device_management.classrooms c SET archived_at=NULL WHERE ' . self::where('c')
+        return $this->one(
+            'UPDATE device_management.classrooms c SET archived_at=NULL WHERE ' . self::where('c')
             . ' AND c.id=CAST(:id AS uuid) RETURNING id::text,name,created_at::text AS "createdAt",archived_at::text AS "archivedAt"',
-            [...self::owner($scope), ':id' => $id]) ?? throw new DeviceError(404, 'not_found');
+            [...self::owner($scope), ':id' => $id],
+        ) ?? throw new DeviceError(404, 'not_found');
     }
 
     public function devices(
@@ -177,7 +192,8 @@ final readonly class PostgresDeviceStore implements DeviceStore
 
     public function deviceSessions(Scope $scope, string $deviceId, int $offset = 0): array
     {
-        return $this->all('SELECT s.id::text,s.device_id::text AS "deviceId",s.student_id::text AS "studentId",
+        return $this->all(
+            'SELECT s.id::text,s.device_id::text AS "deviceId",s.student_id::text AS "studentId",
             st.person_id::text AS "studentPersonId",coalesce(p.display_name,\'\') AS "studentName",
             s.status,s.desired_status AS "desiredStatus",s.classroom_id::text AS "classroomId",
             s.started_at::text AS "startedAt",s.ended_at::text AS "endedAt",s.created_at::text AS "createdAt"
@@ -185,7 +201,8 @@ final readonly class PostgresDeviceStore implements DeviceStore
             JOIN education.students st ON st.id=s.student_id LEFT JOIN core.persons p ON p.id=st.person_id
             WHERE ' . self::where('d') . ' AND s.device_id=CAST(:device AS uuid)
             ORDER BY s.created_at DESC,s.id DESC LIMIT 51 OFFSET :offset',
-            [...self::owner($scope), ':device' => $deviceId, ':offset' => $offset]);
+            [...self::owner($scope), ':device' => $deviceId, ':offset' => $offset],
+        );
     }
 
     public function createDevice(Scope $scope, ?string $classroomId, string $name, string $number): array
@@ -193,7 +210,9 @@ final readonly class PostgresDeviceStore implements DeviceStore
         return $this->db->transaction(function () use ($scope, $classroomId, $name, $number): array {
             if ($classroomId !== null) {
                 $classroom = $this->one('SELECT c.id::text,c.archived_at::text AS "archivedAt" FROM device_management.classrooms c WHERE ' . self::where('c') . ' AND c.id=CAST(:id AS uuid) FOR SHARE', [...self::owner($scope), ':id' => $classroomId]) ?? throw new DeviceError(404, 'not_found');
-                if ($classroom['archivedAt'] !== null) throw new DeviceError(409, 'classroom_archived');
+                if ($classroom['archivedAt'] !== null) {
+                    throw new DeviceError(409, 'classroom_archived');
+                }
             }
             if ($classroomId !== null && $number !== '') {
                 $duplicate = $this->one(
@@ -221,10 +240,14 @@ final readonly class PostgresDeviceStore implements DeviceStore
     {
         return $this->db->transaction(function () use ($scope, $id, $classroomId, $name, $number): array {
             $existing = $this->one(self::DEVICE . ' WHERE ' . self::where('d') . ' AND d.id=CAST(:id AS uuid) FOR UPDATE OF d', [...self::owner($scope), ':id' => $id]) ?? throw new DeviceError(404, 'not_found');
-            if (($existing['classroomId'] !== $classroomId || $existing['number'] !== $number) && $this->activeSession($id) !== null) throw new DeviceError(409, 'device_busy');
+            if (($existing['classroomId'] !== $classroomId || $existing['number'] !== $number) && $this->activeSession($id) !== null) {
+                throw new DeviceError(409, 'device_busy');
+            }
             if ($classroomId !== null) {
                 $classroom = $this->one('SELECT c.id::text,c.archived_at::text AS "archivedAt" FROM device_management.classrooms c WHERE ' . self::where('c') . ' AND c.id=CAST(:id AS uuid) FOR SHARE', [...self::owner($scope), ':id' => $classroomId]) ?? throw new DeviceError(404, 'not_found');
-                if ($classroom['archivedAt'] !== null) throw new DeviceError(409, 'classroom_archived');
+                if ($classroom['archivedAt'] !== null) {
+                    throw new DeviceError(409, 'classroom_archived');
+                }
             }
             if ($classroomId !== null && $number !== '') {
                 $duplicate = $this->one(
@@ -252,7 +275,9 @@ final readonly class PostgresDeviceStore implements DeviceStore
 
     public function createEnrollment(Scope $scope, string $deviceId, string $codeHash, string $expiresAt): array
     {
-        if ($this->activeSession($deviceId) !== null) throw new DeviceError(409, 'device_busy');
+        if ($this->activeSession($deviceId) !== null) {
+            throw new DeviceError(409, 'device_busy');
+        }
         return $this->one(
             'INSERT INTO device_management.device_enrollments(device_id,code_hash,expires_at)
             SELECT d.id,:code,:expires FROM device_management.devices d WHERE ' . self::where('d') . ' AND d.id=CAST(:device AS uuid)
@@ -331,7 +356,9 @@ final readonly class PostgresDeviceStore implements DeviceStore
     {
         $this->db->transaction(function () use ($scope, $deviceId): void {
             $this->lockOwnedDevice($scope, $deviceId, null);
-            if ($this->activeSession($deviceId) !== null) throw new DeviceError(409, 'device_busy');
+            if ($this->activeSession($deviceId) !== null) {
+                throw new DeviceError(409, 'device_busy');
+            }
             $this->db->createCommand(
                 "UPDATE device_management.devices SET enrollment_state='revoked',state_version=state_version+1
                 WHERE id=CAST(:device AS uuid) AND organization_id=CAST(:org AS uuid) AND owner_account_id=CAST(:actor AS uuid)",
@@ -380,13 +407,21 @@ final readonly class PostgresDeviceStore implements DeviceStore
                 self::DEVICE . ' WHERE ' . self::where('d') . ' AND d.id=CAST(:id AS uuid) FOR UPDATE OF d',
                 [...self::owner($scope), ':id' => $deviceId],
             ) ?? throw new DeviceError(404, 'not_found');
-            if ($stateVersion !== null && (int) $device['stateVersion'] !== $stateVersion) throw new DeviceError(409, 'state_version_conflict');
-            if ($device['enrollmentState'] !== 'confirmed') throw new DeviceError(409, 'device_not_confirmed');
+            if ($stateVersion !== null && (int) $device['stateVersion'] !== $stateVersion) {
+                throw new DeviceError(409, 'state_version_conflict');
+            }
+            if ($device['enrollmentState'] !== 'confirmed') {
+                throw new DeviceError(409, 'device_not_confirmed');
+            }
             if ($device['classroomId'] !== null) {
                 $classroom = $this->one('SELECT id::text,archived_at::text AS "archivedAt" FROM device_management.classrooms WHERE id=CAST(:id AS uuid) FOR SHARE', [':id' => $device['classroomId']]);
-                if ($classroom === null || $classroom['archivedAt'] !== null) throw new DeviceError(409, 'classroom_archived');
+                if ($classroom === null || $classroom['archivedAt'] !== null) {
+                    throw new DeviceError(409, 'classroom_archived');
+                }
             }
-            if ($device['status'] !== 'AVAILABLE' || $device['lastSeenAt'] === null || new DateTimeImmutable((string) $device['lastSeenAt']) < new DateTimeImmutable('-90 seconds')) throw new DeviceError(409, 'device_not_ready');
+            if ($device['status'] !== 'AVAILABLE' || $device['lastSeenAt'] === null || new DateTimeImmutable((string) $device['lastSeenAt']) < new DateTimeImmutable('-90 seconds')) {
+                throw new DeviceError(409, 'device_not_ready');
+            }
             $existing = $this->activeSession($deviceId);
             if ($existing !== null) {
                 if (SessionTransitions::isTransitionBlocking((string) $existing['status'])) {
@@ -435,14 +470,20 @@ final readonly class PostgresDeviceStore implements DeviceStore
             if ($session['desiredStatus'] === 'ENDING') {
                 return; // The command is redelivered until acknowledged; do not duplicate it.
             }
-            if ($session['status'] !== 'ACTIVE') throw new DeviceError(409, 'session_not_active');
+            if ($session['status'] !== 'ACTIVE') {
+                throw new DeviceError(409, 'session_not_active');
+            }
             $this->db->createCommand(
                 "UPDATE device_management.device_sessions SET desired_status='ENDING' WHERE id=CAST(:session AS uuid)",
                 [':session' => $sessionId],
             )->execute();
             $this->db->createCommand('UPDATE device_management.devices SET state_version=state_version+1 WHERE id=CAST(:device AS uuid)', [':device' => $deviceId])->execute();
-            $this->queueCommand($deviceId, 'end_session', ['sessionId' => $sessionId],
-                (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+15 minutes')->format(DateTimeImmutable::ATOM));
+            $this->queueCommand(
+                $deviceId,
+                'end_session',
+                ['sessionId' => $sessionId],
+                (new DateTimeImmutable('now', new DateTimeZone('UTC')))->modify('+15 minutes')->format(DateTimeImmutable::ATOM),
+            );
         });
     }
 
@@ -478,7 +519,9 @@ final readonly class PostgresDeviceStore implements DeviceStore
                     AND NOT EXISTS(SELECT 1 FROM storage.manifests archived WHERE archived.space_id=sp.id
                         AND archived.status='accepted' AND archived.version>=m.version)
                     ORDER BY m.confirmed_at DESC LIMIT 1", [':device' => $deviceId, ':student' => $session['studentId'], ':started' => $session['startedAt']]);
-                if ($confirmation === null) throw new DeviceError(409, 'storage_not_confirmed');
+                if ($confirmation === null) {
+                    throw new DeviceError(409, 'storage_not_confirmed');
+                }
             }
             $endedAt = SessionTransitions::terminal($status) ? 'now()' : 'NULL';
             $this->db->createCommand(
@@ -499,8 +542,10 @@ final readonly class PostgresDeviceStore implements DeviceStore
                 'FAILED' => 'ERROR',
                 default => 'AVAILABLE',
             };
-            $this->db->createCommand("UPDATE device_management.devices SET status=:status,state_version=state_version+1 WHERE id=CAST(:device AS uuid)",
-                [':status' => $deviceStatus, ':device' => $deviceId])->execute();
+            $this->db->createCommand(
+                "UPDATE device_management.devices SET status=:status,state_version=state_version+1 WHERE id=CAST(:device AS uuid)",
+                [':status' => $deviceStatus, ':device' => $deviceId],
+            )->execute();
             $this->recordEvent($deviceId, 'session_state', ['sessionId' => $sessionId, 'from' => $current, 'status' => $status]);
             return ['sessionId' => $sessionId, 'deviceId' => $deviceId, 'status' => $status];
         });
@@ -565,7 +610,9 @@ final readonly class PostgresDeviceStore implements DeviceStore
             if ($command['state'] === 'acknowledged') {
                 return ['commandId' => $commandId, 'acknowledged' => true];
             }
-            if ($command['state'] === 'expired' || new DateTimeImmutable((string) $command['expiresAt']) <= new DateTimeImmutable()) throw new DeviceError(409, 'command_expired');
+            if ($command['state'] === 'expired' || new DateTimeImmutable((string) $command['expiresAt']) <= new DateTimeImmutable()) {
+                throw new DeviceError(409, 'command_expired');
+            }
             $this->db->createCommand(
                 "UPDATE device_management.device_commands SET state='acknowledged',acknowledged_at=now()
                 WHERE id=CAST(:command AS uuid)",
@@ -596,9 +643,12 @@ final readonly class PostgresDeviceStore implements DeviceStore
 
     public function markSeen(string $deviceId): void
     {
-        $this->db->createCommand("UPDATE device_management.devices SET last_seen_at=now() WHERE id=CAST(:device AS uuid)",
-            [':device' => $deviceId])->execute();
+        $this->db->createCommand(
+            "UPDATE device_management.devices SET last_seen_at=now() WHERE id=CAST(:device AS uuid)",
+            [':device' => $deviceId],
+        )->execute();
     }
+    /** @return array<string,mixed> */
     public function agentInfo(string $deviceId): array
     {
         return $this->one('SELECT d.id::text,d.number,d.name,d.enrollment_state AS "enrollmentState",c.name AS "classroomName"
@@ -606,19 +656,23 @@ final readonly class PostgresDeviceStore implements DeviceStore
             WHERE d.id=CAST(:device AS uuid)', [':device' => $deviceId]) ?? throw new DeviceError(404, 'not_found');
     }
 
+    /** @return list<array<string,mixed>> */
     public function commands(Scope $scope, string $deviceId, int $offset = 0): array
     {
-        $rows = $this->all('SELECT c.id::text,c.kind,c.payload,c.state AS status,c.created_at::text AS "createdAt",
+        $rows = $this->all(
+            'SELECT c.id::text,c.kind,c.payload,c.state AS status,c.created_at::text AS "createdAt",
             c.expires_at::text AS "expiresAt",c.acknowledged_at::text AS "acknowledgedAt"
             FROM device_management.device_commands c JOIN device_management.devices d ON d.id=c.device_id
             WHERE ' . self::where('d') . ' AND d.id=CAST(:device AS uuid) ORDER BY c.created_at DESC,c.id DESC LIMIT 51 OFFSET :offset',
-            [...self::owner($scope), ':device' => $deviceId, ':offset' => $offset]);
+            [...self::owner($scope), ':device' => $deviceId, ':offset' => $offset],
+        );
         return array_map(static function (array $row): array {
             $row['payload'] = is_string($row['payload']) ? (json_decode($row['payload'], true) ?: []) : $row['payload'];
             return $row;
         }, $rows);
     }
 
+    /** @return array<string,mixed> */
     public function lifecycleDetails(Scope $scope, string $deviceId): array
     {
         $device = $this->device($scope, $deviceId) ?? throw new DeviceError(404, 'not_found');
@@ -627,7 +681,13 @@ final readonly class PostgresDeviceStore implements DeviceStore
             LEFT JOIN device_management.device_sessions s ON s.id=(SELECT id FROM device_management.device_sessions
                 WHERE device_id=d.id AND status<>\'CLOSED\' ORDER BY created_at DESC LIMIT 1)
             WHERE d.id=CAST(:device AS uuid)', [':device' => $deviceId]) ?? [];
-        $decode = static fn(mixed $value): array => is_string($value) ? (json_decode($value, true) ?: []) : (is_array($value) ? $value : []);
+        $decode = static function (mixed $value): array {
+            if (is_string($value)) {
+                $decoded = json_decode($value, true);
+                return is_array($decoded) ? $decoded : [];
+            }
+            return is_array($value) ? $value : [];
+        };
         $state = $decode($row['agent_state'] ?? null);
         $evidence = $decode($row['evidence'] ?? null);
         $error = $this->one("SELECT payload,created_at::text AS at FROM device_management.device_events
@@ -647,58 +707,83 @@ final readonly class PostgresDeviceStore implements DeviceStore
 
     private function lockOwnedDevice(Scope $scope, string $deviceId, ?int $stateVersion): array
     {
-        $device = $this->one(self::DEVICE . ' WHERE ' . self::where('d') . ' AND d.id=CAST(:device AS uuid) FOR UPDATE OF d',
-            [...self::owner($scope), ':device' => $deviceId]) ?? throw new DeviceError(404, 'not_found');
-        if ($device['enrollmentState'] === 'revoked') throw new DeviceError(409, 'device_revoked');
-        if ($stateVersion !== null && (int) $device['stateVersion'] !== $stateVersion) throw new DeviceError(409, 'state_version_conflict');
+        $device = $this->one(
+            self::DEVICE . ' WHERE ' . self::where('d') . ' AND d.id=CAST(:device AS uuid) FOR UPDATE OF d',
+            [...self::owner($scope), ':device' => $deviceId],
+        ) ?? throw new DeviceError(404, 'not_found');
+        if ($device['enrollmentState'] === 'revoked') {
+            throw new DeviceError(409, 'device_revoked');
+        }
+        if ($stateVersion !== null && (int) $device['stateVersion'] !== $stateVersion) {
+            throw new DeviceError(409, 'state_version_conflict');
+        }
         return $device;
     }
 
+    /** @return array<string,mixed> */
     public function cancelAssignment(Scope $scope, string $deviceId, string $sessionId, ?int $stateVersion): array
     {
         return $this->db->transaction(function () use ($scope, $deviceId, $sessionId, $stateVersion): array {
             $this->lockOwnedDevice($scope, $deviceId, $stateVersion);
             $session = $this->session($scope, $deviceId, $sessionId) ?? throw new DeviceError(404, 'not_found');
-            if ($session['status'] === 'CLOSED') return ['sessionId' => $sessionId, 'cancelled' => true];
-            if ($session['status'] !== 'AUTHORIZED') throw new DeviceError(409, 'assignment_already_started');
+            if ($session['status'] === 'CLOSED') {
+                return ['sessionId' => $sessionId, 'cancelled' => true];
+            }
+            if ($session['status'] !== 'AUTHORIZED') {
+                throw new DeviceError(409, 'assignment_already_started');
+            }
             $this->db->createCommand("UPDATE device_management.device_sessions SET status='CLOSED',desired_status='CLOSED',ended_at=now()
                 WHERE id=CAST(:session AS uuid)", [':session' => $sessionId])->execute();
-            $this->db->createCommand("UPDATE device_management.device_commands SET state='expired' WHERE device_id=CAST(:device AS uuid)
+            $this->db->createCommand(
+                "UPDATE device_management.device_commands SET state='expired' WHERE device_id=CAST(:device AS uuid)
                 AND kind='start_session' AND payload->>'sessionId'=:session AND state IN ('queued','delivered')",
-                [':device' => $deviceId, ':session' => $sessionId])->execute();
+                [':device' => $deviceId, ':session' => $sessionId],
+            )->execute();
             $this->db->createCommand("UPDATE device_management.devices SET status='OFFLINE',state_version=state_version+1 WHERE id=CAST(:device AS uuid)", [':device' => $deviceId])->execute();
             $this->recordEvent($deviceId, 'assignment_cancelled', ['sessionId' => $sessionId]);
             return ['sessionId' => $sessionId, 'cancelled' => true];
         });
     }
 
+    /** @return array<string,mixed> */
     public function retryRecovery(Scope $scope, string $deviceId, ?int $stateVersion): array
     {
         return $this->db->transaction(function () use ($scope, $deviceId, $stateVersion): array {
             $this->lockOwnedDevice($scope, $deviceId, $stateVersion);
             $session = $this->activeSession($deviceId) ?? throw new DeviceError(404, 'not_found');
-            if (!in_array($session['status'], ['SYNC_PENDING','RECOVERY_REQUIRED','FAILED'], true)) throw new DeviceError(409, 'recovery_not_required');
+            if (!in_array($session['status'], ['SYNC_PENDING','RECOVERY_REQUIRED','FAILED'], true)) {
+                throw new DeviceError(409, 'recovery_not_required');
+            }
             $this->db->createCommand("UPDATE device_management.device_sessions SET status=CASE WHEN status='FAILED' THEN 'RECOVERY_REQUIRED' ELSE status END,desired_status='ENDING',ended_at=NULL
                 WHERE id=CAST(:session AS uuid)", [':session' => $session['id']])->execute();
-            $command = $this->one("SELECT id::text FROM device_management.device_commands WHERE device_id=CAST(:device AS uuid)
+            $command = $this->one(
+                "SELECT id::text FROM device_management.device_commands WHERE device_id=CAST(:device AS uuid)
                 AND kind='end_session' AND payload->>'sessionId'=:session AND state IN ('queued','delivered') AND expires_at>now()",
-                [':device' => $deviceId, ':session' => $session['id']]);
-            if ($command === null) $command = $this->queueCommand($deviceId, 'end_session', ['sessionId' => $session['id']], (new DateTimeImmutable('+15 minutes'))->format(DateTimeImmutable::ATOM));
-            $this->db->createCommand('UPDATE device_management.device_commands SET authorized_by_account_id=CAST(:actor AS uuid) WHERE id=CAST(:command AS uuid)',
-                [':actor' => $scope->accountId, ':command' => $command['id']])->execute();
+                [':device' => $deviceId, ':session' => $session['id']],
+            );
+            if ($command === null) {
+                $command = $this->queueCommand($deviceId, 'end_session', ['sessionId' => $session['id']], (new DateTimeImmutable('+15 minutes'))->format(DateTimeImmutable::ATOM));
+            }
+            $this->db->createCommand(
+                'UPDATE device_management.device_commands SET authorized_by_account_id=CAST(:actor AS uuid) WHERE id=CAST(:command AS uuid)',
+                [':actor' => $scope->accountId, ':command' => $command['id']],
+            )->execute();
             $this->db->createCommand('UPDATE device_management.devices SET state_version=state_version+1 WHERE id=CAST(:device AS uuid)', [':device' => $deviceId])->execute();
             $this->recordEvent($deviceId, 'recovery_requested', ['sessionId' => $session['id']]);
             return ['sessionId' => $session['id'], 'retrying' => true];
         });
     }
 
+    /** @return array<string,mixed> */
     public function requestLocalSessionEnd(string $deviceId, string $sessionId): array
     {
         $device = $this->one('SELECT organization_id::text AS org,owner_account_id::text AS actor,owner_person_id::text AS person
             FROM device_management.devices WHERE id=CAST(:device AS uuid) AND enrollment_state=\'confirmed\'', [':device' => $deviceId])
             ?? throw new DeviceError(404, 'not_found');
         $active = $this->activeSession($deviceId);
-        if ($active === null || $active['id'] !== $sessionId || $active['status'] !== 'ACTIVE') throw new DeviceError(409, 'session_not_active');
+        if ($active === null || $active['id'] !== $sessionId || $active['status'] !== 'ACTIVE') {
+            throw new DeviceError(409, 'session_not_active');
+        }
         $scope = new Scope((string) $device['org'], (string) $device['actor'], (string) $device['person'], 'ru-RU', 'UTC');
         $this->requestSessionEnd($scope, $deviceId, $sessionId);
         $this->recordEvent($deviceId, 'local_end_requested', ['sessionId' => $sessionId]);
