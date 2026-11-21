@@ -437,7 +437,7 @@ final readonly class PostgresDeviceStore implements DeviceStore
                 VALUES(CAST(:device AS uuid),CAST(:student AS uuid),CAST(:org AS uuid),CAST(:actor AS uuid),CAST(:classroom AS uuid),\'AUTHORIZED\',\'AUTHORIZED\')
                 RETURNING id::text,device_id::text AS "deviceId",student_id::text AS "studentId",status,desired_status AS "desiredStatus",
                 started_at::text AS "startedAt"',
-                [...self::owner($scope), ':device' => $deviceId, ':student' => $studentId, ':classroom' => $device['classroomId']],
+                [...self::owner($scope), ':device' => $deviceId, ':student' => $studentId, ':classroom' => $device['classroomId'] ?? null],
             ) ?? throw new DeviceError(409, 'device_busy');
             $this->db->createCommand("UPDATE device_management.devices SET status='RESERVED',state_version=state_version+1 WHERE id=CAST(:device AS uuid)", [':device' => $deviceId])->execute();
             $this->queueCommand($deviceId, 'start_session', [
