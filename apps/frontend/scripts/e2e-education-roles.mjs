@@ -430,7 +430,7 @@ async function verifyParent(teacher, first) {
   );
 }
 
-async function verifyDevice(teacher, student, lifecycle = false) {
+async function verifyDevice(teacher, student, next) {
   const { page, api } = teacher;
   await navigateClientSide(page, '/devices');
   await page.locator('#search-filter').waitFor();
@@ -498,11 +498,8 @@ async function verifyDevice(teacher, student, lifecycle = false) {
   const reserved = await deviceDetails();
   assert.equal(reserved.sessions[0].studentId, student.id);
   if (!(await dialog.isVisible())) await card.getByRole('button', { name: 'Подробнее' }).click();
-  if (lifecycle) {
+  if (next) {
     const { verifyClassroomLifecycle } = await import('./e2e-education-classroom.mjs');
-    const next = await api('/students', {
-      method: 'POST', body: { groupId: student.groupId, personId: fixture.candidates[0].id }, status: 201,
-    });
     await verifyClassroomLifecycle({
       teacher, dialog, card, device, deviceDetails, credential, next, first: reserved.sessions[0],
       coreUrl: env.CORE_API_URL, otherOrganizationId: fixture.otherOrganizationId,
@@ -560,7 +557,16 @@ try {
         setQuota: (bytes) => runFixture('set-storage-quota', organization, first.id, String(bytes)),
       });
     } else if (role === 'parent') await verifyParent(teacher, first);
-    else await verifyDevice(teacher, first, role === 'classroom');
+    else if (role === 'classroom') {
+      // Seed both students before the assignment dialog caches the roster.
+      const next = await teacher.api('/students', {
+        method: 'POST',
+        body: { groupId: first.groupId, personId: fixture.candidates[0].id },
+        status: 201,
+      });
+      assert.ok(next?.id, 'Classroom fixture enrollment did not return the second student ID.');
+      await verifyDevice(teacher, first, next);
+    } else await verifyDevice(teacher, first);
   }
   assert.deepEqual(errors, [], 'Uncaught browser errors');
 } finally {
