@@ -4,6 +4,8 @@
 
 Исходный SHA — `4cf8c6d40ea107f6da1c3265c97a098962b78615`. HEAD и локальная ссылка `origin/main` совпадают. Исходный `Platform CI` завершился с результатом 16/16. Текущий кандидат остался рабочим деревом. У итогового коммита и GitHub Actions run пока нет идентификаторов. Отпечаток рабочего дерева и список файлов в машиночитаемом отчёте. [Исходный CI](https://github.com/YCleffo/Platform/actions/runs/44988575194) · [Evidence JSON](frontend09-final-evidence.json)
 
+Журналы, патч пакета и отчёты ниже — артефакты локальных прогонов. Они не входят в репозиторий, поэтому указаны путями, а не ссылками.
+
 | Gate | Результат | Покрытие и граница |
 | --- | --- | --- |
 | `CORE_AUTHENTICATED_UX_VERIFIED` | `NOT_VERIFIED` | Ролевые прогоны и навигация перечислены в матрице. Полная проверка Back, Forward, reload, локали и прав для каждого вложенного маршрута открыта. |
@@ -35,16 +37,16 @@
 | `npm run typecheck`, `npm run lint`, `npm run format:check` | `PASS`. |
 | `npm run check:tokens`, `npm run check:styles`, `npm run check:icons`, `node --test scripts/*.test.mjs` | `PASS`, в том числе 20 тестов Node. |
 | `npm run build` | `PASS` в конфигурациях с включённым и выключенным Education. |
-| `node ../../scripts/ci/run-verify-suite.mjs` | 19/19 в production preview, 4 мин 1 с. HTTP-сценарии с фикстурами размечены отдельно от реального API. [Результаты](../../apps/frontend/screenshots/verify-timings.json) |
+| `node ../../scripts/ci/run-verify-suite.mjs` | 19/19 в production preview, 4 мин 1 с. HTTP-сценарии с фикстурами размечены отдельно от реального API. Результаты — `apps/frontend/screenshots/verify-timings.json` |
 | `node apps/frontend/scripts/frontend07-coverage.mjs --check`, `actionlint 1.7.11` | `PASS`. |
 
-Первые локальные прогоны выявили невидимые карточки Dashboard, зависимость сценария календаря от даты и порядка одноимённых уроков, а также сбой повтора передачи при перезапуске SeaweedFS. Повторы завершились успешно. Результаты сохранены в каталоге журнала. [Локальные журналы](../../apps/frontend/screenshots/frontend09-final/logs)
+Первые локальные прогоны выявили невидимые карточки Dashboard, зависимость сценария календаря от даты и порядка одноимённых уроков, а также сбой повтора передачи при перезапуске SeaweedFS. Повторы завершились успешно. Результаты сохранены в каталоге журнала — `apps/frontend/screenshots/frontend09-final/logs`
 
 Временные backend-проекты, их тестовые тома, worktree и каталоги сборок удалены. Настройка тестовых Compose-профилей пересобрала локальный тег `platform-postgres:local`. Работающий PostgreSQL сохранил прежний идентификатор образа.
 
 ## Выпуск
 
-Локальный пакет содержит патч к исходному SHA и файл с SHA дерева и патча. Применимость проверяется командой `git apply --check <путь-к-патчу>` на чистом рабочем дереве исходного SHA. После разрешённых операций Git зафиксировать итоговый SHA, запустить `Platform CI` на нём, сверить все основные jobs и выгрузки браузерной проверки с этим SHA. [Патч](../../apps/frontend/screenshots/frontend09-final/release-candidate.patch) · [Манифест пакета](../../apps/frontend/screenshots/frontend09-final/release-candidate.json)
+Локальный пакет содержит патч к исходному SHA и файл с SHA дерева и патча. Применимость проверяется командой `git apply --check <путь-к-патчу>` на чистом рабочем дереве исходного SHA. После разрешённых операций Git зафиксировать итоговый SHA, запустить `Platform CI` на нём, сверить все основные jobs и выгрузки браузерной проверки с этим SHA. Патч пакета — `apps/frontend/screenshots/frontend09-final/release-candidate.patch`, манифест — `apps/frontend/screenshots/frontend09-final/release-candidate.json`
 
 Следующий этап локальной приёмки — пройти критические авторизованные маршруты с NVDA и нативным масштабом 200–400%.
 

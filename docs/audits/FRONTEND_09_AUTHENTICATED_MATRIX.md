@@ -7,6 +7,8 @@
 | Education | Отдельные PostgreSQL, Redis и SeaweedFS. Тесты проверяют nonce напрямую и через Vite перед первыми мутациями. |
 | Frontend fixtures | Production preview, управляемые ответы и сценарии клавиатуры, вёрстки, локали и темы. |
 
+Снимки, журналы и JSON-метрики ниже — артефакты локальных прогонов. Они не входят в репозиторий, поэтому указаны путями, а не ссылками.
+
 ## Core
 
 | Сценарий | Результат в Chromium |
@@ -17,13 +19,13 @@
 | Credentials | `PASS`. Нативный passkey Chromium, вход, переименование, ограничение последнего способа входа, внешний callback и изоляция аккаунтов. |
 | Own and representative privacy | `PASS`. Запрос, экспорт и байты, полномочия представителя, пересечение аккаунтов, отзыв полномочий, пагинация и отказ в выдаче чужого файла. |
 | Privacy operator | `PASS`. MFA, приём обращения, корректировки полей и контакта, продление срока, ограничения и снятие по области, экспорт, отказ базовой учётной записи и удаление записи Redis presence при выходе. |
-| Configuration и Admin navigation | `PASS` на повторе. Dashboard, Organizations, Persons, Accounts, RBAC, Modules, System Settings, Profile, Security, Privacy и Audit открыты с клавиатуры. Для каждого подтверждены активный пункт, заголовок, RU/EN и Light/Dark. Для Sessions проверены вложенная ссылка, reload и MFA. Черновик с ошибкой валидации и фокус сохранены. Проверены публикация настроек, Feature flags, состояние модуля и HTTP 403 для базовой роли. [Результаты](../../apps/frontend/screenshots/core-config-real-results.json) |
+| Configuration и Admin navigation | `PASS` на повторе. Dashboard, Organizations, Persons, Accounts, RBAC, Modules, System Settings, Profile, Security, Privacy и Audit открыты с клавиатуры. Для каждого подтверждены активный пункт, заголовок, RU/EN и Light/Dark. Для Sessions проверены вложенная ссылка, reload и MFA. Черновик с ошибкой валидации и фокус сохранены. Проверены публикация настроек, Feature flags, состояние модуля и HTTP 403 для базовой роли. Результаты — `apps/frontend/screenshots/core-config-real-results.json` |
 
-[Журналы реального API](../../apps/frontend/screenshots/frontend09-final/logs)
+Журналы реального API — `apps/frontend/screenshots/frontend09-final/logs`
 
 Core хранит Bearer-токены в памяти. Полная перезагрузка защищённой страницы требует входа. Сценарий проверяет сохранение исходного адреса при редиректе и возврат в него после MFA. [Политика frontend-сессии](../frontend/README.md)
 
-На Core измерены 30 переходов между Overview, Modules и Settings. Медиана 34 мс, максимум 370 мс. Сырые счётчики CDP выросли со 172 до 589 слушателей и с 11,1 до 22,0 МБ heap. В выборку включены создание и удаление представлений, динамические загрузки и работа Playwright. Отдельный прогон с контролируемой сборкой мусора и исходной ревизией остаётся открытым. [Навигационные метрики](../../apps/frontend/screenshots/frontend09-final/authenticated/core-admin/navigation-metrics.json)
+На Core измерены 30 переходов между Overview, Modules и Settings. Медиана 34 мс, максимум 370 мс. Сырые счётчики CDP выросли со 172 до 589 слушателей и с 11,1 до 22,0 МБ heap. В выборку включены создание и удаление представлений, динамические загрузки и работа Playwright. Отдельный прогон с контролируемой сборкой мусора и исходной ревизией остаётся открытым. Метрики навигации — `apps/frontend/screenshots/frontend09-final/authenticated/core-admin/navigation-metrics.json`
 
 ## Commercial
 
@@ -35,7 +37,7 @@ Core хранит Bearer-токены в памяти. Полная переза
 | Paid billing | `PASS`. Транспорт провайдера в тестовом режиме, сохранённый способ оплаты, дубли webhook, квитанции, смена тарифа, частичный и оставшийся возврат, восстановление после неопределённого checkout. |
 | Invitations / MFA | `PASS`. Настоящие письма Mailpit, защищённое принятие, изменение роли, запрет удаления последнего владельца, повторная отправка, отказ и отзыв. |
 
-В Account измерены 30 переходов между Overview, Invitations и Billing при 844×390. Медиана 236 мс, максимум 2495 мс. Сырые счётчики CDP выросли с 97 до 313 слушателей и с 18,0 до 22,0 МБ heap. Замер сделан без принудительной сборки мусора и служит контрольной точкой для отдельного исследования удержания объектов. [Навигационные метрики](../../apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/navigation-metrics.json) · [Операторы](../../apps/frontend/screenshots/operators-real-results.json) · [Платежи](../../apps/frontend/screenshots/billing-paid-results.json)
+В Account измерены 30 переходов между Overview, Invitations и Billing при 844×390. Медиана 236 мс, максимум 2495 мс. Сырые счётчики CDP выросли с 97 до 313 слушателей и с 18,0 до 22,0 МБ heap. Замер сделан без принудительной сборки мусора и служит контрольной точкой для отдельного исследования удержания объектов. Метрики навигации — `apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/navigation-metrics.json`, операторы — `apps/frontend/screenshots/operators-real-results.json`, платежи — `apps/frontend/screenshots/billing-paid-results.json`
 
 ## Education
 
@@ -47,9 +49,9 @@ Core хранит Bearer-токены в памяти. Полная переза
 | DeviceManagement | `PASS`. Регистрация, heartbeat, назначение, отмена и журнал. |
 | Classroom | `PASS`. Lifecycle, восстановление, назначение и повтор подтверждения с тестовым Agent и реальными объектами. |
 | Storage | `PASS` на повторе. Четыре viewport, недоступность SeaweedFS и восстановление, отмена, квота, истечение подписи, версии, конфликт и отказ в чужой области. |
-| Общий сценарий Education | `PASS` на повторе. 11 состояний с реальным Core, включая календарь, завершённый урок, архив, профиль и переписку. Проверены RU/EN, обе темы и 393/1440 px. [Результаты](../../apps/frontend/screenshots/education-real/results.json) |
+| Общий сценарий Education | `PASS` на повторе. 11 состояний с реальным Core, включая календарь, завершённый урок, архив, профиль и переписку. Проверены RU/EN, обе темы и 393/1440 px. Результаты — `apps/frontend/screenshots/education-real/results.json` |
 
-[Журналы реального API](../../apps/frontend/screenshots/frontend09-final/logs)
+Журналы реального API — `apps/frontend/screenshots/frontend09-final/logs`
 
 ## Динамические ссылки
 

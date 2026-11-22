@@ -6,6 +6,8 @@
 
 Отдельного SHA коммита для локального кандидата пока нет. Отпечаток исходников рабочего дерева `3b53a5437efc6b466b1c0d482cc66ff1206dcc71269e6f2a7015f8ad8603b5a7` получен штатной функцией `revision()` из `frontend07-evidence.mjs`.
 
+Снимки и JSON-отчёты ниже — артефакты локальных прогонов. Они не входят в репозиторий (`apps/frontend/.gitignore` исключает `screenshots`), поэтому указаны путями, а не ссылками.
+
 | Gate | Статус | Доказательство или граница |
 | --- | --- | --- |
 | `UI_INVENTORY_VERIFIED` | `NOT_VERIFIED` | 12 областей описаны в Markdown и JSON. Для части авторизованных экранов визуальные данные есть только на исходном SHA. |
@@ -44,7 +46,7 @@
 | `node ../../scripts/ci/run-verify-suite.mjs` на production preview | 19/19 Chromium-скриптов прошли в конфигурации основной frontend job. Responsive проверил 22 публичных и guard-состояния на 11 viewport, включая 844×390. Typography проверил 53 маршрута и 440 состояний на изолированных frontend fixtures. |
 | `node scripts/verify-responsive.mjs --navigation-only` | `PASS`, CDP touch подтверждает нативную прокрутку таблицы без перехода, защиту ползунка и выбор раздела намеренным жестом. |
 
-Повтор 19 браузерных скриптов после исправления `AppMenu` занял 3 мин 8 с при параллелизме 4. [Локальные результаты](../../apps/frontend/screenshots/verify-timings.json)
+Повтор 19 браузерных скриптов после исправления `AppMenu` занял 3 мин 8 с при параллелизме 4. Результаты прогона — `apps/frontend/screenshots/verify-timings.json`.
 
 ## Education с реальным API
 
@@ -59,7 +61,7 @@
 | DeviceManagement | `PASS`, регистрация, heartbeat, назначение, отмена и журнал. |
 | Classroom | `PASS`, lifecycle, persistent recovery, повтор подтверждения, реальные байты SeaweedFS и переназначение с синтетическим Agent. |
 | Storage | `PASS`, 4 viewport, байты после восстановления SeaweedFS, отмена и повтор, исчерпание квоты, истечение подписанной ссылки, повторное подтверждение, конфликт версий и отказ в доступе к чужому документу. |
-| Общий сценарий Education | `PASS`, 11 подтверждённых состояний с реальным API. Отдельно проверены RU/EN, обе темы на 393 и 1440 px, учебная группа, вложенный урок, профиль, переписка, материалы и права доступа. [Результаты прогона](../../apps/frontend/screenshots/education-real/results.json) |
+| Общий сценарий Education | `PASS`, 11 подтверждённых состояний с реальным API. Отдельно проверены RU/EN, обе темы на 393 и 1440 px, учебная группа, вложенный урок, профиль, переписка, материалы и права доступа. Результаты прогона — `apps/frontend/screenshots/education-real/results.json` |
 
 [Визуальный отчёт](FRONTEND_09_VISUAL_REGRESSION.md) · [Инвентаризация](FRONTEND_09_UI_INVENTORY.md)
 
