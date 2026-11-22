@@ -51,13 +51,33 @@ try {
   await page.locator('.appearance-view').waitFor();
   check((await page.locator('.app-layout__nav-link--active').getAttribute('href')) === '/settings', 'Settings navigation is not active');
   const initialFont = await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
+  await page.evaluate(() => {
+    window.__viewTransitionDurations = [];
+    if (typeof document.startViewTransition === 'function') {
+      const orig = document.startViewTransition.bind(document);
+      document.startViewTransition = function(callback) {
+        const vt = orig(callback);
+        vt.ready.then(() => {
+          window.__viewTransitionDurations = document.getAnimations()
+            .filter(a => a.animationName?.includes('view-transition'))
+            .map(a => a.effect?.getTiming()?.duration);
+        }).catch(() => {});
+        return vt;
+      };
+    }
+  });
   await range(page, 'appearance-theme-duration', 600);
   await page.getByRole('radio', { name: 'Dark', exact: true }).check();
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
-  const durations = await page.evaluate(() => document.getAnimations()
-    .filter(animation => animation.animationName?.includes('view-transition'))
-    .map(animation => animation.effect.getTiming().duration));
   if (await page.evaluate(() => typeof document.startViewTransition === 'function')) {
+    await page.waitForFunction(() => (window.__viewTransitionDurations?.length ?? 0) > 0 || document.documentElement.dataset.themeChanging === undefined, { timeout: 3000 }).catch(() => {});
+    const durations = await page.evaluate(() => {
+      const captured = window.__viewTransitionDurations ?? [];
+      if (captured.length > 0) return captured;
+      return document.getAnimations()
+        .filter(animation => animation.animationName?.includes('view-transition'))
+        .map(animation => animation.effect?.getTiming()?.duration);
+    });
     check(durations.length > 0 && durations.every(duration => duration === 600), `Theme animations are not synchronized: ${durations}`);
   }
   await settled(page);
