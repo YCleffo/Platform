@@ -75,7 +75,9 @@ async function load(): Promise<void> {
   }
 }
 
-function transitionLabel(event: Awaited<ReturnType<typeof deviceApi.events>>['items'][number]): string | undefined {
+function transitionLabel(
+  event: Awaited<ReturnType<typeof deviceApi.events>>['items'][number],
+): string | undefined {
   if (event.kind !== 'session_state' || Array.isArray(event.payload)) return;
   const { from, status } = event.payload;
   if (typeof from !== 'string' || typeof status !== 'string') return;

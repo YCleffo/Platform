@@ -395,7 +395,8 @@ async function loadDetail(): Promise<void> {
     if (ctx.current() && !controller.signal.aborted && detailId.value === id) detail.value = result;
   } catch (failure) {
     if (ctx.current() && !controller.signal.aborted) {
-      if (failure instanceof ApiError && [401, 403, 404].includes(failure.status)) detail.value = null;
+      if (failure instanceof ApiError && [401, 403, 404].includes(failure.status))
+        detail.value = null;
       detailError.value = issue(failure);
     }
   } finally {
@@ -416,7 +417,14 @@ function closeDetail(): void {
 }
 async function deviceAction(action: DeviceAction): Promise<void> {
   const target = detail.value;
-  if (!target || !canDevice(target, action) || actionBusy.value || detailLoading.value || detailError.value) return;
+  if (
+    !target ||
+    !canDevice(target, action) ||
+    actionBusy.value ||
+    detailLoading.value ||
+    detailError.value
+  )
+    return;
   if (action === 'assign') {
     await openAssign(target);
     return;
