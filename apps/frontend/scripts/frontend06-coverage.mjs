@@ -756,13 +756,13 @@ for (const operation of operations) {
 const snapshot = JSON.stringify({ version: 1, documents: Object.keys(contracts), totals, contractOnly, operations }, null, 2) + '\n';
 if (process.argv.includes('--emit-static')) {
   process.stdout.write(snapshot);
-  process.exit(0);
-}
-if (process.argv.includes('--check')) {
-  if (readFileSync(output, 'utf8').replaceAll('\r\n', '\n') !== snapshot) {
-    throw new Error('The frontend coverage inventory drifted. Regenerate it and review the operation evidence.');
-  }
 } else {
-  writeFileSync(output, snapshot);
+  if (process.argv.includes('--check')) {
+    if (readFileSync(output, 'utf8').replaceAll('\r\n', '\n') !== snapshot) {
+      throw new Error('The frontend coverage inventory drifted. Regenerate it and review the operation evidence.');
+    }
+  } else {
+    writeFileSync(output, snapshot);
+  }
+  console.log(JSON.stringify({ totals, contractOnly: contractOnly.length, backendOperations: operations.length }, null, 2));
 }
-console.log(JSON.stringify({ totals, contractOnly: contractOnly.length, backendOperations: operations.length }, null, 2));
