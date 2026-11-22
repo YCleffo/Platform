@@ -107,16 +107,20 @@ try {
   assert.equal(new URL(page.url()).pathname, billingPath);
   assert.equal(await legalName.inputValue(), 'Unsaved billing draft');
   assert.equal(await country.inputValue(), 'R');
-  await page.getByRole('alert').filter({ hasText: 'Укажите юридическое название и двухбуквенный код страны.' }).waitFor({ timeout: 3000 });
+  // The message is fixed when validation runs, so an already shown alert keeps its language after the switch.
+  assert.match(await page.getByRole('alert').first().innerText(), /Enter a legal name and a two-letter country code\./);
+  await page.getByRole('button', { name: 'Сохранить профиль для счетов', exact: true }).click();
+  await page.getByRole('alert').filter({ hasText: 'Укажите юридическое название и двухбуквенный код страны.' }).waitFor();
   await page.getByText('месяц · ×3', { exact: true }).waitFor();
   await page.getByRole('button', { name: 'RU: Сменить язык' }).click();
   await page.waitForFunction(() => document.documentElement.lang === 'en');
   assert.equal(await legalName.inputValue(), 'Unsaved billing draft');
+  await page.getByRole('button', { name: 'Save billing profile', exact: true }).click();
   await page.getByRole('alert').filter({ hasText: 'Enter a legal name and a two-letter country code.' }).waitFor();
   await page.getByText('month · ×3', { exact: true }).waitFor();
   await legalName.fill('Saved company');
   await country.fill('RU');
-  states.push('billing period and validation follow RU/EN without losing the active route or unfinished profile');
+  states.push('billing period and validation follow RU/EN: re-validation speaks the active language and keeps the unfinished draft');
 
   assert.equal(await page.locator('#billing-legal-name').inputValue(), 'Saved company');
   await page.locator('#billing-legal-name').fill('Edited company'); await page.getByRole('button', { name: 'Save billing profile', exact: true }).click();
