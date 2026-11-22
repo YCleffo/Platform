@@ -21137,7 +21137,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/devices/DevicesView.vue",
-          "line": 470,
+          "line": 478,
           "routes": [
             "education-devices"
           ]
@@ -21225,7 +21225,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/devices/DevicesView.vue",
-          "line": 476,
+          "line": 484,
           "routes": [
             "education-devices"
           ]
@@ -21310,7 +21310,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/devices/DevicesView.vue",
-          "line": 473,
+          "line": 481,
           "routes": [
             "education-devices"
           ]
@@ -21478,7 +21478,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/devices/DevicesView.vue",
-          "line": 478,
+          "line": 486,
           "routes": [
             "education-devices"
           ]
@@ -21566,7 +21566,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/devices/DevicesView.vue",
-          "line": 479,
+          "line": 487,
           "routes": [
             "education-devices"
           ]

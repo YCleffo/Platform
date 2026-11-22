@@ -558,9 +558,11 @@ final readonly class PostgresDeviceStore implements DeviceStore
     private function assertStorageConfirmed(string $deviceId, array $session): void
     {
         // Serialize with Storage operations so a pending manifest is visible before cleanup.
-        $space = $this->one('SELECT id::text FROM storage.spaces
+        $space = $this->one(
+            'SELECT id::text FROM storage.spaces
             WHERE organization_id=CAST(:org AS uuid) AND student_id=CAST(:student AS uuid) FOR UPDATE',
-            [':org' => $session['organizationId'], ':student' => $session['studentId']]);
+            [':org' => $session['organizationId'], ':student' => $session['studentId']],
+        );
         if ($space === null) {
             throw new DeviceError(409, 'storage_not_confirmed');
         }

@@ -41,7 +41,8 @@ if ($command === 'set-storage-quota') {
     if ($bytes === false) {
         throw new RuntimeException('Invalid disposable storage quota.');
     }
-    $updated = $db->createCommand("UPDATE storage.spaces s SET max_bytes=:bytes
+    $updated = $db->createCommand(
+        "UPDATE storage.spaces s SET max_bytes=:bytes
         FROM core.organizations o WHERE o.id=s.organization_id AND o.code LIKE 'education.browser.%'
         AND s.organization_id=CAST(:org AS uuid) AND s.student_id=CAST(:student AS uuid)",
         [':org' => $role, ':student' => $student, ':bytes' => $bytes],
@@ -53,7 +54,8 @@ if ($command === 'set-storage-quota') {
     exit;
 }
 if ($command === 'expire-parent-invite') {
-    $updated = $db->createCommand("UPDATE education.parent_invites i
+    $updated = $db->createCommand(
+        "UPDATE education.parent_invites i
         SET created_at=now()-interval '2 hours',expires_at=now()-interval '1 hour'
         FROM core.organizations o
         WHERE i.id=CAST(:invite AS uuid) AND i.organization_id=o.id
@@ -131,15 +133,18 @@ $result = $db->transaction(function () use ($db, $container, $command, $role): a
         )->queryScalar();
         $studentAccount = $accounts['student'];
         $teacherAccount = $accounts['teacher'];
-        $db->createCommand('INSERT INTO core.organization_memberships(organization_id,person_id)
+        $db->createCommand(
+            'INSERT INTO core.organization_memberships(organization_id,person_id)
             VALUES(CAST(:org AS uuid),CAST(:student AS uuid))',
             [':org' => $switchOrganization, ':student' => $studentAccount['personId']],
         )->execute();
-        $secondStudent = $db->createCommand('INSERT INTO education.students(organization_id,owner_account_id,person_id)
+        $secondStudent = $db->createCommand(
+            'INSERT INTO education.students(organization_id,owner_account_id,person_id)
             VALUES(CAST(:org AS uuid),CAST(:teacher AS uuid),CAST(:person AS uuid)) RETURNING id::text',
             [':org' => $switchOrganization, ':teacher' => $teacherAccount['id'], ':person' => $studentAccount['personId']],
         )->queryScalar();
-        $db->createCommand('INSERT INTO education.student_accounts(student_id,organization_id,account_id,person_id,activated_at)
+        $db->createCommand(
+            'INSERT INTO education.student_accounts(student_id,organization_id,account_id,person_id,activated_at)
             VALUES(CAST(:student AS uuid),CAST(:org AS uuid),CAST(:account AS uuid),CAST(:person AS uuid),now())',
             [':student' => $secondStudent, ':org' => $switchOrganization, ':account' => $studentAccount['id'], ':person' => $studentAccount['personId']],
         )->execute();

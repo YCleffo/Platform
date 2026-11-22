@@ -173,7 +173,10 @@ final class ClassroomPostgresRegressionTest extends TestCase
         $synthetic = ['profilePrepared' => true, 'testAdapter' => true];
         $this->deviceRejects('test_adapter_not_allowed', fn() => $production->transitionSession($device, $session, 'ACTIVE', $synthetic));
         $this->deviceRejects('invalid_evidence', fn() => $this->devices->transitionSession(
-            $device, $session, 'ACTIVE', $synthetic + ['windowsLogonConfirmed' => true],
+            $device,
+            $session,
+            'ACTIVE',
+            $synthetic + ['windowsLogonConfirmed' => true],
         ));
         self::assertSame('SYNCING_IN', $production->activeSession($device)['status']);
         self::assertSame('ACTIVE', $this->devices->transitionSession($device, $session, 'ACTIVE', $synthetic)['status']);
@@ -232,7 +235,10 @@ final class ClassroomPostgresRegressionTest extends TestCase
 
         $this->devices->transitionSession($device, $session['id'], 'SYNC_PENDING');
         $this->deviceRejects('end_not_requested', fn() => $this->devices->transitionSession(
-            $device, $session['id'], 'SYNCING_OUT', ['sessionEnded' => true],
+            $device,
+            $session['id'],
+            'SYNCING_OUT',
+            ['sessionEnded' => true],
         ));
         $retry = $this->devices->retryRecovery($this->scope, $device, null);
         self::assertTrue($retry['retrying']);

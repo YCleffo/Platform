@@ -262,6 +262,9 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+      - name: Install frontend dependencies for API coverage
+        working-directory: apps/frontend
+        run: npm ci
       - name: Verify FRONTEND_07 API coverage inventory
         working-directory: .
         run: node apps/frontend/scripts/frontend07-coverage.mjs --check
