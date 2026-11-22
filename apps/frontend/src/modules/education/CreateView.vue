@@ -6,8 +6,10 @@ import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
 import { validDate } from '@/shared/formatting/temporal';
 import { zonedDateTimeToIso } from '@/shared/formatting/calendar';
 import { educationApi, type Page, type Group, type PersonChoice } from './api';
+import { curriculumLessonOptions } from './curriculum';
 import { useEducationWorkspace } from './workspace';
 import { useEducationMutation, useEducationResource, useEducationError } from './resources';
+import { useHomeworkResource } from './homework/resources';
 import { useEducationI18n } from './i18n';
 import EducationState from './EducationState.vue';
 const props = defineProps<{
@@ -64,26 +66,27 @@ const choices = useEducationResource(async (org, signal) => {
   ]);
   return { groups, selectedGroup, candidates, colleagues };
 });
-const curriculum = useEducationResource(
-  (org, signal) =>
-    props.kind === 'lesson' && groupId.value
-      ? educationApi.groupPrograms(org, groupId.value, signal)
-      : Promise.resolve({ items: [] }),
+const curriculum = useHomeworkResource(
+  () => workspace.organizationId,
+  async (org, signal) => {
+    const group = groupId.value;
+    if (props.kind !== 'lesson' || !group) return null;
+    const programs = await educationApi.groupPrograms(org, group, signal);
+    return curriculumLessonOptions(programs.items);
+  },
   [groupId],
 );
 const curriculumOptions = computed(() => [
   { value: '', label: t('education.noCurriculumLesson') },
-  ...(curriculum.data.value?.items ?? [])
-    .filter((p) => !p.endedAt)
-    .flatMap((p) =>
-      p.modules.flatMap((m) =>
-        m.lessons.map((l) => ({ value: l.id, label: `${p.name} / ${m.name} / ${l.title}` })),
-      ),
-    ),
+  ...(curriculum.data.value ?? []),
 ]);
-watch(groupId, () => {
-  curriculumLessonId.value = '';
-});
+watch(
+  groupId,
+  () => {
+    curriculumLessonId.value = '';
+  },
+  { flush: 'sync' },
+);
 const { data, loading, error, refresh } = choices;
 const groupOptions = computed(() => {
   const items = (data.value?.groups?.items ?? []).filter((item) => !item.archivedAt);

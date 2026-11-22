@@ -45,6 +45,7 @@ final readonly class StorageTransferService
                 'SELECT id::text,space_id::text AS "spaceId",purpose,path,
                 used_at::text AS "usedAt",expires_at::text AS "expiresAt",expected_sha256 AS "expectedSha256",
                 expected_size AS "expectedSize",file_version_id::text AS "fileVersionId",
+                base_version_id::text AS "baseVersionId",base_deleted_at::text AS "baseDeletedAt",created_at::text AS "createdAt",
                 device_id::text AS "deviceId",actor_account_id::text AS "actorAccountId"
                 FROM storage.tickets WHERE id=CAST(:id AS uuid) AND token_hash=:hash FOR UPDATE',
                 [':id' => $ticketId, ':hash' => hash('sha256', $token)],
@@ -70,6 +71,12 @@ final readonly class StorageTransferService
             $reservedBytes = 0;
             $reservedFiles = 0;
             if ($ticket['purpose'] === 'upload') {
+                if ($deviceId === null) {
+                    $resumed = $this->resumeBrowserUpload($scope, $ticket);
+                    if ($resumed !== null) {
+                        return $resumed;
+                    }
+                }
                 [$reservedBytes, $reservedFiles] = $this->reserve($scope, $space, $ticket['path'], (int) $size);
             }
             $id = $this->newId();
@@ -96,6 +103,31 @@ final readonly class StorageTransferService
         });
         $this->initializeMultipart($scope, $row['id'], $deviceId);
         return $this->read($scope, $row['id'], $deviceId);
+    }
+
+    /** A browser may lose its transfer ID on reload. Recover only the same bytes and base version. */
+    private function resumeBrowserUpload(StorageScope $scope, array $ticket): ?array
+    {
+        $id = $this->db->createCommand(
+            "SELECT t.id::text FROM storage.transfers t JOIN storage.tickets source ON source.id=t.ticket_id
+            WHERE t.space_id=CAST(:space AS uuid) AND t.actor_account_id=CAST(:actor AS uuid)
+                AND t.device_id IS NULL AND t.direction='upload' AND t.path=:path
+                AND t.expected_size=:size AND t.expected_sha256=:sha
+                AND source.base_version_id IS NOT DISTINCT FROM CAST(:base AS uuid)
+                AND source.base_deleted_at IS NOT DISTINCT FROM CAST(:deleted AS timestamptz)
+                AND ((t.status IN ('pending','uploading','verifying') AND t.expires_at>now())
+                    OR (t.status='confirmed' AND t.created_at<=CAST(:issued AS timestamptz) AND t.verified_at>=CAST(:issued AS timestamptz)))
+            ORDER BY t.created_at DESC LIMIT 1",
+            [':space' => $ticket['spaceId'], ':actor' => $scope->accountId, ':path' => $ticket['path'],
+                ':size' => $ticket['expectedSize'], ':sha' => $ticket['expectedSha256'], ':base' => $ticket['baseVersionId'],
+                ':deleted' => $ticket['baseDeletedAt'], ':issued' => $ticket['createdAt']],
+        )->queryScalar();
+        if (!is_string($id)) {
+            return null;
+        }
+        $row = $this->row($id);
+        $this->authorize($scope, $row, null);
+        return $row;
     }
 
     public function read(StorageScope $scope, string $id, ?string $deviceId = null): array

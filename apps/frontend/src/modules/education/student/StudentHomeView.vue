@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
+import {
+  formatCalendarDate,
+  formatZonedTime,
+  isoToZonedDateTime,
+} from '@/shared/formatting/calendar';
 import { studentPortalApi } from './api';
 import { studentSession } from './session';
 import { useHomeworkResource } from '../homework/resources';
@@ -14,10 +18,14 @@ const { data, loading, error, refresh } = useHomeworkResource(
   async (organization, signal) => studentPortalApi.home(organization, signal),
 );
 function time(value: string): string {
-  return formatZonedTime(value, locale.value, 'UTC');
+  return formatZonedTime(value, locale.value, studentSession.timezone);
 }
 function date(value: string): string {
-  return formatCalendarDate(value, locale.value, { dateStyle: 'medium' });
+  return formatCalendarDate(
+    isoToZonedDateTime(value, studentSession.timezone).slice(0, 10),
+    locale.value,
+    { dateStyle: 'medium' },
+  );
 }
 function statusLabel(status: string): string {
   return t(

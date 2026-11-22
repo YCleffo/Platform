@@ -73,6 +73,12 @@ onScopeDispose(() => {
         >
           {{ t('education.activateParentInvitation') }}
         </RouterLink>
+        <RouterLink
+          to="/education/student-activate"
+          class="edu-link"
+        >
+          {{ t('education.activateStudentInvitation') }}
+        </RouterLink>
       </nav>
       <p>
         <button

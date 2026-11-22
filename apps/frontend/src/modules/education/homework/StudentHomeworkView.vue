@@ -4,7 +4,6 @@ import { useRoute } from 'vue-router';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
 import AppConfirmDialog from '@/shared/ui/overlays/AppConfirmDialog.vue';
 import { useEducationI18n } from '../i18n';
-import { useEducationWorkspace } from '../workspace';
 import { useEducationError } from '../resources';
 import { studentSession } from '../student/session';
 import EducationState from '../EducationState.vue';
@@ -13,7 +12,6 @@ import HomeworkAnswerHistory from './HomeworkAnswerHistory.vue';
 import { homeworkApi } from './api';
 import { useHomeworkMutation, useHomeworkResource } from './resources';
 const route = useRoute(),
-  workspace = useEducationWorkspace(),
   { t, locale } = useEducationI18n(),
   issue = useEducationError();
 const id = computed(() => String(route.params.id ?? '')),
@@ -73,7 +71,7 @@ function date(value: string): string {
   return new Intl.DateTimeFormat(locale.value, {
     dateStyle: 'medium',
     timeStyle: 'short',
-    timeZone: workspace.header?.timezone ?? 'UTC',
+    timeZone: studentSession.timezone,
   }).format(new Date(value));
 }
 async function save(): Promise<void> {

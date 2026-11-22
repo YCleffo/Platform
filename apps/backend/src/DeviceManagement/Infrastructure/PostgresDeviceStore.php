@@ -15,13 +15,19 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class PostgresDeviceStore implements DeviceStore
 {
+    private const DEVICE_STATUS = "CASE WHEN d.status='AVAILABLE' AND (
+        d.enrollment_state<>'confirmed' OR d.last_seen_at IS NULL OR d.last_seen_at < now() - interval '90 seconds'
+        OR (d.agent_state->>'machineReady') IS DISTINCT FROM 'true'
+        OR coalesce(d.agent_state->>'hasUnfinishedDocuments','false')='true'
+    ) THEN 'OFFLINE' ELSE d.status END";
+
     private const DEVICE = 'SELECT d.id::text,d.organization_id::text AS "organizationId",d.owner_account_id::text AS "ownerAccountId",
-        d.classroom_id::text AS "classroomId",d.workstation_id::text AS "workstationId",d.name,d.number,d.status,
+        d.classroom_id::text AS "classroomId",d.workstation_id::text AS "workstationId",d.name,d.number,' . self::DEVICE_STATUS . ' AS status,
         d.enrollment_state AS "enrollmentState",d.last_seen_at::text AS "lastSeenAt",d.created_at::text AS "createdAt",
         d.state_version AS "stateVersion",c.name AS "classroomName" FROM device_management.devices d
         LEFT JOIN device_management.classrooms c ON c.id=d.classroom_id';
 
-    public function __construct(private ConnectionInterface $db) {}
+    public function __construct(private ConnectionInterface $db, private bool $allowTestAdapter = false) {}
 
     private static function where(string $alias): string
     {
@@ -167,7 +173,7 @@ final readonly class PostgresDeviceStore implements DeviceStore
         }
 
         if ($status !== null && $status !== '') {
-            $clauses[] = 'd.status = :status';
+            $clauses[] = self::DEVICE_STATUS . ' = :status';
             $params[':status'] = $status;
         }
 
@@ -334,7 +340,9 @@ final readonly class PostgresDeviceStore implements DeviceStore
                 [':device' => $deviceId, ':hash' => $credentialHash],
             )->queryScalar();
             $this->db->createCommand(
-                "UPDATE device_management.devices SET enrollment_state='confirmed',status='AVAILABLE',last_seen_at=now(),state_version=state_version+1 WHERE id=CAST(:device AS uuid)",
+                "UPDATE device_management.devices SET enrollment_state='confirmed',
+                status=CASE WHEN status='AVAILABLE' THEN 'OFFLINE' ELSE status END,
+                last_seen_at=NULL,agent_state='{}',state_version=state_version+1 WHERE id=CAST(:device AS uuid)",
                 [':device' => $deviceId],
             )->execute();
             return ['deviceId' => $deviceId, 'credentialId' => (string) $credential];
@@ -494,42 +502,30 @@ final readonly class PostgresDeviceStore implements DeviceStore
     {
         return $this->db->transaction(function () use ($deviceId, $sessionId, $status, $evidence): array {
             $this->one('SELECT id::text FROM device_management.devices WHERE id=CAST(:device AS uuid) FOR UPDATE', [':device' => $deviceId]) ?? throw new DeviceError(404, 'not_found');
-            if (!empty($evidence) || getenv('APP_ENV') !== 'test') {
-                SessionEvidence::assertTransition($status, $evidence);
-            }
             $session = $this->one(
-                'SELECT id::text,status,desired_status AS "desiredStatus",started_at::text AS "startedAt",student_id::text AS "studentId" FROM device_management.device_sessions
+                'SELECT id::text,status,desired_status AS "desiredStatus",organization_id::text AS "organizationId",student_id::text AS "studentId" FROM device_management.device_sessions
                 WHERE device_id=CAST(:device AS uuid) AND id=CAST(:session AS uuid) FOR UPDATE',
                 [':device' => $deviceId, ':session' => $sessionId],
             ) ?? throw new DeviceError(404, 'not_found');
             $current = (string) $session['status'];
-            if ($current === $status) {
-                $this->db->createCommand('UPDATE device_management.device_sessions SET evidence=evidence || CAST(:evidence AS jsonb) WHERE id=CAST(:session AS uuid)', [':evidence' => json_encode((object) $evidence, JSON_THROW_ON_ERROR), ':session' => $sessionId])->execute();
-                return ['sessionId' => $sessionId, 'deviceId' => $deviceId, 'status' => $status];
-            }
             if (!SessionTransitions::allowed($current, $status)) {
                 throw new DeviceError(409, 'invalid_transition');
             }
-            if ($status === 'ENDING' && $session['desiredStatus'] !== 'ENDING' && getenv('APP_ENV') !== 'test') {
+            SessionEvidence::assertTransition($status, $evidence, $this->allowTestAdapter);
+            if ($current === $status) {
+                if (!SessionTransitions::terminal($status)) {
+                    $this->db->createCommand('UPDATE device_management.device_sessions SET evidence=evidence || CAST(:evidence AS jsonb) WHERE id=CAST(:session AS uuid)', [':evidence' => json_encode((object) $evidence, JSON_THROW_ON_ERROR), ':session' => $sessionId])->execute();
+                }
+                return ['sessionId' => $sessionId, 'deviceId' => $deviceId, 'status' => $status];
+            }
+            if (in_array($status, ['ENDING', 'SYNCING_OUT'], true) && $session['desiredStatus'] !== 'ENDING') {
                 throw new DeviceError(409, 'end_not_requested');
             }
             if ($status === 'CLOSED' && $current !== 'CLEANUP') {
                 throw new DeviceError(409, 'storage_not_confirmed');
             }
             if (in_array($status, ['STORAGE_CONFIRMED', 'CLEANUP', 'CLOSED'], true)) {
-                $hasStorageSpace = $this->one('SELECT 1 FROM storage.spaces WHERE student_id=CAST(:student AS uuid)', [':student' => $session['studentId']]);
-                if ($hasStorageSpace !== null) {
-                    $confirmation = $this->one("SELECT m.id::text FROM storage.manifests m JOIN storage.spaces sp ON sp.id=m.space_id
-                        WHERE m.device_id=CAST(:device AS uuid) AND sp.student_id=CAST(:student AS uuid) AND m.status='confirmed'
-                        AND m.confirmed_at>=CAST(:started AS timestamptz) AND NOT EXISTS
-                        (SELECT 1 FROM storage.manifests pending WHERE pending.space_id=sp.id AND pending.status='pending')
-                        AND NOT EXISTS(SELECT 1 FROM storage.manifests archived WHERE archived.space_id=sp.id
-                            AND archived.status='accepted' AND archived.version>=m.version)
-                        ORDER BY m.confirmed_at DESC LIMIT 1", [':device' => $deviceId, ':student' => $session['studentId'], ':started' => $session['startedAt']]);
-                    if ($confirmation === null) {
-                        throw new DeviceError(409, 'storage_not_confirmed');
-                    }
-                }
+                $this->assertStorageConfirmed($deviceId, $session);
             }
             $endedAt = SessionTransitions::terminal($status) ? 'now()' : 'NULL';
             $this->db->createCommand(
@@ -557,6 +553,30 @@ final readonly class PostgresDeviceStore implements DeviceStore
             $this->recordEvent($deviceId, 'session_state', ['sessionId' => $sessionId, 'from' => $current, 'status' => $status]);
             return ['sessionId' => $sessionId, 'deviceId' => $deviceId, 'status' => $status];
         });
+    }
+
+    private function assertStorageConfirmed(string $deviceId, array $session): void
+    {
+        // Serialize with Storage operations so a pending manifest is visible before cleanup.
+        $space = $this->one('SELECT id::text FROM storage.spaces
+            WHERE organization_id=CAST(:org AS uuid) AND student_id=CAST(:student AS uuid) FOR UPDATE',
+            [':org' => $session['organizationId'], ':student' => $session['studentId']]);
+        if ($space === null) {
+            throw new DeviceError(409, 'storage_not_confirmed');
+        }
+
+        $confirmation = $this->one("SELECT m.id::text FROM storage.manifests m
+            WHERE m.space_id=CAST(:space AS uuid) AND m.device_id=CAST(:device AS uuid) AND m.status='confirmed'
+            AND m.confirmed_at >= (SELECT MIN(e.created_at) FROM device_management.device_events e
+                WHERE e.device_id=m.device_id AND e.kind='session_state' AND e.payload->>'sessionId'=:session
+                AND e.payload->>'status'='SYNCING_OUT')
+            AND NOT EXISTS(SELECT 1 FROM storage.manifests pending WHERE pending.space_id=m.space_id AND pending.status='pending')
+            AND NOT EXISTS(SELECT 1 FROM storage.manifests archived WHERE archived.space_id=m.space_id
+                AND archived.status='accepted' AND archived.version>=m.version)
+            LIMIT 1", [':space' => $space['id'], ':device' => $deviceId, ':session' => $session['id']]);
+        if ($confirmation === null) {
+            throw new DeviceError(409, 'storage_not_confirmed');
+        }
     }
 
     public function queueCommand(string $deviceId, string $kind, array $payload, string $expiresAt): array
@@ -633,7 +653,7 @@ final readonly class PostgresDeviceStore implements DeviceStore
     public function recordEvent(string $deviceId, string $kind, array $payload): void
     {
         $this->db->createCommand(
-            'INSERT INTO device_management.device_events(device_id,kind,payload) VALUES(CAST(:device AS uuid),:kind,CAST(:payload AS jsonb))',
+            'INSERT INTO device_management.device_events(device_id,kind,payload,created_at) VALUES(CAST(:device AS uuid),:kind,CAST(:payload AS jsonb),clock_timestamp())',
             [':device' => $deviceId, ':kind' => $kind, ':payload' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)],
         )->execute();
     }
@@ -703,14 +723,15 @@ final readonly class PostgresDeviceStore implements DeviceStore
         $payload = $decode($error['payload'] ?? null);
         $lastError = $evidence['error'] ?? ($error === null ? null : ['code' => (string) ($payload['code'] ?? 'agent_error'),
             'message' => substr((string) ($payload['message'] ?? ''), 0, 500), 'at' => (new DateTimeImmutable((string) $error['at']))->format(DateTimeImmutable::ATOM)]);
-        $online = $device['lastSeenAt'] !== null && new DateTimeImmutable((string) $device['lastSeenAt']) >= new DateTimeImmutable('-90 seconds');
+        $online = $device['enrollmentState'] === 'confirmed' && $device['lastSeenAt'] !== null
+            && new DateTimeImmutable((string) $device['lastSeenAt']) >= new DateTimeImmutable('-90 seconds');
         $archived = $device['classroomId'] !== null && ($this->classroom($scope, (string) $device['classroomId'])['archivedAt'] ?? null) !== null;
         $recovery = $session !== null && in_array($session['status'], ['SYNC_PENDING','RECOVERY_REQUIRED','FAILED'], true);
         return ['availableActions' => \App\DeviceManagement\Application\DeviceAvailableActions::forDevice($device, $session, $online, $archived),
             'commands' => array_slice($this->commands($scope, $deviceId), 0, 50), 'progress' => $evidence['progress'] ?? $state['progress'] ?? null,
             'lastError' => $lastError, 'recovery' => $recovery ? ['required' => true, 'reason' => $session['status'], 'retryAllowed' => $online] : null,
             'stateVersion' => (int) $device['stateVersion'], 'online' => $online, 'agentVersion' => $state['version'] ?? null,
-            'testAdapter' => ($state['testAdapter'] ?? $evidence['testAdapter'] ?? false) === true];
+            'testAdapter' => $this->allowTestAdapter && ($evidence['testAdapter'] ?? false) === true];
     }
 
     private function lockOwnedDevice(Scope $scope, string $deviceId, ?int $stateVersion): array

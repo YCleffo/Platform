@@ -23,6 +23,7 @@ import type {
   PlanChange,
   PlanPrice,
   Receipt,
+  Refund,
   RefundList,
   SavedPaymentMethod,
   Subscription,
@@ -111,6 +112,7 @@ const invoiceDoc = ref<Invoice | null>(null);
 const paymentDoc = ref<Payment | null>(null);
 const receiptDoc = ref<Receipt | null>(null);
 const refundsDoc = ref<RefundList | null>(null);
+const refundDoc = ref<Refund | null>(null);
 const planChangeDoc = ref<PlanChange | null>(null);
 const documentError = ref<string | null>(null);
 const documentLoading = ref(false);
@@ -610,7 +612,8 @@ async function confirm(): Promise<void> {
 
 async function loadDocument(action: (current: () => boolean) => Promise<void>): Promise<void> {
   const generation = ++documentGeneration;
-  const current = () => live && generation === documentGeneration;
+  const epoch = sessionEpoch.value;
+  const current = () => live && generation === documentGeneration && epoch === sessionEpoch.value;
   documentLoading.value = true;
   documentError.value = null;
   try {
@@ -631,6 +634,7 @@ function viewInvoice(id: string): void {
     paymentDoc.value = null;
     receiptDoc.value = null;
     refundsDoc.value = null;
+    refundDoc.value = null;
   });
 }
 
@@ -643,6 +647,7 @@ function viewPayment(id: string): void {
     invoiceDoc.value = invoice;
     receiptDoc.value = null;
     refundsDoc.value = null;
+    refundDoc.value = null;
   });
 }
 
@@ -700,9 +705,18 @@ function viewReceipt(id: string): void {
 }
 
 function viewRefunds(id: string): void {
+  refundDoc.value = null;
   void loadDocument(async (current) => {
     const refunds = await billingApi.refunds(accountId.value, id);
     if (current()) refundsDoc.value = refunds;
+  });
+}
+
+function viewRefund(id: string): void {
+  refundDoc.value = null;
+  void loadDocument(async (current) => {
+    const refund = await billingApi.refund(accountId.value, id);
+    if (current()) refundDoc.value = refund;
   });
 }
 
@@ -796,6 +810,7 @@ watch(
     paymentDoc.value = null;
     receiptDoc.value = null;
     refundsDoc.value = null;
+    refundDoc.value = null;
     planChangeDoc.value = null;
     selectedPriceId.value = '';
     changeTargetPriceId.value = '';
@@ -809,8 +824,10 @@ watch(
     cancelPending();
     actionBusy.value = false;
     historyQuery.value = '';
+    historyBusy.value = false;
     historyError.value = null;
     actionError.value = null;
+    documentLoading.value = false;
     documentError.value = null;
     resetProfile();
     void load();
@@ -1543,7 +1560,43 @@ watch(
           >
             <span>{{ historyStatus(refund.status) }} · {{ refund.id }}</span>
             <span>{{ formatMoney(refund.amount_minor, refund.currency, locale) }}</span>
+            <AppButton
+              size="s"
+              variant="secondary"
+              :aria-label="$t('billing.viewRefund', { id: refund.id })"
+              :aria-expanded="refundDoc?.id === refund.id"
+              @click="viewRefund(refund.id)"
+            >
+              {{ $t('billing.refundDetails') }}
+            </AppButton>
           </div>
+        </section>
+        <section
+          v-if="refundDoc"
+          class="billing__document"
+          aria-labelledby="refund-details-title"
+        >
+          <h4 id="refund-details-title">{{ $t('billing.refundDetails') }} {{ refundDoc.id }}</h4>
+          <p class="billing__muted">
+            {{ historyStatus(refundDoc.status) }} ·
+            {{ formatMoney(refundDoc.amount_minor, refundDoc.currency, locale) }} ·
+            {{ formatDateTime(refundDoc.completed_at ?? refundDoc.created_at, locale) }}
+          </p>
+          <div
+            v-for="item in refundDoc.items"
+            :key="item.invoice_line_id"
+            class="billing__line"
+          >
+            <span>{{ item.description }} × {{ item.quantity }}</span>
+            <span>{{ formatMoney(item.total_minor, item.currency, locale) }}</span>
+          </div>
+          <p
+            v-if="refundDoc.receipt"
+            class="billing__muted"
+          >
+            {{ $t('billing.receipt') }} {{ refundDoc.receipt.id }} ·
+            {{ historyStatus(refundDoc.receipt.status) }}
+          </p>
         </section>
       </AppCard>
     </template>

@@ -3,6 +3,7 @@ import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { coreAdminSession, coreAdminSessionEpoch } from '@/core/admin/session';
 import {
   storageApi,
+  storageVersionConflict,
   type StorageSpace,
   type StorageFile,
   type FileVersion,
@@ -16,6 +17,7 @@ import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
 import EducationState from '../EducationState.vue';
 import type { Page } from '../api';
+import { ApiError } from '@/shared/api/errors';
 
 const { t, locale } = useEducationI18n(),
   issue = useEducationError();
@@ -31,7 +33,9 @@ const loading = ref(false),
   uploadError = ref(''),
   actionMessage = ref('');
 const transferProgress = ref<TransferProgress | null>(null);
+const failedUpload = shallowRef<{ file: File; path: string; review: boolean } | null>(null);
 const downloading = ref<string | null>(null);
+const downloadProgress = ref<TransferProgress | null>(null);
 const folder = ref(''),
   uploadFolder = ref(''),
   offset = ref(0),
@@ -91,7 +95,9 @@ watch(
     transferController = null;
     downloadController = null;
     transferProgress.value = null;
+    failedUpload.value = null;
     downloading.value = null;
+    downloadProgress.value = null;
     data.value = null;
     versionFile.value = null;
     renameTarget.value = null;
@@ -199,6 +205,7 @@ async function restoreVersion(file: StorageFile, version: number): Promise<void>
 }
 async function action(
   task: (id: string) => Promise<unknown>,
+  success: string,
   accept = () => undefined,
 ): Promise<void> {
   if (uploadBusy.value) return;
@@ -210,6 +217,7 @@ async function action(
     await task(ctx.org);
     if (ctx.current()) {
       accept();
+      actionMessage.value = success;
       await refresh();
     }
   } catch (failure) {
@@ -220,13 +228,14 @@ async function action(
 }
 async function deleteFile(file: StorageFile): Promise<void> {
   if (window.confirm(t('education.confirmDelete')))
-    await action((id) => storageApi.deleteFile(id, file.path));
+    await action((id) => storageApi.deleteFile(id, file.path), t('education.fileDeleted'));
 }
 async function renameFile(): Promise<void> {
   const target = renameTarget.value;
   if (!target || !newPath.value.trim()) return;
   await action(
     (id) => storageApi.renameFile(id, target.path, newPath.value.trim()),
+    t('education.fileRenamed'),
     () => {
       renameTarget.value = null;
     },
@@ -234,13 +243,16 @@ async function renameFile(): Promise<void> {
 }
 async function resolveConflict(conflict: FileConflict): Promise<void> {
   if (window.confirm(t('education.keepServerConfirm')))
-    await action((id) => storageApi.resolveConflict(id, conflict.id));
+    await action(
+      (id) => storageApi.resolveConflict(id, conflict.id),
+      t('education.conflictResolved'),
+    );
 }
 async function upload(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement,
     file = input.files?.[0];
   input.value = '';
-  if (!file || uploadBusy.value) return;
+  if (!file || uploadBusy.value || downloading.value !== null) return;
   const path = [uploadFolder.value.trim().replace(/^\/+|\/+$/g, ''), file.name]
     .filter(Boolean)
     .join('/');
@@ -249,11 +261,23 @@ async function upload(event: Event): Promise<void> {
     !window.confirm(t('education.overwriteFileConfirm'))
   )
     return;
+  await uploadFile(file, path);
+}
+async function retryUpload(): Promise<void> {
+  const pending = failedUpload.value;
+  if (!pending) return;
+  if (pending.review && (!data.value || !window.confirm(t('education.retryOverwriteConfirm'))))
+    return;
+  await uploadFile(pending.file, pending.path);
+}
+async function uploadFile(file: File, path: string): Promise<void> {
+  if (uploadBusy.value || downloading.value !== null) return;
   const ctx = context();
   transferController?.abort();
   const request = new AbortController();
   transferController = request;
   uploadBusy.value = true;
+  failedUpload.value = null;
   uploadError.value = '';
   actionMessage.value = '';
   try {
@@ -269,7 +293,18 @@ async function upload(event: Event): Promise<void> {
       await refresh();
     }
   } catch (failure) {
-    if (ctx.current() && !request.signal.aborted) uploadError.value = issue(failure);
+    if (!ctx.current()) return;
+    if (request.signal.aborted) {
+      actionMessage.value = t('education.uploadRequestStopped');
+      await refresh();
+    } else {
+      uploadError.value = issue(failure);
+      const review = storageVersionConflict(failure);
+      if (!(failure instanceof ApiError && (failure.status === 401 || failure.status === 403))) {
+        failedUpload.value = { file, path, review };
+      }
+      if (review) await refresh();
+    }
   } finally {
     if (transferController === request) {
       transferController = null;
@@ -278,21 +313,33 @@ async function upload(event: Event): Promise<void> {
     if (ctx.current()) uploadBusy.value = false;
   }
 }
-async function download(path: string): Promise<void> {
+async function download(file: StorageFile): Promise<void> {
   if (uploadBusy.value || downloadController) return;
   const ctx = context();
   const request = new AbortController();
   downloadController = request;
-  downloading.value = path;
+  downloading.value = file.path;
+  downloadProgress.value = { loaded: 0, total: file.sizeBytes ?? 0, phase: 'downloading' };
   uploadError.value = '';
+  actionMessage.value = '';
   try {
-    await storageApi.downloadFile(ctx.org, path, request.signal);
+    const outcome = await storageApi.downloadFile(ctx.org, file.path, request.signal, (value) => {
+      if (ctx.current() && !request.signal.aborted) downloadProgress.value = value;
+    });
+    if (ctx.current()) {
+      actionMessage.value = t(
+        outcome === 'verified' ? 'education.downloadVerified' : 'education.downloadInBrowser',
+      );
+    }
   } catch (failure) {
-    if (ctx.current() && !request.signal.aborted) uploadError.value = issue(failure);
+    if (!ctx.current()) return;
+    if (request.signal.aborted) actionMessage.value = t('education.downloadStopped');
+    else uploadError.value = issue(failure);
   } finally {
     if (downloadController === request) {
       downloadController = null;
       downloading.value = null;
+      downloadProgress.value = null;
     }
   }
 }
@@ -333,6 +380,15 @@ function formatDate(value: string | null): string {
     >
       {{ uploadError }}
     </p>
+    <button
+      v-if="failedUpload"
+      type="button"
+      class="edu-button"
+      :disabled="uploadBusy || downloading !== null || (failedUpload.review && !data)"
+      @click="retryUpload"
+    >
+      {{ t('education.retryUpload', { file: failedUpload.path }) }}
+    </button>
     <p
       v-if="actionMessage"
       class="edu-success-banner"
@@ -389,10 +445,11 @@ function formatDate(value: string | null): string {
           <input
             type="file"
             class="edu-visually-hidden"
-            :disabled="uploadBusy"
+            :disabled="uploadBusy || downloading !== null"
             @change="upload"
           />
         </label>
+        <p>{{ t('education.uploadReselectHint') }}</p>
         <div
           v-if="uploadBusy && transferProgress"
           class="edu-transfer-progress"
@@ -414,6 +471,28 @@ function formatDate(value: string | null): string {
             class="edu-button"
             type="button"
             @click="transferController?.abort()"
+          >
+            {{ t('education.cancelTransfer') }}
+          </button>
+        </div>
+        <div
+          v-if="downloading !== null && downloadProgress"
+          class="edu-transfer-progress"
+          role="status"
+        >
+          <label for="document-download-progress">{{ t('education.transfer_downloading') }}</label>
+          <progress
+            id="document-download-progress"
+            :value="downloadProgress.loaded"
+            :max="downloadProgress.total || 1"
+          ></progress>
+          <span>
+            {{ formatBytes(downloadProgress.loaded) }} / {{ formatBytes(downloadProgress.total) }}
+          </span>
+          <button
+            class="edu-button"
+            type="button"
+            @click="downloadController?.abort()"
           >
             {{ t('education.cancelTransfer') }}
           </button>
@@ -467,7 +546,7 @@ function formatDate(value: string | null): string {
               type="button"
               class="edu-button edu-button--small"
               :disabled="uploadBusy || downloading !== null"
-              @click="download(file.path)"
+              @click="download(file)"
             >
               {{ t(downloading === file.path ? 'education.loading' : 'education.download') }}
             </button>

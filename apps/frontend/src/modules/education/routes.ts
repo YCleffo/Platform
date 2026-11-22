@@ -4,6 +4,7 @@ const create = () => import('./CreateView.vue');
 export const educationRoutes: RouteRecordRaw[] = [
   { path: '/education/contexts', name: 'education-contexts', component: () => import('./EducationContextView.vue'), meta: { requiresEducationAuth: true } },
   { path: '/parent/activate', name: 'education-parent-activate', component: () => import('./parent/ParentActivationView.vue') },
+  { path: '/education/student-activate', name: 'education-student-activate', component: () => import('./student/StudentActivationView.vue'), meta: { requiresEducationAuth: true } },
   { path: '/parent', component: () => import('./parent/ParentLayout.vue'), meta: { requiresEducationAuth: true }, children: [
     { path: '', redirect: '/parent/home' },
     ...['home', 'schedule', 'diary', 'homework', 'progress', 'notifications'].map(section => ({ path: section, name: `education-parent-${section}`, component: () => import('./parent/ParentSectionView.vue'), meta: { parentSection: section } })),
@@ -45,6 +46,7 @@ export const educationRoutes: RouteRecordRaw[] = [
       { path: 'notifications', name: 'education-student-notifications', component: () => import('./NotificationsView.vue'), props: { student: true }, meta: { educationTab: 'none' } },
       { path: 'home', name: 'education-student-home', component: () => import('./student/StudentHomeView.vue'), meta: { educationTab: 'none' } },
       { path: 'diary', name: 'education-student-diary', component: () => import('./student/StudentDiaryView.vue'), meta: { educationTab: 'none' } },
+      { path: 'schedule', name: 'education-student-schedule', component: () => import('./student/StudentDiaryView.vue'), props: { schedule: true }, meta: { educationTab: 'none' } },
       { path: 'diary/:id', name: 'education-student-lesson', component: () => import('./student/StudentLessonView.vue'), meta: { educationTab: 'none' } },
       { path: 'activities', name: 'education-student-activities', component: () => import('./student/StudentActivitiesView.vue'), meta: { educationTab: 'none' } },
       { path: 'typing/:code', name: 'education-student-typing', component: () => import('./student/StudentTypingView.vue'), meta: { educationTab: 'none' } },
@@ -54,7 +56,6 @@ export const educationRoutes: RouteRecordRaw[] = [
       { path: 'documents', name: 'education-student-documents', component: () => import('./student/StudentDocumentsView.vue'), meta: { educationTab: 'none' } },
     ] },
     { path: '/devices', name: 'education-devices', component: () => import('./devices/DevicesView.vue'), meta: { educationTab: 'people' } },
-    { path: '/education/student-activate', name: 'education-student-activate', component: () => import('./student/StudentActivationView.vue'), meta: { requiresEducationAuth: true } },
     { path: '/students/new', name: 'education-enroll-student', component: create, props: { kind: 'student' }, meta: { educationTab: 'people' } },
     { path: '/students/:id', name: 'education-student', component: () => import('./StudentView.vue'), meta: { educationTab: 'people' } },
     { path: '/materials', name: 'education-materials', component: () => import('./MaterialsView.vue'), meta: { educationTab: 'more' } },

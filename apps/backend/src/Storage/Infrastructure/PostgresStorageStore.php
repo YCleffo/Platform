@@ -689,8 +689,14 @@ final readonly class PostgresStorageStore implements StorageStore
                 ORDER BY version DESC LIMIT 1",
                 [':space' => $spaceId],
             );
-            $active = $deviceId === null ? null : $this->one("SELECT started_at::text AS started FROM device_management.device_sessions
-                WHERE device_id=CAST(:device AS uuid) AND status<>'CLOSED' ORDER BY created_at DESC LIMIT 1", [':device' => $deviceId]);
+            $active = $deviceId === null ? null : $this->one("SELECT COALESCE(
+                    (SELECT MIN(e.created_at) FROM device_management.device_events e
+                    WHERE e.device_id=s.device_id AND e.kind='session_state'
+                    AND e.payload->>'sessionId'=s.id::text AND e.payload->>'status'='SYNCING_OUT'),
+                    s.started_at)::text AS started
+                FROM device_management.device_sessions s
+                WHERE s.device_id=CAST(:device AS uuid) AND s.status<>'CLOSED'
+                ORDER BY s.created_at DESC LIMIT 1", [':device' => $deviceId]);
             $pendingReuse = $this->one("SELECT id::text FROM storage.manifests WHERE space_id=CAST(:space AS uuid) AND status='pending' LIMIT 1", [':space' => $spaceId]);
             if ($latest !== null && $version === (int) $latest['version']
                 && ($latest['deviceId'] ?? null) === $deviceId && $active !== null
@@ -790,7 +796,7 @@ final readonly class PostgresStorageStore implements StorageStore
                     }
                 }
                 $this->db->createCommand(
-                    "UPDATE storage.manifests SET status='confirmed',confirmed_at=now(),
+                    "UPDATE storage.manifests SET status='confirmed',confirmed_at=clock_timestamp(),
                         snapshot=CAST(:snapshot AS jsonb),snapshot_sha256=:hash WHERE id=CAST(:id AS uuid)",
                     [':snapshot' => json_encode($canonical, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
                         ':hash' => $snapshotHash, ':id' => $manifestId],
@@ -818,7 +824,7 @@ final readonly class PostgresStorageStore implements StorageStore
                     base_version,snapshot,snapshot_sha256,confirmed_at)
                 VALUES(CAST(:space AS uuid),:version,'[]',:entries_hash,'confirmed',
                     CAST(:device AS uuid),:base,
-                    CAST(:snapshot AS jsonb),:hash,now())
+                    CAST(:snapshot AS jsonb),:hash,clock_timestamp())
                 RETURNING id::text",
                 [':space' => $spaceId, ':version' => $next,
                     ':entries_hash' => hash('sha256', '[]'),

@@ -10,7 +10,7 @@ export interface SignedRequest {
   headers: Record<string, string>;
   expiresAt: string;
 }
-export interface TransferProgress { loaded: number; total: number; phase: 'hashing' | 'uploading' | 'verifying' }
+export interface TransferProgress { loaded: number; total: number; phase: 'hashing' | 'uploading' | 'downloading' | 'verifying' }
 export interface TransferOptions { signal?: AbortSignal; progress?: (value: TransferProgress) => void }
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 export function signedRequestGuard(value: unknown): value is SignedRequest {
@@ -101,10 +101,34 @@ export function uploadSigned(request: SignedRequest, blob: Blob, options: Transf
   });
 }
 
-/** Education attachments are bounded to ten MiB and verified before the existing Blob consumers receive them. */
 export async function downloadVerified(request: SignedRequest, size: number, sha256: string, mime: string, signal?: AbortSignal): Promise<Blob> {
+  return downloadObject(request, size, sha256, mime, 10 * 1024 * 1024, { signal });
+}
+
+const bufferedDownloadLimit = 64 * 1024 * 1024;
+
+export async function downloadStorageObject(
+  request: SignedRequest, size: number, sha256: string, name: string, options: TransferOptions,
+): Promise<'verified' | 'browser'> {
+  if (size > bufferedDownloadLimit) {
+    downloadInBrowser(request, name);
+    return 'browser';
+  }
+  const epoch = coreAdminSession.epoch();
+  const blob = await downloadObject(request, size, sha256, 'application/octet-stream', bufferedDownloadLimit, options);
+  assertTransferCurrent(epoch, options.signal);
+  const url = URL.createObjectURL(blob);
+  clickDownload(url, name);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return 'verified';
+}
+
+async function downloadObject(
+  request: SignedRequest, size: number, sha256: string, mime: string, maxBytes: number,
+  { signal, progress }: TransferOptions,
+): Promise<Blob> {
   safeRequest(request, 'GET');
-  if (!Number.isSafeInteger(size) || size < 0 || size > 10485760 || !/^[a-f0-9]{64}$/.test(sha256)) throw new ApiResponseError('Education transfer');
+  if (!Number.isSafeInteger(size) || size < 0 || size > maxBytes || !/^[a-f0-9]{64}$/.test(sha256)) throw new ApiResponseError('Object transfer');
   const epoch = coreAdminSession.epoch();
   assertTransferCurrent(epoch, signal);
   const controller = new AbortController();
@@ -122,11 +146,13 @@ export async function downloadVerified(request: SignedRequest, size: number, sha
     while (true) {
       assertTransferCurrent(epoch, signal);
       const part = await reader.read();
+      assertTransferCurrent(epoch, signal);
       if (part.done) break;
       received += part.value.length;
       if (received > size) throw new ApiError(503, 'storage.integrity_failed', 'The downloaded file failed verification.');
       hash.update(part.value);
       chunks.push(new Uint8Array(part.value));
+      progress?.({ loaded: received, total: size, phase: 'downloading' });
     }
     assertTransferCurrent(epoch, signal);
     if (received !== size || hash.digest('hex') !== sha256) throw new ApiError(503, 'storage.integrity_failed', 'The downloaded file failed verification.');
@@ -148,8 +174,12 @@ export function downloadInBrowser(request: SignedRequest, name: string): void {
   safeRequest(request, 'GET');
   if (Object.keys(request.headers).length !== 0) throw new ApiResponseError('Storage download');
   if (Date.parse(request.expiresAt) <= Date.now()) throw signedResponseError(403);
+  clickDownload(request.url, name);
+}
+
+function clickDownload(url: string, name: string): void {
   const anchor = document.createElement('a');
-  anchor.href = request.url;
+  anchor.href = url;
   anchor.download = name;
   anchor.rel = 'noopener noreferrer';
   anchor.referrerPolicy = 'no-referrer';

@@ -6,6 +6,7 @@ import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import { formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
 import { educationApi, type Lesson, type ResultStatus } from './api';
+import { curriculumSnapshotLabel } from './curriculum';
 import { useEducationWorkspace } from './workspace';
 import { useEducationMutation, useEducationResource, useEducationError } from './resources';
 import { useEducationI18n } from './i18n';
@@ -53,6 +54,9 @@ const started = computed(
 );
 const displayStatus = computed<Lesson['status'] | 'now'>(() =>
   data.value?.lesson ? lessonDisplayStatus(data.value.lesson, workspace.header!.now) : 'scheduled',
+);
+const programLesson = computed(() =>
+  curriculumSnapshotLabel(data.value?.lesson?.curriculumSnapshot),
 );
 const canMarkAttendance = computed(
   () => !!data.value?.lesson && data.value.lesson.status !== 'cancelled' && started.value,
@@ -219,7 +223,19 @@ async function saveResult(id: string): Promise<void> {
             {{ statusLabel(displayStatus) }}
           </span>
         </p>
-        <p>{{ data.lesson.groupName }} · {{ students(data.lesson.studentCount) }}</p>
+        <p>
+          <RouterLink
+            :to="`/groups/${data.lesson.groupId}`"
+            class="edu-link"
+          >
+            {{ data.lesson.groupName }}
+          </RouterLink>
+          · {{ students(data.lesson.studentCount) }}
+        </p>
+        <p v-if="programLesson">
+          <strong>{{ t('education.curriculumLesson') }}</strong>
+          · {{ programLesson }}
+        </p>
         <p>
           {{ time(data.lesson.startsAt) }} – {{ time(data.lesson.endsAt) }} ·
           {{ workspace.header!.timezone }}

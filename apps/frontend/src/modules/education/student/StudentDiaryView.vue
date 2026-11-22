@@ -1,24 +1,48 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
+import {
+  addCalendarDays,
+  calendarWeek,
+  formatCalendarDate,
+  formatZonedTime,
+  isoToZonedDateTime,
+} from '@/shared/formatting/calendar';
 import { studentPortalApi, type StudentDiaryLesson } from './api';
 import { studentSession } from './session';
-import { useEducationResource } from '../resources';
+import { useHomeworkResource } from '../homework/resources';
 import { useEducationI18n } from '../i18n';
 import EducationState from '../EducationState.vue';
 import HomeworkSummary from '../homework/HomeworkSummary.vue';
 const { t, locale } = useEducationI18n();
-const org = computed(() => studentSession.organizationId);
+const props = defineProps<{ schedule?: boolean }>();
 const offset = ref(0);
-const { data, loading, error, refresh } = useEducationResource(
-  async (_org, signal) => studentPortalApi.diary(org.value, offset.value, signal),
-  [org, offset],
+const weekOffset = ref(0);
+const week = computed(() =>
+  calendarWeek(
+    addCalendarDays(
+      isoToZonedDateTime(new Date().toISOString(), studentSession.timezone).slice(0, 10),
+      weekOffset.value * 7,
+    ),
+  ),
+);
+const { data, loading, error, refresh } = useHomeworkResource(
+  () => studentSession.organizationId,
+  async (org, signal) => {
+    if (!props.schedule) return studentPortalApi.diary(org, offset.value, signal);
+    const result = await studentPortalApi.schedule(org, week.value[0]!, week.value[6]!, signal);
+    return { items: result.items, nextOffset: null };
+  },
+  [() => props.schedule, offset, weekOffset],
 );
 function time(value: string): string {
-  return formatZonedTime(value, locale.value, 'UTC');
+  return formatZonedTime(value, locale.value, studentSession.timezone);
 }
 function date(value: string): string {
-  return formatCalendarDate(value, locale.value, { dateStyle: 'medium' });
+  return formatCalendarDate(
+    isoToZonedDateTime(value, studentSession.timezone).slice(0, 10),
+    locale.value,
+    { dateStyle: 'medium' },
+  );
 }
 function statusLabel(lesson: StudentDiaryLesson): string {
   return t(
@@ -28,8 +52,40 @@ function statusLabel(lesson: StudentDiaryLesson): string {
 </script>
 <template>
   <section>
-    <h2>{{ t('education.myDiary') }}</h2>
+    <header class="edu-page-title">
+      <h2>{{ t(schedule ? 'education.parentschedule' : 'education.myDiary') }}</h2>
+      <RouterLink
+        :to="schedule ? '/student/diary' : '/student/schedule'"
+        class="edu-link"
+      >
+        {{ t(schedule ? 'education.myDiary' : 'education.parentschedule') }}
+      </RouterLink>
+    </header>
+    <div
+      v-if="schedule"
+      class="edu-form-actions"
+    >
+      <button
+        type="button"
+        class="edu-button"
+        @click="weekOffset--"
+      >
+        {{ t('education.previousWeek') }}
+      </button>
+      <p role="status">
+        {{ formatCalendarDate(week[0]!, locale, { dateStyle: 'medium' }) }} –
+        {{ formatCalendarDate(week[6]!, locale, { dateStyle: 'medium' }) }}
+      </p>
+      <button
+        type="button"
+        class="edu-button"
+        @click="weekOffset++"
+      >
+        {{ t('education.nextWeek') }}
+      </button>
+    </div>
     <HomeworkSummary
+      v-else
       student
       compact
     />
@@ -41,7 +97,7 @@ function statusLabel(lesson: StudentDiaryLesson): string {
     <template v-if="data">
       <EducationState
         v-if="!data.items.length"
-        :empty="t('education.noAttendance')"
+        :empty="t(schedule ? 'education.noLessons' : 'education.noAttendance')"
       />
       <ul
         v-else
@@ -62,7 +118,7 @@ function statusLabel(lesson: StudentDiaryLesson): string {
               {{ time(lesson.endsAt) }} ·
               {{ statusLabel(lesson) }}
             </p>
-            <p>
+            <p v-if="!schedule">
               {{
                 t(
                   `education.${lesson.attendance === 'absent' ? 'absentStatus' : lesson.attendance}`,
@@ -78,7 +134,7 @@ function statusLabel(lesson: StudentDiaryLesson): string {
               </template>
             </p>
             <p
-              v-if="lesson.resultComment"
+              v-if="!schedule && lesson.resultComment"
               class="edu-subtle"
             >
               {{ lesson.resultComment }}

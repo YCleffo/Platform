@@ -157,6 +157,24 @@ final class StorageTransferIntegrationTest extends TransferDatabaseFixture
         self::assertSame(hash('sha256', $old), $this->transfers->complete($this->owner, $download['id'], [])['result']['sha256']);
     }
 
+    public function testReselectingIdenticalBytesAfterBrowserReloadResumesOneTransfer(): void
+    {
+        $path = 'interrupted.txt';
+        $bytes = 'identical bytes from the reopened file picker';
+        $first = $this->upload($path, $bytes);
+        $reselected = $this->store->createTicket($this->owner, 'upload', $path, hash('sha256', $bytes), strlen($bytes));
+        $start = ['ticketId' => $reselected['id'], 'token' => $reselected['token']];
+        self::assertSame($first['id'], $this->transfers->start($this->owner, $start)['id']);
+        $this->denied(fn() => $this->upload($path, 'different bytes'), 409, 'transfer_in_progress');
+
+        self::assertSame(200, $this->objectRequest($first['request'], $bytes)['status']);
+        $confirmed = $this->transfers->complete($this->owner, $first['id'], []);
+        $replayed = $this->transfers->start($this->owner, $start);
+        self::assertSame($first['id'], $replayed['id']);
+        self::assertSame($confirmed['result'], $replayed['result']);
+        self::assertSame(1, $confirmed['result']['version']);
+    }
+
     private function upload(string $path, string $bytes): array
     {
         $ticket = $this->store->createTicket($this->owner, 'upload', $path, hash('sha256', $bytes), strlen($bytes));

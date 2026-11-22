@@ -13,7 +13,7 @@ export interface ActivityConfig {
 export interface LogicAnswer { roundId: string; optionId: string }
 export interface LogicRound { id: string; kind: string; prompt: string; options: { id: string; label: string }[] }
 export interface ActivityExercise {
-  attempt: { id: string; activityCode?: string; status: string; config?: ActivityConfig; stateVersion?: number; state?: { typed?: string; answers?: LogicAnswer[]; currentRound?: number }; startedAt: string };
+  attempt: { id: string; activityCode?: string; assignmentId?: string | null; status: string; config?: ActivityConfig; stateVersion?: number; state?: { typed?: string; answers?: LogicAnswer[]; currentRound?: number }; startedAt: string };
   exercise: { text?: string; durationSeconds?: 15 | 30 | 60; language: ActivityLanguage; mode?: TypingMode; difficulty?: number; version?: number; rounds?: LogicRound[] };
   result?: LogicResult | null;
 }

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "runId": "local-2631d97c-8101-4525-8465-938e923598d8",
+  "testedSha": "d493eeee5e8394ea2a94eb8baf929c584ed523c8",
+  "sourceDigest": "bca2dca92d3e8384d0b807ec8df8f0e93a4e07c639a23633e5db9d5bbfe7827c",
+  "sourceDirty": true,
+  "environment": {
+    "kind": "isolated-ci",
+    "proofSha256": "c74fcf7f96c11618d30b0eba0bca0f7e57e73eb5f957747f0595793f60154dee"
+  },
+  "scenarios": [
+    {
+      "id": "storage-recovery",
+      "testFile": "apps/frontend/scripts/e2e-education-roles.mjs",
+      "status": "PASS",
+      "timestamp": "2026-11-22T02:05:34.891Z",
+      "artifact": "storage-recovery-c5264f08-60ca-4e1f-937c-45301c7d9fac.json",
+      "artifactSha256": "61d1fd9a3a65abea02b02e33486127175a3d24cfcf81d1a0d4ffec45749f5534",
+      "userActionReachable": true,
+      "persistentResultVerified": true,
+      "securityBoundaryVerified": true
+    }
+  ]
+}

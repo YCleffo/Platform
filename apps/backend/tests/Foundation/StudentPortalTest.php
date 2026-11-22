@@ -271,6 +271,10 @@ final class StudentPortalTest extends TestCase
         $config = $this->service->read('student_activity_config', $scope, [], 'platform-typing');
         self::assertSame($assignment['id'], $config['assignments'][0]['id']);
         self::assertSame(['durationSeconds' => 30], $config['assignments'][0]['config']);
+        $teacherAssignments = $this->service->read('activity_assignments', $this->teacherScope, []);
+        self::assertSame($assignment['id'], $teacherAssignments['items'][0]['id']);
+        self::assertSame(['durationSeconds' => 30], $teacherAssignments['items'][0]['config']);
+        self::assertSame('en', $config['assignments'][0]['effectiveConfig']['language']);
 
         $started = $this->service->write('student_start_attempt', $scope, ['durationSeconds' => 30, 'language' => 'en'], 'platform-typing');
         $this->service->write('student_finish_attempt', $scope, ['typed' => $started['exercise']['text'], 'durationSeconds' => 30], $started['attempt']['id']);

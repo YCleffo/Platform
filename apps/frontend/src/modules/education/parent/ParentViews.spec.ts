@@ -129,6 +129,45 @@ describe('parent pages', () => {
     expect(wrapper.text()).not.toContain('INTERNAL_SUBJECT');
     expect(wrapper.text()).not.toContain('INTERNAL_BODY');
   });
+  it('ignores stale mark-read denial after switching children', async () => {
+    const workspace = useParentWorkspace();
+    const second = { ...child, id: '01900000-0000-7000-8000-000000000005', name: 'Child B' };
+    workspace.context = { ...workspace.context!, children: [child, second] };
+    state.route = reactive({ meta: { parentSection: 'notifications' }, query: {} });
+    vi.mocked(parentApi.notifications).mockImplementation(async (selected) => ({
+      items: [{ id: selected.id, threadId: null,
+        kind: selected.id === child.id ? 'parent_homework_published' : 'parent_homework_reviewed',
+        subject: '', createdAt: now, readAt: null }],
+      limit: 50, offset: 0, nextOffset: null,
+    }));
+    let reject!: (reason: unknown) => void;
+    vi.mocked(parentApi.readNotification).mockReturnValue(new Promise((_resolve, fail) => { reject = fail; }));
+    const wrapper = open(ParentSectionView);
+    await flushPromises();
+    await wrapper.findAll('button').find((button) => button.text() === 'education.markRead')!.trigger('click');
+    const signal = vi.mocked(parentApi.readNotification).mock.calls[0]?.[2];
+    workspace.chooseChild(parentChildKey(second));
+    await flushPromises();
+    expect(signal?.aborted).toBe(true);
+    reject(new ApiError(404, 'not_found', 'Revoked'));
+    await flushPromises();
+    expect(workspace.child?.id).toBe(second.id);
+    expect(wrapper.text()).toContain('education.parentNotice_parent_homework_reviewed');
+  });
+  it('refreshes a disappeared notification while keeping the authorized child selected', async () => {
+    state.route = reactive({ meta: { parentSection: 'notifications' }, query: {} });
+    const page = { items: [], limit: 50, offset: 0, nextOffset: null };
+    vi.mocked(parentApi.notifications)
+      .mockResolvedValueOnce({ ...page, items: [{ id: child.id, threadId: null, kind: 'parent_homework_published', subject: '', createdAt: now, readAt: null }] })
+      .mockResolvedValueOnce(page);
+    vi.mocked(parentApi.readNotification).mockRejectedValueOnce(new ApiError(404, 'not_found', 'Missing notice'));
+    const wrapper = open(ParentSectionView);
+    await flushPromises();
+    await wrapper.findAll('button').find((button) => button.text() === 'education.markRead')!.trigger('click');
+    await flushPromises();
+    expect(useParentWorkspace().child?.id).toBe(child.id);
+    expect(wrapper.text()).toContain('education.noNotifications');
+  });
   it('shows reviewed homework as read only and omits unexpected private draft fields', async () => {
     const assignment: ParentHomework & { draftText: string } = {
       id: child.id,

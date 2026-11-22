@@ -1129,9 +1129,13 @@ final readonly class PostgresEducationStore implements EducationStore
     {
         return $this->all(
             'SELECT a.id::text,a.activity_id::text AS "activityId",d.code AS "activityCode",d.name AS "activityName",
-            a.group_id::text AS "groupId",a.student_id::text AS "studentId",a.config,a.opens_at::text AS "opensAt",
-            a.due_at::text AS "dueAt",a.completion FROM education.activity_assignments a
+            a.group_id::text AS "groupId",g.name AS "groupName",a.student_id::text AS "studentId",
+            a.config,a.opens_at::text AS "opensAt",a.due_at::text AS "dueAt",a.completion,a.created_at::text AS "createdAt",
+            CASE WHEN EXISTS(SELECT 1 FROM education.homework_recipients r WHERE r.activity_assignment_id=a.id)
+                THEN \'homework\' ELSE \'learning\' END AS origin
+            FROM education.activity_assignments a
             JOIN education.activity_definitions d ON d.id=a.activity_id
+            LEFT JOIN education.groups g ON g.id=a.group_id AND g.organization_id=a.organization_id
             WHERE a.organization_id=CAST(:org AS uuid) AND (
                 a.student_id=CAST(:student AS uuid)
                 OR a.group_id IN (SELECT group_id FROM education.group_students
@@ -1369,7 +1373,8 @@ final readonly class PostgresEducationStore implements EducationStore
     {
         return $this->all(
             'SELECT a.id::text,a.activity_id::text AS "activityId",d.code AS "activityCode",d.name AS "activityName",
-            a.status,a.source,a.started_at::text AS "startedAt",a.finished_at::text AS "finishedAt",
+            a.status,a.source,a.assignment_id::text AS "assignmentId",
+            a.started_at::text AS "startedAt",a.finished_at::text AS "finishedAt",
             t.duration_seconds AS "durationSeconds",COALESCE(t.language,r.metrics->>\'language\') AS language,t.wpm::float,
             COALESCE(t.accuracy,(r.metrics->>\'accuracy\')::numeric)::float AS accuracy,t.errors,
             (r.metrics->>\'correctAnswers\')::int AS "correctAnswers",(r.metrics->>\'totalRounds\')::int AS "totalRounds",
@@ -1400,7 +1405,7 @@ final readonly class PostgresEducationStore implements EducationStore
     {
         return $this->one(
             'SELECT t.attempt_id::text AS "attemptId",t.duration_seconds AS "durationSeconds",t.language,
-            t.wpm::float,t.accuracy::float,t.errors,t.created_at::text AS "createdAt"
+            t.keystrokes,t.correct_chars AS "correctChars",t.wpm::float,t.accuracy::float,t.errors,t.created_at::text AS "createdAt"
             FROM education.typing_results t JOIN education.activity_attempts a ON a.id=t.attempt_id
             WHERE a.status=\'finished\' AND a.revoked_at IS NULL
             AND t.organization_id=CAST(:org AS uuid) AND t.student_id=CAST(:student AS uuid)
@@ -1412,25 +1417,23 @@ final readonly class PostgresEducationStore implements EducationStore
     public function createAssignment(Scope $scope, string $activityId, ?string $groupId, ?string $studentId, array $config): array
     {
         return $this->db->transaction(function () use ($scope, $activityId, $groupId, $studentId, $config): array {
-            if ($groupId !== null) {
-                $this->required(
-                    'SELECT g.id::text FROM education.groups g WHERE ' . self::where('g') . ' AND g.id=CAST(:id AS uuid) FOR UPDATE',
-                    [...self::owner($scope), ':id' => $groupId],
-                );
-            }
-            if ($studentId !== null) {
-                $this->required(
-                    'SELECT s.id::text FROM education.students s WHERE ' . self::where('s') . ' AND s.id=CAST(:id AS uuid) FOR UPDATE',
-                    [...self::owner($scope), ':id' => $studentId],
-                );
-            }
-            return $this->required(
+            $group = $groupId === null ? null : $this->required(
+                'SELECT g.name FROM education.groups g WHERE ' . self::where('g') . ' AND g.id=CAST(:id AS uuid) FOR UPDATE',
+                [...self::owner($scope), ':id' => $groupId],
+            );
+            $student = $studentId === null ? null : $this->required(
+                'SELECT s.person_id::text AS "personId" FROM education.students s WHERE ' . self::where('s') . ' AND s.id=CAST(:id AS uuid) FOR UPDATE',
+                [...self::owner($scope), ':id' => $studentId],
+            );
+            $assignment = $this->required(
                 'INSERT INTO education.activity_assignments(organization_id,owner_account_id,activity_id,group_id,student_id,config)
                 VALUES(CAST(:org AS uuid),CAST(:actor AS uuid),CAST(:activity AS uuid),:group,:student,CAST(:config AS jsonb))
-                RETURNING id::text,activity_id::text AS "activityId",group_id::text AS "groupId",student_id::text AS "studentId",config',
+                RETURNING id::text,activity_id::text AS "activityId",group_id::text AS "groupId",student_id::text AS "studentId",
+                config,opens_at::text AS "opensAt",due_at::text AS "dueAt",completion,created_at::text AS "createdAt"',
                 [...self::owner($scope), ':activity' => $activityId, ':group' => $groupId, ':student' => $studentId,
-                    ':config' => json_encode($config, JSON_THROW_ON_ERROR)],
+                    ':config' => json_encode((object) $config, JSON_THROW_ON_ERROR)],
             );
+            return [...$assignment, 'groupName' => $group['name'] ?? null, 'studentPersonId' => $student['personId'] ?? null];
         });
     }
 

@@ -4,6 +4,10 @@ An existing installation upgrades through `Install-Service.ps1 -MigrateLegacySta
 
 Windows service and desktop UI for managed classroom sessions and Documents synchronization through the existing Platform DeviceManagement and Storage APIs.
 
+The production Core accepts `ACTIVE` only from the enrolled Agent with a prepared profile and confirmed Windows logon. The synthetic adapter sends `testAdapter: true` with no Windows logon confirmation. Core enables it through isolated test configuration with a browser nonce and the existing runtime isolation guard, or through the dedicated Classroom HTTP harness after it verifies the `classroom02_test` database.
+
+An authorized end command and confirmation that the managed user session ended precede `SYNCING_OUT`. If there are no local changes, the Agent posts its last confirmed manifest version and verified snapshot to `POST /api/device-agent/storage/sync`. With no existing Storage space and an empty Documents folder, it posts `{"version":0,"entries":[]}`. Storage initializes the space and verifies the empty snapshot. Core requires a confirmed manifest for the device and student dated from that session’s first `SYNCING_OUT` transition. An earlier sync-in confirmation, an unresolved pending manifest, or a newer archived recovery manifest cannot authorize cleanup. Repeating confirmation of the same settled snapshot returns the existing checkpoint.
+
 ## S3 document transfers
 
 The platform agent exchanges authenticated metadata with DeviceManagement and Storage, then uses the returned signed requests for S3. Uploads keep a read-sharing file lock and use bounded streams. Multipart requests run within the configured concurrency and share one bandwidth budget. The agent hashes each part, checks the complete source again before confirmation and validates the server's version, size and SHA-256 receipt.

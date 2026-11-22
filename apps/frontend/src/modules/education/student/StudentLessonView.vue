@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
+import {
+  formatCalendarDate,
+  formatZonedTime,
+  isoToZonedDateTime,
+} from '@/shared/formatting/calendar';
 import { studentPortalApi } from './api';
 import { studentSession } from './session';
-import { useEducationError, useEducationResource } from '../resources';
+import { useEducationError } from '../resources';
+import { useHomeworkResource } from '../homework/resources';
 import { useEducationDownload } from '../downloads';
 import { useEducationI18n } from '../i18n';
 import EducationState from '../EducationState.vue';
@@ -21,15 +26,20 @@ const {
   () => org.value,
   () => id.value,
 );
-const { data, loading, error, refresh } = useEducationResource(
-  async (_org, signal) => studentPortalApi.lesson(org.value, id.value, signal),
-  [org, id],
+const { data, loading, error, refresh } = useHomeworkResource(
+  () => org.value,
+  (organization, signal) => studentPortalApi.lesson(organization, id.value, signal),
+  [id],
 );
 function time(value: string): string {
-  return formatZonedTime(value, locale.value, 'UTC');
+  return formatZonedTime(value, locale.value, studentSession.timezone);
 }
 function date(value: string): string {
-  return formatCalendarDate(value, locale.value, { dateStyle: 'medium' });
+  return formatCalendarDate(
+    isoToZonedDateTime(value, studentSession.timezone).slice(0, 10),
+    locale.value,
+    { dateStyle: 'medium' },
+  );
 }
 </script>
 <template>

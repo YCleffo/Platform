@@ -9867,6 +9867,42 @@
           },
           "config": {
             "type": "object"
+          },
+          "effectiveConfig": {
+            "type": "object",
+            "description": "Validated Typing or Logic settings with defaults filled, returned in the student's activity detail."
+          },
+          "groupName": {
+            "type": "string",
+            "nullable": true
+          },
+          "studentPersonId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "opensAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "completion": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["learning", "homework"],
+            "description": "Student assignment source. Homework attempts start through the homework resource."
           }
         },
         "required": [
@@ -10386,6 +10422,38 @@
               "en"
             ]
           },
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "An available learning assignment scoped to the student. The supplied exercise settings must match the assignment."
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["words", "sentences", "numbers", "code", "accuracy"]
+          },
+          "difficulty": {
+            "type": "integer",
+            "enum": [1, 2, 3]
+          },
+          "minAccuracy": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "targetWpm": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 500
+          },
+          "maxAttempts": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "roundCount": {
+            "type": "integer",
+            "enum": [5, 10]
+          },
           "source": {
             "type": "string",
             "enum": [
@@ -10395,10 +10463,7 @@
             ]
           }
         },
-        "required": [
-          "durationSeconds",
-          "language"
-        ]
+        "description": "Exercise parameters vary by activity. Omitted parameters use that activity's defaults."
       },
       "TypingExercise": {
         "type": "object",
@@ -10557,6 +10622,11 @@
           },
           "activityName": {
             "type": "string"
+          },
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           },
           "status": {
             "type": "string",

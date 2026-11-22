@@ -2,6 +2,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { coreAdminSession } from '@/core/admin/session';
+import { ApiError } from '@/shared/api/errors';
 import { homeworkApi } from '../homework/api';
 import { studentPortalApi, type TypingExercise, type TypingResult } from './api';
 import TypingTrainer from './TypingTrainer.vue';
@@ -9,7 +10,7 @@ import TypingTrainer from './TypingTrainer.vue';
 vi.mock('../i18n', () => ({ useEducationI18n: () => ({ t: (key: string) => key, locale: ref('en') }) }));
 vi.mock('../resources', () => ({ useEducationError: () => () => 'Request failed' }));
 vi.mock('../cache', () => ({ invalidateEducationCache: vi.fn() }));
-vi.mock('./api', () => ({ studentPortalApi: { startAttempt: vi.fn(), finishAttempt: vi.fn() } }));
+vi.mock('./api', () => ({ studentPortalApi: { startAttempt: vi.fn(), saveTypingState: vi.fn(), typingAttempt: vi.fn(), finishAttempt: vi.fn() } }));
 vi.mock('../homework/api', () => ({ homeworkApi: { startActivity: vi.fn() } }));
 const org = '019a0000-0000-7000-8000-000000000001';
 const attempt = '019a0000-0000-7000-8000-000000000002';
@@ -32,6 +33,7 @@ beforeEach(() => {
   coreAdminSession.set({ accessToken: 'student-a', refreshToken: 'refresh', sessionId: 'a', accessExpiresAt: '', sessionExpiresAt: '' });
   vi.mocked(studentPortalApi.startAttempt).mockResolvedValue(started);
   vi.mocked(homeworkApi.startActivity).mockResolvedValue(started);
+  vi.mocked(studentPortalApi.saveTypingState).mockResolvedValue(started);
   vi.mocked(studentPortalApi.finishAttempt).mockResolvedValue(result);
 });
 afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()); coreAdminSession.clear(); vi.useRealTimers(); });
@@ -75,6 +77,9 @@ describe('Typing 2 independent QA input and identity regressions', () => {
     await vi.advanceTimersByTimeAsync(14900); expect(studentPortalApi.finishAttempt).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(200); await flushPromises();
     expect(studentPortalApi.finishAttempt).toHaveBeenCalledTimes(1);
+    expect(studentPortalApi.saveTypingState).toHaveBeenCalledExactlyOnceWith(
+      org, attempt, 0, { typed: 'abc', corrections: 0, inputErrors: 0 }, expect.any(AbortSignal),
+    );
     await vi.advanceTimersByTimeAsync(30000); expect(studentPortalApi.finishAttempt).toHaveBeenCalledTimes(1);
     expect(wrapper.emitted('finished')).toEqual([[result]]);
   });
@@ -86,10 +91,41 @@ describe('Typing 2 independent QA input and identity regressions', () => {
     expect(wrapper.get('textarea').attributes('disabled')).toBeDefined();
     await click(wrapper, 'retrySave');
     expect(studentPortalApi.startAttempt).toHaveBeenCalledTimes(1);
+    expect(studentPortalApi.saveTypingState).toHaveBeenCalledTimes(1);
     expect(vi.mocked(studentPortalApi.finishAttempt).mock.calls[1]).toEqual(vi.mocked(studentPortalApi.finishAttempt).mock.calls[0]);
     expect(wrapper.emitted('finished')).toHaveLength(1);
     await click(wrapper, 'trainAgain'); expect(studentPortalApi.startAttempt).toHaveBeenCalledTimes(2);
     expect(wrapper.get('textarea').element.value).toBe('');
+  });
+
+  it('reconciles a committed checkpoint after the response was lost before finishing', async () => {
+    vi.mocked(studentPortalApi.saveTypingState)
+      .mockRejectedValueOnce(new Error('Lost response'))
+      .mockRejectedValueOnce(new ApiError(409, 'state_conflict', 'Stale state version'));
+    vi.mocked(studentPortalApi.typingAttempt).mockResolvedValue({
+      ...started,
+      attempt: { ...started.attempt, stateVersion: 1, state: { typed: 'abc', corrections: 0, inputErrors: 0 } },
+    });
+    const wrapper = open();
+    await start(wrapper);
+    await wrapper.get('textarea').setValue('abc');
+    await click(wrapper, 'finishTraining');
+    expect(studentPortalApi.finishAttempt).not.toHaveBeenCalled();
+    await click(wrapper, 'retrySave');
+    expect(studentPortalApi.typingAttempt).toHaveBeenCalledOnce();
+    expect(studentPortalApi.finishAttempt).toHaveBeenCalledOnce();
+    expect(wrapper.emitted('finished')).toEqual([[result]]);
+  });
+
+  it('starts teacher-assigned Typing with the assignment identity and settings', async () => {
+    const wrapper = open({ assignmentId: 'learning-a', assignedConfig: { durationSeconds: 15, language: 'en', difficulty: 2 } });
+    await start(wrapper);
+    expect(studentPortalApi.startAttempt).toHaveBeenCalledWith(org, 'platform-typing',
+      expect.objectContaining({ assignmentId: 'learning-a', durationSeconds: 15, language: 'en', difficulty: 2 }));
+    await wrapper.get('textarea').setValue('abc');
+    await click(wrapper, 'finishTraining');
+    expect(wrapper.text()).not.toContain('education.nextExercise');
+    expect(homeworkApi.startActivity).not.toHaveBeenCalled();
   });
 
   it('starts assigned legacy Typing through Homework rather than an unassigned attempt', async () => {

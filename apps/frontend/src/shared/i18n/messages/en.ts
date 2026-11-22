@@ -619,6 +619,8 @@ export default {
     refundable: 'Refundable',
     receipt: 'Receipt',
     refunds: 'Refunds',
+    refundDetails: 'Refund details',
+    viewRefund: 'View refund {id}',
     noRefunds: 'No refunds yet.',
     refundPayment: 'Refund payment',
     refundTitle: 'Refund payment',

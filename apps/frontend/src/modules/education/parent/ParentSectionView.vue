@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { coreAdminSession, coreAdminSessionEpoch } from '@/core/admin/session';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import { ApiError } from '@/shared/api/errors';
 import { useEducationI18n } from '../i18n';
@@ -14,7 +15,7 @@ import {
   type ParentLesson,
   type ParentProgress,
 } from './api';
-import { useParentWorkspace } from './workspace';
+import { parentChildKey, useParentWorkspace } from './workspace';
 import { useParentResource } from './resources';
 import ParentLessonList from './ParentLessonList.vue';
 import ParentHomeworkList from './ParentHomeworkList.vue';
@@ -87,22 +88,57 @@ const { data, error, loading, refresh } = useParentResource<SectionData>(
   },
   [section, offset],
 );
-const readBusy = ref('');
+const readError = shallowRef<unknown>(null);
+const readBusy = ref(false);
+let readController: AbortController | null = null;
+function resetRead(): void {
+  readController?.abort();
+  readController = null;
+  readBusy.value = false;
+  readError.value = null;
+}
+watch([() => workspace.revision, () => workspace.selectedKey, coreAdminSessionEpoch], resetRead, {
+  flush: 'sync',
+});
+onScopeDispose(resetRead);
 async function readNotification(id: string): Promise<void> {
   const child = workspace.child;
   if (!child || readBusy.value) return;
-  readBusy.value = id;
+  const request = new AbortController();
+  const epoch = coreAdminSession.epoch();
+  const revision = workspace.revision;
+  const current = () =>
+    !request.signal.aborted &&
+    epoch === coreAdminSession.epoch() &&
+    revision === workspace.revision &&
+    workspace.selectedKey === parentChildKey(child);
+  readController = request;
+  readBusy.value = true;
+  readError.value = null;
   try {
-    await parentApi.readNotification(child, id);
-    if (workspace.child?.id === child.id && workspace.child.organizationId === child.organizationId)
-      await refresh();
+    await parentApi.readNotification(child, id, request.signal);
+    if (current()) await refresh();
   } catch (failure) {
-    data.value = null;
-    error.value = failure;
-    if (failure instanceof ApiError && [403, 404].includes(failure.status)) workspace.denyChild();
+    if (!current()) return;
+    if (failure instanceof ApiError && failure.status === 403) {
+      workspace.denyChild();
+    } else if (failure instanceof ApiError && failure.status === 404) {
+      // A deleted notice and a revoked relationship both return 404 on the write.
+      // The scoped list read distinguishes them.
+      await refresh();
+    } else {
+      readError.value = failure;
+    }
   } finally {
-    readBusy.value = '';
+    if (readController === request) {
+      readController = null;
+      readBusy.value = false;
+    }
   }
+}
+function childSection(path: string) {
+  const child = workspace.child;
+  return { path, query: child ? { child: child.id, organization: child.organizationId } : {} };
 }
 const when = (value: string) =>
   new Intl.DateTimeFormat(locale.value, {
@@ -221,7 +257,7 @@ const notificationLabel = (notification: Notification) =>
           <div class="edu-page-title">
             <h2>{{ t('education.resultsHistory') }}</h2>
             <RouterLink
-              to="/parent/diary"
+              :to="childSection('/parent/diary')"
               class="edu-link"
             >
               {{ t('education.parentdiary') }}
@@ -237,7 +273,7 @@ const notificationLabel = (notification: Notification) =>
           <div class="edu-page-title">
             <h2>{{ t('education.parentDeadlines') }}</h2>
             <RouterLink
-              to="/parent/homework"
+              :to="childSection('/parent/homework')"
               class="edu-link"
             >
               {{ t('education.homework') }}
@@ -253,7 +289,7 @@ const notificationLabel = (notification: Notification) =>
           <h2>{{ t('education.notifications') }}</h2>
           <p>{{ t('education.parentUnread', { count: data.home.unreadCount }) }}</p>
           <RouterLink
-            to="/parent/notifications"
+            :to="childSection('/parent/notifications')"
             class="edu-link"
           >
             {{ t('education.parentnotifications') }}
@@ -342,6 +378,13 @@ const notificationLabel = (notification: Notification) =>
       </template>
       <template v-if="data.notifications">
         <EducationState
+          :error="readError"
+          @retry="
+            resetRead();
+            refresh();
+          "
+        />
+        <EducationState
           v-if="!data.notifications.length"
           :empty="t('education.noNotifications')"
         />
@@ -362,7 +405,7 @@ const notificationLabel = (notification: Notification) =>
               v-if="!notification.readAt"
               type="button"
               class="edu-button"
-              :disabled="!!readBusy"
+              :disabled="readBusy"
               @click="readNotification(notification.id)"
             >
               {{ t('education.markRead') }}

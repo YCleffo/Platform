@@ -1,10 +1,10 @@
 import { watch } from 'vue';
 import { coreAdminHttp } from '@/shared/api/core/adminHttp';
 import { coreAdminSession, coreAdminSessionEpoch } from '@/core/admin/session';
-import { ApiError, ApiResponseError } from '@/shared/api/errors';
+import { ApiError, ApiResponseError, NetworkError } from '@/shared/api/errors';
 import type { Page } from '../../education/api';
 import {
-  assertTransferCurrent, hashBlob, uploadSigned, downloadInBrowser, signedRequestGuard,
+  assertTransferCurrent, hashBlob, uploadSigned, downloadStorageObject, signedRequestGuard,
   signedRequestRejected, type SignedRequest, type TransferOptions,
 } from '../fileTransfer';
 
@@ -55,7 +55,7 @@ const objectTransferGuard: Guard<ObjectTransfer> = (value): value is ObjectTrans
   && (value.request === null || signedRequestGuard(value.request)) && Array.isArray(value.completedParts)
   && value.completedParts.every(part => record(part) && integer(part.partNumber) && integer(part.sizeBytes))
   && (value.result === null || uploadGuard(value.result));
-const uploads = new Map<string, string>();
+const uploads = new Map<string, { id: string; sent: boolean }>();
 watch(coreAdminSessionEpoch, () => uploads.clear(), { flush: 'sync' });
 async function transferPost(org: string, path: string, body: unknown, signal?: AbortSignal): Promise<ObjectTransfer> {
   const value = await coreAdminHttp.request<unknown>(path, { method: 'POST', headers: { 'X-Education-Organization': org }, body, signal });
@@ -76,13 +76,26 @@ async function resumeUpload(org: string, id: string, signal?: AbortSignal): Prom
   }
 }
 
+function storageCode(error: ApiError): unknown {
+  return error.meta?.storageCode ?? error.code;
+}
+
+export function storageVersionConflict(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 409 && storageCode(error) === 'version_conflict';
+}
+
+function renewSignedRequest(request: SignedRequest, error: unknown): boolean {
+  return signedRequestRejected(error) || (error instanceof ApiError
+    && error.code === 'storage.unavailable' && Date.parse(request.expiresAt) <= Date.now());
+}
+
 export async function uploadStorageFile(org: string, path: string, file: File, options: TransferOptions = {}): Promise<UploadResult> {
   const epoch = coreAdminSession.epoch();
   const sha256 = await hashBlob(file, options);
   assertTransferCurrent(epoch, options.signal);
   const key = `${epoch}:${org}:${path}:${sha256}:${file.size}`;
-  const previous = uploads.get(key);
-  let transfer = previous ? await resumeUpload(org, previous, options.signal) : undefined;
+  let pending = uploads.get(key);
+  let transfer = pending ? await resumeUpload(org, pending.id, options.signal) : undefined;
   assertTransferCurrent(epoch, options.signal);
   if (!transfer) {
     uploads.delete(key);
@@ -90,19 +103,30 @@ export async function uploadStorageFile(org: string, path: string, file: File, o
     assertTransferCurrent(epoch, options.signal);
     transfer = await transferPost(org, `${storagePath}/transfers`, { ticketId: ticket.id, token: ticket.token }, options.signal);
     if (epoch !== coreAdminSession.epoch()) assertTransferCurrent(epoch);
-    uploads.set(key, transfer.id);
+    pending = { id: transfer.id, sent: false };
+    uploads.set(key, pending);
   }
   const metadata = `${storagePath}/transfers/${encodeURIComponent(transfer.id)}`;
+  const receipt = (value: ObjectTransfer): UploadResult | null => {
+    if (value.direction !== 'upload' || value.expectedSize !== file.size || value.expectedSha256 !== sha256) {
+      throw new ApiResponseError(metadata);
+    }
+    if (value.status !== 'confirmed') return null;
+    if (!value.result || value.result.path !== path || value.result.sha256 !== sha256
+      || (value.result.size !== undefined && value.result.size !== file.size)) throw new ApiResponseError(metadata);
+    uploads.delete(key);
+    return value.result;
+  };
   try {
     assertTransferCurrent(epoch, options.signal);
-    if (transfer.direction !== 'upload' || transfer.expectedSize !== file.size || transfer.expectedSha256 !== sha256) throw new ApiResponseError(metadata);
-    if (transfer.status === 'confirmed' && transfer.result) { uploads.delete(key); return transfer.result; }
-    if (transfer.status !== 'verifying') {
+    const saved = receipt(transfer);
+    if (saved) return saved;
+    if (transfer.status !== 'verifying' && !pending?.sent) {
       if (transfer.mode === 'single') {
         if (!transfer.request) throw new ApiResponseError(metadata);
         try { await uploadSigned(transfer.request, file, options); }
         catch (error) {
-          if (!signedRequestRejected(error)) throw error;
+          if (!renewSignedRequest(transfer.request, error)) throw error;
           assertTransferCurrent(epoch, options.signal);
           transfer = await transferPost(org, metadata + '/refresh', {}, options.signal);
           assertTransferCurrent(epoch, options.signal);
@@ -131,7 +155,7 @@ export async function uploadStorageFile(org: string, path: string, file: File, o
           assertTransferCurrent(epoch, options.signal);
           try { await uploadSigned(signed, part, { signal: options.signal, progress }); }
           catch (error) {
-            if (!signedRequestRejected(error)) throw error;
+          if (!renewSignedRequest(signed, error)) throw error;
             const renewed = await sign();
             assertTransferCurrent(epoch, options.signal);
             await uploadSigned(renewed, part, { signal: options.signal, progress });
@@ -144,16 +168,40 @@ export async function uploadStorageFile(org: string, path: string, file: File, o
     assertTransferCurrent(epoch, options.signal);
     options.progress?.({ loaded: file.size, total: file.size, phase: 'verifying' });
     assertTransferCurrent(epoch, options.signal);
-    const result = await transferPost(org, metadata + '/complete', {}, options.signal);
-    assertTransferCurrent(epoch);
-    if (result.status !== 'confirmed' || !result.result) throw new ApiResponseError(metadata);
-    uploads.delete(key);
-    return result.result;
+    if (pending) pending.sent = true;
+    try {
+      const result = await transferPost(org, metadata + '/complete', {}, options.signal);
+      assertTransferCurrent(epoch);
+      const saved = receipt(result);
+      if (saved) return saved;
+      throw new ApiResponseError(metadata);
+    } catch (error) {
+      const ambiguous = error instanceof NetworkError || error instanceof ApiResponseError
+        || (error instanceof ApiError && error.status >= 500);
+      if (!ambiguous) throw error;
+      assertTransferCurrent(epoch, options.signal);
+      const status = await readTransfer(org, transfer.id, options.signal).catch((failure: unknown) => {
+        if (failure instanceof ApiError && (failure.status === 401 || failure.status === 403)) throw failure;
+        return null;
+      });
+      assertTransferCurrent(epoch, options.signal);
+      const saved = status && receipt(status);
+      if (saved) return saved;
+      throw error;
+    }
   } catch (error) {
-    if (options.signal?.aborted) {
-      uploads.delete(key);
-      if (epoch === coreAdminSession.epoch()) {
-        await transferPost(org, metadata + '/abort', {}).catch(() => undefined);
+    if (epoch === coreAdminSession.epoch()) {
+      if (options.signal?.aborted || storageVersionConflict(error)) {
+        const response = await transferPost(org, metadata + '/abort', {}).catch(() => null);
+        assertTransferCurrent(epoch);
+        if (response) {
+          const saved = receipt(response);
+          if (saved) return saved;
+          if (response.status === 'aborted') uploads.delete(key);
+        }
+        if (storageVersionConflict(error)) uploads.delete(key);
+      } else if (pending && error instanceof ApiError && ['upload_incomplete', 'upload_missing'].includes(String(storageCode(error)))) {
+        pending.sent = false;
       }
     }
     throw error;
@@ -184,17 +232,34 @@ export const storageApi = {
   },
   ticket: (org: string, purpose: 'upload' | 'download', path: string, expected: { expectedSize?: number; expectedSha256?: string } = {}, signal?: AbortSignal) => post(`${storagePath}/tickets`, org, { purpose, path, ...expected }, ticketGuard, signal),
   uploadFile: uploadStorageFile,
-  downloadFile: async (org: string, path: string, signal?: AbortSignal): Promise<void> => {
+  downloadFile: async (org: string, path: string, signal?: AbortSignal, progress?: TransferOptions['progress']): Promise<'verified' | 'browser'> => {
     const epoch = coreAdminSession.epoch();
     const ticket = await storageApi.ticket(org, 'download', path, {}, signal);
     assertTransferCurrent(epoch, signal);
     let transfer = await transferPost(org, `${storagePath}/transfers`, { ticketId: ticket.id, token: ticket.token }, signal);
     assertTransferCurrent(epoch, signal);
-    if (transfer.direction === 'download' && transfer.request && Date.parse(transfer.request.expiresAt) <= Date.now()) {
-      transfer = await transferPost(org, `${storagePath}/transfers/${encodeURIComponent(transfer.id)}/refresh`, {}, signal);
+    const refresh = async () => {
+      const next = await transferPost(org, `${storagePath}/transfers/${encodeURIComponent(transfer.id)}/refresh`, {}, signal);
       assertTransferCurrent(epoch, signal);
+      if (next.expectedSize !== transfer.expectedSize || next.expectedSha256 !== transfer.expectedSha256) {
+        throw new ApiResponseError('Storage transfer');
+      }
+      transfer = next;
+    };
+    const download = () => {
+      assertTransferCurrent(epoch, signal);
+      if (!transfer.request || transfer.direction !== 'download') throw new ApiResponseError('Storage transfer');
+      return downloadStorageObject(transfer.request, transfer.expectedSize, transfer.expectedSha256, path.split('/').pop() ?? 'file', { signal, progress });
+    };
+    if (transfer.request && Date.parse(transfer.request.expiresAt) <= Date.now()) {
+      await refresh();
+      return download();
     }
-    if (!transfer.request || transfer.direction !== 'download') throw new ApiResponseError('Storage transfer');
-    downloadInBrowser(transfer.request, path.split('/').pop() ?? 'file');
+    try { return await download(); }
+    catch (error) {
+      if (!transfer.request || !renewSignedRequest(transfer.request, error)) throw error;
+      await refresh();
+      return download();
+    }
   },
 };

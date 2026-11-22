@@ -12,7 +12,12 @@ export function useEducationError() {
     if (error instanceof ApiError) {
       const reason = error.meta?.storageCode ?? error.meta?.educationCode ?? error.code;
       switch (reason) {
+        case 'assignment_unavailable': return t('education.learningAssignmentUnavailable');
+        case 'attempt_limit_reached': return t('education.learningAttemptLimit');
         case 'quota_exceeded': return t('education.storageQuotaExceeded');
+        case 'version_conflict': return t('education.storageVersionConflict');
+        case 'transfer_in_progress': return t('education.storageTransferInProgress');
+        case 'storage.object_missing': return t('education.storageObjectMissing');
         case 'checksum_mismatch':
         case 'file_integrity_failed':
         case 'storage.integrity_failed': return t('education.storageIntegrityFailed');
@@ -51,9 +56,19 @@ export function useEducationResource<T>(load: (org: string, signal: AbortSignal)
     scope = nextScope; error.value = null; loading.value = !!org;
     if (!org) return;
     const current = () => !signal.aborted && version === generation && epoch === coreAdminSession.epoch() && revision === workspace.revision;
-    try { const result = await load(org, signal); if (current()) data.value = result; }
+    try {
+      let result: T;
+      try {
+        result = await load(org, signal);
+      } catch (caught) {
+        // A write can invalidate a shared read after this screen starts loading.
+        if (!current() || !(caught instanceof RequestAbortedError || caught instanceof SupersededOperationError)) throw caught;
+        result = await load(org, signal);
+      }
+      if (current()) data.value = result;
+    }
     catch (caught) {
-      if (current() && !(caught instanceof RequestAbortedError) && !(caught instanceof SupersededOperationError)) {
+      if (current()) {
         error.value = caught;
         if (caught instanceof ApiError && caught.status === 403) { workspace.reset(); workspace.error = caught; }
       }

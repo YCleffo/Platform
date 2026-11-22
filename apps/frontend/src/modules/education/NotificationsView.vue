@@ -40,7 +40,7 @@ async function read(id: string): Promise<void> {
         : educationApi.readNotification(org(), id),
     async () => {
       await refresh();
-      await workspace.refreshHeader();
+      if (!props.student) await workspace.refreshHeader();
     },
   );
 }
@@ -116,7 +116,13 @@ async function read(id: string): Promise<void> {
             }}
           </p>
           <p class="edu-subtle">
-            {{ formatZonedTime(item.createdAt, locale, workspace.header?.timezone ?? 'UTC') }}
+            {{
+              formatZonedTime(
+                item.createdAt,
+                locale,
+                student ? studentSession.timezone : (workspace.header?.timezone ?? 'UTC'),
+              )
+            }}
           </p>
         </div>
         <button

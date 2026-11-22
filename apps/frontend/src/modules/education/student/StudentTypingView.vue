@@ -8,12 +8,15 @@ import { studentSession } from './session';
 import { useEducationI18n } from '../i18n';
 import EducationState from '../EducationState.vue';
 import TypingTrainer from './TypingTrainer.vue';
+import StudentLearningAssignments from './StudentLearningAssignments.vue';
+import { useLearningAssignments } from './learningAssignments';
 const { t } = useEducationI18n();
 const org = computed(() => studentSession.organizationId);
 const route = useRoute();
 const homeworkId = computed(() =>
   typeof route.query.homework === 'string' ? route.query.homework : '',
 );
+const learning = useLearningAssignments('platform-typing', () => homeworkId.value);
 const assigned = useHomeworkResource(
   () => org.value,
   (organization, signal) =>
@@ -75,17 +78,39 @@ function onFinished(): void {
         {{ assigned.data.value.assignment.maxAttempts }}
       </p>
     </template>
+    <template v-else>
+      <StudentLearningAssignments
+        :items="learning.items.value"
+        :selected-id="learning.id.value"
+      />
+      <EducationState
+        :loading="learning.loading.value"
+        :error="learning.error.value"
+        @retry="learning.refresh"
+      />
+      <p
+        v-if="!learning.allowed.value && !learning.loading.value && !learning.error.value"
+        class="edu-subtle"
+      >
+        {{ t('education.learningAssignmentUnavailable') }}
+      </p>
+    </template>
     <EducationState
       :loading="loading"
       :error="error"
       @retry="refresh"
     />
     <TypingTrainer
-      v-if="org && (!homeworkId || canRunAssigned)"
-      :key="`${org}:${homeworkId}`"
+      v-if="org && (homeworkId ? canRunAssigned : learning.allowed.value)"
+      :key="`${org}:${homeworkId}:${learning.id.value}`"
       :organization-id="org"
       :homework-id="homeworkId || undefined"
-      :assigned-config="assigned.data.value?.assignment.activityConfig"
+      :assignment-id="homeworkId ? undefined : learning.selected.value?.id"
+      :assigned-config="
+        homeworkId
+          ? assigned.data.value?.assignment.activityConfig
+          : learning.selected.value?.effectiveConfig
+      "
       @finished="onFinished"
     />
     <p

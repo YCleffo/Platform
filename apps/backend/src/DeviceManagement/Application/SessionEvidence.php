@@ -46,13 +46,21 @@ final class SessionEvidence
         return $evidence;
     }
 
-    public static function assertTransition(string $status, array $evidence): void
+    public static function assertTransition(string $status, array $evidence, bool $allowTestAdapter = false): void
     {
+        $testAdapter = ($evidence['testAdapter'] ?? false) === true;
+        $windowsLogon = ($evidence['windowsLogonConfirmed'] ?? false) === true;
+        if ($testAdapter && !$allowTestAdapter) {
+            throw new DeviceError(409, 'test_adapter_not_allowed');
+        }
+        if ($testAdapter && $windowsLogon) {
+            throw new DeviceError(422, 'invalid_evidence');
+        }
         if ($status === 'WINDOWS_PROFILE_READY' && ($evidence['profilePrepared'] ?? false) !== true) {
             throw new DeviceError(409, 'profile_not_confirmed');
         }
         if ($status === 'ACTIVE' && (($evidence['profilePrepared'] ?? false) !== true
-            || (($evidence['windowsLogonConfirmed'] ?? false) !== true && ($evidence['testAdapter'] ?? false) !== true))) {
+            || (!$windowsLogon && !$testAdapter))) {
             throw new DeviceError(409, 'logon_not_confirmed');
         }
         if ($status === 'SYNCING_OUT' && ($evidence['sessionEnded'] ?? false) !== true) {

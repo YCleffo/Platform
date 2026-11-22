@@ -55,7 +55,7 @@ final class ClassroomPostgresRegressionTest extends TestCase
     protected function setUp(): void
     {
         $this->transaction = self::$db->beginTransaction();
-        $this->devices = new PostgresDeviceStore(self::$db);
+        $this->devices = new PostgresDeviceStore(self::$db, allowTestAdapter: true);
         $this->storage = new PostgresStorageStore(self::$db);
         $this->scope = new Scope($this->id(), $this->id(), $this->id(), 'en-US', 'UTC');
         $this->student = $this->id();
@@ -100,6 +100,22 @@ final class ClassroomPostgresRegressionTest extends TestCase
         self::assertSame(1, (int) self::$db->createCommand('SELECT count(*) FROM device_management.device_sessions WHERE device_id=CAST(:id AS uuid)', [':id' => $device])->queryScalar());
     }
 
+    public function testIdleDeviceWithExpiredHeartbeatAppearsOfflineInListAndDetail(): void
+    {
+        [$device, $classroom] = $this->enrolledDevice();
+        $this->ready($device);
+        self::assertSame('AVAILABLE', $this->devices->device($this->scope, $device)['status']);
+        self::assertSame([$device], array_column($this->devices->devices($this->scope, 0, $classroom, 'AVAILABLE'), 'id'));
+
+        self::$db->createCommand("UPDATE device_management.devices SET last_seen_at=now()-interval '91 seconds' WHERE id=CAST(:id AS uuid)", [':id' => $device])->execute();
+
+        self::assertSame('OFFLINE', $this->devices->device($this->scope, $device)['status']);
+        self::assertSame([], $this->devices->devices($this->scope, 0, $classroom, 'AVAILABLE'));
+        self::assertSame([$device], array_column($this->devices->devices($this->scope, 0, $classroom, 'OFFLINE'), 'id'));
+        self::assertNotContains('assign', $this->devices->lifecycleDetails($this->scope, $device)['availableActions']);
+        $this->deviceRejects('device_not_ready', fn() => $this->start($device));
+    }
+
     public function testActiveClassroomCannotBeArchivedOrMovedAndForeignTeacherCannotEnd(): void
     {
         [$device, $classroom] = $this->enrolledDevice();
@@ -123,13 +139,66 @@ final class ClassroomPostgresRegressionTest extends TestCase
         $this->devices->transitionSession($device, $session['id'], 'WINDOWS_PROFILE_READY', ['profilePrepared' => true]);
         $this->devices->transitionSession($device, $session['id'], 'SYNCING_IN');
         $this->deviceRejects('logon_not_confirmed', fn() => $this->devices->transitionSession($device, $session['id'], 'ACTIVE', ['profilePrepared' => true]));
-        $this->devices->transitionSession($device, $session['id'], 'ACTIVE', ['profilePrepared' => true, 'testAdapter' => true]);
+        $this->devices->transitionSession($device, $session['id'], 'ACTIVE', ['profilePrepared' => true, 'windowsLogonConfirmed' => true]);
         $this->devices->requestSessionEnd($this->scope, $device, $session['id']);
         $this->devices->transitionSession($device, $session['id'], 'ENDING');
         $this->devices->transitionSession($device, $session['id'], 'SYNCING_OUT', ['sessionEnded' => true]);
         $this->deviceRejects('storage_not_confirmed', fn() => $this->devices->transitionSession($device, $session['id'], 'STORAGE_CONFIRMED', ['sessionEnded' => true, 'storageConfirmed' => true]));
         self::assertSame('SYNCING_OUT', $this->devices->activeSession($device)['status']);
         self::assertNotSame('AVAILABLE', $this->devices->device($this->scope, $device)['status']);
+        $confirmation = $this->service->agentSync($device, ['version' => 0, 'entries' => []]);
+        self::assertTrue($confirmation['confirmed']);
+        self::assertSame($confirmation, $this->service->agentSync($device, ['version' => $confirmation['version'], 'entries' => []]));
+        $finished = ['sessionEnded' => true, 'storageConfirmed' => true];
+        foreach (['STORAGE_CONFIRMED', 'CLEANUP', 'CLOSED'] as $status) {
+            $evidence = $finished + ['cleanupDone' => $status === 'CLOSED'];
+            $result = $this->devices->transitionSession($device, $session['id'], $status, $evidence);
+            self::assertSame($status, $result['status']);
+            self::assertSame($result, $this->devices->transitionSession($device, $session['id'], $status, $evidence));
+        }
+        self::assertNull($this->devices->activeSession($device));
+        self::assertSame(1, (int) self::$db->createCommand("SELECT count(*) FROM device_management.device_events
+            WHERE device_id=CAST(:device AS uuid) AND kind='session_state' AND payload->>'status'='CLOSED'", [':device' => $device])->queryScalar());
+    }
+
+    public function testProductionStoreRejectsSyntheticEvidenceAndIsolatedStoreDoesNotClaimWindowsLogon(): void
+    {
+        [$device] = $this->enrolledDevice();
+        $this->ready($device);
+        $session = $this->start($device)['id'];
+        $production = new PostgresDeviceStore(self::$db);
+        $production->transitionSession($device, $session, 'PREPARING');
+        $production->transitionSession($device, $session, 'WINDOWS_PROFILE_READY', ['profilePrepared' => true]);
+        $production->transitionSession($device, $session, 'SYNCING_IN');
+        $synthetic = ['profilePrepared' => true, 'testAdapter' => true];
+        $this->deviceRejects('test_adapter_not_allowed', fn() => $production->transitionSession($device, $session, 'ACTIVE', $synthetic));
+        $this->deviceRejects('invalid_evidence', fn() => $this->devices->transitionSession(
+            $device, $session, 'ACTIVE', $synthetic + ['windowsLogonConfirmed' => true],
+        ));
+        self::assertSame('SYNCING_IN', $production->activeSession($device)['status']);
+        self::assertSame('ACTIVE', $this->devices->transitionSession($device, $session, 'ACTIVE', $synthetic)['status']);
+        $evidence = json_decode((string) self::$db->createCommand('SELECT evidence::text FROM device_management.device_sessions
+            WHERE id=CAST(:session AS uuid)', [':session' => $session])->queryScalar(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertTrue($evidence['testAdapter']);
+        self::assertNotSame(true, $evidence['windowsLogonConfirmed'] ?? null);
+    }
+
+    public function testSyncInCheckpointCannotAuthorizeCleanupEvenWhenTheSnapshotIsUnchanged(): void
+    {
+        [$device] = $this->enrolledDevice();
+        $this->ready($device);
+        $session = $this->start($device)['id'];
+        $syncIn = null;
+        $this->activateAndEndForSync($device, $session, function () use ($device, &$syncIn): void {
+            $syncIn = $this->service->agentSync($device, ['version' => 0, 'entries' => []]);
+        });
+        self::assertTrue($syncIn['confirmed']);
+        $evidence = ['sessionEnded' => true, 'storageConfirmed' => true];
+        $this->deviceRejects('storage_not_confirmed', fn() => $this->devices->transitionSession($device, $session, 'STORAGE_CONFIRMED', $evidence));
+        $syncOut = $this->service->agentSync($device, ['version' => $syncIn['version'], 'entries' => []]);
+        self::assertTrue($syncOut['confirmed']);
+        self::assertGreaterThan($syncIn['version'], $syncOut['version']);
+        self::assertSame('STORAGE_CONFIRMED', $this->devices->transitionSession($device, $session, 'STORAGE_CONFIRMED', $evidence)['status']);
     }
 
     public function testRepeatedEndAndCommandAcknowledgmentDoNotCreateSessions(): void
@@ -162,6 +231,9 @@ final class ClassroomPostgresRegressionTest extends TestCase
         self::assertSame('SYNCING_IN', $this->devices->activeSession($device)['status']);
 
         $this->devices->transitionSession($device, $session['id'], 'SYNC_PENDING');
+        $this->deviceRejects('end_not_requested', fn() => $this->devices->transitionSession(
+            $device, $session['id'], 'SYNCING_OUT', ['sessionEnded' => true],
+        ));
         $retry = $this->devices->retryRecovery($this->scope, $device, null);
         self::assertTrue($retry['retrying']);
         self::assertSame($session['id'], $retry['sessionId']);

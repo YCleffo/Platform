@@ -21,9 +21,6 @@ export function clearEducationCache(): void {
   pending.forEach(item => item.controller.abort());
   pending.clear(); entries.clear(); educationMeasurements.clear();
 }
-if (typeof window !== 'undefined') {
-  (window as unknown as { __clearEducationCache?: () => void }).__clearEducationCache = clearEducationCache;
-}
 watch(coreAdminSessionEpoch, clearEducationCache, { flush: 'sync' });
 export function scopeEducationCache(org: string): void {
   if (organization !== org) { clearEducationCache(); organization = org; }

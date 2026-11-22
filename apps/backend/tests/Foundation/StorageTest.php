@@ -171,6 +171,7 @@ final class StorageTest extends TestCase
         $device = $this->devices->write('create_device', $this->deviceScope(), ['name' => 'Sync PC', 'number' => '5']);
         $enrollment = $this->devices->write('device_enroll', $this->deviceScope(), [], $device['id']);
         $agent = $this->devices->agentEnroll(['code' => $enrollment['code']]);
+        $this->devices->agentHeartbeat($device['id'], ['state' => ['machineReady' => true]]);
         $this->devices->write('device_session', $this->deviceScope(), ['studentId' => $this->studentId], $device['id']);
 
         $space = $this->service->read('space', $this->studentScope, []);

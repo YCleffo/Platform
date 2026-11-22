@@ -46,7 +46,7 @@ function classroomHttpRuntime(): array
     if (!is_dir($runtime)) {
         throw new RuntimeException('Create the dedicated HTTP harness runtime directory first.');
     }
-    $deviceStore = new PostgresDeviceStore($db);
+    $deviceStore = new PostgresDeviceStore($db, allowTestAdapter: true);
     // Agent endpoints do not use teacher mutation or access ports. Resolve the
     // actual production ports, but keep this scenario's binary data isolated.
     $deviceService = new DeviceService(

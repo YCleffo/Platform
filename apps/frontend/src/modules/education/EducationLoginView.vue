@@ -8,7 +8,7 @@ import AppPasswordInput from '@/shared/ui/fields/AppPasswordInput.vue';
 import { useEducationI18n } from './i18n';
 import { useEducationError } from './resources';
 import { educationApi } from './api';
-import { educationLanding } from './contexts';
+import { educationLanding, isEducationActivationTarget } from './contexts';
 import './education.css';
 const auth = useAdminAuthStore();
 const router = useRouter();
@@ -53,7 +53,7 @@ async function submit(): Promise<void> {
     if (active && auth.isAuthenticated) {
       const target = typeof route.query.redirect === 'string' ? route.query.redirect : '';
       // Existing Core accounts acquire Education permissions only after accepting the invitation.
-      if (/^\/parent\/activate(?:[?#]|$)/.test(target)) {
+      if (isEducationActivationTarget(target)) {
         await router.replace(target);
         return;
       }

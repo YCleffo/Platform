@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "runId": "local-c986db02-8def-4ed3-8a87-34e997732574",
+  "testedSha": "d493eeee5e8394ea2a94eb8baf929c584ed523c8",
+  "sourceDigest": "bca2dca92d3e8384d0b807ec8df8f0e93a4e07c639a23633e5db9d5bbfe7827c",
+  "sourceDirty": true,
+  "environment": {
+    "kind": "isolated-ci",
+    "proofSha256": "c74fcf7f96c11618d30b0eba0bca0f7e57e73eb5f957747f0595793f60154dee"
+  },
+  "scenarios": [
+    {
+      "id": "teacher-enrollment-journal",
+      "testFile": "apps/frontend/scripts/e2e-education-roles.mjs",
+      "status": "PASS",
+      "timestamp": "2026-11-22T02:01:14.491Z",
+      "artifact": "teacher-enrollment-journal-fc9045d4-a880-4964-aa5b-9a2825f45d7a.json",
+      "artifactSha256": "ecaac76ef37fe78c88a074c8b8874455bd2fe163a9e91e8e4437060a7ab0741d",
+      "userActionReachable": true,
+      "persistentResultVerified": true,
+      "securityBoundaryVerified": true
+    }
+  ]
+}

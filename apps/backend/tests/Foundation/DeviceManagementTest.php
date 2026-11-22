@@ -19,6 +19,7 @@ use App\Education\Application\EducationService;
 use App\Education\Application\EducationStore;
 use App\Education\Application\FileStore;
 use App\Environment;
+use App\Storage\Application\StorageService;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
@@ -107,6 +108,9 @@ final class DeviceManagementTest extends TestCase
 
         $detail = $this->service->read('device', $this->scope, [], $device['id']);
         self::assertSame('confirmed', $detail['enrollmentState']);
+        self::assertSame('OFFLINE', $detail['status']);
+        self::assertFalse($detail['online']);
+        self::assertNotContains('assign', $detail['availableActions']);
         self::assertSame($classroom['name'], $detail['classroomName']);
         self::assertSame('Room 1', $this->service->read('classrooms', $this->scope, [])['items'][0]['name']);
 
@@ -131,6 +135,9 @@ final class DeviceManagementTest extends TestCase
         $enrollment = $this->service->write('device_enroll', $this->scope, [], $device['id']);
         $agent = $this->service->agentEnroll(['code' => $enrollment['code']]);
 
+        $this->assertError(409, fn() => $this->service->write('device_session', $this->scope, ['studentId' => $student['id']], $device['id']), 'device_not_ready');
+        $this->service->agentHeartbeat($device['id'], ['state' => ['machineReady' => true]]);
+
         $session = $this->service->write('device_session', $this->scope, ['studentId' => $student['id']], $device['id']);
         self::assertSame('AUTHORIZED', $session['status']);
         self::assertSame($person, $session['studentPersonId']);
@@ -145,19 +152,16 @@ final class DeviceManagementTest extends TestCase
         $this->service->agentAcknowledge($device['id'], $commandId, []);
         self::assertTrue($this->service->agentAcknowledge($device['id'], $commandId, [])['acknowledged']);
 
-        foreach (['PREPARING', 'WINDOWS_PROFILE_READY', 'SYNCING_IN', 'ACTIVE'] as $status) {
-            $result = $this->service->agentSessionState($device['id'], $session['id'], ['status' => $status]);
-            self::assertSame($status, $result['status']);
-        }
+        $this->reportActive($device['id'], $session['id']);
         $this->assertError(409, fn() => $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'CLEANUP']), 'invalid_transition');
         $this->assertError(422, fn() => $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'NONSENSE']));
 
         $this->service->write('device_session_end', $this->scope, ['sessionId' => $session['id']], $device['id']);
         $commands = $this->service->agentCommands($device['id']);
         self::assertSame('end_session', $commands['items'][0]['kind']);
-        foreach (['ENDING', 'SYNCING_OUT', 'STORAGE_CONFIRMED', 'CLEANUP', 'CLOSED'] as $status) {
-            $this->service->agentSessionState($device['id'], $session['id'], ['status' => $status]);
-        }
+        $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'ENDING']);
+        $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'SYNCING_OUT', 'evidence' => ['sessionEnded' => true]]);
+        $this->confirmStorageAndClose($device['id'], $session['id']);
         $next = $this->service->write('device_session', $this->scope, ['studentId' => $secondStudent['id']], $device['id']);
         self::assertSame('AUTHORIZED', $next['status']);
         self::assertNotSame($session['id'], $next['id']);
@@ -173,25 +177,48 @@ final class DeviceManagementTest extends TestCase
         $device = $this->service->write('create_device', $this->scope, ['name' => 'PC 3', 'number' => '3']);
         $enrollment = $this->service->write('device_enroll', $this->scope, [], $device['id']);
         $agent = $this->service->agentEnroll(['code' => $enrollment['code']]);
+        $this->service->agentHeartbeat($device['id'], ['state' => ['machineReady' => true]]);
 
         $session = $this->service->write('device_session', $this->scope, ['studentId' => $student['id']], $device['id']);
-        foreach (['PREPARING', 'WINDOWS_PROFILE_READY', 'SYNCING_IN', 'ACTIVE'] as $status) {
-            $this->service->agentSessionState($device['id'], $session['id'], ['status' => $status]);
-        }
+        $this->reportActive($device['id'], $session['id']);
         $this->service->write('device_session_end', $this->scope, ['sessionId' => $session['id']], $device['id']);
-        foreach (['ENDING', 'SYNCING_OUT'] as $status) {
-            $this->service->agentSessionState($device['id'], $session['id'], ['status' => $status]);
-        }
+        $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'ENDING']);
+        $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'SYNCING_OUT', 'evidence' => ['sessionEnded' => true]]);
         $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'SYNC_PENDING']);
         $this->assertError(409, fn() => $this->service->write('device_session', $this->scope, ['studentId' => $student['id']], $device['id']), 'sync_pending');
-        $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'SYNCING_OUT']);
-        $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'STORAGE_CONFIRMED']);
-        $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'CLEANUP']);
-        $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'CLOSED']);
+        $this->service->agentSessionState($device['id'], $session['id'], ['status' => 'SYNCING_OUT', 'evidence' => ['sessionEnded' => true]]);
+        $this->confirmStorageAndClose($device['id'], $session['id']);
 
         $this->service->write('revoke_device', $this->scope, [], $device['id']);
         $this->assertError(409, fn() => $this->service->write('device_session', $this->scope, ['studentId' => $student['id']], $device['id']), 'device_revoked');
         self::assertNull($this->store->credentialDevice(hash('sha256', $agent['credential'])));
+        self::assertFalse($this->service->read('device', $this->scope, [], $device['id'])['online']);
+    }
+
+    private function reportActive(string $deviceId, string $sessionId): void
+    {
+        foreach ([
+            'PREPARING' => [],
+            'WINDOWS_PROFILE_READY' => ['profilePrepared' => true],
+            'SYNCING_IN' => [],
+            'ACTIVE' => ['profilePrepared' => true, 'windowsLogonConfirmed' => true],
+        ] as $status => $evidence) {
+            self::assertSame($status, $this->service->agentSessionState($deviceId, $sessionId, [
+                'status' => $status, 'evidence' => $evidence,
+            ])['status']);
+        }
+    }
+
+    private function confirmStorageAndClose(string $deviceId, string $sessionId): void
+    {
+        $confirmation = $this->container->get(StorageService::class)->agentSync($deviceId, ['version' => 0, 'entries' => []]);
+        self::assertTrue($confirmation['confirmed']);
+        foreach (['STORAGE_CONFIRMED', 'CLEANUP', 'CLOSED'] as $status) {
+            self::assertSame($status, $this->service->agentSessionState($deviceId, $sessionId, [
+                'status' => $status,
+                'evidence' => ['storageConfirmed' => true, 'sessionEnded' => true, 'cleanupDone' => $status === 'CLOSED'],
+            ])['status']);
+        }
     }
 
     public function testOtherTeacherCannotSeeOrManageForeignDevices(): void

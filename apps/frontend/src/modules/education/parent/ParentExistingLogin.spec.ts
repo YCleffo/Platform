@@ -28,14 +28,14 @@ beforeEach(() => {
 });
 
 describe('existing Core parent login', () => {
-  it('opens invitation activation before requesting Education permissions', async () => {
-    mocks.route.query.redirect = '/parent/activate';
+  it.each(['/parent/activate', '/education/student-activate'])('opens %s before requesting Education permissions', async (target) => {
+    mocks.route.query.redirect = target;
     mocks.context.mockRejectedValue(new Error('Education permission is not granted until activation'));
     const wrapper = mount(EducationLoginView, { global: { stubs: ['RouterLink'], mocks: { $t: (key: string) => key } } });
     await wrapper.get('form').trigger('submit');
     await flushPromises();
     expect(mocks.context).not.toHaveBeenCalled();
-    expect(mocks.replace).toHaveBeenCalledWith('/parent/activate');
+    expect(mocks.replace).toHaveBeenCalledWith(target);
     wrapper.unmount();
   });
 

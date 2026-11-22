@@ -1,7 +1,7 @@
 import { effectScope, nextTick, reactive } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { coreAdminSession } from '@/core/admin/session';
-import { ApiResponseError } from '@/shared/api/errors';
+import { ApiResponseError, RequestAbortedError } from '@/shared/api/errors';
 import { useEducationMutation, useEducationResource } from './resources';
 
 const state = vi.hoisted(() => ({ workspace: undefined as unknown }));
@@ -28,6 +28,15 @@ describe('Education asynchronous scope', () => {
     await nextTick(); await nextTick(); expect(resource.data.value).toBe('visible');
     const refreshing = resource.refresh(); expect(resource.loading.value).toBe(true); expect(resource.data.value).toBe('visible');
     coreAdminSession.clear(); expect(resource.data.value).toBeNull(); pending.resolve('late secret'); await refreshing; expect(resource.data.value).toBeNull(); scope.stop();
+  });
+  it('retries a still-current screen read after a write aborts the shared request', async () => {
+    const scope = effectScope();
+    const load = vi.fn().mockRejectedValueOnce(new RequestAbortedError()).mockResolvedValueOnce('server read after write');
+    const resource = scope.run(() => useEducationResource(load))!;
+    await vi.waitFor(() => expect(resource.data.value).toBe('server read after write'));
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(resource.error.value).toBeNull();
+    scope.stop();
   });
   it('does not accept mutation results after the organization changes', async () => {
     const pending = deferred<string>(); const accept = vi.fn(); const scope = effectScope();

@@ -17,6 +17,7 @@ const props = defineProps<{
   organizationId: string;
   attemptId?: string;
   homeworkId?: string;
+  assignmentId?: string;
   assignedConfig?: ActivityConfig;
 }>();
 const emit = defineEmits<{ started: [attemptId: string]; finished: [result: LogicResult] }>();
@@ -55,7 +56,12 @@ function clear(): void {
   actionError.value = null;
 }
 watch(
-  [() => props.organizationId, () => props.homeworkId, coreAdminSessionEpoch],
+  [
+    () => props.organizationId,
+    () => props.homeworkId,
+    () => props.assignmentId,
+    coreAdminSessionEpoch,
+  ],
   () => {
     clear();
     if (props.attemptId && props.organizationId && coreAdminSession.accessToken())
@@ -107,7 +113,10 @@ async function start(): Promise<void> {
   await run(async () => {
     const value = props.homeworkId
       ? await activityApi.startHomework(props.organizationId, props.homeworkId)
-      : await activityApi.startLogic(props.organizationId, config.value);
+      : await activityApi.startLogic(props.organizationId, {
+          ...config.value,
+          ...(props.assignmentId ? { assignmentId: props.assignmentId } : {}),
+        });
     if (version !== generation || epoch !== coreAdminSession.epoch()) return;
     accept(value);
     result.value = null;
@@ -124,6 +133,7 @@ async function resume(attemptId: string): Promise<void> {
     if (version !== generation || epoch !== coreAdminSession.epoch()) return;
     if (
       (value.attempt.activityCode && value.attempt.activityCode !== 'platform-logic') ||
+      (props.assignmentId && value.attempt.assignmentId !== props.assignmentId) ||
       !value.exercise.rounds?.length
     )
       throw new Error('Invalid activity');
@@ -197,7 +207,7 @@ onBeforeUnmount(() => {
       <ActivityConfigFields
         v-model="config"
         activity-code="platform-logic"
-        :disabled="busy || !!homeworkId"
+        :disabled="busy || !!(homeworkId || assignmentId)"
       />
       <p class="edu-subtle">{{ t('education.logicHint') }}</p>
       <button

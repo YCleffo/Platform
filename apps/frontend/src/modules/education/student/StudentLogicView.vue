@@ -8,6 +8,8 @@ import { useHomeworkResource } from '../homework/resources';
 import { useEducationI18n } from '../i18n';
 import EducationState from '../EducationState.vue';
 import LogicTrainer from './LogicTrainer.vue';
+import StudentLearningAssignments from './StudentLearningAssignments.vue';
+import { useLearningAssignments } from './learningAssignments';
 const { t } = useEducationI18n();
 const route = useRoute(),
   router = useRouter();
@@ -15,6 +17,7 @@ const org = computed(() => studentSession.organizationId);
 const homeworkId = computed(() =>
   typeof route.query.homework === 'string' ? route.query.homework : '',
 );
+const learning = useLearningAssignments('platform-logic', () => homeworkId.value);
 const attemptId = computed(() =>
   typeof route.query.attempt === 'string' ? route.query.attempt : '',
 );
@@ -35,7 +38,10 @@ const canRunAssigned = computed(
 const pending = useHomeworkResource(() => org.value, studentPortalApi.home);
 const resumable = computed(() =>
   (pending.data.value?.pendingAttempts ?? []).filter(
-    (a) => a.activityCode === 'platform-logic' && a.status === 'running',
+    (a) =>
+      a.activityCode === 'platform-logic' &&
+      a.status === 'running' &&
+      (a.assignmentId ?? '') === (learning.selected.value?.id ?? ''),
   ),
 );
 function started(id: string): void {
@@ -64,27 +70,49 @@ function started(id: string): void {
         {{ assigned.data.value.assignment.maxAttempts }}
       </p>
     </template>
+    <template v-else>
+      <StudentLearningAssignments
+        :items="learning.items.value"
+        :selected-id="learning.id.value"
+      />
+      <EducationState
+        :loading="learning.loading.value"
+        :error="learning.error.value"
+        @retry="learning.refresh"
+      />
+      <p
+        v-if="!learning.allowed.value && !learning.loading.value && !learning.error.value"
+        class="edu-subtle"
+      >
+        {{ t('education.learningAssignmentUnavailable') }}
+      </p>
+    </template>
     <div
-      v-if="!attemptId && !homeworkId && resumable.length"
+      v-if="!attemptId && !homeworkId && learning.allowed.value && resumable.length"
       class="edu-card"
     >
       <h3>{{ t('education.unfinishedAttempts') }}</h3>
       <RouterLink
         v-for="attempt in resumable"
         :key="attempt.id"
-        :to="{ query: { attempt: attempt.id } }"
+        :to="{ query: { ...route.query, attempt: attempt.id } }"
         class="edu-button"
       >
         {{ t('education.restoreAttempt') }} · {{ new Date(attempt.startedAt).toLocaleString() }}
       </RouterLink>
     </div>
     <LogicTrainer
-      v-if="org && (!homeworkId || canRunAssigned)"
-      :key="`${org}:${homeworkId}`"
+      v-if="org && (homeworkId ? canRunAssigned : learning.allowed.value)"
+      :key="`${org}:${homeworkId}:${learning.id.value}`"
       :organization-id="org"
       :attempt-id="attemptId || undefined"
       :homework-id="homeworkId || undefined"
-      :assigned-config="assigned.data.value?.assignment.activityConfig"
+      :assignment-id="homeworkId ? undefined : learning.selected.value?.id"
+      :assigned-config="
+        homeworkId
+          ? assigned.data.value?.assignment.activityConfig
+          : learning.selected.value?.effectiveConfig
+      "
       @started="started"
       @finished="pending.refresh"
     />

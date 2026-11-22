@@ -16,8 +16,13 @@ export const useEducationWorkspace = defineStore('educationWorkspace', () => {
   let contextController: AbortController | null = null;
   let headerController: AbortController | null = null;
 
+  function cancelRequests(): void {
+    contextController?.abort();
+    headerController?.abort();
+    loading.value = false;
+  }
   function reset(): void {
-    clearEducationCache(); contextController?.abort(); headerController?.abort();
+    clearEducationCache(); cancelRequests();
     revision.value++; context.value = null; organizationId.value = ''; header.value = null;
     error.value = null; headerError.value = null; loading.value = false;
   }
@@ -32,6 +37,7 @@ export const useEducationWorkspace = defineStore('educationWorkspace', () => {
     const org = organizationId.value; const version = revision.value; const epoch = coreAdminSession.epoch();
     if (!org) return;
     if (context.value?.organizations.find(item => item.id === org)?.parent && !context.value.organizations.some(item => item.id === org && (item.teacher || item.student))) return;
+    scopeEducationCache(org);
     headerError.value = null;
     try {
       const result = await educationApi.header(org, controller.signal);
@@ -53,5 +59,5 @@ export const useEducationWorkspace = defineStore('educationWorkspace', () => {
     } catch (caught) { if (!controller.signal.aborted && epoch === coreAdminSession.epoch()) error.value = caught; }
     finally { if (!controller.signal.aborted && epoch === coreAdminSession.epoch()) loading.value = false; }
   }
-  return { context, organizationId, header, revision, loading, error, headerError, reset, chooseOrganization, loadContext, refreshHeader };
+  return { context, organizationId, header, revision, loading, error, headerError, reset, cancelRequests, chooseOrganization, loadContext, refreshHeader };
 });

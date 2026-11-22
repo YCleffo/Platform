@@ -1,0 +1,12 @@
+{
+  "runId": "local-2631d97c-8101-4525-8465-938e923598d8",
+  "testedSha": "d493eeee5e8394ea2a94eb8baf929c584ed523c8",
+  "sourceDigest": "bca2dca92d3e8384d0b807ec8df8f0e93a4e07c639a23633e5db9d5bbfe7827c",
+  "timestamp": "2026-11-22T02:05:34.891Z",
+  "proofSha256": "c74fcf7f96c11618d30b0eba0bca0f7e57e73eb5f957747f0595793f60154dee",
+  "id": "storage-recovery",
+  "testFile": "apps/frontend/scripts/e2e-education-roles.mjs",
+  "status": "PASS",
+  "testArgument": "storage",
+  "exitCode": 0
+}

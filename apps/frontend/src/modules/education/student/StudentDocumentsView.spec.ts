@@ -7,7 +7,10 @@ import { storageApi } from './storage';
 import StudentDocumentsView from './StudentDocumentsView.vue';
 vi.mock('../i18n', () => ({ useEducationI18n: () => ({ t: (key: string) => key, locale: ref('en') }) }));
 vi.mock('../resources', () => ({ useEducationError: () => () => 'Request failed' }));
-vi.mock('./storage', () => ({ storageApi: { space: vi.fn(), allFiles: vi.fn(), conflicts: vi.fn(), fileVersions: vi.fn(), restoreFile: vi.fn(), deleteFile: vi.fn(), renameFile: vi.fn(), resolveConflict: vi.fn() } }));
+vi.mock('./storage', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./storage')>(),
+  storageApi: { space: vi.fn(), allFiles: vi.fn(), conflicts: vi.fn(), fileVersions: vi.fn(), restoreFile: vi.fn(), deleteFile: vi.fn(), renameFile: vi.fn(), resolveConflict: vi.fn(), uploadFile: vi.fn() },
+}));
 const id = '11111111-2222-3333-4444-555555555555', org = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const file = { id, path: 'projects/week1/code.txt', version: 2, sizeBytes: 3, sha256: 'a'.repeat(64), createdAt: '2026-03-08T10:00:00Z' };
 const stubs = { AppInput: true, AppDropdown: true, EducationState: true };
@@ -45,5 +48,26 @@ describe('student documents', () => {
     expect(wrapper.text()).not.toContain('projects');
     await wrapper.findAll('button').find(button => button.text() === 'education.refresh')!.trigger('click'); await flushPromises();
     expect(wrapper.text()).toContain('projects');
+  });
+  it('retries a failed transfer with the original file and path without reopening the picker', async () => {
+    vi.mocked(storageApi.uploadFile)
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce({ path: 'submission.txt', version: 1, sha256: 'a'.repeat(64) });
+    wrapper = mount(StudentDocumentsView, { global: { stubs } });
+    await flushPromises();
+    const selectedFile = new File(['data'], 'submission.txt');
+    const input = wrapper.get('input[type=file]');
+    Object.defineProperty(input.element, 'files', { value: [selectedFile] });
+    await input.trigger('change');
+    await flushPromises();
+    expect(wrapper.text()).toContain('Request failed');
+    const retry = wrapper.findAll('button').find(button => button.text() === 'education.retryUpload');
+    expect(retry).toBeDefined();
+    await retry!.trigger('click');
+    await flushPromises();
+    expect(storageApi.uploadFile).toHaveBeenCalledTimes(2);
+    expect(storageApi.uploadFile).toHaveBeenLastCalledWith(org, 'submission.txt', selectedFile, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    expect(wrapper.text()).toContain('education.uploaded');
+    expect(wrapper.text()).not.toContain('education.retryUpload');
   });
 });

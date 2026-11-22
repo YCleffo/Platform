@@ -1,5 +1,9 @@
 import type { EducationContext } from './api';
 
+export function isEducationActivationTarget(path: string): boolean {
+  return /^\/(parent\/activate|education\/student-activate)(?:[?#]|$)/.test(path);
+}
+
 export function educationContexts(
   context: EducationContext,
 ): Array<{ kind: 'teacher' | 'student' | 'parent'; path: string }> {

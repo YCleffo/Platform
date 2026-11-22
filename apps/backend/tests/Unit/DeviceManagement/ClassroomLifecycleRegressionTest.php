@@ -24,7 +24,13 @@ final class ClassroomLifecycleRegressionTest extends TestCase
     {
         $evidence = SessionEvidence::validate(['evidence' => ['profilePrepared' => true, 'testAdapter' => true, 'windowsLogonConfirmed' => false]]);
         self::assertFalse($evidence['windowsLogonConfirmed']);
-        SessionEvidence::assertTransition('ACTIVE', $evidence);
+        $this->rejects('test_adapter_not_allowed', fn() => SessionEvidence::assertTransition('ACTIVE', $evidence));
+        $this->rejects('invalid_evidence', fn() => SessionEvidence::assertTransition(
+            'ACTIVE',
+            array_replace($evidence, ['windowsLogonConfirmed' => true]),
+            allowTestAdapter: true,
+        ));
+        SessionEvidence::assertTransition('ACTIVE', $evidence, allowTestAdapter: true);
     }
 
     public function testCleanupAndClosureCannotIgnoreUnsavedDocumentsOrRunningSession(): void

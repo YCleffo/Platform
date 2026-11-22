@@ -92,7 +92,7 @@ function date(value: string): string {
   return new Intl.DateTimeFormat(locale.value, {
     dateStyle: 'medium',
     timeStyle: 'short',
-    timeZone: workspace.header?.timezone ?? 'UTC',
+    timeZone: props.student ? studentSession.timezone : (workspace.header?.timezone ?? 'UTC'),
   }).format(new Date(value));
 }
 </script>

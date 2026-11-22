@@ -5,8 +5,10 @@ import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import { isoToZonedDateTime, zonedDateTimeToIso } from '@/shared/formatting/calendar';
 import { educationApi, type Group } from './api';
+import { curriculumLessonOptions, curriculumSnapshotLabel } from './curriculum';
 import { useEducationWorkspace } from './workspace';
 import { useEducationError, useEducationMutation, useEducationResource } from './resources';
+import { useHomeworkResource } from './homework/resources';
 import { useEducationI18n } from './i18n';
 import EducationState from './EducationState.vue';
 const route = useRoute();
@@ -25,11 +27,20 @@ const { data, loading, error, refresh } = useEducationResource(async (org, signa
 });
 const title = ref('');
 const groupId = ref('');
+const curriculumLessonId = ref('');
 const startsAt = ref('');
 const endsAt = ref('');
 const location = ref('');
 const localError = ref('');
 let loaded = false;
+watch(
+  groupId,
+  (group) => {
+    const lesson = data.value?.lesson;
+    curriculumLessonId.value = lesson?.groupId === group ? (lesson.curriculumLessonId ?? '') : '';
+  },
+  { flush: 'sync' },
+);
 watch(
   data,
   (value) => {
@@ -37,12 +48,39 @@ watch(
     loaded = true;
     title.value = value.lesson.title;
     groupId.value = value.lesson.groupId;
+    curriculumLessonId.value = value.lesson.curriculumLessonId ?? '';
     startsAt.value = isoToZonedDateTime(value.lesson.startsAt, workspace.header!.timezone);
     endsAt.value = isoToZonedDateTime(value.lesson.endsAt, workspace.header!.timezone);
     location.value = value.lesson.location;
   },
   { immediate: true },
 );
+const curriculum = useHomeworkResource(
+  () => workspace.organizationId,
+  async (org, signal) => {
+    const group = groupId.value;
+    if (!group) return null;
+    const programs = await educationApi.groupPrograms(org, group, signal);
+    return curriculumLessonOptions(programs.items);
+  },
+  [groupId],
+);
+const curriculumOptions = computed(() => {
+  const current = data.value?.lesson;
+  const options = [...(curriculum.data.value ?? [])];
+  const linkedId = current?.curriculumLessonId;
+  if (
+    current?.groupId === groupId.value &&
+    linkedId &&
+    !options.some((option) => option.value === linkedId)
+  ) {
+    options.unshift({
+      value: linkedId,
+      label: curriculumSnapshotLabel(current.curriculumSnapshot) || t('education.curriculumLesson'),
+    });
+  }
+  return [{ value: '', label: t('education.noCurriculumLesson') }, ...options];
+});
 const groupOptions = computed<Group[]>(() => {
   const selected = data.value?.selectedGroup;
   const items = data.value?.groups.items ?? [];
@@ -52,6 +90,8 @@ const locked = computed(() => !!data.value && data.value.lesson.status !== 'sche
 const mutation = useEducationMutation();
 const { busy, error: actionError, uncertain } = mutation;
 async function submit(): Promise<void> {
+  const lesson = data.value?.lesson;
+  if (!lesson || locked.value) return;
   localError.value = '';
   let start = '';
   let end = '';
@@ -71,6 +111,10 @@ async function submit(): Promise<void> {
         startsAt: start,
         endsAt: end,
         location: location.value,
+        ...(groupId.value !== lesson.groupId ||
+        curriculumLessonId.value !== (lesson.curriculumLessonId ?? '')
+          ? { curriculumLessonId: curriculumLessonId.value || null }
+          : {}),
       }),
     async () => {
       await workspace.refreshHeader();
@@ -125,6 +169,19 @@ async function submit(): Promise<void> {
               .map((item) => ({ value: item.id, label: item.name }))
           "
           :disabled="busy || uncertain"
+        />
+        <AppDropdown
+          v-if="groupId"
+          id="education-edit-curriculum-lesson"
+          v-model="curriculumLessonId"
+          :label="t('education.curriculumLesson')"
+          :options="curriculumOptions"
+          :disabled="busy || uncertain || curriculum.loading.value"
+        />
+        <EducationState
+          v-if="curriculum.error.value"
+          :error="curriculum.error.value"
+          @retry="curriculum.refresh"
         />
         <p class="edu-subtle">{{ t('education.timezone') }}: {{ workspace.header!.timezone }}</p>
         <AppInput

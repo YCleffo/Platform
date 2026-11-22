@@ -2,8 +2,11 @@
 import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { useEducationI18n } from '../i18n';
 import { coreAdminSession, coreAdminSessionEpoch } from '@/core/admin/session';
+import { setLocale } from '@/shared/i18n';
+import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
 import type { EducationContext } from '../api';
 import { educationApi } from '../api';
+import { scopeEducationCache } from '../cache';
 import { studentSession } from './session';
 import EducationState from '../EducationState.vue';
 import AppBottomNav from '@/shared/ui/navigation/AppBottomNav.vue';
@@ -20,6 +23,7 @@ const navigation = computed(() => [
 const data = shallowRef<EducationContext | null>(null),
   loading = ref(false),
   error = shallowRef<unknown>(null);
+const selectedOrganization = ref('');
 let controller: AbortController | null = null;
 async function refresh(): Promise<void> {
   controller?.abort();
@@ -32,7 +36,10 @@ async function refresh(): Promise<void> {
   if (!coreAdminSession.accessToken()) return;
   try {
     const context = await educationApi.context(request.signal);
-    if (!request.signal.aborted && epoch === coreAdminSession.epoch()) data.value = context;
+    if (!request.signal.aborted && epoch === coreAdminSession.epoch()) {
+      data.value = context;
+      setLocale(context.locale.toLowerCase().startsWith('ru') ? 'ru' : 'en');
+    }
   } catch (failure) {
     if (!request.signal.aborted && epoch === coreAdminSession.epoch()) error.value = failure;
   } finally {
@@ -44,6 +51,8 @@ watch(
   () => {
     studentSession.organizationId = '';
     studentSession.displayName = null;
+    studentSession.timezone = 'UTC';
+    selectedOrganization.value = '';
     void refresh();
   },
   { immediate: true, flush: 'sync' },
@@ -52,18 +61,26 @@ onScopeDispose(() => {
   controller?.abort();
   studentSession.organizationId = '';
   studentSession.displayName = null;
+  studentSession.timezone = 'UTC';
 });
 const studentOrganizations = computed(() =>
   (data.value?.organizations ?? []).filter((org) => org.student),
 );
-const current = computed(() => studentOrganizations.value[0] ?? null);
+const current = computed(
+  () =>
+    studentOrganizations.value.find((org) => org.id === selectedOrganization.value) ??
+    studentOrganizations.value[0] ??
+    null,
+);
 watch(
   [data, current],
   ([context, org]) => {
     studentSession.displayName = context?.displayName ?? null;
+    studentSession.timezone = context?.timezone ?? 'UTC';
+    if (org) scopeEducationCache(org.id);
     studentSession.organizationId = org?.id ?? '';
   },
-  { immediate: true },
+  { immediate: true, flush: 'sync' },
 );
 </script>
 <template>
@@ -89,11 +106,28 @@ watch(
           {{ t('education.profile') }}
         </RouterLink>
       </header>
-      <p class="edu-subtle">{{ data?.displayName ?? '' }} · {{ current.name }}</p>
+      <p class="edu-subtle">
+        {{ data?.displayName ?? '' }}
+        <template v-if="studentOrganizations.length === 1">· {{ current.name }}</template>
+      </p>
+      <AppDropdown
+        v-if="studentOrganizations.length > 1"
+        id="education-student-organization"
+        :model-value="current.id"
+        :options="studentOrganizations.map((org) => ({ value: org.id, label: org.name }))"
+        :label="t('education.organization')"
+        @update:model-value="(value) => (selectedOrganization = String(value))"
+      />
       <nav
         class="edu-student-shortcuts"
-        :aria-label="t('education.activities')"
+        :aria-label="t('education.studentCabinet')"
       >
+        <RouterLink
+          to="/student/schedule"
+          class="edu-button"
+        >
+          {{ t('education.parentschedule') }}
+        </RouterLink>
         <RouterLink
           to="/student/activities"
           class="edu-button"
@@ -107,7 +141,7 @@ watch(
           {{ t('education.achievements') }}
         </RouterLink>
       </nav>
-      <RouterView />
+      <RouterView :key="current.id" />
     </template>
     <template v-else-if="!loading && !error">
       <EducationState :empty="t('education.noStudentOrganization')" />

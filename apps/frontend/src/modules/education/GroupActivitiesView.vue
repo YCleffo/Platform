@@ -2,7 +2,8 @@
 import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { coreAdminSessionEpoch } from '@/core/admin/session';
-import { educationApi, type Student } from './api';
+import AppConfirmDialog from '@/shared/ui/overlays/AppConfirmDialog.vue';
+import { educationApi, type GroupActivityAttempt, type Student } from './api';
 import { activityApi } from './activityApi';
 import { defaultActivityConfig, type ActivityConfig } from './activityTypes';
 import { useEducationWorkspace } from './workspace';
@@ -117,6 +118,49 @@ const mutation = useHomeworkMutation(
   () => `${id.value}:${activity.value}:${studentId.value}`,
 );
 const { busy, error: actionError, uncertain } = mutation;
+const revocation = useHomeworkMutation(
+  organization,
+  () => `${id.value}:${activity.value}:${period.value.from}:${period.value.to}`,
+);
+const pendingRevoke = ref<GroupActivityAttempt | null>(null);
+const revokeOpen = ref(false);
+const revokeSuccess = ref(false);
+watch(
+  [id, activity, period, organization, coreAdminSessionEpoch],
+  () => {
+    pendingRevoke.value = null;
+    revokeOpen.value = false;
+    revokeSuccess.value = false;
+  },
+  { flush: 'sync' },
+);
+function askRevoke(attempt: GroupActivityAttempt): void {
+  pendingRevoke.value = attempt;
+  revokeSuccess.value = false;
+  revocation.error.value = null;
+  revokeOpen.value = true;
+}
+async function revoke(): Promise<void> {
+  const attempt = pendingRevoke.value;
+  if (!attempt) return;
+  await revocation.run(
+    () => educationApi.revokeActivityAttempt(organization(), attempt.id),
+    async () => {
+      revokeOpen.value = false;
+      pendingRevoke.value = null;
+      revokeSuccess.value = true;
+      await Promise.all([results.refresh(), analytics.refresh()]);
+    },
+  );
+}
+async function reconcileRevoke(): Promise<void> {
+  await Promise.all([results.refresh(), analytics.refresh()]);
+  if (!results.error.value) {
+    revocation.uncertain.value = false;
+    revocation.error.value = null;
+    revokeOpen.value = false;
+  }
+}
 async function assign(): Promise<void> {
   assigned.value = false;
   await mutation.run(
@@ -332,6 +376,17 @@ function applyPeriod(): void {
         />
       </details>
       <h2>{{ t('education.trainingHistory') }}</h2>
+      <p
+        v-if="revokeSuccess"
+        role="status"
+      >
+        {{ t('education.activityAttemptRevoked') }}
+      </p>
+      <EducationState
+        v-if="!revokeOpen"
+        :error="revocation.error.value"
+        @retry="reconcileRevoke"
+      />
       <EducationState
         :loading="results.loading.value"
         :error="results.error.value"
@@ -365,6 +420,14 @@ function applyPeriod(): void {
             {{ attempt.score }}
           </span>
           <span v-else>{{ t(`education.attempt_${attempt.status}`) }}</span>
+          <button
+            type="button"
+            class="edu-button"
+            :disabled="revocation.busy.value || revocation.uncertain.value"
+            @click="askRevoke(attempt)"
+          >
+            {{ t('education.revokeActivityAttempt') }}
+          </button>
         </li>
       </ul>
       <div class="edu-form-actions">
@@ -386,5 +449,25 @@ function applyPeriod(): void {
         </button>
       </div>
     </template>
+    <AppConfirmDialog
+      v-model="revokeOpen"
+      :title="t('education.revokeActivityAttempt')"
+      :description="
+        t('education.revokeActivityAttemptConfirm', { name: pendingRevoke?.name ?? '' })
+      "
+      :confirm-label="t('education.confirm')"
+      :cancel-label="t('education.cancel')"
+      :busy="revocation.busy.value"
+      danger
+      @confirm="revocation.uncertain.value ? reconcileRevoke() : revoke()"
+    >
+      <p
+        v-if="revocation.error.value"
+        class="edu-error"
+        role="alert"
+      >
+        {{ revocation.uncertain.value ? t('education.uncertain') : issue(revocation.error.value) }}
+      </p>
+    </AppConfirmDialog>
   </section>
 </template>

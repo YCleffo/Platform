@@ -2,10 +2,11 @@
 import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
+import AppConfirmDialog from '@/shared/ui/overlays/AppConfirmDialog.vue';
 import { formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
 import { educationApi } from './api';
 import { useEducationWorkspace } from './workspace';
-import { useEducationResource } from './resources';
+import { useEducationError, useEducationMutation, useEducationResource } from './resources';
 import { useEducationI18n } from './i18n';
 import EducationState from './EducationState.vue';
 import StudentCurriculumProgress from './StudentCurriculumProgress.vue';
@@ -14,6 +15,7 @@ import StudentFamilyPanel from './parent/StudentFamilyPanel.vue';
 const route = useRoute();
 const workspace = useEducationWorkspace();
 const { t, locale } = useEducationI18n();
+const issue = useEducationError();
 const id = computed(() => String(route.params.id ?? ''));
 const attendanceOffset = ref(0);
 const resultsOffset = ref(0);
@@ -64,25 +66,35 @@ function statusLabel(status: string): string {
     `education.${status === 'pending' ? 'notAssessed' : status === 'needs_support' ? 'needsSupport' : status}`,
   );
 }
-const busy = ref(false);
 const inviteCode = ref('');
+const confirmRevoke = ref(false);
+const mutation = useEducationMutation();
+const { busy, error: actionError, uncertain } = mutation;
 async function invite(): Promise<void> {
-  busy.value = true;
-  try {
-    const result = await educationApi.inviteStudent(workspace.organizationId, id.value);
-    inviteCode.value = result.code;
-  } finally {
-    busy.value = false;
-  }
+  await mutation.run(
+    () => educationApi.inviteStudent(workspace.organizationId, id.value),
+    (result) => {
+      inviteCode.value = result.code;
+    },
+  );
 }
 async function revoke(): Promise<void> {
-  busy.value = true;
-  try {
-    await educationApi.revokeStudentAccount(workspace.organizationId, id.value);
-    await refresh();
-  } finally {
-    busy.value = false;
-  }
+  await mutation.run(
+    () => educationApi.revokeStudentAccount(workspace.organizationId, id.value),
+    async () => {
+      inviteCode.value = '';
+      confirmRevoke.value = false;
+      await refresh();
+    },
+  );
+}
+async function reconcileAccount(): Promise<void> {
+  await refresh();
+  if (error.value) return;
+  inviteCode.value = '';
+  confirmRevoke.value = false;
+  actionError.value = null;
+  uncertain.value = false;
 }
 </script>
 <template>
@@ -145,11 +157,17 @@ async function revoke(): Promise<void> {
         >
           {{ t('education.accountPending') }}
         </p>
+        <p
+          v-if="!data.card.account || data.card.account.revokedAt"
+          class="edu-subtle"
+        >
+          {{ t('education.studentInviteTeacherHint') }}
+        </p>
         <div class="edu-form-actions">
           <button
             type="button"
             class="edu-button"
-            :disabled="busy"
+            :disabled="busy || uncertain"
             @click="invite"
           >
             {{ t('education.inviteStudent') }}
@@ -158,8 +176,8 @@ async function revoke(): Promise<void> {
             v-if="data.card.account && !data.card.account.revokedAt"
             type="button"
             class="edu-button"
-            :disabled="busy"
-            @click="revoke"
+            :disabled="busy || uncertain"
+            @click="confirmRevoke = true"
           >
             {{ t('education.revokeAccount') }}
           </button>
@@ -171,7 +189,39 @@ async function revoke(): Promise<void> {
           {{ t('education.generatedInvite') }}:
           <strong>{{ inviteCode }}</strong>
         </p>
+        <p
+          v-if="actionError && !confirmRevoke"
+          class="edu-error"
+          role="alert"
+        >
+          {{ uncertain ? t('education.uncertain') : issue(actionError) }}
+        </p>
+        <button
+          v-if="uncertain && !confirmRevoke"
+          type="button"
+          class="edu-link"
+          @click="reconcileAccount"
+        >
+          {{ t('education.refresh') }}
+        </button>
       </article>
+      <AppConfirmDialog
+        v-model="confirmRevoke"
+        :title="t('education.revokeAccount')"
+        :description="t('education.revokeStudentAccountConfirm')"
+        :confirm-label="t(uncertain ? 'education.refresh' : 'education.revokeAccount')"
+        :busy="busy"
+        danger
+        @confirm="uncertain ? reconcileAccount() : revoke()"
+      >
+        <p
+          v-if="actionError"
+          class="edu-error"
+          role="alert"
+        >
+          {{ uncertain ? t('education.uncertain') : issue(actionError) }}
+        </p>
+      </AppConfirmDialog>
       <form
         class="edu-form edu-card"
         @submit.prevent="refresh"

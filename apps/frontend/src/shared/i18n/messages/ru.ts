@@ -619,6 +619,8 @@ export default {
     refundable: 'Доступно к возврату',
     receipt: 'Чек',
     refunds: 'Возвраты',
+    refundDetails: 'Детали возврата',
+    viewRefund: 'Посмотреть возврат {id}',
     noRefunds: 'Возвратов пока нет.',
     refundPayment: 'Вернуть платёж',
     refundTitle: 'Возврат платежа',

@@ -8,7 +8,7 @@ export interface Header { displayName: string | null; avatarFileId: string | nul
 export interface Group { id: string; name: string; studentCount?: number; archivedAt?: string | null }
 export interface Student { id: string; personId: string; name?: string; createdAt?: string }
 export interface PersonChoice { id: string; name: string; personId?: string }
-export interface Lesson { curriculumLessonId?: string | null; id: string; groupId: string; groupName: string; title: string; startsAt: string; endsAt: string; location: string; status: 'scheduled' | 'completed' | 'cancelled'; studentCount: number; completedAt?: string | null; cancelledAt?: string | null }
+export interface Lesson { curriculumLessonId?: string | null; curriculumSnapshot?: Record<string, unknown> | null; id: string; groupId: string; groupName: string; title: string; startsAt: string; endsAt: string; location: string; status: 'scheduled' | 'completed' | 'cancelled'; studentCount: number; completedAt?: string | null; cancelledAt?: string | null }
 export interface CalendarEvent { id: string; title: string; kind: 'meeting' | 'birthday' | 'other'; startsAt: string; endsAt: string; location: string }
 export type TimelineItem = (Lesson & { kind: 'lesson' }) | CalendarEvent;
 export interface Schedule { from: string; to: string; timezone: string; lessons: Lesson[]; events: CalendarEvent[] }
@@ -67,7 +67,7 @@ const contextGuard: Guard<EducationContext> = (v): v is EducationContext => reco
 const headerGuard: Guard<Header> = (v): v is Header => record(v) && nullableText(v.displayName) && nullableUuid(v.avatarFileId) && uuid(v.personId) && date(v.date) && instant(v.now) && ['night', 'morning', 'afternoon', 'evening'].includes(String(v.greeting)) && locale(v.locale) && timezone(v.timezone) && integer(v.unreadCount);
 const groupGuard: Guard<Group> = (v): v is Group => named(v) && (!('studentCount' in v) || integer(v.studentCount)) && (!('archivedAt' in v) || nullableInstant(v.archivedAt));
 const studentGuard: Guard<Student> = (v): v is Student => record(v) && uuid(v.id) && uuid(v.personId) && (v.name === undefined || text(v.name));
-const lessonGuard: Guard<Lesson> = (v): v is Lesson => record(v) && uuid(v.id) && uuid(v.groupId) && text(v.groupName) && text(v.title) && instant(v.startsAt) && instant(v.endsAt) && text(v.location) && ['scheduled', 'completed', 'cancelled'].includes(String(v.status)) && integer(v.studentCount) && (!('completedAt' in v) || nullableInstant(v.completedAt)) && (!('cancelledAt' in v) || nullableInstant(v.cancelledAt));
+const lessonGuard: Guard<Lesson> = (v): v is Lesson => record(v) && uuid(v.id) && uuid(v.groupId) && text(v.groupName) && text(v.title) && instant(v.startsAt) && instant(v.endsAt) && text(v.location) && ['scheduled', 'completed', 'cancelled'].includes(String(v.status)) && integer(v.studentCount) && (!('completedAt' in v) || nullableInstant(v.completedAt)) && (!('cancelledAt' in v) || nullableInstant(v.cancelledAt)) && (!('curriculumLessonId' in v) || v.curriculumLessonId === null || uuid(v.curriculumLessonId)) && (!('curriculumSnapshot' in v) || v.curriculumSnapshot === null || record(v.curriculumSnapshot));
 const eventGuard: Guard<CalendarEvent> = (v): v is CalendarEvent => record(v) && uuid(v.id) && text(v.title) && ['meeting', 'birthday', 'other'].includes(String(v.kind)) && instant(v.startsAt) && instant(v.endsAt) && text(v.location);
 const timelineGuard: Guard<TimelineItem> = (v): v is TimelineItem => (record(v) && v.kind === 'lesson' && lessonGuard(v)) || eventGuard(v);
 const scheduleGuard: Guard<Schedule> = (v): v is Schedule => record(v) && date(v.from) && date(v.to) && timezone(v.timezone) && Array.isArray(v.lessons) && v.lessons.every(lessonGuard) && Array.isArray(v.events) && v.events.every(eventGuard);
@@ -113,6 +113,19 @@ function pathId(id: string): string { if (!uuid(id)) throw new ApiError(404, 'ht
 const query = (path: string, offset: number) => `${path}${path.includes('?') ? '&' : '?'}offset=${offset}`;
 
 export const educationApi = {
+  revokeActivityAttempt: (org: string, id: string) => write(`/attempts/${pathId(id)}/revoke`, org, {},
+    (value): value is { id: string; studentId: string; revokedAt: string } =>
+      record(value) && value.id === id && uuid(value.studentId) && instant(value.revokedAt), 'PUT'),
+  async activateStudent(code: string, signal?: AbortSignal) {
+    const path = '/education/student-activate';
+    try {
+      const result = await coreAdminHttp.request<unknown>(path, { method: 'POST', body: { code }, signal });
+      return checked(result, (value): value is { studentId: string; organizationId: string; accountId: string } =>
+        record(value) && uuid(value.studentId) && uuid(value.organizationId) && uuid(value.accountId), path);
+    } finally {
+      invalidateEducationCache(['context', 'student', 'students', 'groups', 'header']);
+    }
+  },
   programs: (org: string, offset = 0, signal?: AbortSignal) => get(query('/programs', offset), org, pageGuard(programGuard), signal),
   program: (org: string, id: string, signal?: AbortSignal) => get(`/programs/${pathId(id)}`, org, programGuard, signal),
   createProgram: (org: string, values: { name: string; description: string }) => write('/programs', org, values, programGuard),

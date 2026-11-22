@@ -108,6 +108,13 @@ try {
   await page.getByRole('button', { name: 'Refund payment', exact: true }).click();
   await refundDialog.waitFor(); assert.equal(await refundDialog.locator('input[type=number]').getAttribute('max'), '2');
   await page.keyboard.press('Escape'); states.push('settlement requires server refresh; partial refund and pending quantity reservation');
+  refunds[0].receipt = { id: id(13), status: 'pending', external_receipt_id: null, created_at: now, completed_at: null };
+  await page.getByRole('button', { name: 'Refunds', exact: true }).click();
+  await page.getByRole('button', { name: `View refund ${id(11)}`, exact: true }).click();
+  const refundDetails = page.getByRole('region', { name: `Refund details ${id(11)}`, exact: true });
+  await refundDetails.getByText('Fixture seats × 1', { exact: true }).waitFor();
+  await refundDetails.getByText(`Receipt ${id(13)} · Pending`, { exact: true }).waitFor();
+  states.push('refund detail shows the selected quantity and linked receipt status');
   await page.getByRole('button', { name: 'Receipt', exact: true }).click(); await page.getByRole('heading', { name: `Receipt ${id(12)}`, exact: true }).waitFor();
   await page.locator('#billing-history-query').fill('zz'); await page.getByRole('button', { name: 'Find', exact: true }).click();
   await page.getByText(/Enter the document number shown/).waitFor();
@@ -126,7 +133,7 @@ try {
   states.push('scheduled downgrade and cancellation preserve the active subscription');
   // Inspect the persisted page after the temporary action confirmations expire.
   await page.waitForFunction(() => document.querySelectorAll('.app-toast').length === 0);
-  for (const width of [393, 1440]) {
+  for (const width of [393, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `Billing overflow at ${width}`);
     const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();

@@ -259,6 +259,12 @@ jobs:
         run: |
           composer install --no-interaction --prefer-dist --no-scripts --working-dir=../backend
           composer analyse
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Verify FRONTEND_07 API coverage inventory
+        working-directory: .
+        run: node apps/frontend/scripts/frontend07-coverage.mjs --check
 
   backend-qa:
     name: Core В· quality and tests
@@ -748,6 +754,7 @@ jobs:
           node scripts/e2e-core-privacy-operator.mjs --check-guard
           node scripts/e2e-core-configuration.mjs --check-guard
           node scripts/e2e-education.mjs --check-guard
+          node scripts/e2e-education-roles.mjs --check-guard
           node scripts/load-commercial.mjs --check-guard
       - name: Production build
         run: npm run build
@@ -845,6 +852,7 @@ jobs:
           bash scripts/ci/test-start.sh
           docker compose --profile test exec -d -e CORE_AUTH_BROWSER_SMTP=1 backend-test php yii communication:process-email --loop
           echo "CORE_TEST_CONTAINER=$(docker compose --profile test ps -q backend-test)" >> "$GITHUB_ENV"
+          echo "E2E_STORAGE_TEST_CONTAINER=$(docker compose --profile test ps -q seaweedfs-test)" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
@@ -909,6 +917,10 @@ jobs:
           echo "CORE_TEST_CONTAINER=$(docker compose --profile test ps -q backend-test)" >> "$GITHUB_ENV"
           docker compose --profile test exec -T backend-test vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Education
           docker compose --profile test exec -T backend-test vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Foundation
+          docker compose --profile test exec -T postgres-test psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE classroom02_test'
+          docker compose --profile test exec -T -e CLASSROOM_TEST_DATABASE=classroom02_test backend-test \
+            vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Classroom/ClassroomPostgresRegressionTest.php tests/Unit/DeviceManagement/ClassroomLifecycleRegressionTest.php
+          docker compose --profile test exec -T backend-test vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Storage02
           bash scripts/ci/db-role-gate.sh core
       - name: Verify Education through real Core identities, files and browser
         working-directory: apps/frontend
@@ -929,6 +941,19 @@ jobs:
           done
           curl -kfsS https://127.0.0.1:4175/ >/dev/null
           npm run test:e2e:education
+          npm run test:e2e:education:student
+          npm run test:e2e:education:parent
+          npm run test:e2e:education:device
+      - name: Verify FRONTEND_07 browser release scenarios and evidence
+        working-directory: apps/frontend
+        run: |
+          manifest=screenshots/education-real/frontend07/manifest.json
+          result=0
+          node scripts/frontend07-coverage.mjs --run-evidence "$manifest" teacher-enrollment-journal scripts/e2e-education-roles.mjs teacher || result=1
+          node scripts/frontend07-coverage.mjs --run-evidence "$manifest" classroom-lifecycle scripts/e2e-education-roles.mjs classroom || result=1
+          node scripts/frontend07-coverage.mjs --run-evidence "$manifest" storage-recovery scripts/e2e-education-roles.mjs storage || result=1
+          node scripts/frontend07-coverage.mjs --check-evidence "$manifest" || result=1
+          exit "$result"
       - name: Upload Core browser evidence
         if: always()
         uses: actions/upload-artifact@v6

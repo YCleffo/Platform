@@ -46,7 +46,13 @@
     "verify:typography": "node scripts/verify-typography.mjs",
     "verify:workflows": "node scripts/verify-workflows.mjs",
     "test:workbench-contracts": "node --test scripts/workbench-contracts.test.mjs",
-    "test:e2e:education": "node scripts/e2e-education.mjs"
+    "test:e2e:education": "node scripts/e2e-education.mjs",
+    "test:e2e:education:student": "node scripts/e2e-education-roles.mjs student",
+    "test:e2e:education:parent": "node scripts/e2e-education-roles.mjs parent",
+    "test:e2e:education:device": "node scripts/e2e-education-roles.mjs device",
+    "test:e2e:education:teacher": "node scripts/e2e-education-roles.mjs teacher",
+    "test:e2e:education:classroom": "node scripts/e2e-education-roles.mjs classroom",
+    "test:e2e:education:storage": "node scripts/e2e-education-roles.mjs storage"
   },
   "overrides": {
     "minimatch@>=7.0.0 <11.0.1": "11.0.1",

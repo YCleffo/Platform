@@ -1,18 +1,22 @@
 <script setup lang="ts">
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { coreAdminSession, coreAdminSessionEpoch } from '@/core/admin/session';
+import { ApiError } from '@/shared/api/errors';
+import { useToast } from '@/shared/composables/useToast';
 import DeviceDetailsPanel from './DeviceDetailsPanel.vue';
+import DeviceHistoryDialog from './DeviceHistoryDialog.vue';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
+import AppConfirmDialog from '@/shared/ui/overlays/AppConfirmDialog.vue';
 import {
   deviceApi,
+  deviceStates,
   canDevice,
   type DeviceDetail,
   type DeviceAction,
   type Device,
   type DeviceClassroom,
   type DeviceEnrollment,
-  type DeviceSession,
   type DeviceStatus,
 } from './api';
 import { educationApi } from '../api';
@@ -24,6 +28,16 @@ import EducationState from '../EducationState.vue';
 const workspace = useEducationWorkspace();
 const { t, locale } = useEducationI18n();
 const issue = useEducationError();
+const toast = useToast();
+const confirmation = ref<{ title: string; description: string; run: () => Promise<void> } | null>(
+  null,
+);
+
+async function confirmAction(): Promise<void> {
+  const action = confirmation.value;
+  confirmation.value = null;
+  await action?.run();
+}
 
 const offset = ref(0);
 const selectedClassroomId = ref('');
@@ -69,39 +83,51 @@ async function refreshClassrooms(): Promise<void> {
   await Promise.all([refresh(), classroomResource.refresh()]);
 }
 async function restoreClassroom(classroom: DeviceClassroom): Promise<void> {
+  if (classroomBusy.value) return;
+  classroomBusy.value = true;
   const ctx = context();
   classroomError.value = '';
   try {
     await deviceApi.restoreClassroom(ctx.org, classroom.id);
-    if (ctx.current()) await refreshClassrooms();
+    if (!ctx.current()) return;
+    toast.show(t('education.classroomRestored'), 'success');
+    await refreshClassrooms();
   } catch (failure) {
     if (ctx.current()) classroomError.value = issue(failure);
+  } finally {
+    if (ctx.current()) classroomBusy.value = false;
   }
 }
 // Classroom management modal
 const showClassroomModal = ref(false);
 const newClassroomName = ref('');
 const classroomError = ref('');
+const classroomBusy = ref(false);
 const editingClassroomId = ref<string | null>(null);
 const editingClassroomName = ref('');
 
 async function createClassroom(): Promise<void> {
-  if (!newClassroomName.value.trim()) return;
+  if (!newClassroomName.value.trim() || classroomBusy.value) return;
+  classroomBusy.value = true;
   classroomError.value = '';
   const ctx = context();
   try {
     await deviceApi.createClassroom(workspace.organizationId, newClassroomName.value.trim());
     if (!ctx.current()) return;
     newClassroomName.value = '';
+    toast.show(t('education.classroomSaved'), 'success');
     await refreshClassrooms();
   } catch (err) {
     if (!ctx.current()) return;
     classroomError.value = issue(err instanceof Error ? err : new Error(String(err)));
+  } finally {
+    if (ctx.current()) classroomBusy.value = false;
   }
 }
 
 async function renameClassroom(classroom: DeviceClassroom): Promise<void> {
-  if (!editingClassroomName.value.trim()) return;
+  if (!editingClassroomName.value.trim() || classroomBusy.value) return;
+  classroomBusy.value = true;
   classroomError.value = '';
   const ctx = context();
   try {
@@ -112,20 +138,25 @@ async function renameClassroom(classroom: DeviceClassroom): Promise<void> {
     );
     if (!ctx.current()) return;
     editingClassroomId.value = null;
+    toast.show(t('education.classroomSaved'), 'success');
     await refreshClassrooms();
   } catch (err) {
     if (!ctx.current()) return;
     classroomError.value = issue(err instanceof Error ? err : new Error(String(err)));
+  } finally {
+    if (ctx.current()) classroomBusy.value = false;
   }
 }
 
 async function archiveClassroom(classroom: DeviceClassroom): Promise<void> {
-  if (!window.confirm(t('education.archiveClassroomConfirm'))) return;
+  if (classroomBusy.value) return;
+  classroomBusy.value = true;
   classroomError.value = '';
   const ctx = context();
   try {
     await deviceApi.archiveClassroom(workspace.organizationId, classroom.id);
     if (!ctx.current()) return;
+    toast.show(t('education.classroomArchived'), 'success');
     if (selectedClassroomId.value === classroom.id) {
       selectedClassroomId.value = '';
     }
@@ -133,7 +164,17 @@ async function archiveClassroom(classroom: DeviceClassroom): Promise<void> {
   } catch (err) {
     if (!ctx.current()) return;
     classroomError.value = issue(err instanceof Error ? err : new Error(String(err)));
+  } finally {
+    if (ctx.current()) classroomBusy.value = false;
   }
+}
+
+function requestArchive(classroom: DeviceClassroom): void {
+  confirmation.value = {
+    title: t('education.archiveClassroom'),
+    description: t('education.archiveClassroomConfirm'),
+    run: () => archiveClassroom(classroom),
+  };
 }
 
 // Device creation
@@ -142,8 +183,11 @@ const createName = ref('');
 const createNumber = ref('');
 const createClassroomId = ref('');
 const createError = ref('');
+const createBusy = ref(false);
 
 async function createDevice(): Promise<void> {
+  if (createBusy.value) return;
+  createBusy.value = true;
   createError.value = '';
   const ctx = context();
   try {
@@ -156,10 +200,13 @@ async function createDevice(): Promise<void> {
     showCreate.value = false;
     createName.value = '';
     createNumber.value = '';
+    toast.show(t('education.deviceSaved'), 'success');
     await refresh();
   } catch (failure) {
     if (!ctx.current()) return;
     createError.value = issue(failure instanceof Error ? failure : new Error(String(failure)));
+  } finally {
+    if (ctx.current()) createBusy.value = false;
   }
 }
 
@@ -169,6 +216,7 @@ const editName = ref('');
 const editNumber = ref('');
 const editClassroomId = ref('');
 const editError = ref('');
+const editBusy = ref(false);
 
 function openEditDevice(device: Device): void {
   editingDevice.value = device;
@@ -179,7 +227,14 @@ function openEditDevice(device: Device): void {
 }
 
 async function saveEditDevice(): Promise<void> {
-  if (!editingDevice.value || !canDevice(detail.value, 'edit')) return;
+  if (
+    editBusy.value ||
+    editingDevice.value?.id !== detail.value?.id ||
+    !editingDevice.value ||
+    !canDevice(detail.value, 'edit')
+  )
+    return;
+  editBusy.value = true;
   editError.value = '';
   const ctx = context();
   try {
@@ -190,11 +245,14 @@ async function saveEditDevice(): Promise<void> {
     });
     if (!ctx.current()) return;
     editingDevice.value = null;
+    toast.show(t('education.deviceSaved'), 'success');
     await refresh();
     if (ctx.current() && detailId.value) await loadDetail();
   } catch (failure) {
     if (!ctx.current()) return;
     editError.value = issue(failure instanceof Error ? failure : new Error(String(failure)));
+  } finally {
+    if (ctx.current()) editBusy.value = false;
   }
 }
 
@@ -208,19 +266,34 @@ const assignBusy = ref(false);
 const assignError = ref('');
 const rosterSearch = ref('');
 const roster = ref<{ items: { id: string; name?: string }[] } | null>(null);
+const rosterLoading = ref(false);
+const rosterError = ref<unknown>(null);
+let rosterController: AbortController | undefined;
 
 async function loadRoster(): Promise<void> {
+  rosterController?.abort();
+  const request = new AbortController();
+  rosterController = request;
   const ctx = context();
+  rosterLoading.value = true;
+  rosterError.value = null;
   const items: { id: string; name?: string }[] = [];
-  let next: number | null = 0;
-  while (next !== null) {
-    const pageOffset: number = next;
-    const page = await educationApi.students(ctx.org, pageOffset);
-    items.push(...page.items);
-    next = page.nextOffset;
-    if (next !== null && next <= pageOffset) throw new Error('Invalid pagination');
+  try {
+    let next: number | null = 0;
+    while (next !== null) {
+      const pageOffset: number = next;
+      const page = await educationApi.students(ctx.org, pageOffset, request.signal);
+      if (request.signal.aborted || !ctx.current()) return;
+      items.push(...page.items);
+      next = page.nextOffset;
+      if (next !== null && next <= pageOffset) throw new Error('Invalid pagination');
+    }
+    roster.value = { items };
+  } catch (failure) {
+    if (!request.signal.aborted && ctx.current()) rosterError.value = failure;
+  } finally {
+    if (!request.signal.aborted && ctx.current()) rosterLoading.value = false;
   }
-  if (ctx.current()) roster.value = { items };
 }
 
 const filteredRoster = computed(() => {
@@ -238,72 +311,54 @@ async function openAssign(device: DeviceDetail): Promise<void> {
   assignStudentId.value = '';
   assignError.value = '';
   rosterSearch.value = '';
-  try {
-    await loadRoster();
-  } catch (failure) {
-    assignError.value = issue(failure);
-  }
+  roster.value = null;
+  await loadRoster();
 }
 
+function closeAssign(): void {
+  rosterController?.abort();
+  assignDevice.value = null;
+  roster.value = null;
+  rosterLoading.value = false;
+}
+
+const assignAllowed = computed(
+  () =>
+    !!detail.value &&
+    detail.value.id === assignDevice.value?.id &&
+    canDevice(detail.value, 'assign'),
+);
+
 async function assign(): Promise<void> {
+  const target = detail.value;
   if (
     assignBusy.value ||
-    !assignDevice.value ||
-    !assignStudentId.value ||
-    !canDevice(assignDevice.value, 'assign')
+    detailLoading.value ||
+    !target ||
+    !assignAllowed.value ||
+    !assignStudentId.value
   )
     return;
   assignBusy.value = true;
   assignError.value = '';
   const ctx = context();
   try {
-    await deviceApi.startSession(
-      workspace.organizationId,
-      assignDevice.value.id,
-      assignStudentId.value,
-      assignDevice.value.stateVersion,
-    );
+    await deviceApi.startSession(ctx.org, target.id, assignStudentId.value, target.stateVersion);
     if (!ctx.current()) return;
-    assignDevice.value = null;
+    closeAssign();
+    toast.show(t('education.deviceAction_assign'), 'success');
     await refresh();
     if (ctx.current() && detailId.value) await loadDetail();
   } catch (failure) {
     if (!ctx.current()) return;
-    assignError.value = issue(failure instanceof Error ? failure : new Error(String(failure)));
+    assignError.value = issue(failure);
+    if (failure instanceof ApiError && failure.status === 409) await loadDetail();
   } finally {
     if (ctx.current()) assignBusy.value = false;
   }
 }
 
-// Session history drawer/modal
 const historyDevice = ref<Device | null>(null);
-const deviceSessions = ref<DeviceSession[]>([]);
-const historyLoading = ref(false);
-let historyRequest = 0;
-const historyOffset = ref(0),
-  historyNextOffset = ref<number | null>(null),
-  historyError = ref('');
-
-async function openHistory(device: Device, pageOffset = 0): Promise<void> {
-  const ctx = context();
-  const request = ++historyRequest;
-  historyOffset.value = pageOffset;
-  historyError.value = '';
-  deviceSessions.value = [];
-  historyDevice.value = device;
-  historyLoading.value = true;
-  try {
-    const res = await deviceApi.sessions(ctx.org, device.id, undefined, pageOffset);
-    if (ctx.current() && request === historyRequest && historyDevice.value?.id === device.id) {
-      deviceSessions.value = res.items;
-      historyNextOffset.value = res.nextOffset;
-    }
-  } catch (failure) {
-    if (ctx.current() && request === historyRequest) historyError.value = issue(failure);
-  } finally {
-    if (ctx.current() && request === historyRequest) historyLoading.value = false;
-  }
-}
 
 const detail = ref<DeviceDetail | null>(null),
   detailId = ref(''),
@@ -340,7 +395,7 @@ async function loadDetail(): Promise<void> {
     if (ctx.current() && !controller.signal.aborted && detailId.value === id) detail.value = result;
   } catch (failure) {
     if (ctx.current() && !controller.signal.aborted) {
-      detail.value = null;
+      if (failure instanceof ApiError && [401, 403, 404].includes(failure.status)) detail.value = null;
       detailError.value = issue(failure);
     }
   } finally {
@@ -360,9 +415,8 @@ function closeDetail(): void {
   detailError.value = '';
 }
 async function deviceAction(action: DeviceAction): Promise<void> {
-  const target = detail.value,
-    ctx = context();
-  if (!target || !canDevice(target, action) || actionBusy.value) return;
+  const target = detail.value;
+  if (!target || !canDevice(target, action) || actionBusy.value || detailLoading.value || detailError.value) return;
   if (action === 'assign') {
     await openAssign(target);
     return;
@@ -371,26 +425,72 @@ async function deviceAction(action: DeviceAction): Promise<void> {
     openEditDevice(target);
     return;
   }
-  if (action !== 'enroll' && !window.confirm(t(`education.confirmDevice_${action}`))) return;
+  if (action === 'enroll') {
+    await runDeviceAction(action, target);
+    return;
+  }
+  const labels = {
+    revoke: 'revokeDevice',
+    end_session: 'endSession',
+    cancel_assignment: 'cancelAssignment',
+    retry_recovery: 'retryRecovery',
+  };
+  confirmation.value = {
+    title: t(`education.${labels[action]}`),
+    description: t(`education.confirmDevice_${action}`),
+    run: () => runDeviceAction(action, target),
+  };
+}
+
+async function runDeviceAction(
+  action: Exclude<DeviceAction, 'assign' | 'edit'>,
+  observed: DeviceDetail,
+): Promise<void> {
+  const target = detail.value;
+  if (!target || actionBusy.value || detailLoading.value || detailError.value) return;
+  if (
+    target.id !== observed.id ||
+    target.stateVersion !== observed.stateVersion ||
+    !canDevice(target, action)
+  ) {
+    actionError.value = t('education.deviceReadinessChanged');
+    return;
+  }
+  const ctx = context();
+  const session = target.sessions.find((item) => item.status !== 'CLOSED');
+  if (!session && (action === 'end_session' || action === 'cancel_assignment')) {
+    actionError.value = t('education.deviceReadinessChanged');
+    await loadDetail();
+    return;
+  }
   actionBusy.value = true;
   actionError.value = '';
   try {
-    const session = target.sessions.find((item) => item.status !== 'CLOSED');
     if (action === 'enroll') {
       const result = await deviceApi.enroll(ctx.org, target.id);
       if (ctx.current()) enrollments.value.set(target.id, result);
-    } else if (action === 'revoke') await deviceApi.revoke(ctx.org, target.id);
-    else if (action === 'retry_recovery')
+    } else if (action === 'revoke') {
+      await deviceApi.revoke(ctx.org, target.id);
+      if (ctx.current()) enrollments.value.delete(target.id);
+    } else if (action === 'retry_recovery')
       await deviceApi.retryRecovery(ctx.org, target.id, target.stateVersion);
     else if (session && action === 'cancel_assignment')
       await deviceApi.cancelAssignment(ctx.org, target.id, session.id, target.stateVersion);
     else if (session) await deviceApi.endSession(ctx.org, target.id, session.id);
     if (ctx.current()) {
+      toast.show(
+        t(`education.deviceAction_${action}`),
+        action === 'end_session' || action === 'retry_recovery' ? 'info' : 'success',
+      );
       await refresh();
       if (detailId.value === target.id) await loadDetail();
     }
   } catch (failure) {
-    if (ctx.current()) actionError.value = issue(failure);
+    if (ctx.current()) {
+      actionError.value = issue(failure);
+      if (failure instanceof ApiError && failure.status === 409 && detailId.value === target.id)
+        await loadDetail();
+    }
   } finally {
     if (ctx.current()) actionBusy.value = false;
   }
@@ -416,20 +516,20 @@ watch(
     editClassroomId.value = '';
     assignStudentId.value = '';
     rosterSearch.value = '';
-    historyRequest++;
     closeDetail();
     historyDevice.value = null;
-    deviceSessions.value = [];
-    assignDevice.value = null;
-    roster.value = null;
+    closeAssign();
     editingDevice.value = null;
     enrollments.value.clear();
     showCreate.value = false;
     showClassroomModal.value = false;
+    confirmation.value = null;
     actionBusy.value = false;
     assignBusy.value = false;
+    classroomBusy.value = false;
+    createBusy.value = false;
+    editBusy.value = false;
     actionError.value = '';
-    historyError.value = '';
     assignError.value = '';
     classroomError.value = '';
     createError.value = '';
@@ -438,15 +538,22 @@ watch(
   { flush: 'sync' },
 );
 const poll = setInterval(() => {
-  if (!actionBusy.value && workspace.organizationId) {
-    if (detailId.value) void loadDetail();
-    else if (!loading.value) void refresh();
-  }
+  if (
+    !workspace.organizationId ||
+    actionBusy.value ||
+    assignBusy.value ||
+    editBusy.value ||
+    confirmation.value
+  )
+    return;
+  if (detailId.value && !detailLoading.value) void loadDetail();
+  else if (!detailId.value && !loading.value) void refresh();
 }, 10000);
 onScopeDispose(() => {
   active = false;
   clearInterval(poll);
   detailController?.abort();
+  rosterController?.abort();
   if (searchTimer) clearTimeout(searchTimer);
 });
 
@@ -472,6 +579,7 @@ function statusClass(status: DeviceStatus): string {
       return 'edu-badge--active';
     case 'SYNCING_IN':
     case 'SYNCING_OUT':
+    case 'CLEANUP':
       return 'edu-badge--syncing';
     case 'PREPARING':
     case 'RESERVED':
@@ -548,13 +656,10 @@ function formatDate(iso: string | null): string {
           :label="t('education.allStatuses')"
           :options="[
             { value: '', label: t('education.allStatuses') },
-            { value: 'AVAILABLE', label: t('education.device_available') },
-            { value: 'ACTIVE', label: t('education.device_active') },
-            { value: 'PREPARING', label: t('education.device_preparing') },
-            { value: 'SYNCING_IN', label: t('education.device_syncing_in') },
-            { value: 'SYNCING_OUT', label: t('education.device_syncing_out') },
-            { value: 'RECOVERY_REQUIRED', label: t('education.device_recovery_required') },
-            { value: 'OFFLINE', label: t('education.device_offline') },
+            ...deviceStates.map((value) => ({
+              value,
+              label: t(`education.device_${value.toLowerCase()}`),
+            })),
           ]"
         />
         <AppInput
@@ -616,6 +721,7 @@ function formatDate(iso: string | null): string {
         <button
           type="submit"
           class="edu-button edu-button--primary"
+          :disabled="createBusy"
         >
           {{ t('education.save') }}
         </button>
@@ -712,9 +818,9 @@ function formatDate(iso: string | null): string {
             <button
               type="button"
               class="edu-button edu-button--small"
-              @click="openHistory(device)"
+              @click="historyDevice = device"
             >
-              {{ t('education.sessionHistory') }}
+              {{ t('education.deviceHistory') }}
             </button>
           </footer>
         </article>
@@ -778,7 +884,7 @@ function formatDate(iso: string | null): string {
         <DeviceDetailsPanel
           v-if="detail"
           :device="detail"
-          :busy="actionBusy || detailLoading"
+          :busy="actionBusy || detailLoading || !!detailError"
           :enrollment="enrollments.get(detail.id)"
           @action="deviceAction"
         />
@@ -806,7 +912,7 @@ function formatDate(iso: string | null): string {
     <div
       v-if="assignDevice"
       class="edu-modal-backdrop"
-      @click.self="assignDevice = null"
+      @click.self="!assignBusy && closeAssign()"
     >
       <div class="edu-modal edu-card">
         <h3>
@@ -823,7 +929,16 @@ function formatDate(iso: string | null): string {
           maxlength="80"
         />
 
-        <div class="edu-roster-list">
+        <EducationState
+          :loading="rosterLoading"
+          :error="rosterError"
+          :empty="filteredRoster.length ? undefined : t('education.noPeople')"
+          @retry="loadRoster"
+        />
+        <div
+          v-if="filteredRoster.length"
+          class="edu-roster-list"
+        >
           <button
             v-for="student in filteredRoster"
             type="button"
@@ -836,19 +951,13 @@ function formatDate(iso: string | null): string {
             <strong>{{ student.name || student.id }}</strong>
             <span class="edu-subtle">{{ student.id.slice(0, 8) }}</span>
           </button>
-          <p
-            v-if="!filteredRoster.length"
-            class="edu-subtle"
-          >
-            {{ t('education.noPeople') }}
-          </p>
         </div>
 
         <div class="edu-form-actions">
           <button
             type="button"
             class="edu-button edu-button--primary"
-            :disabled="assignBusy || !assignStudentId"
+            :disabled="assignBusy || detailLoading || !assignAllowed || !assignStudentId"
             @click="assign"
           >
             {{ t('education.startPreparation') }}
@@ -856,17 +965,18 @@ function formatDate(iso: string | null): string {
           <button
             type="button"
             class="edu-button"
-            @click="assignDevice = null"
+            :disabled="assignBusy"
+            @click="closeAssign"
           >
             {{ t('education.cancel') }}
           </button>
         </div>
         <p
-          v-if="assignError"
+          v-if="assignError || (!detailLoading && !assignAllowed)"
           class="edu-error"
           role="alert"
         >
-          {{ assignError }}
+          {{ assignError || t('education.deviceReadinessChanged') }}
         </p>
       </div>
     </div>
@@ -906,6 +1016,7 @@ function formatDate(iso: string | null): string {
             <button
               type="submit"
               class="edu-button edu-button--primary"
+              :disabled="editBusy || detailLoading || !canDevice(detail, 'edit')"
             >
               {{ t('education.save') }}
             </button>
@@ -951,6 +1062,7 @@ function formatDate(iso: string | null): string {
           <button
             type="submit"
             class="edu-button edu-button--primary"
+            :disabled="classroomBusy"
           >
             {{ t('education.createClassroom') }}
           </button>
@@ -968,7 +1080,7 @@ function formatDate(iso: string | null): string {
           id="classroom-search"
           v-model="classroomSearch"
           :label="t('education.searchClassrooms')"
-          maxlength="160"
+          maxlength="80"
         />
         <label>
           <input
@@ -1002,6 +1114,7 @@ function formatDate(iso: string | null): string {
               <button
                 type="button"
                 class="edu-button edu-button--primary"
+                :disabled="classroomBusy"
                 @click="renameClassroom(classroom)"
               >
                 {{ t('education.save') }}
@@ -1026,8 +1139,10 @@ function formatDate(iso: string | null): string {
               class="edu-form-actions"
             >
               <button
+                v-if="!classroom.archivedAt"
                 type="button"
                 class="edu-button edu-button--small"
+                :disabled="classroomBusy"
                 @click="
                   editingClassroomId = classroom.id;
                   editingClassroomName = classroom.name;
@@ -1038,11 +1153,12 @@ function formatDate(iso: string | null): string {
               <button
                 type="button"
                 class="edu-button edu-button--small"
+                :disabled="classroomBusy"
                 @click="
-                  classroom.archivedAt ? restoreClassroom(classroom) : archiveClassroom(classroom)
+                  classroom.archivedAt ? restoreClassroom(classroom) : requestArchive(classroom)
                 "
               >
-                {{ t('education.archive') }}
+                {{ t(classroom.archivedAt ? 'education.restoreClassroom' : 'education.archive') }}
               </button>
             </div>
           </li>
@@ -1078,86 +1194,23 @@ function formatDate(iso: string | null): string {
       </div>
     </div>
 
-    <!-- Sessions History Modal Dialog -->
-    <div
+    <DeviceHistoryDialog
       v-if="historyDevice"
-      class="edu-modal-backdrop"
-      @click.self="historyDevice = null"
-    >
-      <div class="edu-modal edu-card">
-        <h3>
-          {{ t('education.sessionHistory') }}: {{ historyDevice.number }} {{ historyDevice.name }}
-        </h3>
-
-        <div
-          v-if="historyLoading"
-          class="edu-subtle"
-        >
-          {{ t('education.loading') }}
-        </div>
-        <ul
-          v-else-if="deviceSessions.length"
-          class="edu-list"
-        >
-          <li
-            v-for="session in deviceSessions"
-            :key="session.id"
-            class="edu-list__item"
-          >
-            <div class="edu-list__main">
-              <strong>{{ session.studentName || session.studentId }}</strong>
-              <p class="edu-subtle">
-                {{ t(`education.session_${session.status.toLowerCase()}`) }} ·
-                {{ t('education.startedAt') }}: {{ formatDate(session.startedAt) }}
-              </p>
-            </div>
-          </li>
-        </ul>
-        <p
-          v-else
-          class="edu-subtle"
-        >
-          {{ t('education.noSessions') }}
-        </p>
-
-        <p
-          v-if="historyError"
-          class="edu-error"
-          role="alert"
-        >
-          {{ historyError }}
-        </p>
-        <div class="edu-form-actions">
-          <button
-            v-if="historyOffset"
-            type="button"
-            class="edu-button"
-            :disabled="historyLoading"
-            @click="openHistory(historyDevice, Math.max(0, historyOffset - 50))"
-          >
-            {{ t('education.back') }}
-          </button>
-          <button
-            v-if="historyNextOffset !== null"
-            type="button"
-            class="edu-button"
-            :disabled="historyLoading"
-            @click="openHistory(historyDevice, historyNextOffset)"
-          >
-            {{ t('education.loadMore') }}
-          </button>
-        </div>
-        <div class="edu-form-actions">
-          <button
-            type="button"
-            class="edu-button"
-            @click="historyDevice = null"
-          >
-            {{ t('education.back') }}
-          </button>
-        </div>
-      </div>
-    </div>
+      :key="historyDevice.id"
+      :device="historyDevice"
+      :organization-id="workspace.organizationId"
+      @close="historyDevice = null"
+    />
+    <AppConfirmDialog
+      v-if="confirmation"
+      :model-value="true"
+      :title="confirmation.title"
+      :description="confirmation.description"
+      :confirm-label="confirmation.title"
+      danger
+      @update:model-value="confirmation = null"
+      @confirm="confirmAction"
+    />
   </section>
 </template>
 

@@ -16,7 +16,7 @@ export const achievementGuard: Guard<Achievement> = (v): v is Achievement => rec
 const historyGuard: Guard<ActivityHistoryEntry> = (v): v is ActivityHistoryEntry => record(v) && id(v.attemptId) && instant(v.createdAt) && ['ru', 'en'].includes(String(v.language)) && num(v.accuracy) && count(v.errors) && (v.wpm === undefined || num(v.wpm)) && (v.score === undefined || num(v.score));
 export const progressGuard: Guard<ActivityProgress> = (v): v is ActivityProgress => record(v) && record(v.typing) && count(v.typing.attempts) && (v.typing.bestWpm === null || num(v.typing.bestWpm)) && (v.typing.averageAccuracy === null || num(v.typing.averageAccuracy)) && Array.isArray(v.typing.history) && v.typing.history.every(historyGuard) && record(v.logic) && count(v.logic.attempts) && (v.logic.bestScore === null || num(v.logic.bestScore)) && Array.isArray(v.logic.history) && v.logic.history.every(historyGuard) && Array.isArray(v.achievements) && v.achievements.every(achievementGuard) && count(v.completedAssignments);
 async function request<T>(org: string, path: string, guard: Guard<T>, method: 'GET' | 'POST' | 'PUT' = 'GET', body?: unknown, signal?: AbortSignal): Promise<T> {
-  const value = await coreAdminHttp.request<unknown>(`/education${path}`, { method, headers: { 'X-Education-Organization': org }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal });
+  const value = await coreAdminHttp.request<unknown>(`/education${path}`, { method, headers: { 'X-Education-Organization': org }, ...(body === undefined ? {} : { body }), signal });
   if (!guard(value)) throw new ApiResponseError(path);
   return value;
 }
@@ -24,7 +24,7 @@ const pathId = (value: string) => encodeURIComponent(value);
 export const activityApi = {
   catalog: (org: string, signal?: AbortSignal) => request(org, '/activities', (v): v is { items: StudentActivityDefinition[] } => record(v) && Array.isArray(v.items) && v.items.every(a => record(a) && id(a.id) && str(a.code) && str(a.name) && str(a.kind) && count(a.contractVersion) && typeof a.enabled === 'boolean' && record(a.config) && Array.isArray(a.metrics) && str(a.requiredPermission)), 'GET', undefined, signal),
   startHomework: (org: string, homeworkId: string) => request(org, `/student/homework/${pathId(homeworkId)}/activity/start`, activityExerciseGuard, 'POST', {}),
-  startLogic: (org: string, config: ActivityConfig) => request(org, '/student/activities/platform-logic/attempts', activityExerciseGuard, 'POST', config),
+  startLogic: (org: string, config: ActivityConfig & { assignmentId?: string }) => request(org, '/student/activities/platform-logic/attempts', activityExerciseGuard, 'POST', config),
   attempt: (org: string, attemptId: string, signal?: AbortSignal) => request(org, `/student/attempts/${pathId(attemptId)}`, activityExerciseGuard, 'GET', undefined, signal),
   saveState: (org: string, attemptId: string, version: number, state: { typed?: string; answers?: LogicAnswer[]; currentRound?: number }) => request(org, `/student/attempts/${pathId(attemptId)}/state`, activityExerciseGuard, 'PUT', { version, state }),
   finishLogic: (org: string, attemptId: string, answers: LogicAnswer[]) => request(org, `/student/attempts/${pathId(attemptId)}/finish`, logicResultGuard, 'PUT', { answers }),

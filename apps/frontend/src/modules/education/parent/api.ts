@@ -290,7 +290,7 @@ async function request<T>(
     method,
     headers: org ? { 'X-Education-Organization': org } : undefined,
     signal,
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    ...(body === undefined ? {} : { body }),
   });
   if (!guard(value)) throw new ApiResponseError(path);
   return value;

@@ -1,7 +1,8 @@
 ﻿<script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
-import { studentPortalApi, type TypingExercise, type TypingResult } from './api';
+import { studentPortalApi, type TypingExercise, type TypingInput, type TypingResult } from './api';
 import { coreAdminSession, coreAdminSessionEpoch } from '@/core/admin/session';
+import { ApiError } from '@/shared/api/errors';
 import { homeworkApi } from '../homework/api';
 import { invalidateEducationCache } from '../cache';
 import { useEducationI18n } from '../i18n';
@@ -12,11 +13,13 @@ import { defaultActivityConfig, type ActivityConfig } from '../activityTypes';
 const props = defineProps<{
   organizationId: string;
   homeworkId?: string;
+  assignmentId?: string;
   assignedConfig?: ActivityConfig;
 }>();
 const emit = defineEmits<{ (event: 'finished', result: TypingResult): void }>();
 const { t } = useEducationI18n();
 const issue = useEducationError();
+const assigned = computed(() => !!(props.homeworkId || props.assignmentId));
 const inputId = useId();
 const config = ref<ActivityConfig>(defaultActivityConfig());
 const status = ref<'idle' | 'running' | 'finished' | 'saving' | 'failed'>('idle');
@@ -36,23 +39,28 @@ const inputErrors = ref(0);
 let timer: number | null = null;
 let observer: ResizeObserver | null = null;
 let generation = 0;
-let finishValues: {
-  typed: string;
-  durationSeconds: number;
-  corrections: number;
-  inputErrors: number;
-} | null = null;
+let finishValues: (TypingInput & { durationSeconds: number }) | null = null;
+let stateSaved = false;
+let stateController: AbortController | null = null;
 watch(
-  [() => props.organizationId, () => props.homeworkId, coreAdminSessionEpoch],
+  [
+    () => props.organizationId,
+    () => props.homeworkId,
+    () => props.assignmentId,
+    coreAdminSessionEpoch,
+  ],
   () => {
     generation++;
     stopTimer();
+    stateController?.abort();
+    stateController = null;
     exercise.value = null;
     typed.value = '';
     result.value = null;
     status.value = 'idle';
     actionError.value = null;
     finishValues = null;
+    stateSaved = false;
     composing.value = false;
   },
   { flush: 'sync' },
@@ -98,7 +106,7 @@ async function start(next = false): Promise<void> {
   const version = generation,
     epoch = coreAdminSession.epoch();
   const current = () => generation === version && coreAdminSession.epoch() === epoch;
-  if (next && !props.homeworkId)
+  if (next && !assigned.value)
     config.value = {
       ...config.value,
       difficulty: Math.min(3, (config.value.difficulty ?? 1) + 1) as 1 | 2 | 3,
@@ -108,12 +116,14 @@ async function start(next = false): Promise<void> {
   result.value = null;
   exercise.value = null;
   finishValues = null;
+  stateSaved = false;
   try {
     const started = props.homeworkId
       ? await homeworkApi.startActivity(props.organizationId, props.homeworkId)
       : await studentPortalApi.startAttempt(props.organizationId, 'platform-typing', {
           ...config.value,
           durationSeconds: config.value.durationSeconds ?? 30,
+          ...(props.assignmentId ? { assignmentId: props.assignmentId } : {}),
         });
     if (!current()) return;
     exercise.value = started as TypingExercise;
@@ -157,17 +167,52 @@ async function finish(): Promise<void> {
 }
 async function saveResult(): Promise<void> {
   if (!exercise.value || !finishValues || status.value === 'saving') return;
+  const attempt = exercise.value.attempt;
+  const payload = finishValues;
   const version = generation,
     epoch = coreAdminSession.epoch();
   const current = () => generation === version && coreAdminSession.epoch() === epoch;
   status.value = 'saving';
   actionError.value = null;
   try {
-    const saved = await studentPortalApi.finishAttempt(
-      props.organizationId,
-      exercise.value.attempt.id,
-      finishValues,
-    );
+    if (!stateSaved) {
+      const request = new AbortController();
+      stateController = request;
+      const state = {
+        typed: payload.typed,
+        corrections: payload.corrections,
+        inputErrors: payload.inputErrors,
+      };
+      try {
+        await studentPortalApi.saveTypingState(
+          props.organizationId,
+          attempt.id,
+          attempt.stateVersion ?? 0,
+          state,
+          request.signal,
+        );
+      } catch (error) {
+        if (!current() || !(error instanceof ApiError) || error.status !== 409) throw error;
+        const latest = await studentPortalApi.typingAttempt(
+          props.organizationId,
+          attempt.id,
+          request.signal,
+        );
+        const saved = latest.attempt.state;
+        if (
+          latest.attempt.status !== 'running' ||
+          saved?.typed !== state.typed ||
+          saved.corrections !== state.corrections ||
+          saved.inputErrors !== state.inputErrors
+        )
+          throw error;
+      } finally {
+        if (stateController === request) stateController = null;
+      }
+      if (!current()) return;
+      stateSaved = true;
+    }
+    const saved = await studentPortalApi.finishAttempt(props.organizationId, attempt.id, payload);
     if (!current()) return;
     result.value = saved;
     status.value = 'finished';
@@ -247,6 +292,7 @@ onMounted(() => window.addEventListener('resize', scrollCaret));
 onBeforeUnmount(() => {
   generation++;
   stopTimer();
+  stateController?.abort();
   observer?.disconnect();
   window.removeEventListener('resize', scrollCaret);
 });
@@ -259,7 +305,7 @@ onBeforeUnmount(() => {
     >
       <ActivityConfigFields
         v-model="config"
-        :disabled="!!homeworkId || status === 'saving'"
+        :disabled="assigned || status === 'saving'"
       />
       <p class="edu-subtle">{{ t('education.typingHint') }}</p>
       <button
@@ -402,6 +448,7 @@ onBeforeUnmount(() => {
           {{ t('education.trainAgain') }}
         </button>
         <button
+          v-if="!assigned"
           type="button"
           class="edu-button edu-button--primary"
           @click="start(true)"

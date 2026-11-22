@@ -202,6 +202,13 @@ try {
     return Boolean(group);
   }, 'Group was not found in /groups list');
   assert.ok(group);
+  // Prepare the larger roster before the actual enrollment through the browser.
+  for (const candidate of seeded.candidates.slice(1))
+    await api('/students', {
+      method: 'POST',
+      body: { groupId: group.id, personId: candidate.id },
+      status: 201,
+    });
   await page.getByRole('link', { name: 'Добавить ученика', exact: true }).click();
   await page.waitForURL((url) => url.pathname.includes('/students/new'));
   const existingTab = page.locator('button', { hasText: /Выбрать существующего|Choose existing/ });
@@ -216,13 +223,6 @@ try {
   await selectDropdown(page, 'education-create-person', seeded.candidates[0].id);
   await page.locator('form button[type=submit]').click();
   await page.waitForURL((url) => url.pathname === '/people' || url.pathname.startsWith('/groups/'));
-  for (const candidate of seeded.candidates.slice(1))
-    await api('/students', {
-      method: 'POST',
-      body: { groupId: group.id, personId: candidate.id },
-      status: 201,
-    });
-  await page.evaluate(() => window.__clearEducationCache?.());
   assert.equal((await api('/groups')).items.find((item) => item.id === group.id).studentCount, 12);
   const roster = (await api('/students')).items;
   await page.locator('.edu-navigation a[href="/people"]').click();
@@ -244,6 +244,54 @@ try {
     'group roster view and rename persist real scoped records; 12 Core roster members remain unique',
   );
 
+  const teacherChoice = page.locator(`#teacher-${seeded.accounts.colleague.id}`);
+  const teacherForm = page.locator('form').filter({ has: teacherChoice });
+  const saveTeachers = () => teacherForm.getByRole('button', { name: 'Сохранить', exact: true }).click();
+  const hasColleague = async () => (await api(`/groups/${group.id}/teachers`)).items.some(
+    (item) => item.accountId === seeded.accounts.colleague.id && item.assigned,
+  );
+  await teacherChoice.check();
+  await saveTeachers();
+  await eventually(hasColleague, 'Teacher delegation did not persist');
+  const delegated = await session(seeded.accounts.colleague);
+  assert.equal((await delegated.api(`/groups/${group.id}`)).id, group.id);
+  await teacherChoice.uncheck();
+  await saveTeachers();
+  await eventually(async () => !(await hasColleague()), 'Teacher delegation was not revoked');
+  await delegated.api(`/groups/${group.id}`, { status: 404 });
+  report('group owner delegates and revokes access through the teacher panel; colleague scope follows the saved assignment');
+
+  await page.getByRole('link', { name: 'Создать программу', exact: true }).click();
+  await page.getByRole('button', { name: 'Создать программу', exact: true }).click();
+  await page.locator('#program-name').fill('Программа занятия');
+  await page.locator('form').filter({ has: page.locator('#program-name') })
+    .getByRole('button', { name: 'Сохранить', exact: true }).click();
+  await page.waitForURL((url) => /^\/programs\/[a-f0-9-]+$/.test(url.pathname));
+  const programId = new URL(page.url()).pathname.split('/').at(-1);
+  await page.locator('#new-module-name').fill('Практические занятия');
+  await page.getByRole('button', { name: 'Добавить модуль', exact: true }).click();
+  const newTopic = page.locator('input[id^="new-lesson-"]');
+  await newTopic.fill('Первый урок программы');
+  await page.getByRole('button', { name: 'Добавить урок', exact: true }).click();
+  await page.getByText('1. Первый урок программы', { exact: true }).waitFor();
+  await newTopic.fill('Второй урок программы');
+  await page.getByRole('button', { name: 'Добавить урок', exact: true }).click();
+  await page.getByText('2. Второй урок программы', { exact: true }).waitFor();
+  const program = await api(`/programs/${programId}`);
+  const [firstTopic, secondTopic] = program.modules[0].lessons;
+  assert.equal(firstTopic.title, 'Первый урок программы');
+  assert.equal(secondTopic.title, 'Второй урок программы');
+  await page.goBack();
+  await page.waitForURL((url) => url.pathname === '/programs');
+  await page.goBack();
+  await page.waitForURL((url) => url.pathname === `/groups/${group.id}`);
+  await selectDropdown(page, 'group-program', programId);
+  await page.getByRole('button', { name: 'Назначить программу', exact: true }).click();
+  await eventually(
+    async () => (await api(`/groups/${group.id}/programs`)).items.some(item => item.programId === programId),
+    'Group program assignment did not persist',
+  );
+
   await today(page);
   await page.locator('[data-action="createLesson"]').click();
   const header = await api('/today/header');
@@ -251,6 +299,7 @@ try {
   const end = new Date(start.getTime() + 150 * 60000);
   await page.locator('#education-create-title').fill('Python + Ai помощник');
   await selectDropdown(page, 'education-create-group', group.id);
+  await selectDropdown(page, 'education-curriculum-lesson', firstTopic.id);
   await page.locator('#education-starts-at').fill(wall(start, header.timezone));
   await page.locator('#education-starts-at').press('Tab');
   await page.locator('#education-ends-at').fill(wall(end, header.timezone));
@@ -259,7 +308,9 @@ try {
   await page.locator('form button[type=submit]').click();
   await page.waitForURL((url) => /^\/lessons\/[a-f0-9-]+$/.test(url.pathname));
   const lessonId = page.url().split('/').at(-1);
-  assert.equal((await api(`/lessons/${lessonId}`)).studentCount, 12);
+  const created = await api(`/lessons/${lessonId}`);
+  assert.equal(created.studentCount, 12);
+  assert.equal(created.curriculumLessonId, firstTopic.id);
   await page.getByRole('link', { name: 'Материалы', exact: true }).click();
   await page.getByRole('link', { name: 'Загрузить материалы', exact: true }).click();
   const bytes = Buffer.from(
@@ -293,10 +344,12 @@ try {
     .fill(wall(new Date(rescheduledStart.getTime() + 30 * 60000), header.timezone));
   await page.locator('#education-edit-ends-at').press('Tab');
   await page.locator('#education-edit-location').fill('Каб. 2');
+  await selectDropdown(page, 'education-edit-curriculum-lesson', secondTopic.id);
   await page.locator('form button[type=submit]').click();
   await page.waitForURL((url) => new RegExp(`^/lessons/${lessonId}$`).test(url.pathname));
   const moved = await api(`/lessons/${lessonId}`);
   assert.equal(moved.location, 'Каб. 2');
+  assert.equal(moved.curriculumLessonId, secondTopic.id);
   assert.ok(Date.parse(moved.startsAt) <= Date.parse(header.now));
   await page.locator('.edu-navigation a[href="/calendar"]').click();
   await page
@@ -322,6 +375,8 @@ try {
   const completed = await api(`/lessons/${lessonId}`);
   assert.equal(completed.status, 'completed');
   assert.ok(completed.completedAt);
+  assert.equal(completed.curriculumLessonId, secondTopic.id);
+  report('Program, module, two topics, group assignment and scheduled lesson re-link persisted through completion.');
   const history = await api(`/lessons/${lessonId}/participants`);
   assert.equal(history.items.find((item) => item.id === roster[0].id)?.status, 'present');
   assert.equal((await api(`/lessons/${lessonId}/materials`)).items[0].name, 'lesson-material.txt');
@@ -417,6 +472,10 @@ try {
   await page.getByRole('link', { name: 'Группы', exact: true }).click();
   await page.getByRole('link', { name: 'Открыть группу', exact: true }).click();
   await page.waitForURL((url) => url.pathname === `/groups/${group.id}`);
+  await page.getByRole('link', { name: 'Открыть журнал', exact: true }).click();
+  await page.locator('.edu-journal__entry').filter({ hasText: 'Python + Ai помощник' }).first().waitFor();
+  await page.getByRole('link', { name: 'Группа', exact: true }).click();
+  report('completed lesson is visible through the group journal');
   await page.getByRole('button', { name: 'Архивировать', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Архивировать', exact: true }).click();
   await page.getByText('Группа в архиве. История занятий сохранена.', { exact: true }).waitFor();

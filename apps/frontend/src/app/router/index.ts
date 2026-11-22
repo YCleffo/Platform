@@ -4,6 +4,7 @@ import AuthLayout from '@/app/layouts/AuthLayout.vue';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import { educationRoutes } from '@/modules/education/routes';
+import { isEducationActivationTarget } from '@/modules/education/contexts';
 
 const CatalogView = () => import('@/modules/commercial/catalog/CatalogView.vue');
 const PlanComparisonView = () => import('@/modules/commercial/catalog/PlanComparisonView.vue');
@@ -214,7 +215,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
     }
     if (to.name === 'education-login' && adminAuth.isAuthenticated) {
       const target = typeof to.query.redirect === 'string' ? to.query.redirect : '';
-      return /^\/parent\/activate(?:[?#]|$)/.test(target) ? target : { name: 'education-contexts' };
+      return isEducationActivationTarget(target) ? target : { name: 'education-contexts' };
     }
     if (to.matched.some(record => record.meta.requiresAdminAuth === true) && !adminAuth.isAuthenticated) {
       return { name: 'admin-login', query: { redirect: to.fullPath } };

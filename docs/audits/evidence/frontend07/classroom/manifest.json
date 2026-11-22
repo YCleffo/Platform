@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "runId": "local-fcdba6c4-607f-4827-99dd-77d8cb95c996",
+  "testedSha": "d493eeee5e8394ea2a94eb8baf929c584ed523c8",
+  "sourceDigest": "bca2dca92d3e8384d0b807ec8df8f0e93a4e07c639a23633e5db9d5bbfe7827c",
+  "sourceDirty": true,
+  "environment": {
+    "kind": "isolated-ci",
+    "proofSha256": "c74fcf7f96c11618d30b0eba0bca0f7e57e73eb5f957747f0595793f60154dee"
+  },
+  "scenarios": [
+    {
+      "id": "classroom-lifecycle",
+      "testFile": "apps/frontend/scripts/e2e-education-roles.mjs",
+      "status": "PASS",
+      "timestamp": "2026-11-22T02:05:05.547Z",
+      "artifact": "classroom-lifecycle-b7406939-7dc9-4658-a798-a8b0232d34b2.json",
+      "artifactSha256": "70f17ba343397811d76038c71d626e22e62792c71a1054df44e348b72f72a079",
+      "userActionReachable": true,
+      "persistentResultVerified": true,
+      "securityBoundaryVerified": true
+    }
+  ]
+}

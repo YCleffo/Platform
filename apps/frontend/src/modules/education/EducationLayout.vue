@@ -28,19 +28,20 @@ const currentOrganization = computed(() =>
 const workspaceOrganizations = computed(
   () => workspace.context?.organizations.filter((item) => item.teacher || item.student) ?? [],
 );
+const studentPortal = computed(
+  () => route.path === '/student' || route.path.startsWith('/student/'),
+);
 watch(
   () => workspace.context,
   (context) => {
     if (
+      !studentPortal.value &&
       context &&
       !context.organizations.some((item) => item.teacher || item.student) &&
       context.organizations.some((item) => item.parent)
     )
       void router.replace('/parent/home');
   },
-);
-const studentPortal = computed(
-  () => route.path === '/student' || route.path.startsWith('/student/'),
 );
 const sectionLabel = computed(() =>
   route.path.startsWith('/programs')
@@ -69,14 +70,19 @@ async function prefetch(path: string): Promise<void> {
   }
 }
 let timer: ReturnType<typeof setInterval> | undefined;
+watch(studentPortal, (student) => {
+  if (student) workspace.cancelRequests();
+  else void workspace.loadContext();
+});
 onMounted(() => {
-  void workspace.loadContext();
+  if (!studentPortal.value) void workspace.loadContext();
   timer = setInterval(() => {
-    if (!document.hidden) void workspace.refreshHeader();
+    if (!studentPortal.value && !document.hidden) void workspace.refreshHeader();
   }, 60000);
 });
 onBeforeUnmount(() => {
   if (timer) clearInterval(timer);
+  workspace.cancelRequests();
 });
 </script>
 <template>
@@ -196,7 +202,7 @@ onBeforeUnmount(() => {
           <strong>{{ studentPortal ? t('education.studentCabinet') : sectionLabel }}</strong>
         </div>
         <AppDropdown
-          v-if="workspaceOrganizations.length > 1"
+          v-if="!studentPortal && workspaceOrganizations.length > 1"
           id="education-organization"
           :label="t('education.organization')"
           :model-value="workspace.organizationId"
@@ -204,7 +210,7 @@ onBeforeUnmount(() => {
           @update:model-value="(value) => workspace.chooseOrganization(String(value))"
         />
         <span
-          v-else
+          v-else-if="!studentPortal"
           class="edu-topbar__organization"
         >
           {{ currentOrganization?.name }}
@@ -240,8 +246,9 @@ onBeforeUnmount(() => {
         class="edu-main"
         tabindex="-1"
       >
+        <RouterView v-if="studentPortal" />
         <EducationState
-          v-if="workspace.loading || workspace.error"
+          v-else-if="workspace.loading || workspace.error"
           :loading="workspace.loading"
           :error="workspace.error"
           @retry="workspace.loadContext"

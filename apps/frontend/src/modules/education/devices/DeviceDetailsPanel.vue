@@ -12,6 +12,7 @@ const props = defineProps<{ device: DeviceDetail; busy: boolean; enrollment?: De
 const emit = defineEmits<{ action: [action: DeviceAction] }>();
 const { t, locale } = useEducationI18n();
 const session = computed(() => props.device.sessions.find((item) => item.status !== 'CLOSED'));
+const lastSession = computed(() => session.value ?? props.device.sessions[0]);
 const lastConfirmed = computed(() =>
   props.device.commands.find((command) => command.acknowledgedAt),
 );
@@ -40,23 +41,28 @@ const labels: Record<DeviceAction, string> = {
     <dl>
       <dt>{{ t('education.classroom') }}</dt>
       <dd>{{ device.classroomName || t('education.noClassroom') }}</dd>
+      <dt>{{ t('education.deviceState') }}</dt>
+      <dd data-device-status>{{ t(`education.device_${device.status.toLowerCase()}`) }}</dd>
       <dt>{{ t('education.connection') }}</dt>
-      <dd>
-        {{ t(device.online ? 'education.online' : 'education.device_offline') }} ·
-        {{ date(device.lastSeenAt) }}
-      </dd>
+      <dd>{{ t(device.online ? 'education.online' : 'education.device_offline') }}</dd>
+      <dt>{{ t('education.lastHeartbeat') }}</dt>
+      <dd>{{ date(device.lastSeenAt) }}</dd>
       <dt>{{ t('education.enrollment') }}</dt>
       <dd>{{ t(`education.enrollment_${device.enrollmentState}`) }}</dd>
       <dt>{{ t('education.agentVersion') }}</dt>
       <dd>{{ device.agentVersion || '—' }}</dd>
       <dt>{{ t('education.sessionState') }}</dt>
-      <dd>
+      <dd data-device-session-status>
         {{
-          session
-            ? t(`education.session_${session.status.toLowerCase()}`)
+          lastSession
+            ? t(`education.session_${lastSession.status.toLowerCase()}`)
             : t('education.noSessions')
         }}
       </dd>
+      <template v-if="session?.desiredStatus && session.desiredStatus !== session.status">
+        <dt>{{ t('education.requestedSessionState') }}</dt>
+        <dd>{{ t(`education.session_${session.desiredStatus.toLowerCase()}`) }}</dd>
+      </template>
       <dt>{{ t('education.students') }}</dt>
       <dd>{{ session?.studentName || '—' }}</dd>
       <dt>{{ t('education.lastConfirmedAction') }}</dt>
@@ -64,17 +70,17 @@ const labels: Record<DeviceAction, string> = {
         {{ lastConfirmed ? `${lastConfirmed.kind} · ${date(lastConfirmed.acknowledgedAt)}` : '—' }}
       </dd>
     </dl>
-    <div
-      v-if="device.progress"
-      role="status"
-    >
+    <div v-if="device.progress">
       <p>
-        {{ t(`education.stage_${device.progress.stage.toLowerCase()}`) }} ·
-        {{ device.progress.completed }} / {{ device.progress.total }}
+        {{ t(`education.stage_${device.progress.stage.toLowerCase()}`, device.progress.stage) }}
+        <template v-if="device.progress.total > 0">
+          · {{ device.progress.completed }} / {{ device.progress.total }}
+        </template>
       </p>
       <progress
+        v-if="device.progress.total > 0"
         :value="device.progress.completed"
-        :max="Math.max(1, device.progress.total)"
+        :max="device.progress.total"
         :aria-label="t('education.syncProgress')"
       />
     </div>
@@ -91,7 +97,8 @@ const labels: Record<DeviceAction, string> = {
       v-if="device.recovery?.required"
       class="edu-error"
     >
-      {{ t('education.syncProblem') }} {{ device.recovery.reason }}
+      {{ t('education.syncProblem') }}
+      <code v-if="device.recovery.reason">{{ device.recovery.reason }}</code>
     </p>
     <p
       v-if="enrollment"

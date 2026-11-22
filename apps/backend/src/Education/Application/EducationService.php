@@ -668,7 +668,10 @@ final readonly class EducationService
             'nextLesson' => $next,
             'groups' => $this->store->studentGroupList($scope),
             'recentResults' => array_slice($results, 0, 3),
-            'activities' => $this->store->activityCatalog(),
+            'activities' => array_map(
+                static fn(array $row): array => self::jsonFields($row, ['config', 'metrics']),
+                $this->store->activityCatalog(),
+            ),
             'pendingAttempts' => array_values(array_filter($attempts, static fn(array $row): bool => $row['status'] === 'running')),
             'bestTyping' => $this->store->bestTyping($scope),
             'homework' => $this->homework?->read('student_summary', $scope),
@@ -723,8 +726,30 @@ final readonly class EducationService
             $this->store->studentAssignments($scope),
             static fn(array $row): bool => $row['activityId'] === $definition['id'],
         ));
-        $assignments = array_map(static fn(array $row): array => self::jsonFields($row, ['config', 'completion']), $assignments);
+        $assignments = array_map(function (array $row) use ($code): array {
+            $row = self::activityAssignmentPayload($row);
+            if (in_array($code, ['platform-typing', 'platform-logic'], true)) {
+                $row['effectiveConfig'] = $this->handlers()->validateConfig($code, ActivityHandlerRegistry::json($row['config']));
+            }
+            return $row;
+        }, $assignments);
         return [...self::jsonFields($definition, ['config', 'metrics']), 'assignments' => $assignments];
+    }
+
+    /**
+     * @param array<string,mixed> $row
+     * @return array<string,mixed>
+     */
+    private static function activityAssignmentPayload(array $row): array
+    {
+        $row = self::jsonFields($row, ['config', 'completion']);
+        // These settings are JSON objects even when they have no properties.
+        foreach (['config', 'completion'] as $field) {
+            if (($row[$field] ?? null) === []) {
+                $row[$field] = (object) [];
+            }
+        }
+        return $row;
     }
 
     private function permissionsAllowed(Scope $scope, string $permission): bool
@@ -827,7 +852,7 @@ final readonly class EducationService
         $this->handlers()->validateConfig($code, $input['config'] ?? []);
         $config = $input['config'] ?? [];
         $assignment = $this->store->createAssignment($scope, (string) $definition['id'], $groupId, $studentId, $config);
-        return [...$assignment, 'activityCode' => $code, 'activityName' => $definition['name']];
+        return [...self::activityAssignmentPayload($assignment), 'activityCode' => $code, 'activityName' => $definition['name']];
     }
 
     /** @return array<string,mixed> */
@@ -835,14 +860,14 @@ final readonly class EducationService
     {
         $items = $this->store->assignments($scope, $offset);
         $page = self::page($items, $offset);
-        $page['items'] = array_values(array_filter(array_slice($items, 0, 50), function (array $row) use ($scope): bool {
-            $row = self::jsonFields($row, ['config', 'completion']);
+        $visible = array_filter(array_slice($items, 0, 50), function (array $row) use ($scope): bool {
             if ($row['studentPersonId'] !== null) {
                 return $this->access->member((string) $row['studentPersonId'], $scope->organizationId)
                     && $this->access->resourceAllowed((string) $row['studentPersonId'], 'student', (string) $row['studentId']);
             }
             return true;
-        }));
+        });
+        $page['items'] = array_map(self::activityAssignmentPayload(...), array_values($visible));
         return $page;
     }
 
