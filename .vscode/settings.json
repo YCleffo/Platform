@@ -8,5 +8,6 @@
   "yaml.customTags": [
     "!override sequence:array",
     "!reset sequence:array"
-  ]
+  ],
+  "git.ignoreLimitWarning": true
 }
