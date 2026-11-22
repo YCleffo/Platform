@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { request } from 'playwright';
 import { evaluateCoreMutationGate } from './core-e2e-guard.mjs';
+import { captureAuthenticated, measureAuthenticatedNavigation, observeAuthenticated } from './frontend09-authenticated-evidence.mjs';
 import {
   launchBrowser,
   navigateClientSide,
@@ -57,20 +58,33 @@ const context = await browser.newContext({
   viewport: { width: 1440, height: 1000 },
 });
 await context.addInitScript(() => {
-  localStorage.setItem('platform.locale', 'en');
-  localStorage.setItem('platform.theme', 'dark');
+  if (localStorage.getItem('platform.locale') === null) localStorage.setItem('platform.locale', 'en');
+  if (localStorage.getItem('platform.theme') === null) localStorage.setItem('platform.theme', 'dark');
 });
 const page = await context.newPage();
 const errors = [];
 const states = [];
+const navigation = [];
 let access;
 page.on('pageerror', (e) => errors.push(e.message));
-page.on('response', async (r) => {
-  if (new URL(r.url()).pathname === '/api/auth/mfa/verify' && r.ok())
-    access = (await r.json()).data.accessToken;
-});
 const button = (name, dialog = false) =>
   (dialog ? page.getByRole('dialog') : page).getByRole('button', { name, exact: true });
+async function loginOperator(recoveryCode) {
+  await page.locator('#admin-identifier').fill(actor.email);
+  await page.locator('#admin-password').fill(actor.password);
+  await page.locator('form button[type=submit]').click();
+  await page.locator('#admin-totp').waitFor();
+  await button('Recovery code').click();
+  await page.locator('#admin-recovery').fill(recoveryCode);
+  const verified = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/auth/mfa/verify');
+  await page.locator('form button[type=submit]').click();
+  const response = await verified;
+  assert.equal(response.status(), 200, 'Core operator MFA login failed');
+  access = (await response.json()).data.accessToken;
+}
+async function assertLoginRedirect(expected) {
+  await page.waitForURL((url) => url.pathname === '/admin/login' && url.searchParams.get('redirect') === expected);
+}
 async function save() {
   await button('Save changes', true).click();
   await page.getByRole('dialog').waitFor({ state: 'hidden' });
@@ -101,18 +115,113 @@ async function api(path, { method = 'GET', data, token = access, status = 200 } 
   assert.equal(r.status(), status, path);
   return r;
 }
+
+async function auditWorkspace() {
+  await observeAuthenticated(page);
+  const sidebar = page.locator('.admin__sidebar nav');
+  const sidebarLink = (path) => sidebar.locator(`a[href="${path}"]`);
+  const heading = page.locator('.admin__topbar').getByRole('heading', { level: 1 });
+  const sections = ['/admin', '/admin/organizations', '/admin/persons', '/admin/accounts', '/admin/rbac', '/admin/modules', '/admin/settings', '/admin/profile', '/admin/security', '/admin/privacy', '/admin/audit'];
+  const language = page.locator('.admin__topbar-actions button').filter({ has: page.locator('.admin__locale') });
+  const theme = page.locator('.admin__topbar-actions button').filter({ has: page.locator('svg') }).first();
+  async function check(path, link) {
+    await page.waitForURL((url) => url.pathname === path);
+    await page.getByRole('main').waitFor();
+    await link.and(page.locator('[aria-current="page"]')).waitFor();
+    assert.ok((await heading.innerText()).trim(), `Missing heading for ${path}`);
+  }
+  async function setLanguage(value) {
+    await language.click();
+    await page.waitForFunction((expected) => document.documentElement.lang === expected, value);
+  }
+  async function setTheme(value) {
+    await theme.click();
+    await page.waitForFunction((expected) => document.documentElement.dataset.theme === expected && !document.documentElement.hasAttribute('data-theme-changing'), value);
+  }
+  for (const path of sections) {
+    const link = sidebarLink(path);
+    await link.focus();
+    await link.press('Enter');
+    await check(path, link);
+    await setLanguage('ru');
+    await setTheme('light');
+    await check(path, link);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1), `Core layout overflows on ${path}`);
+    await setLanguage('en');
+    await setTheme('dark');
+    await check(path, link);
+    navigation.push({ path, action: 'keyboard, active link, heading, locale and theme' });
+  }
+  await page.goBack();
+  await check('/admin/privacy', sidebarLink('/admin/privacy'));
+  await page.goForward();
+  await check('/admin/audit', sidebarLink('/admin/audit'));
+  const sessions = '/admin/security/sessions';
+  await sidebarLink('/admin/security').click();
+  await page.locator(`.core-security__tabs a[href="${sessions}"]`).click();
+  await check(sessions, sidebarLink('/admin/security'));
+  await page.reload();
+  await assertLoginRedirect(sessions);
+  await loginOperator(actor.recoveryCodes[1]);
+  await check(sessions, sidebarLink('/admin/security'));
+  navigation.push({ path: sessions, action: 'nested link, guarded reload, MFA return and active parent link' });
+  await measureAuthenticatedNavigation(page, {
+    suite: 'core-admin',
+    targets: ['/admin', '/admin/modules', '/admin/settings'].map((path) => ({
+      path,
+      locator: () => sidebarLink(path),
+      ready: () => sidebarLink(path).and(page.locator('[aria-current="page"]')),
+    })),
+  });
+  await sidebarLink('/admin/settings').click();
+  await check('/admin/settings', sidebarLink('/admin/settings'));
+  const capture = { suite: 'core-admin', screen: 'settings', mask: ['.admin__identity'] };
+  const variants = [
+    [320, 740, 'ru', 'light'], [393, 852, 'en', 'dark'], [430, 932, 'en', 'light'],
+    [768, 1024, 'ru', 'dark'], [1024, 768, 'en', 'light'], [1440, 900, 'ru', 'dark'],
+    [1920, 1080, 'ru', 'light'], [844, 390, 'en', 'dark'],
+  ];
+  for (const [width, height, locale, appearance] of variants) {
+    await page.setViewportSize({ width, height });
+    if ((await page.locator('html').getAttribute('lang')) !== locale) await setLanguage(locale);
+    if ((await page.locator('html').getAttribute('data-theme')) !== appearance) await setTheme(appearance);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1), `Core settings overflows at ${width}x${height}`);
+    await captureAuthenticated(page, capture);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await button('Add setting').click();
+  const dialog = page.getByRole('dialog');
+  const input = dialog.locator('#config-key');
+  await input.fill('invalid key!');
+  assert.equal(await input.getAttribute('aria-invalid'), 'true');
+  const preferences = await context.newPage();
+  try {
+    await preferences.goto(env.APP_URL + '/settings');
+    await selectDropdown(preferences, 'appearance-language', 'ru');
+    await preferences.getByRole('radio', { name: 'Светлая', exact: true }).check();
+    await page.waitForFunction(() => document.documentElement.lang === 'ru' && document.documentElement.dataset.theme === 'light');
+    assert.equal(await input.inputValue(), 'invalid key!');
+    assert.equal(await input.getAttribute('aria-invalid'), 'true');
+    assert.equal(await input.evaluate((element) => element === document.activeElement), true);
+    await captureAuthenticated(page, { ...capture, screen: 'settings-invalid-draft' });
+    await selectDropdown(preferences, 'appearance-language', 'en');
+    await preferences.getByRole('radio', { name: 'Dark', exact: true }).check();
+    await page.waitForFunction(() => document.documentElement.lang === 'en' && document.documentElement.dataset.theme === 'dark');
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await dialog.waitFor({ state: 'hidden' });
+    states.push('Real Core settings dialog keeps invalid draft, validation and focus through cross-tab RU/EN and Light/Dark');
+  } finally {
+    await preferences.close();
+  }
+}
 const prefix = 'test.configuration.browser.';
 mkdirSync('screenshots', { recursive: true });
 try {
-  await page.goto(env.APP_URL + '/admin/login?redirect=/admin/settings');
-  await page.locator('#admin-identifier').fill(actor.email);
-  await page.locator('#admin-password').fill(actor.password);
-  await page.locator('form button[type=submit]').click();
-  await page.locator('#admin-totp').waitFor();
-  await button('Recovery code').click();
-  await page.locator('#admin-recovery').fill(actor.recoveryCode);
-  await page.locator('form button[type=submit]').click();
+  await page.goto(env.APP_URL + '/admin/settings');
+  await assertLoginRedirect('/admin/settings');
+  await loginOperator(actor.recoveryCodes[0]);
   await page.waitForURL((u) => u.pathname === '/admin/settings');
+  await auditWorkspace();
   await api('/core/modules/' + moduleCode + '/disable', { method: 'POST', data: {} });
   await setting(prefix + 'public', 'Published title', { publish: true });
   await setting(prefix + 'private', 'Internal marker');
@@ -275,7 +384,7 @@ try {
   await button('Sign out').click();
   await page.waitForURL((u) => u.pathname === '/admin/login');
   assert.deepEqual(errors, []);
-  const result = { passed: true, realBackend: true, load, states };
+  const result = { passed: true, realBackend: true, load, states, navigation };
   writeFileSync('screenshots/core-config-real-results.json', JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result));
 } catch (error) {

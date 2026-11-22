@@ -4,9 +4,11 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { request as playwrightRequest } from 'playwright';
+import AxeBuilder from '@axe-core/playwright';
 import { evaluateCoreMutationGate } from './core-e2e-guard.mjs';
 import { launchBrowser, navigateClientSide, selectDropdown } from './e2e-support.mjs';
 import { verifyLearning } from './e2e-education-learning.mjs';
+import { captureAuthenticated, observeAuthenticated } from './frontend09-authenticated-evidence.mjs';
 
 const env = process.env;
 const role = process.argv[2];
@@ -93,8 +95,10 @@ async function login(actor, redirect) {
     try {
       await page.waitForURL((url) => url.pathname + url.search === target);
     } catch (error) {
+      const loginFeedback = (await page.locator('.education-login [role="alert"]').allTextContents())
+        .map((message) => message.trim()).filter(Boolean).join(' ').slice(0, 200);
       throw new Error(
-        `Expected ${target}, reached ${new URL(page.url()).pathname}; Education context HTTP statuses: ${contextStatuses.join(', ') || 'none'}.`,
+        `Expected ${target}, reached ${new URL(page.url()).pathname}; Education context HTTP statuses: ${contextStatuses.join(', ') || 'none'}; sign-in feedback: ${loginFeedback || 'none'}.`,
         { cause: error },
       );
     }
@@ -278,6 +282,12 @@ async function verifyStudent(teacher, first) {
   await page.getByText(first.title, { exact: true }).waitFor();
   await page.locator(`a[href="/student/diary/${first.lesson.id}"]`).click();
   await page.getByRole('heading', { name: first.title }).waitFor();
+  await page.locator('.app-bottom-nav a[aria-current="page"][href="/student/diary"]:visible').waitFor();
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.locator('.edu-student-tabs a[aria-current="page"][href="/student/diary"]:visible').waitFor();
+  assert.equal(await page.locator('.edu-student-tabs a[href="/student/schedule"]').isVisible(), true);
+  assert.equal(await page.locator('.app-bottom-nav').isVisible(), false);
+  await page.setViewportSize({ width: 393, height: 852 });
   assert.equal((await api('/student/home')).nextLesson.id, first.lesson.id);
   await page.locator('a[href="/student/documents"]:visible').click();
   const bytes = Buffer.from('Disposable student document\n');
@@ -318,6 +328,7 @@ async function verifyParent(teacher, first) {
     await guest.dispose();
   }
   const { page, api } = await login(fixture.accounts.parent, '/parent/activate');
+  await observeAuthenticated(page);
   await activateParent(page, 'invalid-disposable-invitation', false);
   await activateParent(page, expired.code, false);
   const secondInvite = await issueParentCode(
@@ -332,7 +343,7 @@ async function verifyParent(teacher, first) {
   await activateParent(page, firstInvite.code, false);
   await activateParent(page, secondInvite.code, true);
 
-  for (const width of [393, 768, 1024, 1440]) {
+  for (const width of [320, 393, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 852 });
     await selectDropdown(page, 'education-parent-child', `${organization}:${first.id}`);
     await page.getByText(first.title, { exact: true }).waitFor();
@@ -345,6 +356,38 @@ async function verifyParent(teacher, first) {
     await page.getByText(second.title, { exact: true }).waitFor();
     assert.equal(await page.getByText(first.title, { exact: true }).count(), 0);
   }
+
+  const parentHome = new URL(page.url());
+  const timeOrigin = await page.evaluate(() => performance.timeOrigin);
+  assert.equal((await api('/parent/context')).locale, 'ru-RU');
+  const english = page.getByRole('button', { name: 'EN — English', exact: true });
+  await english.click();
+  await page.getByRole('heading', { name: 'Parent cabinet', exact: true }).waitFor();
+  assert.equal(await english.getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.locator('html').getAttribute('lang'), 'en');
+  assert.equal(page.url(), parentHome.href);
+  await page.getByText(second.title, { exact: true }).waitFor();
+  const languageAxe = await new AxeBuilder({ page }).include('.edu-parent-topbar')
+    .withRules(['label-content-name-mismatch']).analyze();
+  assert.deepEqual(languageAxe.violations.map(({ id }) => id), []);
+  await captureAuthenticated(page, { suite: 'education-parent', screen: 'home' });
+
+  await page.locator('a[href="/parent/activate"]').click();
+  await page.waitForURL((url) => url.pathname === '/parent/activate');
+  await Promise.all([
+    page.waitForResponse((response) =>
+      response.ok() && new URL(response.url()).pathname === '/api/education/parent/context'),
+    navigateClientSide(page, parentHome.pathname + parentHome.search),
+  ]);
+  await page.getByText(second.title, { exact: true }).waitFor();
+  assert.equal(await page.locator('html').getAttribute('lang'), 'en');
+  assert.equal(await page.evaluate(() => performance.timeOrigin), timeOrigin);
+  await page.getByRole('button', { name: 'RU — Русский', exact: true }).click();
+  await page.getByRole('heading', { name: 'Кабинет родителя', exact: true }).waitFor();
+  assert.equal(await page.locator('html').getAttribute('lang'), 'ru');
+  assert.equal(page.url(), parentHome.href);
+  console.log('Parent RU/EN, selected child and language persistence after context refresh verified.');
+
   for (const section of ['schedule', 'diary', 'homework', 'progress', 'notifications']) {
     await Promise.all([
       page.waitForResponse(
@@ -355,7 +398,18 @@ async function verifyParent(teacher, first) {
       ),
       page.locator(`.edu-parent-nav a[href^="/parent/${section}"]`).click(),
     ]);
+    await page.locator(`.edu-parent-nav a[aria-current="page"][href^="/parent/${section}"]`).waitFor();
   }
+  await page.setViewportSize({ width: 320, height: 740 });
+  assert.ok(await page.locator('.edu-parent-nav').evaluate((nav) => {
+    const viewport = nav.getBoundingClientRect();
+    return nav.scrollWidth > nav.clientWidth && [...nav.querySelectorAll('a')].every((link) => {
+      const target = link.getBoundingClientRect();
+      return target.height >= 44 && target.width >= 44 && target.top >= viewport.top &&
+        target.bottom <= viewport.bottom;
+    });
+  }), 'Parent tabs should stay in one independently scrollable row at 320px');
+  await page.setViewportSize({ width: 393, height: 852 });
   assert.equal(await page.locator('a[href^="/student/"], a[href^="/lessons/"]').count(), 0);
   const secondHome = `**/api/education/parent/children/${second.id}/home`;
   const disconnect = (route) => route.abort('failed');
@@ -423,8 +477,29 @@ async function verifyParent(teacher, first) {
   await unavailable.waitFor();
   assert.equal(await page.getByText(first.title, { exact: true }).count(), 0);
   await api(`/parent/children/${first.id}/home`, { status: [403, 404] });
-  await selectDropdown(page, 'education-parent-child', `${organization}:${second.id}`);
-  await page.getByText(second.title, { exact: true }).waitFor();
+  const secondHomePath = `/parent/children/${second.id}/home`;
+  const remaining = await api(secondHomePath);
+  assert.equal(remaining.nextLesson?.title, second.title, 'Revocation must preserve the other child’s schedule.');
+  const outcomes = [];
+  const recordHome = (response) => {
+    if (new URL(response.url()).pathname === `/api/education${secondHomePath}`) outcomes.push(response.status());
+  };
+  page.on('response', recordHome);
+  const hasSecondChild = (url) => url.pathname === '/parent/home'
+    && url.searchParams.get('child') === second.id
+    && url.searchParams.get('organization') === organization;
+  try {
+    await selectDropdown(page, 'education-parent-child', `${organization}:${second.id}`);
+    await page.waitForURL(hasSecondChild);
+    await page.getByText(second.title, { exact: true }).waitFor();
+  } catch (error) {
+    throw new Error(
+      `Switch after revocation: URL selected remaining child=${hasSecondChild(new URL(page.url()))}, home HTTP statuses=${outcomes.join(', ') || 'none'}, unavailable message=${await unavailable.isVisible()}.`,
+      { cause: error },
+    );
+  } finally {
+    page.off('response', recordHome);
+  }
   console.log(
     'Parent invitation, replay rejection, child reads, switching, unrelated-child denial and revocation verified.',
   );

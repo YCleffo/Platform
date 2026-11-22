@@ -48,6 +48,9 @@ const sectionLabel = computed(() =>
     ? t('education.programs')
     : t(`education.${String(route.meta.educationTab ?? 'today')}`),
 );
+const mobileSection = computed(() =>
+  route.meta.educationTab === 'homework' ? 'more' : route.meta.educationTab,
+);
 watch(
   () => auth.isAuthenticated,
   (value) => {
@@ -301,15 +304,15 @@ onBeforeUnmount(() => {
     <nav
       v-if="!studentPortal"
       class="edu-navigation"
-      :aria-label="t('education.today')"
+      :aria-label="t('education.workspace')"
     >
       <RouterLink
         v-for="item in navigation"
         :key="item.key"
         :to="item.path"
         class="edu-navigation__link"
-        :class="{ 'edu-navigation__link--active': route.meta.educationTab === item.key }"
-        :aria-current="route.meta.educationTab === item.key ? 'page' : undefined"
+        :class="{ 'edu-navigation__link--active': mobileSection === item.key }"
+        :aria-current="mobileSection === item.key ? 'page' : undefined"
       >
         <span class="edu-navigation__icon">
           <component

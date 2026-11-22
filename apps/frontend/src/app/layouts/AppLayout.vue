@@ -18,6 +18,8 @@ import { setLocale } from '@/shared/i18n';
 import AppHeader from '@/shared/ui/navigation/AppHeader.vue';
 import AppBreadcrumbs from '@/shared/ui/navigation/AppBreadcrumbs.vue';
 import { breadcrumbs } from '@/shared/navigation/breadcrumbs';
+import { activeNavigationRoute } from '@/shared/navigation/activeRoute';
+import { startsOnPageSurface } from '@/shared/navigation/pageSwipe';
 import AppBottomNav from '@/shared/ui/navigation/AppBottomNav.vue';
 import type { BottomNavItem } from '@/shared/ui/navigation/AppBottomNav.vue';
 import AppMobileMenu from '@/shared/ui/navigation/AppMobileMenu.vue';
@@ -32,13 +34,7 @@ const { isDark, toggleTheme } = useTheme();
 const menuOpen = ref(false);
 const headerCrumbs = computed(() => breadcrumbs(route.name, route.params, (key) => t(key)));
 
-const primaryNavigation = computed(() =>
-  typeof route.meta.primaryNavigation === 'string'
-    ? route.meta.primaryNavigation
-    : typeof route.name === 'string'
-      ? route.name
-      : '',
-);
+const primaryNavigation = computed(() => activeNavigationRoute(route));
 
 const bottomItems = computed<BottomNavItem[]>(() => [
   { label: t('nav.catalog'), icon: LayoutGrid, routeName: 'catalog' },
@@ -62,49 +58,75 @@ watch(primaryNavigation, (to: string, from: string) => {
   }
 });
 
-let touchStartX = 0;
-let touchStartY = 0;
-let touchStartTime = 0;
+let swipeStart: { id: number; x: number; y: number; time: number; route: string } | undefined;
+let suppressClickUntil = 0;
 
 function onTouchStart(event: TouchEvent): void {
-  const target = event.target as HTMLElement | null;
-  if (target?.closest('input, textarea, select, [role="slider"], .app-range')) return;
-  const touch = event.changedTouches[0];
-  if (!touch) return;
-  touchStartX = touch.clientX;
-  touchStartY = touch.clientY;
-  touchStartTime = performance.now();
+  swipeStart = undefined;
+  suppressClickUntil = 0;
+  const page = event.currentTarget;
+  const touch = event.touches[0];
+  if (
+    window.innerWidth >= 768 ||
+    menuOpen.value ||
+    event.touches.length !== 1 ||
+    !touch ||
+    touch.clientX < 24 ||
+    touch.clientX > window.innerWidth - 24 ||
+    !(page instanceof Element) ||
+    !startsOnPageSurface(event.target, page)
+  )
+    return;
+  swipeStart = {
+    id: touch.identifier,
+    x: touch.clientX,
+    y: touch.clientY,
+    time: performance.now(),
+    route: route.fullPath,
+  };
+}
+
+function cancelSwipe(): void {
+  swipeStart = undefined;
+}
+
+function onTouchMove(event: TouchEvent): void {
+  const touch = event.touches[0];
+  if (!swipeStart || event.touches.length !== 1 || touch?.identifier !== swipeStart.id) {
+    cancelSwipe();
+    return;
+  }
+  const dx = Math.abs(touch.clientX - swipeStart.x);
+  const dy = Math.abs(touch.clientY - swipeStart.y);
+  if (dy > 10 && dy >= dx) cancelSwipe();
 }
 
 function onTouchEnd(event: TouchEvent): void {
-  if (touchStartX === 0 && touchStartY === 0) return;
-  const target = event.target as HTMLElement | null;
-  if (target?.closest('input, textarea, select, [role="slider"], .app-range')) {
-    touchStartX = 0;
-    touchStartY = 0;
-    return;
-  }
+  const start = swipeStart;
+  cancelSwipe();
   const touch = event.changedTouches[0];
-  if (!touch) return;
-  const dx = touch.clientX - touchStartX;
-  const dy = touch.clientY - touchStartY;
-  const dt = performance.now() - touchStartTime;
-  touchStartX = 0;
-  touchStartY = 0;
+  if (!start || touch?.identifier !== start.id || route.fullPath !== start.route || menuOpen.value)
+    return;
+  const dx = touch.clientX - start.x;
+  const dy = touch.clientY - start.y;
+  if (
+    Math.abs(dx) < 45 ||
+    Math.abs(dx) <= Math.abs(dy) * 1.4 ||
+    performance.now() - start.time >= 500
+  )
+    return;
+  const current = bottomItems.value.findIndex((item) => item.routeName === primaryNavigation.value);
+  const target = current < 0 ? undefined : bottomItems.value[current + (dx < 0 ? 1 : -1)];
+  if (!target) return;
+  suppressClickUntil = performance.now() + 300;
+  void router.push({ name: target.routeName });
+}
 
-  if (Math.abs(dx) >= 45 && Math.abs(dx) > Math.abs(dy) * 1.4 && dt < 500) {
-    const currentIndex = bottomItems.value.findIndex(
-      (item) => item.routeName === primaryNavigation.value,
-    );
-    if (currentIndex === -1) return;
-
-    if (dx < 0 && currentIndex < bottomItems.value.length - 1) {
-      const nextItem = bottomItems.value[currentIndex + 1];
-      if (nextItem) void router.push({ name: nextItem.routeName });
-    } else if (dx > 0 && currentIndex > 0) {
-      const prevItem = bottomItems.value[currentIndex - 1];
-      if (prevItem) void router.push({ name: prevItem.routeName });
-    }
+function onPageClick(event: MouseEvent): void {
+  if (event.detail > 0 && performance.now() < suppressClickUntil) {
+    suppressClickUntil = 0;
+    event.preventDefault();
+    event.stopPropagation();
   }
 }
 
@@ -234,7 +256,10 @@ async function logout(): Promise<void> {
       <main
         class="app-layout__main"
         @touchstart.passive="onTouchStart"
+        @touchmove.passive="onTouchMove"
         @touchend.passive="onTouchEnd"
+        @touchcancel.passive="cancelSwipe"
+        @click.capture="onPageClick"
       >
         <RouterView v-slot="{ Component }">
           <Transition

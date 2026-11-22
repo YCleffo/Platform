@@ -5,25 +5,86 @@ import ru from './messages/ru';
 export const SUPPORTED_LOCALES = ['en', 'ru'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
-function detectLocale(): SupportedLocale {
-  let stored: string | null = null;
-  try { stored = localStorage.getItem('platform.locale'); } catch { /* Browser language remains available. */ }
-  if (stored === 'en' || stored === 'ru') {
-    return stored;
+const storageKey = 'platform.locale';
+const fallbackLocale = 'en';
+
+function supportedLocale(value: string | null | undefined): SupportedLocale | undefined {
+  if (!value) return;
+  try {
+    const language = new Intl.Locale(value).language;
+    if (language === 'en' || language === 'ru') return language;
+  } catch {
+    // Unsupported or invalid locale tags fall through to the next source.
   }
-  const browser = navigator.language.slice(0, 2).toLowerCase();
-  return browser === 'ru' ? 'ru' : 'en';
+}
+
+function storedLocale(): SupportedLocale | undefined {
+  try {
+    const stored = localStorage.getItem(storageKey);
+    if (stored === 'en' || stored === 'ru') return stored;
+  } catch {
+    // The language selector still works for the current page without storage.
+  }
+}
+
+let explicitLocale = storedLocale();
+let accountLocale: SupportedLocale | undefined;
+let contextLocale: SupportedLocale | undefined;
+
+// A browser choice is persisted. Server defaults last only for the current Core session.
+function effectiveLocale(): SupportedLocale {
+  return explicitLocale ?? accountLocale ?? contextLocale
+    ?? supportedLocale(globalThis.navigator?.language) ?? fallbackLocale;
 }
 
 export const i18n = createI18n({
   legacy: false,
-  locale: detectLocale(),
-  fallbackLocale: 'en',
+  locale: effectiveLocale(),
+  fallbackLocale,
   messages: { en, ru },
 });
 
-export function setLocale(locale: SupportedLocale): void {
+function updateLocale(): void {
+  const locale = effectiveLocale();
   i18n.global.locale.value = locale;
-  try { localStorage.setItem('platform.locale', locale); } catch { /* Session-only language remains available. */ }
-  document.documentElement.lang = locale;
+  if (globalThis.document) document.documentElement.lang = locale;
+}
+
+function syncStoredLocale(event: StorageEvent): void {
+  if (event.key !== storageKey && event.key !== null) return;
+  try {
+    if (event.storageArea !== localStorage) return;
+    const stored = localStorage.getItem(storageKey);
+    explicitLocale = stored === 'en' || stored === 'ru' ? stored : undefined;
+  } catch {
+    return;
+  }
+  updateLocale();
+}
+
+export function initLocale(): void {
+  updateLocale();
+  window.addEventListener('storage', syncStoredLocale);
+}
+
+export function setLocale(locale: SupportedLocale): void {
+  explicitLocale = locale;
+  try { localStorage.setItem(storageKey, locale); } catch { /* Keep the choice in memory. */ }
+  updateLocale();
+}
+
+export function applyAccountLocale(locale: string | null): void {
+  accountLocale = supportedLocale(locale);
+  updateLocale();
+}
+
+export function applyContextLocale(locale: string): void {
+  contextLocale = supportedLocale(locale);
+  updateLocale();
+}
+
+export function resetSessionLocales(): void {
+  accountLocale = undefined;
+  contextLocale = undefined;
+  updateLocale();
 }

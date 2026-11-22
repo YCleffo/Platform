@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import ConfigSettingsPanel from './configuration/ConfigSettingsPanel.vue';
 import ConfigFlagsPanel from './configuration/ConfigFlagsPanel.vue';
@@ -8,7 +9,8 @@ import BrandingSettingsPanel from './configuration/BrandingSettingsPanel.vue';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
 import './configuration/configuration.css';
 const auth = useAdminAuthStore();
-const tab = ref('settings');
+const route = useRoute();
+const router = useRouter();
 const tabs = computed(() =>
   [
     { key: 'branding', label: 'branding.title', allowed: auth.can('core.settings.read') },
@@ -21,13 +23,13 @@ const tabs = computed(() =>
     { key: 'public', label: 'configuration.publicConfig', allowed: auth.can('core.settings.read') },
   ].filter((v) => v.allowed),
 );
-watch(
-  tabs,
-  (value) => {
-    if (!value.some((v) => v.key === tab.value)) tab.value = value[0]?.key ?? '';
-  },
-  { immediate: true },
-);
+const tab = computed(() => {
+  const requested = typeof route.query.tab === 'string' ? route.query.tab : 'settings';
+  return tabs.value.find(({ key }) => key === requested)?.key ?? tabs.value[0]?.key;
+});
+function chooseTab(key: string): void {
+  if (key !== tab.value) void router.push({ query: { ...route.query, tab: key } });
+}
 </script>
 <template>
   <section class="config-page">
@@ -40,7 +42,7 @@ watch(
         :key="item.key"
         :variant="tab === item.key ? 'primary' : 'secondary'"
         :aria-current="tab === item.key ? 'page' : undefined"
-        @click="tab = item.key"
+        @click="chooseTab(item.key)"
       >
         {{ $t(item.label) }}
       </AppButton>

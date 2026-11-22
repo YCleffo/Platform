@@ -7,6 +7,7 @@ import { useCoreAccountSettings } from '@/core/admin/accountSettingsStore';
 import { useCorePresence } from '@/core/admin/presenceStore';
 import { useAdminOperation } from '../useAdminOperation';
 import { resolveErrorMessage } from '@/shared/errors/humanize';
+import { applyAccountLocale } from '@/shared/i18n';
 import {
   changedSettings,
   copySettings,
@@ -155,6 +156,7 @@ async function savePreferences(): Promise<void> {
     if (preferencesGuard.current(request)) {
       preferences.value = { ...result };
       savedPreferences.value = { ...result };
+      applyAccountLocale(result.locale);
       prefSuccess.value = 'coreProfile.saved';
     }
   } catch (error) {

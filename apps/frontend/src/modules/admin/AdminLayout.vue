@@ -28,6 +28,7 @@ import {
   X,
 } from '@/shared/ui/icons';
 import { lockScroll, unlockScroll } from '@/shared/composables/useScrollLock';
+import { useFocusTrap } from '@/shared/composables/useFocusTrap';
 import { cachedAdminGet } from './adminCache';
 import AppIconButton from '@/shared/ui/actions/AppIconButton.vue';
 import AppTooltip from '@/shared/ui/overlays/AppTooltip.vue';
@@ -50,6 +51,10 @@ const router = useRouter();
 const { t, locale } = useI18n();
 const { isDark, toggleTheme } = useTheme();
 const menuOpen = ref(false);
+const drawer = ref<HTMLElement | null>(null);
+const { activate, deactivate, isActive } = useFocusTrap(drawer);
+let drawerLocked = false;
+let desktopViewport: MediaQueryList | undefined;
 const SIDEBAR_STORAGE_KEY = 'platform.admin.sidebar.collapsed';
 const SIDEBAR_WIDTH_KEY = 'platform.admin.sidebar.width';
 const collapsed = ref(false);
@@ -75,12 +80,14 @@ interface AdminNavItem {
   permission?: string;
 }
 
-const sections = computed<Array<{ title: string; items: AdminNavItem[] }>>(() => [
+const sections = computed<Array<{ key: string; title: string; items: AdminNavItem[] }>>(() => [
   {
+    key: 'overview',
     title: t('admin.overview'),
     items: [{ label: t('admin.dashboard'), name: 'admin-dashboard', icon: LayoutGrid }],
   },
   {
+    key: 'platform',
     title: t('admin.platform'),
     items: [
       {
@@ -122,6 +129,7 @@ const sections = computed<Array<{ title: string; items: AdminNavItem[] }>>(() =>
     ],
   },
   {
+    key: 'operations',
     title: t('admin.operations'),
     items: [
       {
@@ -288,19 +296,42 @@ async function logout(): Promise<void> {
 }
 
 function onKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape') {
+  if (event.key === 'Escape' && !event.defaultPrevented && isActive()) {
+    event.preventDefault();
     closeMenu();
   }
 }
 
-watch(menuOpen, (value) => {
-  if (value) {
-    document.addEventListener('keydown', onKeydown);
+function releaseDrawer(): void {
+  if (!drawerLocked) return;
+  drawerLocked = false;
+  document.removeEventListener('keydown', onKeydown);
+  deactivate();
+  unlockScroll();
+}
+
+function onViewportChange(event: MediaQueryListEvent): void {
+  if (event.matches) closeMenu();
+}
+
+watch(
+  menuOpen,
+  (value) => {
+    if (!value) {
+      releaseDrawer();
+      return;
+    }
+    drawerLocked = true;
     lockScroll();
-  } else {
-    document.removeEventListener('keydown', onKeydown);
-    unlockScroll();
-  }
+    activate();
+    document.addEventListener('keydown', onKeydown);
+  },
+  { flush: 'post' },
+);
+
+onMounted(() => {
+  desktopViewport = window.matchMedia('(min-width: 961px)');
+  desktopViewport.addEventListener('change', onViewportChange);
 });
 
 watch(() => route.fullPath, closeMenu);
@@ -345,8 +376,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopResize?.();
-  document.removeEventListener('keydown', onKeydown);
-  unlockScroll();
+  desktopViewport?.removeEventListener('change', onViewportChange);
+  releaseDrawer();
 });
 </script>
 
@@ -418,7 +449,7 @@ onBeforeUnmount(() => {
       <nav class="admin__nav">
         <div
           v-for="section in visibleSections"
-          :key="section.title"
+          :key="section.key"
           class="admin__section"
         >
           <p
@@ -477,6 +508,9 @@ onBeforeUnmount(() => {
           <AppIconButton
             class="admin__menu-button"
             :label="$t('nav.menu')"
+            aria-haspopup="dialog"
+            :aria-controls="menuOpen ? 'admin-navigation-drawer' : undefined"
+            :aria-expanded="menuOpen"
             @click="menuOpen = true"
           >
             <span
@@ -544,10 +578,13 @@ onBeforeUnmount(() => {
 
     <div
       v-if="menuOpen"
+      id="admin-navigation-drawer"
+      ref="drawer"
       class="admin__drawer"
       role="dialog"
       aria-modal="true"
       :aria-label="$t('admin.navigation')"
+      tabindex="-1"
     >
       <div class="admin__drawer-head">
         <span class="admin__brand">
@@ -572,7 +609,7 @@ onBeforeUnmount(() => {
       <nav class="admin__drawer-nav">
         <div
           v-for="section in visibleSections"
-          :key="section.title"
+          :key="section.key"
         >
           <p class="admin__section-title">{{ section.title }}</p>
           <RouterLink
@@ -581,6 +618,8 @@ onBeforeUnmount(() => {
             class="admin__link"
             :class="{ 'admin__link--active': activeRoute === item.name }"
             :to="{ name: item.name }"
+            :aria-current="activeRoute === item.name ? 'page' : undefined"
+            @click="closeMenu"
           >
             <component
               :is="item.icon"

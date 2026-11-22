@@ -31,9 +31,11 @@ html:has(.education-shell), html:has(.education-login) { scrollbar-gutter: auto;
 .edu-next__body > svg { flex-shrink: 0; color: var(--text-2); }
 .edu-monogram { display: grid; place-items: center; flex: 0 0 52px; min-height: 52px; padding: 6px; color: var(--accent-text); background: var(--edu-accent-surface); border-radius: var(--radius-control-l); font-size: var(--type-h1-size); font-weight: var(--type-h1-weight); line-height: var(--type-h1-line); text-transform: capitalize; }
 .edu-next__meta { color: var(--text-2); font-size: var(--type-body-caption-size); font-weight: var(--type-body-caption-weight); line-height: var(--type-body-caption-line); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.edu-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 40px; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--radius-control-m); color: var(--accent-text); background: var(--edu-accent-surface); text-decoration: none; font-size: var(--type-body-small-size); font-weight: var(--type-body-small-emphasis-weight); line-height: var(--type-body-small-line); text-align: center; cursor: pointer; }
+.edu-button { display: inline-flex; align-items: center; justify-content: center; gap: var(--gap-xs); min-height: max(44px, var(--button-height-m)); padding: var(--pad-button-s-vertical) var(--pad-button-s-horizontal); border: 1px solid transparent; border-radius: var(--radius-control-m); color: var(--accent-text); background: var(--edu-accent-surface); text-decoration: none; font-size: var(--type-body-small-size); font-weight: var(--type-body-small-emphasis-weight); line-height: var(--type-body-small-line); text-align: center; cursor: pointer; }
 .edu-button--primary { background: var(--accent); color: var(--color-white); }
-.edu-button:disabled { opacity: .6; cursor: wait; }
+.edu-button--primary:hover:not(:disabled) { background: var(--accent-hover); }
+.edu-button--primary:active:not(:disabled) { background: var(--accent-pressed); }
+.edu-button:disabled { opacity: .55; cursor: not-allowed; }
 .edu-next__actions { display: flex; gap: 8px; }
 .edu-next__actions .edu-button { min-width: 0; flex: 1; min-height: 28px; padding: 5px 6px; white-space: nowrap; font-size: var(--type-body-caption-size); font-weight: var(--type-body-caption-weight); line-height: var(--type-body-caption-line); }
 .edu-next__actions .edu-button:first-child { flex: 1.45; }
@@ -78,7 +80,7 @@ html:has(.education-shell), html:has(.education-login) { scrollbar-gutter: auto;
 .edu-navigation__link--active { color: var(--accent-text); }
 .edu-navigation__icon { position: relative; display: grid; place-items: center; width: 30px; height: 26px; }
 .edu-navigation__icon .edu-dot { right: -3px; top: -3px; }
-.edu-card, .edu-login-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-card-m); padding: 16px; box-shadow: var(--shadow-soft); }
+.edu-card, .edu-login-card:not(.app-card) { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-card-m); padding: var(--pad-card-compact); box-shadow: var(--shadow-soft); transition: var(--theme-transition); }
 .edu-empty-next { min-height: 100px; display: grid; align-content: center; gap: 10px; }
 .edu-state { display: grid; justify-items: start; gap: 10px; margin: 12px 0; padding: 16px; color: var(--text-2); border: 1px solid var(--border); border-radius: var(--radius-card-m); background: var(--surface-2); overflow-wrap: anywhere; }
 .edu-state--error, .edu-error { color: var(--danger-text); }
@@ -100,7 +102,8 @@ html:has(.education-shell), html:has(.education-login) { scrollbar-gutter: auto;
 .edu-language { display: flex; gap: 16px; margin-top: 22px; }
 .edu-language button { background: none; border: 0; color: var(--accent-text); cursor: pointer; }
 .education-login { padding: 24px 18px; display: grid; place-items: center; }
-.edu-login-card { width: min(100%, 440px); display: grid; gap: 18px; padding: 24px; }
+.edu-login-card { width: min(100%, 440px); display: grid; gap: var(--gap-xl); }
+.edu-login-card:not(.app-card) { padding: var(--pad-card-large); }
 .edu-brand { color: var(--accent-text); font-size: var(--type-h2-size); font-weight: var(--type-h2-weight); line-height: var(--type-h2-line); }
 .edu-skip { position: fixed; left: 12px; top: -100px; z-index: var(--z-menu); background: var(--surface); padding: 12px; color: var(--text-1); }
 .edu-skip:focus { top: 12px; }
@@ -110,7 +113,6 @@ html:has(.education-shell), html:has(.education-login) { scrollbar-gutter: auto;
   .edu-today-columns { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 28px; align-items: start; }
   .edu-today-secondary .edu-quick-section { margin-top: 0; }
   .edu-today-secondary .edu-quick { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 16px; }
-  .edu-navigation { width: min(100%, 1100px); margin: 0 auto; }
   .edu-today .edu-week { max-width: 620px; margin-top: 20px; margin-bottom: 20px; }
 }
 
@@ -140,8 +142,7 @@ html:has(.education-shell), html:has(.education-login) { scrollbar-gutter: auto;
 .edu-topbar > .app-dropdown { max-width: 320px; min-width: 0; }
 .edu-main { min-width: 0; max-width: none; width: 100%; }
 .education-shell :is(h1, h2, h3, strong) { overflow-wrap: anywhere; }
-.edu-button, .edu-icon-button { min-height: 44px; }
-.edu-icon-button { min-width: 44px; }
+.edu-icon-button { min-height: 44px; min-width: 44px; }
 .edu-next__actions { flex-wrap: wrap; }
 .edu-next__actions .edu-button { min-height: 40px; white-space: normal; }
 .edu-quick { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -175,7 +176,8 @@ html:has(.education-shell), html:has(.education-login) { scrollbar-gutter: auto;
 @media (min-width: 768px) {
  .education-shell { display: grid; grid-template-columns: 210px minmax(0, 1fr); }
  .education-shell--student { display: block; }
- .edu-sidebar { display: flex; flex-direction: column; position: sticky; height: 100dvh; top: 0; padding: 24px 14px 18px; border-right: 1px solid var(--border); background: var(--surface); }
+ .edu-navigation { display: none; }
+ .edu-sidebar { display: flex; flex-direction: column; position: sticky; height: 100dvh; top: 0; padding: 24px 14px 18px; border-right: 1px solid var(--border); background: var(--surface); overflow-y: auto; }
  .edu-sidebar__brand { display: flex; align-items: center; gap: 10px; color: var(--accent-text); text-decoration: none; padding: 0 10px 30px; }
  .edu-sidebar__brand > span { display: grid; gap: 2px; color: var(--text-2); font-size: var(--type-body-caption-size); line-height: var(--type-body-caption-line); font-weight: var(--type-body-caption-weight); }
  .edu-sidebar__brand strong { color: var(--text-1); font-size: var(--type-h3-size); line-height: var(--type-h3-line); font-weight: var(--type-h3-weight); }

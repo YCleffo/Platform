@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAccountStore } from '@/core/account/accountStore';
@@ -14,7 +14,8 @@ import AccountSwitcher from './AccountSwitcher.vue';
 const store = useAccountStore();
 const route = useRoute();
 const router = useRouter();
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const tabs = ref<HTMLElement | null>(null);
 
 const accountId = computed(() => String(route.params.accountId ?? ''));
 const detail = computed(() => store.accountDetail);
@@ -35,6 +36,31 @@ const canManageInvitations = computed(() => detail.value?.permissions.manage_mem
 const canManageBilling = computed(() => detail.value?.permissions.manage_billing === true);
 const canReadAccount = computed(() => detail.value?.permissions.read_account === true);
 const canViewAudit = computed(() => detail.value?.permissions.manage_members === true);
+
+function revealActiveTab(): void {
+  const strip = tabs.value;
+  const active = strip?.querySelector('[aria-current="page"]');
+  if (!strip || !active || strip.scrollWidth <= strip.clientWidth) return;
+
+  const viewport = strip.getBoundingClientRect();
+  const item = active.getBoundingClientRect();
+  if (item.left < viewport.left) strip.scrollLeft += item.left - viewport.left;
+  else if (item.right > viewport.right) strip.scrollLeft += item.right - viewport.right;
+}
+
+watch([() => route.name, locale], revealActiveTab, { flush: 'post' });
+watch(
+  tabs,
+  (strip, _, onCleanup) => {
+    if (!strip) return;
+    revealActiveTab();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(revealActiveTab);
+    observer.observe(strip);
+    onCleanup(() => observer.disconnect());
+  },
+  { flush: 'post' },
+);
 
 watch(
   accountId,
@@ -116,6 +142,7 @@ function switchAccount(id: string): void {
       </header>
 
       <nav
+        ref="tabs"
         class="account-layout__tabs"
         :aria-label="$t('account.sections')"
       >

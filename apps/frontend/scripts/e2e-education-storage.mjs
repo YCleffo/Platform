@@ -61,6 +61,17 @@ async function withObjectStoreOffline(check) {
     const deadline = Date.now() + 45000;
     while (Date.now() < deadline && health() !== 'healthy') await delay(500);
     assert.equal(health(), 'healthy', 'SeaweedFS test service did not recover');
+    // SeaweedFS reports master health before the Core S3 client can access its buckets.
+    const endpoint = new URL('/health/storage', process.env.CORE_API_URL);
+    const storageDeadline = Date.now() + 45000;
+    let ready = false;
+    while (!ready && Date.now() < storageDeadline) {
+      const response = await fetch(endpoint, { signal: AbortSignal.timeout(3000) }).catch(() => null);
+      ready = response?.status === 200;
+      await response?.body?.cancel();
+      if (!ready) await delay(500);
+    }
+    assert.ok(ready, 'Core S3 readiness did not recover after SeaweedFS restart');
   }
 }
 

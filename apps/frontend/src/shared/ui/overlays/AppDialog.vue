@@ -29,7 +29,7 @@ const titleId = `${uid}-title`;
 const descriptionId = `${uid}-description`;
 
 const dialogEl = ref<HTMLElement | null>(null);
-const { activate, deactivate } = useFocusTrap(dialogEl);
+const { activate, deactivate, isActive } = useFocusTrap(dialogEl);
 
 let overlayActive = false;
 let scrollLocked = false;
@@ -42,7 +42,8 @@ function requestClose(): void {
 }
 
 function onKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape' && props.closeOnEscape) {
+  if (event.key === 'Escape' && !event.defaultPrevented && props.closeOnEscape && isActive()) {
+    event.preventDefault();
     requestClose();
   }
 }

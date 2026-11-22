@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 const route = useRoute();
+const privacyActive = computed(() => String(route.name ?? '').startsWith('admin-profile-privacy'));
 </script>
 <template>
   <section class="core-profile-layout">
@@ -13,7 +15,8 @@ const route = useRoute();
       </RouterLink>
       <RouterLink
         :to="{ name: 'admin-profile-privacy' }"
-        :class="{ 'is-current': String(route.name ?? '').startsWith('admin-profile-privacy') }"
+        :class="{ 'is-current': privacyActive }"
+        :aria-current="privacyActive ? 'page' : undefined"
       >
         {{ $t('corePrivacy.title') }}
       </RouterLink>

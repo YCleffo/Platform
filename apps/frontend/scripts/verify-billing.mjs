@@ -83,6 +83,33 @@ async function signIn() {
 }
 try {
   await signIn();
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.waitForFunction(() => {
+    const strip = document.querySelector('.account-layout__tabs');
+    const active = strip?.querySelector('[aria-current="page"]');
+    if (!active || !(strip.scrollWidth > strip.clientWidth)) return false;
+    const bounds = strip.getBoundingClientRect();
+    const tab = active.getBoundingClientRect();
+    return bounds.left <= tab.left + 1 && bounds.right >= tab.right - 1;
+  }, undefined, { timeout: 3000 });
+  states.push('mobile billing opens with the active account section visible');
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  const legalName = page.locator('#billing-legal-name');
+  await legalName.fill('Unsaved billing draft');
+  const billingPath = new URL(page.url()).pathname;
+  await page.getByRole('button', { name: 'EN: Change language' }).click();
+  await page.waitForFunction(() => document.documentElement.lang === 'ru');
+  assert.equal(new URL(page.url()).pathname, billingPath);
+  assert.equal(await legalName.inputValue(), 'Unsaved billing draft');
+  await page.getByText('месяц · ×3', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'RU: Сменить язык' }).click();
+  await page.waitForFunction(() => document.documentElement.lang === 'en');
+  assert.equal(await legalName.inputValue(), 'Unsaved billing draft');
+  await page.getByText('month · ×3', { exact: true }).waitFor();
+  await legalName.fill('Saved company');
+  states.push('billing period follows RU/EN without losing the active route or unfinished profile');
+
   assert.equal(await page.locator('#billing-legal-name').inputValue(), 'Saved company');
   await page.locator('#billing-legal-name').fill('Edited company'); await page.getByRole('button', { name: 'Save billing profile', exact: true }).click();
   await page.getByText('Billing profile saved.', { exact: true }).waitFor(); assert.equal(profilePayload.legal_name, 'Edited company');
@@ -124,6 +151,11 @@ try {
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel auto-renewal', exact: true }).click();
   await page.getByText('Auto-renewal is disabled.', { exact: true }).waitFor(); assert.equal(subscription.status, 'active');
   states.push('receipt, history search, period-end auto-renew cancellation preserves active access');
+  await page.getByRole('button', { name: 'EN: Change language' }).click();
+  await page.locator('#billing-plan').click();
+  await page.getByRole('menuitemradio', { name: /Fixture plan · месяц/u }).waitFor();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'RU: Сменить язык' }).click();
   await page.locator('#billing-quantity').fill('2');
   await page.getByRole('button', { name: 'Request plan change', exact: true }).click();
   await page.getByText('Plan change requested.', { exact: true }).waitFor();

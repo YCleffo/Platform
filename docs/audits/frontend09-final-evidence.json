@@ -1,0 +1,2256 @@
+{
+  "version": 1,
+  "verdict": "NOT_VERIFIED",
+  "revision": {
+    "testedSha": "4cf8c6d40ea107f6da1c3265c97a098962b78615",
+    "sourceDigest": "584fef5cd9ab0ddd42e057af5a513036cc783ed202590408b8c3557a0db8d5ef",
+    "sourceDirty": true,
+    "finalCommitSha": null,
+    "baselineRunId": 44988575194,
+    "baselineJobsPassed": 16,
+    "finalRunId": null
+  },
+  "changedFiles": [
+    ".github/workflows/ci.yml",
+    "apps/frontend/index.html",
+    "apps/frontend/scripts/e2e-account-workspace.mjs",
+    "apps/frontend/scripts/e2e-commercial-operators.mjs",
+    "apps/frontend/scripts/e2e-core-configuration.mjs",
+    "apps/frontend/scripts/e2e-education-roles.mjs",
+    "apps/frontend/scripts/e2e-education-storage.mjs",
+    "apps/frontend/scripts/e2e-education.mjs",
+    "apps/frontend/scripts/frontend09-authenticated-evidence.mjs",
+    "apps/frontend/scripts/verify-accessibility.mjs",
+    "apps/frontend/scripts/verify-appearance.mjs",
+    "apps/frontend/scripts/verify-billing.mjs",
+    "apps/frontend/scripts/verify-core-configuration.mjs",
+    "apps/frontend/scripts/verify-core-profile.mjs",
+    "apps/frontend/scripts/verify-frontend09.mjs",
+    "apps/frontend/scripts/verify-responsive.mjs",
+    "apps/frontend/src/app/layouts/AppLayout.spec.ts",
+    "apps/frontend/src/app/layouts/AppLayout.vue",
+    "apps/frontend/src/app/router/routeAudit.spec.ts",
+    "apps/frontend/src/app/router/router.spec.ts",
+    "apps/frontend/src/app/theme/index.ts",
+    "apps/frontend/src/app/theme/theme.spec.ts",
+    "apps/frontend/src/core/admin/adminAuthStore.ts",
+    "apps/frontend/src/core/admin/session.ts",
+    "apps/frontend/src/main.ts",
+    "apps/frontend/src/modules/admin/AdminDashboardView.vue",
+    "apps/frontend/src/modules/admin/AdminLayout.vue",
+    "apps/frontend/src/modules/admin/AdminPrivacyView.vue",
+    "apps/frontend/src/modules/admin/AdminSecurityLayout.vue",
+    "apps/frontend/src/modules/admin/AdminSettingsView.vue",
+    "apps/frontend/src/modules/admin/adminLocalization.spec.ts",
+    "apps/frontend/src/modules/admin/profile/CorePreferencesView.vue",
+    "apps/frontend/src/modules/admin/profile/CoreProfileLayout.vue",
+    "apps/frontend/src/modules/commercial/account/AccountLayout.vue",
+    "apps/frontend/src/modules/commercial/account/AccountSwitcher.vue",
+    "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
+    "apps/frontend/src/modules/commercial/operator/OperatorConsole.vue",
+    "apps/frontend/src/modules/education/AttendanceView.vue",
+    "apps/frontend/src/modules/education/EducationLayout.vue",
+    "apps/frontend/src/modules/education/EducationLoginView.vue",
+    "apps/frontend/src/modules/education/MoreView.vue",
+    "apps/frontend/src/modules/education/TodayView.vue",
+    "apps/frontend/src/modules/education/education.css",
+    "apps/frontend/src/modules/education/i18n.ts",
+    "apps/frontend/src/modules/education/parent/ParentExistingLogin.spec.ts",
+    "apps/frontend/src/modules/education/parent/ParentLayout.spec.ts",
+    "apps/frontend/src/modules/education/parent/ParentLayout.vue",
+    "apps/frontend/src/modules/education/parent/parent.css",
+    "apps/frontend/src/modules/education/parent/workspace.ts",
+    "apps/frontend/src/modules/education/routes.ts",
+    "apps/frontend/src/modules/education/student/StudentLayout.spec.ts",
+    "apps/frontend/src/modules/education/student/StudentLayout.vue",
+    "apps/frontend/src/modules/education/workspace.ts",
+    "apps/frontend/src/shared/composables/useFocusTrap.ts",
+    "apps/frontend/src/shared/i18n/index.ts",
+    "apps/frontend/src/shared/i18n/locale.spec.ts",
+    "apps/frontend/src/shared/navigation/activeRoute.ts",
+    "apps/frontend/src/shared/navigation/pageSwipe.ts",
+    "apps/frontend/src/shared/ui/fields/AppRange.vue",
+    "apps/frontend/src/shared/ui/menus/AppMenu.spec.ts",
+    "apps/frontend/src/shared/ui/menus/AppMenu.vue",
+    "apps/frontend/src/shared/ui/navigation/AppBottomNav.spec.ts",
+    "apps/frontend/src/shared/ui/navigation/AppBottomNav.vue",
+    "apps/frontend/src/shared/ui/navigation/AppMobileMenu.vue",
+    "apps/frontend/src/shared/ui/overlays/AppDialog.spec.ts",
+    "apps/frontend/src/shared/ui/overlays/AppDialog.vue",
+    "docs/audits/FRONTEND_09_ACCEPTANCE.md",
+    "docs/audits/FRONTEND_09_AUTHENTICATED_MATRIX.md",
+    "docs/audits/FRONTEND_09_FINAL_ACCEPTANCE.md",
+    "docs/audits/FRONTEND_09_NAVIGATION_MATRIX.md",
+    "docs/audits/FRONTEND_09_UI_INVENTORY.md",
+    "docs/audits/FRONTEND_09_VISUAL_FINAL.md",
+    "docs/audits/FRONTEND_09_VISUAL_REGRESSION.md",
+    "docs/audits/frontend07-coverage.json",
+    "docs/audits/frontend09-final-evidence.json",
+    "docs/audits/frontend09-ui-inventory.json",
+    "scripts/ci/run-verify-suite.mjs"
+  ],
+  "gates": {
+    "CORE_AUTHENTICATED_UX_VERIFIED": "NOT_VERIFIED",
+    "COMMERCIAL_AUTHENTICATED_UX_VERIFIED": "NOT_VERIFIED",
+    "CROSS_PRODUCT_DESIGN_CONSISTENCY": "NOT_VERIFIED",
+    "AUTHENTICATED_THEME_VERIFIED": "NOT_VERIFIED",
+    "AUTHENTICATED_I18N_VERIFIED": "NOT_VERIFIED",
+    "AUTHENTICATED_LINKS_AND_NAVIGATION": "NOT_VERIFIED",
+    "AUTHENTICATED_RESPONSIVE_A11Y": "NOT_VERIFIED",
+    "AUTHENTICATED_MOTION_PERFORMANCE": "NOT_VERIFIED",
+    "FRONTEND_09_REGRESSION_EXPANDED": "PASS",
+    "FRONTEND_09_FINAL_CI_GREEN": "NOT_VERIFIED"
+  },
+  "releaseCandidate": {
+    "patch": "apps/frontend/screenshots/frontend09-final/release-candidate.patch",
+    "manifest": "apps/frontend/screenshots/frontend09-final/release-candidate.json"
+  },
+  "commands": [
+    {
+      "name": "Chromium frontend suite",
+      "command": "node ../../scripts/ci/run-verify-suite.mjs",
+      "environment": "local production preview with HTTP fixtures",
+      "exitCode": 0,
+      "passed": 19,
+      "artifact": "apps/frontend/screenshots/verify-timings.json"
+    },
+    {
+      "name": "Node suite",
+      "command": "node --test scripts/*.test.mjs",
+      "environment": "local Windows Node",
+      "exitCode": 0,
+      "passed": 20
+    },
+    {
+      "name": "Workflow syntax",
+      "command": "actionlint 1.7.11",
+      "environment": "local container",
+      "exitCode": 0
+    },
+    {
+      "name": "Production builds",
+      "command": "npm run build",
+      "environment": "local, Education disabled and enabled",
+      "exitCode": 0
+    },
+    {
+      "name": "Vitest",
+      "command": "npm test",
+      "environment": "local Windows Node and happy-dom",
+      "exitCode": 0,
+      "passed": 541,
+      "files": 109
+    },
+    {
+      "name": "Typecheck, lint, format, design and generated API coverage",
+      "command": "npm run typecheck; npm run lint; npm run format:check; npm run check:tokens; npm run check:styles; npm run check:icons; node apps/frontend/scripts/frontend07-coverage.mjs --check",
+      "environment": "local Windows Node",
+      "exitCode": 0
+    }
+  ],
+  "core": {
+    "environment": "isolated Core/PostgreSQL/Redis/Mailpit; real Core and frontend-proxy nonce checks",
+    "cases": [
+      {
+        "name": "auth",
+        "command": "node scripts/e2e-core-auth.mjs",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/core-auth.log",
+          "sha256": "cf7c7063f314263bbc237a5978a196dcbe787988e16aeca48075c7e85f41651b"
+        }
+      },
+      {
+        "name": "security",
+        "command": "node scripts/e2e-core-security.mjs",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/core-security.log",
+          "sha256": "9d6b3fc31a4decff57963b9c43a4f91eb3c52137197b43f5532cf97f06701d4f"
+        }
+      },
+      {
+        "name": "profile",
+        "command": "node scripts/e2e-core-profile.mjs",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/core-profile.log",
+          "sha256": "512d244a48b305e2ec8add889247c5d6c8bd4a22fc4a46f8aaf2c7b4135d508a"
+        }
+      },
+      {
+        "name": "credentials",
+        "command": "node scripts/e2e-core-credentials.mjs",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/core-credentials.log",
+          "sha256": "1e681fec29b699d28f3be004433439a15db46f0bfa5d2080f606f250ed8c1b9d"
+        }
+      },
+      {
+        "name": "privacy",
+        "command": "node scripts/e2e-core-privacy.mjs",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/core-privacy.log",
+          "sha256": "0bfcba51e991193458740a623df43a99f15e7ee0fbbf2f22fde6937c14d8e912"
+        }
+      },
+      {
+        "name": "privacy-operator",
+        "command": "node scripts/e2e-core-privacy-operator.mjs",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/core-privacy-operator.log",
+          "sha256": "d3964ae801b8f90a7480000b2340e99dd86ed1937bafd55f76794b58e01827cc"
+        }
+      },
+      {
+        "name": "configuration",
+        "command": "node scripts/e2e-core-configuration.mjs",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/core-configuration-final.log",
+          "sha256": "9eb171d2f9f26e5892a36c05f124f4855c22bb23882c28faa4b58118be897095"
+        }
+      }
+    ]
+  },
+  "commercial": {
+    "environment": "isolated Commercial/PostgreSQL/Mailpit/outbox; synthetic payment-provider transport",
+    "cases": [
+      {
+        "name": "Account",
+        "command": "node scripts/e2e-account-workspace.mjs",
+        "artifacts": [
+          {
+            "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/navigation-metrics.json",
+            "sha256": "32a2f0de9a764fbf7c5fcebc0362674905593def349d570923c1df51c314562a"
+          },
+          {
+            "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/overview-1440x900-ru-light.json",
+            "sha256": "1e7065387d5233913485f894b218add5060f75d630adc8e062e6a5368421a5be"
+          }
+        ],
+        "status": "PASS",
+        "exitCode": 0
+      },
+      {
+        "name": "Operator",
+        "command": "node scripts/e2e-commercial-operators.mjs",
+        "artifacts": [
+          {
+            "path": "apps/frontend/screenshots/operators-real-results.json",
+            "sha256": "6a7eb1ff51724a93e1678233a22b564923a8fe142a0e39756b917ef2164d30f8"
+          }
+        ],
+        "status": "PASS",
+        "exitCode": 0
+      },
+      {
+        "name": "Billing recovery",
+        "command": "node scripts/e2e-billing-recovery.mjs",
+        "artifacts": [
+          {
+            "path": "apps/frontend/screenshots/billing-real-results.json",
+            "sha256": "1b1b8bd5ee5196efeb46e7452399815d0debf2ebd67b2fe78817734900187142"
+          }
+        ],
+        "status": "PASS",
+        "exitCode": 0
+      },
+      {
+        "name": "Paid billing",
+        "command": "node scripts/e2e-paid-billing.mjs",
+        "artifacts": [
+          {
+            "path": "apps/frontend/screenshots/billing-paid-results.json",
+            "sha256": "475991750112b0c8a272d0f62a4639a70769292ee9798d55c3e394d1c1d43f48"
+          }
+        ],
+        "status": "PASS",
+        "exitCode": 0
+      },
+      {
+        "name": "Invitation/MFA",
+        "command": "node scripts/e2e-invitation-lifecycle.mjs",
+        "artifacts": [
+          {
+            "path": "apps/frontend/screenshots/e2e-invitation-accepted.png",
+            "sha256": "e84a434ecdf017f767a8f95613eabfc16a920cff890f4b8052da14389d0ba5a9"
+          },
+          {
+            "path": "apps/frontend/screenshots/e2e-invitation-declined.png",
+            "sha256": "e729debbefd2f79a4e06da98624158736a187228884d1a8a197565841fccb784"
+          }
+        ],
+        "status": "PASS",
+        "exitCode": 0
+      }
+    ]
+  },
+  "education": {
+    "environment": "isolated Core/Education/PostgreSQL/Redis and real SeaweedFS",
+    "cases": [
+      {
+        "name": "legacy",
+        "command": "node scripts/e2e-education.mjs",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/education-legacy-final.log",
+          "sha256": "f4b6e20efcdb7c5a51247c498647397fe60f67bfd91e54228d7755af1153e75d"
+        }
+      },
+      {
+        "name": "parent",
+        "command": "node scripts/e2e-education-roles.mjs parent",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/education-parent.log",
+          "sha256": "55dfa7e7deb131adf0dbd027ffa75200f8edcd341251a180e65f935386623b7b"
+        }
+      },
+      {
+        "name": "teacher",
+        "command": "node scripts/e2e-education-roles.mjs teacher",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/education-teacher.log",
+          "sha256": "898304983befb1c9cb00969580cdf0f40d40901501ec6a8ba7541c1c73111944"
+        }
+      },
+      {
+        "name": "student",
+        "command": "node scripts/e2e-education-roles.mjs student",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/education-student.log",
+          "sha256": "4d35d36f5cf1ca91cafc0adf1b5a9b29854c5d5e4c8f76477f723182cff9606f"
+        }
+      },
+      {
+        "name": "device",
+        "command": "node scripts/e2e-education-roles.mjs device",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/education-device.log",
+          "sha256": "94f3645846501d3d52c60e2e3ca026f6f667b80c93c291ad9c637af4ea975392"
+        }
+      },
+      {
+        "name": "classroom",
+        "command": "node scripts/e2e-education-roles.mjs classroom",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/education-classroom.log",
+          "sha256": "17ee0fb5c76416da43ec466871a451d7be0585b6dafe38f6939907e3b63d437e"
+        }
+      },
+      {
+        "name": "storage",
+        "command": "node scripts/e2e-education-roles.mjs storage",
+        "exitCode": 0,
+        "status": "PASS",
+        "artifact": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/education-storage-rerun.log",
+          "sha256": "f434a4ade1db0d13cd07f0b563b39332cad02c037d148ef8cdd25e275a5efd87"
+        }
+      }
+    ]
+  },
+  "navigation": {
+    "routeCount": 111,
+    "staticCounts": {
+      "resolved": 213,
+      "browser-verification": 133,
+      "fragment": 2
+    },
+    "baselineDynamicCount": 131,
+    "classifications": {
+      "VERIFIED": 3,
+      "NOT_VERIFIED": 28,
+      "ROLE_RESTRICTED": 10,
+      "CONTEXT_DEPENDENT": 81,
+      "INTERNAL": 11
+    },
+    "runtimeLinks": [
+      {
+        "source": "src/app/layouts/AppLayout.vue:122",
+        "kind": "router.push",
+        "target": "{ name: target.routeName }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "VERIFIED",
+        "test": "verify-responsive.mjs CDP touch navigation",
+        "evidence": {
+          "path": "apps/frontend/screenshots/verify-logs/verify-responsive.log",
+          "sha256": "d3e3f0a7ee9b488bac637ac8f2b7edd8b8fad5743b206e6fb621dca19e81726e"
+        }
+      },
+      {
+        "source": "src/app/layouts/AppLayout.vue:173",
+        "kind": "RouterLink",
+        "target": "{ name: item.routeName }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/app/layouts/SiteContextMenu.vue:302",
+        "kind": "router.push",
+        "target": "{ name: item.id }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/admin/AdminDashboardView.vue:169",
+        "kind": "RouterLink",
+        "target": "card.to",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "ROLE_RESTRICTED",
+        "verifiedActions": [
+          "Feature flags",
+          "Legal holds"
+        ],
+        "test": "verify-core-configuration.mjs",
+        "evidence": {
+          "path": "apps/frontend/screenshots/core-config-ui-results.json",
+          "sha256": "42e4b162b2a52bf059b95b49913501073483c0e5467a8c6092de51b1151e0733"
+        }
+      },
+      {
+        "source": "src/modules/admin/AdminLayout.vue:467",
+        "kind": "RouterLink",
+        "target": "{ name: item.name }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "ROLE_RESTRICTED"
+      },
+      {
+        "source": "src/modules/admin/AdminLayout.vue:615",
+        "kind": "RouterLink",
+        "target": "{ name: item.name }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "ROLE_RESTRICTED"
+      },
+      {
+        "source": "src/modules/admin/AdminLoginView.vue:40",
+        "kind": "location.assign",
+        "target": "url",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/admin/AdminLoginView.vue:88",
+        "kind": "router.replace",
+        "target": "/^\\/admin(?:\\/|$|\\?)/.test(redirect) && !redirect.startsWith('/admin/login')\n        ? redirect\n        : '/admin'",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/admin/AdminPrivacyView.vue:24",
+        "kind": "router.push",
+        "target": "{ query: { ...route.query, tab: key } }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "INTERNAL"
+      },
+      {
+        "source": "src/modules/admin/AdminSettingsView.vue:31",
+        "kind": "router.push",
+        "target": "{ query: { ...route.query, tab: key } }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "INTERNAL"
+      },
+      {
+        "source": "src/modules/admin/auth/CoreAuthLinkView.vue:70",
+        "kind": "router.replace",
+        "target": "{ query }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/admin/auth/CoreAuthLinkView.vue:93",
+        "kind": "location.assign",
+        "target": "url",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/admin/auth/CoreAuthLinkView.vue:191",
+        "kind": "RouterLink",
+        "target": "{ name: requestRoute }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/admin/auth/CoreAuthLinkView.vue:239",
+        "kind": "RouterLink",
+        "target": "{ name: requestRoute }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/admin/auth/CoreRecoveryCallbackView.vue:47",
+        "kind": "router.replace",
+        "target": "{ name: auth.isAuthenticated ? 'admin-dashboard' : 'admin-login' }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/admin/auth/CoreRecoveryCallbackView.vue:70",
+        "kind": "router.replace",
+        "target": "{ query: {} }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "INTERNAL"
+      },
+      {
+        "source": "src/modules/admin/auth/CoreRecoveryRequestView.vue:92",
+        "kind": "RouterLink",
+        "target": "{\n          name: kind === 'password' ? 'core-mfa-recovery-request' : 'core-password-reset-request',\n        }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/admin/auth/externalLink.ts:80",
+        "kind": "location.replace",
+        "target": "url",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/commercial/auth/LoginView.vue:47",
+        "kind": "router.push",
+        "target": "redirectTarget.value !== null ? redirectTarget.value : { name: 'cabinet' }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/commercial/auth/MfaChallengeView.vue:111",
+        "kind": "router.push",
+        "target": "redirectTarget.value !== null ? redirectTarget.value : { name: 'cabinet' }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/commercial/billing/AccountBillingView.vue:731",
+        "kind": "location.assign",
+        "target": "url",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/commercial/catalog/PlanCard.vue:92",
+        "kind": "RouterLink",
+        "target": "target",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/commercial/catalog/PlanComparisonView.vue:123",
+        "kind": "RouterLink",
+        "target": "detailTarget(plan)",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/commercial/catalog/PlanComparisonView.vue:129",
+        "kind": "RouterLink",
+        "target": "target(plan)",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/commercial/catalog/PlanDetailView.vue:93",
+        "kind": "RouterLink",
+        "target": "target(plan)",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/AttendanceView.vue:103",
+        "kind": "RouterLink",
+        "target": "`/groups/${id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/AttendanceView.vue:117",
+        "kind": "RouterLink",
+        "target": "`/groups/${id}/journal`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/AttendanceView.vue:161",
+        "kind": "RouterLink",
+        "target": "`/lessons/${column.lesson.id}/participants`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/AttendanceView.vue:177",
+        "kind": "RouterLink",
+        "target": "`/students/${student.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/CalendarTimeGrid.vue:153",
+        "kind": "RouterLink",
+        "target": "`/lessons/${entry.item.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/CalendarView.vue:39",
+        "kind": "router.replace",
+        "target": "{ query: { date, view: mode } }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "INTERNAL"
+      },
+      {
+        "source": "src/modules/education/CalendarView.vue:74",
+        "kind": "RouterLink",
+        "target": "`/lessons/new?date=${selected}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/CalendarView.vue:80",
+        "kind": "RouterLink",
+        "target": "`/calendar/new?date=${selected}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/CreateView.vue:208",
+        "kind": "router.push",
+        "target": "`/groups/${result.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/CreateView.vue:210",
+        "kind": "router.push",
+        "target": "groupId.value ? `/groups/${groupId.value}` : `/students/${result.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/CreateView.vue:211",
+        "kind": "router.push",
+        "target": "`/lessons/${result.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/CreateView.vue:212",
+        "kind": "router.push",
+        "target": "`/messages/${result.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/CreateView.vue:214",
+        "kind": "router.push",
+        "target": "`/lessons/${route.query.lesson}/materials`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/CreateView.vue:215",
+        "kind": "router.push",
+        "target": "listPath.value",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/CreateView.vue:225",
+        "kind": "RouterLink",
+        "target": "listPath",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/CreateView.vue:492",
+        "kind": "RouterLink",
+        "target": "listPath",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/EducationContextView.vue:33",
+        "kind": "router.replace",
+        "target": "choices[0]!.path",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "ROLE_RESTRICTED"
+      },
+      {
+        "source": "src/modules/education/EducationContextView.vue:62",
+        "kind": "RouterLink",
+        "target": "choice.path",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "ROLE_RESTRICTED"
+      },
+      {
+        "source": "src/modules/education/EducationLayout.vue:134",
+        "kind": "RouterLink",
+        "target": "item.path",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "ROLE_RESTRICTED"
+      },
+      {
+        "source": "src/modules/education/EducationLayout.vue:161",
+        "kind": "RouterLink",
+        "target": "item.path",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "ROLE_RESTRICTED"
+      },
+      {
+        "source": "src/modules/education/EducationLayout.vue:309",
+        "kind": "RouterLink",
+        "target": "item.path",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "ROLE_RESTRICTED"
+      },
+      {
+        "source": "src/modules/education/EducationLoginView.vue:67",
+        "kind": "router.replace",
+        "target": "target",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/EducationLoginView.vue:72",
+        "kind": "router.replace",
+        "target": "/^\\/(parent|education\\/parent-activate|education\\/contexts|today|calendar|people|messages|more|lessons|groups|students|student|programs|devices|materials|notifications|attention|homework)(?:[/?#]|$)/.test(\n          target,\n        )\n          ? target\n          : home",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/GroupActivitiesView.vue:192",
+        "kind": "RouterLink",
+        "target": "`/groups/${id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/GroupActivitiesView.vue:366",
+        "kind": "RouterLink",
+        "target": "`/students/${student.studentId}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/GroupActivitiesView.vue:408",
+        "kind": "RouterLink",
+        "target": "`/students/${attempt.studentId}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/GroupCurriculumPanel.vue:115",
+        "kind": "RouterLink",
+        "target": "`/lessons/new?group=${groupId}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/GroupView.vue:196",
+        "kind": "RouterLink",
+        "target": "`/groups/${data.group.id}/attendance`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/GroupView.vue:202",
+        "kind": "RouterLink",
+        "target": "`/groups/${data.group.id}/journal`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/GroupView.vue:208",
+        "kind": "RouterLink",
+        "target": "`/groups/${data.group.id}/activities`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/GroupView.vue:214",
+        "kind": "RouterLink",
+        "target": "`/students/new?group=${data.group.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/GroupView.vue:249",
+        "kind": "RouterLink",
+        "target": "`/students/${student.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/JournalView.vue:73",
+        "kind": "RouterLink",
+        "target": "`/groups/${id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/JournalView.vue:176",
+        "kind": "RouterLink",
+        "target": "`/lessons/${entry.id}/results`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/LessonEditView.vue:121",
+        "kind": "router.push",
+        "target": "`/lessons/${id.value}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/LessonEditView.vue:130",
+        "kind": "RouterLink",
+        "target": "`/lessons/${id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/LessonEditView.vue:225",
+        "kind": "RouterLink",
+        "target": "`/lessons/${id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/LessonView.vue:227",
+        "kind": "RouterLink",
+        "target": "`/groups/${data.lesson.groupId}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/LessonView.vue:263",
+        "kind": "RouterLink",
+        "target": "`/lessons/${data.lesson.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/LessonView.vue:269",
+        "kind": "RouterLink",
+        "target": "`/lessons/${data.lesson.id}/participants`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/LessonView.vue:275",
+        "kind": "RouterLink",
+        "target": "`/lessons/${data.lesson.id}/results`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/LessonView.vue:281",
+        "kind": "RouterLink",
+        "target": "`/lessons/${data.lesson.id}/materials`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/LessonView.vue:287",
+        "kind": "RouterLink",
+        "target": "`/lessons/${data.lesson.id}/edit`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/LessonView.vue:530",
+        "kind": "RouterLink",
+        "target": "`/materials/upload?lesson=${data.lesson.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/MessagesView.vue:47",
+        "kind": "RouterLink",
+        "target": "`/messages/${item.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/NotificationsView.vue:52",
+        "kind": "RouterLink",
+        "target": "student ? '/student/home' : '/today'",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/NotificationsView.vue:84",
+        "kind": "RouterLink",
+        "target": "`/lessons/${item.id}/participants`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/NotificationsView.vue:103",
+        "kind": "RouterLink",
+        "target": "notificationTarget(item, student)!",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/PeopleView.vue:44",
+        "kind": "RouterLink",
+        "target": "groups ? '/groups/new' : '/students/new'",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/PeopleView.vue:96",
+        "kind": "RouterLink",
+        "target": "`/groups/${item.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/PeopleView.vue:112",
+        "kind": "RouterLink",
+        "target": "`/groups/${item.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/PeopleView.vue:118",
+        "kind": "RouterLink",
+        "target": "`/students/new?group=${item.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/PeopleView.vue:137",
+        "kind": "RouterLink",
+        "target": "`/students/${item.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/PeopleView.vue:143",
+        "kind": "RouterLink",
+        "target": "`/students/${item.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/ProgramView.vue:205",
+        "kind": "RouterLink",
+        "target": "`/programs/${id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/ProgramView.vue:221",
+        "kind": "RouterLink",
+        "target": "`/programs/${id}/modules/${m.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/ProgramsView.vue:31",
+        "kind": "router.push",
+        "target": "`/programs/${result.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/ProgramsView.vue:101",
+        "kind": "RouterLink",
+        "target": "`/programs/${program.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/StudentView.vue:128",
+        "kind": "RouterLink",
+        "target": "`/groups/${group.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/StudentView.vue:140",
+        "kind": "RouterLink",
+        "target": "`/groups/${group.id}/journal`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/TodayView.vue:127",
+        "kind": "RouterLink",
+        "target": "`/calendar?date=${selected}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/TodayView.vue:209",
+        "kind": "RouterLink",
+        "target": "`/lessons/${data.next.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/TodayView.vue:235",
+        "kind": "RouterLink",
+        "target": "`/lessons/${data.next.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/TodayView.vue:245",
+        "kind": "RouterLink",
+        "target": "`/lessons/${data.next.id}/participants`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/TodayView.vue:255",
+        "kind": "RouterLink",
+        "target": "`/lessons/${data.next.id}/materials`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/TodayView.vue:288",
+        "kind": "RouterLink",
+        "target": "`/calendar?date=${selected}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/TodayView.vue:318",
+        "kind": "RouterLink",
+        "target": "item.kind === 'lesson'\n                      ? `/lessons/${item.id}`\n                      : `/calendar?date=${selected}#event-${item.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/TodayView.vue:357",
+        "kind": "RouterLink",
+        "target": "item.path",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/TodayView.vue:395",
+        "kind": "RouterLink",
+        "target": "`/lessons/${item.id}/participants`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/homework/HomeworkCreateView.vue:14",
+        "kind": "router.replace",
+        "target": "`/homework/${detail.assignment.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/homework/HomeworkDetailView.vue:178",
+        "kind": "RouterLink",
+        "target": "`/lessons/${data.assignment.lessonId}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/homework/HomeworkDetailView.vue:290",
+        "kind": "RouterLink",
+        "target": "`/homework/submissions/${row.submissionId}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/homework/HomeworkDetailView.vue:297",
+        "kind": "RouterLink",
+        "target": "`/students/${row.studentId}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/homework/HomeworkListView.vue:77",
+        "kind": "router.replace",
+        "target": "{\n    query: {\n      ...(search.value ? { search: search.value.trim() } : {}),\n      ...(state.value ? { [props.student ? 'state' : 'status']: state.value } : {}),\n      ...(!props.student && group.value ? { groupId: group.value } : {}),\n      ...(!props.student && studentId.value ? { studentId: studentId.value } : {}),\n      ...(overdue.value ? { overdue: 'true' } : {}),\n      sort: sort.value,\n    },\n  }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "INTERNAL"
+      },
+      {
+        "source": "src/modules/education/homework/HomeworkListView.vue:89",
+        "kind": "router.replace",
+        "target": "{ query: { ...route.query, offset } }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "INTERNAL"
+      },
+      {
+        "source": "src/modules/education/homework/HomeworkListView.vue:241",
+        "kind": "RouterLink",
+        "target": "`${student ? '/student' : ''}/homework/${studentAssignment(row).id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/homework/HomeworkReviewView.vue:93",
+        "kind": "RouterLink",
+        "target": "`/homework/${data.assignment.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/homework/HomeworkSummary.vue:57",
+        "kind": "RouterLink",
+        "target": "link",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/homework/HomeworkSummary.vue:101",
+        "kind": "RouterLink",
+        "target": "`${student ? '/student' : ''}/homework/${studentAssignment(row).id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/homework/HomeworkSummary.vue:134",
+        "kind": "RouterLink",
+        "target": "`/student/homework/${studentAssignment(row).id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/homework/StudentHomeworkView.vue:146",
+        "kind": "RouterLink",
+        "target": "`/student/diary/${data.assignment.lessonId}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/homework/StudentHomeworkView.vue:184",
+        "kind": "RouterLink",
+        "target": "{\n              path:\n                data.assignment.activityCode === 'platform-logic'\n                  ? '/student/logic/platform-logic'\n                  : '/student/typing/platform-typing',\n              query: { homework: id },\n            }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/parent/ParentLayout.vue:76",
+        "kind": "router.push",
+        "target": "{\n    path: route.path,\n    query: { ...route.query, child: child.id, organization: child.organizationId },\n  }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "VERIFIED",
+        "test": "e2e-education-roles.mjs parent",
+        "evidence": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/education-parent.log",
+          "sha256": "55dfa7e7deb131adf0dbd027ffa75200f8edcd341251a180e65f935386623b7b"
+        }
+      },
+      {
+        "source": "src/modules/education/parent/ParentLayout.vue:220",
+        "kind": "RouterLink",
+        "target": "{\n                path: `/parent/${tab}`,\n                query: { child: workspace.child.id, organization: workspace.child.organizationId },\n              }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "VERIFIED",
+        "test": "e2e-education-roles.mjs parent",
+        "evidence": {
+          "path": "apps/frontend/screenshots/frontend09-final/logs/education-parent.log",
+          "sha256": "55dfa7e7deb131adf0dbd027ffa75200f8edcd341251a180e65f935386623b7b"
+        }
+      },
+      {
+        "source": "src/modules/education/parent/ParentSectionView.vue:259",
+        "kind": "RouterLink",
+        "target": "childSection('/parent/diary')",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/parent/ParentSectionView.vue:275",
+        "kind": "RouterLink",
+        "target": "childSection('/parent/homework')",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/parent/ParentSectionView.vue:291",
+        "kind": "RouterLink",
+        "target": "childSection('/parent/notifications')",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/student/StudentActivitiesView.vue:99",
+        "kind": "RouterLink",
+        "target": "target(activity.code)",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/student/StudentDiaryView.vue:57",
+        "kind": "RouterLink",
+        "target": "schedule ? '/student/diary' : '/student/schedule'",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/modules/education/student/StudentDiaryView.vue:111",
+        "kind": "RouterLink",
+        "target": "`/student/diary/${lesson.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/student/StudentHomeView.vue:56",
+        "kind": "RouterLink",
+        "target": "`/student/diary/${data.nextLesson.id}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/student/StudentHomeView.vue:114",
+        "kind": "RouterLink",
+        "target": "activity.code === 'platform-logic'\n                  ? `/student/logic/${activity.code}`\n                  : `/student/typing/${activity.code}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/student/StudentLayout.vue:135",
+        "kind": "RouterLink",
+        "target": "{ name: item.routeName }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "ROLE_RESTRICTED"
+      },
+      {
+        "source": "src/modules/education/student/StudentLayout.vue:149",
+        "kind": "RouterLink",
+        "target": "{ name: item.routeName }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "ROLE_RESTRICTED"
+      },
+      {
+        "source": "src/modules/education/student/StudentLearningAssignments.vue:25",
+        "kind": "RouterLink",
+        "target": "{ query: {} }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "INTERNAL"
+      },
+      {
+        "source": "src/modules/education/student/StudentLearningAssignments.vue:54",
+        "kind": "RouterLink",
+        "target": "{ query: { assignment: assignment.id } }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "INTERNAL"
+      },
+      {
+        "source": "src/modules/education/student/StudentLogicView.vue:48",
+        "kind": "router.replace",
+        "target": "{ query: { ...route.query, attempt: id } }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "INTERNAL"
+      },
+      {
+        "source": "src/modules/education/student/StudentLogicView.vue:55",
+        "kind": "RouterLink",
+        "target": "homeworkId ? `/student/homework/${homeworkId}` : '/student/activities'",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/modules/education/student/StudentLogicView.vue:95",
+        "kind": "RouterLink",
+        "target": "{ query: { ...route.query, attempt: attempt.id } }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "INTERNAL"
+      },
+      {
+        "source": "src/modules/education/student/StudentTypingView.vue:64",
+        "kind": "RouterLink",
+        "target": "`/student/homework/${homeworkId}`",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "CONTEXT_DEPENDENT"
+      },
+      {
+        "source": "src/shared/ui/navigation/AppBottomNav.vue:20",
+        "kind": "navigation-item",
+        "target": "{\n    label: item.label,\n    routeName: item.routeName,\n    icon: markRaw(toRaw(item.icon)),\n  }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "INTERNAL"
+      },
+      {
+        "source": "src/shared/ui/navigation/AppBottomNav.vue:128",
+        "kind": "router.push",
+        "target": "{ name: target.routeName }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/shared/ui/navigation/AppBottomNav.vue:338",
+        "kind": "RouterLink",
+        "target": "{ name: item.routeName }",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/shared/ui/navigation/AppBreadcrumbs.vue:34",
+        "kind": "router.push",
+        "target": "to",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/shared/ui/navigation/AppBreadcrumbs.vue:49",
+        "kind": "RouterLink",
+        "target": "items[0].to",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/shared/ui/navigation/AppMobileMenu.vue:272",
+        "kind": "RouterLink",
+        "target": "link.to",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/shared/ui/navigation/AppMobileMenu.vue:308",
+        "kind": "RouterLink",
+        "target": "link.to",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      },
+      {
+        "source": "src/shared/ui/navigation/AppMobileMenu.vue:343",
+        "kind": "RouterLink",
+        "target": "link.to",
+        "status": "browser-verification",
+        "detail": "Runtime destination or context",
+        "classification": "NOT_VERIFIED"
+      }
+    ],
+    "browserRouteAudit": {
+      "path": "apps/frontend/screenshots/frontend09-route-audit.json",
+      "sha256": "ad97cc64ba887cc40fb04737038104e6535351ce9c1eba2b88e7c7f7b91fa621"
+    },
+    "metrics": [
+      {
+        "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/navigation-metrics.json",
+        "sha256": "32a2f0de9a764fbf7c5fcebc0362674905593def349d570923c1df51c314562a"
+      },
+      {
+        "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/navigation-metrics.json",
+        "sha256": "b550ebc5aa6c4c88cfbe349a19ddb3212fdc875e719551c7a1abda05156acd36"
+      }
+    ]
+  },
+  "visual": {
+    "browserVersion": "158.0.8127.37",
+    "publicComparisons": [
+      {
+        "file": "public-settings-320x740-ru-light.png",
+        "identical": true,
+        "before": {
+          "path": "apps/frontend/screenshots/frontend09-baseline/public-settings-320x740-ru-light.png",
+          "sha256": "d7481ab6a8a5151124ea98fca83b8ddaa67229252b1f1eca9ae6d6122930b9ad"
+        },
+        "after": {
+          "path": "apps/frontend/screenshots/frontend09/public-settings-320x740-ru-light.png",
+          "sha256": "d7481ab6a8a5151124ea98fca83b8ddaa67229252b1f1eca9ae6d6122930b9ad"
+        }
+      },
+      {
+        "file": "commercial-login-320x740-ru-light.png",
+        "identical": true,
+        "before": {
+          "path": "apps/frontend/screenshots/frontend09-baseline/commercial-login-320x740-ru-light.png",
+          "sha256": "b1d18c71daab213de480784e8749be7890f1ea929cedc1abcb35039ee69a92e9"
+        },
+        "after": {
+          "path": "apps/frontend/screenshots/frontend09/commercial-login-320x740-ru-light.png",
+          "sha256": "b1d18c71daab213de480784e8749be7890f1ea929cedc1abcb35039ee69a92e9"
+        }
+      },
+      {
+        "file": "core-admin-login-320x740-ru-light.png",
+        "identical": true,
+        "before": {
+          "path": "apps/frontend/screenshots/frontend09-baseline/core-admin-login-320x740-ru-light.png",
+          "sha256": "5d50f777556ca309299af860952326724eb9620a071228b808c8e36d9aae4b94"
+        },
+        "after": {
+          "path": "apps/frontend/screenshots/frontend09/core-admin-login-320x740-ru-light.png",
+          "sha256": "5d50f777556ca309299af860952326724eb9620a071228b808c8e36d9aae4b94"
+        }
+      },
+      {
+        "file": "public-settings-393x852-en-dark.png",
+        "identical": true,
+        "before": {
+          "path": "apps/frontend/screenshots/frontend09-baseline/public-settings-393x852-en-dark.png",
+          "sha256": "06d673f9f7d1b4844b7e430d97c9ea111dbc4ef20125c08ef8b2173ea5044877"
+        },
+        "after": {
+          "path": "apps/frontend/screenshots/frontend09/public-settings-393x852-en-dark.png",
+          "sha256": "06d673f9f7d1b4844b7e430d97c9ea111dbc4ef20125c08ef8b2173ea5044877"
+        }
+      },
+      {
+        "file": "commercial-login-393x852-en-dark.png",
+        "identical": true,
+        "before": {
+          "path": "apps/frontend/screenshots/frontend09-baseline/commercial-login-393x852-en-dark.png",
+          "sha256": "29246eaa144d45d419cf039b19413d17ea81f14e86e281c8a03c84d480e5a011"
+        },
+        "after": {
+          "path": "apps/frontend/screenshots/frontend09/commercial-login-393x852-en-dark.png",
+          "sha256": "29246eaa144d45d419cf039b19413d17ea81f14e86e281c8a03c84d480e5a011"
+        }
+      },
+      {
+        "file": "core-admin-login-393x852-en-dark.png",
+        "identical": true,
+        "before": {
+          "path": "apps/frontend/screenshots/frontend09-baseline/core-admin-login-393x852-en-dark.png",
+          "sha256": "f922782208bc44f6c832294bbe4371511a43d393f2b957338fbb8faed4d876d3"
+        },
+        "after": {
+          "path": "apps/frontend/screenshots/frontend09/core-admin-login-393x852-en-dark.png",
+          "sha256": "f922782208bc44f6c832294bbe4371511a43d393f2b957338fbb8faed4d876d3"
+        }
+      },
+      {
+        "file": "public-settings-844x390-ru-dark.png",
+        "identical": true,
+        "before": {
+          "path": "apps/frontend/screenshots/frontend09-baseline/public-settings-844x390-ru-dark.png",
+          "sha256": "d70aa3e955fa98b65dbf37cc398e840a6bbe3f96d8fbafbb8454caa21487fc0d"
+        },
+        "after": {
+          "path": "apps/frontend/screenshots/frontend09/public-settings-844x390-ru-dark.png",
+          "sha256": "d70aa3e955fa98b65dbf37cc398e840a6bbe3f96d8fbafbb8454caa21487fc0d"
+        }
+      },
+      {
+        "file": "commercial-login-844x390-ru-dark.png",
+        "identical": true,
+        "before": {
+          "path": "apps/frontend/screenshots/frontend09-baseline/commercial-login-844x390-ru-dark.png",
+          "sha256": "d596aedbfecdafcee063d0240042ae027ca82fd267761cb088d4904fd97df2a6"
+        },
+        "after": {
+          "path": "apps/frontend/screenshots/frontend09/commercial-login-844x390-ru-dark.png",
+          "sha256": "d596aedbfecdafcee063d0240042ae027ca82fd267761cb088d4904fd97df2a6"
+        }
+      },
+      {
+        "file": "core-admin-login-844x390-ru-dark.png",
+        "identical": true,
+        "before": {
+          "path": "apps/frontend/screenshots/frontend09-baseline/core-admin-login-844x390-ru-dark.png",
+          "sha256": "5eaf3d7abd6cc20f1511f10adfa4117252b9206d5ec4acae351790cf31fd5ca2"
+        },
+        "after": {
+          "path": "apps/frontend/screenshots/frontend09/core-admin-login-844x390-ru-dark.png",
+          "sha256": "5eaf3d7abd6cc20f1511f10adfa4117252b9206d5ec4acae351790cf31fd5ca2"
+        }
+      },
+      {
+        "file": "public-settings-1440x900-en-light.png",
+        "identical": true,
+        "before": {
+          "path": "apps/frontend/screenshots/frontend09-baseline/public-settings-1440x900-en-light.png",
+          "sha256": "0e7b5b8c977a0c9cb350335fa70abf209f3f200e49315f296fba01bf63d73c3c"
+        },
+        "after": {
+          "path": "apps/frontend/screenshots/frontend09/public-settings-1440x900-en-light.png",
+          "sha256": "0e7b5b8c977a0c9cb350335fa70abf209f3f200e49315f296fba01bf63d73c3c"
+        }
+      },
+      {
+        "file": "commercial-login-1440x900-en-light.png",
+        "identical": true,
+        "before": {
+          "path": "apps/frontend/screenshots/frontend09-baseline/commercial-login-1440x900-en-light.png",
+          "sha256": "c4402f7a0f9f74820849c5d4a238e601914e1fcbe4ef709390ad2e9ec2328d2a"
+        },
+        "after": {
+          "path": "apps/frontend/screenshots/frontend09/commercial-login-1440x900-en-light.png",
+          "sha256": "c4402f7a0f9f74820849c5d4a238e601914e1fcbe4ef709390ad2e9ec2328d2a"
+        }
+      },
+      {
+        "file": "core-admin-login-1440x900-en-light.png",
+        "identical": true,
+        "before": {
+          "path": "apps/frontend/screenshots/frontend09-baseline/core-admin-login-1440x900-en-light.png",
+          "sha256": "43b659dc0db5ae03a603ffe0a8791cf950ac715cfe088c5d751f1b1b000547f3"
+        },
+        "after": {
+          "path": "apps/frontend/screenshots/frontend09/core-admin-login-1440x900-en-light.png",
+          "sha256": "43b659dc0db5ae03a603ffe0a8791cf950ac715cfe088c5d751f1b1b000547f3"
+        }
+      }
+    ],
+    "authenticated": [
+      {
+        "suite": "commercial-account",
+        "screen": "billing",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "light",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/billing-393x852-en-light.png",
+          "sha256": "2a36afe3b7af37b62de714a99b98a21954e6e84a10d0d1df1086190e0b87435f"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/billing-393x852-en-light.json",
+          "sha256": "43c48ac14a8a3b498e8c85fe113c6f4681089ee5747f0b2ebb4789a53c6b1668"
+        }
+      },
+      {
+        "suite": "commercial-account",
+        "screen": "overview",
+        "viewport": [
+          1440,
+          900
+        ],
+        "theme": "light",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/overview-1440x900-ru-light.png",
+          "sha256": "5678a98bf0f43d4d2e7cb4cc04fc46e37d3676ad6450540036009a2ea791c94e"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/overview-1440x900-ru-light.json",
+          "sha256": "1e7065387d5233913485f894b218add5060f75d630adc8e062e6a5368421a5be"
+        }
+      },
+      {
+        "suite": "commercial-account",
+        "screen": "overview",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "dark",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/overview-393x852-en-dark.png",
+          "sha256": "fd9160dda54a64d90662f8128910aa53e2b81da7a73f105eec6024946b90e9c6"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/overview-393x852-en-dark.json",
+          "sha256": "991381778bfe2ee25a8074d079e93afd0d977c1fdb12dfb2016db600256c72ba"
+        }
+      },
+      {
+        "suite": "commercial-account",
+        "screen": "overview",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "light",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/overview-393x852-en-light.png",
+          "sha256": "b120db64b7df0324017bc4468b1920dda684cbb43a2958d958b5b10e0ea6d261"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-account/overview-393x852-en-light.json",
+          "sha256": "b6ed32d28bb7775ffecfe706f3103bae65a66bafc4ce4be02de3a464b4babb99"
+        }
+      },
+      {
+        "suite": "commercial-operator",
+        "screen": "privacy-queue",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "theme": "dark",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-operator/privacy-queue-1440x1000-en-dark.png",
+          "sha256": "eb75b550b0187515a8b99cbce6c068eaac14902df47d37a34494f3425f2888af"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-operator/privacy-queue-1440x1000-en-dark.json",
+          "sha256": "30d4e7e9a485f50e8a1fccd086802ecc034ab8b8e4e948720edd4f44175a02cb"
+        }
+      },
+      {
+        "suite": "commercial-operator",
+        "screen": "privacy-queue",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "light",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-operator/privacy-queue-393x852-ru-light.png",
+          "sha256": "8eff94da8336c0942f76d180708e2b454c1ef7982ef3d3ccd91884e61738b9d4"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/commercial-operator/privacy-queue-393x852-ru-light.json",
+          "sha256": "e31ec0de0a2e93720fa6feb4df074bdd05114ecbb0902964577c07744a31e6b8"
+        }
+      },
+      {
+        "suite": "core-admin",
+        "screen": "settings",
+        "viewport": [
+          1024,
+          768
+        ],
+        "theme": "light",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-1024x768-en-light.png",
+          "sha256": "86aac3b35d7305b749072a7fdf0609251286c84f210bc3394d352dae263a2cc7"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-1024x768-en-light.json",
+          "sha256": "538279a7e5b71362f4865d44adf3d6200d528b466860e20611c1090afb7dec13"
+        }
+      },
+      {
+        "suite": "core-admin",
+        "screen": "settings",
+        "viewport": [
+          1440,
+          900
+        ],
+        "theme": "dark",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-1440x900-ru-dark.png",
+          "sha256": "dacaeb5c17c31727535eee5e323c984ba39371b3b428eb336ea65df8d0af0d5c"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-1440x900-ru-dark.json",
+          "sha256": "245f1239351d6ee08f4935f6dd06568aac052828a2cd1bb48b80d123beca1c05"
+        }
+      },
+      {
+        "suite": "core-admin",
+        "screen": "settings",
+        "viewport": [
+          1920,
+          1080
+        ],
+        "theme": "light",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-1920x1080-ru-light.png",
+          "sha256": "c0e13b2f4401e729473d74b64347a032560f09779c9afceea51a7287bae72820"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-1920x1080-ru-light.json",
+          "sha256": "93440e6e5599d066e2ab9a6f080c91b039dcd28cf2c20f70be2d7ee8299d9642"
+        }
+      },
+      {
+        "suite": "core-admin",
+        "screen": "settings",
+        "viewport": [
+          320,
+          740
+        ],
+        "theme": "light",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-320x740-ru-light.png",
+          "sha256": "dc1d4c9b7e1a029eaf4fcea41df2b2803a0849319e25d30b32fe4836a7833017"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-320x740-ru-light.json",
+          "sha256": "d1498b7b60ce04445783ffbb6fa501e33b9eb69546b491a2af97c4b743683420"
+        }
+      },
+      {
+        "suite": "core-admin",
+        "screen": "settings",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "dark",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-393x852-en-dark.png",
+          "sha256": "d1f6df1f702a4ef4124e53a26ec766abbe29c81e807de5ef30cb6ccf80b2c320"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-393x852-en-dark.json",
+          "sha256": "9d55cf14263b9323aef45dd2252cb74d5ec9211a46472da8e8c708ffc7028185"
+        }
+      },
+      {
+        "suite": "core-admin",
+        "screen": "settings",
+        "viewport": [
+          430,
+          932
+        ],
+        "theme": "light",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-430x932-en-light.png",
+          "sha256": "2f05194799a438dd99862e902509468b21c0bb6fcfc51f1fa54dbb1fc356b035"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-430x932-en-light.json",
+          "sha256": "205909bf32b2f8846eaa607ee5d42d2349baa8fe0c01db67758688a9e77830a7"
+        }
+      },
+      {
+        "suite": "core-admin",
+        "screen": "settings",
+        "viewport": [
+          768,
+          1024
+        ],
+        "theme": "dark",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-768x1024-ru-dark.png",
+          "sha256": "1f1ad1cf5d8879871ca14c4c83c5fbb2ab09d73a874584cff944052560a22dd7"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-768x1024-ru-dark.json",
+          "sha256": "5a63c3bc8804526be3b31721e44775c1309cb163bdb513e849d1d55bb717d29e"
+        }
+      },
+      {
+        "suite": "core-admin",
+        "screen": "settings",
+        "viewport": [
+          844,
+          390
+        ],
+        "theme": "dark",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-844x390-en-dark.png",
+          "sha256": "1ba8fe98b1b621b87456c8360e3779af68eb04ab8abfab2eb0797a5c63d203d0"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-844x390-en-dark.json",
+          "sha256": "cc9bd663105b1945ced4e11558e52bde97f506558b65287c87b2ecb7dcc9e541"
+        }
+      },
+      {
+        "suite": "core-admin",
+        "screen": "settings-invalid-draft",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "theme": "light",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-invalid-draft-1440x1000-ru-light.png",
+          "sha256": "f86884f7098de913dfea08451e4ceb651a3773d2e831ed8590e19ed7fdf444b3"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/core-admin/settings-invalid-draft-1440x1000-ru-light.json",
+          "sha256": "1dedd04a5242c40d3d3bd6dbf1f1a9bbd60779d15ba933dfc8a566f4f61595ef"
+        }
+      },
+      {
+        "suite": "education-parent",
+        "screen": "home",
+        "viewport": [
+          1440,
+          852
+        ],
+        "theme": "light",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-parent/home-1440x852-en-light.png",
+          "sha256": "68d92b4f2a1c6a6da905fd74eaef3e3bf27a4b11c207555a9bb578237efadbcc"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-parent/home-1440x852-en-light.json",
+          "sha256": "c3d59f6608ea2ee73a67f43e268ac743413e0890ef8090e73cd87aeeafe5524b"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "group",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "theme": "dark",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/group-1440x1000-en-dark.png",
+          "sha256": "104c4a4520d31a7e3b16d57f7c247256ae041817a8a942feedd6c3448f6436b8"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/group-1440x1000-en-dark.json",
+          "sha256": "13e748dac6fe23b92ed552e6f3b16b92c8271de249a19509c93d9f2123733675"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "group",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "dark",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/group-393x852-en-dark.png",
+          "sha256": "05d560e50736311b9e6cef0f992ebdecb4f37100e3f89a14b85e5c5c90540f47"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/group-393x852-en-dark.json",
+          "sha256": "b9bd9ebeab413a2c2b305e1112c5b5a9e2ed8864ef5644916fcdbc9ef8aba409"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "group",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "light",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/group-393x852-ru-light.png",
+          "sha256": "7d8e34ec077ed90cb17430c030ad710dcf0283da3a58dce470b2d5b02a13efce"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/group-393x852-ru-light.json",
+          "sha256": "468736cf82ea2d65084b006d420ba8bbc4206d2f527d96ee7888febd02d0b712"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "lesson",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "theme": "dark",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/lesson-1440x1000-en-dark.png",
+          "sha256": "4a0ab157c1fe69e76df4bd19455d2fbd375aab11041fccc650cc726a3df33f6f"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/lesson-1440x1000-en-dark.json",
+          "sha256": "19152e0fde73b9107f3c634daf7b4033d8be2ecf00d8f7b480f1c80db8a74c6c"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "lesson",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "dark",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/lesson-393x852-en-dark.png",
+          "sha256": "8dc643b29cb5ac124757d27cc18842cf3676a929b912778029aaaa17a937dd33"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/lesson-393x852-en-dark.json",
+          "sha256": "4aaa23572ec3fd9f9bda7a7eadc9dd7dfe73e7c71770fa37236c6cbacd343741"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "lesson",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "light",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/lesson-393x852-ru-light.png",
+          "sha256": "a3d5fde197b079881b5ab4722b11aca86b18ceaf0eab9f681d639ed9432a3fdc"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/lesson-393x852-ru-light.json",
+          "sha256": "4b90d8000ce0dc4a84d0652b0cc0eac4abbf82541383c3711d4358a165c27531"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "lesson-edit",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "light",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/lesson-edit-393x852-ru-light.png",
+          "sha256": "5399505deb864ba965616de58444bb68dc0a92d56b619c43997577d911c7df8e"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/lesson-edit-393x852-ru-light.json",
+          "sha256": "db096a08c14b67dc56a9120d24c5559f8e49ffb2a3b4e04a44aaf79c44278136"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "today",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "theme": "dark",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-1440x1000-en-dark.png",
+          "sha256": "174b7f8427c194d3182bf57ae497d596507dee3811010e4c6a4a54996f913f70"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-1440x1000-en-dark.json",
+          "sha256": "24917bb79f395d8f3feaa0274fdf4dd302efc9698303565d2faaa62930404d20"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "today",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "theme": "light",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-1440x1000-en-light.png",
+          "sha256": "f0c7cf3c3c1960472a9b55cabc9757b8153c1f0d5af21f47f012808cfcc76e03"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-1440x1000-en-light.json",
+          "sha256": "dd6b95784c93abff19024cd62282eed39efaaeb904ff0806691940e35fe8d871"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "today",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "theme": "dark",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-1440x1000-ru-dark.png",
+          "sha256": "cc9e3c882b9a99d88cb7fb9deb8df65042c4fc685718c434baa3fdf2ac71d53d"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-1440x1000-ru-dark.json",
+          "sha256": "82a6134071daa0eee26747d07582fcef8e7decdf00238c3f14eb5ccd0e0a70db"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "today",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "theme": "light",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-1440x1000-ru-light.png",
+          "sha256": "d1508fd84fa0b87456afcb44cc8a5e99933146876ebdb2899a3e0c326b78c607"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-1440x1000-ru-light.json",
+          "sha256": "5469c24c9ea4a67af1be29379ce0a8a293b132fc5974ef433a9ccb7b18006a76"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "today",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "dark",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-393x852-en-dark.png",
+          "sha256": "e530fb2ade6e543997b2254ed30210868dc5bdb7b88698dc9fbe337baaf35b39"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-393x852-en-dark.json",
+          "sha256": "234ced9cfe2d1c1539b4243cb7afbec1ffdb5699ed6109a92875908b9c563c33"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "today",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "light",
+        "language": "en",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-393x852-en-light.png",
+          "sha256": "6d46555830f9cc846193fc9238c988072fbef680dcf38e4e05cf9b596f9a489b"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-393x852-en-light.json",
+          "sha256": "15bd1e26b8d3303678d62530c7c194fbd1b78564c3ddd42d4ef18736fc0d60e1"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "today",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "dark",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-393x852-ru-dark.png",
+          "sha256": "ed1e001d01019d9c95b85f29806e0bb662bc01726f761d88607ad9459ae471de"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-393x852-ru-dark.json",
+          "sha256": "257e6787cc57ba0d3695cc64cde9f20eb91d88bf5d38140b4bea0bbeff78b682"
+        }
+      },
+      {
+        "suite": "education-teacher",
+        "screen": "today",
+        "viewport": [
+          393,
+          852
+        ],
+        "theme": "light",
+        "language": "ru",
+        "violationIds": [],
+        "image": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-393x852-ru-light.png",
+          "sha256": "2cea9dc0151151e52fd79748a0aa4e113f58cf55027a19dd68771190e4a3d001"
+        },
+        "report": {
+          "path": "apps/frontend/screenshots/frontend09-final/authenticated/education-teacher/today-393x852-ru-light.json",
+          "sha256": "fe5572baae16a12adc1925619cd5e8deee9a62011ee6487e1c2c221cbdb23833"
+        }
+      }
+    ],
+    "publicReport": {
+      "path": "apps/frontend/screenshots/frontend09/visual-report.json",
+      "sha256": "6b03f78926f14eb7ff7bbfcd073db5ff611e1c5a60affdca294eb877353e30c9"
+    },
+    "baselineReport": {
+      "path": "apps/frontend/screenshots/frontend09-baseline/visual-report.json",
+      "sha256": "17d1af5c4405f9cf4f31fcc743585821ec5ed875ce42c424318a6619f33f2970"
+    },
+    "settingsContrastReport": {
+      "path": "apps/frontend/screenshots/accessibility.json",
+      "sha256": "7e3b27bf15f10cdc12314c72c3aca39c7df39d85e9ed830818f57ab983f879bd"
+    },
+    "nativeZoomReport": {
+      "path": "apps/frontend/screenshots/frontend09-final-settings-browser-zoom.json",
+      "sha256": "a1aaa0b178ca505d4c179f1768f5e06da83e3f06ce075ca1cbb48c63c3ff390c"
+    }
+  },
+  "open": [
+    "Full authenticated cross-product route, locale, theme, and state matrix",
+    "Native zoom in authenticated workspaces and manual NVDA or VoiceOver",
+    "Independent comparison of authenticated performance against baseline",
+    "Candidate GitHub Actions publication and matched run ID"
+  ]
+}

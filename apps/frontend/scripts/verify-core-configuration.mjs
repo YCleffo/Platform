@@ -184,6 +184,22 @@ async function login() {
 mkdirSync('screenshots', { recursive: true });
 try {
   await login();
+  await page.locator('.admin-dashboard__card[href="/admin/privacy?tab=holds"]').click();
+  await page.waitForURL((url) => url.pathname === '/admin/privacy' && url.searchParams.get('tab') === 'holds');
+  await page.locator('.admin-tabs__nav [aria-current="page"]').filter({ hasText: 'Legal holds' }).waitFor();
+  await page.goBack();
+  await page.waitForURL((url) => url.pathname === '/admin');
+  await page.locator('.admin-dashboard__card').filter({ hasText: 'Feature flags' }).click();
+  await page.waitForURL((url) => url.pathname === '/admin/settings');
+  assert.equal(new URL(page.url()).searchParams.get('tab'), 'flags', 'dashboard shortcut opens the feature flags tab');
+  await page.getByRole('button', { name: 'Feature flags', exact: true }).and(page.locator('[aria-current="page"]')).waitFor();
+  await click('System settings');
+  await page.getByRole('button', { name: 'System settings', exact: true }).and(page.locator('[aria-current="page"]')).waitFor();
+  await page.goBack();
+  await page.getByRole('button', { name: 'Feature flags', exact: true }).and(page.locator('[aria-current="page"]')).waitFor();
+  await page.goForward();
+  await page.getByRole('button', { name: 'System settings', exact: true }).and(page.locator('[aria-current="page"]')).waitFor();
+  states.push('Dashboard feature flags shortcut, active tab and browser history');
   await navigateClientSide(page, '/admin/settings');
   await setting('ui.title', 'Public title', true);
   await setting('ui.internal', 'Internal marker');
@@ -300,6 +316,8 @@ try {
   readonly = true;
   await page.evaluate(() => localStorage.setItem('platform.locale', 'en'));
   await login();
+  await page.locator('.admin-dashboard__card').filter({ hasText: 'Feature flags' }).waitFor();
+  assert.equal(await page.locator('.admin-dashboard__card[href="/admin/organizations"]').count(), 0);
   await navigateClientSide(page, '/admin/settings');
   await page.getByRole('heading', { name: 'ui.title', exact: true }).waitFor();
   assert.equal(await button('Add setting').count(), 0);

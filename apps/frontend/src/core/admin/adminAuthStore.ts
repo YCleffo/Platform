@@ -5,6 +5,7 @@ import { coreAdminAuth, type CoreAdminIdentity, type CoreAdminLoginResult, type 
 import { coreAdminSession, type CoreAdminTokens } from '@/core/admin/session';
 import { coreAdminHttp } from '@/shared/api/core/adminHttp';
 import { authenticatePasskey } from '@/shared/webauthn';
+import { applyAccountLocale } from '@/shared/i18n';
 
 type AdminStatus = 'anonymous' | 'authenticating' | 'mfa_required' | 'password_change_required' | 'authenticated';
 interface Operation { generation: number; controller: AbortController }
@@ -81,6 +82,7 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
     assertCurrent(operation);
     if (coreAdminSession.epoch() !== epoch) throw new SupersededOperationError();
     identity.value = me;
+    applyAccountLocale(me.locale);
     status.value = 'authenticated';
     challengeToken.value = null;
     if (me.account.personId !== null && (me.roles.includes('core.superadmin') || me.permissions.includes('core.persons.read'))) {

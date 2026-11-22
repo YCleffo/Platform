@@ -22,6 +22,7 @@ import { useTheme } from '@/app/theme';
 import { setLocale } from '@/shared/i18n';
 import { lockScroll, unlockScroll } from '@/shared/composables/useScrollLock';
 import { useFocusTrap } from '@/shared/composables/useFocusTrap';
+import { activeNavigationRoute } from '@/shared/navigation/activeRoute';
 
 interface MenuLink {
   label: string;
@@ -40,7 +41,7 @@ const { t, locale } = useI18n();
 const { isDark, toggleTheme } = useTheme();
 
 const panel = ref<HTMLElement | null>(null);
-const { activate, deactivate } = useFocusTrap(panel);
+const { activate, deactivate, isActive } = useFocusTrap(panel);
 let overlayActive = false;
 
 const accountId = computed(() =>
@@ -48,6 +49,7 @@ const accountId = computed(() =>
 );
 const detail = computed(() => accountStore.accountDetail);
 const currentRoute = computed(() => (typeof route.name === 'string' ? route.name : ''));
+const primaryRoute = computed(() => activeNavigationRoute(route));
 const accountInitials = computed(() => {
   const name = detail.value?.display_name?.trim() ?? '';
   return name === ''
@@ -171,7 +173,8 @@ function deactivateOverlay(): void {
 }
 
 function onKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape') {
+  if (event.key === 'Escape' && !event.defaultPrevented && isActive()) {
+    event.preventDefault();
     close();
   }
 }
@@ -270,9 +273,9 @@ onBeforeUnmount(deactivateOverlay);
                   v-for="link in mainLinks"
                   :key="link.routeName"
                   class="mobile-menu__link"
-                  :class="{ 'mobile-menu__link--active': currentRoute === link.routeName }"
+                  :class="{ 'mobile-menu__link--active': primaryRoute === link.routeName }"
                   :to="link.to"
-                  :aria-current="currentRoute === link.routeName ? 'page' : undefined"
+                  :aria-current="primaryRoute === link.routeName ? 'page' : undefined"
                   @click="close"
                 >
                   <span

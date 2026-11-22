@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import AppDropdown from '../fields/AppDropdown.vue';
@@ -14,6 +14,35 @@ function click(selector: string) { document.querySelector<HTMLButtonElement>(sel
 function key(key: string) { document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })); }
 
 describe('shared menus', () => {
+  it('emits a mobile selection after returning from the menu history entry', async () => {
+    vi.stubGlobal('innerWidth', 393);
+    const wrapper = mount(AppDropdown, {
+      attachTo: document.body,
+      props: { id: 'history-unit', label: 'Choice', modelValue: 'one', options },
+      global,
+    });
+    try {
+      const originalState = window.history.state;
+      click('#history-unit');
+      await flush();
+      expect(window.history.state.appMenu).toBe('history-unit-menu');
+      const selectionAtReturn = new Promise((resolve) => {
+        window.addEventListener('popstate', () => resolve(wrapper.emitted('update:modelValue')), {
+          once: true,
+        });
+      });
+
+      click('#history-unit-menu [data-menu-id="two"]');
+
+      expect(await selectionAtReturn).toBeUndefined();
+      expect(window.history.state).toEqual(originalState);
+      expect(wrapper.emitted('update:modelValue')).toEqual([['two']]);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('returns focus to search after its clear button disappears', async () => {
     const wrapper = mount(AppDropdown, { attachTo: document.body, props: { id: 'clear-search-unit', label: 'Choice', modelValue: 'two', options, searchable: true }, global });
     try {

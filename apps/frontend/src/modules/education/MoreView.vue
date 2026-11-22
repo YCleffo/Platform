@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import { coreAccount } from '@/shared/api/core/account';
 import { useTheme } from '@/app/theme';
+import { applyAccountLocale, setLocale } from '@/shared/i18n';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
 import { educationApi } from './api';
@@ -61,9 +62,15 @@ async function savePreferences(): Promise<void> {
     localError.value = t('education.invalid');
     return;
   }
+  const requestedLocale = locale.value;
+  const languageChanged =
+    requestedLocale !==
+    (workspace.header!.locale.toLowerCase().startsWith('ru') ? 'ru-RU' : 'en-US');
   await mutation.run(
-    () => coreAccount.patchPreferences({ locale: locale.value, timezone: timezone.value }),
-    async () => {
+    () => coreAccount.patchPreferences({ locale: requestedLocale, timezone: timezone.value }),
+    async (result) => {
+      applyAccountLocale(result.locale);
+      if (languageChanged) setLocale(requestedLocale === 'ru-RU' ? 'ru' : 'en');
       await workspace.refreshHeader(true);
       saved.value = true;
     },
@@ -76,7 +83,7 @@ async function reconcile(): Promise<void> {
     error.value = null;
     name.value = workspace.header.displayName ?? '';
     avatar.value = workspace.header.avatarFileId;
-    locale.value = workspace.header.locale;
+    locale.value = workspace.header.locale.toLowerCase().startsWith('ru') ? 'ru-RU' : 'en-US';
     timezone.value = workspace.header.timezone;
   }
 }

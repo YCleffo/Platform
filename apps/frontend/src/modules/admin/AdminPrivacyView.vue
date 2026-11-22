@@ -1,20 +1,28 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import { useAdminResourceConfigs } from './adminConfigs';
 import AdminResourceView from './AdminResourceView.vue';
 import WorkflowPanel from './workbench/WorkflowPanel.vue';
 import PrivacyOperatorRequests from './privacy/PrivacyOperatorRequests.vue';
 
 const { t } = useI18n();
+const route = useRoute();
+const router = useRouter();
 const configs = useAdminResourceConfigs();
 const holdsConfig = computed(() => configs.value.legalHolds!);
-const tab = ref<'requests' | 'holds' | 'advanced'>('requests');
 const tabs = computed(() => [
   { key: 'requests' as const, label: t('admin.privacyRequests') },
   { key: 'holds' as const, label: holdsConfig.value.title },
   { key: 'advanced' as const, label: t('admin.advancedPrivacy') },
 ]);
+const tab = computed(
+  () => tabs.value.find(({ key }) => key === route.query.tab)?.key ?? 'requests',
+);
+function chooseTab(key: string): void {
+  if (key !== tab.value) void router.push({ query: { ...route.query, tab: key } });
+}
 </script>
 
 <template>
@@ -28,7 +36,8 @@ const tabs = computed(() => [
         :key="item.key"
         type="button"
         :class="{ 'admin-tabs__tab--active': tab === item.key }"
-        @click="tab = item.key"
+        :aria-current="tab === item.key ? 'page' : undefined"
+        @click="chooseTab(item.key)"
       >
         {{ item.label }}
       </button>

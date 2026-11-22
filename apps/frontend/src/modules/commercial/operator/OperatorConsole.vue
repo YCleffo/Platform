@@ -329,6 +329,7 @@ onBeforeUnmount(() => {
           )"
           :key="item"
           :variant="tab === item ? 'primary' : 'secondary'"
+          :aria-pressed="tab === item"
           @click="tab = item as typeof tab"
         >
           {{ t('operator.' + item) }}

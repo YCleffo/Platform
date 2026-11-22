@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { launchBrowser } from './e2e-support.mjs';
@@ -5,7 +6,79 @@ import { launchBrowser } from './e2e-support.mjs';
 const base = process.env.BASE_URL ?? 'http://127.0.0.1:5173';
 const browser = await launchBrowser();
 const results = [];
+const settingsRangeChecks = [];
+const settingsVariants = [
+  { width: 320, height: 740, locale: 'ru', theme: 'light' },
+  { width: 393, height: 852, locale: 'en', theme: 'dark' },
+  { width: 844, height: 390, locale: 'ru', theme: 'dark' },
+  { width: 1440, height: 900, locale: 'en', theme: 'light' },
+];
+const rangeNames = {
+  en: [
+    ['Font size', 'Decrease Font size', 'Increase Font size'],
+    ['Animation speed', 'Decrease Animation speed', 'Increase Animation speed'],
+    ['Theme transition', 'Decrease Theme transition', 'Increase Theme transition'],
+  ],
+  ru: [
+    ['Размер шрифта', 'Уменьшить: Размер шрифта', 'Увеличить: Размер шрифта'],
+    ['Скорость анимаций', 'Уменьшить: Скорость анимаций', 'Увеличить: Скорость анимаций'],
+    ['Смена темы', 'Уменьшить: Смена темы', 'Увеличить: Смена темы'],
+  ],
+};
 mkdirSync('screenshots', { recursive: true });
+
+async function verifySettingsRanges() {
+  for (const variant of settingsVariants) {
+    const { width, height, locale, theme } = variant;
+    const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
+    try {
+      await context.addInitScript(({ locale, theme }) => {
+        localStorage.setItem('platform.locale', locale);
+        localStorage.setItem('platform.theme', theme);
+      }, variant);
+      const page = await context.newPage();
+      await page.goto(base + '/settings');
+      const [fontSize] = rangeNames[locale];
+      const fontRange = page.getByRole('group', { name: fontSize[0], exact: true });
+      await fontRange.waitFor();
+      for (const [rangeName, decrease, increase] of rangeNames[locale]) {
+        const range = page.getByRole('group', { name: rangeName, exact: true });
+        assert.equal(await range.getByRole('slider', { name: rangeName, exact: true }).count(), 1);
+        assert.equal((await range.getByRole('button', { name: decrease, exact: true }).innerText()).trim(), '−');
+        assert.equal((await range.getByRole('button', { name: increase, exact: true }).innerText()).trim(), '+');
+      }
+      const contrast = await fontRange.evaluate((range) => {
+        function luminance(color) {
+          const rgb = color.match(/[\d.]+/g).map((value) => Number(value) / 255);
+          const weights = [0.2126, 0.7152, 0.0722];
+          return weights.reduce((sum, weight, index) => {
+            const channel = rgb[index];
+            const linear = channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+            return sum + weight * linear;
+          }, 0);
+        }
+        function ratio(color, background) {
+          const first = luminance(color);
+          const second = luminance(background);
+          return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+        }
+        const button = getComputedStyle(range.querySelector('.app-range__step'));
+        const rail = getComputedStyle(range.querySelector('.app-range__rail'));
+        const card = getComputedStyle(range.closest('.app-card'));
+        return {
+          stepSymbol: ratio(button.color, button.backgroundColor),
+          rail: ratio(rail.backgroundColor, card.backgroundColor),
+        };
+      });
+      assert.ok(contrast.stepSymbol >= 4.5, `${theme} ${width}px step symbol contrast ${contrast.stepSymbol}`);
+      assert.ok(contrast.rail >= 3, `${theme} ${width}px range rail contrast ${contrast.rail}`);
+      settingsRangeChecks.push({ ...variant, names: rangeNames[locale], contrast });
+    } finally {
+      await context.close();
+    }
+  }
+}
+
 async function scan(page, label) {
   const invalidReferences = await page.locator('[aria-controls], [aria-labelledby], [aria-describedby], [aria-owns]').evaluateAll(elements => elements.flatMap(element =>
     ['aria-controls', 'aria-labelledby', 'aria-describedby', 'aria-owns'].flatMap(attribute => (element.getAttribute(attribute)?.split(/\s+/) ?? []).filter(id => id && !document.getElementById(id)).map(id => `${attribute}: ${id}`))));
@@ -15,6 +88,7 @@ async function scan(page, label) {
     nodes: item.nodes.map(node => ({ target: node.target, summary: node.failureSummary })) })), incomplete: result.incomplete.map(item => ({ id: item.id, count: item.nodes.length })) });
 }
 try {
+  await verifySettingsRanges();
   for (const theme of ['light', 'dark']) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     await context.addInitScript(theme => { localStorage.setItem('platform.locale', 'en'); localStorage.setItem('platform.theme', theme); }, theme);
@@ -55,8 +129,8 @@ try {
 
     await context.close();
   }
-  writeFileSync('screenshots/accessibility.json', JSON.stringify({ engine: 'axe-core 4.14', tags: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'], results }, null, 2));
+  writeFileSync('screenshots/accessibility.json', JSON.stringify({ engine: 'axe-core 4.14', tags: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'], results, settingsRangeChecks }, null, 2));
   const bad = results.filter(result => result.violations.length);
   if (bad.length) { console.error(JSON.stringify(bad, null, 2)); throw new Error(`Accessibility violations in ${bad.length} states`); }
-  console.log(`ACCESSIBILITY CHECKS PASSED: ${results.length} states, zero automated A/AA violations; manual review remains necessary.`);
+  console.log(`ACCESSIBILITY CHECKS PASSED: ${results.length} axe states and ${settingsRangeChecks.length} Settings range name/contrast cases. Manual screen-reader review remains open.`);
 } finally { await browser.close(); }

@@ -7,6 +7,7 @@ import { request as playwrightRequest } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
 import { evaluateCoreMutationGate } from './core-e2e-guard.mjs';
 import { launchBrowser, selectDropdown, stableScreenshot } from './e2e-support.mjs';
+import { captureAuthenticated, observeAuthenticated } from './frontend09-authenticated-evidence.mjs';
 
 const env = process.env;
 if (process.argv.includes('--check-guard')) {
@@ -154,6 +155,11 @@ function wall(instant, zone) {
   );
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
+function localNoon(date, zone) {
+  const utcNoon = Date.parse(`${date}T12:00:00Z`);
+  const wallAtUtcNoon = Date.parse(`${wall(new Date(utcNoon), zone)}:00Z`);
+  return new Date(utcNoon + (utcNoon - wallAtUtcNoon));
+}
 async function eventually(action, message) {
   for (let attempt = 0; attempt < 30; attempt++) {
     if (await action()) return;
@@ -161,31 +167,55 @@ async function eventually(action, message) {
   }
   throw new Error(message);
 }
+function workspaceLink(page, path) {
+  return page.locator(`.edu-sidebar__nav:visible a[href="${path}"], .edu-navigation:visible a[href="${path}"]`);
+}
 async function today(page) {
-  await page.locator('.edu-navigation a[href="/today"]').click();
+  await workspaceLink(page, '/today').click();
   await page.locator('.edu-quick').waitFor();
 }
-async function inspect(page, label) {
+async function openCalendarLesson(page, date, id) {
+  await workspaceLink(page, '/calendar').click();
+  await page.locator('#education-calendar-date').fill(date);
+  await page.locator(`a[href="/lessons/${id}"]`).click();
+  await page.waitForURL((url) => url.pathname === `/lessons/${id}`);
+}
+async function inspect(page, label, expectedSection = '/today') {
   await page.evaluate(() => document.fonts.ready);
   assert.equal(
     await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),
     false,
     label + ': horizontal overflow',
   );
-  assert.equal(await page.locator('.edu-navigation__link').count(), 5);
-  const height = (await page.locator('.edu-navigation').boundingBox()).height;
-  assert.ok(Math.abs(height - 72) < 1, label + ': navigation height ' + height);
-  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  const desktop = page.viewportSize().width >= 768;
+  const navigation = page.locator(desktop ? '.edu-sidebar__nav' : '.edu-navigation');
+  const duplicate = page.locator(desktop ? '.edu-navigation' : '.edu-sidebar__nav');
+  assert.equal(await navigation.isVisible(), true, label + ': expected navigation');
+  assert.equal(await duplicate.isVisible(), false, label + ': duplicate navigation');
+  const active = navigation.locator('[aria-current="page"]');
+  await navigation.locator(`[aria-current="page"][href="${expectedSection}"]`).waitFor();
+  assert.equal(await active.count(), 1, label + ': active navigation');
+  assert.equal(await active.getAttribute('href'), expectedSection);
+  if (!desktop) {
+    assert.equal(await navigation.locator('a').count(), 5);
+    const { height } = await navigation.boundingBox();
+    assert.ok(Math.abs(height - 72) < 1, label + ': navigation height ' + height);
+  }
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
   assert.deepEqual(
     axe.violations.map((v) => ({ id: v.id, targets: v.nodes.map((n) => n.target) })),
     [],
     label + ': axe',
   );
   await stableScreenshot(page, `${artifact}/${label}.png`);
+  const screen = label.startsWith('lesson-edit') ? 'lesson-edit'
+    : { '/today': 'today', '/people': 'group', '/calendar': 'lesson' }[expectedSection];
+  if (screen) await captureAuthenticated(page, { suite: 'education-teacher', screen });
 }
 try {
   main = await session(seeded.accounts.teacher);
   const { page, api } = main;
+  await observeAuthenticated(page);
   await page.getByText('На этот день ничего не запланировано', { exact: true }).waitFor();
   assert.equal(await page.locator('.edu-quick__action').count(), 6);
   assert.equal(await page.locator('.edu-attention').count(), 0);
@@ -225,7 +255,7 @@ try {
   await page.waitForURL((url) => url.pathname === '/people' || url.pathname.startsWith('/groups/'));
   assert.equal((await api('/groups')).items.find((item) => item.id === group.id).studentCount, 12);
   const roster = (await api('/students')).items;
-  await page.locator('.edu-navigation a[href="/people"]').click();
+  await workspaceLink(page, '/people').click();
   await page.getByRole('link', { name: 'Группы', exact: true }).click();
   await page.getByRole('link', { name: 'Открыть группу', exact: true }).click();
   await page.waitForURL((url) => url.pathname === `/groups/${group.id}`);
@@ -239,7 +269,7 @@ try {
       (await api('/groups')).items.find((item) => item.id === group.id)?.name === 'Группа ВС 12:00',
     'group rename was not persisted',
   );
-  await inspect(page, 'group-roster-ru-light');
+  await inspect(page, 'group-roster-ru-light', '/people');
   report(
     'group roster view and rename persist real scoped records; 12 Core roster members remain unique',
   );
@@ -335,7 +365,7 @@ try {
 
   await page.getByRole('link', { name: 'Открыть занятие', exact: true }).click();
   await page.getByRole('link', { name: 'Редактировать занятие', exact: true }).click();
-  await inspect(page, 'lesson-edit-ru-light');
+  await inspect(page, 'lesson-edit-ru-light', '/calendar');
   const rescheduledStart = new Date(Date.parse(header.now));
   await page.locator('#education-edit-starts-at').fill(wall(rescheduledStart, header.timezone));
   await page.locator('#education-edit-starts-at').press('Tab');
@@ -351,11 +381,7 @@ try {
   assert.equal(moved.location, 'Каб. 2');
   assert.equal(moved.curriculumLessonId, secondTopic.id);
   assert.ok(Date.parse(moved.startsAt) <= Date.parse(header.now));
-  await page.locator('.edu-navigation a[href="/calendar"]').click();
-  await page
-    .getByRole('link', { name: /Python \+ Ai помощник/ })
-    .first()
-    .click();
+  await openCalendarLesson(page, header.date, lessonId);
   await page.getByRole('link', { name: 'Список', exact: true }).click();
   await selectDropdown(page, `education-attendance-${roster[0].id}`, 'present');
   await eventually(
@@ -380,15 +406,11 @@ try {
   const history = await api(`/lessons/${lessonId}/participants`);
   assert.equal(history.items.find((item) => item.id === roster[0].id)?.status, 'present');
   assert.equal((await api(`/lessons/${lessonId}/materials`)).items[0].name, 'lesson-material.txt');
-  await page.locator('.edu-navigation a[href="/calendar"]').click();
-  await page
-    .getByRole('link', { name: /Python \+ Ai помощник/ })
-    .first()
-    .click();
+  await openCalendarLesson(page, header.date, lessonId);
   await page.getByText('Завершено', { exact: true }).waitFor();
   await page.getByRole('link', { name: 'Материалы', exact: true }).click();
   await page.getByText('lesson-material.txt', { exact: true }).waitFor();
-  await inspect(page, 'lesson-history-ru-light');
+  await inspect(page, 'lesson-history-ru-light', '/calendar');
   assert.equal((await api(`/lessons/${lessonId}`)).title, 'Python + Ai помощник');
   report(
     'lesson rescheduled through the edit form, updated calendar opened, attendance persisted, completion kept materials and survived reload',
@@ -400,10 +422,11 @@ try {
   await today(page);
   await page.locator('[data-action="uploadMaterials"]').click();
   await page.locator('#education-material-file').waitFor();
-  await page.locator('.edu-navigation a[href="/calendar"]').click();
+  await workspaceLink(page, '/calendar').click();
   await page.getByRole('link', { name: 'Добавить событие', exact: true }).click();
   await page.locator('#education-create-title').fill('Созвон с родителями');
-  const meetingStart = new Date(Date.parse(header.now) + 30 * 60000);
+  // Keep timeline fixtures on the selected civil date, including runs near midnight.
+  const meetingStart = localNoon(header.date, header.timezone);
   const meetingEnd = new Date(meetingStart.getTime() + 30 * 60000);
   await page.locator('#education-starts-at').fill(wall(meetingStart, header.timezone));
   await page.locator('#education-starts-at').press('Tab');
@@ -422,7 +445,7 @@ try {
       location: 'День рождения',
     },
   });
-  const secondStart = new Date(Date.parse(header.now) + 10 * 60000);
+  const secondStart = new Date(meetingStart.getTime() - 20 * 60000);
   const secondLesson = await api('/lessons', {
     method: 'POST',
     status: 201,
@@ -435,8 +458,10 @@ try {
     },
   });
   const yesterdayLessons = [];
+  const yesterday = wall(new Date(meetingStart.getTime() - 86400000), header.timezone).slice(0, 10);
+  const yesterdayNoon = localNoon(yesterday, header.timezone).getTime();
   for (let index = 0; index < 2; index++) {
-    const at = new Date(Date.parse(header.now) - 86400000 + index * 3600000);
+    const at = new Date(yesterdayNoon + index * 3600000);
     const lesson = await api('/lessons', {
       method: 'POST',
       status: 201,
@@ -468,7 +493,7 @@ try {
 
   await api(`/lessons/${secondLesson.id}/cancel`, { method: 'POST' });
   for (const id of yesterdayLessons) await api(`/lessons/${id}/complete`, { method: 'POST' });
-  await page.locator('.edu-navigation a[href="/people"]').click();
+  await workspaceLink(page, '/people').click();
   await page.getByRole('link', { name: 'Группы', exact: true }).click();
   await page.getByRole('link', { name: 'Открыть группу', exact: true }).click();
   await page.waitForURL((url) => url.pathname === `/groups/${group.id}`);
@@ -489,11 +514,7 @@ try {
     'present',
   );
   const restarted = await session(seeded.accounts.teacher);
-  await restarted.page.locator('.edu-navigation a[href="/calendar"]').click();
-  await restarted.page
-    .getByRole('link', { name: /Python \+ Ai помощник/ })
-    .first()
-    .click();
+  await openCalendarLesson(restarted.page, header.date, lessonId);
   await restarted.page.getByText('Завершено', { exact: true }).waitFor();
   assert.equal((await restarted.api(`/lessons/${lessonId}`)).status, 'completed');
   assert.equal(
@@ -516,7 +537,7 @@ try {
   const colleague = await session(seeded.accounts.colleague);
   await colleague.page.locator('.edu-greeting').waitFor();
   assert.equal((await colleague.api('/today/header')).unreadCount, 1);
-  await colleague.page.locator('.edu-navigation a[href="/messages"]').click();
+  await workspaceLink(colleague.page, '/messages').click();
   await colleague.page.locator(`.edu-list a[href="/messages/${threadId}"]`).click();
   await colleague.page.getByText('Встречаемся после занятия.', { exact: true }).waitFor();
   await colleague.page.locator('#education-reply').fill('Да, спасибо.');
@@ -544,7 +565,7 @@ try {
     'two real Core users exchange messages; own inbox badge, organization/member isolation and no implicit teacher role',
   );
 
-  await page.locator('.edu-navigation a[href="/more"]').click();
+  await workspaceLink(page, '/more').click();
   const avatarData = readFileSync('design/мобайл.svg', 'utf8').match(
     /data:image\/png;base64,([A-Za-z0-9+/=\s]+)/,
   )?.[1];
@@ -561,7 +582,7 @@ try {
   report('profile alias and actual private avatar upload persist through the real API');
   await today(page);
   for (const language of ['ru-RU', 'en-US']) {
-    await page.locator('.edu-navigation a[href="/more"]').click();
+    await workspaceLink(page, '/more').click();
     await selectDropdown(page, 'education-language', language);
     await page.locator('form').nth(1).locator('button[type=submit]').click();
     await page
@@ -585,26 +606,22 @@ try {
       }
       if (language === 'en-US' && theme === 'dark') {
         await page.setViewportSize({ width: 393, height: 852 });
-        await page.locator('.edu-navigation a[href="/people"]').click();
+        await workspaceLink(page, '/people').click();
         await page.getByRole('link', { name: 'Groups', exact: true }).click();
         await page.getByRole('link', { name: 'Open group', exact: true }).click();
         await page.locator('[data-student-id]').first().waitFor();
-        await inspect(page, 'en-dark-group-393');
+        await inspect(page, 'en-dark-group-393', '/people');
         await page.setViewportSize({ width: 1440, height: 1000 });
-        await inspect(page, 'en-dark-group-1440');
-        await page.locator('.edu-navigation a[href="/calendar"]').click();
-        await page
-          .getByRole('link', { name: /Python \+ Ai помощник/ })
-          .first()
-          .click();
+        await inspect(page, 'en-dark-group-1440', '/people');
+        await openCalendarLesson(page, header.date, lessonId);
         await page.getByText('Completed', { exact: true }).waitFor();
         await page.setViewportSize({ width: 393, height: 852 });
-        await inspect(page, 'en-dark-lesson-393');
+        await inspect(page, 'en-dark-lesson-393', '/calendar');
         await page.setViewportSize({ width: 1440, height: 1000 });
-        await inspect(page, 'en-dark-lesson-1440');
+        await inspect(page, 'en-dark-lesson-1440', '/calendar');
         await today(page);
       }
-      await page.locator('.edu-navigation a[href="/more"]').click();
+      await workspaceLink(page, '/more').click();
     }
   }
   await main.storage();

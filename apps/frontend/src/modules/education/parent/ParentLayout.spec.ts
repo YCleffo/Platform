@@ -77,6 +77,7 @@ beforeEach(() => {
   state.route = reactive({
     path: '/parent/homework',
     fullPath: '/parent/homework',
+    meta: { parentSection: 'homework' },
     query: { child: second.id, organization: second.organizationId },
   });
   vi.mocked(parentApi.context).mockResolvedValue(context);
@@ -96,10 +97,26 @@ describe('parent child navigation', () => {
     );
     expect(wrapper.find('router-view-stub').exists()).toBe(true);
   });
+  it('keeps the newer authorized child route when an older context request completes', async () => {
+    const route = state.route as { query: { child: string; organization: string } };
+    route.query = { child: first.id, organization: first.organizationId };
+    let resolveContext!: (value: ParentContext) => void;
+    const pending = new Promise<ParentContext>((resolve) => { resolveContext = resolve; });
+    vi.mocked(parentApi.context).mockReturnValueOnce(pending);
+    const wrapper = open();
+
+    route.query = { child: second.id, organization: second.organizationId };
+    resolveContext({ ...context, children: [second] });
+    await flushPromises();
+
+    expect(useParentWorkspace().child?.id).toBe(second.id);
+    expect(wrapper.find('router-view-stub').exists()).toBe(true);
+  });
   it('keeps another child hidden when the requested child is inaccessible', async () => {
     state.route = reactive({
       path: '/parent/homework',
       fullPath: '/parent/homework',
+      meta: { parentSection: 'homework' },
       query: { child: 'unlinked-child', organization: second.organizationId },
     });
     const wrapper = open();

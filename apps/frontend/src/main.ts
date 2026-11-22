@@ -2,7 +2,7 @@ import { createApp, watch } from 'vue';
 import { createPinia } from 'pinia';
 import App from './App.vue';
 import { router } from './app/router';
-import { i18n } from './shared/i18n';
+import { i18n, initLocale } from './shared/i18n';
 import { initTheme } from './app/theme';
 import { initAppearance } from './app/appearance';
 import { loadPlatformBranding } from './shared/branding';
@@ -26,8 +26,8 @@ app.use(i18n);
 
 initAppearance();
 initTheme();
+initLocale();
 void loadPlatformBranding().catch(() => undefined);
-document.documentElement.lang = String(i18n.global.locale.value);
 
 setUnauthorizedHandler(() => {
   useAuthStore(pinia).reset();

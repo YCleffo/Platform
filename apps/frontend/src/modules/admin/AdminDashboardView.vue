@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, type RouteLocationRaw } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { cachedAdminGet, peekAdminCache } from './adminCache';
 import { useAdminOperation } from './useAdminOperation';
@@ -126,17 +126,30 @@ async function load(): Promise<void> {
 
 const maxCount = computed(() => Math.max(1, ...Object.values(counts.value)));
 const maxStatus = computed(() => Math.max(1, ...accountStatuses.value.map((item) => item.count)));
-const cards = computed(() => [
-  { key: 'organizations', label: t('admin.organizations'), to: 'admin-organizations' },
-  { key: 'persons', label: t('admin.persons'), to: 'admin-persons' },
-  { key: 'accounts', label: t('admin.accounts'), to: 'admin-accounts' },
-  { key: 'roles', label: t('admin.rbac'), to: 'admin-rbac' },
-  { key: 'modules', label: t('admin.modules'), to: 'admin-modules' },
-  { key: 'flags', label: t('admin.featureFlags'), to: 'admin-settings' },
-  { key: 'privacy', label: t('admin.privacyRequests'), to: 'admin-privacy' },
-  { key: 'legalHolds', label: t('admin.legalHolds'), to: 'admin-privacy' },
-  { key: 'audit', label: t('admin.audit'), to: 'admin-audit' },
-]);
+const cards = computed(() => {
+  const items: Array<{ key: string; label: string; to: RouteLocationRaw }> = [
+    { key: 'organizations', label: t('admin.organizations'), to: { name: 'admin-organizations' } },
+    { key: 'persons', label: t('admin.persons'), to: { name: 'admin-persons' } },
+    { key: 'accounts', label: t('admin.accounts'), to: { name: 'admin-accounts' } },
+    { key: 'roles', label: t('admin.rbac'), to: { name: 'admin-rbac' } },
+    { key: 'modules', label: t('admin.modules'), to: { name: 'admin-modules' } },
+    {
+      key: 'flags',
+      label: t('admin.featureFlags'),
+      to: { name: 'admin-settings', query: { tab: 'flags' } },
+    },
+    { key: 'privacy', label: t('admin.privacyRequests'), to: { name: 'admin-privacy' } },
+    {
+      key: 'legalHolds',
+      label: t('admin.legalHolds'),
+      to: { name: 'admin-privacy', query: { tab: 'holds' } },
+    },
+    { key: 'audit', label: t('admin.audit'), to: { name: 'admin-audit' } },
+  ];
+  return items.filter(({ key }) =>
+    resources.some((resource) => resource.key === key && auth.can(resource.permission)),
+  );
+});
 
 onMounted(load);
 </script>
@@ -151,12 +164,12 @@ onMounted(load);
       <p class="admin-dashboard__roles">{{ auth.roles.join(' · ') }}</p>
     </header>
 
-    <template>
+    <template v-if="cards.length">
       <div class="admin-dashboard__cards">
         <RouterLink
           v-for="card in cards"
           :key="card.key"
-          :to="{ name: card.to }"
+          :to="card.to"
           class="admin-dashboard__card"
         >
           <span>{{ card.label }}</span>
@@ -182,7 +195,7 @@ onMounted(load);
             <span class="admin-dashboard__bar-value">{{ counts[card.key] }}</span>
           </div>
         </AppCard>
-        <AppCard>
+        <AppCard v-if="auth.can('core.accounts.read')">
           <h3>{{ $t('admin.accountsByStatus') }}</h3>
           <p
             v-if="accountStatuses.length === 0"

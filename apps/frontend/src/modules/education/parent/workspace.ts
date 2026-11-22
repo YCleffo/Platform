@@ -1,7 +1,7 @@
 import { computed, ref, shallowRef, watch } from 'vue';
 import { defineStore } from 'pinia';
 import { coreAdminSession, coreAdminSessionEpoch } from '@/core/admin/session';
-import { setLocale } from '@/shared/i18n';
+import { applyContextLocale } from '@/shared/i18n';
 import { parentApi, type ParentChild, type ParentContext } from './api';
 
 export const parentChildKey = (child: Pick<ParentChild, 'organizationId' | 'id'>): string =>
@@ -73,13 +73,14 @@ export const useParentWorkspace = defineStore('educationParentWorkspace', () => 
     try {
       const result = await parentApi.context(request.signal);
       if (!current()) return;
-      context.value = result;
       selectedKey.value = result.children.some((item) => parentChildKey(item) === previous)
         ? previous
         : preferredKey ? '' : result.children[0]
           ? parentChildKey(result.children[0])
           : '';
-      setLocale(result.locale.toLowerCase().startsWith('ru') ? 'ru' : 'en');
+      // The layout reconciles the latest URL synchronously when the context arrives.
+      context.value = result;
+      applyContextLocale(result.locale);
     } catch (failure) {
       if (current()) error.value = failure;
     } finally {

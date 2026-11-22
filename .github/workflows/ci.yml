@@ -903,6 +903,8 @@ jobs:
         run: npm run test:e2e:core-privacy-operator
       - name: Verify Core configuration forms and public publication
         working-directory: apps/frontend
+        env:
+          FRONTEND09_AUTH_EVIDENCE: '1'
         run: npm run test:e2e:core-configuration
       - name: Install Education and verify its PostgreSQL workflows
         env:
@@ -928,6 +930,7 @@ jobs:
       - name: Verify Education through real Core identities, files and browser
         working-directory: apps/frontend
         env:
+          FRONTEND09_AUTH_EVIDENCE: '1'
           VITE_EDUCATION_ENABLED: "1"
           VITE_CORE_PROXY_TARGET: http://127.0.0.1:8081
           VITE_COMMERCIAL_PROXY_TARGET: http://127.0.0.1:1
@@ -964,6 +967,7 @@ jobs:
           name: core-auth-browser-${{ github.run_id }}
           path: |
             apps/frontend/screenshots/education-real
+            apps/frontend/screenshots/frontend09-final/authenticated
             apps/frontend/screenshots/core-auth-*
             apps/frontend/screenshots/core-security-*
             apps/frontend/screenshots/core-config-*
@@ -1186,6 +1190,8 @@ jobs:
           curl -kfsS https://127.0.0.1:4173/ >/dev/null
       - name: Run browser account workspace flow
         working-directory: apps/frontend
+        env:
+          FRONTEND09_AUTH_EVIDENCE: '1'
         run: node scripts/e2e-account-workspace.mjs
       - name: Reset disposable Commercial fixtures before invitation flow
         run: |
@@ -1231,6 +1237,8 @@ jobs:
           bash ./scripts/ci/control-email-worker-start.sh
       - name: Verify two real operators, MFA, finance and privacy evidence
         working-directory: apps/frontend
+        env:
+          FRONTEND09_AUTH_EVIDENCE: '1'
         run: npm run test:e2e:operators
       - name: Reset isolated fixtures before load without disabling registration limits
         run: |

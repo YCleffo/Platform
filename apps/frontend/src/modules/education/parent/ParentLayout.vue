@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
@@ -14,9 +14,34 @@ const workspace = useParentWorkspace();
 const auth = useAdminAuthStore();
 const route = useRoute();
 const router = useRouter();
-const { t } = useEducationI18n();
+const { t, locale } = useEducationI18n();
 const { isDark, toggleTheme } = useTheme();
 const tabs = ['home', 'schedule', 'diary', 'homework', 'progress', 'notifications'] as const;
+const navigation = ref<HTMLElement | null>(null);
+const activeSection = computed(() => route.meta.parentSection);
+function alignNavigation(): void {
+  const nav = navigation.value;
+  if (!nav || nav.scrollWidth <= nav.clientWidth) return;
+  const current = nav.querySelector('[aria-current="page"]');
+  if (!current) return;
+  const viewport = nav.getBoundingClientRect();
+  const link = current.getBoundingClientRect();
+  if (link.left < viewport.left) nav.scrollLeft += link.left - viewport.left;
+  else if (link.right > viewport.right) nav.scrollLeft += link.right - viewport.right;
+}
+watch([activeSection, locale], alignNavigation, { flush: 'post' });
+watch(
+  navigation,
+  (nav, _, onCleanup) => {
+    if (!nav) return;
+    alignNavigation();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(alignNavigation);
+    observer.observe(nav);
+    onCleanup(() => observer.disconnect());
+  },
+  { flush: 'post' },
+);
 const choices = computed(
   () =>
     workspace.context?.children.map((child) => ({
@@ -105,6 +130,9 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="edu-link"
+          lang="ru"
+          aria-label="RU — Русский"
+          :aria-pressed="locale === 'ru'"
           @click="setLocale('ru')"
         >
           RU
@@ -112,6 +140,9 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="edu-link"
+          lang="en"
+          aria-label="EN — English"
+          :aria-pressed="locale === 'en'"
           @click="setLocale('en')"
         >
           EN
@@ -182,6 +213,7 @@ onBeforeUnmount(() => {
             </span>
           </p>
           <nav
+            ref="navigation"
             class="edu-parent-nav"
             :aria-label="t('education.parentCabinet')"
           >
@@ -192,7 +224,7 @@ onBeforeUnmount(() => {
                 path: `/parent/${tab}`,
                 query: { child: workspace.child.id, organization: workspace.child.organizationId },
               }"
-              :aria-current="route.path === `/parent/${tab}` ? 'page' : undefined"
+              :aria-current="activeSection === tab ? 'page' : undefined"
             >
               {{ t(`education.parent${tab}`) }}
             </RouterLink>

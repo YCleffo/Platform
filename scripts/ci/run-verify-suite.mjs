@@ -30,7 +30,7 @@ const groups = [
   },
   {
     name: 'navigation-workflows-mobile',
-    scripts: ['verify-menus.mjs', 'verify-workflows.mjs'],
+    scripts: ['verify-menus.mjs', 'verify-workflows.mjs', 'verify-frontend09.mjs'],
   },
 ];
 

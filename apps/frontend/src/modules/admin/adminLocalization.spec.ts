@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
-import { mount, type VueWrapper } from '@vue/test-utils';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import en from '@/shared/i18n/messages/en';
@@ -46,7 +46,12 @@ describe('admin locale changes without remounting', () => {
 
   it('updates settings tab titles and actions', async () => {
     const i18n = translations();
-    const wrapper = mount(AdminSettingsView, { global: { plugins: [i18n] } });
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/settings', component: AdminSettingsView }],
+    });
+    await router.push('/settings');
+    const wrapper = mount(AdminSettingsView, { global: { plugins: [i18n, router] } });
     wrappers.push(wrapper);
     expect(wrapper.text()).toContain(en.configuration.addSetting);
     i18n.global.locale.value = 'ru';
@@ -57,9 +62,16 @@ describe('admin locale changes without remounting', () => {
 
   it('updates privacy tabs and advanced operation labels', async () => {
     const i18n = translations();
-    const wrapper = mount(AdminPrivacyView, { global: { plugins: [i18n], stubs: { PrivacyOperatorRequests: true } } });
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/privacy', component: AdminPrivacyView }],
+    });
+    await router.push('/privacy');
+    const wrapper = mount(AdminPrivacyView, { global: { plugins: [i18n, router], stubs: { PrivacyOperatorRequests: true } } });
     wrappers.push(wrapper);
     await wrapper.get('nav').findAll('button')[2]!.trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.query.tab).toBe('advanced');
     expect(wrapper.text()).toContain(en.admin.getErasureCase);
     i18n.global.locale.value = 'ru';
     await nextTick();

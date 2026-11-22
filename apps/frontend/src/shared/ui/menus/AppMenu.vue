@@ -61,6 +61,7 @@ let keyboardNavigation = false;
 let focusedItemId = '';
 let disposed = false;
 let historyPushed = false;
+let pendingSelection: AbortController | undefined;
 let touchStartX = 0;
 let touchStartY = 0;
 let touchDepth = 0;
@@ -88,11 +89,30 @@ function row(id: string): HTMLButtonElement | undefined {
     .flatMap(buttons)
     .find((button) => button.dataset.menuId === id);
 }
-function close(restore = true): void {
-  if (historyPushed) {
-    historyPushed = false;
-    window.history.back();
+function releaseHistory(afterRelease?: () => void): void {
+  const ownsEntry = historyPushed && window.history.state?.appMenu === menuId.value;
+  historyPushed = false;
+  if (!ownsEntry) {
+    afterRelease?.();
+    return;
   }
+  if (afterRelease) {
+    // Let the router process the overlay's Back before a selection can navigate.
+    const selection = new AbortController();
+    pendingSelection = selection;
+    window.addEventListener(
+      'popstate',
+      () => {
+        pendingSelection = undefined;
+        afterRelease();
+      },
+      { once: true, signal: selection.signal },
+    );
+  }
+  window.history.back();
+}
+function close(restore = true, afterRelease?: () => void): void {
+  releaseHistory(afterRelease);
   open.value = false;
   if (restore) (props.anchor && props.anchor.tabIndex >= 0 ? props.anchor : previousFocus)?.focus();
 }
@@ -145,8 +165,8 @@ function activate(item: MenuItem, depth: number): void {
     void enter(item, depth, true);
     return;
   }
-  emit('select', item);
-  if (props.closeOnSelect) close();
+  if (props.closeOnSelect) close(true, () => emit('select', item));
+  else emit('select', item);
 }
 function hover(item: MenuItem, depth: number, event: PointerEvent): void {
   // Layout changes can dispatch pointerenter under a stationary cursor. Keep
@@ -338,10 +358,7 @@ watch(
   async (value) => {
     cleanup();
     if (!value) {
-      if (historyPushed) {
-        historyPushed = false;
-        window.history.back();
-      }
+      releaseHistory();
       return;
     }
     previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -420,6 +437,7 @@ watch(
 );
 onBeforeUnmount(() => {
   disposed = true;
+  pendingSelection?.abort();
   cleanup();
 });
 </script>

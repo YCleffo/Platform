@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, useId, watch } from 'vue';
 import {
   Bell,
   Calendar,
@@ -24,6 +24,7 @@ const workspace = useEducationWorkspace();
 const { t, locale, students } = useEducationI18n();
 const selected = ref(workspace.header!.date);
 const week = computed(() => calendarWeek(selected.value));
+const weekId = useId();
 watch(
   () => workspace.header?.date,
   (date, before) => {
@@ -101,19 +102,28 @@ const dateLine = computed(() =>
       role="group"
       :aria-label="t('education.week')"
     >
-      <button
+      <template
         v-for="day in week"
         :key="day"
-        type="button"
-        class="edu-week__day"
-        :class="{ 'edu-week__day--selected': selected === day }"
-        :aria-pressed="selected === day"
-        :aria-label="formatCalendarDate(day, locale, { dateStyle: 'full' })"
-        @click="selected = day"
       >
-        <span>{{ formatCalendarDate(day, locale, { weekday: 'short' }) }}</span>
-        <strong>{{ Number(day.slice(8)) }}</strong>
-      </button>
+        <button
+          type="button"
+          class="edu-week__day"
+          :class="{ 'edu-week__day--selected': selected === day }"
+          :aria-pressed="selected === day"
+          :aria-describedby="`${weekId}-${day}`"
+          @click="selected = day"
+        >
+          <span>{{ formatCalendarDate(day, locale, { weekday: 'short' }) }}</span>
+          <strong>{{ Number(day.slice(8)) }}</strong>
+        </button>
+        <span
+          :id="`${weekId}-${day}`"
+          hidden
+        >
+          {{ formatCalendarDate(day, locale, { dateStyle: 'full' }) }}
+        </span>
+      </template>
       <RouterLink
         :to="`/calendar?date=${selected}`"
         class="edu-icon-button edu-week__calendar"

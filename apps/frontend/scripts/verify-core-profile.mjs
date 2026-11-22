@@ -54,8 +54,46 @@ async function inspect(label) {
 async function login() {
   await page.goto(base + '/admin/login?redirect=/admin/profile'); await page.locator('#admin-identifier').fill('scaffold@example.test'); await page.locator('#admin-password').fill('Synthetic-scaffold-password'); await page.locator('form button[type=submit]').click(); await page.waitForURL(url => url.pathname === '/admin/profile'); await page.locator('#core-profile-email').waitFor();
 }
+
+async function inspectAdminDrawer() {
+  await page.setViewportSize({ width: 393, height: 852 });
+  const trigger = page.getByRole('button', { name: 'Open menu', exact: true });
+  const drawer = page.locator('.admin__drawer');
+  const close = drawer.getByRole('button', { name: 'Close', exact: true });
+  const current = drawer.locator('a[href="/admin/profile"]');
+  const last = drawer.getByRole('link').last();
+
+  await trigger.press('Enter');
+  await drawer.waitFor();
+  assert.equal(await close.evaluate((node) => node === document.activeElement), true, 'focus enters the admin drawer');
+  assert.equal(await trigger.getAttribute('aria-expanded'), 'true');
+  assert.equal(await current.getAttribute('aria-current'), 'page');
+  await page.keyboard.press('Shift+Tab');
+  assert.equal(await last.evaluate((node) => node === document.activeElement), true, 'reverse Tab wraps inside the drawer');
+  await page.keyboard.press('Tab');
+  assert.equal(await close.evaluate((node) => node === document.activeElement), true, 'Tab wraps inside the drawer');
+  await page.keyboard.press('Escape');
+  await drawer.waitFor({ state: 'hidden' });
+  assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+  assert.equal(await trigger.evaluate((node) => node === document.activeElement), true, 'Escape returns focus to the trigger');
+
+  await trigger.click();
+  await current.click();
+  await drawer.waitFor({ state: 'hidden' });
+  await page.waitForURL((url) => url.pathname === '/admin/profile');
+
+  const previousOverflow = await page.evaluate(() => document.body.style.overflow);
+  await trigger.click();
+  await drawer.waitFor();
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  await page.waitForFunction((expected) => document.body.style.overflow === expected, previousOverflow);
+  assert.equal(await drawer.count(), 0, 'desktop removes the mobile drawer and releases scroll');
+  states.push('Mobile Core drawer traps Tab, marks the active link, restores focus, closes on current link and releases scroll on desktop');
+}
+
 try {
   await login(); await inspect('preferences loaded without platform administration permissions');
+  await inspectAdminDrawer();
   const browserAppearance = await page.evaluate(() => localStorage.getItem('platform.appearance.v1'));
   await selectDropdown(page, 'core-profile-locale', 'ru-RU'); await selectDropdown(page, 'core-profile-timezone', 'Asia/Yekaterinburg');
   await page.getByRole('button', { name: 'Save language and time zone', exact: true }).click(); await page.getByText('Changes saved.', { exact: true }).waitFor();

@@ -10,13 +10,14 @@
     <title>Platform</title>
     <script>
       (function () {
+        var theme = 'system';
         try {
-          var t = localStorage.getItem('platform.theme');
-          var dark = t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-        } catch (e) {
-          document.documentElement.dataset.theme = 'light';
-        }
+          var stored = localStorage.getItem('platform.theme');
+          if (stored === 'dark' || stored === 'light') theme = stored;
+        } catch (e) { /* Use the system preference when storage is unavailable. */ }
+        var dark = theme === 'dark' ||
+          (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
       })();
     </script>
   </head>

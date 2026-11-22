@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useEducationI18n } from '../i18n';
 import { coreAdminSession, coreAdminSessionEpoch } from '@/core/admin/session';
-import { setLocale } from '@/shared/i18n';
+import { applyContextLocale } from '@/shared/i18n';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
 import type { EducationContext } from '../api';
 import { educationApi } from '../api';
@@ -11,14 +12,22 @@ import { studentSession } from './session';
 import EducationState from '../EducationState.vue';
 import AppBottomNav from '@/shared/ui/navigation/AppBottomNav.vue';
 import { Home, Calendar, LayoutGrid, CircleCheck, Backpack } from '@/shared/ui/icons';
+import { activeNavigationRoute } from '@/shared/navigation/activeRoute';
 
 const { t } = useEducationI18n();
+const route = useRoute();
+const activeSection = computed(() => activeNavigationRoute(route, 'studentNavigation'));
 const navigation = computed(() => [
   { label: t('education.studentHome'), icon: Home, routeName: 'education-student-home' },
   { label: t('education.myDiary'), icon: Calendar, routeName: 'education-student-diary' },
-  { label: t('education.homework'), icon: LayoutGrid, routeName: 'education-student-homework' },
+  { label: t('education.myHomework'), icon: LayoutGrid, routeName: 'education-student-homework' },
   { label: t('education.myProgress'), icon: CircleCheck, routeName: 'education-student-progress' },
   { label: t('education.documents'), icon: Backpack, routeName: 'education-student-documents' },
+]);
+const shortcuts = computed(() => [
+  { label: t('education.parentschedule'), routeName: 'education-student-schedule' },
+  { label: t('education.activities'), routeName: 'education-student-activities' },
+  { label: t('education.achievements'), routeName: 'education-student-achievements' },
 ]);
 const data = shallowRef<EducationContext | null>(null),
   loading = ref(false),
@@ -38,7 +47,7 @@ async function refresh(): Promise<void> {
     const context = await educationApi.context(request.signal);
     if (!request.signal.aborted && epoch === coreAdminSession.epoch()) {
       data.value = context;
-      setLocale(context.locale.toLowerCase().startsWith('ru') ? 'ru' : 'en');
+      applyContextLocale(context.locale);
     }
   } catch (failure) {
     if (!request.signal.aborted && epoch === coreAdminSession.epoch()) error.value = failure;
@@ -96,6 +105,7 @@ watch(
         <RouterLink
           to="/student/notifications"
           class="edu-link"
+          :aria-current="activeSection === 'education-student-notifications' ? 'page' : undefined"
         >
           {{ t('education.notifications') }}
         </RouterLink>
@@ -123,22 +133,26 @@ watch(
         :aria-label="t('education.studentCabinet')"
       >
         <RouterLink
-          to="/student/schedule"
+          v-for="item in shortcuts"
+          :key="item.routeName"
+          :to="{ name: item.routeName }"
           class="edu-button"
+          :aria-current="activeSection === item.routeName ? 'page' : undefined"
         >
-          {{ t('education.parentschedule') }}
+          {{ item.label }}
         </RouterLink>
+      </nav>
+      <nav
+        class="edu-student-tabs edu-pills"
+        :aria-label="t('education.studentCabinet')"
+      >
         <RouterLink
-          to="/student/activities"
-          class="edu-button"
+          v-for="item in [...navigation, ...shortcuts]"
+          :key="item.routeName"
+          :to="{ name: item.routeName }"
+          :aria-current="activeSection === item.routeName ? 'page' : undefined"
         >
-          {{ t('education.activities') }}
-        </RouterLink>
-        <RouterLink
-          to="/student/achievements"
-          class="edu-button"
-        >
-          {{ t('education.achievements') }}
+          {{ item.label }}
         </RouterLink>
       </nav>
       <RouterView :key="current.id" />
@@ -154,21 +168,10 @@ watch(
         </RouterLink>
       </p>
     </template>
-    <nav
-      v-if="current"
-      class="edu-student-tabs edu-pills"
-    >
-      <RouterLink to="/student/home">{{ t('education.studentHome') }}</RouterLink>
-      <RouterLink to="/student/diary">{{ t('education.myDiary') }}</RouterLink>
-      <RouterLink to="/student/homework">{{ t('education.myHomework') }}</RouterLink>
-      <RouterLink to="/student/activities">{{ t('education.activities') }}</RouterLink>
-      <RouterLink to="/student/progress">{{ t('education.myProgress') }}</RouterLink>
-      <RouterLink to="/student/achievements">{{ t('education.achievements') }}</RouterLink>
-      <RouterLink to="/student/documents">{{ t('education.documents') }}</RouterLink>
-    </nav>
     <AppBottomNav
       v-if="current"
       :items="navigation"
+      :active-route-name="activeSection"
     />
   </div>
 </template>
@@ -179,8 +182,12 @@ watch(
 .edu-student-shortcuts {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0;
+  gap: var(--gap-s);
+  margin: var(--space-12) 0;
+}
+.edu-student-shortcuts [aria-current='page'] {
+  color: var(--accent-text);
+  background: var(--accent-soft);
 }
 @media (min-width: 768px) {
   .edu-student-shortcuts {
@@ -188,8 +195,9 @@ watch(
   }
   .edu-student-tabs {
     display: flex;
-    margin-top: 24px;
+    margin-block: var(--space-16);
     width: fit-content;
+    max-width: 100%;
   }
 }
 </style>

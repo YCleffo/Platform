@@ -19,23 +19,25 @@
   margin-bottom: 12px;
 }
 .edu-parent-nav {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
-  margin: 22px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  margin: var(--space-16) 0;
+  padding: var(--space-6);
 }
 .edu-parent-nav a {
   display: flex;
   justify-content: center;
   align-items: center;
+  flex: 1 0 auto;
   min-height: 44px;
-  padding: 8px;
+  padding: var(--space-8) var(--space-12);
   border: 1px solid var(--border);
   border-radius: var(--radius-control-m);
   color: var(--text-2);
   text-decoration: none;
   text-align: center;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 .edu-parent-nav a[aria-current='page'] {
   color: var(--accent-text);
@@ -103,7 +105,10 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .edu-parent-nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
   }
   .edu-parent-topbar {
     padding: 16px 18px;
@@ -113,13 +118,5 @@
   .education-parent .edu-main {
     padding-left: 12px;
     padding-right: 12px;
-  }
-  .edu-parent-nav {
-    gap: 4px;
-  }
-  .edu-parent-nav a {
-    font-size: var(--type-body-caption-size);
-    line-height: var(--type-body-caption-line);
-    font-weight: var(--type-body-caption-weight);
   }
 }

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 import { coreAdminSession, coreAdminSessionEpoch } from '@/core/admin/session';
 import { clearEducationCache, invalidateEducationCache, scopeEducationCache } from './cache';
-import { setLocale } from '@/shared/i18n';
+import { applyContextLocale } from '@/shared/i18n';
 import { educationApi, type EducationContext, type Header } from './api';
 
 export const useEducationWorkspace = defineStore('educationWorkspace', () => {
@@ -42,7 +42,7 @@ export const useEducationWorkspace = defineStore('educationWorkspace', () => {
     try {
       const result = await educationApi.header(org, controller.signal);
       if (controller.signal.aborted || version !== revision.value || epoch !== coreAdminSession.epoch()) return;
-      header.value = result; setLocale(result.locale.toLowerCase().startsWith('ru') ? 'ru' : 'en');
+      header.value = result; applyContextLocale(result.locale);
     } catch (caught) { if (!controller.signal.aborted && version === revision.value && epoch === coreAdminSession.epoch()) { headerError.value = caught; } }
   }
   watch(organizationId, () => { void refreshHeader(); }, { flush: 'sync' });
@@ -53,6 +53,7 @@ export const useEducationWorkspace = defineStore('educationWorkspace', () => {
       const result = await educationApi.context(controller.signal);
       if (controller.signal.aborted || epoch !== coreAdminSession.epoch()) return;
       context.value = result;
+      applyContextLocale(result.locale);
       if (result.organizations.some(item => item.id === organizationId.value)) { await refreshHeader(); }
       else if (result.organizations.length === 1) chooseOrganization(result.organizations[0]!.id);
       else organizationId.value = '';

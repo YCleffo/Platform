@@ -1,0 +1,122 @@
+{
+  "baselineSha": "4cf8c6d40ea107f6da1c3265c97a098962b78615",
+  "baselineCi": { "runId": 44988575194, "attempt": 1, "successfulJobs": 16, "totalJobs": 16 },
+  "sourceInventory": { "vueComponents": 188, "componentTestFiles": 107, "browserAndUtilityScripts": 58 },
+  "assessment": "Source inventory with impact classification before remediation. Browser verification of the candidate is recorded in FRONTEND_09_ACCEPTANCE.md.",
+  "dimensions": {
+    "layout": ["layout", "header", "sidebar", "bottom navigation", "tabs", "breadcrumbs"],
+    "components": ["cards", "buttons", "inputs", "menus", "dialogs", "toasts", "tables", "filters"],
+    "style": ["typography", "color", "spacing", "radius", "shadow", "icons"],
+    "interaction": ["motion", "responsive", "accessibility"]
+  },
+  "workspaces": [
+    {
+      "id": "commercial-public",
+      "status": "MAJOR_DRIFT",
+      "layout": "AppLayout desktop header, breadcrumbs and AppBottomNav; Catalog and plan comparison keep their own layout.",
+      "components": "Shared actions, navigation, disclosure and feedback; plan cards and comparison table are domain components.",
+      "style": "Shared color, typography and motion tokens.",
+      "interaction": "Section swipe needed to exclude interactive elements and horizontal content scroll.",
+      "source": ["apps/frontend/src/app/layouts/AppLayout.vue", "apps/frontend/src/modules/commercial/catalog"]
+    },
+    {
+      "id": "commercial-account",
+      "status": "MINOR_DRIFT",
+      "layout": "AccountLayout includes account context tabs and shared breadcrumbs.",
+      "components": "Members, usage, audit and finance use domain tables and filters with shared controls.",
+      "style": "Shared color, control spacing and typography tokens.",
+      "interaction": "Account-switch, permissions, table overflow and keyboard reflow need authenticated browser coverage.",
+      "source": ["apps/frontend/src/modules/commercial/account/AccountLayout.vue", "apps/frontend/src/modules/commercial/billing"]
+    },
+    {
+      "id": "commercial-operator",
+      "status": "NOT_VERIFIED",
+      "layout": "Operator console and separate catalog route within AppLayout.",
+      "components": "Domain queues, filters and action dialogs with shared control and feedback components.",
+      "style": "Shared semantic status and accent tokens with operator-specific density.",
+      "interaction": "Candidate operator contrast, focus and queue reflow need an isolated authenticated browser run.",
+      "source": ["apps/frontend/src/modules/commercial/operator"]
+    },
+    {
+      "id": "core-admin",
+      "status": "MINOR_DRIFT",
+      "layout": "Resizable collapsible sidebar, breadcrumbs and nested sections.",
+      "components": "Shared menus, inputs and dialogs mix with domain-specific registry tables and filters.",
+      "style": "Shared surfaces and typography; admin density is workspace-specific.",
+      "interaction": "Persistent sidebar width and permission-sensitive navigation require checks at tablet and desktop widths.",
+      "source": ["apps/frontend/src/modules/admin/AdminLayout.vue", "apps/frontend/src/modules/admin/AdminResourcePageView.vue"]
+    },
+    {
+      "id": "core-profile-security",
+      "status": "NOT_VERIFIED",
+      "layout": "Profile and Security have nested layouts in Core Admin.",
+      "components": "Profile forms, privacy and credential dialogs reuse shared actions and fields.",
+      "style": "Shared form, card and error tokens.",
+      "interaction": "Candidate MFA, session revocation, security dialogs, keyboard paths and locale propagation need a real isolated Core run.",
+      "source": ["apps/frontend/src/modules/admin/profile", "apps/frontend/src/modules/admin/AdminSecurityLayout.vue"]
+    },
+    {
+      "id": "education-teacher",
+      "status": "MAJOR_DRIFT",
+      "layout": "Header, sidebar, mobile navigation, context controls and route-specific tools.",
+      "components": "Shared controls coexist with Education buttons, cards, journals, timetable and state surfaces.",
+      "style": "Shared theme tokens with local Education interaction sizing.",
+      "interaction": "Desktop duplicated the rail with bottom navigation; locale could be overwritten by a server refresh.",
+      "source": ["apps/frontend/src/modules/education/EducationLayout.vue", "apps/frontend/src/modules/education/education.css"]
+    },
+    {
+      "id": "education-student",
+      "status": "MAJOR_DRIFT",
+      "layout": "Mobile AppBottomNav and larger-screen desktop tabs.",
+      "components": "Lesson, diary, assignments and exercise components coexist with shared navigation and controls.",
+      "style": "Shared theme tokens and Education cards.",
+      "interaction": "Nested routes lost active state, schedule visibility changed by width and server context could override locale.",
+      "source": ["apps/frontend/src/modules/education/student/StudentLayout.vue", "apps/frontend/src/modules/education/routes.ts"]
+    },
+    {
+      "id": "education-parent",
+      "status": "MAJOR_DRIFT",
+      "layout": "Six sections and an independent child/organization selector.",
+      "components": "AppDropdown, status feedback, diary rows and progress cards.",
+      "style": "Shared theme tokens with parent-specific card and tab layout.",
+      "interaction": "Long translated navigation labels stressed the mobile grid and active context had to survive locale refresh.",
+      "source": ["apps/frontend/src/modules/education/parent/ParentLayout.vue", "apps/frontend/src/modules/education/parent/parent.css"]
+    },
+    {
+      "id": "education-devices",
+      "status": "MINOR_DRIFT",
+      "layout": "Teacher workspace, filtering, device cards, detail and history.",
+      "components": "Domain-specific device state and assignment views use Education surfaces, buttons and shared inputs.",
+      "style": "Semantic status colors and local device layouts.",
+      "interaction": "Session state, accessible action names, recovery and mobile modal positioning require real fixture coverage.",
+      "source": ["apps/frontend/src/modules/education/devices"]
+    },
+    {
+      "id": "education-storage",
+      "status": "MINOR_DRIFT",
+      "layout": "Student documents view with transfer queue and versions.",
+      "components": "Domain file controls, table/list, conflict and restore confirmations.",
+      "style": "Education surfaces with shared semantic state tokens.",
+      "interaction": "Confirm bytes and persisted transfer/recovery state independently of visual smoke.",
+      "source": ["apps/frontend/src/modules/education/student/StudentDocumentsView.vue"]
+    },
+    {
+      "id": "auth-entry",
+      "status": "MAJOR_DRIFT",
+      "layout": "Commercial and Core share AuthLayout; Education used a separate sign-in shell.",
+      "components": "Shared fields, buttons and password input; Education sign-in had local card and submit styling.",
+      "style": "Shared tokens, including theme bootstrap across all entry points.",
+      "interaction": "Blocked storage could initially paint the wrong theme; login draft must survive locale and theme changes.",
+      "source": ["apps/frontend/src/app/layouts/AuthLayout.vue", "apps/frontend/src/modules/education/EducationLoginView.vue"]
+    },
+    {
+      "id": "feedback-states",
+      "status": "BROKEN",
+      "layout": "Inline state containers, skeletons, transient feedback and modal layers.",
+      "components": "AppErrorState, AppEmptyState, AppToast, AppDialog, EducationState and workspace-specific status content.",
+      "style": "Semantic colors and shared layer/motion tokens.",
+      "interaction": "One Escape could close stacked dialogs; an empty persistent dialog could release keyboard focus.",
+      "source": ["apps/frontend/src/shared/ui/feedback", "apps/frontend/src/shared/ui/overlays/AppDialog.vue", "apps/frontend/src/modules/education/EducationState.vue"]
+    }
+  ]
+}

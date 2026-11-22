@@ -45,7 +45,7 @@ import AppSwitch from '@/shared/ui/fields/AppSwitch.vue';
 const route = useRoute();
 const store = useAccountStore();
 const toast = useToast();
-const { t, locale } = useI18n();
+const { t, te, locale } = useI18n();
 
 const accountId = computed(() => String(route.params.accountId ?? ''));
 const billingApi = useBillingApi(commercialBilling, () => accountId.value);
@@ -143,11 +143,16 @@ const {
   actionError.value = message;
 });
 
+function periodLabel(period: string): string {
+  const key = `catalog.period_${period}`;
+  return te(key) ? t(key) : period;
+}
+
 const priceOptions = computed(() =>
   catalogPlans.value.flatMap((plan) =>
     plan.prices.map((price) => ({
       value: price.id,
-      label: `${plan.name} · ${price.billing_period} · ${formatMoney(price.amount_minor, price.currency, locale.value)}`,
+      label: `${plan.name} · ${periodLabel(price.billing_period)} · ${formatMoney(price.amount_minor, price.currency, locale.value)}`,
     })),
   ),
 );
@@ -959,7 +964,7 @@ watch(
             <div>
               <strong>{{ item.plan.name }}</strong>
               <span class="billing__muted">
-                {{ item.price.billing_period }} · ×{{ item.quantity }}
+                {{ periodLabel(item.price.billing_period) }} · ×{{ item.quantity }}
               </span>
             </div>
             <span>

@@ -61,6 +61,58 @@ describe('AppDialog', () => {
     }
   });
 
+  it('handles Escape only in the topmost dialog and restores the underlying focus', async () => {
+    const outer = mount(AppDialog, {
+      props: { modelValue: true, title: 'Outer' },
+      attachTo: document.body,
+      global,
+    });
+    try {
+      await flush();
+      const previousFocus = document.activeElement;
+      const inner = mount(AppDialog, {
+        props: { modelValue: true, title: 'Inner' },
+        attachTo: document.body,
+        global,
+      });
+      try {
+        await flush();
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+        await flush();
+        expect(inner.emitted('update:modelValue')).toEqual([[false]]);
+        expect(outer.emitted('update:modelValue')).toBeUndefined();
+        await inner.setProps({ modelValue: false });
+        await flush();
+        expect(document.activeElement).toBe(previousFocus);
+      } finally {
+        inner.unmount();
+      }
+    } finally {
+      outer.unmount();
+    }
+  });
+
+  it('keeps keyboard focus inside a persistent dialog with no controls', async () => {
+    const wrapper = mount(AppDialog, {
+      props: { modelValue: true, title: 'Saving', persistent: true },
+      attachTo: document.body,
+      global,
+    });
+    try {
+      await flush();
+      const dialog = document.querySelector('[role="dialog"]');
+      expect(document.activeElement).toBe(dialog);
+      for (const shiftKey of [false, true]) {
+        const tab = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, cancelable: true });
+        document.dispatchEvent(tab);
+        expect(tab.defaultPrevented).toBe(true);
+        expect(document.activeElement).toBe(dialog);
+      }
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it('generates unique labelled ids per instance', async () => {
     const Parent = defineComponent({
       setup() {

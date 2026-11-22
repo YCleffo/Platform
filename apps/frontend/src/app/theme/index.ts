@@ -13,14 +13,16 @@ function storedTheme(): Theme {
 
 const theme = ref<Theme>(storedTheme());
 const systemDark = ref(false);
+const resolved = computed(() =>
+  theme.value === 'system' ? (systemDark.value ? 'dark' : 'light') : theme.value,
+);
 let media: MediaQueryList | null = null;
 let activeTransition: ViewTransition | undefined;
 let changeId = 0;
 let storageListening = false;
 
 function applyTheme(): void {
-  const resolved = theme.value === 'system' ? (systemDark.value ? 'dark' : 'light') : theme.value;
-  document.documentElement.dataset.theme = resolved;
+  document.documentElement.dataset.theme = resolved.value;
 }
 
 function changeTheme(next: Theme, persist = true): void {
@@ -30,13 +32,20 @@ function changeTheme(next: Theme, persist = true): void {
   activeTransition?.skipTransition();
   activeTransition = undefined;
   const root = document.documentElement;
+  if (root.dataset.theme === resolved.value) {
+    delete root.dataset.themeChanging;
+    return;
+  }
   root.dataset.themeChanging = '';
   const commit = () => {
     if (id !== changeId) return;
     applyTheme();
   };
-  const reduced = root.dataset.motion === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (typeof document.startViewTransition === 'function' && !reduced) {
+  const withoutMotion =
+    root.dataset.motion === 'reduced' ||
+    root.style.getPropertyValue('--ui-theme-duration') === '0ms' ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (typeof document.startViewTransition === 'function' && !withoutMotion) {
     try {
       activeTransition = document.startViewTransition(async () => { commit(); await nextTick(); });
       void activeTransition.ready.catch(() => undefined);
@@ -79,9 +88,6 @@ export function initTheme(): void {
 
 export function useTheme() {
   ensureMedia();
-  const resolved = computed(() =>
-    theme.value === 'system' ? (systemDark.value ? 'dark' : 'light') : theme.value,
-  );
   const isDark = computed(() => resolved.value === 'dark');
 
   function setTheme(next: Theme): void {

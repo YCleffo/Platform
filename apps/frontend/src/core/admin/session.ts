@@ -1,3 +1,6 @@
+import { readonly, shallowRef } from 'vue';
+import { resetSessionLocales } from '@/shared/i18n';
+
 export interface CoreAdminTokens {
   accessToken: string;
   refreshToken: string;
@@ -23,6 +26,7 @@ export const coreAdminSession = {
   },
   set(next: CoreAdminTokens): void {
     tokens = next;
+    resetSessionLocales();
     epoch.value += 1;
   },
   rotate(next: CoreAdminTokens, expectedEpoch: number, expectedRefreshToken: string): boolean {
@@ -33,15 +37,14 @@ export const coreAdminSession = {
   },
   clear(): void {
     tokens = null;
+    resetSessionLocales();
     epoch.value += 1;
   },
   setUnauthorizedHandler(handler: () => void): void {
     unauthorizedHandler = handler;
   },
   notifyUnauthorized(): void {
-    tokens = null;
-    epoch.value += 1;
+    coreAdminSession.clear();
     unauthorizedHandler?.();
   },
 };
-import { readonly, shallowRef } from 'vue';

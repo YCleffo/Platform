@@ -235,7 +235,7 @@ function change(delta: number): void {
   position: absolute;
   inset: 19px 12px;
   border-radius: 999px;
-  background: var(--border-strong);
+  background: var(--text-3);
   pointer-events: none;
   transition: var(--theme-transition);
 }

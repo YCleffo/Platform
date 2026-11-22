@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
-import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, ref, toRaw, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { activeNavigationRoute } from '@/shared/navigation/activeRoute';
 
 export interface BottomNavItem {
   label: string;
@@ -13,28 +14,34 @@ const props = defineProps<{ items: BottomNavItem[]; activeRouteName?: string }>(
 
 const route = useRoute();
 const router = useRouter();
-const active = computed(() => props.activeRouteName ?? route.name);
+const active = computed(() => props.activeRouteName ?? activeNavigationRoute(route));
 
 const sanitizedItems = computed(() =>
   props.items.map((item) => ({
     label: item.label,
     routeName: item.routeName,
-    icon: markRaw(item.icon),
+    icon: markRaw(toRaw(item.icon)),
   })),
 );
 
 const listRef = ref<HTMLElement | null>(null);
 const linkRefs = new Map<string, HTMLElement>();
+let resizeObserver: ResizeObserver | undefined;
 
 function setLinkRef(routeName: string, el: unknown): void {
+  const previous = linkRefs.get(routeName);
   if (el && typeof el === 'object') {
     const domEl =
       '$el' in el && el.$el instanceof HTMLElement ? el.$el : el instanceof HTMLElement ? el : null;
     if (domEl) {
+      if (domEl === previous) return;
+      if (previous) resizeObserver?.unobserve(previous);
       linkRefs.set(routeName, domEl);
+      resizeObserver?.observe(domEl);
       return;
     }
   }
+  if (previous) resizeObserver?.unobserve(previous);
   linkRefs.delete(routeName);
 }
 
@@ -49,8 +56,7 @@ const pillWidth = ref(0);
 const pillReady = ref(false);
 
 function updatePill(): void {
-  const current = active.value as string;
-  const target = linkRefs.get(current);
+  const target = linkRefs.get(active.value);
   const container = listRef.value;
   if (!target || !container) {
     pillReady.value = false;
@@ -62,7 +68,7 @@ function updatePill(): void {
     pillLeft.value = targetRect.left - containerRect.left;
     pillWidth.value = targetRect.width;
     pillReady.value = true;
-  }
+  } else pillReady.value = false;
 }
 
 function findTargetTab(offset: number): BottomNavItem | null {
@@ -99,16 +105,11 @@ function findTargetTab(offset: number): BottomNavItem | null {
   return closestItem;
 }
 
-let didDrag = false;
-let suppressClick = false;
-let suppressTimer: ReturnType<typeof setTimeout> | undefined;
+let suppressClickUntil = 0;
 
-function suppressNextClick(): void {
-  suppressClick = true;
-  if (suppressTimer) clearTimeout(suppressTimer);
-  suppressTimer = setTimeout(() => {
-    suppressClick = false;
-  }, 120);
+function resetDrag(): void {
+  dragOffset.value = 0;
+  isDraggingPill.value = false;
 }
 
 function finishDrag(offset: number): void {
@@ -118,13 +119,13 @@ function finishDrag(offset: number): void {
     : 400;
   const releaseLeft = Math.max(0, Math.min(maxLeft, pillLeft.value + offset));
 
+  const target = findTargetTab(releaseLeft - pillLeft.value);
   pillLeft.value = releaseLeft;
-  dragOffset.value = 0;
-  isDraggingPill.value = false;
+  resetDrag();
+  suppressClickUntil = performance.now() + 300;
 
-  const target = findTargetTab(offset);
   if (target && target.routeName !== active.value) {
-    void router?.push({ name: target.routeName });
+    void router.push({ name: target.routeName }).then(() => nextTick(updatePill));
   } else {
     void nextTick(() => {
       updatePill();
@@ -136,12 +137,18 @@ let touchStartX = 0;
 let touchStartY = 0;
 let isTouching = false;
 let touchMoved = false;
+let touchId: number | undefined;
 
 function onTouchStart(event: TouchEvent): void {
   const touch = event.touches[0];
-  if (!touch) return;
+  if (!touch || event.touches.length !== 1) {
+    onTouchCancel();
+    return;
+  }
+  suppressClickUntil = 0;
   touchStartX = touch.clientX;
   touchStartY = touch.clientY;
+  touchId = touch.identifier;
   isTouching = true;
   touchMoved = false;
   dragOffset.value = 0;
@@ -150,15 +157,21 @@ function onTouchStart(event: TouchEvent): void {
 function onTouchMove(event: TouchEvent): void {
   if (!isTouching) return;
   const touch = event.touches[0];
-  if (!touch) return;
+  if (!touch || event.touches.length !== 1 || touch.identifier !== touchId) {
+    onTouchCancel();
+    return;
+  }
   const dx = touch.clientX - touchStartX;
   const dy = touch.clientY - touchStartY;
 
   if (!touchMoved) {
-    if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+    if (Math.abs(dy) > 8 && Math.abs(dy) >= Math.abs(dx)) {
+      onTouchCancel();
+      return;
+    }
+    if (Math.abs(dx) > 8) {
       touchMoved = true;
       isDraggingPill.value = true;
-      didDrag = true;
     }
   }
 
@@ -170,18 +183,19 @@ function onTouchMove(event: TouchEvent): void {
   }
 }
 
-function onTouchEnd(): void {
-  if (!isTouching) return;
+function onTouchCancel(): void {
   isTouching = false;
+  touchId = undefined;
+  touchMoved = false;
+  resetDrag();
+}
 
-  if (touchMoved) {
-    const finalOffset = dragOffset.value;
-    suppressNextClick();
-    finishDrag(finalOffset);
-  } else {
-    dragOffset.value = 0;
-    isDraggingPill.value = false;
-  }
+function onTouchEnd(event: TouchEvent): void {
+  if (!isTouching || event.changedTouches[0]?.identifier !== touchId) return;
+  isTouching = false;
+  touchId = undefined;
+  if (touchMoved) finishDrag(dragOffset.value);
+  else resetDrag();
 }
 
 let mouseStartX = 0;
@@ -191,6 +205,7 @@ let mouseMoved = false;
 
 function onMouseDown(event: MouseEvent): void {
   if (event.button !== 0) return;
+  suppressClickUntil = 0;
   mouseStartX = event.clientX;
   mouseStartY = event.clientY;
   isMouseDown = true;
@@ -212,7 +227,6 @@ function onWindowMouseMove(event: MouseEvent): void {
     if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
       mouseMoved = true;
       isDraggingPill.value = true;
-      didDrag = true;
     }
   }
 
@@ -230,26 +244,17 @@ function onWindowMouseUp(): void {
   if (!isMouseDown) return;
   isMouseDown = false;
 
-  if (mouseMoved) {
-    const finalOffset = dragOffset.value;
-    suppressNextClick();
-    finishDrag(finalOffset);
-  } else {
-    dragOffset.value = 0;
-    isDraggingPill.value = false;
-  }
+  if (mouseMoved) finishDrag(dragOffset.value);
+  else resetDrag();
 }
 
 function onLinkClick(event: MouseEvent): void {
-  if (suppressClick || didDrag) {
+  if (event.detail > 0 && performance.now() < suppressClickUntil) {
     event.preventDefault();
     event.stopPropagation();
-    suppressClick = false;
-    didDrag = false;
+    suppressClickUntil = 0;
   }
 }
-
-let resizeObserver: ResizeObserver | undefined;
 
 onMounted(() => {
   void nextTick(() => {
@@ -271,7 +276,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect();
-  if (suppressTimer) clearTimeout(suppressTimer);
   if (typeof window !== 'undefined') {
     window.removeEventListener('resize', updatePill);
     window.removeEventListener('mousemove', onWindowMouseMove);
@@ -279,17 +283,7 @@ onBeforeUnmount(() => {
   }
 });
 
-watch(
-  active,
-  () => {
-    void nextTick(() => {
-      updatePill();
-      setTimeout(updatePill, 120);
-      setTimeout(updatePill, 360);
-    });
-  },
-  { flush: 'post' },
-);
+watch([active, sanitizedItems], updatePill, { flush: 'post' });
 
 const pillStyle = computed(() => {
   if (!pillReady.value) {
@@ -319,7 +313,7 @@ const pillStyle = computed(() => {
     @touchstart="onTouchStart"
     @touchmove="onTouchMove"
     @touchend="onTouchEnd"
-    @touchcancel="onTouchEnd"
+    @touchcancel="onTouchCancel"
     @mousedown="onMouseDown"
   >
     <div class="app-bottom-nav__inner">
@@ -350,7 +344,7 @@ const pillStyle = computed(() => {
             :draggable="false"
             active-class=""
             exact-active-class=""
-            @click="onLinkClick"
+            @click.capture="onLinkClick"
             @dragstart.prevent
           >
             <span
@@ -485,6 +479,11 @@ const pillStyle = computed(() => {
   color: var(--text-1);
 }
 
+.app-bottom-nav__link:focus-visible {
+  outline: 2px solid var(--focus-border);
+  outline-offset: -2px;
+}
+
 .app-bottom-nav__link--active {
   color: var(--accent-text);
 }
@@ -503,6 +502,7 @@ const pillStyle = computed(() => {
   opacity: 0;
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: var(--type-body-small-emphasis-size);
   font-weight: var(--type-body-small-emphasis-weight);
   line-height: var(--type-body-small-emphasis-line);

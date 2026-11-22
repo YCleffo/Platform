@@ -1,7 +1,10 @@
 import { chromium } from 'playwright';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:5173';
-const widths = [320, 360, 375, 393, 430, 768, 1024, 1280, 1440];
+const viewports = [
+  [320, 740], [360, 800], [375, 812], [393, 852], [430, 932], [768, 1024],
+  [844, 390], [1024, 768], [1280, 800], [1440, 900], [1920, 1080],
+].map(([width, height]) => ({ width, height }));
 
 // No backend is required: these are static/guard states of the SPA.
 const routes = [
@@ -47,8 +50,9 @@ async function launch() {
 const browser = await launch();
 const widthConcurrency = Math.max(1, Number.parseInt(process.env.RESPONSIVE_CONCURRENCY ?? '3', 10) || 3);
 
-async function verifyWidth(width) {
-  const context = await browser.newContext({ viewport: { width, height: 800 } });
+async function verifyWidth(viewport) {
+  const { width, height } = viewport;
+  const context = await browser.newContext({ viewport });
   await context.addInitScript(() => {
     localStorage.setItem('platform.theme', 'light');
     localStorage.setItem('platform.locale', 'en');
@@ -70,10 +74,10 @@ async function verifyWidth(width) {
   });
 
   for (const route of routes) {
-    const label = `${width}px ${route.path}`;
+    const label = `${width}×${height} ${route.path}`;
     try {
-      await page.goto(`${BASE}${route.path}`, { waitUntil: 'networkidle', timeout: 15000 });
-      await page.waitForTimeout(150);
+      await page.goto(`${BASE}${route.path}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.locator(route.selector).first().waitFor({ timeout: 5000 });
       const pathname = new URL(page.url()).pathname;
       if (pathname !== route.expected) {
         problems.push(`${label}: resolved to ${pathname}, expected ${route.expected}`);
@@ -94,7 +98,7 @@ async function verifyWidth(width) {
   }
 
   if (pageErrors.length > 0) {
-    problems.push(`${width}px: console/page errors -> ${pageErrors.join(' | ')}`);
+    problems.push(`${width}×${height}: console/page errors -> ${pageErrors.join(' | ')}`);
   }
   await context.close();
 }
@@ -112,10 +116,11 @@ async function mapLimit(items, limit, worker) {
   );
 }
 
-await mapLimit(widths, widthConcurrency, verifyWidth);
+const navigationOnly = process.argv.includes('--navigation-only');
+if (!navigationOnly) await mapLimit(viewports, widthConcurrency, verifyWidth);
 
 // Theme + keyboard + localization checks (mobile reference width).
-{
+if (!navigationOnly) {
   const context = await browser.newContext({ viewport: { width: 393, height: 852 } });
   const page = await context.newPage();
 
@@ -162,6 +167,97 @@ await mapLimit(widths, widthConcurrency, verifyWidth);
   await context.close();
 }
 
+async function verifyNavigation() {
+  const context = await browser.newContext({
+    viewport: { width: 393, height: 852 },
+    isMobile: true,
+    hasTouch: true,
+    reducedMotion: 'reduce',
+  });
+  try {
+    await context.addInitScript(() => { localStorage.setItem('platform.locale', 'en'); });
+    const page = await context.newPage();
+    const cdp = await context.newCDPSession(page);
+    async function swipe(x, y, targetX, targetY = y) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+      for (const progress of [.25, .5, .75, 1]) {
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x: x + (targetX - x) * progress, y: y + (targetY - y) * progress }],
+        });
+      }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    }
+    await page.route('**/api/control/catalog/plans', (route) => route.fulfill({
+      json: {
+        plans: [{
+          id: '018f0000-0000-7000-8000-000000000021', code: 'starter', version: 1, name: 'Starter',
+          prices: [{ id: '018f0000-0000-7000-8000-000000000022', currency: 'RUB', amount_minor: 99000, billing_period: 'month' }],
+          features: { seats: 3, analytics: false, sso: false, support: 'email' },
+        }],
+      },
+    }));
+    await page.goto(`${BASE}/plans`, { waitUntil: 'domcontentloaded' });
+    const heading = page.locator('.plans__title');
+    await heading.waitFor();
+    const activeCatalog = page.locator('.app-bottom-nav:visible a[aria-current="page"][href="/"]');
+    await activeCatalog.waitFor();
+    const menuButton = page.getByRole('button', { name: 'Open menu', exact: true });
+    await menuButton.click();
+    const menu = page.getByRole('dialog', { name: 'Menu', exact: true });
+    await menu.getByRole('navigation', { name: 'Main' }).locator('a[href="/"][aria-current="page"]').waitFor();
+    await page.keyboard.press('Escape');
+    await menu.waitFor({ state: 'hidden' });
+    if (!(await menuButton.evaluate((element) => element === document.activeElement))) {
+      throw new Error('Mobile navigation menu did not restore focus');
+    }
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.locator('.app-layout__nav:visible a[aria-current="page"][href="/"]').waitFor();
+    await page.locator('.app-bottom-nav').waitFor({ state: 'hidden' });
+    await page.setViewportSize({ width: 393, height: 852 });
+
+    await page.locator('.app-bottom-nav a[href="/settings"]').tap();
+    await page.waitForURL((url) => url.pathname === '/settings');
+    const slider = page.locator('input[type="range"]').first();
+    await slider.scrollIntoViewIfNeeded();
+    const { x, y, width, height } = await slider.boundingBox();
+    await swipe(x + width * .25, y + height / 2, x + width * .75);
+    if (new URL(page.url()).pathname !== '/settings') throw new Error('Slider drag changed section');
+
+    await page.goto(`${BASE}/plans`, { waitUntil: 'domcontentloaded' });
+    await heading.waitFor();
+    const tableScroll = page.locator('.plans__scroll');
+    const caption = tableScroll.locator('caption');
+    await caption.scrollIntoViewIfNeeded();
+    const tableBounds = await tableScroll.boundingBox();
+    const captionBounds = await caption.boundingBox();
+    await swipe(tableBounds.x + tableBounds.width - 48, captionBounds.y + captionBounds.height / 2,
+      tableBounds.x + 48);
+    await page.waitForFunction(() => document.querySelector('.plans__scroll')?.scrollLeft > 0);
+    if (new URL(page.url()).pathname !== '/plans') throw new Error('Horizontal table drag changed section');
+    await heading.scrollIntoViewIfNeeded();
+    const title = await heading.boundingBox();
+    const touchY = title.y + title.height / 2;
+    await swipe(380, touchY, 220);
+    await swipe(260, touchY, 240, touchY + 95);
+    if (new URL(page.url()).pathname !== '/plans') throw new Error('Edge or vertical swipe changed section');
+
+    await swipe(220, touchY, 110);
+    await page.waitForURL((url) => url.pathname === '/login' && url.searchParams.get('redirect') === '/cabinet');
+    await page.goBack({ waitUntil: 'domcontentloaded' });
+    await page.waitForURL((url) => url.pathname === '/plans');
+    await activeCatalog.waitFor();
+  } finally {
+    await context.close();
+  }
+}
+
+try {
+  await verifyNavigation();
+} catch (error) {
+  problems.push(`mobile navigation: ${String(error)}`);
+}
+
 await browser.close();
 
 if (problems.length > 0) {
@@ -173,7 +269,9 @@ if (problems.length > 0) {
 }
 
 console.log(
-  'RESPONSIVE CHECKS PASSED: routes, guards, overflow (320–1440), console, theme, keyboard, RU.\n' +
+  (navigationOnly
+    ? 'NAVIGATION CHECKS PASSED: mobile and desktop active links, menu focus, slider and touch gestures.\n'
+    : 'RESPONSIVE CHECKS PASSED: routes, guards, overflow (320–1920), console, theme, keyboard, RU and navigation.\n') +
     'READ-ONLY SMOKE: no authentication and no data mutations.\n' +
     'NOT_VERIFIED here: authenticated cabinet, account workspace, Security Center, MFA and membership mutations (need an isolated runtime).',
 );

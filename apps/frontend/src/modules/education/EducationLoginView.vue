@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, shallowRef } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import { setLocale } from '@/shared/i18n';
+import AppButton from '@/shared/ui/actions/AppButton.vue';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppPasswordInput from '@/shared/ui/fields/AppPasswordInput.vue';
+import AppCard from '@/shared/ui/surfaces/AppCard.vue';
 import { useEducationI18n } from './i18n';
 import { useEducationError } from './resources';
 import { educationApi } from './api';
@@ -13,7 +15,7 @@ import './education.css';
 const auth = useAdminAuthStore();
 const router = useRouter();
 const route = useRoute();
-const { t } = useEducationI18n();
+const { t, locale } = useEducationI18n();
 const issue = useEducationError();
 const email = ref('');
 const password = ref('');
@@ -22,7 +24,15 @@ const recovery = ref(false);
 const freshPassword = ref('');
 const repeated = ref('');
 const busy = ref(false);
-const error = ref('');
+const failure = shallowRef<
+  { type: 'passwordMismatch' } | { type: 'request'; cause: unknown } | null
+>(null);
+const error = computed(() => {
+  if (!failure.value) return '';
+  return failure.value.type === 'request'
+    ? issue(failure.value.cause)
+    : t('education.passwordMismatch');
+});
 let active = true;
 const step = computed(() =>
   auth.status === 'mfa_required' || auth.status === 'password_change_required'
@@ -32,7 +42,7 @@ const step = computed(() =>
 async function submit(): Promise<void> {
   if (busy.value) return;
   busy.value = true;
-  error.value = '';
+  failure.value = null;
   try {
     if (step.value === 'mfa_required')
       await auth.verifyMfa(
@@ -41,7 +51,7 @@ async function submit(): Promise<void> {
       );
     else if (step.value === 'password_change_required') {
       if (freshPassword.value.length < 12 || freshPassword.value !== repeated.value) {
-        error.value = t('education.passwordMismatch');
+        failure.value = { type: 'passwordMismatch' };
         return;
       }
       await auth.completeRequiredPasswordChange(password.value, freshPassword.value);
@@ -68,7 +78,7 @@ async function submit(): Promise<void> {
       );
     }
   } catch (caught) {
-    if (active) error.value = issue(caught);
+    if (active) failure.value = { type: 'request', cause: caught };
   } finally {
     if (active) busy.value = false;
   }
@@ -77,7 +87,7 @@ function restart(): void {
   auth.cancelPendingAuthentication();
   password.value = '';
   code.value = '';
-  error.value = '';
+  failure.value = null;
 }
 onBeforeUnmount(() => {
   active = false;
@@ -90,7 +100,10 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <main class="education-login">
-    <div class="edu-login-card">
+    <AppCard
+      class="edu-login-card"
+      padding="large"
+    >
       <p class="edu-brand">Education</p>
       <h1>
         {{
@@ -165,10 +178,9 @@ onBeforeUnmount(() => {
         >
           {{ error }}
         </p>
-        <button
+        <AppButton
           type="submit"
-          class="edu-button edu-button--primary"
-          :disabled="busy"
+          :loading="busy"
         >
           {{
             t(
@@ -179,7 +191,7 @@ onBeforeUnmount(() => {
                   : 'education.confirm',
             )
           }}
-        </button>
+        </AppButton>
       </form>
       <button
         v-if="step === 'mfa_required'"
@@ -210,17 +222,21 @@ onBeforeUnmount(() => {
       <div class="edu-language">
         <button
           type="button"
+          lang="ru"
+          :aria-pressed="locale === 'ru'"
           @click="setLocale('ru')"
         >
           Русский
         </button>
         <button
           type="button"
+          lang="en"
+          :aria-pressed="locale === 'en'"
           @click="setLocale('en')"
         >
           English
         </button>
       </div>
-    </div>
+    </AppCard>
   </main>
 </template>

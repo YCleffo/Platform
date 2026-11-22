@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { guard, actor, uiLogin, fixture, api, sql, env, suffix, observations } from './acceptance-support.mjs';
 import { launchBrowser, stableScreenshot } from './e2e-support.mjs';
+import { captureAuthenticated, observeAuthenticated } from './frontend09-authenticated-evidence.mjs';
 await guard();
 const owner = await actor('operator-owner'); const first = await actor('operator-first'); const second = await actor('operator-second');
 for (const operator of [first, second]) {
@@ -27,7 +28,13 @@ const [a, b] = pages;
 const hash = createHash('sha256').update('Synthetic external transfer evidence ' + suffix).digest('hex');
 const evidence = { externalTransactionReference: 'urn:test:transfer:' + suffix, documentReference: 'urn:test:document:' + suffix, documentSha256: hash };
 mkdirSync('screenshots', { recursive: true });
-async function tab(page, name) { await page.locator('.operator-console__tabs').getByRole('button', { name, exact: true }).click(); }
+async function tab(page, name) {
+  const navigation = page.locator('.operator-console__tabs');
+  const button = navigation.getByRole('button', { name, exact: true });
+  await button.click();
+  await button.and(navigation.locator('[aria-pressed="true"]')).waitFor();
+  assert.equal(await navigation.locator('[aria-pressed="true"]').count(), 1);
+}
 async function fill(page, values) { for (const [name, value] of Object.entries(values)) await page.getByRole('dialog').locator(`[data-field="${name}"] input`).fill(value); }
 async function confirm(page) { const d = page.getByRole('dialog'); const check = d.getByRole('checkbox', { name: 'I checked the target and confirm this action.', exact: true }); if (await check.count()) await check.check(); }
 async function save(page, expected = [200, 201]) {
@@ -39,6 +46,34 @@ async function save(page, expected = [200, 201]) {
 async function dismiss(page) { await page.locator('.app-dialog--full').waitFor(); await page.keyboard.press('Escape'); await page.getByRole('dialog').waitFor({ state: 'hidden' }); }
 try {
   await uiLogin(a, first, true); await uiLogin(b, second, true);
+  await observeAuthenticated(a);
+  const operatorCapture = {
+    suite: 'commercial-operator', screen: 'privacy-queue',
+    mask: ['.operator-console > p:first-of-type'],
+  };
+  const requests = a.locator('.operator-console__tabs [aria-pressed="true"]');
+  await requests.getByText('Subject requests', { exact: true }).waitFor();
+  await a.getByRole('button', { name: 'Register a request', exact: true }).and(a.locator('button:enabled')).waitFor();
+  await captureAuthenticated(a, operatorCapture);
+
+  await a.setViewportSize({ width: 393, height: 852 });
+  await a.getByRole('button', { name: 'Open menu', exact: true }).click();
+  const menu = a.locator('.mobile-menu[role="dialog"]');
+  await menu.getByRole('button', { name: 'Light theme', exact: true }).click();
+  await menu.getByRole('button', { name: /Change language/ }).click();
+  await a.waitForFunction(() => document.documentElement.lang === 'ru' && document.documentElement.dataset.theme === 'light');
+  await a.keyboard.press('Escape');
+  await menu.waitFor({ state: 'hidden' });
+  assert.notEqual(await requests.textContent(), 'Subject requests');
+  assert.equal(new URL(a.url()).pathname, '/operator');
+  assert.ok(await a.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1), 'Operator workspace overflows at 393px');
+  await captureAuthenticated(a, operatorCapture);
+  await a.setViewportSize({ width: 1440, height: 1000 });
+  await a.getByRole('button', { name: 'RU: Сменить язык' }).click();
+  await a.waitForFunction(() => document.documentElement.lang === 'en');
+  await requests.getByText('Subject requests', { exact: true }).waitFor();
+  states.push('operator tabs expose one active section; real authenticated workspace retains it across mobile locale and theme changes');
+
   await tab(a, 'External compensation');
   await a.getByRole('button', { name: 'Propose compensation', exact: true }).first().click(); await fill(a, evidence);
   sql(`UPDATE commercial.control_sessions SET primary_authenticated_at=now()-interval '1 hour',mfa_authenticated_at=now()-interval '1 hour' WHERE control_user_id='${first.id}' AND revoked_at IS NULL AND mfa_authenticated_at IS NOT NULL`);

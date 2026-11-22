@@ -1527,7 +1527,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 582,
+          "line": 587,
           "routes": [
             "account-billing"
           ]
@@ -2101,7 +2101,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 243,
+          "line": 248,
           "routes": [
             "account-billing"
           ]
@@ -2190,7 +2190,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 241,
+          "line": 246,
           "routes": [
             "account-billing"
           ]
@@ -2365,7 +2365,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 251,
+          "line": 256,
           "routes": [
             "account-billing"
           ]
@@ -2538,7 +2538,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 244,
+          "line": 249,
           "routes": [
             "account-billing"
           ]
@@ -2622,7 +2622,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 252,
+          "line": 257,
           "routes": [
             "account-billing"
           ]
@@ -2706,7 +2706,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 702,
+          "line": 707,
           "routes": [
             "account-billing"
           ]
@@ -2790,7 +2790,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 661,
+          "line": 666,
           "routes": [
             "account-billing"
           ]
@@ -2874,7 +2874,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 253,
+          "line": 258,
           "routes": [
             "account-billing"
           ]
@@ -2958,7 +2958,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 665,
+          "line": 670,
           "routes": [
             "account-billing"
           ]
@@ -3047,7 +3047,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 250,
+          "line": 255,
           "routes": [
             "account-billing"
           ]
@@ -3366,7 +3366,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 242,
+          "line": 247,
           "routes": [
             "account-billing"
           ]
@@ -3623,7 +3623,7 @@
         },
         {
           "file": "apps/frontend/src/modules/admin/AdminLayout.vue",
-          "line": 44,
+          "line": 45,
           "routes": [
             "/admin"
           ]
@@ -3659,7 +3659,7 @@
         },
         {
           "file": "apps/frontend/src/modules/admin/profile/CorePreferencesView.vue",
-          "line": 133,
+          "line": 134,
           "routes": [
             "admin-profile"
           ]
@@ -3749,7 +3749,7 @@
         },
         {
           "file": "apps/frontend/src/modules/admin/AdminLayout.vue",
-          "line": 44,
+          "line": 45,
           "routes": [
             "/admin"
           ]
@@ -3785,7 +3785,7 @@
         },
         {
           "file": "apps/frontend/src/modules/admin/profile/CorePreferencesView.vue",
-          "line": 133,
+          "line": 134,
           "routes": [
             "admin-profile"
           ]
@@ -5026,7 +5026,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 413,
+          "line": 418,
           "routes": [
             "account-billing"
           ]
@@ -5205,7 +5205,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 344,
+          "line": 349,
           "routes": [
             "account-billing"
           ]
@@ -5301,7 +5301,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 570,
+          "line": 575,
           "routes": [
             "account-billing"
           ]
@@ -5392,7 +5392,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 423,
+          "line": 428,
           "routes": [
             "account-billing"
           ]
@@ -5496,7 +5496,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 693,
+          "line": 698,
           "routes": [
             "account-billing"
           ]
@@ -5587,7 +5587,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 535,
+          "line": 540,
           "routes": [
             "account-billing"
           ]
@@ -5678,7 +5678,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 396,
+          "line": 401,
           "routes": [
             "account-billing"
           ]
@@ -5774,7 +5774,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 548,
+          "line": 553,
           "routes": [
             "account-billing"
           ]
@@ -5865,7 +5865,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 560,
+          "line": 565,
           "routes": [
             "account-billing"
           ]
@@ -5964,7 +5964,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 405,
+          "line": 410,
           "routes": [
             "account-billing"
           ]
@@ -6055,7 +6055,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 519,
+          "line": 524,
           "routes": [
             "account-billing"
           ]
@@ -8906,7 +8906,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 359,
+          "line": 364,
           "routes": [
             "account-billing"
           ]
@@ -9780,7 +9780,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/core/admin/adminAuthStore.ts",
-          "line": 156,
+          "line": 158,
           "routes": [
             "/admin",
             "/education",
@@ -9866,14 +9866,14 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/admin/profile/CorePreferencesView.vue",
-          "line": 117,
+          "line": 118,
           "routes": [
             "admin-profile"
           ]
         },
         {
           "file": "apps/frontend/src/core/admin/adminAuthStore.ts",
-          "line": 80,
+          "line": 81,
           "routes": [
             "/admin",
             "/education",
@@ -12289,7 +12289,7 @@
       "frontendApi": [
         {
           "file": "apps/frontend/src/core/admin/adminAuthStore.ts",
-          "line": 87,
+          "line": 89,
           "action": "accept"
         },
         {
@@ -14278,14 +14278,14 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/admin/profile/CorePreferencesView.vue",
-          "line": 154,
+          "line": 155,
           "routes": [
             "admin-profile"
           ]
         },
         {
           "file": "apps/frontend/src/modules/education/MoreView.vue",
-          "line": 65,
+          "line": 70,
           "routes": [
             "education-more"
           ]
@@ -14676,7 +14676,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/core/admin/adminAuthStore.ts",
-          "line": 105,
+          "line": 107,
           "routes": [
             "/admin",
             "/education",
@@ -14767,7 +14767,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/core/admin/adminAuthStore.ts",
-          "line": 184,
+          "line": 186,
           "routes": [
             "/admin",
             "/education",
@@ -15596,7 +15596,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/core/admin/adminAuthStore.ts",
-          "line": 162,
+          "line": 164,
           "routes": [
             "/admin",
             "/education",
@@ -15688,7 +15688,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/core/admin/adminAuthStore.ts",
-          "line": 147,
+          "line": 149,
           "routes": [
             "/admin",
             "/education",
@@ -15774,7 +15774,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/core/admin/adminAuthStore.ts",
-          "line": 143,
+          "line": 145,
           "routes": [
             "/admin",
             "/education",
@@ -16096,7 +16096,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/core/admin/adminAuthStore.ts",
-          "line": 167,
+          "line": 169,
           "routes": [
             "/admin",
             "/education",
@@ -22237,7 +22237,7 @@
         },
         {
           "file": "apps/frontend/src/modules/education/TodayView.vue",
-          "line": 40,
+          "line": 41,
           "routes": [
             "education-today"
           ]
@@ -22401,14 +22401,14 @@
         },
         {
           "file": "apps/frontend/src/modules/education/EducationLoginView.vue",
-          "line": 60,
+          "line": 70,
           "routes": [
             "education-login"
           ]
         },
         {
           "file": "apps/frontend/src/modules/education/student/StudentLayout.vue",
-          "line": 38,
+          "line": 47,
           "routes": [
             "/student"
           ]
@@ -23092,7 +23092,7 @@
         },
         {
           "file": "apps/frontend/src/modules/education/EducationLayout.vue",
-          "line": 66,
+          "line": 69,
           "routes": [
             "/education"
           ]
@@ -25092,7 +25092,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/TodayView.vue",
-          "line": 39,
+          "line": 40,
           "routes": [
             "education-today"
           ]
@@ -26015,7 +26015,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/EducationLayout.vue",
-          "line": 67,
+          "line": 70,
           "routes": [
             "/education"
           ]
@@ -26213,14 +26213,14 @@
         },
         {
           "file": "apps/frontend/src/modules/education/EducationLayout.vue",
-          "line": 64,
+          "line": 67,
           "routes": [
             "/education"
           ]
         },
         {
           "file": "apps/frontend/src/modules/education/TodayView.vue",
-          "line": 37,
+          "line": 38,
           "routes": [
             "education-today"
           ]
@@ -27658,7 +27658,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/EducationLayout.vue",
-          "line": 66,
+          "line": 69,
           "routes": [
             "/education"
           ]
@@ -28553,7 +28553,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/TodayView.vue",
-          "line": 38,
+          "line": 39,
           "routes": [
             "education-today"
           ]
@@ -29044,7 +29044,7 @@
         },
         {
           "file": "apps/frontend/src/modules/education/MoreView.vue",
-          "line": 38,
+          "line": 39,
           "routes": [
             "education-more"
           ]
@@ -33571,7 +33571,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/MoreView.vue",
-          "line": 40,
+          "line": 41,
           "routes": [
             "education-more"
           ]

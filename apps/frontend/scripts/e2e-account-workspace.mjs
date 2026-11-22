@@ -13,6 +13,11 @@ import {
   stableScreenshot,
   verifySecuritySession,
 } from './e2e-support.mjs';
+import {
+  captureAuthenticated,
+  measureAuthenticatedNavigation,
+  observeAuthenticated,
+} from './frontend09-authenticated-evidence.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'screenshots');
@@ -25,6 +30,14 @@ const MAILPIT = process.env.MAILPIT_URL ?? '';
 const failures = [];
 const check = (condition, message) => {
   if (!condition) failures.push(message);
+};
+const accountCapture = {
+  suite: 'commercial-account',
+  mask: [
+    '.account-layout__name', '.account-layout__code', '.account-layout__crumb-current',
+    '.app-breadcrumbs__current', '.switcher__value', '.details__row:first-child dd',
+    '.details__row:nth-last-child(-n+2) dd',
+  ],
 };
 
 async function assertNoOverflow(page, label) {
@@ -83,6 +96,7 @@ async function main() {
     await page.goto(`${APP}/login`, { waitUntil: 'networkidle' });
     await submitLogin(page, emailA, password);
     await page.waitForURL('**/cabinet', { timeout: 20_000 });
+    await observeAuthenticated(page);
 
     await assertPrimaryNavigation(page, '/cabinet');
     await navigateClientSide(page, '/');
@@ -108,6 +122,7 @@ async function main() {
     check(await page.getByText('Draft', { exact: true }).first().isVisible(), 'overview shows the account status');
     await assertNoOverflow(page, 'overview 393');
     await stableScreenshot(page, join(outDir, 'frontend04-overview-393-light.png'));
+    await captureAuthenticated(page, { ...accountCapture, screen: 'overview' });
 
     // Members (read-only).
     await page.locator('.account-layout__tabs a', { hasText: 'Members' }).first().click();
@@ -119,13 +134,30 @@ async function main() {
     await assertNoOverflow(page, 'members 393');
     await stableScreenshot(page, join(outDir, 'frontend04-members-393-light.png'));
 
+    const invitationsPath = `/accounts/${accountA}/invitations`;
+    const billingPath = `/accounts/${accountA}/billing`;
+    const tabs = page.locator('.account-layout__tabs');
+    await tabs.getByRole('link', { name: 'Invitations', exact: true }).click();
+    await page.waitForURL((url) => url.pathname === invitationsPath);
+    await page.getByText('No invitations yet.', { exact: true }).waitFor();
+    await assertAccountNavigation(page, invitationsPath);
+    await assertNoOverflow(page, 'invitations 393');
+
     // Billing and usage pages are backed by the Commercial API.
     await page.locator('.account-layout__tabs a', { hasText: 'Billing' }).first().click();
     await page.waitForURL(`**/accounts/${accountA}/billing`, { timeout: 20_000 });
     await page.waitForSelector('.billing__title', { timeout: 20_000 });
+    await assertAccountNavigation(page, billingPath);
+    await page.goBack();
+    await page.getByText('No invitations yet.', { exact: true }).waitFor();
+    await assertAccountNavigation(page, invitationsPath);
+    await page.goForward();
+    await page.locator('.billing__title').waitFor();
+    await assertAccountNavigation(page, billingPath);
     check(await page.getByText('Billing', { exact: true }).first().isVisible(), 'billing page renders');
     await assertNoOverflow(page, 'billing 393');
     await stableScreenshot(page, join(outDir, 'frontend05-billing-393-light.png'));
+    await captureAuthenticated(page, { ...accountCapture, screen: 'billing' });
 
     await page.locator('.account-layout__tabs a', { hasText: 'Usage' }).first().click();
     await page.waitForURL(`**/accounts/${accountA}/usage`, { timeout: 20_000 });
@@ -179,10 +211,10 @@ async function main() {
     check((await page.locator('.account-layout__name').textContent())?.includes(nameB), 'switcher opens account B');
 
     // Keyboard reachability of the switcher.
-    await page.getByRole('button', { name: 'Switch account' }).focus();
+    const switchButton = page.getByRole('button', { name: `Switch account ${nameB}`, exact: true });
+    await switchButton.focus();
     await page.keyboard.press('Tab');
-    const activeLabel = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? '');
-    check(activeLabel !== 'Switch account', 'Tab must move focus away from the switcher');
+    check(await switchButton.evaluate((button) => document.activeElement !== button), 'Tab must move focus away from the switcher');
 
     // Unknown account via client-side navigation.
     await navigateClientSide(page, '/accounts/018f0000-0000-7000-8000-0000000000ff');
@@ -212,6 +244,7 @@ async function main() {
     await page.keyboard.press('Escape');
     await themeMenu.waitFor({ state: 'detached', timeout: 2_000 });
     await stableScreenshot(page, join(outDir, 'frontend04-overview-393-dark.png'));
+    await captureAuthenticated(page, { ...accountCapture, screen: 'overview' });
     await page.getByRole('button', { name: 'Open menu' }).click();
     await themeMenu.getByRole('button', { name: 'Light theme' }).click();
     await page.waitForFunction((previous) => document.documentElement.dataset.theme === previous, themeBefore);
@@ -219,11 +252,31 @@ async function main() {
     await themeMenu.waitFor({ state: 'detached', timeout: 2_000 });
 
     // Mobile boundary and desktop layout.
-    await page.setViewportSize({ width: 320, height: 720 });
+    await page.setViewportSize({ width: 320, height: 740 });
     await assertNoOverflow(page, 'overview 320');
     await page.setViewportSize({ width: 1440, height: 900 });
     await stableScreenshot(page, join(outDir, 'frontend04-overview-1440-light.png'));
     await assertNoOverflow(page, 'overview 1440');
+    await page.getByRole('button', { name: 'EN: Change language' }).click();
+    await page.waitForFunction(() => document.documentElement.lang === 'ru');
+    await assertAccountNavigation(page, `/accounts/${accountA}`);
+    check(await tabs.getByRole('link', { name: 'Выставление счетов', exact: true }).isVisible(), 'account tabs translate while keeping current section');
+    await captureAuthenticated(page, { ...accountCapture, screen: 'overview' });
+    await page.getByRole('button', { name: 'RU: Сменить язык' }).click();
+    await page.waitForFunction(() => document.documentElement.lang === 'en');
+    const sizes = [[320, 740], [393, 852], [430, 932], [768, 1024], [1024, 768], [1440, 900], [1920, 1080], [844, 390]];
+    for (const [width, height] of sizes) {
+      await page.setViewportSize({ width, height });
+      await assertNoOverflow(page, `overview ${width}×${height}`);
+    }
+    await measureAuthenticatedNavigation(page, {
+      suite: accountCapture.suite,
+      targets: [
+        { path: `/accounts/${accountA}`, locator: () => tabs.getByRole('link', { name: 'Overview', exact: true }), ready: () => page.locator('.overview') },
+        { path: invitationsPath, locator: () => tabs.getByRole('link', { name: 'Invitations', exact: true }), ready: () => page.getByText('No invitations yet.', { exact: true }) },
+        { path: billingPath, locator: () => tabs.getByRole('link', { name: 'Billing', exact: true }), ready: () => page.locator('#billing-legal-name') },
+      ],
+    });
     await page.setViewportSize({ width: 393, height: 852 });
   } catch (error) {
     failures.push(`main flow: ${String(error)}`);
@@ -294,5 +347,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  'ACCOUNT WORKSPACE E2E PASSED: login, create accounts, overview, members, switching, unknown account, direct URL re-login, theme, 320/1440, keyboard, cross-user denial.',
+  'ACCOUNT WORKSPACE E2E PASSED: login, create accounts, overview, members, invitations, billing, usage, analytics, audit, Back/Forward, switching, direct URL re-login, RU/EN, theme, 320/1440, keyboard, cross-user denial.',
 );

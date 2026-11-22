@@ -203,12 +203,10 @@ async function reconcile(): Promise<void> {
                 <option value="present">{{ t('education.present') }}</option>
                 <option value="absent">{{ t('education.absentStatus') }}</option>
               </select>
-              <span
-                v-else
-                aria-label="Нет участия"
-              >
-                —
-              </span>
+              <template v-else>
+                <span aria-hidden="true">—</span>
+                <span class="visually-hidden">{{ t('education.noParticipation') }}</span>
+              </template>
             </td>
           </tr>
         </tbody>

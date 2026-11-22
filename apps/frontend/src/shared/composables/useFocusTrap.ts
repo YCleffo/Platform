@@ -3,8 +3,14 @@ import { onBeforeUnmount, type Ref } from 'vue';
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+const activeTraps: Array<() => void> = [];
+
 export function useFocusTrap(container: Ref<HTMLElement | null>) {
   let lastActive: HTMLElement | null = null;
+
+  function isActive(): boolean {
+    return activeTraps.at(-1) === focusFirst;
+  }
 
   function focusFirst(): void {
     const el = container.value;
@@ -20,7 +26,7 @@ export function useFocusTrap(container: Ref<HTMLElement | null>) {
   }
 
   function onKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'Tab') {
+    if (event.key !== 'Tab' || event.defaultPrevented || !isActive()) {
       return;
     }
     const el = container.value;
@@ -31,6 +37,8 @@ export function useFocusTrap(container: Ref<HTMLElement | null>) {
       (node) => node.offsetParent !== null || node === document.activeElement,
     );
     if (items.length === 0) {
+      event.preventDefault();
+      el.focus();
       return;
     }
     const first = items[0];
@@ -38,7 +46,10 @@ export function useFocusTrap(container: Ref<HTMLElement | null>) {
     if (first === undefined || last === undefined) {
       return;
     }
-    if (event.shiftKey && document.activeElement === first) {
+    if (!el.contains(document.activeElement)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (event.shiftKey && document.activeElement === first) {
       event.preventDefault();
       last.focus();
     } else if (!event.shiftKey && document.activeElement === last) {
@@ -48,18 +59,27 @@ export function useFocusTrap(container: Ref<HTMLElement | null>) {
   }
 
   function activate(): void {
+    if (container.value === null || activeTraps.includes(focusFirst)) return;
     lastActive = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    activeTraps.push(focusFirst);
     document.addEventListener('keydown', onKeydown);
     focusFirst();
   }
 
   function deactivate(): void {
+    const position = activeTraps.indexOf(focusFirst);
+    if (position === -1) return;
+    const restoreFocus = isActive();
+    activeTraps.splice(position, 1);
     document.removeEventListener('keydown', onKeydown);
-    lastActive?.focus();
+    if (restoreFocus) {
+      if (lastActive?.isConnected && !lastActive.closest('[inert]')) lastActive.focus();
+      else activeTraps.at(-1)?.();
+    }
     lastActive = null;
   }
 
   onBeforeUnmount(deactivate);
 
-  return { activate, deactivate, focusFirst };
+  return { activate, deactivate, focusFirst, isActive };
 }

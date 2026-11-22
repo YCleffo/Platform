@@ -20,8 +20,8 @@ const open = ref(false);
     <button
       type="button"
       class="switcher__button"
+      aria-haspopup="dialog"
       :aria-expanded="open"
-      :aria-label="$t('account.switchAccount')"
       @click="open = true"
     >
       <span class="switcher__text">

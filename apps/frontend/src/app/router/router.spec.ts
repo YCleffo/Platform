@@ -5,6 +5,7 @@ import { createAppRouter } from './index';
 import { useAuthStore } from '@/core/auth/authStore';
 import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import { beginSession, endSession } from '@/core/auth/session';
+import { activeNavigationRoute } from '@/shared/navigation/activeRoute';
 
 const accountId = '018f0000-0000-7000-8000-000000000001';
 
@@ -100,5 +101,23 @@ describe('router account guard', () => {
     const router = createAppRouter(createMemoryHistory(), true);
     await router.push('/education/login?redirect=/parent/activate');
     expect(router.currentRoute.value.name).toBe('education-parent-activate');
+  });
+
+  it('resolves teacher and student deep links to their navigation sections', () => {
+    const router = createAppRouter(createMemoryHistory(), true);
+    for (const path of ['/lessons/lesson', '/lessons/lesson/edit', '/lessons/lesson/materials']) {
+      expect(router.resolve(path).meta.educationTab).toBe('calendar');
+    }
+    for (const [path, section] of [
+      ['/student/diary/lesson', 'education-student-diary'],
+      ['/student/homework/work', 'education-student-homework'],
+      ['/student/typing/intro', 'education-student-activities'],
+      ['/student/logic/intro', 'education-student-activities'],
+      ['/student/schedule', 'education-student-schedule'],
+    ] as const) {
+      expect(activeNavigationRoute(router.resolve(path), 'studentNavigation')).toBe(section);
+    }
+    expect(router.resolve('/parent/notifications?child=child&organization=org').meta.parentSection)
+      .toBe('notifications');
   });
 });
