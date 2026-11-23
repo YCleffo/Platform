@@ -481,6 +481,17 @@ async function payInvoiceById(invoiceId: string): Promise<void> {
 }
 
 async function payPlanChange(): Promise<void> {
+  if (!canManage.value && store.detailLoading) {
+    await store.loadAccount(accountId.value);
+  }
+  if (!canManage.value) {
+    return;
+  }
+  const paymentId = planChange.value?.payment_id;
+  if (paymentId) {
+    await continuePayment(paymentId);
+    return;
+  }
   const invoiceId = planChange.value?.invoice_id;
   if (invoiceId !== null && invoiceId !== undefined) {
     await payInvoiceById(invoiceId);
@@ -488,6 +499,9 @@ async function payPlanChange(): Promise<void> {
 }
 
 async function continuePayment(paymentId: string): Promise<void> {
+  if (!canManage.value && store.detailLoading) {
+    await store.loadAccount(accountId.value);
+  }
   if (!canManage.value) {
     return;
   }

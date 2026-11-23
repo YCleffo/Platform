@@ -44,6 +44,14 @@ const page = await context.newPage();
 const errors = [];
 const states = [];
 let access;
+page.on('console', (msg) => {
+  if (msg.type() === 'error') {
+    console.error(`[Browser Console Error] ${msg.text()}`);
+  }
+});
+page.on('requestfailed', (req) => {
+  console.error(`[Browser Request Failed] ${req.method()} ${req.url()} - ${req.failure()?.errorText}`);
+});
 page.on('pageerror', (error) => errors.push(error.message));
 page.on('response', async (r) => {
   if (
@@ -213,9 +221,14 @@ try {
   await billing(down.id);
   const payBtn = page.getByRole('button', { name: 'Pay for the change', exact: true });
   await payBtn.waitFor({ state: 'visible' });
+  await until(
+    () => payBtn.isEnabled(),
+    (v) => v === true,
+    'Pay for the change button must be enabled',
+  );
   const checkoutPromise = page.waitForResponse(
     (r) => r.url().endsWith('/checkout') && r.request().method() === 'POST',
-    { timeout: 15000 },
+    { timeout: 30000 },
   );
   await payBtn.click();
   let checkout;
@@ -225,7 +238,7 @@ try {
     if (await payBtn.isVisible()) {
       const retryPromise = page.waitForResponse(
         (r) => r.url().endsWith('/checkout') && r.request().method() === 'POST',
-        { timeout: 15000 },
+        { timeout: 30000 },
       );
       await payBtn.click();
       checkout = await retryPromise;

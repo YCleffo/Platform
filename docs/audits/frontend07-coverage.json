@@ -1155,7 +1155,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 595,
+          "line": 609,
           "routes": [
             "account-billing"
           ]
@@ -2334,7 +2334,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 715,
+          "line": 729,
           "routes": [
             "account-billing"
           ]
@@ -2418,7 +2418,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 674,
+          "line": 688,
           "routes": [
             "account-billing"
           ]
@@ -2586,7 +2586,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 678,
+          "line": 692,
           "routes": [
             "account-billing"
           ]
@@ -4929,7 +4929,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 583,
+          "line": 597,
           "routes": [
             "account-billing"
           ]
@@ -5124,7 +5124,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 706,
+          "line": 720,
           "routes": [
             "account-billing"
           ]
@@ -5215,7 +5215,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 548,
+          "line": 562,
           "routes": [
             "account-billing"
           ]
@@ -5402,7 +5402,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 561,
+          "line": 575,
           "routes": [
             "account-billing"
           ]
@@ -5493,7 +5493,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 573,
+          "line": 587,
           "routes": [
             "account-billing"
           ]
@@ -5683,7 +5683,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 532,
+          "line": 546,
           "routes": [
             "account-billing"
           ]
