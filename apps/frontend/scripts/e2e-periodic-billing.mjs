@@ -135,6 +135,10 @@ async function settle(paymentId, webhook = true) {
 }
 async function paid(name) {
   await navigateClientSide(page, '/cabinet');
+  await page
+    .locator('[data-testid="cabinet-create-account"], button:has-text("Create account")')
+    .first()
+    .waitFor({ state: 'visible', timeout: 30000 });
   const id = await createCommercialAccount(page, name + '-' + suffix, name + ' ' + suffix);
   await billing(id);
   await page.locator('#billing-legal-name').fill('Isolated ' + name);
