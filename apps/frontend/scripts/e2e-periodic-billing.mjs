@@ -253,6 +253,7 @@ async function paid(name) {
       method: 'POST',
       token: access,
       key: `${suffix}-${name}-inv`,
+      body: {},
       expected: [200, 201],
     });
     const pay = await api(`/api/control/accounts/${id}/invoices/${inv.id}/payment`, {
