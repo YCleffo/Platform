@@ -800,7 +800,6 @@ jobs:
       CONTROL_TEST_USER: platform_control_test
       PLATFORM_BASE_DOMAIN: platform.example
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      EDUCATION_ENABLED: "1"
       SMTP_HOST: mailpit-core-test
       AUTH_PUBLIC_BASE_URL: https://e2e.platform.test:4175
       AUTH_WEBAUTHN_RP_ID: e2e.platform.test
@@ -955,6 +954,7 @@ jobs:
     timeout-minutes: 25
     env:
       COMPOSE_PROJECT_NAME: platform-edu-roles-ci
+      EDUCATION_ENABLED: "1"
       POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
       POSTGRES_USER: platform_app
@@ -962,7 +962,6 @@ jobs:
       CONTROL_TEST_USER: platform_control_test
       PLATFORM_BASE_DOMAIN: platform.example
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      EDUCATION_ENABLED: "1"
       SMTP_HOST: mailpit-core-test
       AUTH_PUBLIC_BASE_URL: https://e2e.platform.test:4175
       AUTH_WEBAUTHN_RP_ID: e2e.platform.test
@@ -1131,6 +1130,7 @@ jobs:
     timeout-minutes: 25
     env:
       COMPOSE_PROJECT_NAME: platform-edu-f07-ci
+      EDUCATION_ENABLED: "1"
       POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
       POSTGRES_USER: platform_app
@@ -1138,7 +1138,6 @@ jobs:
       CONTROL_TEST_USER: platform_control_test
       PLATFORM_BASE_DOMAIN: platform.example
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      EDUCATION_ENABLED: "1"
       SMTP_HOST: mailpit-core-test
       AUTH_PUBLIC_BASE_URL: https://e2e.platform.test:4175
       AUTH_WEBAUTHN_RP_ID: e2e.platform.test
