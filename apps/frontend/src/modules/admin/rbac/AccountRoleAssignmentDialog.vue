@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import {
-  coreRbacApi,
-  type AccountRoleAssignment,
-  type CoreRole,
-} from '@/shared/api/core/rbac';
+import { coreRbacApi, type AccountRoleAssignment, type CoreRole } from '@/shared/api/core/rbac';
 import { resolveErrorMessage } from '@/shared/errors/humanize';
 import { useToast } from '@/shared/composables/useToast';
 import { formatDateTime } from '@/shared/formatting/date';
@@ -114,9 +110,7 @@ async function revokeRole(assignment: AccountRoleAssignment): Promise<void> {
   saving.value = true;
   try {
     await coreRbacApi.revokeAccountRole(activeAccountId.value, assignment.roleId);
-    assignedRoles.value = assignedRoles.value.filter(
-      (r) => r.roleId !== assignment.roleId,
-    );
+    assignedRoles.value = assignedRoles.value.filter((r) => r.roleId !== assignment.roleId);
     auditLog.value.unshift({
       id: `${assignment.roleId}-${Date.now()}`,
       roleName: assignment.roleName,

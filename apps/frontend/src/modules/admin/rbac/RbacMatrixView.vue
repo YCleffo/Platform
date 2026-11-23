@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import {
-  coreRbacApi,
-  type CorePermission,
-  type CoreRole,
-} from '@/shared/api/core/rbac';
+import { coreRbacApi, type CorePermission, type CoreRole } from '@/shared/api/core/rbac';
 import { resolveErrorMessage } from '@/shared/errors/humanize';
 import { useToast } from '@/shared/composables/useToast';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
@@ -222,10 +218,12 @@ onMounted(() => {
                       :disabled="role.isSystem || saving"
                       :aria-label="`${role.name}: ${perm.name}`"
                       @change="togglePermission(role, perm.code)"
-                    >
+                    />
                     <span
                       class="rbac-matrix__checkbox-status"
-                      :class="{ 'rbac-matrix__checkbox-status--active': hasPermission(role, perm.code) }"
+                      :class="{
+                        'rbac-matrix__checkbox-status--active': hasPermission(role, perm.code),
+                      }"
                     />
                   </label>
                 </td>

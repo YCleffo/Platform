@@ -1248,6 +1248,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         },
@@ -3164,6 +3165,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         }
@@ -5768,6 +5770,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         },
@@ -5870,6 +5873,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         }
@@ -5964,6 +5968,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         },
@@ -6055,6 +6060,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         }
@@ -6151,6 +6157,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         },
@@ -6411,6 +6418,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         },
@@ -6501,6 +6509,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         },
@@ -6589,6 +6598,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         },
@@ -6825,6 +6835,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         },
@@ -6923,6 +6934,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         },
@@ -7011,6 +7023,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         },
@@ -7108,6 +7121,7 @@
             "register",
             "resend-verification",
             "security",
+            "settings-developer",
             "verify-email"
           ]
         },
@@ -9016,7 +9030,7 @@
         },
         {
           "file": "apps/frontend/src/shared/api/core/rbac.ts",
-          "line": 158,
+          "line": 166,
           "action": "revokeAccountRole",
           "owner": "coreRbacApi"
         }
@@ -9032,6 +9046,13 @@
             "admin-persons",
             "admin-privacy",
             "admin-privacy-registry",
+            "admin-rbac"
+          ]
+        },
+        {
+          "file": "apps/frontend/src/modules/admin/rbac/AccountRoleAssignmentDialog.vue",
+          "line": 112,
+          "routes": [
             "admin-rbac"
           ]
         }
@@ -9476,7 +9497,8 @@
             "education-login",
             "education-more",
             "education-parent-activate",
-            "operator-console"
+            "operator-console",
+            "settings-developer"
           ]
         }
       ],
@@ -9569,7 +9591,8 @@
             "education-login",
             "education-more",
             "education-parent-activate",
-            "operator-console"
+            "operator-console",
+            "settings-developer"
           ]
         }
       ],
@@ -10876,13 +10899,13 @@
         },
         {
           "file": "apps/frontend/src/shared/api/core/platformAdmin.ts",
-          "line": 129,
+          "line": 176,
           "action": "listAccounts",
           "owner": "platformAdminApi"
         },
         {
           "file": "apps/frontend/src/shared/api/core/platformAdmin.ts",
-          "line": 129,
+          "line": 176,
           "action": "listAccounts",
           "owner": "platformAdminApi"
         }
@@ -10899,6 +10922,13 @@
             "admin-privacy",
             "admin-privacy-registry",
             "admin-rbac"
+          ]
+        },
+        {
+          "file": "apps/frontend/src/modules/admin/superadmin/PlatformSuperadminView.vue",
+          "line": 70,
+          "routes": [
+            "admin-superadmin"
           ]
         }
       ],
@@ -10986,6 +11016,13 @@
             "admin-privacy",
             "admin-privacy-registry",
             "admin-rbac"
+          ]
+        },
+        {
+          "file": "apps/frontend/src/modules/settings/DeveloperSettingsView.vue",
+          "line": 206,
+          "routes": [
+            "settings-developer"
           ]
         }
       ],
@@ -11140,7 +11177,7 @@
         },
         {
           "file": "apps/frontend/src/shared/api/core/rbac.ts",
-          "line": 142,
+          "line": 150,
           "action": "listAccountRoles",
           "owner": "coreRbacApi"
         }
@@ -11766,13 +11803,13 @@
         },
         {
           "file": "apps/frontend/src/shared/api/core/platformAdmin.ts",
-          "line": 83,
+          "line": 130,
           "action": "listOrganizations",
           "owner": "platformAdminApi"
         },
         {
           "file": "apps/frontend/src/shared/api/core/platformAdmin.ts",
-          "line": 83,
+          "line": 130,
           "action": "listOrganizations",
           "owner": "platformAdminApi"
         }
@@ -11789,6 +11826,13 @@
             "admin-privacy",
             "admin-privacy-registry",
             "admin-rbac"
+          ]
+        },
+        {
+          "file": "apps/frontend/src/modules/admin/superadmin/PlatformSuperadminView.vue",
+          "line": 58,
+          "routes": [
+            "admin-superadmin"
           ]
         }
       ],
@@ -11960,6 +12004,13 @@
             "admin-persons",
             "admin-privacy",
             "admin-privacy-registry",
+            "admin-rbac"
+          ]
+        },
+        {
+          "file": "apps/frontend/src/modules/admin/rbac/RbacMatrixView.vue",
+          "line": 48,
+          "routes": [
             "admin-rbac"
           ]
         }
@@ -13431,6 +13482,20 @@
             "admin-privacy-registry",
             "admin-rbac"
           ]
+        },
+        {
+          "file": "apps/frontend/src/modules/admin/rbac/AccountRoleAssignmentDialog.vue",
+          "line": 49,
+          "routes": [
+            "admin-rbac"
+          ]
+        },
+        {
+          "file": "apps/frontend/src/modules/admin/rbac/RbacMatrixView.vue",
+          "line": 47,
+          "routes": [
+            "admin-rbac"
+          ]
         }
       ],
       "coverage": "PARTIAL",
@@ -14566,7 +14631,8 @@
             "education-login",
             "education-more",
             "education-parent-activate",
-            "operator-console"
+            "operator-console",
+            "settings-developer"
           ]
         }
       ],
@@ -14657,7 +14723,8 @@
             "education-login",
             "education-more",
             "education-parent-activate",
-            "operator-console"
+            "operator-console",
+            "settings-developer"
           ]
         }
       ],
@@ -15486,7 +15553,8 @@
             "education-login",
             "education-more",
             "education-parent-activate",
-            "operator-console"
+            "operator-console",
+            "settings-developer"
           ]
         }
       ],
@@ -15578,7 +15646,8 @@
             "education-login",
             "education-more",
             "education-parent-activate",
-            "operator-console"
+            "operator-console",
+            "settings-developer"
           ]
         }
       ],
@@ -15664,7 +15733,8 @@
             "education-login",
             "education-more",
             "education-parent-activate",
-            "operator-console"
+            "operator-console",
+            "settings-developer"
           ]
         }
       ],
@@ -15986,7 +16056,8 @@
             "education-login",
             "education-more",
             "education-parent-activate",
-            "operator-console"
+            "operator-console",
+            "settings-developer"
           ]
         }
       ],
@@ -16553,6 +16624,13 @@
             "admin-privacy-registry",
             "admin-rbac"
           ]
+        },
+        {
+          "file": "apps/frontend/src/modules/settings/DeveloperSettingsView.vue",
+          "line": 218,
+          "routes": [
+            "settings-developer"
+          ]
         }
       ],
       "coverage": "PARTIAL",
@@ -16645,6 +16723,13 @@
             "admin-privacy-registry",
             "admin-rbac"
           ]
+        },
+        {
+          "file": "apps/frontend/src/modules/settings/DeveloperSettingsView.vue",
+          "line": 275,
+          "routes": [
+            "settings-developer"
+          ]
         }
       ],
       "coverage": "PARTIAL",
@@ -16736,6 +16821,13 @@
             "admin-privacy",
             "admin-privacy-registry",
             "admin-rbac"
+          ]
+        },
+        {
+          "file": "apps/frontend/src/modules/settings/DeveloperSettingsView.vue",
+          "line": 246,
+          "routes": [
+            "settings-developer"
           ]
         }
       ],
@@ -17435,7 +17527,7 @@
         },
         {
           "file": "apps/frontend/src/shared/api/core/platformAdmin.ts",
-          "line": 102,
+          "line": 149,
           "action": "createOrganization",
           "owner": "platformAdminApi"
         }
@@ -17452,6 +17544,13 @@
             "admin-privacy",
             "admin-privacy-registry",
             "admin-rbac"
+          ]
+        },
+        {
+          "file": "apps/frontend/src/modules/admin/superadmin/PlatformSuperadminView.vue",
+          "line": 113,
+          "routes": [
+            "admin-superadmin"
           ]
         }
       ],
@@ -19373,6 +19472,13 @@
             "admin-persons",
             "admin-privacy",
             "admin-privacy-registry",
+            "admin-rbac"
+          ]
+        },
+        {
+          "file": "apps/frontend/src/modules/admin/rbac/RbacMatrixView.vue",
+          "line": 90,
+          "routes": [
             "admin-rbac"
           ]
         }
@@ -34478,6 +34584,13 @@
           "routes": [
             "education-student-documents"
           ]
+        },
+        {
+          "file": "apps/frontend/src/modules/storage/CloudDriveView.vue",
+          "line": 85,
+          "routes": [
+            "drive"
+          ]
         }
       ],
       "coverage": "PARTIAL",
@@ -34625,6 +34738,13 @@
       ],
       "ui": [
         {
+          "file": "apps/frontend/src/modules/storage/CloudDriveView.vue",
+          "line": 84,
+          "routes": [
+            "drive"
+          ]
+        },
+        {
           "file": "apps/frontend/src/modules/education/student/StudentDocumentsView.vue",
           "line": 77,
           "routes": [
@@ -34721,6 +34841,13 @@
           "routes": [
             "education-student-documents"
           ]
+        },
+        {
+          "file": "apps/frontend/src/modules/storage/CloudDriveView.vue",
+          "line": 191,
+          "routes": [
+            "drive"
+          ]
         }
       ],
       "coverage": "PARTIAL",
@@ -34804,6 +34931,13 @@
           "line": 76,
           "routes": [
             "education-student-documents"
+          ]
+        },
+        {
+          "file": "apps/frontend/src/modules/storage/CloudDriveView.vue",
+          "line": 83,
+          "routes": [
+            "drive"
           ]
         }
       ],
@@ -35492,6 +35626,13 @@
           "routes": [
             "education-student-documents"
           ]
+        },
+        {
+          "file": "apps/frontend/src/modules/storage/CloudDriveView.vue",
+          "line": 270,
+          "routes": [
+            "drive"
+          ]
         }
       ],
       "coverage": "PARTIAL",
@@ -35575,6 +35716,13 @@
           "line": 237,
           "routes": [
             "education-student-documents"
+          ]
+        },
+        {
+          "file": "apps/frontend/src/modules/storage/CloudDriveView.vue",
+          "line": 227,
+          "routes": [
+            "drive"
           ]
         }
       ],
@@ -35660,6 +35808,13 @@
           "routes": [
             "education-student-documents"
           ]
+        },
+        {
+          "file": "apps/frontend/src/modules/storage/CloudDriveView.vue",
+          "line": 203,
+          "routes": [
+            "drive"
+          ]
         }
       ],
       "coverage": "PARTIAL",
@@ -35740,6 +35895,13 @@
         }
       ],
       "ui": [
+        {
+          "file": "apps/frontend/src/modules/storage/CloudDriveView.vue",
+          "line": 111,
+          "routes": [
+            "drive"
+          ]
+        },
         {
           "file": "apps/frontend/src/modules/education/student/StudentDocumentsView.vue",
           "line": 285,

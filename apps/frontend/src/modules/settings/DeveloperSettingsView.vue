@@ -51,7 +51,9 @@ const saving = ref(false);
 
 const credentials = ref<ServiceCredentialSummary[]>([]);
 const currentAccountId = computed(() => {
-  return auth.currentUser?.id || adminAuth.identity?.account.id || '01a204bc-f94d-7bac-8ac8-a828186dfd4b';
+  return (
+    auth.currentUser?.id || adminAuth.identity?.account.id || '01a204bc-f94d-7bac-8ac8-a828186dfd4b'
+  );
 });
 
 // Issue modal state
@@ -77,10 +79,26 @@ const newlyIssuedSecret = ref<IssuedServiceCredential | null>(null);
 
 const availableScopes = [
   { code: 'read:storage', label: 'Cloud Drive Read', desc: 'Read files and folder listings' },
-  { code: 'manage:billing', label: 'Billing Operations', desc: 'Manage subscriptions, plans and invoices' },
-  { code: 'education:read', label: 'Education Reader', desc: 'Read course catalog, enrollments and progress' },
-  { code: 'entitlements.read', label: 'Entitlements Read', desc: 'Check customer license entitlements' },
-  { code: 'usage.write', label: 'Usage Metering', desc: 'Push real-time usage consumption metrics' },
+  {
+    code: 'manage:billing',
+    label: 'Billing Operations',
+    desc: 'Manage subscriptions, plans and invoices',
+  },
+  {
+    code: 'education:read',
+    label: 'Education Reader',
+    desc: 'Read course catalog, enrollments and progress',
+  },
+  {
+    code: 'entitlements.read',
+    label: 'Entitlements Read',
+    desc: 'Check customer license entitlements',
+  },
+  {
+    code: 'usage.write',
+    label: 'Usage Metering',
+    desc: 'Push real-time usage consumption metrics',
+  },
 ];
 
 // Webhook state
@@ -140,7 +158,8 @@ const openApiEndpoints = ref<ApiEndpointDoc[]>([
     module: 'Cloud Drive',
     description: 'List accessible files and directories for the authorized tenant.',
     scopes: ['read:storage'],
-    exampleCurl: 'curl -H "Authorization: Bearer sk_live_..." https://platform.local/api/storage/files?prefix=/documents',
+    exampleCurl:
+      'curl -H "Authorization: Bearer sk_live_..." https://platform.local/api/storage/files?prefix=/documents',
   },
   {
     method: 'POST',
@@ -148,7 +167,8 @@ const openApiEndpoints = ref<ApiEndpointDoc[]>([
     module: 'Cloud Drive',
     description: 'Request a secure direct presigned S3 upload ticket with SHA-256 verification.',
     scopes: ['read:storage'],
-    exampleCurl: 'curl -X POST -H "Authorization: Bearer sk_live_..." -H "Content-Type: application/json" -d \'{"fileName":"doc.pdf","sizeBytes":1024,"mimeType":"application/pdf","sha256":"..."}\' https://platform.local/api/storage/tickets',
+    exampleCurl:
+      'curl -X POST -H "Authorization: Bearer sk_live_..." -H "Content-Type: application/json" -d \'{"fileName":"doc.pdf","sizeBytes":1024,"mimeType":"application/pdf","sha256":"..."}\' https://platform.local/api/storage/tickets',
   },
   {
     method: 'GET',
@@ -156,7 +176,8 @@ const openApiEndpoints = ref<ApiEndpointDoc[]>([
     module: 'Commercial Billing',
     description: 'Retrieve active tenant subscription status, renewal date, and seat limits.',
     scopes: ['manage:billing'],
-    exampleCurl: 'curl -H "Authorization: Bearer sk_live_..." https://platform.local/api/commercial/subscriptions/current',
+    exampleCurl:
+      'curl -H "Authorization: Bearer sk_live_..." https://platform.local/api/commercial/subscriptions/current',
   },
   {
     method: 'POST',
@@ -164,7 +185,8 @@ const openApiEndpoints = ref<ApiEndpointDoc[]>([
     module: 'Usage Metering',
     description: 'Submit metered consumption units for active tenant entitlements.',
     scopes: ['usage.write'],
-    exampleCurl: 'curl -X POST -H "Authorization: Bearer sk_live_..." -H "Content-Type: application/json" -d \'{"units":100,"metricKey":"api_calls"}\' https://platform.local/api/commercial/usage/meter',
+    exampleCurl:
+      'curl -X POST -H "Authorization: Bearer sk_live_..." -H "Content-Type: application/json" -d \'{"units":100,"metricKey":"api_calls"}\' https://platform.local/api/commercial/usage/meter',
   },
   {
     method: 'GET',
@@ -172,7 +194,8 @@ const openApiEndpoints = ref<ApiEndpointDoc[]>([
     module: 'Education Platform',
     description: 'Fetch catalog of courses, syllabus modules, and learner enrollment records.',
     scopes: ['education:read'],
-    exampleCurl: 'curl -H "Authorization: Bearer sk_live_..." https://platform.local/api/education/courses',
+    exampleCurl:
+      'curl -H "Authorization: Bearer sk_live_..." https://platform.local/api/education/courses',
   },
 ]);
 
@@ -249,10 +272,7 @@ async function handleRevokeKey(): Promise<void> {
   if (!revokingCredential.value) return;
   saving.value = true;
   try {
-    await coreServiceCredentialsApi.revoke(
-      currentAccountId.value,
-      revokingCredential.value.id,
-    );
+    await coreServiceCredentialsApi.revoke(currentAccountId.value, revokingCredential.value.id);
     const target = credentials.value.find((c) => c.id === revokingCredential.value!.id);
     if (target) {
       target.status = 'revoked';
@@ -406,7 +426,13 @@ onMounted(() => {
               </td>
               <td>
                 <AppBadge
-                  :variant="item.status === 'active' ? 'success' : item.status === 'rotated' ? 'warning' : 'danger'"
+                  :variant="
+                    item.status === 'active'
+                      ? 'success'
+                      : item.status === 'rotated'
+                        ? 'warning'
+                        : 'danger'
+                  "
                   size="s"
                 >
                   {{ item.status }}
@@ -566,9 +592,7 @@ onMounted(() => {
                 <td class="dev-settings__muted-cell">
                   {{ formatDateTime(del.deliveredAt) }}
                 </td>
-                <td class="dev-settings__muted-cell">
-                  {{ del.durationMs }}ms
-                </td>
+                <td class="dev-settings__muted-cell">{{ del.durationMs }}ms</td>
                 <td class="dev-settings__align-right">
                   <div class="dev-settings__btn-group">
                     <AppButton
@@ -623,9 +647,13 @@ onMounted(() => {
                 v-model="issueForm.scopes"
                 type="checkbox"
                 :value="sc.code"
-              >
+              />
               <div class="dev-settings__scope-meta">
-                <span class="dev-settings__scope-title">{{ sc.label }} (<code>{{ sc.code }}</code>)</span>
+                <span class="dev-settings__scope-title">
+                  {{ sc.label }} (
+                  <code>{{ sc.code }}</code>
+                  )
+                </span>
                 <span class="dev-settings__scope-desc">{{ sc.desc }}</span>
               </div>
             </label>
@@ -666,18 +694,10 @@ onMounted(() => {
             v-model="rotationGraceHours"
             class="dev-settings__select"
           >
-            <option :value="1">
-              1 hour
-            </option>
-            <option :value="12">
-              12 hours
-            </option>
-            <option :value="24">
-              24 hours (Recommended)
-            </option>
-            <option :value="48">
-              48 hours
-            </option>
+            <option :value="1">1 hour</option>
+            <option :value="12">12 hours</option>
+            <option :value="24">24 hours (Recommended)</option>
+            <option :value="48">48 hours</option>
           </select>
         </div>
         <div class="dev-settings__form-actions">
@@ -708,7 +728,8 @@ onMounted(() => {
           {{ $t('developer.revokeConfirmation') }}
         </p>
         <p v-if="revokingCredential">
-          <strong>Key:</strong> {{ revokingCredential.name }} ({{ revokingCredential.prefix }}••••)
+          <strong>Key:</strong>
+          {{ revokingCredential.name }} ({{ revokingCredential.prefix }}••••)
         </p>
         <div class="dev-settings__form-actions">
           <AppButton
@@ -772,9 +793,17 @@ onMounted(() => {
         v-if="inspectedPayload"
         class="dev-settings__dialog-body"
       >
-        <p><strong>Event:</strong> <code>{{ inspectedPayload.event }}</code></p>
-        <p><strong>Delivered To:</strong> {{ inspectedPayload.targetUrl }}</p>
-        <pre class="dev-settings__curl-box"><code>{{ JSON.stringify(inspectedPayload.payload, null, 2) }}</code></pre>
+        <p>
+          <strong>Event:</strong>
+          <code>{{ inspectedPayload.event }}</code>
+        </p>
+        <p>
+          <strong>Delivered To:</strong>
+          {{ inspectedPayload.targetUrl }}
+        </p>
+        <pre
+          class="dev-settings__curl-box"
+        ><code>{{ JSON.stringify(inspectedPayload.payload, null, 2) }}</code></pre>
         <div class="dev-settings__form-actions">
           <AppButton
             variant="secondary"

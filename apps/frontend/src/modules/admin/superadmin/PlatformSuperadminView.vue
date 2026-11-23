@@ -302,11 +302,21 @@ onMounted(() => {
               v-for="org in organizations"
               :key="org.id"
             >
-              <td><strong>{{ org.name }}</strong></td>
-              <td><code class="superadmin__code">{{ org.slug }}</code></td>
+              <td>
+                <strong>{{ org.name }}</strong>
+              </td>
+              <td>
+                <code class="superadmin__code">{{ org.slug }}</code>
+              </td>
               <td>
                 <AppBadge
-                  :variant="org.status === 'active' ? 'success' : org.status === 'suspended' ? 'warning' : 'danger'"
+                  :variant="
+                    org.status === 'active'
+                      ? 'success'
+                      : org.status === 'suspended'
+                        ? 'warning'
+                        : 'danger'
+                  "
                   size="s"
                 >
                   {{ org.status }}
@@ -388,7 +398,13 @@ onMounted(() => {
               <td>{{ acc.organizationName }}</td>
               <td>
                 <AppBadge
-                  :variant="acc.moderationStatus === 'active' ? 'success' : acc.moderationStatus === 'pending' ? 'warning' : 'danger'"
+                  :variant="
+                    acc.moderationStatus === 'active'
+                      ? 'success'
+                      : acc.moderationStatus === 'pending'
+                        ? 'warning'
+                        : 'danger'
+                  "
                   size="s"
                 >
                   {{ acc.moderationStatus }}
@@ -470,20 +486,34 @@ onMounted(() => {
               v-for="sess in sessions"
               :key="sess.id"
             >
-              <td><strong>{{ sess.accountEmail }}</strong></td>
+              <td>
+                <strong>{{ sess.accountEmail }}</strong>
+              </td>
               <td>
                 <code class="superadmin__code">{{ sess.ipAddress }}</code>
-                <span class="superadmin__muted-cell"> ({{ sess.location }})</span>
+                <span class="superadmin__muted-cell">({{ sess.location }})</span>
               </td>
               <td class="superadmin__muted-cell">
                 {{ sess.userAgent }}
               </td>
               <td>
                 <AppBadge
-                  :variant="sess.riskScore === 'high' ? 'danger' : sess.riskScore === 'medium' ? 'warning' : 'neutral'"
+                  :variant="
+                    sess.riskScore === 'high'
+                      ? 'danger'
+                      : sess.riskScore === 'medium'
+                        ? 'warning'
+                        : 'neutral'
+                  "
                   size="s"
                 >
-                  {{ sess.riskScore === 'high' ? $t('platformAdmin.riskHigh') : sess.riskScore === 'medium' ? $t('platformAdmin.riskMedium') : $t('platformAdmin.riskLow') }}
+                  {{
+                    sess.riskScore === 'high'
+                      ? $t('platformAdmin.riskHigh')
+                      : sess.riskScore === 'medium'
+                        ? $t('platformAdmin.riskMedium')
+                        : $t('platformAdmin.riskLow')
+                  }}
                 </AppBadge>
               </td>
               <td class="superadmin__muted-cell">
@@ -538,10 +568,22 @@ onMounted(() => {
               {{ svc.name }}
             </h3>
             <AppBadge
-              :variant="svc.status === 'healthy' ? 'success' : svc.status === 'degraded' ? 'warning' : 'danger'"
+              :variant="
+                svc.status === 'healthy'
+                  ? 'success'
+                  : svc.status === 'degraded'
+                    ? 'warning'
+                    : 'danger'
+              "
               size="s"
             >
-              {{ svc.status === 'healthy' ? $t('platformAdmin.healthy') : svc.status === 'degraded' ? $t('platformAdmin.degraded') : $t('platformAdmin.unhealthy') }}
+              {{
+                svc.status === 'healthy'
+                  ? $t('platformAdmin.healthy')
+                  : svc.status === 'degraded'
+                    ? $t('platformAdmin.degraded')
+                    : $t('platformAdmin.unhealthy')
+              }}
             </AppBadge>
           </div>
           <p
@@ -551,8 +593,12 @@ onMounted(() => {
             {{ svc.details }}
           </p>
           <div class="superadmin__health-footer">
-            <span class="superadmin__latency-tag">{{ $t('platformAdmin.latency', { ms: svc.latencyMs }) }}</span>
-            <span class="superadmin__muted-cell">Checked: {{ formatDateTime(svc.lastCheckedAt) }}</span>
+            <span class="superadmin__latency-tag">
+              {{ $t('platformAdmin.latency', { ms: svc.latencyMs }) }}
+            </span>
+            <span class="superadmin__muted-cell">
+              Checked: {{ formatDateTime(svc.lastCheckedAt) }}
+            </span>
           </div>
         </AppCard>
       </div>
@@ -609,22 +655,19 @@ onMounted(() => {
         v-if="editingOrg"
         class="superadmin__dialog-form"
       >
-        <p><strong>Organization:</strong> {{ editingOrg.name }}</p>
+        <p>
+          <strong>Organization:</strong>
+          {{ editingOrg.name }}
+        </p>
         <div class="superadmin__field">
           <label class="superadmin__field-label">{{ $t('developer.status') }}</label>
           <select
             v-model="selectedStatus"
             class="superadmin__select"
           >
-            <option value="active">
-              Active
-            </option>
-            <option value="suspended">
-              Suspended
-            </option>
-            <option value="archived">
-              Archived
-            </option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+            <option value="archived">Archived</option>
           </select>
         </div>
         <div class="superadmin__form-actions">
@@ -654,7 +697,10 @@ onMounted(() => {
         v-if="moderatingAccount"
         class="superadmin__dialog-form"
       >
-        <p><strong>Account:</strong> {{ moderatingAccount.email }}</p>
+        <p>
+          <strong>Account:</strong>
+          {{ moderatingAccount.email }}
+        </p>
         <AppInput
           id="superadmin-moderate-reason"
           v-model="moderationReason"

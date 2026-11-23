@@ -301,7 +301,7 @@ onMounted(() => {
           type="file"
           class="cloud-drive__hidden-input"
           @change="handleFileUpload(($event.target as HTMLInputElement).files)"
-        >
+        />
         <AppButton
           variant="primary"
           size="m"
@@ -321,7 +321,12 @@ onMounted(() => {
       <div class="cloud-drive__quota-header">
         <span class="cloud-drive__quota-title">{{ $t('drive.storageSpace') }}</span>
         <span class="cloud-drive__quota-stats">
-          {{ $t('drive.usedOf', { used: formatBytes(space.bytesUsed), limit: formatBytes(space.bytesLimit) }) }}
+          {{
+            $t('drive.usedOf', {
+              used: formatBytes(space.bytesUsed),
+              limit: formatBytes(space.bytesLimit),
+            })
+          }}
           ({{ spaceUsagePercent }}%)
         </span>
       </div>
@@ -479,7 +484,10 @@ onMounted(() => {
         v-if="sharingFile"
         class="cloud-drive__dialog-body"
       >
-        <p><strong>File:</strong> {{ sharingFile.name }}</p>
+        <p>
+          <strong>File:</strong>
+          {{ sharingFile.name }}
+        </p>
         <div class="cloud-drive__field">
           <label class="cloud-drive__field-label">{{ $t('drive.linkTtl') }}</label>
           <select
@@ -487,18 +495,10 @@ onMounted(() => {
             class="cloud-drive__select"
             @change="generatePresignedLink"
           >
-            <option :value="900">
-              15 minutes
-            </option>
-            <option :value="3600">
-              1 hour
-            </option>
-            <option :value="86400">
-              24 hours
-            </option>
-            <option :value="604800">
-              7 days
-            </option>
+            <option :value="900">15 minutes</option>
+            <option :value="3600">1 hour</option>
+            <option :value="86400">24 hours</option>
+            <option :value="604800">7 days</option>
           </select>
         </div>
 
@@ -537,7 +537,10 @@ onMounted(() => {
         v-if="versioningFile"
         class="cloud-drive__dialog-body"
       >
-        <p><strong>{{ versioningFile.name }}</strong> (current version: v{{ versioningFile.version }})</p>
+        <p>
+          <strong>{{ versioningFile.name }}</strong>
+          (current version: v{{ versioningFile.version }})
+        </p>
         <AppSkeleton
           v-if="loadingVersions"
           height="150px"
@@ -632,7 +635,10 @@ onMounted(() => {
         <p class="cloud-drive__danger-text">
           {{ $t('drive.deleteConfirm') }}
         </p>
-        <p><strong>File:</strong> {{ deletingFile.name }}</p>
+        <p>
+          <strong>File:</strong>
+          {{ deletingFile.name }}
+        </p>
         <div class="cloud-drive__form-actions">
           <AppButton
             variant="secondary"
@@ -660,8 +666,15 @@ onMounted(() => {
         v-if="activeConflict"
         class="cloud-drive__dialog-body"
       >
-        <p><strong>Conflict on:</strong> {{ activeConflict.fileName }}</p>
-        <p>Server version: v{{ activeConflict.serverVersion }} | Client version: v{{ activeConflict.clientVersion }}</p>
+        <p>
+          <strong>Conflict on:</strong>
+          {{ activeConflict.fileName }}
+        </p>
+        <p>
+          Server version: v{{ activeConflict.serverVersion }} | Client version: v{{
+            activeConflict.clientVersion
+          }}
+        </p>
         <div class="cloud-drive__conflict-actions">
           <AppButton
             variant="secondary"
