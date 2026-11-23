@@ -130,20 +130,29 @@ SQL, [$verificationId, $userId]);
         if (!is_string($recipient) || filter_var($recipient, FILTER_VALIDATE_EMAIL) === false) {
             throw new InvalidEmailEvent();
         }
+        $locale = (isset($payload['locale']) && is_string($payload['locale']) && str_starts_with($payload['locale'], 'ru')) ? 'ru' : 'en';
         $url = $this->verificationUrl . (str_contains($this->verificationUrl, '?') ? '&' : '?')
             . 'token=' . rawurlencode($this->tokens->verificationToken($verificationId));
-        $text = "Verify your Platform email address: $url";
+
+        if ($locale === 'ru') {
+            $subject = 'Подтверждение адреса электронной почты Platform';
+            $text = "Подтвердите ваш адрес электронной почты Platform: $url";
+            $html = '<p>Подтвердите ваш адрес электронной почты для завершения настройки аккаунта Platform.</p>'
+                . '<p><a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Подтвердить email</a></p>'
+                . '<p>Если вы не создавали этот аккаунт, вы можете проигнорировать это письмо.</p>';
+        } else {
+            $subject = 'Verify your Platform email address';
+            $text = "Verify your Platform email address: $url";
+            $html = '<p>Confirm your email address to finish setting up your Platform account.</p>'
+                . '<p><a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Verify email</a></p>'
+                . '<p>If you did not create this account, you can ignore this email.</p>';
+        }
 
         return [
             'recipient' => $recipient,
-            'subject' => 'Verify your Platform email address',
+            'subject' => $subject,
             'text' => $text,
-            'html' => ControlEmailLayout::render(
-                'Verify your Platform email address',
-                '<p>Confirm your email address to finish setting up your Platform account.</p>'
-                . '<p><a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Verify email</a></p>'
-                . '<p>If you did not create this account, you can ignore this email.</p>',
-            ),
+            'html' => ControlEmailLayout::render($subject, $html, $locale),
             'message_id' => (string) $claim['event_id'] . '@' . $this->messageIdDomain,
         ];
     }

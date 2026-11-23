@@ -30,4 +30,50 @@ describe('i18n messages', () => {
       }
     }
   });
+
+  it('checks for untranslated english in russian dictionary', () => {
+    const enMap = collect(en);
+    const ruMap = collect(ru);
+    const whitelist = new Set([
+      'picker.dateFormatEn',
+      'navigation.core',
+      'app.name',
+      'admin.brandSubtitle',
+    ]);
+    for (const [key, enVal] of Object.entries(enMap)) {
+      const ruVal = ruMap[key];
+      if (enVal === ruVal && /[a-zA-Z]{4,}/.test(enVal)) {
+        expect(whitelist.has(key), `Unexpected identical string at ${key}: "${enVal}"`).toBe(true);
+      }
+    }
+  });
+
+  it('every error code key resolves to a valid translation in both locales', () => {
+    const enMap = collect(en);
+    const ruMap = collect(ru);
+    const codeKeys = [
+      'operator.authorizationRequired',
+      'coreCredentials.insecure', 'coreCredentials.unsupported',
+      'coreCredentials.cancelled', 'coreCredentials.duplicate',
+      'coreCredentials.origin', 'coreCredentials.unavailable',
+      'coreCredentials.popupBlocked', 'coreCredentials.popupUnsupported',
+      'coreCredentials.linkTimeout', 'coreCredentials.linkCancelled',
+      'coreSecurity.recentRequired', 'coreCredentials.lastMethod',
+      'coreCredentials.identityConflict', 'coreCredentials.invalid',
+      'errors.notFound', 'coreCredentials.providerUnavailable',
+      'coreProfile.invalidPreferences', 'coreAuth.externalInvalid',
+      'coreAuth.externalCancelled', 'coreAuth.externalStorage',
+      'auth.invalidCredentials', 'auth.mfaInvalid', 'coreAuth.linkInvalid',
+      'errors.rate_limited', 'coreAuth.temporarilyUnavailable',
+      'coreAuth.restartLogin', 'errors.invalidResponse', 'admin.forbidden',
+      'errors.sessionExpired', 'auth.mfaExpired', 'security.mfaRequired',
+      'auth.resetInvalid', 'auth.verifyLinkInvalid', 'errors.email_unavailable',
+      'errors.validation_failed', 'errors.request_too_large', 'errors.operationRejected',
+      'errors.generic', 'errors.network', 'common.unexpectedError',
+    ];
+    for (const key of codeKeys) {
+      expect(enMap[key], `en:${key}`).toBeDefined();
+      expect(ruMap[key], `ru:${key}`).toBeDefined();
+    }
+  });
 });

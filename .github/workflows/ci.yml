@@ -945,12 +945,12 @@ jobs:
           rm -f /tmp/e2e-core-cert/key.pem /tmp/e2e-core-cert/cert.pem
           bash scripts/ci/test-stop.sh
 
-  education-browser:
-    name: Education · browser and storage E2E
+  education-roles-browser:
+    name: Education · roles and storage E2E
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 25
     env:
-      COMPOSE_PROJECT_NAME: platform-education-browser-ci
+      COMPOSE_PROJECT_NAME: platform-edu-roles-ci
       POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
       POSTGRES_USER: platform_app
@@ -1092,16 +1092,6 @@ jobs:
           npm run test:e2e:education:student
           npm run test:e2e:education:parent
           npm run test:e2e:education:device
-      - name: Verify FRONTEND_07 browser release scenarios and evidence
-        working-directory: apps/frontend
-        run: |
-          manifest=screenshots/education-real/frontend07/manifest.json
-          result=0
-          node scripts/frontend07-coverage.mjs --run-evidence "$manifest" teacher-enrollment-journal scripts/e2e-education-roles.mjs teacher || result=1
-          node scripts/frontend07-coverage.mjs --run-evidence "$manifest" classroom-lifecycle scripts/e2e-education-roles.mjs classroom || result=1
-          node scripts/frontend07-coverage.mjs --run-evidence "$manifest" storage-recovery scripts/e2e-education-roles.mjs storage || result=1
-          node scripts/frontend07-coverage.mjs --check-evidence "$manifest" || result=1
-          exit "$result"
       - name: Verify and seal required Education evidence
         working-directory: apps/frontend
         run: node ../../scripts/ci/frontend09-artifacts.mjs seal education
@@ -1109,7 +1099,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: education-browser-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          name: education-roles-browser-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
             apps/frontend/screenshots/education-real
             apps/frontend/screenshots/frontend09-final/authenticated
@@ -1127,6 +1117,165 @@ jobs:
           rm -f /tmp/vite-education.pid
           rm -f /tmp/e2e-core-cert/key.pem /tmp/e2e-core-cert/cert.pem
           bash scripts/ci/test-stop.sh
+
+  education-frontend07-browser:
+    name: Education · FRONTEND_07 scenarios
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      COMPOSE_PROJECT_NAME: platform-edu-f07-ci
+      POSTGRES_DB: platform_test
+      POSTGRES_TEST_DB: platform_test
+      POSTGRES_USER: platform_app
+      CONTROL_TEST_DB: platform_commercial_test
+      CONTROL_TEST_USER: platform_control_test
+      PLATFORM_BASE_DOMAIN: platform.example
+      SMTP_HOST: mailpit-core-test
+      AUTH_PUBLIC_BASE_URL: https://e2e.platform.test:4175
+      AUTH_WEBAUTHN_RP_ID: e2e.platform.test
+      AUTH_WEBAUTHN_ORIGINS: https://e2e.platform.test:4175
+      E2E_ALLOWED_HOSTS: e2e.platform.test
+      E2E_RUNTIME: isolated-ci
+      E2E_ISOLATED_DB: "1"
+      E2E_ALLOW_MUTATIONS: "1"
+      APP_URL: https://e2e.platform.test:4175
+      CORE_API_URL: http://e2e.platform.test:8081
+      MAILPIT_URL: http://e2e.platform.test:8027
+    steps:
+      - uses: actions/checkout@v5
+      - name: Generate disposable Core secrets
+        run: |
+          python3 - <<'PY'
+          import base64, os, secrets
+          values = {k: secrets.token_hex(32) for k in (
+              'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD',
+              'CONTROL_APP_SECRET', 'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY',
+              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD', 'CORE_MAINTENANCE_PASSWORD', 'CONTROL_MAINTENANCE_PASSWORD', 'E2E_ISOLATION_PROOF', 'E2E_PASSWORD')}
+          values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
+              'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for key, value in values.items():
+                  print('::add-mask::' + value)
+                  output.write(key + '=' + value + '\n')
+          PY
+      - name: Set up Core Composer dependencies
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
+          tools: composer:v2
+      - name: Cache Composer downloads
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/composer
+            ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('apps/backend/composer.lock', 'apps/control-plane/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+      - name: Install Core dependencies
+        working-directory: apps/backend
+        run: composer install --no-interaction --prefer-dist
+      - name: Prepare isolated Education object storage
+        run: |
+          python3 scripts/dev/storage02/s3-config.py --test-suite ci --port 18339 \
+            --directory runtime/ci-s3 --cors-origin https://e2e.platform.test:4175
+          cat runtime/ci-s3/s3.env >> "$GITHUB_ENV"
+          compose_file=compose.yaml:compose.ci.yaml:compose.ci.s3.yaml
+          compose_env_files=runtime/ci-s3/s3.env
+          COMPOSE_FILE="$compose_file" COMPOSE_ENV_FILES="$compose_env_files" docker compose --profile test config --quiet
+          printf 'COMPOSE_FILE=%s\nCOMPOSE_ENV_FILES=%s\n' "$compose_file" "$compose_env_files" >> "$GITHUB_ENV"
+      - name: Start isolated Core and SMTP runtime
+        run: |
+          echo '127.0.0.1 e2e.platform.test' | sudo tee -a /etc/hosts
+          docker compose --profile test build backend-test
+          docker compose --profile test up -d --wait mailpit-core-test
+          bash scripts/ci/test-start.sh
+          docker compose --profile test exec -d -e CORE_AUTH_BROWSER_SMTP=1 backend-test php yii communication:process-email --loop
+          echo "CORE_TEST_CONTAINER=$(docker compose --profile test ps -q backend-test)" >> "$GITHUB_ENV"
+          echo "E2E_STORAGE_TEST_CONTAINER=$(docker compose --profile test ps -q seaweedfs-test)" >> "$GITHUB_ENV"
+      - name: Install Education and verify its PostgreSQL workflows
+        env:
+          EDUCATION_ENABLED: "1"
+        run: |
+          CI_USER_ID="$(id -u)"
+          CI_GROUP_ID="$(id -g)"
+          export CI_USER_ID CI_GROUP_ID
+          docker compose --profile test exec -T backend-test php yii education:migrate
+          docker compose --profile test exec -T backend-test php yii education:migrate
+          docker compose --profile test exec -T backend-test php yii device:migrate
+          docker compose --profile test exec -T backend-test php yii storage:migrate
+          docker compose --profile test up -d --no-build --no-deps --wait backend-test
+          docker compose --profile test exec -T backend-test composer yii-config-rebuild
+          echo "CORE_TEST_CONTAINER=$(docker compose --profile test ps -q backend-test)" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - name: Cache Playwright browser binaries
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/frontend/package-lock.json') }}
+      - name: Install frontend dependencies and runner Chromium
+        working-directory: apps/frontend
+        run: |
+          npm ci
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            npx playwright install --with-deps chromium
+          else
+            npx playwright install chromium
+          fi
+      - name: Start Education frontend preview
+        working-directory: apps/frontend
+        env:
+          VITE_EDUCATION_ENABLED: "1"
+          VITE_CORE_PROXY_TARGET: http://127.0.0.1:8081
+          VITE_COMMERCIAL_PROXY_TARGET: http://127.0.0.1:1
+          VITE_HTTPS_KEY: /tmp/e2e-core-cert/key.pem
+          VITE_HTTPS_CERT: /tmp/e2e-core-cert/cert.pem
+        run: |
+          mkdir -p /tmp/e2e-core-cert
+          openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes -keyout /tmp/e2e-core-cert/key.pem -out /tmp/e2e-core-cert/cert.pem -subj '/CN=e2e.platform.test'
+          npm run build
+          node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4175 --strictPort > /tmp/vite-education.log 2>&1 &
+          echo $! > /tmp/vite-education.pid
+          for _attempt in $(seq 1 60); do
+            if curl -kfsS https://127.0.0.1:4175/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -kfsS https://127.0.0.1:4175/ >/dev/null
+      - name: Verify FRONTEND_07 browser release scenarios and evidence
+        working-directory: apps/frontend
+        run: |
+          manifest=screenshots/education-real/frontend07/manifest.json
+          result=0
+          node scripts/frontend07-coverage.mjs --run-evidence "$manifest" teacher-enrollment-journal scripts/e2e-education-roles.mjs teacher || result=1
+          node scripts/frontend07-coverage.mjs --run-evidence "$manifest" classroom-lifecycle scripts/e2e-education-roles.mjs classroom || result=1
+          node scripts/frontend07-coverage.mjs --run-evidence "$manifest" storage-recovery scripts/e2e-education-roles.mjs storage || result=1
+          node scripts/frontend07-coverage.mjs --check-evidence "$manifest" || result=1
+          exit "$result"
+      - name: Upload Education FRONTEND_07 browser evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: education-frontend07-browser-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: apps/frontend/screenshots/education-real/frontend07
+          if-no-files-found: ignore
+      - name: Diagnose Education browser failure
+        if: failure()
+        run: |
+          docker compose --profile test logs --no-color --tail 100 backend-test postgres-test mailpit-core-test seaweedfs-test s3-init-test
+          cat /tmp/vite-education.log || true
+      - name: Remove disposable Education runtime
+        if: always()
+        run: |
+          if [[ -s /tmp/vite-education.pid ]]; then kill "$(cat /tmp/vite-education.pid)" 2>/dev/null || true; fi
+          rm -f /tmp/vite-education.pid
+          rm -f /tmp/e2e-core-cert/key.pem /tmp/e2e-core-cert/cert.pem
+          bash scripts/ci/test-stop.sh
+
   billing-periodic:
     name: Billing В· renewal and recovery
     runs-on: ubuntu-24.04

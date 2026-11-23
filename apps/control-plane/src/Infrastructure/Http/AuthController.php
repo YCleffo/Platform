@@ -24,7 +24,8 @@ final class AuthController extends AbstractController
     public function register(Request $request): JsonResponse
     {
         $data = ApiRequest::json($request);
-        $result = $this->auth->register(ApiRequest::string($data, 'email'), ApiRequest::string($data, 'password'), $this->ip($request), ApiRequest::correlationId($request));
+        $locale = ApiRequest::nullableString($data, 'locale') ?? $request->getPreferredLanguage(['en', 'ru']) ?? 'en';
+        $result = $this->auth->register(ApiRequest::string($data, 'email'), ApiRequest::string($data, 'password'), $this->ip($request), ApiRequest::correlationId($request), $locale);
 
         return new JsonResponse(['status' => 'verification_required', 'user_id' => $result['user_id']], Response::HTTP_ACCEPTED);
     }
@@ -33,7 +34,8 @@ final class AuthController extends AbstractController
     public function resend(Request $request): JsonResponse
     {
         $data = ApiRequest::json($request);
-        $this->auth->resendVerification(ApiRequest::string($data, 'email'), $this->ip($request), ApiRequest::correlationId($request));
+        $locale = ApiRequest::nullableString($data, 'locale') ?? $request->getPreferredLanguage(['en', 'ru']) ?? 'en';
+        $this->auth->resendVerification(ApiRequest::string($data, 'email'), $this->ip($request), ApiRequest::correlationId($request), $locale);
 
         return new JsonResponse(['status' => 'accepted'], Response::HTTP_ACCEPTED);
     }
@@ -77,7 +79,8 @@ final class AuthController extends AbstractController
     public function passwordResetRequest(Request $request): JsonResponse
     {
         $data = ApiRequest::json($request);
-        $this->security->requestPasswordReset(ApiRequest::string($data, 'email'), $this->ip($request), ApiRequest::correlationId($request));
+        $locale = ApiRequest::nullableString($data, 'locale') ?? $request->getPreferredLanguage(['en', 'ru']) ?? 'en';
+        $this->security->requestPasswordReset(ApiRequest::string($data, 'email'), $this->ip($request), ApiRequest::correlationId($request), $locale);
         return new JsonResponse(['status' => 'accepted'], Response::HTTP_ACCEPTED);
     }
 

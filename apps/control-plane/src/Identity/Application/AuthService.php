@@ -28,7 +28,7 @@ final readonly class AuthService
     }
 
     /** @return array{user_id: string, verification_token: string} */
-    public function register(string $emailInput, string $password, string $ip, string $correlationId): array
+    public function register(string $emailInput, string $password, string $ip, string $correlationId, ?string $locale = null): array
     {
         $this->rateLimiter->consume('auth.register.ip', $ip, 5, 3600);
         $email = EmailPolicy::normalize($emailInput);
@@ -40,7 +40,7 @@ final readonly class AuthService
         $verificationToken = $this->tokens->verificationToken($verificationId);
 
         try {
-            $this->connection->transactional(function (Connection $connection) use ($userId, $verificationId, $email, $passwordHash, $verificationToken, $correlationId): void {
+            $this->connection->transactional(function (Connection $connection) use ($userId, $verificationId, $email, $passwordHash, $verificationToken, $correlationId, $locale): void {
                 $connection->executeStatement(<<<'SQL'
 INSERT INTO commercial.control_users
  (id, email, email_normalized, password_hash, status, password_changed_at)
@@ -55,12 +55,14 @@ INSERT INTO commercial.audit_events
  (actor_type, actor_id, action, resource_type, resource_id, correlation_id, outcome)
 VALUES ('control_user', ?, 'control_user.registered', 'control_user', ?, ?, 'success')
 SQL, [$userId, $userId, $correlationId]);
+                $payload = ['user_id' => $userId, 'verification_id' => $verificationId];
+                if ($locale !== null && trim($locale) !== '') {
+                    $payload['locale'] = $locale;
+                }
                 $connection->executeStatement(<<<'SQL'
 INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload)
-VALUES ('control_user.email_verification_requested', 'control_user', ?, jsonb_build_object(
-  'user_id', ?::text, 'verification_id', ?::text
-))
-SQL, [$userId, $userId, $verificationId]);
+VALUES ('control_user.email_verification_requested', 'control_user', ?, ?::jsonb)
+SQL, [$userId, json_encode($payload, JSON_THROW_ON_ERROR)]);
             });
         } catch (UniqueConstraintViolationException) {
             throw new AuthFailure('email_unavailable', 'The email cannot be registered.');
@@ -69,13 +71,13 @@ SQL, [$userId, $userId, $verificationId]);
         return ['user_id' => $userId, 'verification_token' => $verificationToken];
     }
 
-    public function resendVerification(string $emailInput, string $ip, string $correlationId): ?string
+    public function resendVerification(string $emailInput, string $ip, string $correlationId, ?string $locale = null): ?string
     {
         $email = EmailPolicy::normalize($emailInput);
         $this->rateLimiter->consume('auth.verify_resend.ip', $ip, 5, 3600);
         $this->rateLimiter->consume('auth.verify_resend.identity', $email['normalized'], 3, 3600);
 
-        return $this->connection->transactional(function (Connection $connection) use ($email, $correlationId): ?string {
+        return $this->connection->transactional(function (Connection $connection) use ($email, $correlationId, $locale): ?string {
             $user = $connection->fetchAssociative('SELECT id, email, status FROM commercial.control_users WHERE email_normalized = ? FOR UPDATE', [$email['normalized']]);
             if ($user === false || $user['status'] !== 'pending_verification' || !is_string($user['id']) || !is_string($user['email'])) {
                 return null;
@@ -85,7 +87,11 @@ SQL, [$userId, $userId, $verificationId]);
             $token = $this->tokens->verificationToken($verificationId);
             $connection->executeStatement("INSERT INTO commercial.control_user_email_verifications (id, control_user_id, token_hash, expires_at) VALUES (?, ?, decode(?, 'hex'), now() + (? * interval '1 second'))", [$verificationId, $user['id'], $this->tokens->hash($token), $this->verificationTtlSeconds]);
             $connection->executeStatement("INSERT INTO commercial.audit_events (actor_type, actor_id, action, resource_type, resource_id, correlation_id, outcome) VALUES ('control_user', ?, 'control_user.email_verification_requested', 'control_user', ?, ?, 'success')", [$user['id'], $user['id'], $correlationId]);
-            $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('control_user.email_verification_requested', 'control_user', ?, jsonb_build_object('user_id', ?::text, 'verification_id', ?::text))", [$user['id'], $user['id'], $verificationId]);
+            $payload = ['user_id' => $user['id'], 'verification_id' => $verificationId];
+            if ($locale !== null && trim($locale) !== '') {
+                $payload['locale'] = $locale;
+            }
+            $connection->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('control_user.email_verification_requested', 'control_user', ?, ?::jsonb)", [$user['id'], json_encode($payload, JSON_THROW_ON_ERROR)]);
 
             return $token;
         });

@@ -6,15 +6,19 @@ namespace ControlPlane\Infrastructure\Outbox;
 
 final class ControlEmailLayout
 {
-    public static function render(string $title, string $bodyHtml): string
+    public static function render(string $title, string $bodyHtml, string $locale = 'en'): string
     {
         $safeTitle = htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $content = self::inlineStyles($bodyHtml);
         $year = date('Y');
+        $isRu = str_starts_with($locale, 'ru');
+        $htmlLang = $isRu ? 'ru' : 'en';
+        $footerMsg1 = $isRu ? 'Это автоматическое сообщение платформы Platform.' : 'This is an automated message from Platform.';
+        $footerMsg2 = $isRu ? 'Если вы не ожидали этого письма, обратитесь к администратору вашей платформы.' : 'If you were not expecting this email, contact your platform administrator.';
 
         return <<<HTML
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{$htmlLang}">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -45,8 +49,8 @@ final class ControlEmailLayout
                     </tr>
                     <tr>
                         <td style="padding:20px 28px 28px;border-top:1px solid #eef1f6;color:#6b7280;font:400 12px/1.6 Arial,Helvetica,sans-serif;">
-                            <p style="margin:0 0 6px;color:#6b7280;font:400 12px/1.6 Arial,Helvetica,sans-serif;">This is an automated message from Platform.</p>
-                            <p style="margin:0;color:#6b7280;font:400 12px/1.6 Arial,Helvetica,sans-serif;">If you were not expecting this email, contact your platform administrator.</p>
+                            <p style="margin:0 0 6px;color:#6b7280;font:400 12px/1.6 Arial,Helvetica,sans-serif;">{$footerMsg1}</p>
+                            <p style="margin:0;color:#6b7280;font:400 12px/1.6 Arial,Helvetica,sans-serif;">{$footerMsg2}</p>
                             <p style="margin:12px 0 0;color:#9ca3af;font:400 12px/1.6 Arial,Helvetica,sans-serif;">&copy; {$year} Platform</p>
                         </td>
                     </tr>

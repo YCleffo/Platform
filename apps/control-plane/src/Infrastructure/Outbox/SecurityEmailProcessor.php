@@ -32,22 +32,63 @@ final readonly class SecurityEmailProcessor implements EmailEventProcessor
     {
         $payload=json_decode((string)$row['payload'],true); if(!is_array($payload)||!is_string($payload['user_id']??null)||!Uuid::isValid($payload['user_id']))throw new \DomainException('Invalid security email event.');
         $email=$this->connection->fetchOne('SELECT email FROM commercial.control_users WHERE id=? AND status=?',[$payload['user_id'],'active']); if(!is_string($email)||filter_var($email,FILTER_VALIDATE_EMAIL)===false)throw new \DomainException('No active recipient.');
-        $type=(string)$row['event_type'];
+        $locale = (isset($payload['locale']) && is_string($payload['locale']) && str_starts_with($payload['locale'], 'ru')) ? 'ru' : 'en';
+        $type = (string) $row['event_type'];
         if (!in_array($type, self::EVENTS, true)) throw new \DomainException('Unsupported security email event.');
-        $subject='Platform security notice'; $text='A security setting for your Platform account changed.'; $body='';
-        if($type==='control_user.password_reset_requested'){
-            if(!is_string($payload['reset_id']??null)||!Uuid::isValid($payload['reset_id']))throw new \DomainException('Invalid reset event.');
-            $url=$this->passwordResetUrl.(str_contains($this->passwordResetUrl,'?')?'&':'?').'token='.rawurlencode($this->tokens->passwordResetToken($payload['reset_id']));
-            $subject='[Platform Cabinet] Reset your password';$text="[Platform Cabinet] Reset your password: $url";
-            $body='<p>We received a request to reset the password for your Platform customer account.</p>'
-                .'<p><a href="'.htmlspecialchars($url,ENT_QUOTES,'UTF-8').'">Choose a new password</a></p>'
-                .'<p>If you did not request this, you can ignore this email.</p>';
+        $body = '';
+
+        if ($locale === 'ru') {
+            $subject = 'Уведомление безопасности Platform';
+            $text = 'Настройки безопасности для Platform customer account были изменены.';
+            if ($type === 'control_user.password_reset_requested') {
+                if (!is_string($payload['reset_id'] ?? null) || !Uuid::isValid($payload['reset_id'])) throw new \DomainException('Invalid reset event.');
+                $url = $this->passwordResetUrl . (str_contains($this->passwordResetUrl, '?') ? '&' : '?') . 'token=' . rawurlencode($this->tokens->passwordResetToken($payload['reset_id']));
+                $subject = '[Platform Cabinet] Сброс вашего пароля';
+                $text = "[Platform Cabinet] Сброс вашего пароля для Platform customer account: $url";
+                $body = '<p>Мы получили запрос на сброс пароля для вашего Platform customer account.</p>'
+                    . '<p><a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Выбрать новый пароль</a></p>'
+                    . '<p>Если вы не запрашивали сброс пароля, вы можете проигнорировать это письмо.</p>';
+            } elseif ($type === 'control_user.password_changed') {
+                $subject = '[Platform Cabinet] Пароль изменён';
+                $text = 'Пароль для вашего Platform customer account был успешно изменён. Если это были не вы, немедленно свяжитесь со службой поддержки.';
+            } elseif ($type === 'control_user.mfa_enabled') {
+                $subject = 'Двухфакторная аутентификация включена';
+                $text = 'Двухфакторная аутентификация была включена для вашего Platform customer account.';
+            } elseif ($type === 'control_user.mfa_disabled') {
+                $subject = 'Двухфакторная аутентификация отключена';
+                $text = 'Двухфакторная аутентификация была отключена для вашего Platform customer account.';
+            } elseif ($type === 'control_user.recovery_codes_regenerated') {
+                $subject = 'Резервные коды созданы заново';
+                $text = 'Резервные коды для вашего Platform customer account были успешно обновлены.';
+            }
+        } else {
+            $subject = 'Platform security notice';
+            $text = 'A security setting for your Platform account changed.';
+            if ($type === 'control_user.password_reset_requested') {
+                if (!is_string($payload['reset_id'] ?? null) || !Uuid::isValid($payload['reset_id'])) throw new \DomainException('Invalid reset event.');
+                $url = $this->passwordResetUrl . (str_contains($this->passwordResetUrl, '?') ? '&' : '?') . 'token=' . rawurlencode($this->tokens->passwordResetToken($payload['reset_id']));
+                $subject = '[Platform Cabinet] Reset your password';
+                $text = "[Platform Cabinet] Reset your password: $url";
+                $body = '<p>We received a request to reset the password for your Platform customer account.</p>'
+                    . '<p><a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Choose a new password</a></p>'
+                    . '<p>If you did not request this, you can ignore this email.</p>';
+            } elseif ($type === 'control_user.password_changed') {
+                $subject = '[Platform Cabinet] Your password changed';
+                $text = 'Your Platform customer account password was changed. If this was not you, contact support immediately.';
+            } elseif ($type === 'control_user.mfa_enabled') {
+                $subject = 'Two-factor authentication enabled';
+                $text = 'Two-factor authentication was enabled for your Platform customer account.';
+            } elseif ($type === 'control_user.mfa_disabled') {
+                $subject = 'Two-factor authentication disabled';
+                $text = 'Two-factor authentication was disabled for your Platform customer account.';
+            } elseif ($type === 'control_user.recovery_codes_regenerated') {
+                $subject = 'Recovery codes regenerated';
+                $text = 'Your Platform recovery codes were regenerated.';
+            }
         }
-        elseif($type==='control_user.password_changed'){$subject='[Platform Cabinet] Your password changed';$text='Your Platform customer account password was changed. If this was not you, contact support immediately.';}
-        elseif($type==='control_user.mfa_enabled'){$subject='Two-factor authentication enabled';$text='Two-factor authentication was enabled for your Platform customer account.';}
-        elseif($type==='control_user.mfa_disabled'){$subject='Two-factor authentication disabled';$text='Two-factor authentication was disabled for your Platform customer account.';}
-        elseif($type==='control_user.recovery_codes_regenerated'){$subject='Recovery codes regenerated';$text='Your Platform recovery codes were regenerated.';}
-        if($body===''){$body='<p>'.htmlspecialchars($text,ENT_QUOTES,'UTF-8').'</p>';}
-        return [$email,$subject,$text,ControlEmailLayout::render($subject,$body),(string)$row['event_id'].'@'.$this->messageIdDomain];
+        if ($body === '') {
+            $body = '<p>' . htmlspecialchars($text, ENT_QUOTES, 'UTF-8') . '</p>';
+        }
+        return [$email, $subject, $text, ControlEmailLayout::render($subject, $body, $locale), (string)$row['event_id'] . '@' . $this->messageIdDomain];
     }
 }

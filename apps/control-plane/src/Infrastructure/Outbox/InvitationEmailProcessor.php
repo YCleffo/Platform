@@ -128,29 +128,48 @@ SQL, [$invitationId, $accountId]);
         if ($invitation === false || filter_var($invitation['email'], FILTER_VALIDATE_EMAIL) === false) {
             throw new InvalidEmailEvent();
         }
+        $locale = (isset($payload['locale']) && is_string($payload['locale']) && str_starts_with($payload['locale'], 'ru')) ? 'ru' : 'en';
         $token = $this->tokens->invitationToken($invitationId, (int) $invitation['token_version']);
         $url = rtrim($this->invitationUrl, '#') . '#token=' . rawurlencode($token);
         $organization = (string) $invitation['display_name'];
-        $role = match ((string) $invitation['role']) {
-            'admin' => 'Administrator',
-            'billing' => 'Billing',
-            'technical' => 'Technical',
-            default => 'Member',
-        };
+        $roleKey = (string) $invitation['role'];
         $expires = (string) $invitation['expires_at'];
-        $text = "You have been invited to join $organization on Platform as $role.\n\nAccept the invitation: $url\n\nThis invitation expires on $expires. If you were not expecting it, you can ignore this email.";
-        $subject = 'Invitation to join ' . $organization . ' on Platform';
-        $html = '<p>You have been invited to join <strong>' . htmlspecialchars($organization, ENT_QUOTES, 'UTF-8')
-            . '</strong> on Platform as <strong>' . htmlspecialchars($role, ENT_QUOTES, 'UTF-8') . '</strong>.</p>'
-            . '<p><a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Accept invitation</a></p>'
-            . '<p>This invitation expires on ' . htmlspecialchars($expires, ENT_QUOTES, 'UTF-8')
-            . '. If you were not expecting it, you can ignore this email.</p>';
+
+        if ($locale === 'ru') {
+            $role = match ($roleKey) {
+                'admin' => 'Администратор',
+                'billing' => 'Биллинг',
+                'technical' => 'Технический специалист',
+                default => 'Участник',
+            };
+            $subject = 'Приглашение в организацию ' . $organization . ' на Platform';
+            $text = "Вас пригласили присоединиться к организации $organization на Platform в роли $role.\n\nПринять приглашение: $url\n\nСрок действия приглашения истекает $expires. Если вы не ожидали этого письма, проигнорируйте его.";
+            $html = '<p>Вас пригласили присоединиться к <strong>' . htmlspecialchars($organization, ENT_QUOTES, 'UTF-8')
+                . '</strong> на Platform в роли <strong>' . htmlspecialchars($role, ENT_QUOTES, 'UTF-8') . '</strong>.</p>'
+                . '<p><a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Принять приглашение</a></p>'
+                . '<p>Срок действия приглашения истекает ' . htmlspecialchars($expires, ENT_QUOTES, 'UTF-8')
+                . '. Если вы не ожидали этого письма, проигнорируйте его.</p>';
+        } else {
+            $role = match ($roleKey) {
+                'admin' => 'Administrator',
+                'billing' => 'Billing',
+                'technical' => 'Technical',
+                default => 'Member',
+            };
+            $subject = 'Invitation to join ' . $organization . ' on Platform';
+            $text = "You have been invited to join $organization on Platform as $role.\n\nAccept the invitation: $url\n\nThis invitation expires on $expires. If you were not expecting it, you can ignore this email.";
+            $html = '<p>You have been invited to join <strong>' . htmlspecialchars($organization, ENT_QUOTES, 'UTF-8')
+                . '</strong> on Platform as <strong>' . htmlspecialchars($role, ENT_QUOTES, 'UTF-8') . '</strong>.</p>'
+                . '<p><a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Accept invitation</a></p>'
+                . '<p>This invitation expires on ' . htmlspecialchars($expires, ENT_QUOTES, 'UTF-8')
+                . '. If you were not expecting it, you can ignore this email.</p>';
+        }
 
         return [
             'recipient' => $invitation['email'],
             'subject' => $subject,
             'text' => $text,
-            'html' => ControlEmailLayout::render($subject, $html),
+            'html' => ControlEmailLayout::render($subject, $html, $locale),
             'message_id' => (string) $claim['event_id'] . '@' . $this->messageIdDomain,
         ];
     }

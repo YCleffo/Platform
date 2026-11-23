@@ -47,13 +47,19 @@ WORKDIR /app
 COPY composer.json composer.lock /app/
 
 RUN --mount=type=cache,target=/tmp/cache \
-    COMPOSER_CACHE_DIR=/tmp/cache composer install \
-        --no-dev \
-        --no-progress \
-        --no-interaction \
-        --prefer-dist \
-        --classmap-authoritative \
-        --no-scripts
+    for attempt in 1 2 3; do \
+        COMPOSER_CACHE_DIR=/tmp/cache composer install \
+            --no-dev \
+            --no-progress \
+            --no-interaction \
+            --prefer-dist \
+            --classmap-authoritative \
+            --no-scripts && break || { \
+                if [ "$attempt" -eq 3 ]; then exit 1; fi; \
+                echo "Composer install attempt $attempt failed, retrying in 5s..." >&2; \
+                sleep 5; \
+            }; \
+    done
 
 COPY bin /app/bin
 COPY config /app/config
@@ -101,7 +107,13 @@ FROM base AS test
 COPY --from=composer /composer /usr/bin/composer
 COPY composer.json composer.lock /app/
 RUN --mount=type=cache,target=/tmp/cache \
-    COMPOSER_CACHE_DIR=/tmp/cache composer install --no-progress --no-interaction --prefer-dist --no-scripts
+    for attempt in 1 2 3; do \
+        COMPOSER_CACHE_DIR=/tmp/cache composer install --no-progress --no-interaction --prefer-dist --no-scripts && break || { \
+            if [ "$attempt" -eq 3 ]; then exit 1; fi; \
+            echo "Composer test install attempt $attempt failed, retrying in 5s..." >&2; \
+            sleep 5; \
+        }; \
+    done
 COPY . /app
 RUN mkdir -p /app/var/cache /app/var/log \
     && chown -R www-data:www-data /app/var \

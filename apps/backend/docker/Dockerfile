@@ -88,12 +88,18 @@ WORKDIR /app
 COPY . /app
 
 RUN --mount=type=cache,target=/tmp/cache \
-    COMPOSER_CACHE_DIR=/tmp/cache composer install \
-    --no-dev \
-    --no-progress \
-    --no-interaction \
-    --prefer-dist \
-    --classmap-authoritative \
+    for attempt in 1 2 3; do \
+        COMPOSER_CACHE_DIR=/tmp/cache composer install \
+            --no-dev \
+            --no-progress \
+            --no-interaction \
+            --prefer-dist \
+            --classmap-authoritative && break || { \
+                if [ "$attempt" -eq 3 ]; then exit 1; fi; \
+                echo "Composer install attempt $attempt failed, retrying in 5s..." >&2; \
+                sleep 5; \
+            }; \
+    done \
     && rm composer.lock composer.json
 
 

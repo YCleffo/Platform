@@ -54,19 +54,23 @@ final readonly class AuthSecurityService
         return $result;
     }
 
-    public function requestPasswordReset(string $emailInput, string $ip, string $correlation): void
+    public function requestPasswordReset(string $emailInput, string $ip, string $correlation, ?string $locale = null): void
     {
         $email = EmailPolicy::normalize($emailInput)['normalized'];
         $this->rateLimiter->consume('auth.password_reset.ip', $ip, 5, 3600);
         $this->rateLimiter->consume('auth.password_reset.identity', $email, 3, 3600);
-        $this->connection->transactional(function (Connection $db) use ($email, $correlation): void {
+        $this->connection->transactional(function (Connection $db) use ($email, $correlation, $locale): void {
             $user = $db->fetchAssociative("SELECT id FROM commercial.control_users WHERE email_normalized = ? AND status = 'active' FOR UPDATE", [$email]);
             if ($user === false || !is_string($user['id'])) { return; }
             $id = Uuid::v7()->toRfc4122(); $token = $this->tokens->passwordResetToken($id);
             $db->executeStatement('UPDATE commercial.control_user_password_resets SET invalidated_at = now() WHERE control_user_id = ? AND consumed_at IS NULL AND invalidated_at IS NULL', [$user['id']]);
             $db->executeStatement("INSERT INTO commercial.control_user_password_resets (id, control_user_id, token_hash, expires_at) VALUES (?, ?, decode(?, 'hex'), now() + (? * interval '1 second'))", [$id, $user['id'], $this->tokens->hash($token), $this->passwordResetTtlSeconds]);
             $this->audit($db, $user['id'], 'control_password.reset_requested', 'control_password_reset', $id, $correlation);
-            $db->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('control_user.password_reset_requested', 'control_user', ?, jsonb_build_object('user_id', ?::text, 'reset_id', ?::text))", [$user['id'], $user['id'], $id]);
+            $payload = ['user_id' => $user['id'], 'reset_id' => $id];
+            if ($locale !== null && trim($locale) !== '') {
+                $payload['locale'] = $locale;
+            }
+            $db->executeStatement("INSERT INTO commercial.outbox_events (event_type, aggregate_type, aggregate_id, payload) VALUES ('control_user.password_reset_requested', 'control_user', ?, ?::jsonb)", [$user['id'], json_encode($payload, JSON_THROW_ON_ERROR)]);
         });
     }
 
