@@ -821,6 +821,9 @@ onMounted(() => {
 .dev-settings {
   display: grid;
   gap: var(--space-20);
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .dev-settings__header {
@@ -831,11 +834,17 @@ onMounted(() => {
   gap: var(--space-16);
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--space-16);
+  min-width: 0;
 }
 
 .dev-settings__title {
+  font-size: var(--type-h2-size);
+  letter-spacing: var(--type-h2-tracking);
+  line-height: var(--type-h2-line);
+  font-weight: var(--type-h2-weight);
   color: var(--text-1);
   margin: 0;
+  overflow-wrap: break-word;
 }
 
 .dev-settings__subtitle {
@@ -844,11 +853,14 @@ onMounted(() => {
   font-weight: var(--type-body-small-weight);
   color: var(--text-2);
   margin: var(--space-4) 0 0 0;
+  overflow-wrap: break-word;
 }
 
 .dev-settings__tabs {
   display: flex;
   gap: var(--space-8);
+  flex-wrap: wrap;
+  max-width: 100%;
 }
 
 .dev-settings__tab-btn {
@@ -858,6 +870,8 @@ onMounted(() => {
   border: 1px solid transparent;
   border-radius: var(--radius-control-m);
   color: var(--text-2);
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   cursor: pointer;
   transition: var(--theme-transition);
@@ -1069,6 +1083,10 @@ onMounted(() => {
 }
 
 .dev-settings__section-heading {
+  font-size: var(--type-h3-size);
+  letter-spacing: var(--type-h3-tracking);
+  line-height: var(--type-h3-line);
+  font-weight: var(--type-h3-weight);
   margin: 0;
   color: var(--text-1);
 }

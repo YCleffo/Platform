@@ -299,6 +299,10 @@ onMounted(() => {
 }
 
 .rbac-matrix__title {
+  font-size: var(--type-h3-size);
+  letter-spacing: var(--type-h3-tracking);
+  line-height: var(--type-h3-line);
+  font-weight: var(--type-h3-weight);
   color: var(--text-1);
   margin: 0;
 }

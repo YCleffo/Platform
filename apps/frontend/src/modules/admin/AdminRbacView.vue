@@ -11,13 +11,13 @@ const { t } = useI18n();
 const configs = useAdminResourceConfigs();
 const rolesConfig = computed(() => configs.value.roles!);
 const permissionsConfig = computed(() => configs.value.permissions!);
-const tab = ref<'roles' | 'matrix' | 'permissions'>('roles');
+const tab = ref<'roles' | 'permissions' | 'matrix'>('roles');
 const showAssignDialog = ref(false);
 
 const tabs = computed(() => [
   { key: 'roles' as const, label: rolesConfig.value.title },
-  { key: 'matrix' as const, label: t('admin.rbacMatrixTab') },
   { key: 'permissions' as const, label: permissionsConfig.value.title },
+  { key: 'matrix' as const, label: t('admin.rbacMatrixTab') },
 ]);
 </script>
 

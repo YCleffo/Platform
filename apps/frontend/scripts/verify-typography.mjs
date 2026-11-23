@@ -390,11 +390,14 @@ const coreRoutes = [
   ['/admin/security/passkeys', '.core-credentials'],
   ['/admin/security/identities', '.core-credentials'],
   ['/admin/finance', '.admin-finance'],
+  ['/admin/superadmin', '.superadmin'],
 ];
 const commercialRoutes = [
   ['/cabinet', '.cabinet'],
   ['/settings/security', '.security-view'],
   ['/settings/privacy', '.privacy'],
+  ['/settings/developer', '.dev-settings'],
+  ['/drive', '.cloud-drive'],
   [`/accounts/${account.id}`, '.overview'],
   [`/accounts/${account.id}/members`, '.members'],
   [`/accounts/${account.id}/billing`, '.billing'],
@@ -520,7 +523,7 @@ try {
       {
         fixtureOnly: true,
         passed: problems.length === 0,
-        routes: 53,
+        routes: 56,
         states,
         problems,
         localFonts: fonts.size,
@@ -534,7 +537,7 @@ try {
     JSON.stringify({
       passed: true,
       fixtureOnly: true,
-      routes: 53,
+      routes: 56,
       states: states.length,
       textChecks: states.reduce((sum, s) => sum + s.checked, 0),
       localFonts: fonts.size,

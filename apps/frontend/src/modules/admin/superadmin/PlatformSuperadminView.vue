@@ -203,7 +203,7 @@ onMounted(() => {
 <template>
   <div class="superadmin">
     <header class="superadmin__header">
-      <div>
+      <div class="superadmin__intro">
         <h1 class="superadmin__title">
           {{ $t('platformAdmin.title') }}
         </h1>
@@ -345,7 +345,7 @@ onMounted(() => {
       <AppEmptyState
         v-else
         :title="$t('common.empty')"
-        :subtitle="$t('platformAdmin.subtitle')"
+        :description="$t('platformAdmin.subtitle')"
       />
     </div>
 
@@ -441,7 +441,7 @@ onMounted(() => {
       <AppEmptyState
         v-else
         :title="$t('common.empty')"
-        :subtitle="$t('platformAdmin.subtitle')"
+        :description="$t('platformAdmin.subtitle')"
       />
     </div>
 
@@ -537,7 +537,7 @@ onMounted(() => {
       <AppEmptyState
         v-else
         :title="$t('platformAdmin.noSuspiciousSessions')"
-        :subtitle="$t('platformAdmin.subtitle')"
+        :description="$t('platformAdmin.subtitle')"
       />
     </div>
 
@@ -731,6 +731,9 @@ onMounted(() => {
 .superadmin {
   display: grid;
   gap: var(--space-20);
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .superadmin__header {
@@ -741,11 +744,22 @@ onMounted(() => {
   gap: var(--space-16);
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--space-16);
+  min-width: 0;
+}
+
+.superadmin__intro {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .superadmin__title {
+  font-size: var(--type-h2-size);
+  letter-spacing: var(--type-h2-tracking);
+  line-height: var(--type-h2-line);
+  font-weight: var(--type-h2-weight);
   color: var(--text-1);
   margin: 0;
+  overflow-wrap: break-word;
 }
 
 .superadmin__subtitle {
@@ -754,24 +768,31 @@ onMounted(() => {
   font-weight: var(--type-body-small-weight);
   color: var(--text-2);
   margin: var(--space-4) 0 0 0;
+  overflow-wrap: break-word;
 }
 
 .superadmin__tabs {
   display: flex;
   gap: var(--space-8);
   flex-wrap: wrap;
+  max-width: 100%;
 }
 
 .superadmin__tab-btn {
   min-height: 38px;
-  padding: 0 var(--space-16);
+  padding: 0 var(--space-12);
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius-control-m);
   color: var(--text-2);
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
   font-weight: var(--type-body-medium-emphasis-weight);
   cursor: pointer;
   transition: var(--theme-transition);
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
 }
 
 .superadmin__tab-btn:hover {
@@ -789,6 +810,8 @@ onMounted(() => {
 .superadmin__pane {
   display: grid;
   gap: var(--space-16);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .superadmin__actions {
@@ -801,6 +824,7 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius-card-m);
   background: var(--surface);
+  max-width: 100%;
 }
 
 .superadmin__table {
@@ -866,8 +890,10 @@ onMounted(() => {
 /* Health cards */
 .superadmin__health-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: var(--space-16);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .superadmin__health-card {
@@ -883,6 +909,10 @@ onMounted(() => {
 }
 
 .superadmin__health-title {
+  font-size: var(--type-h3-size);
+  letter-spacing: var(--type-h3-tracking);
+  line-height: var(--type-h3-line);
+  font-weight: var(--type-h3-weight);
   margin: 0;
   color: var(--text-1);
 }

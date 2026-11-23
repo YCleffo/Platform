@@ -707,6 +707,9 @@ onMounted(() => {
 .cloud-drive {
   display: grid;
   gap: var(--space-20);
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .cloud-drive__header {
@@ -717,11 +720,17 @@ onMounted(() => {
   gap: var(--space-16);
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--space-16);
+  min-width: 0;
 }
 
 .cloud-drive__title {
+  font-size: var(--type-h2-size);
+  letter-spacing: var(--type-h2-tracking);
+  line-height: var(--type-h2-line);
+  font-weight: var(--type-h2-weight);
   color: var(--text-1);
   margin: 0;
+  overflow-wrap: break-word;
 }
 
 .cloud-drive__subtitle {
@@ -896,6 +905,9 @@ onMounted(() => {
 }
 
 .cloud-drive__file-name {
+  font-size: var(--type-body-small-emphasis-size);
+  line-height: var(--type-body-small-emphasis-line);
+  font-weight: var(--type-body-small-emphasis-weight);
   color: var(--text-1);
 }
 
