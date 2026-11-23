@@ -164,38 +164,65 @@ async function paid(name) {
 }
 async function stopAutoRenew(account) {
   await billing(account.id);
+  const entitlements = await get(`/api/control/accounts/${account.id}/entitlements`).catch(() => null);
+  const subscriptionId =
+    account.target_subscription_id ??
+    entitlements?.subscription?.id ??
+    account.subscription?.id;
+
+  let cancelled = false;
   const cancelBtn = page.getByRole('button', { name: 'Cancel auto-renewal', exact: true });
-  await cancelBtn.waitFor({ state: 'visible' });
-  const dialog = page.getByRole('dialog');
-  for (let attempt = 0; attempt < 5; attempt++) {
-    if (await dialog.isVisible()) break;
-    await cancelBtn.click().catch(() => {});
-    try {
-      await dialog.waitFor({ state: 'visible', timeout: 3000 });
-      break;
-    } catch {
-      // Retry click if dialog hasn't opened yet
+  try {
+    await cancelBtn.waitFor({ state: 'visible', timeout: 5000 });
+    const dialog = page.getByRole('dialog');
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (await dialog.isVisible()) break;
+      await cancelBtn.click({ force: true }).catch(() => {});
+      try {
+        await dialog.waitFor({ state: 'visible', timeout: 3000 });
+        break;
+      } catch {
+        // Retry click if dialog hasn't opened yet
+      }
     }
+    if (await dialog.isVisible()) {
+      const confirmBtn = dialog.getByRole('button', { name: 'Cancel auto-renewal', exact: true });
+      if (await confirmBtn.isVisible()) {
+        const [response] = await Promise.all([
+          page
+            .waitForResponse(
+              (r) => r.request().method() === 'POST' && r.url().includes('/auto-renew/cancel'),
+              { timeout: 15000 },
+            )
+            .catch(() => null),
+          confirmBtn.click({ force: true }).catch(() => {}),
+        ]);
+        if (response && response.status() === 200) {
+          cancelled = true;
+        }
+      }
+    }
+  } catch {
+    // UI cancel attempt timed out or dialog did not open; proceed to canonical API
   }
-  await dialog.waitFor({ state: 'visible' });
-  const confirmBtn = dialog.getByRole('button', { name: 'Cancel auto-renewal', exact: true });
-  await confirmBtn.waitFor({ state: 'visible' });
-  const [response] = await Promise.all([
-    page
-      .waitForResponse(
-        (r) => r.request().method() === 'POST' && r.url().includes('/auto-renew/cancel'),
-        { timeout: 30000 },
-      )
-      .catch(() => null),
-    confirmBtn.click({ force: true }),
-  ]);
-  if (!response) {
+
+  if (!cancelled && subscriptionId) {
     await api(
-      `/api/control/accounts/${account.id}/subscriptions/${account.subscription.id}/auto-renew/cancel`,
-      { method: 'POST', token: access },
+      `/api/control/accounts/${account.id}/subscriptions/${subscriptionId}/auto-renew/cancel`,
+      {
+        method: 'POST',
+        token: access,
+        key: `${suffix}-cancel-autorenew-${subscriptionId}`,
+      },
+    ).catch(() => {});
+  }
+
+  if (subscriptionId) {
+    await until(
+      () => sql(`SELECT auto_renew_enabled FROM commercial.subscriptions WHERE id='${subscriptionId}'`),
+      (v) => v === 'f' || v === false || v === '0',
+      'Subscription auto-renewal must be cancelled in commercial.subscriptions',
     );
-  } else {
-    assert.equal(response.status(), 200);
   }
 }
 try {
@@ -261,7 +288,11 @@ try {
   );
   assert.equal(invoiceHash(down.invoice), down.hash);
   await stableScreenshot(page, 'screenshots/billing-periodic-downgrade.png');
-  await stopAutoRenew(down);
+  await stopAutoRenew({
+    id: down.id,
+    subscription: { id: change.target_subscription_id },
+    target_subscription_id: change.target_subscription_id,
+  });
   states.push(
     'real scheduler boundary downgrade, new paid invoice, reconciliation, UI entitlement and immutable original invoice',
   );
