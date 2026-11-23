@@ -1,0 +1,297 @@
+openapi: 3.1.0
+info:
+  title: Platform Core RBAC API
+  version: 1.0.0
+  description: Управление ролями, разрешениями и ролевыми назначениями Core.
+paths:
+  /api/core/roles:
+    get:
+      operationId: listRoles
+      summary: Список всех ролей
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Список ролей платформы
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Role"
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Недостаточно прав
+    post:
+      operationId: createRole
+      summary: Создать новую кастомную роль
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code:
+                  type: string
+                  pattern: "^[a-z0-9_\\-]+$"
+                name:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+      responses:
+        "201":
+          description: Роль успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+        "409":
+          description: Роль с таким кодом уже существует
+  /api/core/roles/{id}:
+    patch:
+      operationId: updateRole
+      summary: Обновить кастомную роль
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Роль обновлена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+    delete:
+      operationId: deleteRole
+      summary: Удалить кастомную роль
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Роль удалена
+        "409":
+          description: Нельзя удалить системную роль или роль с активными назначениями
+  /api/core/roles/{id}/permissions:
+    get:
+      operationId: getRolePermissions
+      summary: Получить список разрешений роли
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Список назначенных разрешений
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+    put:
+      operationId: updateRolePermissions
+      summary: Переназначить разрешения для роли
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [permissions]
+              properties:
+                permissions:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Разрешения успешно обновлены
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+  /api/core/permissions:
+    get:
+      operationId: listPermissions
+      summary: Полный реестр доступных системных привилегий
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Справочник привилегий
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Permission"
+  /api/core/accounts/{id}/roles:
+    get:
+      operationId: getAccountRoles
+      summary: Список ролей, назначенных аккаунту
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Назначенные роли
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Role"
+  /api/core/accounts/{id}/roles/{roleId}:
+    post:
+      operationId: assignAccountRole
+      summary: Назначить роль аккаунту
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Роль успешно назначена
+    delete:
+      operationId: revokeAccountRole
+      summary: Отозвать роль у аккаунта
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Роль успешно отозвана
+components:
+  schemas:
+    Role:
+      type: object
+      required: [id, code, name, isSystem, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        isSystem:
+          type: boolean
+        permissionsCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Permission:
+      type: object
+      required: [code, name, category]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

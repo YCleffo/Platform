@@ -1,0 +1,362 @@
+openapi: 3.1.0
+info:
+  title: Platform Superadmin Organizations & Accounts API
+  version: 1.0.0
+  description: Управление организациями и глобальная модерация аккаунтов Core.
+paths:
+  /api/core/organizations:
+    get:
+      operationId: listOrganizations
+      summary: Реестр организаций платформы
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 25
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, suspended, archived]
+      responses:
+        "200":
+          description: Список организаций
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Organization"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+    post:
+      operationId: createOrganization
+      summary: Создать новую организацию
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, code]
+              properties:
+                name:
+                  type: string
+                code:
+                  type: string
+                  pattern: "^[a-z0-9\\-]+$"
+      responses:
+        "201":
+          description: Организация создана
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+  /api/core/organizations/{id}/members:
+    get:
+      operationId: listOrganizationMembers
+      summary: Список участников организации
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Участники
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/OrganizationMember"
+    post:
+      operationId: addOrganizationMember
+      summary: Добавить участника в организацию
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [personId, role]
+              properties:
+                personId:
+                  type: string
+                  format: uuid
+                role:
+                  type: string
+                  enum: [owner, admin, member]
+      responses:
+        "200":
+          description: Участник добавлен
+  /api/core/organizations/{id}/members/{personId}/leave:
+    post:
+      operationId: removeOrganizationMember
+      summary: Исключить участника из организации
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: personId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Участник исключен
+  /api/core/accounts:
+    get:
+      operationId: listPlatformAccounts
+      summary: Глобальный реестр аккаунтов пользователей
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending_approval, active, disabled, archived]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 25
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Реестр пользователей
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AccountModeration"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+  /api/core/accounts/{id}:
+    get:
+      operationId: getPlatformAccount
+      summary: Детальный профиль пользователя
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Карточка аккаунта
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountModeration"
+  /api/core/accounts/{id}/approve:
+    post:
+      operationId: approveAccount
+      summary: Одобрить регистрацию аккаунта
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Аккаунт одобрен
+  /api/core/accounts/{id}/disable:
+    post:
+      operationId: disableAccount
+      summary: Заблокировать аккаунт
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Аккаунт заблокирован
+  /api/core/accounts/{id}/enable:
+    post:
+      operationId: enableAccount
+      summary: Разблокировать аккаунт
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Аккаунт активен
+  /api/core/accounts/{id}/archive:
+    post:
+      operationId: archiveAccount
+      summary: Архивация аккаунта
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Аккаунт архивирован
+components:
+  schemas:
+    Organization:
+      type: object
+      required: [id, name, code, status, memberCount, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+        status:
+          type: string
+          enum: [active, suspended, archived]
+        memberCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    OrganizationMember:
+      type: object
+      required: [id, organizationId, personId, name, role, joinedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        personId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [owner, admin, member]
+        joinedAt:
+          type: string
+          format: date-time
+    AccountModeration:
+      type: object
+      required: [id, email, status, isMfaEnrolled, createdAt, roles]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending_approval, active, disabled, archived]
+        isMfaEnrolled:
+          type: boolean
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        roles:
+          type: array
+          items:
+            type: string
+    Pagination:
+      type: object
+      required: [total, limit, offset]
+      properties:
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

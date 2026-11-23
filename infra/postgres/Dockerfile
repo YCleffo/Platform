@@ -24,7 +24,7 @@ FROM postgres:18.6-trixie@sha256:bd5dfa494a5a259704365813dbfa5fa6b3e69be7348d43b
 # Update the package manager and zlib security fixes while keeping PostgreSQL
 # and PGDATA compatible with the pinned 18.6 base.
 RUN apt-get -o Acquire::Retries=0 update \
-    && apt-get -o Acquire::Retries=0 install -y --no-install-recommends --only-upgrade apt libapt-pkg7.0 zlib1g \
+    && apt-get -o Acquire::Retries=0 upgrade -y --no-install-recommends \
     && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge '3.0.4' \
     && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' zlib1g)" ge '1:1.3.dfsg+really1.3.1-1+deb13u1' \
     && rm -rf /var/lib/apt/lists/*

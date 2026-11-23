@@ -194,7 +194,7 @@ async function main() {
     await page.getByRole('heading', { name: 'Invoices and payment history', exact: true }).waitFor();
     await page.getByRole('heading', { name: 'Billing profile', exact: true }).waitFor();
     await inspectBillingPreferences(page, billingPath);
-    await page.getByRole('link', { name: 'Open Security Center', exact: true }).click();
+    await page.getByRole('link', { name: 'Open Security Center', exact: true }).first().click();
     await page.waitForURL((url) => url.pathname === '/settings/security');
     await page.locator('.security-view__session-list').waitFor();
     await assertPrimaryNavigation(page, '/settings/security');
