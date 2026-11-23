@@ -417,6 +417,8 @@ services:
       context: ./apps/control-plane
       dockerfile: docker/Dockerfile
       target: test
+      args:
+        COMPOSER_AUTH: ${COMPOSER_AUTH:-}
     restart: "no"
     environment:
       APP_ENV: test

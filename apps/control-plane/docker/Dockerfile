@@ -19,6 +19,7 @@ RUN install-php-extensions \
 # Apply available Debian fixes, then remove compiler headers from runtime images.
 # PHP extensions are already compiled; test/Composer operations need no C++ toolchain.
 RUN apt-get update \
+    && apt-get install -y --no-install-recommends unzip \
     && apt-get upgrade -y --no-install-recommends \
     && apt-get purge -y linux-libc-dev \
     && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libbrotli1)" ge '1.1.0-2+deb13u1' \
@@ -104,14 +105,17 @@ CMD ["frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile"]
 # Isolated CI/test image; production remains --no-dev and non-root.
 FROM base AS test
 
+ARG COMPOSER_AUTH=""
+ENV COMPOSER_AUTH=$COMPOSER_AUTH
+
 COPY --from=composer /composer /usr/bin/composer
 COPY composer.json composer.lock /app/
 RUN --mount=type=cache,target=/tmp/cache \
-    for attempt in 1 2 3; do \
+    for attempt in 1 2 3 4; do \
         COMPOSER_CACHE_DIR=/tmp/cache composer install --no-progress --no-interaction --prefer-dist --no-scripts && break || { \
-            if [ "$attempt" -eq 3 ]; then exit 1; fi; \
-            echo "Composer test install attempt $attempt failed, retrying in 5s..." >&2; \
-            sleep 5; \
+            if [ "$attempt" -eq 4 ]; then exit 1; fi; \
+            echo "Composer test install attempt $attempt failed, retrying in $((attempt * 5))s..." >&2; \
+            sleep $((attempt * 5)); \
         }; \
     done
 COPY . /app

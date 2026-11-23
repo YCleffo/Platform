@@ -1195,7 +1195,7 @@
         "name": "session_revoke",
         "action": "AuthController::revokeSession",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 131
+        "line": 134
       },
       "permission": {
         "context": "ROLE_CONTROL_USER",
@@ -1205,7 +1205,7 @@
         "authorization": [
           {
             "file": "apps/control-plane/src/Identity/Application/AuthSecurityService.php",
-            "line": 184,
+            "line": 188,
             "requirement": "Recent MFA"
           }
         ],
@@ -2799,14 +2799,14 @@
         "name": "mfa_status",
         "action": "AuthController::mfaStatus",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 109
+        "line": 112
       },
       "permission": {
         "context": "ROLE_CONTROL_USER",
         "permissions": [],
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
         "authorizationLines": [
-          109
+          112
         ],
         "authorization": [],
         "note": "Symfony firewall plus controller and delegated service policy. Conditional permissions depend on the operation and resource."
@@ -2885,7 +2885,7 @@
         "name": "sessions",
         "action": "AuthController::sessions",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 128
+        "line": 131
       },
       "permission": {
         "context": "ROLE_CONTROL_USER",
@@ -5723,14 +5723,14 @@
         "name": "login",
         "action": "AuthController::login",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 51
+        "line": 53
       },
       "permission": {
         "context": "PUBLIC_ACCESS",
         "permissions": [],
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
         "authorizationLines": [
-          54
+          56
         ],
         "authorization": [],
         "note": "Symfony firewall plus controller and delegated service policy. Conditional permissions depend on the operation and resource."
@@ -5818,7 +5818,7 @@
         "name": "logout",
         "action": "AuthController::logout",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 69
+        "line": 71
       },
       "permission": {
         "context": "PUBLIC_ACCESS",
@@ -5908,20 +5908,20 @@
         "name": "mfa_disable",
         "action": "AuthController::mfaDisable",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 124
+        "line": 127
       },
       "permission": {
         "context": "ROLE_CONTROL_USER",
         "permissions": [],
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
         "authorizationLines": [
-          124,
-          125
+          127,
+          128
         ],
         "authorization": [
           {
             "file": "apps/control-plane/src/Identity/Application/AuthSecurityService.php",
-            "line": 218,
+            "line": 222,
             "requirement": "Recent MFA"
           }
         ],
@@ -6009,15 +6009,15 @@
         "name": "mfa_login_verify",
         "action": "AuthController::verifyMfaLogin",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 101
+        "line": 104
       },
       "permission": {
         "context": "PUBLIC_ACCESS",
         "permissions": [],
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
         "authorizationLines": [
-          101,
-          104
+          104,
+          107
         ],
         "authorization": [],
         "note": "Symfony firewall plus controller and delegated service policy. Conditional permissions depend on the operation and resource."
@@ -6098,7 +6098,7 @@
         "name": "mfa_recovery_regenerate",
         "action": "AuthController::recoveryRegenerate",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 120
+        "line": 123
       },
       "permission": {
         "context": "ROLE_CONTROL_USER",
@@ -6108,7 +6108,7 @@
         "authorization": [
           {
             "file": "apps/control-plane/src/Identity/Application/AuthSecurityService.php",
-            "line": 209,
+            "line": 213,
             "requirement": "Recent MFA"
           }
         ],
@@ -6196,7 +6196,7 @@
         "name": "mfa_totp_confirm",
         "action": "AuthController::totpConfirm",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 116
+        "line": 119
       },
       "permission": {
         "context": "ROLE_CONTROL_USER",
@@ -6277,7 +6277,7 @@
         "name": "mfa_totp_setup",
         "action": "AuthController::totpSetup",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 112
+        "line": 115
       },
       "permission": {
         "context": "ROLE_CONTROL_USER",
@@ -6358,7 +6358,7 @@
         "name": "password_change",
         "action": "AuthController::passwordChange",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 93
+        "line": 96
       },
       "permission": {
         "context": "ROLE_CONTROL_USER",
@@ -6368,7 +6368,7 @@
         "authorization": [
           {
             "file": "apps/control-plane/src/Identity/Application/AuthSecurityService.php",
-            "line": 198,
+            "line": 202,
             "requirement": "Recent MFA"
           }
         ],
@@ -6456,14 +6456,14 @@
         "name": "password_reset_confirm",
         "action": "AuthController::passwordResetConfirm",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 85
+        "line": 88
       },
       "permission": {
         "context": "PUBLIC_ACCESS",
         "permissions": [],
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
         "authorizationLines": [
-          88
+          91
         ],
         "authorization": [],
         "note": "Symfony firewall plus controller and delegated service policy. Conditional permissions depend on the operation and resource."
@@ -6546,7 +6546,7 @@
         "name": "password_reset_request",
         "action": "AuthController::passwordResetRequest",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 77
+        "line": 79
       },
       "permission": {
         "context": "PUBLIC_ACCESS",
@@ -6634,7 +6634,7 @@
         "name": "reauthenticate",
         "action": "AuthController::reauthenticate",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 97
+        "line": 100
       },
       "permission": {
         "context": "ROLE_CONTROL_USER",
@@ -6718,14 +6718,14 @@
         "name": "refresh",
         "action": "AuthController::refresh",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 60
+        "line": 62
       },
       "permission": {
         "context": "PUBLIC_ACCESS",
         "permissions": [],
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
         "authorizationLines": [
-          63
+          65
         ],
         "authorization": [],
         "note": "Symfony firewall plus controller and delegated service policy. Conditional permissions depend on the operation and resource."
@@ -6870,7 +6870,7 @@
         "name": "sessions_revoke_others",
         "action": "AuthController::revokeOtherSessions",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 135
+        "line": 138
       },
       "permission": {
         "context": "ROLE_CONTROL_USER",
@@ -6880,7 +6880,7 @@
         "authorization": [
           {
             "file": "apps/control-plane/src/Identity/Application/AuthSecurityService.php",
-            "line": 191,
+            "line": 195,
             "requirement": "Recent MFA"
           }
         ],
@@ -6968,7 +6968,7 @@
         "name": "verification_resend",
         "action": "AuthController::resend",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 33
+        "line": 34
       },
       "permission": {
         "context": "PUBLIC_ACCESS",
@@ -7063,14 +7063,14 @@
         "name": "verify",
         "action": "AuthController::verify",
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
-        "line": 42
+        "line": 44
       },
       "permission": {
         "context": "PUBLIC_ACCESS",
         "permissions": [],
         "source": "apps/control-plane/src/Infrastructure/Http/AuthController.php",
         "authorizationLines": [
-          45
+          47
         ],
         "authorization": [],
         "note": "Symfony firewall plus controller and delegated service policy. Conditional permissions depend on the operation and resource."

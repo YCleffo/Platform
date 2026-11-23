@@ -432,6 +432,7 @@ jobs:
       CONTROL_TEST_DB: platform_commercial_test
       CONTROL_TEST_USER: platform_control_test
       PLATFORM_BASE_DOMAIN: platform.example
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout code
@@ -639,6 +640,7 @@ jobs:
       CONTROL_TEST_DB: platform_commercial_test
       CONTROL_TEST_USER: platform_control_test
       PLATFORM_BASE_DOMAIN: platform.example
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CROSS_PLANE_REQUIRED: "1"
 
     steps:
@@ -797,6 +799,8 @@ jobs:
       CONTROL_TEST_DB: platform_commercial_test
       CONTROL_TEST_USER: platform_control_test
       PLATFORM_BASE_DOMAIN: platform.example
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      EDUCATION_ENABLED: "1"
       SMTP_HOST: mailpit-core-test
       AUTH_PUBLIC_BASE_URL: https://e2e.platform.test:4175
       AUTH_WEBAUTHN_RP_ID: e2e.platform.test
@@ -957,6 +961,8 @@ jobs:
       CONTROL_TEST_DB: platform_commercial_test
       CONTROL_TEST_USER: platform_control_test
       PLATFORM_BASE_DOMAIN: platform.example
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      EDUCATION_ENABLED: "1"
       SMTP_HOST: mailpit-core-test
       AUTH_PUBLIC_BASE_URL: https://e2e.platform.test:4175
       AUTH_WEBAUTHN_RP_ID: e2e.platform.test
@@ -1033,6 +1039,7 @@ jobs:
           docker compose --profile test exec -T backend-test php yii storage:migrate
           docker compose --profile test up -d --no-build --no-deps --wait backend-test
           docker compose --profile test exec -T backend-test composer yii-config-rebuild
+          docker compose --profile test exec -T backend-test php tests/e2e/education-fixture.php enable "$E2E_ISOLATION_PROOF"
           echo "CORE_TEST_CONTAINER=$(docker compose --profile test ps -q backend-test)" >> "$GITHUB_ENV"
           docker compose --profile test exec -T backend-test vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Education
           docker compose --profile test exec -T backend-test vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Foundation
@@ -1130,6 +1137,8 @@ jobs:
       CONTROL_TEST_DB: platform_commercial_test
       CONTROL_TEST_USER: platform_control_test
       PLATFORM_BASE_DOMAIN: platform.example
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      EDUCATION_ENABLED: "1"
       SMTP_HOST: mailpit-core-test
       AUTH_PUBLIC_BASE_URL: https://e2e.platform.test:4175
       AUTH_WEBAUTHN_RP_ID: e2e.platform.test
@@ -1206,6 +1215,7 @@ jobs:
           docker compose --profile test exec -T backend-test php yii storage:migrate
           docker compose --profile test up -d --no-build --no-deps --wait backend-test
           docker compose --profile test exec -T backend-test composer yii-config-rebuild
+          docker compose --profile test exec -T backend-test php tests/e2e/education-fixture.php enable "$E2E_ISOLATION_PROOF"
           echo "CORE_TEST_CONTAINER=$(docker compose --profile test ps -q backend-test)" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v6
         with:
@@ -1292,6 +1302,7 @@ jobs:
       CONTROL_TEST_PORT: "8091"
       MAILPIT_TEST_UI_PORT: "8026"
       PLATFORM_BASE_DOMAIN: platform.example
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CONTROL_VERIFICATION_URL: https://e2e.platform.test:4173/verify-email
       CONTROL_PASSWORD_RESET_URL: https://e2e.platform.test:4173/reset-password
       E2E_ALLOWED_HOSTS: e2e.platform.test
@@ -1408,6 +1419,7 @@ jobs:
       CONTROL_TEST_PORT: "8091"
       MAILPIT_TEST_UI_PORT: "8026"
       PLATFORM_BASE_DOMAIN: platform.example
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CONTROL_VERIFICATION_URL: https://e2e.platform.test:4173/verify-email
       CONTROL_INVITATION_URL: https://e2e.platform.test:4173/invitation
       CONTROL_PASSWORD_RESET_URL: https://e2e.platform.test:4173/reset-password
@@ -1561,6 +1573,7 @@ jobs:
       CONTROL_TEST_PORT: "8091"
       MAILPIT_TEST_UI_PORT: "8026"
       PLATFORM_BASE_DOMAIN: platform.example
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CONTROL_VERIFICATION_URL: https://e2e.platform.test:4173/verify-email
       CONTROL_INVITATION_URL: https://e2e.platform.test:4173/invitation
       CONTROL_PASSWORD_RESET_URL: https://e2e.platform.test:4173/reset-password

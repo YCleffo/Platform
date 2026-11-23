@@ -13,6 +13,10 @@ if [[ -z "${CONTROL_TEST_PASSWORD:-}" ]]; then
   exit 1
 fi
 
+if [[ -n "${GITHUB_TOKEN:-}" && -z "${COMPOSER_AUTH:-}" ]]; then
+  export COMPOSER_AUTH="{\"github-oauth\":{\"github.com\":\"${GITHUB_TOKEN}\"}}"
+fi
+
 docker compose --profile control-test up -d --wait control-postgres-test
 docker compose --profile control-test build control-plane-test
 docker compose --profile control-test run --rm control-plane-test php bin/console lint:yaml config --parse-tags
