@@ -16,6 +16,7 @@ import type { RoleOption } from './accountPresentation';
 import MemberRemoveDialog from './MemberRemoveDialog.vue';
 import ReauthenticateDialog from '@/modules/commercial/security/ReauthenticateDialog.vue';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
+import AppCard from '@/shared/ui/surfaces/AppCard.vue';
 import AppEmptyState from '@/shared/ui/feedback/AppEmptyState.vue';
 import AppErrorState from '@/shared/ui/feedback/AppErrorState.vue';
 import AppSkeleton from '@/shared/ui/feedback/AppSkeleton.vue';
@@ -222,11 +223,21 @@ async function confirmRemove(): Promise<void> {
       v-if="!canView"
       :message="$t('account.accessDenied')"
     />
-    <AppSkeleton
+    <div
       v-else-if="loading"
-      variant="list"
-      :lines="4"
-    />
+      class="account-members__skeleton-grid"
+    >
+      <AppCard
+        v-for="i in 4"
+        :key="i"
+        padding="default"
+      >
+        <AppSkeleton
+          variant="card"
+          :lines="2"
+        />
+      </AppCard>
+    </div>
     <AppErrorState
       v-else-if="errorMessage"
       :message="errorMessage"
@@ -384,5 +395,18 @@ async function confirmRemove(): Promise<void> {
 
 .members__notice a {
   font-weight: var(--type-body-medium-emphasis-weight);
+}
+
+.account-members__skeleton-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12);
+}
+
+@media (min-width: 768px) {
+  .account-members__skeleton-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-16);
+  }
 }
 </style>

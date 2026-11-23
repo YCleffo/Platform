@@ -1265,12 +1265,16 @@ watch(
         >
           {{ historyError }}
         </p>
-        <p
+        <AppSkeleton
+          v-else-if="historyBusy"
+          variant="table"
+          :rows="3"
+          :columns="3"
+        />
+        <AppEmptyState
           v-else-if="!billingState?.history.items.length"
-          class="billing__muted"
-        >
-          {{ $t('billing.historyEmpty') }}
-        </p>
+          :title="$t('billing.historyEmpty')"
+        />
         <ul
           v-else
           class="billing__history"

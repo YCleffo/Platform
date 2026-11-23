@@ -1,7 +1,7 @@
 import { useI18n } from 'vue-i18n';
 import { i18n } from '@/shared/i18n';
 
-const copy = {
+export const educationCopy = {
   transfer_hashing: ['Проверка файла', 'Checking file'],
   transfer_uploading: ['Загрузка', 'Uploading'],
   transfer_downloading: ['Скачивание', 'Downloading'],
@@ -23,7 +23,7 @@ const copy = {
   storageTransferFailed: ['Хранилище не приняло файл. Повторите передачу.', 'Storage rejected the file. Try the transfer again.'],
   storageConfigurationFailed: ['Хранилище не настроено. Обратитесь к администратору.', 'Storage is not configured. Contact your administrator.'],
   activityTargetNotReached: ['Цель задания пока не достигнута. Повторите упражнение, если остались попытки.', 'The assignment target has not been reached. Try again if attempts remain.'],
-  score: ['баллов', 'points'], logicRounds: ['раундов', 'rounds'],
+  score: ['баллов', 'points'], logicRounds: ['раундов', 'rounds'], errors: ['Ошибок', 'Errors'],
   activityAwardNotice: ['Получено новое достижение. Посмотрите условия и результат.', 'You unlocked an achievement. View its conditions and result.'],
   parentNotice_parent_activity_finished: ['Ребёнок завершил учебное упражнение.', 'Your child completed a learning activity.'],
   parentNotice_parent_achievement_unlocked: ['Ребёнок получил новое достижение.', 'Your child unlocked an achievement.'],
@@ -320,7 +320,7 @@ const copy = {
   bestTyping: ['Личный рекорд', 'Personal best'], wpm: ['зн/мин', 'wpm'], seconds: ['сек', 's'], duration: ['Длительность', 'Duration'], startTraining: ['Начать тренировку', 'Start training'], finishTraining: ['Завершить', 'Finish'], trainingResult: ['Результат тренировки', 'Training result'], trainAgain: ['Ещё раз', 'Train again'], trainingHistory: ['История тренировок', 'Training history'],   noTrainingResults: ['Результатов тренировок пока нет', 'No training results yet'], noActivities: ['Доступных активностей пока нет', 'No activities available yet'], openActivity: ['Открыть', 'Open'], inviteStudent: ['Пригласить ученика', 'Invite student'], generatedInvite: ['Код приглашения (одноразовый, действует 72 часа)', 'Invitation code (one-time, valid 72 hours)'], revokeAccount: ['Отозвать доступ', 'Revoke access'], accountActive: ['Аккаунт активирован', 'Account activated'], accountPending: ['Аккаунт не активирован', 'Account not activated'],
 } as const;
 for (const [locale, index] of [['ru', 0], ['en', 1]] as const) {
-  i18n.global.mergeLocaleMessage(locale, { education: Object.fromEntries(Object.entries(copy).map(([key, value]) => [key, value[index]])) });
+  i18n.global.mergeLocaleMessage(locale, { education: Object.fromEntries(Object.entries(educationCopy).map(([key, value]) => [key, value[index]])) });
 }
 export function useEducationI18n() {
   const { t, locale } = useI18n();

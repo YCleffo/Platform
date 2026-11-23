@@ -386,7 +386,11 @@ onMounted(() => {
       v-else-if="loading"
       class="cloud-drive__card"
     >
-      <AppSkeleton height="300px" />
+      <AppSkeleton
+        variant="table"
+        :rows="5"
+        :columns="5"
+      />
     </AppCard>
 
     <!-- Files Table -->
@@ -472,7 +476,7 @@ onMounted(() => {
     <AppEmptyState
       v-else
       :title="$t('drive.noFiles')"
-      :subtitle="$t('drive.subtitle')"
+      :description="$t('drive.subtitle')"
     />
 
     <!-- MODAL: SHARE / PRESIGNED LINK -->
@@ -543,7 +547,8 @@ onMounted(() => {
         </p>
         <AppSkeleton
           v-if="loadingVersions"
-          height="150px"
+          variant="list"
+          :lines="3"
         />
         <div
           v-else-if="fileVersions.length > 0"

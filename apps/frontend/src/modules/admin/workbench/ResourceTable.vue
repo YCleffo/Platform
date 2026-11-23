@@ -268,7 +268,12 @@ onBeforeUnmount(() => {
       :message="error"
       @retry="load"
     />
-    <AppSkeleton v-if="loading" />
+    <AppSkeleton
+      v-if="loading"
+      variant="table"
+      :rows="5"
+      :columns="Math.min(6, Math.max(3, (config.columns?.length ?? 4) + 1))"
+    />
     <template v-else-if="canRead && (!error || items.length > 0)">
       <div class="admin-resource__table-wrap">
         <table v-if="shown.length">

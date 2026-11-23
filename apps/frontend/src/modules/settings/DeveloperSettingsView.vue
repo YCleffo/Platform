@@ -375,7 +375,11 @@ onMounted(() => {
         v-else-if="loading"
         class="dev-settings__card"
       >
-        <AppSkeleton height="250px" />
+        <AppSkeleton
+          variant="table"
+          :rows="4"
+          :columns="6"
+        />
       </AppCard>
 
       <div

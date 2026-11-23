@@ -140,7 +140,11 @@ onMounted(() => {
       v-else-if="loading"
       class="rbac-matrix__card"
     >
-      <AppSkeleton height="400px" />
+      <AppSkeleton
+        variant="table"
+        :rows="6"
+        :columns="5"
+      />
     </AppCard>
 
     <AppCard

@@ -277,7 +277,11 @@ onMounted(() => {
         v-else-if="loading"
         class="superadmin__card"
       >
-        <AppSkeleton height="250px" />
+        <AppSkeleton
+          variant="table"
+          :rows="5"
+          :columns="6"
+        />
       </AppCard>
 
       <div
@@ -365,7 +369,11 @@ onMounted(() => {
         v-else-if="loading"
         class="superadmin__card"
       >
-        <AppSkeleton height="250px" />
+        <AppSkeleton
+          variant="table"
+          :rows="5"
+          :columns="6"
+        />
       </AppCard>
 
       <div
@@ -461,7 +469,11 @@ onMounted(() => {
         v-else-if="loading"
         class="superadmin__card"
       >
-        <AppSkeleton height="250px" />
+        <AppSkeleton
+          variant="table"
+          :rows="5"
+          :columns="6"
+        />
       </AppCard>
 
       <div

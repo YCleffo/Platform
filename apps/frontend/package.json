@@ -30,6 +30,7 @@
     "generate:icons": "node scripts/generate-icons.mjs",
     "check:icons": "node scripts/generate-icons.mjs --check",
     "check:styles": "node scripts/check-styles.mjs",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "verify:ux": "node scripts/verify-ux.mjs",
     "verify:controls": "node scripts/verify-controls.mjs",
     "verify:accessibility": "node scripts/verify-accessibility.mjs",
