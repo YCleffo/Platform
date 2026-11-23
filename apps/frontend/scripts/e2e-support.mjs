@@ -100,21 +100,21 @@ export async function createCommercialAccount(page, code, name) {
   const openBtn = page
     .locator('[data-testid="cabinet-create-account"], button:has-text("Create account")')
     .first();
-  await openBtn.waitFor({ state: 'visible', timeout: 30000 });
+  await openBtn.waitFor({ state: 'visible', timeout: 5000 });
   const createDialog = page
     .locator('[role="dialog"]')
     .filter({ hasText: 'Create a commercial account' });
-  for (let attempt = 0; attempt < 5; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     if (await createDialog.isVisible()) break;
-    await openBtn.click({ force: true }).catch(() => {});
+    await openBtn.click().catch(() => {});
     try {
-      await createDialog.waitFor({ state: 'visible', timeout: 3000 });
+      await createDialog.waitFor({ state: 'visible', timeout: 2000 });
       break;
     } catch {
       // Retry click if dialog hasn't opened yet
     }
   }
-  await createDialog.waitFor({ state: 'visible', timeout: 30000 });
+  await createDialog.waitFor({ state: 'visible', timeout: 5000 });
   await createDialog.locator('#account-code').fill(code);
   await createDialog.locator('#account-name').fill(name);
   await createDialog.locator('button', { hasText: 'Create account' }).first().click();

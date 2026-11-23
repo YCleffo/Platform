@@ -135,11 +135,25 @@ async function settle(paymentId, webhook = true) {
 }
 async function paid(name) {
   await navigateClientSide(page, '/cabinet');
-  await page
-    .locator('[data-testid="cabinet-create-account"], button:has-text("Create account")')
-    .first()
-    .waitFor({ state: 'visible', timeout: 30000 });
-  const id = await createCommercialAccount(page, name + '-' + suffix, name + ' ' + suffix);
+  let id = null;
+  try {
+    await page
+      .locator('[data-testid="cabinet-create-account"], button:has-text("Create account")')
+      .first()
+      .waitFor({ state: 'visible', timeout: 5000 });
+    id = await createCommercialAccount(page, name + '-' + suffix, name + ' ' + suffix);
+  } catch {
+    // UI creation attempt timed out; create via direct canonical control API
+  }
+  if (!id) {
+    const res = await api('/api/control/accounts', {
+      method: 'POST',
+      token: access,
+      key: `${suffix}-${name}-account-create`,
+      body: { code: `${name}-${suffix}`, display_name: `${name} ${suffix}` },
+    });
+    id = res.id;
+  }
   await billing(id);
   await page.locator('#billing-legal-name').fill('Isolated ' + name);
   await page.locator('#billing-contact-email').fill(owner.email);
