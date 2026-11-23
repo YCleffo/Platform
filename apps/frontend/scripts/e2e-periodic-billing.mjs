@@ -55,11 +55,11 @@ page.on('requestfailed', (req) => {
 page.on('pageerror', (error) => errors.push(error.message));
 page.on('response', async (r) => {
   if (
-    /\/api\/control\/auth\/(login|mfa\/login\/verify)$/.test(new URL(r.url()).pathname) &&
+    /\/api\/control\/auth\/(login|mfa\/login\/verify|refresh)$/.test(new URL(r.url()).pathname) &&
     r.ok()
   ) {
-    const body = await r.json();
-    if (body.access_token) access = body.access_token;
+    const body = await r.json().catch(() => null);
+    if (body?.access_token) access = body.access_token;
   }
 });
 mkdirSync('screenshots', { recursive: true });
@@ -226,30 +226,27 @@ try {
     (v) => v === true,
     'Pay for the change button must be enabled',
   );
-  const payment = sql(
-    `SELECT p.id FROM commercial.payments p JOIN commercial.subscription_plan_changes c ON c.invoice_id=p.invoice_id WHERE c.id='${change.id}'`,
-  );
   const openPaymentBtn = page.getByRole('button', { name: 'Open payment page', exact: true }).first();
-  const checkoutPromise = page.waitForResponse(
-    (r) => r.url().includes('/checkout') && r.request().method() === 'POST',
-    { timeout: 15000 },
-  ).catch(() => null);
-  await payBtn.click();
-  const checkout = await checkoutPromise;
-  if (checkout) {
-    assert.equal(checkout.status(), 200);
-  } else {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (await openPaymentBtn.isVisible()) break;
+    await payBtn.click().catch(() => {});
     try {
       await openPaymentBtn.waitFor({ state: 'visible', timeout: 10000 });
+      break;
     } catch {
-      await api(`/api/control/accounts/${down.id}/payments/${payment}/checkout`, {
-        method: 'POST',
-        token: access,
-        body: { provider: 'yookassa', method: 'bank_card', save_payment_method: false },
-      });
+      // Retry click if button not yet visible
     }
   }
-  await settle(payment, false);
+  await openPaymentBtn.waitFor({ state: 'visible', timeout: 30000 });
+  const payment = await until(
+    () =>
+      sql(
+        `SELECT p.id FROM commercial.payments p JOIN commercial.subscription_plan_changes c ON c.invoice_id=p.invoice_id WHERE c.id='${change.id}'`,
+      ),
+    (v) => Boolean(v && v.trim().length > 0),
+    'Payment record must exist for the plan change',
+  );
+  await settle(payment.trim(), false);
   await until(
     () => sql(`SELECT status FROM commercial.subscription_plan_changes WHERE id='${change.id}'`),
     (v) => v === 'applied',

@@ -1116,6 +1116,14 @@ watch(
             {{ $t('billing.payPlanChange') }}
           </AppButton>
           <AppButton
+            v-if="checkoutResult?.confirmation"
+            size="s"
+            variant="secondary"
+            @click="openCheckout"
+          >
+            {{ $t('billing.openCheckout') }}
+          </AppButton>
+          <AppButton
             size="s"
             variant="secondary"
             :disabled="!canManage || actionBusy"
