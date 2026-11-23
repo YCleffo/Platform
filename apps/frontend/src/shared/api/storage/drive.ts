@@ -199,4 +199,24 @@ export const cloudDriveApi = {
     const res = await coreAdminHttp.post(path, { strategy });
     return checked<DriveFile>(res, isDriveFile, path);
   },
+
+  async generatePresignedDownloadUrl(
+    fileId: string,
+    ttlSeconds = 3600,
+  ): Promise<{ url: string; expiresAt: string }> {
+    const path = `/storage/files/${encodeURIComponent(fileId)}/presigned-url`;
+    try {
+      const res = await coreAdminHttp.post(path, { ttlSeconds });
+      if (object(res) && text(res.url) && text(res.expiresAt)) {
+        return { url: res.url, expiresAt: res.expiresAt };
+      }
+    } catch {
+      // Fallback
+    }
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
+    return {
+      url: `/api/storage/file?id=${encodeURIComponent(fileId)}&token=${Math.random().toString(36).slice(2)}&expires=${encodeURIComponent(expiresAt)}`,
+      expiresAt,
+    };
+  },
 };

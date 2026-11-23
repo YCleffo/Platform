@@ -55,5 +55,21 @@ export function useToast() {
     return id;
   }
 
-  return { toasts: readonly(toasts), show, dismiss };
+  function success(message: string, timeoutMs = 5000): number {
+    return show(message, 'success', timeoutMs);
+  }
+
+  function error(message: string, timeoutMs = 5000): number {
+    return show(message, 'error', timeoutMs);
+  }
+
+  function info(message: string, timeoutMs = 5000): number {
+    return show(message, 'info', timeoutMs);
+  }
+
+  function warning(message: string, timeoutMs = 5000): number {
+    return show(message, 'warning', timeoutMs);
+  }
+
+  return { toasts: readonly(toasts), show, dismiss, success, error, info, warning };
 }

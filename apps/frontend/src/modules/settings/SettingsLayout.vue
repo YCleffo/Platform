@@ -30,6 +30,13 @@
         {{ $t('privacy.title') }}
       </RouterLink>
       <RouterLink
+        :to="{ name: 'settings-developer' }"
+        active-class=""
+        exact-active-class="settings-layout__tab--active"
+      >
+        {{ $t('developer.title') }}
+      </RouterLink>
+      <RouterLink
         :to="{ name: 'settings-components' }"
         active-class=""
         exact-active-class="settings-layout__tab--active"

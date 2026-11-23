@@ -137,6 +137,14 @@ export const coreRbacApi = {
     checked(res, (v) => object(v) && v.status === 'deleted', path);
   },
 
+  async setRolePermissions(roleId: string, permissions: string[]): Promise<CoreRole> {
+    return this.patchRole(roleId, { permissions });
+  },
+
+  async getAccountRoles(accountId: string): Promise<AccountRoleAssignment[]> {
+    return this.listAccountRoles(accountId);
+  },
+
   async listAccountRoles(accountId: string): Promise<AccountRoleAssignment[]> {
     const path = `/core/accounts/${encodeURIComponent(accountId)}/roles`;
     const res = await coreAdminHttp.get(path);

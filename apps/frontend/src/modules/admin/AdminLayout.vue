@@ -115,6 +115,12 @@ const sections = computed<Array<{ key: string; title: string; items: AdminNavIte
         permission: 'core.rbac.read',
       },
       {
+        label: t('platformAdmin.superadmin'),
+        name: 'admin-superadmin',
+        icon: ShieldCheck,
+        permission: 'core.superadmin',
+      },
+      {
         label: t('admin.modules'),
         name: 'admin-modules',
         icon: Settings,

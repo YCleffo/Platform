@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
   Building2,
+  Inbox,
   Layers,
   LayoutGrid,
   LogIn,
@@ -39,13 +40,15 @@ const primaryNavigation = computed(() => activeNavigationRoute(route));
 const bottomItems = computed<BottomNavItem[]>(() => [
   { label: t('nav.catalog'), icon: LayoutGrid, routeName: 'catalog' },
   { label: t('nav.cabinet'), icon: Building2, routeName: 'cabinet' },
+  { label: t('nav.drive'), icon: Inbox, routeName: 'drive' },
   { label: t('nav.settings'), icon: Settings, routeName: 'settings' },
 ]);
 
 const primaryOrder: Record<string, number> = {
   catalog: 0,
   cabinet: 1,
-  settings: 2,
+  drive: 2,
+  settings: 3,
 };
 
 const pageTransition = ref<'page-slide-left' | 'page-slide-right'>('page-slide-left');

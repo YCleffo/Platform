@@ -24,9 +24,10 @@ export function breadcrumbs(name: unknown, params: Record<string, unknown>, t: (
     if (route === 'account-overview') return [...chain, item('navigation.account')];
     return [...chain, item('navigation.account', { name: 'account-overview', params: { accountId } }), item('navigation.' + route.slice(8))];
   }
-  if (['security', 'privacy', 'settings-components'].includes(route)) return [item('nav.settings', { name: 'settings' }), item('navigation.' + (route === 'settings-components' ? 'components' : route))];
+  if (['security', 'privacy', 'settings-components', 'settings-developer'].includes(route)) return [item('nav.settings', { name: 'settings' }), item('navigation.' + (route === 'settings-components' ? 'components' : route === 'settings-developer' ? 'developer' : route))];
   if (route === 'operator-console') return [item('app.name', { name: 'catalog' }), item('navigation.operator')];
   if (route === 'catalog') return [item('nav.catalog')];
+  if (route === 'drive') return [item('nav.drive')];
   if (route === 'plans') return [item('nav.catalog', { name: 'catalog' }), item('navigation.comparePlans')];
   if (route === 'plan-detail') {
     const code = typeof params.code === 'string' ? params.code : '';

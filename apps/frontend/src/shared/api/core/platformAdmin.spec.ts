@@ -3,6 +3,8 @@ import {
   platformAdminApi,
   isPlatformOrganization,
   isPlatformAccountSummary,
+  isPlatformSuspiciousSession,
+  isServiceHealthItem,
 } from './platformAdmin';
 import { coreAdminHttp } from './adminHttp';
 import { ApiResponseError } from '../errors';
@@ -77,5 +79,22 @@ describe('platformAdminApi', () => {
   it('throws on invalid API payload', async () => {
     vi.mocked(coreAdminHttp.get).mockResolvedValueOnce({ notAnOrg: true });
     await expect(platformAdminApi.getOrganization('org-1')).rejects.toThrow(ApiResponseError);
+  });
+
+  it('lists suspicious sessions and revokes them', async () => {
+    const sessions = await platformAdminApi.listSuspiciousSessions();
+    expect(sessions.length).toBeGreaterThan(0);
+    expect(isPlatformSuspiciousSession(sessions[0])).toBe(true);
+
+    await platformAdminApi.revokeSession('sess-1');
+    expect(coreAdminHttp.post).toHaveBeenCalledWith('/core/security/sessions/sess-1/revoke');
+  });
+
+  it('retrieves system service health items', async () => {
+    vi.mocked(coreAdminHttp.get).mockResolvedValue({ status: 'ok' });
+    const health = await platformAdminApi.getServicesHealth();
+    expect(health.length).toBeGreaterThanOrEqual(4);
+    expect(health.every(isServiceHealthItem)).toBe(true);
+    expect(health.some((h) => h.name.includes('PostgreSQL'))).toBe(true);
   });
 });

@@ -117,4 +117,10 @@ describe('cloudDriveApi', () => {
     vi.mocked(coreAdminHttp.get).mockResolvedValueOnce({ items: [{ invalid: true }] });
     await expect(cloudDriveApi.listVersions('file-1')).rejects.toThrow(ApiResponseError);
   });
+
+  it('generates presigned download url with ttl', async () => {
+    const res = await cloudDriveApi.generatePresignedDownloadUrl('file-1', 1800);
+    expect(res.url).toContain('file-1');
+    expect(res.expiresAt).toBeDefined();
+  });
 });

@@ -1,41 +1,65 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useAdminResourceConfigs } from './adminConfigs';
 import AdminResourceView from './AdminResourceView.vue';
+import RbacMatrixView from './rbac/RbacMatrixView.vue';
+import AccountRoleAssignmentDialog from './rbac/AccountRoleAssignmentDialog.vue';
+import AppButton from '@/shared/ui/actions/AppButton.vue';
 
+const { t } = useI18n();
 const configs = useAdminResourceConfigs();
 const rolesConfig = computed(() => configs.value.roles!);
 const permissionsConfig = computed(() => configs.value.permissions!);
-const tab = ref<'roles' | 'permissions'>('roles');
+const tab = ref<'roles' | 'matrix' | 'permissions'>('roles');
+const showAssignDialog = ref(false);
+
 const tabs = computed(() => [
   { key: 'roles' as const, label: rolesConfig.value.title },
+  { key: 'matrix' as const, label: t('admin.rbacMatrixTab') },
   { key: 'permissions' as const, label: permissionsConfig.value.title },
 ]);
 </script>
 
 <template>
   <section class="admin-tabs">
-    <nav
-      class="admin-tabs__nav"
-      :aria-label="$t('admin.rbac')"
-    >
-      <button
-        v-for="item in tabs"
-        :key="item.key"
-        type="button"
-        :class="{ 'admin-tabs__tab--active': tab === item.key }"
-        @click="tab = item.key"
+    <div class="admin-tabs__header">
+      <nav
+        class="admin-tabs__nav"
+        :aria-label="$t('admin.rbac')"
       >
-        {{ item.label }}
-      </button>
-    </nav>
+        <button
+          v-for="item in tabs"
+          :key="item.key"
+          type="button"
+          :class="{ 'admin-tabs__tab--active': tab === item.key }"
+          @click="tab = item.key"
+        >
+          {{ item.label }}
+        </button>
+      </nav>
+      <AppButton
+        variant="secondary"
+        size="m"
+        @click="showAssignDialog = true"
+      >
+        {{ $t('admin.assignRolesToEmployee') }}
+      </AppButton>
+    </div>
+
+    <RbacMatrixView v-if="tab === 'matrix'" />
     <AdminResourceView
-      v-if="tab === 'roles'"
+      v-else-if="tab === 'roles'"
       :config="rolesConfig"
     />
     <AdminResourceView
       v-else
       :config="permissionsConfig"
+    />
+
+    <AccountRoleAssignmentDialog
+      :open="showAssignDialog"
+      @close="showAssignDialog = false"
     />
   </section>
 </template>
@@ -44,6 +68,13 @@ const tabs = computed(() => [
 .admin-tabs {
   display: grid;
   gap: var(--space-16);
+}
+.admin-tabs__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-12);
 }
 .admin-tabs__nav {
   display: flex;
@@ -58,14 +89,19 @@ const tabs = computed(() => [
   min-height: 36px;
   padding: 0 var(--space-12);
   border-radius: var(--radius-control-s);
+  border: none;
+  background: transparent;
   color: var(--text-2);
-  font-size: var(--type-body-small-emphasis-size);
-  letter-spacing: var(--type-body-small-emphasis-tracking);
-  line-height: var(--type-body-small-emphasis-line);
-  font-weight: var(--type-body-small-emphasis-weight);
+  cursor: pointer;
+  font-weight: var(--type-body-medium-emphasis-weight);
+  transition: var(--theme-transition);
 }
-.admin-tabs__nav button.admin-tabs__tab--active {
-  background: var(--accent-soft);
-  color: var(--accent-text);
+.admin-tabs__nav button:hover {
+  color: var(--text-1);
+}
+.admin-tabs__tab--active {
+  background: var(--selected-surface) !important;
+  color: var(--text-1) !important;
+  font-weight: var(--type-body-large-emphasis-weight) !important;
 }
 </style>

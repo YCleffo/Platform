@@ -32,6 +32,7 @@ const SettingsLayout = () => import('@/modules/settings/SettingsLayout.vue');
 const AppearanceSettingsView = () => import('@/modules/settings/AppearanceSettingsView.vue');
 const ComponentsSettingsView = () => import('@/modules/settings/ComponentsSettingsView.vue');
 const PrivacySettingsView = () => import('@/modules/settings/PrivacySettingsView.vue');
+const DeveloperSettingsView = () => import('@/modules/settings/DeveloperSettingsView.vue');
 
 export function createAppRouter(history: RouterHistory = createWebHistory(import.meta.env.BASE_URL), educationEnabled = import.meta.env.VITE_EDUCATION_ENABLED === '1') {
   const router = createRouter({
@@ -48,6 +49,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
           { path: 'plans', name: 'plans', component: PlanComparisonView, meta: { primaryNavigation: 'catalog' } },
           { path: 'plans/:code', name: 'plan-detail', component: PlanDetailView, meta: { primaryNavigation: 'catalog' } },
           { path: 'cabinet', name: 'cabinet', component: AccountCabinetView, meta: { requiresAuth: true } },
+          { path: 'drive', name: 'drive', component: () => import('@/modules/storage/CloudDriveView.vue'), meta: { requiresAuth: true, primaryNavigation: 'drive' } },
           {
             path: 'settings', component: SettingsLayout, meta: { primaryNavigation: 'settings' },
             children: [
@@ -55,6 +57,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
               { path: 'components', name: 'settings-components', component: ComponentsSettingsView },
               { path: 'security', name: 'security', component: SecuritySettingsView, meta: { requiresAuth: true } },
               { path: 'privacy', name: 'privacy', component: PrivacySettingsView, meta: { requiresAuth: true } },
+              { path: 'developer', name: 'settings-developer', component: DeveloperSettingsView, meta: { requiresAuth: true } },
             ],
           },
           {
@@ -129,6 +132,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
           { path: 'persons', name: 'admin-persons', component: () => import('@/modules/admin/AdminResourcePageView.vue'), meta: { adminResource: 'persons' } },
           { path: 'accounts', name: 'admin-accounts', component: () => import('@/modules/admin/AdminResourcePageView.vue'), meta: { adminResource: 'accounts' } },
           { path: 'rbac', name: 'admin-rbac', component: () => import('@/modules/admin/AdminRbacView.vue') },
+          { path: 'superadmin', name: 'admin-superadmin', component: () => import('@/modules/admin/superadmin/PlatformSuperadminView.vue') },
           { path: 'modules', name: 'admin-modules', component: () => import('@/modules/admin/AdminModulesView.vue') },
           { path: 'settings', name: 'admin-settings', component: () => import('@/modules/admin/AdminSettingsView.vue') },
           { path: 'profile', component: () => import('@/modules/admin/profile/CoreProfileLayout.vue'), children: [
