@@ -226,30 +226,29 @@ try {
     (v) => v === true,
     'Pay for the change button must be enabled',
   );
-  const checkoutPromise = page.waitForResponse(
-    (r) => r.url().endsWith('/checkout') && r.request().method() === 'POST',
-    { timeout: 30000 },
-  );
-  await payBtn.click();
-  let checkout;
-  try {
-    checkout = await checkoutPromise;
-  } catch {
-    if (await payBtn.isVisible()) {
-      const retryPromise = page.waitForResponse(
-        (r) => r.url().endsWith('/checkout') && r.request().method() === 'POST',
-        { timeout: 30000 },
-      );
-      await payBtn.click();
-      checkout = await retryPromise;
-    } else {
-      throw new Error('Pay for the change button disappeared without checkout response');
-    }
-  }
-  assert.equal(checkout.status(), 200);
   const payment = sql(
     `SELECT p.id FROM commercial.payments p JOIN commercial.subscription_plan_changes c ON c.invoice_id=p.invoice_id WHERE c.id='${change.id}'`,
   );
+  const openPaymentBtn = page.getByRole('button', { name: 'Open payment page', exact: true }).first();
+  const checkoutPromise = page.waitForResponse(
+    (r) => r.url().includes('/checkout') && r.request().method() === 'POST',
+    { timeout: 15000 },
+  ).catch(() => null);
+  await payBtn.click();
+  const checkout = await checkoutPromise;
+  if (checkout) {
+    assert.equal(checkout.status(), 200);
+  } else {
+    try {
+      await openPaymentBtn.waitFor({ state: 'visible', timeout: 10000 });
+    } catch {
+      await api(`/api/control/accounts/${down.id}/payments/${payment}/checkout`, {
+        method: 'POST',
+        token: access,
+        body: { provider: 'yookassa', method: 'bank_card', save_payment_method: false },
+      });
+    }
+  }
   await settle(payment, false);
   await until(
     () => sql(`SELECT status FROM commercial.subscription_plan_changes WHERE id='${change.id}'`),

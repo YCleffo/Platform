@@ -443,7 +443,7 @@ async function startSubscription(): Promise<void> {
 }
 
 async function payInvoiceById(invoiceId: string): Promise<void> {
-  if (!canManage.value && store.detailLoading) {
+  if (!canManage.value) {
     await store.loadAccount(accountId.value);
   }
   if (!canManage.value) {
@@ -481,7 +481,7 @@ async function payInvoiceById(invoiceId: string): Promise<void> {
 }
 
 async function payPlanChange(): Promise<void> {
-  if (!canManage.value && store.detailLoading) {
+  if (!canManage.value) {
     await store.loadAccount(accountId.value);
   }
   if (!canManage.value) {
@@ -499,7 +499,7 @@ async function payPlanChange(): Promise<void> {
 }
 
 async function continuePayment(paymentId: string): Promise<void> {
-  if (!canManage.value && store.detailLoading) {
+  if (!canManage.value) {
     await store.loadAccount(accountId.value);
   }
   if (!canManage.value) {

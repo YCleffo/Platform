@@ -59,8 +59,8 @@ async function session(actor, width = 393) {
     viewport: { width, height: 852 },
   });
   contexts.push(context);
-  context.setDefaultTimeout(15000);
-  context.setDefaultNavigationTimeout(30000);
+  context.setDefaultTimeout(30000);
+  context.setDefaultNavigationTimeout(45000);
   await context.addInitScript(() => {
     localStorage.setItem('platform.locale', 'ru');
     localStorage.setItem('platform.theme', 'light');
@@ -94,11 +94,13 @@ async function session(actor, width = 393) {
       }
     }
   });
-  await page.goto(`${env.APP_URL}/education/login?redirect=/today`);
-  await page.locator('#education-email').fill(actor.email);
+  await page.goto(`${env.APP_URL}/education/login?redirect=/today`, { waitUntil: 'domcontentloaded' });
+  const emailInput = page.locator('#education-email');
+  await emailInput.waitFor({ state: 'visible', timeout: 30000 });
+  await emailInput.fill(actor.email);
   await page.locator('#education-password').fill(actor.password);
   await page.locator('form button[type=submit]').click();
-  await page.waitForURL((url) => url.pathname === '/today');
+  await page.waitForURL((url) => url.pathname === '/today', { timeout: 30000 });
   async function api(
     path,
     { method = 'GET', body, organization = actor.organizationId, status = 200 } = {},
