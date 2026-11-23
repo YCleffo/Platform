@@ -56,7 +56,10 @@ defineEmits<{
     :title="$t('cabinet.noAccounts')"
     :icon="Building2"
   >
-    <AppButton @click="$emit('create')">
+    <AppButton
+      data-testid="cabinet-create-account"
+      @click="$emit('create')"
+    >
       <Plus
         :size="18"
         aria-hidden="true"

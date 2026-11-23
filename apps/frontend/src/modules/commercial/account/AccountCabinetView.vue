@@ -74,7 +74,10 @@ async function onCreated(accountId: string): Promise<void> {
         <h1 class="cabinet__title">{{ $t('cabinet.title') }}</h1>
         <p class="cabinet__subtitle">{{ $t('cabinet.subtitle') }}</p>
       </div>
-      <AppButton @click="openCreate">
+      <AppButton
+        data-testid="cabinet-create-account"
+        @click="openCreate"
+      >
         <Plus
           :size="18"
           aria-hidden="true"

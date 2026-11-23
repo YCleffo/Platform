@@ -150,6 +150,7 @@ async function paid(name) {
       method: 'POST',
       token: access,
       key: `${suffix}-${name}-account-create`,
+      expected: [200, 201],
       body: { code: `${name}-${suffix}`, display_name: `${name} ${suffix}` },
     });
     id = res.id;
