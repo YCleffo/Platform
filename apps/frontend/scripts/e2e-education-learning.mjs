@@ -164,8 +164,12 @@ async function assignLearningActivity(teacher, groupId, code) {
 }
 
 async function openLearningAssignment(student, code, assignment, path) {
-  await navigateClientSide(student.page, path);
+  await navigateClientSide(student.page, '/student/activities');
+  await student.page.locator(`.edu-activity-catalog a[href="${path}"]`).click();
+  await student.page.waitForURL((url) => url.pathname === path && !url.search);
   await student.page.locator(`a[href="${path}?assignment=${assignment}"]`).click();
+  await student.page.waitForURL((url) =>
+    url.pathname === path && url.searchParams.get('assignment') === assignment);
   const started = await afterMutation(
     student.page,
     'POST',

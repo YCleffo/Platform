@@ -1,4 +1,5 @@
-import { mkdirSync } from 'node:fs';
+import assert from 'node:assert/strict';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { evaluateMutationGate } from './e2e-guard.mjs';
@@ -28,6 +29,7 @@ const API = process.env.CONTROL_API_URL ?? '';
 const MAILPIT = process.env.MAILPIT_URL ?? '';
 
 const failures = [];
+const verified = [];
 const check = (condition, message) => {
   if (!condition) failures.push(message);
 };
@@ -45,6 +47,36 @@ async function assertNoOverflow(page, label) {
     () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
   );
   check(ok, `${label}: horizontal overflow`);
+}
+
+async function inspectBillingPreferences(page, billingPath) {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const legalName = page.locator('#billing-legal-name');
+  const country = page.locator('#billing-country');
+  await legalName.fill('Unsaved QA billing profile');
+  await country.fill('R');
+  await page.getByRole('button', { name: 'Save billing profile', exact: true }).press('Enter');
+  const englishError = page.getByRole('alert').filter({ hasText: 'Enter a legal name and a two-letter country code.' });
+  await englishError.waitFor();
+  await page.getByRole('button', { name: 'EN: Change language' }).click();
+  await page.waitForFunction(() => document.documentElement.lang === 'ru');
+  await page.getByRole('alert').filter({ hasText: 'Укажите юридическое название и двухбуквенный код страны.' }).waitFor();
+  await page.getByRole('button', { name: 'RU: Сменить язык' }).click();
+  await page.waitForFunction(() => document.documentElement.lang === 'en');
+  await englishError.waitFor();
+  assert.equal(await legalName.inputValue(), 'Unsaved QA billing profile');
+  assert.equal(await country.inputValue(), 'R');
+  assert.equal(new URL(page.url()).pathname, billingPath);
+  await assertAccountNavigation(page, billingPath);
+
+  for (const [label, theme] of [['Dark theme', 'dark'], ['Light theme', 'light']]) {
+    await page.getByRole('button', { name: label, exact: true }).click();
+    await page.waitForFunction((expected) => document.documentElement.dataset.theme === expected, theme);
+    assert.equal(await legalName.inputValue(), 'Unsaved QA billing profile');
+    await englishError.waitFor();
+  }
+  await assertNoOverflow(page, 'billing draft and error at desktop');
+  verified.push('Billing profile retained draft and translated validation across RU/EN and light/dark');
 }
 
 async function main() {
@@ -158,10 +190,25 @@ async function main() {
     await assertNoOverflow(page, 'billing 393');
     await stableScreenshot(page, join(outDir, 'frontend05-billing-393-light.png'));
     await captureAuthenticated(page, { ...accountCapture, screen: 'billing' });
+    await page.getByRole('heading', { name: 'Start subscription', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'Invoices and payment history', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'Billing profile', exact: true }).waitFor();
+    await inspectBillingPreferences(page, billingPath);
+    await page.getByRole('link', { name: 'Open Security Center', exact: true }).click();
+    await page.waitForURL((url) => url.pathname === '/settings/security');
+    await page.locator('.security-view__session-list').waitFor();
+    await assertPrimaryNavigation(page, '/settings/security');
+    await page.goBack();
+    await page.waitForURL((url) => url.pathname === billingPath);
+    await page.locator('#billing-legal-name').waitFor();
+    await assertAccountNavigation(page, billingPath);
+    await page.setViewportSize({ width: 393, height: 852 });
+    verified.push('Billing nested subscription/invoice/profile sections and Security Center link with Back');
 
     await page.locator('.account-layout__tabs a', { hasText: 'Usage' }).first().click();
     await page.waitForURL(`**/accounts/${accountA}/usage`, { timeout: 20_000 });
     await page.waitForSelector('.usage__title', { timeout: 20_000 });
+    await assertAccountNavigation(page, `/accounts/${accountA}/usage`);
     check(await page.getByText('Usage', { exact: true }).first().isVisible(), 'usage page renders');
     await assertNoOverflow(page, 'usage 393');
     await stableScreenshot(page, join(outDir, 'frontend05-usage-393-light.png'));
@@ -170,6 +217,7 @@ async function main() {
     await page.waitForURL(`**/accounts/${accountA}/analytics`, { timeout: 20_000 });
     await page.waitForSelector('.analytics__title', { timeout: 20_000 });
     await page.locator('.analytics__bar').first().waitFor({ state: 'visible', timeout: 20_000 });
+    await assertAccountNavigation(page, `/accounts/${accountA}/analytics`);
     check(await page.getByText('Members', { exact: true }).first().isVisible(), 'analytics page renders');
     check(await page.locator('.analytics__bar').count() > 0, 'analytics activity chart renders');
     await assertNoOverflow(page, 'analytics 393');
@@ -179,11 +227,13 @@ async function main() {
     await page.waitForURL(`**/accounts/${accountA}/audit`, { timeout: 20_000 });
     await page.waitForSelector('.audit__title', { timeout: 20_000 });
     await page.locator('.audit__event').first().waitFor({ state: 'visible', timeout: 20_000 });
+    await assertAccountNavigation(page, `/accounts/${accountA}/audit`);
     check((await page.locator('.audit__event').first().innerText()).includes('commercial_account.created'), 'audit page renders account events');
     await assertNoOverflow(page, 'audit 393');
     await stableScreenshot(page, join(outDir, 'frontend05-audit-393-light.png'));
 
-    await page.getByRole('button', { name: 'Open menu' }).click();
+    const menuTrigger = page.getByRole('button', { name: 'Open menu' });
+    await menuTrigger.press('Enter');
     const accountMenu = page.getByRole('dialog', { name: 'Menu' });
     await accountMenu.waitFor();
     check(await accountMenu.getByRole('link', { name: 'Billing', exact: true }).isVisible(), 'mobile menu exposes billing');
@@ -191,6 +241,9 @@ async function main() {
     check(await accountMenu.getByRole('link', { name: 'Analytics', exact: true }).isVisible(), 'mobile menu exposes analytics');
     check(await accountMenu.getByRole('link', { name: 'Audit log', exact: true }).isVisible(), 'mobile menu exposes audit');
     await page.keyboard.press('Escape');
+    await accountMenu.waitFor({ state: 'detached' });
+    assert.equal(await menuTrigger.evaluate((button) => button === document.activeElement), true, 'Menu Escape restores focus');
+    verified.push('Owner account tabs expose Overview/Members/Invitations/Billing/Usage/Analytics/Audit and mark one active indicator');
 
     await navigateClientSide(page, '/settings/privacy');
     await page.waitForSelector('.privacy__title', { timeout: 20_000 });
@@ -226,12 +279,18 @@ async function main() {
 
     // Direct URL requires re-authentication because tokens are memory-only,
     // then returns to the originally requested account.
-    await page.goto(`${APP}/accounts/${accountA}`, { waitUntil: 'networkidle' });
+    await page.goto(`${APP}${billingPath}`, { waitUntil: 'networkidle' });
     await page.waitForURL('**/login**', { timeout: 20_000 });
+    assert.equal(new URL(page.url()).searchParams.get('redirect'), billingPath, 'Nested route survives the login guard');
     await submitLogin(page, emailA, password);
-    await page.waitForURL(`**/accounts/${accountA}`, { timeout: 20_000 });
+    await page.waitForURL((url) => url.pathname === billingPath, { timeout: 20_000 });
     await page.waitForSelector('.account-layout__name', { timeout: 20_000 });
+    await page.locator('#billing-legal-name').waitFor();
+    await assertAccountNavigation(page, billingPath);
     check((await page.locator('.account-layout__name').textContent())?.includes(nameA), 'direct URL returns to account A after re-login');
+    verified.push('Direct nested billing URL reauthenticates and restores account and active section');
+    await tabs.getByRole('link', { name: 'Overview', exact: true }).click();
+    await page.waitForURL((url) => url.pathname === `/accounts/${accountA}`);
 
     // Dark theme from the full-screen mobile menu.
     const themeBefore = await page.evaluate(() => document.documentElement.dataset.theme);
@@ -241,6 +300,7 @@ async function main() {
     await page.waitForFunction((previous) => document.documentElement.dataset.theme !== previous, themeBefore);
     const themeAfter = await page.evaluate(() => document.documentElement.dataset.theme);
     check(themeAfter !== themeBefore, 'theme toggle changes data-theme');
+    assert.equal(await themeMenu.isVisible(), true, 'Theme transition preserves the mobile menu dialog');
     await page.keyboard.press('Escape');
     await themeMenu.waitFor({ state: 'detached', timeout: 2_000 });
     await stableScreenshot(page, join(outDir, 'frontend04-overview-393-dark.png'));
@@ -306,6 +366,7 @@ async function main() {
         (await pageB.locator('.account-layout__name').count()) === 0,
         'user B must not see account A data',
       );
+      verified.push('Unrelated user denied access to the account and its identity data');
     }
   } catch (error) {
     failures.push(`user B isolation: ${String(error)}`);
@@ -345,6 +406,12 @@ if (failures.length > 0) {
   }
   process.exit(1);
 }
+
+writeFileSync(join(outDir, 'frontend09-account-workspace-closeout.json'), JSON.stringify({
+  passed: true,
+  realBackend: true,
+  scenarios: verified,
+}, null, 2));
 
 console.log(
   'ACCOUNT WORKSPACE E2E PASSED: login, create accounts, overview, members, invitations, billing, usage, analytics, audit, Back/Forward, switching, direct URL re-login, RU/EN, theme, 320/1440, keyboard, cross-user denial.',

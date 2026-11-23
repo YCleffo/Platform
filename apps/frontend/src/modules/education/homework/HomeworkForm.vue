@@ -235,6 +235,7 @@ async function save(): Promise<void> {
     <AppDropdown
       v-model="form.type"
       :label="t('education.homeworkType')"
+      show-label
       :disabled="busy || (!!assignment && assignment.status !== 'DRAFT')"
       :options="
         (['text', 'files', 'typing', 'activity'] as const).map((value) => ({
@@ -253,6 +254,7 @@ async function save(): Promise<void> {
       <AppDropdown
         v-model="groupChoice"
         :label="t('education.group')"
+        show-label
         :disabled="busy || (!!assignment && assignment.status !== 'DRAFT')"
         :options="[
           { value: '', label: t('education.homeworkAll') },

@@ -11,6 +11,7 @@ const options = [
 for (const [label, value, sha] of options) {
   const url = new URL(value);
   assert.equal(value, url.origin, label + ' URL must be an origin');
+  assert.match(url.protocol, /^https?:$/, label + ' preview must use HTTP(S)');
   assert.equal(url.hostname, '127.0.0.1', label + ' preview must use IPv4 loopback');
   assert.match(sha, /^[a-f0-9]{40}$/, label + ' SHA must be the exact build revision');
 }
@@ -57,7 +58,7 @@ const fixture = new Map([
 const suites = [
   {
     name: 'core-admin', login: '/admin/login?redirect=/admin', email: '#admin-identifier', password: '#admin-password',
-    landing: '/admin', nav: '.admin__sidebar', routes: [
+    landing: '/admin', nav: '.admin__sidebar a.admin__link', routes: [
       { path: '/admin', selector: '.admin-dashboard' },
       { path: '/admin/modules', selector: '.config-card' },
       { path: '/admin/settings', selector: '.config-tabs' },
@@ -65,7 +66,7 @@ const suites = [
   },
   {
     name: 'commercial-account', login: '/login', email: '#login-email', password: '#login-password',
-    landing: '/cabinet', nav: '.account-layout__tabs', routes: [
+    landing: '/cabinet', nav: '.account-layout__tabs a', routes: [
       { path: accountPath, selector: '.overview' },
       { path: accountPath + '/invitations', text: 'No invitations yet.' },
       { path: accountPath + '/billing', selector: '#billing-legal-name' },
@@ -79,11 +80,8 @@ const report = {
   runs: [],
 };
 
-async function sample(page, cdp, transitions, collectGarbage) {
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  });
+async function sample(page, cdp, transitions, collectGarbage, stabilize) {
+  await stabilize();
   if (collectGarbage) await cdp.send('HeapProfiler.collectGarbage');
   const { metrics } = await cdp.send('Performance.getMetrics');
   const dom = await cdp.send('Memory.getDOMCounters');
@@ -100,10 +98,9 @@ async function sample(page, cdp, transitions, collectGarbage) {
     await cdp.send('Runtime.releaseObjectGroup', { objectGroup: 'navigation-sample' });
   }
   const browserSample = await page.evaluate(() => {
-    const tasks = window.navigationLongTasks;
     return {
       liveDocumentNodes: document.querySelectorAll('*').length,
-      longTasks: { count: tasks.length, maxMs: Math.max(0, ...tasks) },
+      longTasks: window.navigationLongTasks,
     };
   });
   return { transitions, heapBytes: metrics.find(metric => metric.name === 'JSHeapUsedSize').value, ...dom, ...browserSample, globalListenerTypes };
@@ -137,16 +134,28 @@ async function measure(revision, origin, sha, suite, collectGarbage) {
   await context.addInitScript(() => {
     localStorage.setItem('platform.locale', 'en');
     localStorage.setItem('platform.theme', 'light');
-    window.navigationLongTasks = [];
+    window.navigationLongTasks = { count: 0, maxMs: 0 };
     const observer = new PerformanceObserver((entries) => {
-      for (const entry of entries.getEntries()) window.navigationLongTasks.push(entry.duration);
+      for (const entry of entries.getEntries()) {
+        const tasks = window.navigationLongTasks;
+        tasks.count++;
+        tasks.maxMs = Math.max(tasks.maxMs, entry.duration);
+      }
     });
     observer.observe({ type: 'longtask', buffered: true });
   });
   try {
     const page = await context.newPage();
     const errors = [];
+    const pending = new Set();
+    let requestCount = 0;
     page.on('pageerror', error => errors.push(error.message));
+    page.on('request', request => {
+      pending.add(request);
+      requestCount++;
+    });
+    page.on('requestfinished', request => pending.delete(request));
+    page.on('requestfailed', request => pending.delete(request));
     page.setDefaultTimeout(7000);
     await page.goto(origin + suite.login);
     await page.locator(suite.email).fill('fixture@example.test');
@@ -159,10 +168,19 @@ async function measure(revision, origin, sha, suite, collectGarbage) {
     const cdp = await context.newCDPSession(page);
     await cdp.send('Performance.enable');
     const cycle = [suite.routes[1], home, suite.routes[2], home];
+    async function stabilize() {
+      await page.evaluate(() => document.fonts.ready);
+      for (let attempt = 0; attempt < 120; attempt++) {
+        const count = requestCount;
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        if (pending.size === 0 && requestCount === count) return;
+      }
+      assert.fail('Fixture requests did not settle before the performance checkpoint');
+    }
     async function transition(index) {
       const target = cycle[index % cycle.length];
       const start = performance.now();
-      const link = page.locator(suite.nav).locator('a[href="' + target.path + '"]');
+      const link = page.locator(suite.nav).and(page.locator('a[href="' + target.path + '"]'));
       await link.click();
       await page.waitForURL(url => url.pathname === target.path);
       const content = target.selector ? page.locator(target.selector).first() : page.getByText(target.text, { exact: true });
@@ -171,12 +189,13 @@ async function measure(revision, origin, sha, suite, collectGarbage) {
       return { path: target.path, ms: performance.now() - start };
     }
     for (let index = 0; index < warmup; index++) await transition(index);
-    await page.evaluate(() => { window.navigationLongTasks.length = 0; });
-    const snapshots = [await sample(page, cdp, 0, collectGarbage)];
+    await stabilize();
+    await page.evaluate(() => { window.navigationLongTasks = { count: 0, maxMs: 0 }; });
+    const snapshots = [await sample(page, cdp, 0, collectGarbage, stabilize)];
     const navigation = [];
     for (let index = 0; index < checkpoints.at(-1); index++) {
       navigation.push(await transition(index));
-      if (checkpoints.includes(index + 1)) snapshots.push(await sample(page, cdp, index + 1, collectGarbage));
+      if (checkpoints.includes(index + 1)) snapshots.push(await sample(page, cdp, index + 1, collectGarbage, stabilize));
     }
     assert.deepEqual(mismatches, [], 'Unexpected mutation attempted against fixtures');
     assert.deepEqual(errors, [], 'Uncaught page errors');
@@ -193,9 +212,10 @@ async function measure(revision, origin, sha, suite, collectGarbage) {
 }
 
 try {
-  for (const [label, origin, sha] of options) {
-    for (const suite of suites) {
-      for (const collectGarbage of [false, true]) await measure(label, origin, sha, suite, collectGarbage);
+  for (const suite of suites) {
+    for (const collectGarbage of [false, true]) {
+      const pair = collectGarbage ? [...options].reverse() : options;
+      for (const [label, origin, sha] of pair) await measure(label, origin, sha, suite, collectGarbage);
     }
   }
 } finally {

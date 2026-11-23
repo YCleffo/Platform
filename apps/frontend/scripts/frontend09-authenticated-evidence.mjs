@@ -63,7 +63,14 @@ export async function captureAuthenticated(page, { suite, screen, mask = [] }) {
   assert.match(layout.language, /^(ru|en)$/);
   assert.match(layout.theme, /^(light|dark)$/);
   const axe = await new AxeBuilder({ page }).withTags(tags).analyze();
-  const results = (rules) => rules.map(({ id, nodes }) => ({ id, targets: nodes.map(({ target }) => target) }));
+  // Axe node HTML and failure summaries may include fixture values. Keep rule and selector evidence.
+  const results = (rules) => rules.map(({ id, impact, nodes }) => ({
+    id, impact, targets: nodes.map(({ target }) => target),
+  }));
+  const violations = results(axe.violations);
+  const incomplete = results(axe.incomplete);
+  const overflow = layout.documentWidth > layout.clientWidth + 1;
+  const route = location.pathname.replace(/\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b/gi, ':id');
   const file = `${screen}-${layout.viewport.join('x')}-${layout.language}-${layout.theme}.png`;
   const directory = `screenshots/frontend09-final/authenticated/${suite}`;
   mkdirSync(directory, { recursive: true });
@@ -75,12 +82,25 @@ export async function captureAuthenticated(page, { suite, screen, mask = [] }) {
   writeFileSync(`${directory}/${file.replace(/\.png$/, '.json')}`, `${JSON.stringify({
     suite,
     screen,
+    route,
     file,
     sha256: createHash('sha256').update(image).digest('hex'),
+    browserVersion: page.context().browser()?.version() ?? null,
     layout,
-    violations: results(axe.violations),
-    incomplete: results(axe.incomplete),
+    status: violations.length || overflow ? 'FAIL' : 'PASS',
+    overflow,
+    axe: { engine: axe.testEngine, tags },
+    violations,
+    incomplete,
+    requiresManualReview: incomplete.length > 0,
+    priorityIncomplete: incomplete.filter(({ impact, id }) =>
+      impact === 'critical' || impact === 'serious' || id === 'color-contrast' || id === 'label-content-name-mismatch',
+    ),
   }, null, 2)}\n`);
+  const problems = [];
+  if (violations.length) problems.push(`axe violations: ${violations.map(({ id }) => id).join(', ')}`);
+  if (overflow) problems.push(`horizontal overflow: ${layout.documentWidth}px > ${layout.clientWidth}px`);
+  assert.equal(problems.length, 0, `${suite}/${screen} ${route}: ${problems.join('; ')}. Evidence: ${directory}/${file}`);
 }
 
 export async function measureAuthenticatedNavigation(page, { suite, targets }) {
@@ -111,7 +131,7 @@ export async function measureAuthenticatedNavigation(page, { suite, targets }) {
     const directory = `screenshots/frontend09-final/authenticated/${suite}`;
     mkdirSync(directory, { recursive: true });
     writeFileSync(`${directory}/navigation-metrics.json`, `${JSON.stringify({
-      paths: targets.map(({ path }) => path),
+      paths: targets.map(({ path }) => path.replace(/\b[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\b/gi, ':id')),
       transitions: durations.length,
       p50Ms: sorted[Math.floor(sorted.length / 2)],
       maxMs: sorted.at(-1),

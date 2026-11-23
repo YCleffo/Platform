@@ -213,9 +213,16 @@ try {
   await billing(down.id);
   const checkout = page.waitForResponse(
     (r) => r.url().endsWith('/checkout') && r.request().method() === 'POST',
-  );
-  await page.getByRole('button', { name: 'Pay for the change', exact: true }).click();
-  assert.equal((await checkout).status(), 200);
+  ).catch(() => null);
+  const [paymentResponse] = await Promise.all([
+    page.waitForResponse((r) => r.url().endsWith('/payment') && r.request().method() === 'POST'),
+    page.getByRole('button', { name: 'Pay for the change', exact: true }).click(),
+  ]);
+  const preparedPayment = await paymentResponse.json();
+  assert.ok(paymentResponse.ok(), `Downgrade payment creation HTTP ${paymentResponse.status()} (${preparedPayment.error?.code ?? 'unknown'})`);
+  const checkoutResponse = await checkout;
+  assert.ok(checkoutResponse, 'Downgrade checkout never followed successful payment creation');
+  assert.equal(checkoutResponse.status(), 200);
   const payment = sql(
     `SELECT p.id FROM commercial.payments p JOIN commercial.subscription_plan_changes c ON c.invoice_id=p.invoice_id WHERE c.id='${change.id}'`,
   );

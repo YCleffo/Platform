@@ -283,6 +283,7 @@ async function confirmRemove(): Promise<void> {
           v-model="addRole"
           :label="$t('workbench.fields.role')"
           :options="addRoles"
+          show-label
           :disabled="busy"
         />
         <AppCheckbox

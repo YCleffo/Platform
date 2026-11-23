@@ -1,38 +1,12 @@
 import { createWriteStream, mkdirSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
+import { groups } from './browser-verification-groups.mjs';
 
 const baseUrl = process.env.BASE_URL ?? 'http://127.0.0.1:4174';
 const concurrency = Math.max(1, Number.parseInt(process.env.VERIFY_CONCURRENCY ?? '4', 10) || 4);
 const timeoutMs = Math.max(30_000, Number.parseInt(process.env.VERIFY_TIMEOUT_MS ?? '600000', 10) || 600_000);
 const logDirectory = join('screenshots', 'verify-logs');
-
-const groups = [
-  {
-    name: 'appearance-theme-responsive',
-    scripts: ['verify-responsive.mjs', 'verify-appearance.mjs', 'verify-ux.mjs'],
-  },
-  {
-    name: 'accessibility-controls-typography',
-    scripts: ['verify-accessibility.mjs', 'verify-controls.mjs', 'verify-typography.mjs', 'verify-mobile-components.mjs'],
-  },
-  {
-    name: 'core-authentication-security-configuration',
-    scripts: ['verify-core-auth.mjs', 'verify-core-security.mjs', 'verify-core-configuration.mjs'],
-  },
-  {
-    name: 'core-profile-credentials-privacy',
-    scripts: ['verify-core-profile.mjs', 'verify-core-credentials.mjs', 'verify-core-privacy.mjs', 'verify-core-privacy-operator.mjs'],
-  },
-  {
-    name: 'commercial-billing-admin',
-    scripts: ['verify-admin.mjs', 'verify-billing.mjs'],
-  },
-  {
-    name: 'navigation-workflows-mobile',
-    scripts: ['verify-menus.mjs', 'verify-workflows.mjs', 'verify-frontend09.mjs'],
-  },
-];
 
 const tasks = groups.flatMap((group) => group.scripts.map((script) => ({ group: group.name, script })));
 

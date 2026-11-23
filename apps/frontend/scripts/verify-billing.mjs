@@ -194,6 +194,7 @@ try {
   assert.deepEqual(errors, []); writeFileSync('screenshots/billing-results.json', JSON.stringify({ passed: true, fixture: 'HTTP UI only', states }, null, 2));
   console.log(JSON.stringify({ passed: true, fixture: 'HTTP UI only', states }));
 } catch (error) {
-  console.error('Billing browser state:', await page.locator('[role=alert]').allTextContents(), errors);
+  console.error('Billing original error:', error);
+  try { console.error('Billing browser state:', await page.locator('[role=alert]').allTextContents(), errors); } catch {}
   await stableScreenshot(page, 'screenshots/billing-failure.png'); throw error;
 } finally { await context.close(); await browser.close(); }

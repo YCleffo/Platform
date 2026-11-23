@@ -117,4 +117,15 @@ describe('AppInput', () => {
       wrapper.unmount();
     }
   });
+
+  it('supports size variations s, m, and l', () => {
+    const wrapperM = mount(AppInput, { props: { id: 'm', modelValue: '', size: 'm' } });
+    expect(wrapperM.get('.app-input__control').classes()).toContain('app-input__control--m');
+
+    const wrapperS = mount(AppInput, { props: { id: 's', modelValue: '', size: 's' } });
+    expect(wrapperS.get('.app-input__control').classes()).toContain('app-input__control--s');
+
+    const wrapperL = mount(AppInput, { props: { id: 'l', modelValue: '', size: 'l' } });
+    expect(wrapperL.get('.app-input__control').classes()).toContain('app-input__control--l');
+  });
 });

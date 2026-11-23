@@ -192,7 +192,7 @@ function layout(): void {
   const anchorWidth = rect?.width ?? 0;
   panelWidth.value = props.point
     ? Math.min(280, width - 24)
-    : Math.min(Math.max(anchorWidth, 96), 360, width - 24);
+    : Math.min(Math.max(anchorWidth, 220), width - 24);
   const elements = panels();
   const count = Math.max(1, elements.length);
   const maxEach = Math.max(180, Math.floor((width - 24 - (count - 1) * 8) / count));

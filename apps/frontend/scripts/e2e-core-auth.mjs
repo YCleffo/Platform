@@ -61,6 +61,21 @@ async function completed(title) {
   assert.equal(new URL(page.url()).searchParams.has('token'), false, 'Consumed token remains in URL');
 }
 
+async function verifyRecoveryRequestLink(source, destination) {
+  const waitForPath = (expected) => page.waitForURL((url) => url.pathname === expected && !url.search);
+  await page.locator(`.core-auth-links a[href="${destination}"]`).click();
+  await waitForPath(destination);
+  await page.locator('#core-recovery-email').waitFor();
+  await page.goBack();
+  await waitForPath(source);
+  await page.goForward();
+  await waitForPath(destination);
+  await page.reload();
+  await waitForPath(destination);
+  await page.locator('#core-recovery-email').waitFor();
+  states.push(`Core recovery request link: ${source} → ${destination}, verified Back, Forward and reload`);
+}
+
 try {
   const gate = await evaluateCoreMutationGate(env, async url => {
     const response = await context.request.get(url, { timeout: 5000 });
@@ -92,6 +107,7 @@ try {
   const oldReset = await loginApi(accounts.reset);
   await page.locator('#core-recovery-email').fill(accounts.reset.email); await submit();
   await page.getByRole('heading', { name: 'Check your email' }).waitFor();
+  await verifyRecoveryRequestLink('/admin/forgot-password', '/admin/mfa-recovery');
   const reset = await token(accounts.reset, 'password-reset');
   await page.goto(`${APP}/password-reset?token=${encodeURIComponent(reset)}`);
   await page.locator('#core-link-password').fill(`${env.E2E_PASSWORD}-reset`);
@@ -116,6 +132,7 @@ try {
   await page.goto(`${APP}/admin/mfa-recovery`);
   await page.locator('#core-recovery-email').fill(accounts.mfa.email); await submit();
   await page.getByRole('heading', { name: 'Check your email' }).waitFor();
+  await verifyRecoveryRequestLink('/admin/mfa-recovery', '/admin/forgot-password');
   const recovery = await token(accounts.mfa, 'mfa-recovery');
   await page.goto(`${APP}/mfa-recovery?token=${encodeURIComponent(recovery)}`);
   await page.locator('#core-link-password').fill('wrong password'); await submit();

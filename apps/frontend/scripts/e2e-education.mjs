@@ -222,7 +222,24 @@ try {
   await api('/today/header', { organization: seeded.otherOrganizationId, status: 403 });
   report('real empty day, no fabricated next lesson/attention; organization scope denied');
 
+  await workspaceLink(page, '/people').click();
+  for (const [source, destination] of [
+    ['/people', '/students/new'],
+    ['/people?tab=groups', '/groups/new'],
+  ]) {
+    if (source.includes('?')) await page.locator('.edu-toolbar a[href="/people?tab=groups"]').click();
+    await page.waitForURL((url) => url.pathname + url.search === source);
+    await page.locator(`.edu-page-title a[href="${destination}"]`).click();
+    await page.waitForURL((url) => url.pathname === destination);
+    await page.locator(`.edu-page-title a[href="${source}"]`).click();
+    await page.waitForURL((url) => url.pathname + url.search === source);
+    await page.locator('.edu-navigation a[href="/people"][aria-current="page"]').waitFor();
+  }
+  report('Navigation: People list branches reach group and student forms; form header returns to the matching list and query');
+  await today(page);
+
   await page.locator('[data-action="createGroup"]').click();
+  await page.waitForURL((url) => url.pathname === '/groups/new' && !url.search);
   await page.locator('#education-create-title').fill('Группа ВС 11:00');
   await page.locator('form button[type=submit]').click();
   await page.waitForURL((url) => url.pathname !== '/groups/new' && (url.pathname === '/people' || /^\/groups\/[0-9a-f-]+$/.test(url.pathname)));

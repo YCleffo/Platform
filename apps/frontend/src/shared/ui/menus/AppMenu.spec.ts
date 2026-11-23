@@ -157,4 +157,44 @@ describe('shared menus', () => {
       expect(document.querySelector('[data-menu-id="act"]')).not.toBeNull();
     } finally { wrapper.unmount(); }
   });
+
+  it('renders a visible label and supports sizes s, m, l on dropdown', async () => {
+    const wrapper = mount(AppDropdown, {
+      props: { id: 'label-unit', label: 'Plan label', modelValue: 'one', options, showLabel: true, size: 'l' },
+      global,
+    });
+    expect(wrapper.get('.app-dropdown__label').text()).toBe('Plan label');
+    expect(wrapper.get('.app-dropdown').classes()).toContain('app-dropdown--l');
+    expect(wrapper.get('.app-dropdown').classes()).toContain('app-dropdown--with-label');
+  });
+
+  it('matches dropdown menu panel width to anchor trigger width', async () => {
+    const anchor = document.createElement('button');
+    anchor.getBoundingClientRect = () => ({
+      width: 550,
+      height: 44,
+      top: 100,
+      bottom: 144,
+      left: 50,
+      right: 600,
+      x: 50,
+      y: 100,
+      toJSON: () => {},
+    });
+    document.body.appendChild(anchor);
+    const wrapper = mount(AppMenu, {
+      attachTo: document.body,
+      props: { modelValue: true, label: 'Wide menu', anchor, items: [{ id: 'opt1', label: 'Option 1' }] },
+      global,
+    });
+    try {
+      await flush();
+      const panel = document.querySelector<HTMLElement>('.app-menu__panel')!;
+      expect(panel).not.toBeNull();
+      expect(panel.style.width).toBe('550px');
+    } finally {
+      wrapper.unmount();
+      anchor.remove();
+    }
+  });
 });

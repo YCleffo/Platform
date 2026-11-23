@@ -16,7 +16,7 @@ interface Props {
   error?: string;
   required?: boolean;
   disabled?: boolean;
-  size?: 'm' | 'l';
+  size?: 's' | 'm' | 'l';
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -203,6 +203,7 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
+  width: 100%;
 }
 
 .app-input__label {
@@ -236,14 +237,25 @@ onBeforeUnmount(() => {
   transition: var(--theme-transition);
 }
 
+.app-input__control--s {
+  font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  letter-spacing: var(--type-body-small-tracking);
+  line-height: var(--type-body-small-line);
+  height: var(--control-h-s);
+  box-sizing: border-box;
+  min-height: var(--control-h-s);
+  padding: var(--pad-input-s-vertical) var(--pad-input-s-horizontal);
+}
+
 .app-input__control--m {
   font-size: var(--type-body-medium-size);
   font-weight: var(--type-body-medium-weight);
   letter-spacing: var(--type-body-medium-tracking);
   line-height: var(--type-body-medium-line);
-  height: var(--control-h-m);
+  height: var(--button-height-m);
   box-sizing: border-box;
-  min-height: var(--control-h-m);
+  min-height: var(--button-height-m);
   padding: var(--pad-input-m-vertical) var(--pad-input-m-horizontal);
 }
 

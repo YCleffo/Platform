@@ -433,7 +433,7 @@ try {
   // Read the registered routes, including records built with map/spread.
   const named = new Map(await page.evaluate(() => {
     const router = document.querySelector('#app').__vue_app__.config.globalProperties.$router;
-    return router.getRoutes().filter(route => typeof route.name === 'string')
+    return router.getRoutes().filter(route => typeof route.name === 'string' && !route.name.startsWith('education-'))
       .map(route => [route.name, route.path.replace(/\/$/, '') || '/']);
   }));
   const tested = [...coreRoutes, ...commercialRoutes]

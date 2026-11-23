@@ -724,6 +724,10 @@ jobs:
           cache-dependency-path: apps/frontend/package-lock.json
       - name: Install dependencies
         run: npm ci
+      - name: Start frontend evidence window and verify manifest checks
+        run: |
+          node --test ../../scripts/ci/frontend09-artifacts.test.mjs
+          node ../../scripts/ci/frontend09-artifacts.mjs start frontend
       - name: Audit locked dependencies
         run: npm audit --audit-level=high
       - name: Verify all dependency, frontend and HTTP contracts
@@ -768,11 +772,13 @@ jobs:
           RESPONSIVE_CONCURRENCY: "3"
           PLAYWRIGHT_DOCKER_NETWORK: bridge
         run: bash ../../scripts/ci/playwright-run.sh bash ../../scripts/ci/verify-browser-suite.sh
+      - name: Verify and seal required frontend evidence
+        run: node ../../scripts/ci/frontend09-artifacts.mjs seal frontend
       - name: Upload browser verification evidence
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: frontend-browser-verification-${{ github.run_id }}
+          name: frontend-browser-verification-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: apps/frontend/screenshots
           if-no-files-found: ignore
       - name: Diagnose failed preview
@@ -885,7 +891,9 @@ jobs:
           curl -kfsS https://127.0.0.1:4175/ >/dev/null
       - name: Verify Core invitation, password reset, MFA recovery and required password change
         working-directory: apps/frontend
-        run: npm run test:e2e:core-auth
+        run: |
+          node ../../scripts/ci/frontend09-artifacts.mjs start core
+          npm run test:e2e:core-auth
       - name: Verify real Core MFA and session management
         working-directory: apps/frontend
         run: npm run test:e2e:core-security
@@ -960,14 +968,18 @@ jobs:
           node scripts/frontend07-coverage.mjs --run-evidence "$manifest" storage-recovery scripts/e2e-education-roles.mjs storage || result=1
           node scripts/frontend07-coverage.mjs --check-evidence "$manifest" || result=1
           exit "$result"
+      - name: Verify and seal required Core and Education evidence
+        working-directory: apps/frontend
+        run: node ../../scripts/ci/frontend09-artifacts.mjs seal core
       - name: Upload Core browser evidence
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: core-auth-browser-${{ github.run_id }}
+          name: core-auth-browser-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
             apps/frontend/screenshots/education-real
             apps/frontend/screenshots/frontend09-final/authenticated
+            apps/frontend/screenshots/frontend09-core-manifest.json
             apps/frontend/screenshots/core-auth-*
             apps/frontend/screenshots/core-security-*
             apps/frontend/screenshots/core-config-*
@@ -1192,7 +1204,9 @@ jobs:
         working-directory: apps/frontend
         env:
           FRONTEND09_AUTH_EVIDENCE: '1'
-        run: node scripts/e2e-account-workspace.mjs
+        run: |
+          node ../../scripts/ci/frontend09-artifacts.mjs start commercial
+          node scripts/e2e-account-workspace.mjs
       - name: Reset disposable Commercial fixtures before invitation flow
         run: |
           docker compose --profile control-test stop control-plane-test
@@ -1261,11 +1275,14 @@ jobs:
       - name: Collect browser runtime logs
         if: always()
         run: cp /tmp/vite-e2e.log apps/frontend/vite-e2e.log 2>/dev/null || true
+      - name: Verify and seal required Commercial evidence
+        working-directory: apps/frontend
+        run: node ../../scripts/ci/frontend09-artifacts.mjs seal commercial
       - name: Upload browser artifacts
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: browser-e2e-${{ github.run_id }}
+          name: browser-e2e-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
             apps/frontend/screenshots
             apps/frontend/vite-e2e.log

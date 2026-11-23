@@ -157,14 +157,26 @@ async function auditWorkspace() {
   await page.goForward();
   await check('/admin/audit', sidebarLink('/admin/audit'));
   const sessions = '/admin/security/sessions';
+  const mfa = '/admin/security/mfa';
+  const securityLink = sidebarLink('/admin/security');
   await sidebarLink('/admin/security').click();
   await page.locator(`.core-security__tabs a[href="${sessions}"]`).click();
-  await check(sessions, sidebarLink('/admin/security'));
+  await check(sessions, securityLink);
+  await page.locator(`.core-security__tabs a[href="${mfa}"]`).press('Enter');
+  await check(mfa, securityLink);
+  await page.locator(`.core-security__tabs a[href="${mfa}"][aria-current="page"]`).waitFor();
+  await page.goBack();
+  await check(sessions, securityLink);
+  await page.locator(`.core-security__tabs a[href="${sessions}"][aria-current="page"]`).waitFor();
+  await page.goForward();
+  await check(mfa, securityLink);
+  await page.goBack();
+  await check(sessions, securityLink);
   await page.reload();
   await assertLoginRedirect(sessions);
   await loginOperator(actor.recoveryCodes[1]);
   await check(sessions, sidebarLink('/admin/security'));
-  navigation.push({ path: sessions, action: 'nested link, guarded reload, MFA return and active parent link' });
+  navigation.push({ path: sessions, action: 'nested Sessions/MFA, Back/Forward, guarded reload, MFA return and active parent link' });
   await measureAuthenticatedNavigation(page, {
     suite: 'core-admin',
     targets: ['/admin', '/admin/modules', '/admin/settings'].map((path) => ({

@@ -7,6 +7,7 @@ const base = new URL(process.env.BASE_URL ?? 'http://127.0.0.1:4174');
 const rows = [];
 const errors = [];
 const out = 'screenshots/frontend09-closeout-navigation';
+const commercialReads = process.argv.includes('--commercial-reads');
 const browser = await launchBrowser();
 const provenance = revision();
 const title = (page) => page.getByRole('heading', { level: 1 }).first();
@@ -17,7 +18,8 @@ const currentPath = (page) => {
 
 async function expectPath(page, path) {
   await page.waitForURL((url) => url.pathname + url.search === path, { timeout: 8000 });
-  await title(page).waitFor({ timeout: 8000 });
+  const ready = /^\/plans\//.test(path) ? page.locator('.plan-detail') : title(page);
+  await ready.waitFor({ timeout: 8000 });
   assert.equal(currentPath(page), path);
 }
 
@@ -41,9 +43,11 @@ async function scenario({ source, scenario, start, destination, width = 393, mod
     reducedMotion: 'reduce',
     hasTouch: width < 768,
     isMobile: width < 768,
+    ignoreHTTPSErrors: commercialReads,
   });
   await context.addInitScript(() => localStorage.setItem('platform.locale', 'en'));
   const page = await context.newPage();
+  page.setDefaultTimeout(8000);
   const pageErrors = [];
   page.on('pageerror', (error) => pageErrors.push(error.name));
   const row = { source, scenario, start, expectedUrl: destination, viewport: { width, height: 852 }, mode,
@@ -142,7 +146,7 @@ try {
 
   await scenario({ source: 'src/shared/ui/navigation/AppMobileMenu.vue:343', scenario: 'Personal mobile menu reaches Components', start: '/plans', destination: '/settings/components' }, async (page) => {
     const menu = await mobileMenu(page);
-    await menu.getByRole('navigation', { name: 'Personal', exact: true }).locator('a[href="/settings/components"]').click();
+    await menu.getByRole('navigation', { name: 'Personal settings', exact: true }).locator('a[href="/settings/components"]').click();
     await expectPath(page, '/settings/components');
     await menu.waitFor({ state: 'hidden' });
     await verifyHistory(page, '/plans', '/settings/components', navActive(page, '.app-bottom-nav', '/settings'));
@@ -150,19 +154,59 @@ try {
   });
 
   for (const [start, destination] of [
-    ['/admin/forgot-password', '/admin/mfa-recovery'],
-    ['/admin/mfa-recovery', '/admin/forgot-password'],
+    ['/password-reset', '/admin/forgot-password'],
+    ['/mfa-recovery', '/admin/mfa-recovery'],
   ]) {
-    await scenario({ source: 'src/modules/admin/auth/CoreRecoveryRequestView.vue:92', scenario: `Core recovery form link ${start}`, start, destination }, async (page) => {
+    await scenario({ source: 'src/modules/admin/auth/CoreAuthLinkView.vue', scenario: `Request a fresh link from ${start}`, start, destination }, async (page) => {
       await page.locator(`.core-auth-links a[href="${destination}"]`).click();
       await expectPath(page, destination);
       await verifyHistory(page, start, destination);
-      return { action: 'Cross-link between password and MFA recovery requests', history: true, reload: true, session: 'public' };
+      return { action: 'Recovery link missing; open the proper request form', history: true, reload: true, session: 'public' };
     });
+  }
+
+  if (commercialReads) {
+    assert.ok(['127.0.0.1', 'localhost', 'e2e.platform.test'].includes(base.hostname), 'Commercial checks require a test frontend origin');
+    const context = await browser.newContext({ ignoreHTTPSErrors: true });
+    let plan;
+    try {
+      const response = await context.request.get(new URL('/api/control/catalog/plans', base).href);
+      assert.ok(response.ok(), 'Commercial test catalog is unavailable');
+      const body = await response.json();
+      plan = (body.data?.plans ?? body.plans)?.find(({ prices }) => prices.length > 0);
+      assert.match(plan?.code ?? '', /^[a-z0-9-]+$/, 'Commercial test catalog contains no supported plan code');
+      assert.match(plan?.prices[0]?.id ?? '', /^[a-z0-9-]+$/, 'Commercial test catalog contains no supported price ID');
+    } finally {
+      await context.close();
+    }
+    const detail = `/plans/${encodeURIComponent(plan.code)}`;
+    const redirect = `${detail}?planPrice=${encodeURIComponent(plan.prices[0].id)}`;
+    for (const [source, start, selector] of [
+      ['src/modules/commercial/catalog/PlanCard.vue:92', '/', `.plan:has(a.plan__details[href="${detail}"]) a.plan__cta`],
+      ['src/modules/commercial/catalog/PlanComparisonView.vue:129', '/plans', '.plans__cta'],
+      ['src/modules/commercial/catalog/PlanDetailView.vue:93', detail, '.plan-detail__cta'],
+    ]) {
+      const loginDestination = `/login?redirect=${encodeURIComponent(redirect)}`;
+      await scenario({ source, scenario: `Priced plan CTA from ${start}`, start, destination: loginDestination, mode: 'isolated-commercial-public-read' }, async (page) => {
+        const button = page.locator(selector).filter({ visible: true }).and(
+          page.locator(`a[href*="${plan.prices[0].id}"]`),
+        );
+        await button.click();
+        await page.waitForURL((target) =>
+          target.pathname === '/login' && target.searchParams.get('redirect') === redirect, { timeout: 8000 });
+        const url = new URL(page.url());
+        assert.equal(url.pathname, '/login');
+        assert.equal(url.searchParams.get('redirect'), redirect);
+        const destination = currentPath(page);
+        await verifyHistory(page, start, destination);
+        return { action: 'Activate priced plan CTA', history: true, reload: true, session: 'public', planCode: plan.code, priceMatchesCatalog: true };
+      });
+    }
   }
 } finally {
   mkdirSync(out, { recursive: true });
-  writeFileSync(`${out}/public-routes.json`, JSON.stringify({ ...provenance, browserVersion: browser.version(), rows }, null, 2) + '\n');
+  const report = commercialReads ? 'commercial-public-routes' : 'public-routes';
+  writeFileSync(`${out}/${report}.json`, JSON.stringify({ ...provenance, browserVersion: browser.version(), rows }, null, 2) + '\n');
   await browser.close();
 }
 

@@ -17,7 +17,8 @@ const props = withDefaults(
     multiple?: boolean;
     clearable?: boolean;
     invalid?: boolean;
-    size?: 'm' | 's';
+    size?: 's' | 'm' | 'l';
+    showLabel?: boolean;
   }>(),
   {
     id: undefined,
@@ -28,6 +29,7 @@ const props = withDefaults(
     clearable: false,
     invalid: false,
     size: 'm',
+    showLabel: false,
   },
 );
 const model = defineModel<Value | Value[]>({ required: true });
@@ -96,79 +98,99 @@ watch(
 <template>
   <div
     class="app-dropdown"
-    :class="{ 'app-dropdown--invalid': invalid, 'app-dropdown--s': size === 's' }"
+    :class="{
+      'app-dropdown--invalid': invalid,
+      'app-dropdown--s': size === 's',
+      'app-dropdown--m': size === 'm',
+      'app-dropdown--l': size === 'l',
+      'app-dropdown--with-label': showLabel,
+    }"
   >
+    <label
+      v-if="showLabel"
+      :id="`${fieldId}-label`"
+      :for="fieldId"
+      class="app-dropdown__label"
+    >
+      {{ label }}
+    </label>
     <span
+      v-else
       :id="`${fieldId}-label`"
       class="visually-hidden"
     >
       {{ label }}
     </span>
-    <button
-      :id="fieldId"
-      ref="trigger"
-      v-bind="$attrs"
-      type="button"
-      class="app-dropdown__trigger"
-      :disabled="disabled"
-      aria-haspopup="menu"
-      :aria-expanded="open"
-      :aria-controls="open ? `${fieldId}-menu` : undefined"
-      :aria-labelledby="`${fieldId}-label ${fieldId}-value`"
-      :aria-invalid="invalid || undefined"
-      @click="
-        initialFocus = 'selected';
-        open = !open;
-      "
-      @keydown="keydown"
-    >
-      <span
-        :id="`${fieldId}-value`"
-        class="app-dropdown__value"
-        :class="{ 'app-dropdown__value--empty': !text, 'app-dropdown__value--multiple': multiple }"
-        :title="text || undefined"
+    <div class="app-dropdown__control">
+      <button
+        :id="fieldId"
+        ref="trigger"
+        v-bind="$attrs"
+        type="button"
+        class="app-dropdown__trigger"
+        :disabled="disabled"
+        aria-haspopup="menu"
+        :aria-expanded="open"
+        :aria-controls="open ? `${fieldId}-menu` : undefined"
+        :aria-labelledby="`${fieldId}-label ${fieldId}-value`"
+        :aria-invalid="invalid || undefined"
+        @click="
+          initialFocus = 'selected';
+          open = !open;
+        "
+        @keydown="keydown"
       >
-        <template v-if="multiple && selected.length > 0">
-          <span
-            class="app-dropdown__chips"
-            aria-hidden="true"
-          >
+        <span
+          :id="`${fieldId}-value`"
+          class="app-dropdown__value"
+          :class="{
+            'app-dropdown__value--empty': !text,
+            'app-dropdown__value--multiple': multiple,
+          }"
+          :title="text || undefined"
+        >
+          <template v-if="multiple && selected.length > 0">
             <span
-              v-for="option in visibleSelected"
-              :key="option.value"
-              class="app-dropdown__chip"
+              class="app-dropdown__chips"
+              aria-hidden="true"
             >
-              {{ option.label }}
+              <span
+                v-for="option in visibleSelected"
+                :key="option.value"
+                class="app-dropdown__chip"
+              >
+                {{ option.label }}
+              </span>
+              <span
+                v-if="hiddenSelectedCount > 0"
+                class="app-dropdown__chip app-dropdown__chip--more"
+              >
+                +{{ hiddenSelectedCount }}
+              </span>
             </span>
-            <span
-              v-if="hiddenSelectedCount > 0"
-              class="app-dropdown__chip app-dropdown__chip--more"
-            >
-              +{{ hiddenSelectedCount }}
-            </span>
-          </span>
-          <span class="visually-hidden">{{ text }}</span>
-        </template>
-        <template v-else>{{ text || placeholder || $t('menus.choose') }}</template>
-      </span>
-      <ChevronDown
-        :size="18"
-        aria-hidden="true"
-      />
-    </button>
-    <button
-      v-if="clearable && selected.length"
-      type="button"
-      class="app-dropdown__clear"
-      :disabled="disabled"
-      :aria-label="$t('menus.clearSelection')"
-      @click="model = (multiple ? [] : '') as Value | Value[]"
-    >
-      <X
-        :size="16"
-        aria-hidden="true"
-      />
-    </button>
+            <span class="visually-hidden">{{ text }}</span>
+          </template>
+          <template v-else>{{ text || placeholder || $t('menus.choose') }}</template>
+        </span>
+        <ChevronDown
+          :size="18"
+          aria-hidden="true"
+        />
+      </button>
+      <button
+        v-if="clearable && selected.length"
+        type="button"
+        class="app-dropdown__clear"
+        :disabled="disabled"
+        :aria-label="$t('menus.clearSelection')"
+        @click="model = (multiple ? [] : '') as Value | Value[]"
+      >
+        <X
+          :size="16"
+          aria-hidden="true"
+        />
+      </button>
+    </div>
     <AppMenu
       :id="`${fieldId}-menu`"
       v-model="open"
@@ -178,7 +200,7 @@ watch(
       :searchable="searchEnabled"
       :close-on-select="!multiple"
       :initial-focus="initialFocus"
-      :size="size"
+      :size="size === 'l' ? 'm' : size"
       @select="choose"
     >
       <template #footer><slot name="footer" /></template>
@@ -188,6 +210,23 @@ watch(
 
 <style scoped>
 .app-dropdown {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+  min-width: 0;
+}
+.app-dropdown__label {
+  font-size: var(--type-body-medium-emphasis-size);
+  letter-spacing: var(--type-body-medium-emphasis-tracking);
+  line-height: var(--type-body-medium-emphasis-line);
+  font-weight: var(--type-body-medium-emphasis-weight);
+  color: var(--text-2);
+  user-select: none;
+  transition: var(--theme-transition);
+}
+.app-dropdown__control {
   position: relative;
   display: flex;
   align-items: stretch;
@@ -204,7 +243,9 @@ watch(
   width: auto;
   min-width: 0;
   min-height: var(--button-height-m);
-  padding: var(--space-8) var(--space-12);
+  height: var(--button-height-m);
+  box-sizing: border-box;
+  padding: var(--pad-input-m-vertical) var(--pad-input-m-horizontal);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-control-m);
   background: var(--surface);
@@ -283,15 +324,30 @@ watch(
   flex: 0 0 auto;
 }
 .app-dropdown--s .app-dropdown__trigger {
-  min-height: 32px;
-  padding: var(--space-4) var(--space-8);
+  min-height: var(--control-h-s);
+  height: var(--control-h-s);
+  padding: var(--pad-input-s-vertical) var(--pad-input-s-horizontal);
   font-size: var(--type-body-small-size);
   font-weight: var(--type-body-small-weight);
   letter-spacing: var(--type-body-small-tracking);
   line-height: var(--type-body-small-line);
 }
 .app-dropdown--s .app-dropdown__clear {
-  flex-basis: 32px;
+  flex-basis: var(--control-h-s);
+  height: var(--control-h-s);
+}
+.app-dropdown--l .app-dropdown__trigger {
+  min-height: var(--control-h-l);
+  height: var(--control-h-l);
+  padding: var(--pad-input-l-vertical) var(--pad-input-l-horizontal);
+  font-size: var(--type-body-large-size);
+  font-weight: var(--type-body-large-weight);
+  letter-spacing: var(--type-body-large-tracking);
+  line-height: var(--type-body-large-line);
+}
+.app-dropdown--l .app-dropdown__clear {
+  flex-basis: var(--control-h-l);
+  height: var(--control-h-l);
 }
 .app-dropdown__trigger:disabled,
 .app-dropdown__clear:disabled {
@@ -303,6 +359,8 @@ watch(
   align-items: center;
   justify-content: center;
   flex: 0 0 var(--button-height-m);
+  height: var(--button-height-m);
+  box-sizing: border-box;
   border: 1px solid var(--border);
   border-radius: var(--radius-control-m);
   color: var(--text-2);

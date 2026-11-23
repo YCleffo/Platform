@@ -324,6 +324,7 @@ async function submit(): Promise<void> {
             id="education-create-group"
             v-model="groupId"
             :label="t('education.group')"
+            show-label
             :placeholder="t('education.chooseGroup')"
             :options="groupOptions.map((item) => ({ value: item.id, label: item.name }))"
             :disabled="busy || uncertain"

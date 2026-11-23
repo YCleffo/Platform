@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { launchBrowser } from './e2e-support.mjs';
 
 // This fixture intercepts every request. It makes no calls to the app or a backend.
@@ -10,12 +10,15 @@ const origin = 'http://127.0.0.1:1';
 Object.assign(process.env, { APP_URL: origin, E2E_RUNTIME: 'isolated-ci', FRONTEND09_AUTH_EVIDENCE: '1' });
 const { captureAuthenticated } = await import('./frontend09-authenticated-evidence.mjs');
 const workingDirectory = process.cwd();
-const directory = await mkdtemp(join(tmpdir(), 'platform-authenticated-evidence-'));
+const temp = await realpath(tmpdir());
+const directory = await mkdtemp(join(temp, 'platform-authenticated-evidence-'));
 let browser;
 try {
   process.chdir(directory);
   browser = await launchBrowser();
-  const page = await browser.newPage({ viewport: { width: 393, height: 852 } });
+  const context = await browser.newContext({ viewport: { width: 393, height: 852 } });
+  await context.route('**/*', (route) => route.abort());
+  const page = await context.newPage();
   for (const { screen, button, width, error } of [
     { screen: 'invalid-name', button: '', width: '100%', error: /axe violations: button-name/ },
     { screen: 'overflow', button: 'Continue', width: '800px', error: /horizontal overflow/ },
@@ -45,5 +48,6 @@ try {
 } finally {
   await browser?.close();
   process.chdir(workingDirectory);
+  assert.equal(dirname(await realpath(directory)), temp);
   await rm(directory, { recursive: true, force: true });
 }

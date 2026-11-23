@@ -1112,21 +1112,24 @@ watch(
             </p>
           </div>
         </div>
-        <div class="billing__form-grid">
+        <div class="billing__plan-grid">
           <AppDropdown
             id="billing-plan"
             :model-value="subscription ? changeTargetPriceId : selectedPriceId"
             :label="$t('billing.plan')"
             :options="priceOptions"
+            show-label
             :disabled="!canManage || actionBusy"
             @update:model-value="onPlanChange"
           />
           <AppInput
             id="billing-quantity"
+            class="billing__quantity-input"
             :model-value="subscription ? changeQuantity : quantity"
             :label="$t('billing.quantity')"
             type="number"
             min="1"
+            size="m"
             :disabled="!canManage || actionBusy"
             @update:model-value="onQuantityChange"
           />
@@ -1204,14 +1207,16 @@ watch(
       <AppCard>
         <h3>{{ $t('billing.historyTitle') }}</h3>
         <form
-          class="billing__actions"
+          class="billing__search-form"
           @submit.prevent="loadHistory(0)"
         >
           <AppInput
             id="billing-history-query"
+            class="billing__search-input"
             v-model="historyQuery"
             :label="$t('billing.historySearch')"
             maxlength="36"
+            size="m"
           />
           <AppButton
             type="submit"
@@ -1796,6 +1801,32 @@ watch(
   flex-wrap: wrap;
   gap: var(--space-8);
   margin-top: var(--space-12);
+}
+.billing__plan-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px;
+  gap: var(--space-12);
+  align-items: start;
+  margin-top: var(--space-12);
+}
+@media (max-width: 640px) {
+  .billing__plan-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.billing__quantity-input {
+  width: 100%;
+}
+.billing__search-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+}
+.billing__search-input {
+  flex: 1 1 280px;
+  max-width: 420px;
 }
 .billing__form-grid {
   display: grid;
