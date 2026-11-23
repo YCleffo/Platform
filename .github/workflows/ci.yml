@@ -786,7 +786,7 @@ jobs:
         run: cat screenshots/vite-verify.log || true
 
   core-auth-browser:
-    name: Core В· account browser E2E
+    name: Core · account browser E2E
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -803,6 +803,164 @@ jobs:
       AUTH_WEBAUTHN_ORIGINS: https://e2e.platform.test:4175
       CORE_AUTH_BROWSER_OIDC_FIXTURE: "1"
       CORE_PRIVACY_BROWSER_FIXTURE: "1"
+      E2E_ALLOWED_HOSTS: e2e.platform.test
+      E2E_RUNTIME: isolated-ci
+      E2E_ISOLATED_DB: "1"
+      E2E_ALLOW_MUTATIONS: "1"
+      APP_URL: https://e2e.platform.test:4175
+      CORE_API_URL: http://e2e.platform.test:8081
+      MAILPIT_URL: http://e2e.platform.test:8027
+    steps:
+      - uses: actions/checkout@v5
+      - name: Generate disposable Core secrets
+        run: |
+          python3 - <<'PY'
+          import base64, os, secrets
+          values = {k: secrets.token_hex(32) for k in (
+              'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD',
+              'CONTROL_APP_SECRET', 'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY',
+              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD', 'CORE_MAINTENANCE_PASSWORD', 'CONTROL_MAINTENANCE_PASSWORD', 'E2E_ISOLATION_PROOF', 'E2E_PASSWORD')}
+          values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
+              'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for key, value in values.items():
+                  print('::add-mask::' + value)
+                  output.write(key + '=' + value + '\n')
+          PY
+      - name: Set up Core Composer dependencies
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, intl, pdo, pdo_pgsql, sodium, curl
+          tools: composer:v2
+      - name: Cache Composer downloads
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/composer
+            ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('apps/backend/composer.lock', 'apps/control-plane/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+      - name: Install Core dependencies
+        working-directory: apps/backend
+        run: composer install --no-interaction --prefer-dist
+      - name: Start isolated Core and SMTP runtime
+        run: |
+          echo '127.0.0.1 e2e.platform.test' | sudo tee -a /etc/hosts
+          docker compose --profile test build backend-test
+          docker compose --profile test up -d --wait mailpit-core-test
+          bash scripts/ci/test-start.sh
+          docker compose --profile test exec -d -e CORE_AUTH_BROWSER_SMTP=1 backend-test php yii communication:process-email --loop
+          echo "CORE_TEST_CONTAINER=$(docker compose --profile test ps -q backend-test)" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - name: Cache Playwright browser binaries
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/frontend/package-lock.json') }}
+      - name: Install frontend dependencies and runner Chromium
+        working-directory: apps/frontend
+        run: |
+          npm ci
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            npx playwright install --with-deps chromium
+          else
+            npx playwright install chromium
+          fi
+      - name: Start Core frontend
+        working-directory: apps/frontend
+        env:
+          VITE_CORE_PROXY_TARGET: http://127.0.0.1:8081
+          VITE_COMMERCIAL_PROXY_TARGET: http://127.0.0.1:1
+          VITE_HTTPS_KEY: /tmp/e2e-core-cert/key.pem
+          VITE_HTTPS_CERT: /tmp/e2e-core-cert/cert.pem
+        run: |
+          mkdir -p /tmp/e2e-core-cert
+          openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes -keyout /tmp/e2e-core-cert/key.pem -out /tmp/e2e-core-cert/cert.pem -subj '/CN=e2e.platform.test'
+          node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4175 --strictPort > /tmp/vite-core-auth.log 2>&1 &
+          echo $! > /tmp/vite-core-auth.pid
+          for _attempt in $(seq 1 60); do
+            if curl -kfsS https://127.0.0.1:4175/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -kfsS https://127.0.0.1:4175/ >/dev/null
+      - name: Verify Core invitation, password reset, MFA recovery and required password change
+        working-directory: apps/frontend
+        run: |
+          node ../../scripts/ci/frontend09-artifacts.mjs start core
+          npm run test:e2e:core-auth
+      - name: Verify real Core MFA and session management
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-security
+      - name: Verify real Core preferences, settings and consent lifecycle
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-profile
+      - name: Verify real passkey and external credential lifecycle
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-credentials
+      - name: Verify own and representative privacy request lifecycle
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-privacy
+      - name: Verify privacy operator workflow and presence
+        working-directory: apps/frontend
+        run: npm run test:e2e:core-privacy-operator
+      - name: Verify Core configuration forms and public publication
+        working-directory: apps/frontend
+        env:
+          FRONTEND09_AUTH_EVIDENCE: '1'
+        run: npm run test:e2e:core-configuration
+      - name: Verify and seal required Core evidence
+        working-directory: apps/frontend
+        run: node ../../scripts/ci/frontend09-artifacts.mjs seal core
+      - name: Upload Core browser evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: core-auth-browser-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            apps/frontend/screenshots/frontend09-final/authenticated
+            apps/frontend/screenshots/frontend09-core-manifest.json
+            apps/frontend/screenshots/core-auth-*
+            apps/frontend/screenshots/core-security-*
+            apps/frontend/screenshots/core-config-*
+            apps/frontend/screenshots/core-profile-*
+            apps/frontend/screenshots/core-credentials-*
+            apps/frontend/screenshots/core-privacy-*
+          if-no-files-found: ignore
+      - name: Diagnose Core browser failure
+        if: failure()
+        run: |
+          docker compose --profile test logs --no-color --tail 100 backend-test postgres-test mailpit-core-test
+          cat /tmp/vite-core-auth.log || true
+      - name: Remove disposable Core runtime
+        if: always()
+        run: |
+          if [[ -s /tmp/vite-core-auth.pid ]]; then kill "$(cat /tmp/vite-core-auth.pid)" 2>/dev/null || true; fi
+          rm -f /tmp/vite-core-auth.pid
+          rm -f /tmp/e2e-core-cert/key.pem /tmp/e2e-core-cert/cert.pem
+          bash scripts/ci/test-stop.sh
+
+  education-browser:
+    name: Education · browser and storage E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      COMPOSE_PROJECT_NAME: platform-education-browser-ci
+      POSTGRES_DB: platform_test
+      POSTGRES_TEST_DB: platform_test
+      POSTGRES_USER: platform_app
+      CONTROL_TEST_DB: platform_commercial_test
+      CONTROL_TEST_USER: platform_control_test
+      PLATFORM_BASE_DOMAIN: platform.example
+      SMTP_HOST: mailpit-core-test
+      AUTH_PUBLIC_BASE_URL: https://e2e.platform.test:4175
+      AUTH_WEBAUTHN_RP_ID: e2e.platform.test
+      AUTH_WEBAUTHN_ORIGINS: https://e2e.platform.test:4175
       E2E_ALLOWED_HOSTS: e2e.platform.test
       E2E_RUNTIME: isolated-ci
       E2E_ISOLATED_DB: "1"
@@ -862,58 +1020,6 @@ jobs:
           docker compose --profile test exec -d -e CORE_AUTH_BROWSER_SMTP=1 backend-test php yii communication:process-email --loop
           echo "CORE_TEST_CONTAINER=$(docker compose --profile test ps -q backend-test)" >> "$GITHUB_ENV"
           echo "E2E_STORAGE_TEST_CONTAINER=$(docker compose --profile test ps -q seaweedfs-test)" >> "$GITHUB_ENV"
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: apps/frontend/package-lock.json
-      - name: Install frontend dependencies and runner Chromium
-        working-directory: apps/frontend
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
-      - name: Start Core frontend
-        working-directory: apps/frontend
-        env:
-          VITE_CORE_PROXY_TARGET: http://127.0.0.1:8081
-          VITE_COMMERCIAL_PROXY_TARGET: http://127.0.0.1:1
-          VITE_HTTPS_KEY: /tmp/e2e-core-cert/key.pem
-          VITE_HTTPS_CERT: /tmp/e2e-core-cert/cert.pem
-        run: |
-          mkdir -p /tmp/e2e-core-cert
-          openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes -keyout /tmp/e2e-core-cert/key.pem -out /tmp/e2e-core-cert/cert.pem -subj '/CN=e2e.platform.test'
-          node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4175 --strictPort > /tmp/vite-core-auth.log 2>&1 &
-          echo $! > /tmp/vite-core-auth.pid
-          for _attempt in $(seq 1 60); do
-            if curl -kfsS https://127.0.0.1:4175/ >/dev/null; then break; fi
-            sleep 1
-          done
-          curl -kfsS https://127.0.0.1:4175/ >/dev/null
-      - name: Verify Core invitation, password reset, MFA recovery and required password change
-        working-directory: apps/frontend
-        run: |
-          node ../../scripts/ci/frontend09-artifacts.mjs start core
-          npm run test:e2e:core-auth
-      - name: Verify real Core MFA and session management
-        working-directory: apps/frontend
-        run: npm run test:e2e:core-security
-      - name: Verify real Core preferences, settings and consent lifecycle
-        working-directory: apps/frontend
-        run: npm run test:e2e:core-profile
-      - name: Verify real passkey and external credential lifecycle
-        working-directory: apps/frontend
-        run: npm run test:e2e:core-credentials
-      - name: Verify own and representative privacy request lifecycle
-        working-directory: apps/frontend
-        run: npm run test:e2e:core-privacy
-      - name: Verify privacy operator workflow and presence
-        working-directory: apps/frontend
-        run: npm run test:e2e:core-privacy-operator
-      - name: Verify Core configuration forms and public publication
-        working-directory: apps/frontend
-        env:
-          FRONTEND09_AUTH_EVIDENCE: '1'
-        run: npm run test:e2e:core-configuration
       - name: Install Education and verify its PostgreSQL workflows
         env:
           EDUCATION_ENABLED: "1"
@@ -935,25 +1041,53 @@ jobs:
             vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Classroom/ClassroomPostgresRegressionTest.php tests/Unit/DeviceManagement/ClassroomLifecycleRegressionTest.php
           docker compose --profile test exec -T backend-test vendor/bin/phpunit --bootstrap tests/bootstrap.php tests/Storage02
           bash scripts/ci/db-role-gate.sh core
-      - name: Verify Education through real Core identities, files and browser
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - name: Cache Playwright browser binaries
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/frontend/package-lock.json') }}
+      - name: Install frontend dependencies and runner Chromium
+        working-directory: apps/frontend
+        run: |
+          npm ci
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            npx playwright install --with-deps chromium
+          else
+            npx playwright install chromium
+          fi
+      - name: Start Education frontend preview
         working-directory: apps/frontend
         env:
-          FRONTEND09_AUTH_EVIDENCE: '1'
           VITE_EDUCATION_ENABLED: "1"
           VITE_CORE_PROXY_TARGET: http://127.0.0.1:8081
           VITE_COMMERCIAL_PROXY_TARGET: http://127.0.0.1:1
           VITE_HTTPS_KEY: /tmp/e2e-core-cert/key.pem
           VITE_HTTPS_CERT: /tmp/e2e-core-cert/cert.pem
         run: |
-          kill "$(cat /tmp/vite-core-auth.pid)"
+          mkdir -p /tmp/e2e-core-cert
+          openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes -keyout /tmp/e2e-core-cert/key.pem -out /tmp/e2e-core-cert/cert.pem -subj '/CN=e2e.platform.test'
           npm run build
           node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4175 --strictPort > /tmp/vite-education.log 2>&1 &
-          echo $! > /tmp/vite-core-auth.pid
+          echo $! > /tmp/vite-education.pid
           for _attempt in $(seq 1 60); do
             if curl -kfsS https://127.0.0.1:4175/ >/dev/null; then break; fi
             sleep 1
           done
           curl -kfsS https://127.0.0.1:4175/ >/dev/null
+      - name: Start Education evidence window
+        working-directory: apps/frontend
+        run: node ../../scripts/ci/frontend09-artifacts.mjs start education
+      - name: Verify Education through real Core identities, files and browser
+        working-directory: apps/frontend
+        env:
+          FRONTEND09_AUTH_EVIDENCE: '1'
+        run: |
           npm run test:e2e:education
           npm run test:e2e:education:student
           npm run test:e2e:education:parent
@@ -968,39 +1102,31 @@ jobs:
           node scripts/frontend07-coverage.mjs --run-evidence "$manifest" storage-recovery scripts/e2e-education-roles.mjs storage || result=1
           node scripts/frontend07-coverage.mjs --check-evidence "$manifest" || result=1
           exit "$result"
-      - name: Verify and seal required Core and Education evidence
+      - name: Verify and seal required Education evidence
         working-directory: apps/frontend
-        run: node ../../scripts/ci/frontend09-artifacts.mjs seal core
-      - name: Upload Core browser evidence
+        run: node ../../scripts/ci/frontend09-artifacts.mjs seal education
+      - name: Upload Education browser evidence
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: core-auth-browser-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          name: education-browser-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
             apps/frontend/screenshots/education-real
             apps/frontend/screenshots/frontend09-final/authenticated
-            apps/frontend/screenshots/frontend09-core-manifest.json
-            apps/frontend/screenshots/core-auth-*
-            apps/frontend/screenshots/core-security-*
-            apps/frontend/screenshots/core-config-*
-            apps/frontend/screenshots/core-profile-*
-            apps/frontend/screenshots/core-credentials-*
-            apps/frontend/screenshots/core-privacy-*
+            apps/frontend/screenshots/frontend09-education-manifest.json
           if-no-files-found: ignore
-      - name: Diagnose Core browser failure
+      - name: Diagnose Education browser failure
         if: failure()
         run: |
           docker compose --profile test logs --no-color --tail 100 backend-test postgres-test mailpit-core-test seaweedfs-test s3-init-test
-          cat /tmp/vite-core-auth.log || true
           cat /tmp/vite-education.log || true
-      - name: Remove disposable Core runtime
+      - name: Remove disposable Education runtime
         if: always()
         run: |
-          if [[ -s /tmp/vite-core-auth.pid ]]; then kill "$(cat /tmp/vite-core-auth.pid)" 2>/dev/null || true; fi
-          rm -f /tmp/vite-core-auth.pid
+          if [[ -s /tmp/vite-education.pid ]]; then kill "$(cat /tmp/vite-education.pid)" 2>/dev/null || true; fi
+          rm -f /tmp/vite-education.pid
           rm -f /tmp/e2e-core-cert/key.pem /tmp/e2e-core-cert/cert.pem
           bash scripts/ci/test-stop.sh
-
   billing-periodic:
     name: Billing В· renewal and recovery
     runs-on: ubuntu-24.04
@@ -1057,11 +1183,21 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
+      - name: Cache Playwright browser binaries
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/frontend/package-lock.json') }}
       - name: Install frontend dependencies and runner Chromium
         working-directory: apps/frontend
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            npx playwright install --with-deps chromium
+          else
+            npx playwright install chromium
+          fi
       - name: Generate disposable TLS certificate
         run: |
           mkdir -p "$RUNNER_TEMP/billing-tls"
@@ -1108,13 +1244,166 @@ jobs:
           bash scripts/ci/control-test-stop.sh
           rm -f "$BILLING_TEST_CLOCK_DIRECTORY/time" "$RUNNER_TEMP/billing-tls/key.pem" "$RUNNER_TEMP/billing-tls/cert.pem"
 
-  browser-e2e:
-    name: Frontend В· browser E2E
+  commercial-account-browser:
+    name: Commercial · workspace and access E2E
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       COMPOSE_FILE: compose.yaml:compose.ci.yaml:compose.browser.yaml
-      COMPOSE_PROJECT_NAME: platform-browser-ci
+      COMPOSE_PROJECT_NAME: platform-comm-account-ci
+      POSTGRES_DB: platform_test
+      POSTGRES_TEST_DB: platform_test
+      POSTGRES_USER: platform_app
+      CONTROL_TEST_DB: platform_commercial_test
+      CONTROL_TEST_USER: platform_control_test
+      CONTROL_TEST_PORT: "8091"
+      MAILPIT_TEST_UI_PORT: "8026"
+      PLATFORM_BASE_DOMAIN: platform.example
+      CONTROL_VERIFICATION_URL: https://e2e.platform.test:4173/verify-email
+      CONTROL_INVITATION_URL: https://e2e.platform.test:4173/invitation
+      CONTROL_PASSWORD_RESET_URL: https://e2e.platform.test:4173/reset-password
+      E2E_ALLOWED_HOSTS: e2e.platform.test
+      E2E_RUNTIME: isolated-ci
+      E2E_ISOLATED_DB: "1"
+      E2E_ALLOW_MUTATIONS: "1"
+      APP_URL: https://e2e.platform.test:4173
+      CONTROL_API_URL: http://e2e.platform.test:8091
+      MAILPIT_URL: http://e2e.platform.test:8026
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Generate isolated CI secrets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, os, secrets
+          values = {k: secrets.token_hex(32) for k in (
+              'YOOKASSA_SECRET_KEY', 'POSTGRES_PASSWORD', 'CONTROL_POSTGRES_PASSWORD', 'CONTROL_TEST_PASSWORD', 'CONTROL_APP_SECRET',
+              'CONTROL_TOKEN_SECRET', 'AUTH_IDENTIFIER_HMAC_KEY', 'DEVICE_FINGERPRINT_KEY', 'E2E_ISOLATION_PROOF',
+              'CORE_RUNTIME_PASSWORD', 'CONTROL_RUNTIME_PASSWORD', 'CORE_MAINTENANCE_PASSWORD', 'CONTROL_MAINTENANCE_PASSWORD')}
+          values.update({k: base64.b64encode(secrets.token_bytes(32)).decode() for k in (
+              'AUTH_TOTP_ENCRYPTION_KEY', 'CONTROL_TOTP_ENCRYPTION_KEY')})
+          values['E2E_PASSWORD'] = secrets.token_urlsafe(24)
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for key, value in values.items():
+                  print('::add-mask::' + value)
+                  output.write(key + '=' + value + '\n')
+          PY
+      - name: Map disposable browser host alias
+        run: echo "127.0.0.1 e2e.platform.test" | sudo tee -a /etc/hosts
+      - name: Validate Compose profiles
+        run: docker compose --profile control --profile test --profile control-test --profile backup --profile provisioner config --quiet
+      - name: Start isolated Commercial database and migrate from empty
+        run: bash ./scripts/ci/control-test-start.sh
+      - name: Reset disposable Commercial fixtures
+        run: env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+      - name: Start Commercial HTTP runtime and Mailpit
+        run: docker compose --profile control-test up -d --wait control-plane-test mailpit-test
+      - name: Start the real outbox worker
+        run: bash ./scripts/ci/control-email-worker-start.sh
+      - name: Set up Node for Playwright
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - name: Cache Playwright browser binaries
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/frontend/package-lock.json') }}
+      - name: Install frontend dependencies and runner Chromium
+        working-directory: apps/frontend
+        run: |
+          npm ci
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            npx playwright install --with-deps chromium
+          else
+            npx playwright install chromium
+          fi
+      - name: Generate disposable frontend TLS certificate
+        run: |
+          mkdir -p /tmp/e2e-cert
+          openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
+            -keyout /tmp/e2e-cert/key.pem -out /tmp/e2e-cert/cert.pem \
+            -subj "/CN=e2e.platform.test"
+      - name: Start disposable frontend runtime
+        working-directory: apps/frontend
+        env:
+          VITE_COMMERCIAL_PROXY_TARGET: http://127.0.0.1:8091
+          VITE_HTTPS_KEY: /tmp/e2e-cert/key.pem
+          VITE_HTTPS_CERT: /tmp/e2e-cert/cert.pem
+        run: |
+          node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4173 --strictPort > /tmp/vite-e2e.log 2>&1 &
+          echo $! > /tmp/vite-e2e.pid
+          for _attempt in $(seq 1 60); do
+            if curl -kfsS https://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8091/health/live
+          curl -fsS 'http://127.0.0.1:8026/api/v1/messages?limit=1'
+          curl -kfsS https://127.0.0.1:4173/ >/dev/null
+      - name: Run browser account workspace flow
+        working-directory: apps/frontend
+        env:
+          FRONTEND09_AUTH_EVIDENCE: '1'
+        run: |
+          node ../../scripts/ci/frontend09-artifacts.mjs start commercial-account
+          node scripts/e2e-account-workspace.mjs
+      - name: Reset disposable Commercial fixtures before invitation flow
+        run: |
+          docker compose --profile control-test stop control-plane-test
+          env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+          docker compose --profile control-test up -d --wait control-plane-test
+          bash ./scripts/ci/control-email-worker-start.sh
+      - name: Run browser invitation and MFA flow
+        working-directory: apps/frontend
+        run: node scripts/e2e-invitation-lifecycle.mjs
+      - name: Reset disposable Commercial fixtures before recovery flow
+        run: |
+          docker compose --profile control-test stop control-plane-test
+          env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
+          docker compose --profile control-test up -d --wait control-plane-test
+          bash ./scripts/ci/control-email-worker-start.sh
+      - name: Run browser account recovery flow
+        working-directory: apps/frontend
+        run: node scripts/e2e-auth-recovery.mjs
+      - name: Collect browser runtime logs
+        if: always()
+        run: cp /tmp/vite-e2e.log apps/frontend/vite-e2e.log 2>/dev/null || true
+      - name: Verify and seal required Commercial account evidence
+        working-directory: apps/frontend
+        run: node ../../scripts/ci/frontend09-artifacts.mjs seal commercial-account
+      - name: Upload browser artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: commercial-account-browser-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            apps/frontend/screenshots
+            apps/frontend/vite-e2e.log
+          if-no-files-found: ignore
+      - name: Diagnose failed browser runtime
+        if: failure()
+        run: |
+          docker compose --profile control-test ps -a
+          docker compose --profile control-test logs --no-color --tail 200 control-postgres-test control-plane-test mailpit-test
+          cat /tmp/vite-e2e.log || true
+      - name: Stop isolated browser runtime
+        if: always()
+        run: |
+          if [[ -s /tmp/vite-e2e.pid ]]; then kill "$(cat /tmp/vite-e2e.pid)" 2>/dev/null || true; fi
+          rm -f /tmp/vite-e2e.pid /tmp/e2e-cert/key.pem /tmp/e2e-cert/cert.pem
+          bash ./scripts/ci/control-test-stop.sh
+
+  commercial-billing-browser:
+    name: Commercial · billing and operators E2E
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      COMPOSE_FILE: compose.yaml:compose.ci.yaml:compose.browser.yaml
+      COMPOSE_PROJECT_NAME: platform-comm-billing-ci
       POSTGRES_DB: platform_test
       POSTGRES_TEST_DB: platform_test
       POSTGRES_USER: platform_app
@@ -1173,11 +1462,21 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json
+      - name: Cache Playwright browser binaries
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/frontend/package-lock.json') }}
       - name: Install frontend dependencies and runner Chromium
         working-directory: apps/frontend
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            npx playwright install --with-deps chromium
+          else
+            npx playwright install chromium
+          fi
       - name: Generate disposable frontend TLS certificate
         run: |
           mkdir -p /tmp/e2e-cert
@@ -1200,37 +1499,9 @@ jobs:
           curl -fsS http://127.0.0.1:8091/health/live
           curl -fsS 'http://127.0.0.1:8026/api/v1/messages?limit=1'
           curl -kfsS https://127.0.0.1:4173/ >/dev/null
-      - name: Run browser account workspace flow
+      - name: Start Commercial billing evidence window
         working-directory: apps/frontend
-        env:
-          FRONTEND09_AUTH_EVIDENCE: '1'
-        run: |
-          node ../../scripts/ci/frontend09-artifacts.mjs start commercial
-          node scripts/e2e-account-workspace.mjs
-      - name: Reset disposable Commercial fixtures before invitation flow
-        run: |
-          docker compose --profile control-test stop control-plane-test
-          env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
-          docker compose --profile control-test up -d --wait control-plane-test
-          bash ./scripts/ci/control-email-worker-start.sh
-      - name: Run browser invitation and MFA flow
-        working-directory: apps/frontend
-        run: node scripts/e2e-invitation-lifecycle.mjs
-      - name: Reset disposable Commercial fixtures before recovery flow
-        run: |
-          docker compose --profile control-test stop control-plane-test
-          env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
-          docker compose --profile control-test up -d --wait control-plane-test
-          bash ./scripts/ci/control-email-worker-start.sh
-      - name: Run browser account recovery flow
-        working-directory: apps/frontend
-        run: node scripts/e2e-auth-recovery.mjs
-      - name: Reset disposable Commercial fixtures before billing flow
-        run: |
-          docker compose --profile control-test stop control-plane-test
-          env APP_ENV=test bash ./scripts/ci/control-test-reset.sh
-          docker compose --profile control-test up -d --wait control-plane-test
-          bash ./scripts/ci/control-email-worker-start.sh
+        run: node ../../scripts/ci/frontend09-artifacts.mjs start commercial-billing
       - name: Verify real zero-price billing, MFA and cancellation
         working-directory: apps/frontend
         run: npm run test:e2e:billing
@@ -1275,14 +1546,14 @@ jobs:
       - name: Collect browser runtime logs
         if: always()
         run: cp /tmp/vite-e2e.log apps/frontend/vite-e2e.log 2>/dev/null || true
-      - name: Verify and seal required Commercial evidence
+      - name: Verify and seal required Commercial billing evidence
         working-directory: apps/frontend
-        run: node ../../scripts/ci/frontend09-artifacts.mjs seal commercial
+        run: node ../../scripts/ci/frontend09-artifacts.mjs seal commercial-billing
       - name: Upload browser artifacts
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: browser-e2e-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          name: commercial-billing-browser-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
             apps/frontend/screenshots
             apps/frontend/vite-e2e.log

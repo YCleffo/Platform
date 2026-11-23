@@ -8,7 +8,10 @@ import { groups } from './browser-verification-groups.mjs';
 const capturesRoot = 'frontend09-final/authenticated';
 const jobs = {
   frontend: { environment: 'production preview with isolated HTTP fixtures' },
-  core: { environment: 'isolated Core and Education API', captures: { 'core-admin': 9, 'education-teacher': 15, 'education-parent': 1 }, results: ['core-auth-results.json', 'core-config-real-results.json', 'education-real/results.json'] },
+  core: { environment: 'isolated Core API', captures: { 'core-admin': 9 }, results: ['core-auth-results.json', 'core-config-real-results.json'] },
+  education: { environment: 'isolated Education and Storage API', captures: { 'education-teacher': 15, 'education-parent': 1 }, results: ['education-real/results.json'] },
+  'commercial-account': { environment: 'isolated Commercial API workspace and access flows', captures: { 'commercial-account': 4 }, results: ['frontend09-account-workspace-closeout.json'] },
+  'commercial-billing': { environment: 'isolated Commercial API billing and operator flows', captures: { 'commercial-operator': 2 }, results: ['billing-real-results.json', 'billing-paid-results.json', 'operators-real-results.json'] },
   commercial: { environment: 'isolated Commercial API and synthetic payment transport', captures: { 'commercial-account': 4, 'commercial-operator': 2 }, results: ['frontend09-account-workspace-closeout.json', 'billing-real-results.json', 'billing-paid-results.json', 'operators-real-results.json'] },
 };
 

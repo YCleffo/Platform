@@ -50,3 +50,71 @@ test('requires matching source and fresh, verified browser evidence', () => {
     rmSync(directory, { recursive: true });
   }
 });
+
+test('seals individual core, education and commercial profiles', () => {
+  const temp = realpathSync(tmpdir());
+  const directory = mkdtempSync(join(temp, 'platform-ci-profiles-'));
+  const sourceSha = 'c'.repeat(40);
+  const provenance = { ...runIdentity({ GITHUB_SHA: sourceSha, GITHUB_RUN_ID: '456', GITHUB_RUN_ATTEMPT: '1' }), startedAt: Date.now() - 1000 };
+  const bytes = 'profile fixture image bytes';
+  const sha256 = createHash('sha256').update(bytes).digest('hex');
+  const write = (name, content) => {
+    const path = join(directory, name);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, typeof content === 'string' ? content : JSON.stringify(content));
+  };
+  const writeCaptures = (suite, count) => {
+    for (let i = 0; i < count; i++) {
+      const file = `cap-${i}.png`;
+      write(`frontend09-final/authenticated/${suite}/${file}`, bytes);
+      write(`frontend09-final/authenticated/${suite}/cap-${i}.json`, {
+        suite,
+        status: 'PASS',
+        overflow: false,
+        violations: [],
+        incomplete: [],
+        browserVersion: 'test-browser',
+        route: `/test-${suite}`,
+        file,
+        sha256,
+      });
+    }
+  };
+
+  try {
+    // Test Core profile
+    write('core-auth-results.json', { passed: true });
+    write('core-config-real-results.json', { passed: true });
+    writeCaptures('core-admin', 9);
+    const coreManifest = sealEvidence(directory, 'core', provenance);
+    assert.equal(coreManifest.status, 'PASS');
+    assert.equal(coreManifest.profile, 'core');
+
+    // Test Education profile
+    write('education-real/results.json', { passed: true });
+    writeCaptures('education-teacher', 15);
+    writeCaptures('education-parent', 1);
+    const eduManifest = sealEvidence(directory, 'education', provenance);
+    assert.equal(eduManifest.status, 'PASS');
+    assert.equal(eduManifest.profile, 'education');
+
+    // Test Commercial Account profile
+    write('frontend09-account-workspace-closeout.json', { passed: true });
+    writeCaptures('commercial-account', 4);
+    const accManifest = sealEvidence(directory, 'commercial-account', provenance);
+    assert.equal(accManifest.status, 'PASS');
+    assert.equal(accManifest.profile, 'commercial-account');
+
+    // Test Commercial Billing profile
+    write('billing-real-results.json', { passed: true });
+    write('billing-paid-results.json', { passed: true });
+    write('operators-real-results.json', { passed: true });
+    writeCaptures('commercial-operator', 2);
+    const billManifest = sealEvidence(directory, 'commercial-billing', provenance);
+    assert.equal(billManifest.status, 'PASS');
+    assert.equal(billManifest.profile, 'commercial-billing');
+  } finally {
+    assert.equal(dirname(realpathSync(directory)), temp);
+    rmSync(directory, { recursive: true });
+  }
+});
