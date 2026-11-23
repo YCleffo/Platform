@@ -51,12 +51,15 @@
     "branding.yaml",
     "control-plane.yaml",
     "core-configuration.yaml",
+    "core-organizations-accounts.yaml",
     "core-privacy.yaml",
+    "core-rbac.yaml",
     "device-management.yaml",
     "education-activities.yaml",
     "education-parent.yaml",
     "education.yaml",
     "homework.yaml",
+    "service-credentials.yaml",
     "storage.yaml"
   ],
   "totals": {
@@ -78,7 +81,7 @@
       "ALTERNATIVE_VERIFIED": 0,
       "INTERNAL": 8,
       "DEPRECATED": 0,
-      "withoutContract": 85
+      "withoutContract": 60
     },
     "DeviceManagement": {
       "FULL": 0,
@@ -114,7 +117,7 @@
   "contractOnly": [],
   "static": {
     "registered": 447,
-    "hasContract": 362,
+    "hasContract": 387,
     "hasClient": 398,
     "hasRoutedConsumer": 377
   },
@@ -145,36 +148,6 @@
       },
       "source": "apps/backend/src/Core/Auth/Api/RevokeSessionAction.php",
       "action": "App\\Core\\Auth\\Api\\RevokeSessionAction"
-    },
-    {
-      "endpoint": "DELETE /api/core/accounts/{id}/roles/{roleId}",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.rbac.manage"
-        ],
-        "source": "apps/backend/src/Core/Rbac/Api/AccountRolesAction.php"
-      },
-      "source": "apps/backend/src/Core/Rbac/Api/AccountRolesAction.php",
-      "action": "App\\Core\\Rbac\\Api\\AccountRolesAction"
-    },
-    {
-      "endpoint": "DELETE /api/core/roles/{id}",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.rbac.manage"
-        ],
-        "source": "apps/backend/src/Core/Rbac/Api/CustomRoleAction.php"
-      },
-      "source": "apps/backend/src/Core/Rbac/Api/CustomRoleAction.php",
-      "action": "App\\Core\\Rbac\\Api\\CustomRoleAction"
     },
     {
       "endpoint": "GET /",
@@ -249,66 +222,6 @@
       "action": "App\\Core\\Auth\\Api\\ListSessionsAction"
     },
     {
-      "endpoint": "GET /api/core/accounts",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.accounts.read"
-        ],
-        "source": "apps/backend/src/Core/Account/Api/ListAccountsAction.php"
-      },
-      "source": "apps/backend/src/Core/Account/Api/ListAccountsAction.php",
-      "action": "App\\Core\\Account\\Api\\ListAccountsAction"
-    },
-    {
-      "endpoint": "GET /api/core/accounts/{accountId}/service-credentials",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.service_credentials.read"
-        ],
-        "source": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php"
-      },
-      "source": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php",
-      "action": "App\\Core\\Auth\\Api\\ServiceCredentialAction"
-    },
-    {
-      "endpoint": "GET /api/core/accounts/{id}",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.accounts.read"
-        ],
-        "source": "apps/backend/src/Core/Account/Api/GetAccountAction.php"
-      },
-      "source": "apps/backend/src/Core/Account/Api/GetAccountAction.php",
-      "action": "App\\Core\\Account\\Api\\GetAccountAction"
-    },
-    {
-      "endpoint": "GET /api/core/accounts/{id}/roles",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.rbac.manage"
-        ],
-        "source": "apps/backend/src/Core/Rbac/Api/AccountRolesAction.php"
-      },
-      "source": "apps/backend/src/Core/Rbac/Api/AccountRolesAction.php",
-      "action": "App\\Core\\Rbac\\Api\\AccountRolesAction"
-    },
-    {
       "endpoint": "GET /api/core/audit-events",
       "category": "administrative",
       "permission": {
@@ -320,51 +233,6 @@
       },
       "source": "apps/backend/src/Core/Audit/Api/ListAuditEventsAction.php",
       "action": "App\\Core\\Audit\\Api\\ListAuditEventsAction"
-    },
-    {
-      "endpoint": "GET /api/core/organizations",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.organizations.read"
-        ],
-        "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php"
-      },
-      "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php",
-      "action": "App\\Core\\Organization\\Api\\OrganizationAction"
-    },
-    {
-      "endpoint": "GET /api/core/organizations/{id}/members",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.organization_memberships.read"
-        ],
-        "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php"
-      },
-      "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php",
-      "action": "App\\Core\\Organization\\Api\\OrganizationAction"
-    },
-    {
-      "endpoint": "GET /api/core/permissions",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.rbac.read"
-        ],
-        "source": "apps/backend/src/Core/Rbac/Api/ListPermissionsAction.php"
-      },
-      "source": "apps/backend/src/Core/Rbac/Api/ListPermissionsAction.php",
-      "action": "App\\Core\\Rbac\\Api\\ListPermissionsAction"
     },
     {
       "endpoint": "GET /api/core/persons",
@@ -487,36 +355,6 @@
       "action": "App\\Core\\Privacy\\Api\\ManageLegalHoldsAction"
     },
     {
-      "endpoint": "GET /api/core/roles",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.rbac.read"
-        ],
-        "source": "apps/backend/src/Core/Rbac/Api/ListRolesAction.php"
-      },
-      "source": "apps/backend/src/Core/Rbac/Api/ListRolesAction.php",
-      "action": "App\\Core\\Rbac\\Api\\ListRolesAction"
-    },
-    {
-      "endpoint": "GET /api/core/roles/{id}/permissions",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.rbac.manage"
-        ],
-        "source": "apps/backend/src/Core/Rbac/Api/RolePermissionsAction.php"
-      },
-      "source": "apps/backend/src/Core/Rbac/Api/RolePermissionsAction.php",
-      "action": "App\\Core\\Rbac\\Api\\RolePermissionsAction"
-    },
-    {
       "endpoint": "GET /api/health/isolation",
       "category": "service",
       "permission": {
@@ -596,21 +434,6 @@
       },
       "source": "apps/backend/src/Core/Person/Api/UpdatePersonAction.php",
       "action": "App\\Core\\Person\\Api\\UpdatePersonAction"
-    },
-    {
-      "endpoint": "PATCH /api/core/roles/{id}",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.rbac.manage"
-        ],
-        "source": "apps/backend/src/Core/Rbac/Api/CustomRoleAction.php"
-      },
-      "source": "apps/backend/src/Core/Rbac/Api/CustomRoleAction.php",
-      "action": "App\\Core\\Rbac\\Api\\CustomRoleAction"
     },
     {
       "endpoint": "POST /api/auth/activate",
@@ -827,111 +650,6 @@
       "action": "App\\Core\\Account\\Api\\CreateAccountAction"
     },
     {
-      "endpoint": "POST /api/core/accounts/{accountId}/service-credentials",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.service_credentials.manage"
-        ],
-        "source": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php"
-      },
-      "source": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php",
-      "action": "App\\Core\\Auth\\Api\\ServiceCredentialAction"
-    },
-    {
-      "endpoint": "POST /api/core/accounts/{accountId}/service-credentials/{credentialId}/revoke",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.service_credentials.manage"
-        ],
-        "source": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php"
-      },
-      "source": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php",
-      "action": "App\\Core\\Auth\\Api\\ServiceCredentialAction"
-    },
-    {
-      "endpoint": "POST /api/core/accounts/{accountId}/service-credentials/{credentialId}/rotate",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.service_credentials.manage"
-        ],
-        "source": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php"
-      },
-      "source": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php",
-      "action": "App\\Core\\Auth\\Api\\ServiceCredentialAction"
-    },
-    {
-      "endpoint": "POST /api/core/accounts/{id}/approve",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.accounts.manage"
-        ],
-        "source": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php"
-      },
-      "source": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php",
-      "action": "App\\Core\\Account\\Api\\AccountLifecycleAction"
-    },
-    {
-      "endpoint": "POST /api/core/accounts/{id}/archive",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.accounts.manage"
-        ],
-        "source": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php"
-      },
-      "source": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php",
-      "action": "App\\Core\\Account\\Api\\AccountLifecycleAction"
-    },
-    {
-      "endpoint": "POST /api/core/accounts/{id}/disable",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.accounts.manage"
-        ],
-        "source": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php"
-      },
-      "source": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php",
-      "action": "App\\Core\\Account\\Api\\AccountLifecycleAction"
-    },
-    {
-      "endpoint": "POST /api/core/accounts/{id}/enable",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.accounts.manage"
-        ],
-        "source": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php"
-      },
-      "source": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php",
-      "action": "App\\Core\\Account\\Api\\AccountLifecycleAction"
-    },
-    {
       "endpoint": "POST /api/core/accounts/{id}/invite",
       "category": "administrative",
       "permission": {
@@ -945,66 +663,6 @@
       },
       "source": "apps/backend/src/Core/Auth/Api/InviteAccountAction.php",
       "action": "App\\Core\\Auth\\Api\\InviteAccountAction"
-    },
-    {
-      "endpoint": "POST /api/core/accounts/{id}/roles/{roleId}",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.rbac.manage"
-        ],
-        "source": "apps/backend/src/Core/Rbac/Api/AccountRolesAction.php"
-      },
-      "source": "apps/backend/src/Core/Rbac/Api/AccountRolesAction.php",
-      "action": "App\\Core\\Rbac\\Api\\AccountRolesAction"
-    },
-    {
-      "endpoint": "POST /api/core/organizations",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.organizations.manage"
-        ],
-        "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php"
-      },
-      "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php",
-      "action": "App\\Core\\Organization\\Api\\OrganizationAction"
-    },
-    {
-      "endpoint": "POST /api/core/organizations/{id}/members",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.organization_memberships.manage"
-        ],
-        "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php"
-      },
-      "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php",
-      "action": "App\\Core\\Organization\\Api\\OrganizationAction"
-    },
-    {
-      "endpoint": "POST /api/core/organizations/{id}/members/{personId}/leave",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.organization_memberships.manage"
-        ],
-        "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php"
-      },
-      "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php",
-      "action": "App\\Core\\Organization\\Api\\OrganizationAction"
     },
     {
       "endpoint": "POST /api/core/persons",
@@ -1243,21 +901,6 @@
       "action": "App\\Core\\Privacy\\Api\\ManageRepresentationAction"
     },
     {
-      "endpoint": "POST /api/core/roles",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.rbac.manage"
-        ],
-        "source": "apps/backend/src/Core/Rbac/Api/CustomRoleAction.php"
-      },
-      "source": "apps/backend/src/Core/Rbac/Api/CustomRoleAction.php",
-      "action": "App\\Core\\Rbac\\Api\\CustomRoleAction"
-    },
-    {
       "endpoint": "POST /api/m2m/runtime/entitlements/apply",
       "category": "service",
       "permission": {
@@ -1267,21 +910,6 @@
       },
       "source": "apps/backend/src/PlatformRuntime/ApplyEntitlementsAction.php",
       "action": "App\\PlatformRuntime\\ApplyEntitlementsAction"
-    },
-    {
-      "endpoint": "PUT /api/core/roles/{id}/permissions",
-      "category": "administrative",
-      "permission": {
-        "context": [
-          "RequireAuthentication"
-        ],
-        "permissions": [
-          "core.rbac.manage"
-        ],
-        "source": "apps/backend/src/Core/Rbac/Api/RolePermissionsAction.php"
-      },
-      "source": "apps/backend/src/Core/Rbac/Api/RolePermissionsAction.php",
-      "action": "App\\Core\\Rbac\\Api\\RolePermissionsAction"
     }
   ],
   "operations": [
@@ -1527,7 +1155,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 587,
+          "line": 598,
           "routes": [
             "account-billing"
           ]
@@ -2101,7 +1729,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 248,
+          "line": 253,
           "routes": [
             "account-billing"
           ]
@@ -2190,7 +1818,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 246,
+          "line": 251,
           "routes": [
             "account-billing"
           ]
@@ -2365,7 +1993,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 256,
+          "line": 261,
           "routes": [
             "account-billing"
           ]
@@ -2538,7 +2166,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 249,
+          "line": 254,
           "routes": [
             "account-billing"
           ]
@@ -2622,7 +2250,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 257,
+          "line": 262,
           "routes": [
             "account-billing"
           ]
@@ -2706,7 +2334,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 707,
+          "line": 718,
           "routes": [
             "account-billing"
           ]
@@ -2790,7 +2418,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 666,
+          "line": 677,
           "routes": [
             "account-billing"
           ]
@@ -2874,7 +2502,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 258,
+          "line": 263,
           "routes": [
             "account-billing"
           ]
@@ -2958,7 +2586,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 670,
+          "line": 681,
           "routes": [
             "account-billing"
           ]
@@ -3047,7 +2675,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 255,
+          "line": 260,
           "routes": [
             "account-billing"
           ]
@@ -3366,7 +2994,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 247,
+          "line": 252,
           "routes": [
             "account-billing"
           ]
@@ -5026,7 +4654,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 418,
+          "line": 423,
           "routes": [
             "account-billing"
           ]
@@ -5205,7 +4833,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 349,
+          "line": 354,
           "routes": [
             "account-billing"
           ]
@@ -5301,7 +4929,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 575,
+          "line": 586,
           "routes": [
             "account-billing"
           ]
@@ -5392,7 +5020,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 428,
+          "line": 433,
           "routes": [
             "account-billing"
           ]
@@ -5496,7 +5124,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 698,
+          "line": 709,
           "routes": [
             "account-billing"
           ]
@@ -5587,7 +5215,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 540,
+          "line": 551,
           "routes": [
             "account-billing"
           ]
@@ -5678,7 +5306,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 401,
+          "line": 406,
           "routes": [
             "account-billing"
           ]
@@ -5774,7 +5402,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 553,
+          "line": 564,
           "routes": [
             "account-billing"
           ]
@@ -5865,7 +5493,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 565,
+          "line": 576,
           "routes": [
             "account-billing"
           ]
@@ -5964,7 +5592,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 410,
+          "line": 415,
           "routes": [
             "account-billing"
           ]
@@ -6055,7 +5683,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 524,
+          "line": 535,
           "routes": [
             "account-billing"
           ]
@@ -8906,7 +8534,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/commercial/billing/AccountBillingView.vue",
-          "line": 364,
+          "line": 369,
           "routes": [
             "account-billing"
           ]
@@ -9367,12 +8995,30 @@
         "source": "apps/backend/src/Core/Rbac/Api/AccountRolesAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-rbac.yaml",
+          "path": "/api/core/accounts/{id}/roles/{roleId}",
+          "operationId": "revokeAccountRole",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 244,
           "action": "role.revoke"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/rbac.ts",
+          "line": 158,
+          "action": "revokeAccountRole",
+          "owner": "coreRbacApi"
         }
       ],
       "ui": [
@@ -9397,6 +9043,11 @@
           "type": "Contract",
           "file": "apps/frontend/scripts/workbench-contracts.test.mjs",
           "scope": "Workbench parity suite; individual assertions vary by operation"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/core/rbac.spec.ts",
+          "scope": "revokeAccountRole"
         }
       ],
       "priority": {
@@ -9406,7 +9057,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -9588,12 +9239,30 @@
         "source": "apps/backend/src/Core/Rbac/Api/CustomRoleAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-rbac.yaml",
+          "path": "/api/core/roles/{id}",
+          "operationId": "deleteRole",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 257,
           "action": "role.delete"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/rbac.ts",
+          "line": 136,
+          "action": "deleteRole",
+          "owner": "coreRbacApi"
         }
       ],
       "ui": [
@@ -9627,7 +9296,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -11186,12 +10855,36 @@
         "source": "apps/backend/src/Core/Account/Api/ListAccountsAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-organizations-accounts.yaml",
+          "path": "/api/core/accounts",
+          "operationId": "listPlatformAccounts",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 517,
           "action": "accounts"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/platformAdmin.ts",
+          "line": 129,
+          "action": "listAccounts",
+          "owner": "platformAdminApi"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/platformAdmin.ts",
+          "line": 129,
+          "action": "listAccounts",
+          "owner": "platformAdminApi"
         }
       ],
       "ui": [
@@ -11225,7 +10918,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -11255,12 +10948,30 @@
         "source": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "service-credentials.yaml",
+          "path": "/api/core/accounts/{accountId}/service-credentials",
+          "operationId": "listServiceCredentials",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 175,
           "action": "credential.list"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/serviceCredentials.ts",
+          "line": 56,
+          "action": "list",
+          "owner": "coreServiceCredentialsApi"
         }
       ],
       "ui": [
@@ -11285,6 +10996,11 @@
           "type": "Contract",
           "file": "apps/frontend/scripts/workbench-contracts.test.mjs",
           "scope": "Workbench parity suite; individual assertions vary by operation"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/core/serviceCredentials.spec.ts",
+          "scope": "list"
         }
       ],
       "priority": {
@@ -11294,7 +11010,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -11323,7 +11039,19 @@
         "source": "apps/backend/src/Core/Account/Api/GetAccountAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-organizations-accounts.yaml",
+          "path": "/api/core/accounts/{id}",
+          "operationId": "getPlatformAccount",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
@@ -11362,7 +11090,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -11391,12 +11119,30 @@
         "source": "apps/backend/src/Core/Rbac/Api/AccountRolesAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-rbac.yaml",
+          "path": "/api/core/accounts/{id}/roles",
+          "operationId": "getAccountRoles",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 227,
           "action": "account.roles"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/rbac.ts",
+          "line": 142,
+          "action": "listAccountRoles",
+          "owner": "coreRbacApi"
         }
       ],
       "ui": [
@@ -11430,7 +11176,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -11999,12 +11745,36 @@
         "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-organizations-accounts.yaml",
+          "path": "/api/core/organizations",
+          "operationId": "listOrganizations",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 491,
           "action": "organizations"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/platformAdmin.ts",
+          "line": 83,
+          "action": "listOrganizations",
+          "owner": "platformAdminApi"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/platformAdmin.ts",
+          "line": 83,
+          "action": "listOrganizations",
+          "owner": "platformAdminApi"
         }
       ],
       "ui": [
@@ -12029,6 +11799,11 @@
           "type": "Contract",
           "file": "apps/frontend/scripts/workbench-contracts.test.mjs",
           "scope": "Workbench parity suite; individual assertions vary by operation"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/core/platformAdmin.spec.ts",
+          "scope": "listOrganizations"
         }
       ],
       "priority": {
@@ -12038,7 +11813,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -12068,7 +11843,19 @@
         "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-organizations-accounts.yaml",
+          "path": "/api/core/organizations/{id}/members",
+          "operationId": "listOrganizationMembers",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
@@ -12107,7 +11894,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -12136,12 +11923,30 @@
         "source": "apps/backend/src/Core/Rbac/Api/ListPermissionsAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-rbac.yaml",
+          "path": "/api/core/permissions",
+          "operationId": "listPermissions",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 550,
           "action": "permissions"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/rbac.ts",
+          "line": 86,
+          "action": "listPermissions",
+          "owner": "coreRbacApi"
         }
       ],
       "ui": [
@@ -12166,6 +11971,11 @@
           "type": "Contract",
           "file": "apps/frontend/scripts/workbench-contracts.test.mjs",
           "scope": "Workbench parity suite; individual assertions vary by operation"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/core/rbac.spec.ts",
+          "scope": "listPermissions"
         }
       ],
       "priority": {
@@ -12175,7 +11985,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -13582,12 +13392,30 @@
         "source": "apps/backend/src/Core/Rbac/Api/ListRolesAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-rbac.yaml",
+          "path": "/api/core/roles",
+          "operationId": "listRoles",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 539,
           "action": "roles"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/rbac.ts",
+          "line": 96,
+          "action": "listRoles",
+          "owner": "coreRbacApi"
         }
       ],
       "ui": [
@@ -13612,6 +13440,11 @@
           "type": "Contract",
           "file": "apps/frontend/scripts/workbench-contracts.test.mjs",
           "scope": "Workbench parity suite; individual assertions vary by operation"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/core/rbac.spec.ts",
+          "scope": "listRoles"
         }
       ],
       "priority": {
@@ -13621,7 +13454,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -13650,7 +13483,19 @@
         "source": "apps/backend/src/Core/Rbac/Api/RolePermissionsAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-rbac.yaml",
+          "path": "/api/core/roles/{id}/permissions",
+          "operationId": "getRolePermissions",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
@@ -13689,7 +13534,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -14488,12 +14333,30 @@
         "source": "apps/backend/src/Core/Rbac/Api/CustomRoleAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-rbac.yaml",
+          "path": "/api/core/roles/{id}",
+          "operationId": "updateRole",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 254,
           "action": "role.update"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/rbac.ts",
+          "line": 130,
+          "action": "patchRole",
+          "owner": "coreRbacApi"
         }
       ],
       "ui": [
@@ -14527,7 +14390,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -16651,12 +16514,30 @@
         "source": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "service-credentials.yaml",
+          "path": "/api/core/accounts/{accountId}/service-credentials",
+          "operationId": "createServiceCredential",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 184,
           "action": "credential.create"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/serviceCredentials.ts",
+          "line": 73,
+          "action": "issue",
+          "owner": "coreServiceCredentialsApi"
         }
       ],
       "ui": [
@@ -16681,6 +16562,11 @@
           "type": "Contract",
           "file": "apps/frontend/scripts/workbench-contracts.test.mjs",
           "scope": "Workbench parity suite; individual assertions vary by operation"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/core/serviceCredentials.spec.ts",
+          "scope": "issue"
         }
       ],
       "priority": {
@@ -16690,7 +16576,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -16720,12 +16606,30 @@
         "source": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "service-credentials.yaml",
+          "path": "/api/core/accounts/{accountId}/service-credentials/{credentialId}/revoke",
+          "operationId": "revokeServiceCredential",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 210,
           "action": "credential.revoke"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/serviceCredentials.ts",
+          "line": 91,
+          "action": "revoke",
+          "owner": "coreServiceCredentialsApi"
         }
       ],
       "ui": [
@@ -16750,6 +16654,11 @@
           "type": "Contract",
           "file": "apps/frontend/scripts/workbench-contracts.test.mjs",
           "scope": "Workbench parity suite; individual assertions vary by operation"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/core/serviceCredentials.spec.ts",
+          "scope": "revoke"
         }
       ],
       "priority": {
@@ -16759,7 +16668,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -16789,12 +16698,30 @@
         "source": "apps/backend/src/Core/Auth/Api/ServiceCredentialAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "service-credentials.yaml",
+          "path": "/api/core/accounts/{accountId}/service-credentials/{credentialId}/rotate",
+          "operationId": "rotateServiceCredential",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 193,
           "action": "credential.rotate"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/serviceCredentials.ts",
+          "line": 85,
+          "action": "rotate",
+          "owner": "coreServiceCredentialsApi"
         }
       ],
       "ui": [
@@ -16819,6 +16746,11 @@
           "type": "Contract",
           "file": "apps/frontend/scripts/workbench-contracts.test.mjs",
           "scope": "Workbench parity suite; individual assertions vary by operation"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/core/serviceCredentials.spec.ts",
+          "scope": "rotate"
         }
       ],
       "priority": {
@@ -16828,7 +16760,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -16858,7 +16790,19 @@
         "source": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-organizations-accounts.yaml",
+          "path": "/api/core/accounts/{id}/approve",
+          "operationId": "approveAccount",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
@@ -16897,7 +16841,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -16927,7 +16871,19 @@
         "source": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-organizations-accounts.yaml",
+          "path": "/api/core/accounts/{id}/archive",
+          "operationId": "archiveAccount",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
@@ -16966,7 +16922,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -16996,7 +16952,19 @@
         "source": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-organizations-accounts.yaml",
+          "path": "/api/core/accounts/{id}/disable",
+          "operationId": "disableAccount",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
@@ -17035,7 +17003,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -17065,7 +17033,19 @@
         "source": "apps/backend/src/Core/Account/Api/AccountLifecycleAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-organizations-accounts.yaml",
+          "path": "/api/core/accounts/{id}/enable",
+          "operationId": "enableAccount",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
@@ -17104,7 +17084,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -17201,7 +17181,19 @@
         "source": "apps/backend/src/Core/Rbac/Api/AccountRolesAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-rbac.yaml",
+          "path": "/api/core/accounts/{id}/roles/{roleId}",
+          "operationId": "assignAccountRole",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
@@ -17240,7 +17232,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -17422,12 +17414,30 @@
         "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-organizations-accounts.yaml",
+          "path": "/api/core/organizations",
+          "operationId": "createOrganization",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 62,
           "action": "organization.create"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/platformAdmin.ts",
+          "line": 102,
+          "action": "createOrganization",
+          "owner": "platformAdminApi"
         }
       ],
       "ui": [
@@ -17461,7 +17471,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -17491,7 +17501,19 @@
         "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-organizations-accounts.yaml",
+          "path": "/api/core/organizations/{id}/members",
+          "operationId": "addOrganizationMember",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
@@ -17530,7 +17552,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -17560,7 +17582,19 @@
         "source": "apps/backend/src/Core/Organization/Api/OrganizationAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-organizations-accounts.yaml",
+          "path": "/api/core/organizations/{id}/members/{personId}/leave",
+          "operationId": "removeOrganizationMember",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
@@ -17599,7 +17633,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -19302,12 +19336,30 @@
         "source": "apps/backend/src/Core/Rbac/Api/CustomRoleAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-rbac.yaml",
+          "path": "/api/core/roles",
+          "operationId": "createRole",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
           "line": 253,
           "action": "role.create"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/core/rbac.ts",
+          "line": 117,
+          "action": "createRole",
+          "owner": "coreRbacApi"
         }
       ],
       "ui": [
@@ -19332,6 +19384,11 @@
           "type": "Contract",
           "file": "apps/frontend/scripts/workbench-contracts.test.mjs",
           "scope": "Workbench parity suite; individual assertions vary by operation"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/core/rbac.spec.ts",
+          "scope": "createRole"
         }
       ],
       "priority": {
@@ -19341,7 +19398,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -19637,7 +19694,19 @@
         "source": "apps/backend/src/Core/Rbac/Api/RolePermissionsAction.php"
       },
       "audience": "Admin",
-      "contracts": [],
+      "contracts": [
+        {
+          "file": "core-rbac.yaml",
+          "path": "/api/core/roles/{id}/permissions",
+          "operationId": "updateRolePermissions",
+          "security": [
+            {
+              "BearerAuth": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
       "frontendApi": [
         {
           "file": "apps/frontend/src/modules/admin/workbench/catalog.ts",
@@ -19676,7 +19745,7 @@
       "previousCoverage": "PARTIAL",
       "evidenceStages": {
         "backendRouteExists": true,
-        "contractDocumented": false,
+        "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
         "userActionReachable": "NOT_VERIFIED",
@@ -34394,6 +34463,12 @@
           "line": 220,
           "action": "conflicts",
           "owner": "storageApi"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/storage/drive.ts",
+          "line": 186,
+          "action": "listConflicts",
+          "owner": "cloudDriveApi"
         }
       ],
       "ui": [
@@ -34531,6 +34606,18 @@
           "owner": "storageApi"
         },
         {
+          "file": "apps/frontend/src/shared/api/storage/drive.ts",
+          "line": 136,
+          "action": "listFiles",
+          "owner": "cloudDriveApi"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/storage/drive.ts",
+          "line": 136,
+          "action": "listFiles",
+          "owner": "cloudDriveApi"
+        },
+        {
           "file": "apps/frontend/src/modules/education/student/StudentDocumentsView.vue",
           "line": 77,
           "action": "List documents through the paginated Storage API"
@@ -34557,6 +34644,11 @@
           "type": "Historical scenario reference",
           "file": "apps/frontend/scripts/e2e-education-roles.mjs",
           "scope": "Student invitation, self-activation, lesson and private document round trip"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/storage/drive.spec.ts",
+          "scope": "listFiles"
         }
       ],
       "priority": {
@@ -34614,6 +34706,12 @@
           "line": 222,
           "action": "fileVersions",
           "owner": "storageApi"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/storage/drive.ts",
+          "line": 170,
+          "action": "listVersions",
+          "owner": "cloudDriveApi"
         }
       ],
       "ui": [
@@ -34632,6 +34730,11 @@
           "type": "Contract",
           "file": "apps/frontend/scripts/device-storage-contract.test.mjs",
           "scope": "Route parity"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/storage/drive.spec.ts",
+          "scope": "listVersions"
         }
       ],
       "priority": {
@@ -34687,6 +34790,12 @@
           "line": 212,
           "action": "space",
           "owner": "storageApi"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/storage/drive.ts",
+          "line": 126,
+          "action": "space",
+          "owner": "cloudDriveApi"
         }
       ],
       "ui": [
@@ -34710,6 +34819,11 @@
           "type": "Historical scenario reference",
           "file": "apps/frontend/scripts/e2e-education-roles.mjs",
           "scope": "Student invitation, self-activation, lesson and private document round trip"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/storage/drive.spec.ts",
+          "scope": "space"
         }
       ],
       "priority": {
@@ -35363,6 +35477,12 @@
           "line": 221,
           "action": "resolveConflict",
           "owner": "storageApi"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/storage/drive.ts",
+          "line": 199,
+          "action": "resolveConflict",
+          "owner": "cloudDriveApi"
         }
       ],
       "ui": [
@@ -35381,6 +35501,11 @@
           "type": "Contract",
           "file": "apps/frontend/scripts/device-storage-contract.test.mjs",
           "scope": "Route parity"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/storage/drive.spec.ts",
+          "scope": "resolveConflict"
         }
       ],
       "priority": {
@@ -35436,6 +35561,12 @@
           "line": 219,
           "action": "renameFile",
           "owner": "storageApi"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/storage/drive.ts",
+          "line": 158,
+          "action": "renameFile",
+          "owner": "cloudDriveApi"
         }
       ],
       "ui": [
@@ -35514,6 +35645,12 @@
           "line": 223,
           "action": "restoreFile",
           "owner": "storageApi"
+        },
+        {
+          "file": "apps/frontend/src/shared/api/storage/drive.ts",
+          "line": 180,
+          "action": "restoreVersion",
+          "owner": "cloudDriveApi"
         }
       ],
       "ui": [
@@ -35591,6 +35728,12 @@
           "owner": "storageApi"
         },
         {
+          "file": "apps/frontend/src/shared/api/storage/drive.ts",
+          "line": 152,
+          "action": "requestUploadTicket",
+          "owner": "cloudDriveApi"
+        },
+        {
           "file": "apps/frontend/src/modules/education/student/StudentDocumentsView.vue",
           "line": 285,
           "action": "Acquire the scoped upload ticket for a student document"
@@ -35617,6 +35760,11 @@
           "type": "Historical scenario reference",
           "file": "apps/frontend/scripts/e2e-education-roles.mjs",
           "scope": "Student invitation, self-activation, lesson and private document round trip"
+        },
+        {
+          "type": "Unit",
+          "file": "apps/frontend/src/shared/api/storage/drive.spec.ts",
+          "scope": "requestUploadTicket"
         }
       ],
       "priority": {

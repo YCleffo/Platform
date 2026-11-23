@@ -211,10 +211,12 @@ try {
     'Scheduler must materialize downgrade at its boundary',
   );
   await billing(down.id);
+  const payBtn = page.getByRole('button', { name: 'Pay for the change', exact: true });
+  await payBtn.waitFor({ state: 'visible' });
   const checkout = page.waitForResponse(
     (r) => r.url().endsWith('/checkout') && r.request().method() === 'POST',
   );
-  await page.getByRole('button', { name: 'Pay for the change', exact: true }).click();
+  await payBtn.click();
   assert.equal((await checkout).status(), 200);
   const payment = sql(
     `SELECT p.id FROM commercial.payments p JOIN commercial.subscription_plan_changes c ON c.invoice_id=p.invoice_id WHERE c.id='${change.id}'`,

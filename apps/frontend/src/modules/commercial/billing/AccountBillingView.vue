@@ -105,7 +105,8 @@ const profile = reactive({
   line1: '',
   postal_code: '',
 });
-const profileError = ref<string | null>(null);
+const profileErrorKey = ref<string | null>(null);
+const profileError = computed(() => (profileErrorKey.value ? t(profileErrorKey.value) : null));
 const profileKey = ref<string | null>(null);
 
 const invoiceDoc = ref<Invoice | null>(null);
@@ -171,7 +172,10 @@ const planChangeRequested = computed(
   () => planChange.value !== null && planChange.value.status !== 'cancelled',
 );
 const canPayPlanChange = computed(
-  () => planChange.value?.status === 'payment_required' && planChange.value.invoice_id !== null,
+  () =>
+    canManage.value &&
+    planChange.value?.status === 'payment_required' &&
+    planChange.value.invoice_id !== null,
 );
 
 interface CheckoutFlow {
@@ -222,6 +226,7 @@ watch(
 );
 
 function resetProfile(): void {
+  profileErrorKey.value = null;
   profile.legal_name = detail.value?.legal_name ?? detail.value?.display_name ?? '';
   profile.contact_email = '';
   profile.contact_name = '';
@@ -355,9 +360,9 @@ async function saveProfile(): Promise<void> {
   if (!canManage.value) {
     return;
   }
-  profileError.value = null;
+  profileErrorKey.value = null;
   if (profile.legal_name.trim() === '' || profile.country_code.trim().length !== 2) {
-    profileError.value = t('billing.profileRequired');
+    profileErrorKey.value = 'billing.profileRequired';
     return;
   }
   await perform(async () => {
@@ -438,6 +443,12 @@ async function startSubscription(): Promise<void> {
 }
 
 async function payInvoiceById(invoiceId: string): Promise<void> {
+  if (!canManage.value && store.detailLoading) {
+    let retries = 0;
+    while (!canManage.value && store.detailLoading && retries++ < 30) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
   if (!canManage.value) {
     return;
   }
@@ -1087,6 +1098,7 @@ watch(
           <AppButton
             v-if="canPayPlanChange"
             size="s"
+            :disabled="!canManage || actionBusy"
             :loading="actionBusy"
             @click="payPlanChange"
           >
@@ -1095,6 +1107,7 @@ watch(
           <AppButton
             size="s"
             variant="secondary"
+            :disabled="!canManage || actionBusy"
             :loading="actionBusy"
             @click="cancelPlanChange"
           >
