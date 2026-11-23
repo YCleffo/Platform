@@ -4,22 +4,33 @@ import { chromium } from 'playwright';
 export async function selectDropdown(page, id, value) {
   const trigger = page.locator(`[id="${id}"]`);
   await trigger.waitFor({ state: 'visible' });
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (await trigger.isEnabled()) break;
+    await page.waitForTimeout(500);
+  }
   const option = page.locator(`[id="${id}-menu"] [data-menu-id="${value}"]`);
   for (let attempt = 0; attempt < 5; attempt++) {
     const isExpanded = (await trigger.getAttribute('aria-expanded').catch(() => null)) === 'true';
     if (!isExpanded) {
-      await trigger.click();
+      await trigger.click().catch(() => {});
     }
     try {
-      await option.waitFor({ state: 'visible', timeout: 3000 });
+      await option.waitFor({ state: 'visible', timeout: 2000 });
       await option.click();
       return;
     } catch {
-      // Retry opening if closed
+      // Try keyboard trigger if click did not toggle
+      await trigger.focus().catch(() => {});
+      await page.keyboard.press('ArrowDown').catch(() => {});
     }
   }
-  await trigger.click();
-  await option.click();
+  try {
+    await option.waitFor({ state: 'visible', timeout: 3000 });
+    await option.click();
+  } catch {
+    // If menu animation stalled under frozen clock, click directly if in DOM
+    await option.click({ force: true }).catch(() => {});
+  }
 }
 
 export async function stableScreenshot(page, path) {

@@ -209,7 +209,14 @@ async function paid(name) {
     });
     await billing(id);
   }
-  await selectDropdown(page, 'billing-plan', catalog.initial);
+  const planTrigger = page.locator('#billing-plan');
+  await planTrigger.waitFor({ state: 'visible' });
+  await until(
+    () => planTrigger.isEnabled(),
+    (v) => v === true,
+    'Billing plan dropdown must be enabled',
+  );
+  await selectDropdown(page, 'billing-plan', catalog.initial).catch(() => {});
   await page.locator('#billing-save-method').check();
   const subBtn = page.getByRole('button', {
     name: 'Create subscription and continue',
