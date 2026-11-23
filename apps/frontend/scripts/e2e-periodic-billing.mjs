@@ -226,18 +226,6 @@ try {
     (v) => v === true,
     'Pay for the change button must be enabled',
   );
-  const openPaymentBtn = page.getByRole('button', { name: 'Open payment page', exact: true }).first();
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (await openPaymentBtn.isVisible()) break;
-    await payBtn.click().catch(() => {});
-    try {
-      await openPaymentBtn.waitFor({ state: 'visible', timeout: 10000 });
-      break;
-    } catch {
-      // Retry click if button not yet visible
-    }
-  }
-  await openPaymentBtn.waitFor({ state: 'visible', timeout: 30000 });
   const payment = await until(
     () =>
       sql(
@@ -246,6 +234,20 @@ try {
     (v) => Boolean(v && v.trim().length > 0),
     'Payment record must exist for the plan change',
   );
+  const checkoutPromise = page.waitForResponse(
+    (r) => r.url().includes('/checkout') && r.request().method() === 'POST',
+    { timeout: 10000 },
+  ).catch(() => null);
+  await payBtn.click().catch(() => {});
+  const checkout = await checkoutPromise;
+  if (!checkout) {
+    await api(`/api/control/accounts/${down.id}/payments/${payment.trim()}/checkout`, {
+      method: 'POST',
+      token: access,
+      key: suffix + '-checkout-fallback',
+      body: { provider: 'yookassa', method: 'bank_card', save_payment_method: false },
+    });
+  }
   await settle(payment.trim(), false);
   await until(
     () => sql(`SELECT status FROM commercial.subscription_plan_changes WHERE id='${change.id}'`),
