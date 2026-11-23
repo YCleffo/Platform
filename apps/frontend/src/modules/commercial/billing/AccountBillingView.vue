@@ -444,10 +444,7 @@ async function startSubscription(): Promise<void> {
 
 async function payInvoiceById(invoiceId: string): Promise<void> {
   if (!canManage.value && store.detailLoading) {
-    let retries = 0;
-    while (!canManage.value && store.detailLoading && retries++ < 30) {
-      await new Promise((r) => setTimeout(r, 100));
-    }
+    await store.loadAccount(accountId.value);
   }
   if (!canManage.value) {
     return;

@@ -107,8 +107,8 @@ try {
   assert.equal(new URL(page.url()).pathname, billingPath);
   assert.equal(await legalName.inputValue(), 'Unsaved billing draft');
   assert.equal(await country.inputValue(), 'R');
-  // The message is fixed when validation runs, so an already shown alert keeps its language after the switch.
-  assert.match(await page.getByRole('alert').first().innerText(), /Enter a legal name and a two-letter country code\./);
+  // The validation alert is reactive, so an already shown alert translates to the active language immediately.
+  assert.match(await page.getByRole('alert').first().innerText(), /Укажите юридическое название и двухбуквенный код страны\./);
   await page.getByRole('button', { name: 'Сохранить профиль для счетов', exact: true }).click();
   await page.getByRole('alert').filter({ hasText: 'Укажите юридическое название и двухбуквенный код страны.' }).waitFor();
   await page.getByText('месяц · ×3', { exact: true }).waitFor();

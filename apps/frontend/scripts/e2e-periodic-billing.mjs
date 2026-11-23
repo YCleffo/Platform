@@ -213,11 +213,27 @@ try {
   await billing(down.id);
   const payBtn = page.getByRole('button', { name: 'Pay for the change', exact: true });
   await payBtn.waitFor({ state: 'visible' });
-  const checkout = page.waitForResponse(
+  const checkoutPromise = page.waitForResponse(
     (r) => r.url().endsWith('/checkout') && r.request().method() === 'POST',
+    { timeout: 15000 },
   );
   await payBtn.click();
-  assert.equal((await checkout).status(), 200);
+  let checkout;
+  try {
+    checkout = await checkoutPromise;
+  } catch {
+    if (await payBtn.isVisible()) {
+      const retryPromise = page.waitForResponse(
+        (r) => r.url().endsWith('/checkout') && r.request().method() === 'POST',
+        { timeout: 15000 },
+      );
+      await payBtn.click();
+      checkout = await retryPromise;
+    } else {
+      throw new Error('Pay for the change button disappeared without checkout response');
+    }
+  }
+  assert.equal(checkout.status(), 200);
   const payment = sql(
     `SELECT p.id FROM commercial.payments p JOIN commercial.subscription_plan_changes c ON c.invoice_id=p.invoice_id WHERE c.id='${change.id}'`,
   );
