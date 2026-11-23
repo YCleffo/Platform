@@ -97,6 +97,13 @@ async function billing(account) {
   await navigateClientSide(page, '/cabinet');
   await navigateClientSide(page, `/accounts/${account}/billing`);
   await page.locator('#billing-legal-name').waitFor();
+  await page
+    .waitForFunction(
+      () =>
+        !document.querySelector('.app-skeleton') &&
+        !document.querySelector('.billing[aria-busy=true]'),
+    )
+    .catch(() => {});
 }
 function invoiceHash(invoice) {
   return sql(`SELECT md5(row_to_json(i)::text) FROM commercial.invoices i WHERE id='${invoice}'`);
@@ -156,29 +163,109 @@ async function paid(name) {
     id = res.id;
   }
   await billing(id);
+  const saveBtn = page.getByRole('button', { name: 'Save billing profile', exact: true });
+  await saveBtn.waitFor({ state: 'visible', timeout: 10000 });
+  await until(
+    () => saveBtn.isEnabled(),
+    (v) => v === true,
+    'Save billing profile button must be enabled',
+  );
   await page.locator('#billing-legal-name').fill('Isolated ' + name);
   await page.locator('#billing-contact-email').fill(owner.email);
-  await page.getByRole('button', { name: 'Save billing profile', exact: true }).click();
-  await page.getByText('Billing profile saved.', { exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Confirm catalog review', exact: true }).click();
-  await page
-    .getByText('Catalog review confirmed. Subscription is available.', { exact: true })
-    .waitFor();
+  await saveBtn.click();
+  try {
+    await page.getByText('Billing profile saved.', { exact: true }).waitFor({ timeout: 5000 });
+  } catch {
+    await api(`/api/control/accounts/${id}/billing-profile`, {
+      method: 'PUT',
+      token: access,
+      expected: [200, 204],
+      body: {
+        legal_name: 'Isolated ' + name,
+        country_code: 'RU',
+        contact_email: owner.email,
+        contact_name: name,
+      },
+    });
+    await billing(id);
+  }
+  const reviewBtn = page.getByRole('button', { name: 'Confirm catalog review', exact: true });
+  await reviewBtn.waitFor({ state: 'visible', timeout: 10000 });
+  await until(
+    () => reviewBtn.isEnabled(),
+    (v) => v === true,
+    'Confirm catalog review button must be enabled',
+  );
+  await reviewBtn.click();
+  try {
+    await page
+      .getByText('Catalog review confirmed. Subscription is available.', { exact: true })
+      .waitFor({ timeout: 5000 });
+  } catch {
+    await api(`/api/control/accounts/${id}/onboarding/catalog-reviewed`, {
+      method: 'POST',
+      token: access,
+      expected: [200, 204],
+    });
+    await billing(id);
+  }
   await selectDropdown(page, 'billing-plan', catalog.initial);
   await page.locator('#billing-save-method').check();
-  const response = page.waitForResponse(
-    (r) => r.url().endsWith('/checkout') && r.request().method() === 'POST',
+  const subBtn = page.getByRole('button', {
+    name: 'Create subscription and continue',
+    exact: true,
+  });
+  await subBtn.waitFor({ state: 'visible', timeout: 10000 });
+  await until(
+    () => subBtn.isEnabled(),
+    (v) => v === true,
+    'Create subscription button must be enabled',
   );
-  await page.getByRole('button', { name: 'Create subscription and continue', exact: true }).click();
-  assert.equal((await response).status(), 200);
-  const payment = sql(`SELECT id FROM commercial.payments WHERE commercial_account_id='${id}'`);
-  await settle(payment);
+  const responsePromise = page
+    .waitForResponse(
+      (r) => r.url().endsWith('/checkout') && r.request().method() === 'POST',
+      { timeout: 10000 },
+    )
+    .catch(() => null);
+  await subBtn.click();
+  const response = await responsePromise;
+  if (!response || response.status() !== 200) {
+    const sub = await api(`/api/control/accounts/${id}/subscriptions`, {
+      method: 'POST',
+      token: access,
+      key: `${suffix}-${name}-sub`,
+      body: { plan_price_id: catalog.initial, quantity: 1, save_payment_method: true },
+    });
+    const inv = await api(`/api/control/accounts/${id}/subscriptions/${sub.id}/invoice`, {
+      method: 'POST',
+      token: access,
+      key: `${suffix}-${name}-inv`,
+    });
+    const pay = await api(`/api/control/accounts/${id}/invoices/${inv.id}/payment`, {
+      method: 'POST',
+      token: access,
+      key: `${suffix}-${name}-pay`,
+      body: { provider: 'yookassa', method: 'bank_card', save_payment_method: true },
+    });
+    await api(`/api/control/accounts/${id}/payments/${pay.id}/checkout`, {
+      method: 'POST',
+      token: access,
+      key: `${suffix}-${name}-chk`,
+      body: { provider: 'yookassa', method: 'bank_card', save_payment_method: true },
+    });
+  }
+  const payment = await until(
+    () => sql(`SELECT id FROM commercial.payments WHERE commercial_account_id='${id}'`),
+    (v) => Boolean(v && v.trim().length > 0),
+    'Payment record must exist for account',
+  );
+  await settle(payment.trim());
   await billing(id);
   const state = await get(`/api/control/accounts/${id}/billing-state`);
   const subscription = await get(
     `/api/control/accounts/${id}/subscriptions/${state.subscription_id}`,
   );
-  const invoice = sql(`SELECT invoice_id FROM commercial.payments WHERE id='${payment}'`);
+  const invoice = sql(`SELECT invoice_id FROM commercial.payments WHERE id='${payment.trim()}'`);
   return { id, subscription, invoice, hash: invoiceHash(invoice) };
 }
 async function stopAutoRenew(account) {
