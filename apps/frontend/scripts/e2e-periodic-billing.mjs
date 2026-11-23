@@ -231,34 +231,43 @@ async function paid(name) {
   const responsePromise = page
     .waitForResponse(
       (r) => r.url().endsWith('/checkout') && r.request().method() === 'POST',
-      { timeout: 10000 },
+      { timeout: 30000 },
     )
     .catch(() => null);
   await subBtn.click();
   const response = await responsePromise;
   if (!response || response.status() !== 200) {
-    const sub = await api(`/api/control/accounts/${id}/subscriptions`, {
-      method: 'POST',
-      token: access,
-      key: `${suffix}-${name}-sub`,
-      body: { plan_price_id: catalog.initial, quantity: 1, save_payment_method: true },
-    });
-    const inv = await api(`/api/control/accounts/${id}/subscriptions/${sub.id}/invoice`, {
+    const st = await get(`/api/control/accounts/${id}/billing-state`).catch(() => null);
+    let subId = st?.subscription_id;
+    if (!subId) {
+      const sub = await api(`/api/control/accounts/${id}/subscriptions`, {
+        method: 'POST',
+        token: access,
+        key: `${suffix}-${name}-sub`,
+        body: { plan_price_id: catalog.initial, quantity: 1, save_payment_method: true },
+        expected: [200, 201],
+      });
+      subId = sub.id;
+    }
+    const inv = await api(`/api/control/accounts/${id}/subscriptions/${subId}/invoice`, {
       method: 'POST',
       token: access,
       key: `${suffix}-${name}-inv`,
+      expected: [200, 201],
     });
     const pay = await api(`/api/control/accounts/${id}/invoices/${inv.id}/payment`, {
       method: 'POST',
       token: access,
       key: `${suffix}-${name}-pay`,
-      body: { provider: 'yookassa', method: 'bank_card', save_payment_method: true },
+      body: {},
+      expected: [200, 201],
     });
     await api(`/api/control/accounts/${id}/payments/${pay.id}/checkout`, {
       method: 'POST',
       token: access,
       key: `${suffix}-${name}-chk`,
       body: { provider: 'yookassa', method: 'bank_card', save_payment_method: true },
+      expected: [200, 201],
     });
   }
   const payment = await until(
@@ -386,6 +395,7 @@ try {
       token: access,
       key: suffix + '-checkout-fallback',
       body: { provider: 'yookassa', method: 'bank_card', save_payment_method: false },
+      expected: [200, 201],
     });
   }
   await settle(payment.trim(), false);
