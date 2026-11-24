@@ -16,8 +16,8 @@ case "${plane}" in
     admin_user="${POSTGRES_USER:?POSTGRES_USER is required}"
     admin_password="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
     database="${POSTGRES_TEST_DB:?POSTGRES_TEST_DB is required}"
-    schemas="core,platform_runtime,public,storage,media"
-    if [[ "${EDUCATION_ENABLED:-0}" == "1" ]]; then schemas="${schemas},education"; fi
+    schemas="core,platform_runtime,public"
+    if [[ "${EDUCATION_ENABLED:-0}" == "1" ]]; then schemas="${schemas},education,storage,media"; fi
     runtime_role="${CORE_RUNTIME_ROLE:-platform_core_runtime}"
     runtime_password="${CORE_RUNTIME_PASSWORD:?CORE_RUNTIME_PASSWORD is required}"
     maintenance_role="${CORE_MAINTENANCE_ROLE:-platform_core_maintenance}"

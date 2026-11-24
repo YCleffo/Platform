@@ -24,8 +24,10 @@ if ($command === 'init') {
     }
     // A minimal committed fixture in the explicitly named test database. The
     // production migrations remain the source of DeviceManagement/Storage DDL.
-    $db->getActivePdo()->exec('CREATE SCHEMA IF NOT EXISTS core; CREATE SCHEMA IF NOT EXISTS education;
+    $db->getActivePdo()->exec('CREATE SCHEMA IF NOT EXISTS core; CREATE SCHEMA IF NOT EXISTS education; CREATE SCHEMA IF NOT EXISTS media;
         CREATE TABLE IF NOT EXISTS core.modules(code text PRIMARY KEY,name text,description text,version text,enabled bool);
+        CREATE TABLE IF NOT EXISTS core.organizations(id uuid PRIMARY KEY DEFAULT uuidv7(),name text);
+        CREATE TABLE IF NOT EXISTS core.accounts(id uuid PRIMARY KEY DEFAULT uuidv7(),email text);
         CREATE TABLE IF NOT EXISTS core.persons(id uuid PRIMARY KEY DEFAULT uuidv7(),given_name text,family_name text,middle_name text,display_name text);
         ALTER TABLE core.persons ADD COLUMN IF NOT EXISTS display_name text;
         CREATE TABLE IF NOT EXISTS education.students(id uuid PRIMARY KEY DEFAULT uuidv7(),person_id uuid,organization_id uuid,owner_account_id uuid)');

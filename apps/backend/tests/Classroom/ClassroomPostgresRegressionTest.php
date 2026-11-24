@@ -43,8 +43,10 @@ final class ClassroomPostgresRegressionTest extends TestCase
         self::$db = new Connection(new Driver("pgsql:host=$host;port=$port;dbname=classroom02_test", getenv('DB_USER') ?: '', getenv('DB_PASSWORD') ?: ''), new SchemaCache(new ArrayCache()));
         self::assertSame('classroom02_test', self::$db->createCommand('SELECT current_database()')->queryScalar());
         self::$db->getActivePdo()->exec('CREATE SCHEMA IF NOT EXISTS core; CREATE SCHEMA IF NOT EXISTS education;
-            CREATE SCHEMA IF NOT EXISTS device_management; CREATE SCHEMA IF NOT EXISTS storage;
+            CREATE SCHEMA IF NOT EXISTS device_management; CREATE SCHEMA IF NOT EXISTS storage; CREATE SCHEMA IF NOT EXISTS media;
             CREATE TABLE IF NOT EXISTS core.modules(code text PRIMARY KEY,name text,description text,version text,enabled bool);
+            CREATE TABLE IF NOT EXISTS core.organizations(id uuid PRIMARY KEY DEFAULT uuidv7(),name text);
+            CREATE TABLE IF NOT EXISTS core.accounts(id uuid PRIMARY KEY DEFAULT uuidv7(),email text);
             CREATE TABLE IF NOT EXISTS core.persons(id uuid PRIMARY KEY DEFAULT uuidv7(),given_name text,family_name text,middle_name text,display_name text);
             CREATE TABLE IF NOT EXISTS education.students(id uuid PRIMARY KEY DEFAULT uuidv7(),person_id uuid,organization_id uuid,owner_account_id uuid);
             ALTER TABLE core.persons ADD COLUMN IF NOT EXISTS display_name text');
