@@ -374,13 +374,13 @@ function formatDate(val: string): string {
 }
 
 .edu-parent-analytics__score-pill--good {
-  background: var(--surface-2);
-  color: var(--success);
+  background: var(--success-soft);
+  color: var(--success-text);
 }
 
 .edu-parent-analytics__score-pill--warn {
-  background: var(--surface-2);
-  color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger-text);
 }
 
 .edu-parent-analytics__progress-bar {
@@ -551,7 +551,7 @@ function formatDate(val: string): string {
 }
 
 .edu-parent-analytics__chip-due {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 /* Feedback Grid */
