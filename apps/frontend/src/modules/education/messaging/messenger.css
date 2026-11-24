@@ -676,7 +676,9 @@
   box-shadow: var(--shadow-soft);
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--motion-fast-duration) var(--motion-linear), var(--theme-transition);
+  transition:
+    opacity var(--motion-fast-duration) var(--motion-linear),
+    var(--theme-transition);
   z-index: 2;
 }
 
@@ -739,4 +741,3 @@
   margin: 4px 0;
   max-width: 320px;
 }
-

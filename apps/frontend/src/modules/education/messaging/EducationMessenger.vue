@@ -716,7 +716,13 @@ onScopeDispose(() => {
               </div>
               <div class="edu-messenger__thread-bottom">
                 <span class="edu-messenger__last-msg">
-                  {{ th.lastMessageBody ? (th.lastMessageSenderId === currentPersonId ? `${t('education.you')}: ${th.lastMessageBody}` : th.lastMessageBody) : t('education.noMessagesInThread') }}
+                  {{
+                    th.lastMessageBody
+                      ? th.lastMessageSenderId === currentPersonId
+                        ? `${t('education.you')}: ${th.lastMessageBody}`
+                        : th.lastMessageBody
+                      : t('education.noMessagesInThread')
+                  }}
                 </span>
                 <span
                   v-if="(th.unreadCount || 0) > 0"
