@@ -378,12 +378,6 @@ function charClass(index: number): string[] {
   ];
 }
 
-watch(typed, (val) => {
-  if (status.value === 'running' && text.value.length > 0 && val === text.value) {
-    void finish();
-  }
-});
-
 async function restartSameText(): Promise<void> {
   if (!exercise.value) {
     await start();
@@ -407,19 +401,8 @@ async function restartSameText(): Promise<void> {
   observeBoard();
 }
 
-// Quick restart with Tab + Enter
-function handleKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Tab') {
-    event.preventDefault();
-    if (status.value === 'running' || status.value === 'finished') {
-      void start();
-    }
-  }
-}
-
 onMounted(() => {
   window.addEventListener('resize', scrollCaret);
-  window.addEventListener('keydown', handleKeydown);
 });
 
 onBeforeUnmount(() => {
@@ -428,7 +411,6 @@ onBeforeUnmount(() => {
   stateController?.abort();
   observer?.disconnect();
   window.removeEventListener('resize', scrollCaret);
-  window.removeEventListener('keydown', handleKeydown);
 });
 </script>
 
@@ -588,6 +570,7 @@ onBeforeUnmount(() => {
         autocapitalize="off"
         :spellcheck="false"
         :lang="exercise.exercise.language"
+        @keydown.tab.prevent="void start()"
         @input="onInput"
         @compositionstart="composing = true"
         @compositionend="compositionEnd"

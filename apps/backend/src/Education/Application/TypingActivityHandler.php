@@ -49,9 +49,8 @@ final class TypingActivityHandler implements ActivityPluginInterface
     {
         return [
             'language' => 'en',
-            'durationSeconds' => 15,
+            'durationSeconds' => 30,
             'mode' => 'words',
-            'wordCount' => 25,
             'difficulty' => 1,
             'minAccuracy' => 0,
             'targetWpm' => 0,
@@ -100,8 +99,8 @@ final class TypingActivityHandler implements ActivityPluginInterface
         }
         $random = new \Random\Randomizer();
 
-        if ($mode === 'words') {
-            $wordCount = isset($config['wordCount']) && is_int($config['wordCount']) ? $config['wordCount'] : 25;
+        if ($mode === 'words' && isset($config['wordCount']) && is_int($config['wordCount'])) {
+            $wordCount = $config['wordCount'];
             $allWords = [];
             foreach ($texts as $chunk) {
                 $chunkStr = is_string($chunk) ? trim($chunk) : '';
@@ -121,7 +120,7 @@ final class TypingActivityHandler implements ActivityPluginInterface
             return [
                 'text' => implode(' ', $selected),
                 'version' => (int) ($set['version'] ?? TypingExerciseSets::VERSION),
-                'setCode' => $set['code'] ?? 'typing-v3',
+                'setCode' => $set['code'] ?? 'typing-v2',
             ];
         }
 
@@ -141,7 +140,7 @@ final class TypingActivityHandler implements ActivityPluginInterface
         return [
             'text' => mb_substr(implode(' ', $parts), 0, $maximum - 32, 'UTF-8'),
             'version' => (int) ($set['version'] ?? TypingExerciseSets::VERSION),
-            'setCode' => $set['code'] ?? 'typing-v3',
+            'setCode' => $set['code'] ?? 'typing-v2',
         ];
     }
 
