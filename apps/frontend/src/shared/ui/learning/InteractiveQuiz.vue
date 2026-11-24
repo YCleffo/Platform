@@ -439,12 +439,12 @@ const canSubmit = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background-color: var(--surface-primary, #1e222b);
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-card-m, 12px);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card-m);
   padding: 16px;
   box-sizing: border-box;
-  color: var(--text-primary, #fff);
+  color: var(--text-1);
   width: 100%;
 }
 
@@ -452,7 +452,7 @@ const canSubmit = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border-bottom: 1px solid var(--border-default, rgba(255, 255, 255, 0.1));
+  border-bottom: 1px solid var(--border);
   padding-bottom: 12px;
 }
 
@@ -465,28 +465,28 @@ const canSubmit = computed(() => {
 
 .app-quiz__title {
   margin: 0;
-  font-size: var(--type-h3-size, 16px);
-  line-height: var(--type-h3-line, 22px);
-  font-weight: var(--type-h3-weight, 600);
-  color: var(--text-primary, #fff);
+  font-size: var(--type-h3-size);
+  line-height: var(--type-h3-line);
+  font-weight: var(--type-h3-weight);
+  color: var(--text-1);
 }
 
 .app-quiz__badge {
-  background: var(--surface-secondary, rgba(255, 255, 255, 0.08));
-  border-radius: var(--radius-card-s, 4px);
+  background: var(--surface-2);
+  border-radius: var(--radius-card-s);
   padding: 2px 8px;
-  font-size: var(--type-detail-size, 11px);
-  line-height: var(--type-detail-line, 14px);
-  font-weight: var(--type-detail-weight, 500);
-  color: var(--accent, #00d2ff);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-small-emphasis-weight);
+  color: var(--accent);
 }
 
 .app-quiz__desc {
   margin: 0;
-  font-size: var(--type-body-caption-size, 13px);
-  line-height: var(--type-body-caption-line, 18px);
-  font-weight: var(--type-body-caption-weight, 400);
-  color: var(--text-secondary, #9ba3af);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
+  color: var(--text-2);
 }
 
 .app-quiz__questions {
@@ -499,19 +499,19 @@ const canSubmit = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: var(--surface-secondary, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-card-m, 8px);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card-m);
   padding: 12px;
   transition: border-color var(--theme-transition);
 }
 
 .app-quiz__card--correct {
-  border-color: var(--status-success, #10b981);
+  border-color: var(--success);
 }
 
 .app-quiz__card--incorrect {
-  border-color: var(--status-danger, #ef4444);
+  border-color: var(--danger);
 }
 
 .app-quiz__q-header {
@@ -521,26 +521,27 @@ const canSubmit = computed(() => {
 }
 
 .app-quiz__q-number {
-  font-size: var(--type-detail-size, 12px);
-  line-height: var(--type-detail-line, 16px);
-  font-weight: var(--type-h3-weight, 600);
-  color: var(--accent, #00d2ff);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-h3-weight);
+  color: var(--accent);
   flex-shrink: 0;
 }
 
 .app-quiz__prompt {
   margin: 0;
   flex: 1;
-  font-size: var(--type-body-caption-size, 14px);
-  line-height: var(--type-body-caption-line, 20px);
-  font-weight: var(--type-body-caption-weight, 500);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-small-emphasis-weight);
+  color: var(--text-1);
 }
 
 .app-quiz__q-type {
-  font-size: var(--type-detail-size, 11px);
-  line-height: var(--type-detail-line, 14px);
-  font-weight: var(--type-detail-weight, 400);
-  color: var(--text-secondary, #9ba3af);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
+  color: var(--text-2);
   flex-shrink: 0;
 }
 
@@ -555,10 +556,10 @@ const canSubmit = computed(() => {
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  background: var(--surface-primary, #181b22);
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-card-s, 6px);
-  color: var(--text-primary, #fff);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card-s);
+  color: var(--text-1);
   cursor: pointer;
   text-align: left;
   transition:
@@ -567,58 +568,59 @@ const canSubmit = computed(() => {
 }
 
 .app-quiz__option:hover:not(:disabled) {
-  background: var(--surface-tertiary, rgba(255, 255, 255, 0.08));
-  border-color: var(--accent, #00d2ff);
+  background: var(--surface-2);
+  border-color: var(--accent);
 }
 
 .app-quiz__option--selected {
-  border-color: var(--accent, #00d2ff);
-  background: rgba(0, 210, 255, 0.08);
+  border-color: var(--accent);
+  background: var(--surface-2);
 }
 
 .app-quiz__option--correct {
-  border-color: var(--status-success, #10b981) !important;
-  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: var(--success) !important;
+  background: var(--surface-2) !important;
 }
 
 .app-quiz__option--wrong {
-  border-color: var(--status-danger, #ef4444) !important;
-  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: var(--danger) !important;
+  background: var(--surface-2) !important;
 }
 
 .app-quiz__indicator {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid var(--border-strong, #6b7280);
+  border: 2px solid var(--border);
   flex-shrink: 0;
   transition: border-color var(--theme-transition);
 }
 
 .app-quiz__option--selected .app-quiz__indicator {
-  border-color: var(--accent, #00d2ff);
-  background-color: var(--accent, #00d2ff);
+  border-color: var(--accent);
+  background-color: var(--accent);
 }
 
 .app-quiz__checkbox-indicator {
   width: 14px;
   height: 14px;
   border-radius: 3px;
-  border: 2px solid var(--border-strong, #6b7280);
+  border: 2px solid var(--border);
   flex-shrink: 0;
   transition: border-color var(--theme-transition);
 }
 
 .app-quiz__option--selected .app-quiz__checkbox-indicator {
-  border-color: var(--accent, #00d2ff);
-  background-color: var(--accent, #00d2ff);
+  border-color: var(--accent);
+  background-color: var(--accent);
 }
 
 .app-quiz__opt-text {
-  font-size: var(--type-body-caption-size, 13px);
-  line-height: var(--type-body-caption-line, 18px);
-  font-weight: var(--type-body-caption-weight, 400);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
   flex: 1;
+  color: var(--text-1);
 }
 
 /* Ordering styles */
@@ -633,12 +635,13 @@ const canSubmit = computed(() => {
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  background: var(--surface-primary, #181b22);
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.1));
-  border-radius: var(--radius-card-s, 6px);
-  color: var(--text-primary, #fff);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card-s);
+  color: var(--text-1);
   cursor: grab;
   user-select: none;
+  -webkit-user-select: none;
   transition:
     background-color var(--theme-transition),
     border-color var(--theme-transition);
@@ -649,13 +652,11 @@ const canSubmit = computed(() => {
 }
 
 .app-quiz__order-item--correct {
-  border-color: var(--status-success, #10b981);
-  background: rgba(16, 185, 129, 0.12);
+  border-color: var(--success);
 }
 
 .app-quiz__order-item--wrong {
-  border-color: var(--status-danger, #ef4444);
-  background: rgba(239, 68, 68, 0.12);
+  border-color: var(--danger);
 }
 
 .app-quiz__order-pos {
@@ -665,17 +666,18 @@ const canSubmit = computed(() => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--surface-secondary, rgba(255, 255, 255, 0.1));
-  font-size: var(--type-detail-size, 11px);
-  line-height: var(--type-detail-line, 14px);
-  font-weight: var(--type-detail-weight, 600);
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-h3-weight);
 }
 
 .app-quiz__order-handle {
-  color: var(--text-secondary, #9ba3af);
-  font-size: var(--type-body-caption-size, 14px);
-  line-height: var(--type-body-caption-line, 18px);
-  font-weight: var(--type-body-caption-weight, 400);
+  color: var(--text-2);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
 }
 
 .app-quiz__order-actions {
@@ -684,20 +686,20 @@ const canSubmit = computed(() => {
 }
 
 .app-quiz__arrow-btn {
-  background: var(--surface-secondary, rgba(255, 255, 255, 0.08));
-  border: none;
-  border-radius: var(--radius-card-s, 4px);
-  color: var(--text-primary, #fff);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card-s);
+  color: var(--text-1);
   cursor: pointer;
   padding: 2px 6px;
-  font-size: var(--type-detail-size, 10px);
-  line-height: var(--type-detail-line, 14px);
-  font-weight: var(--type-detail-weight, 400);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
   transition: background-color var(--theme-transition);
 }
 
 .app-quiz__arrow-btn:hover:not(:disabled) {
-  background: var(--surface-tertiary, rgba(255, 255, 255, 0.2));
+  background: var(--surface);
 }
 
 .app-quiz__arrow-btn:disabled {
@@ -708,13 +710,13 @@ const canSubmit = computed(() => {
 .app-quiz__explanation {
   margin-top: 6px;
   padding: 8px 12px;
-  border-radius: var(--radius-card-s, 6px);
-  background: rgba(0, 210, 255, 0.06);
-  border-left: 3px solid var(--accent, #00d2ff);
-  font-size: var(--type-body-caption-size, 12px);
-  line-height: var(--type-body-caption-line, 16px);
-  font-weight: var(--type-body-caption-weight, 400);
-  color: var(--text-secondary, #9ba3af);
+  border-radius: var(--radius-card-s);
+  background: var(--surface-2);
+  border-left: 3px solid var(--accent);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
+  color: var(--text-2);
 }
 
 .app-quiz__result-banner {
@@ -722,27 +724,30 @@ const canSubmit = computed(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-radius: var(--radius-card-s, 8px);
+  border-radius: var(--radius-card-s);
   gap: 12px;
 }
 
 .app-quiz__result-banner--pass {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid var(--status-success, #10b981);
+  background: var(--surface-2);
+  border: 1px solid var(--success);
+  color: var(--text-1);
 }
 
 .app-quiz__result-banner--fail {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid var(--status-danger, #ef4444);
+  background: var(--surface-2);
+  border: 1px solid var(--danger);
+  color: var(--text-1);
 }
 
 .app-quiz__result-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: var(--type-body-caption-size, 13px);
-  line-height: var(--type-body-caption-line, 18px);
-  font-weight: var(--type-body-caption-weight, 400);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
+  color: var(--text-1);
 }
 
 .app-quiz__actions {
@@ -752,11 +757,11 @@ const canSubmit = computed(() => {
 
 .app-quiz__btn {
   border: none;
-  border-radius: var(--radius-card-s, 6px);
+  border-radius: var(--radius-card-s);
   padding: 8px 16px;
-  font-size: var(--type-body-caption-size, 13px);
-  line-height: var(--type-body-caption-line, 18px);
-  font-weight: var(--type-body-caption-weight, 500);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-small-emphasis-weight);
   cursor: pointer;
   transition:
     background-color var(--theme-transition),
@@ -764,8 +769,8 @@ const canSubmit = computed(() => {
 }
 
 .app-quiz__btn--submit {
-  background-color: var(--accent, #00d2ff);
-  color: #000;
+  background-color: var(--accent);
+  color: var(--color-white);
 }
 
 .app-quiz__btn--submit:hover:not(:disabled) {
@@ -779,11 +784,12 @@ const canSubmit = computed(() => {
 }
 
 .app-quiz__btn--retry {
-  background-color: var(--surface-tertiary, rgba(255, 255, 255, 0.15));
-  color: #fff;
+  background-color: var(--surface-2);
+  color: var(--text-1);
+  border: 1px solid var(--border);
 }
 
 .app-quiz__btn--retry:hover {
-  background-color: var(--surface-tertiary, rgba(255, 255, 255, 0.25));
+  background-color: var(--surface);
 }
 </style>

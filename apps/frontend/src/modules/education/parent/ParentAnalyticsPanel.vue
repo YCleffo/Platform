@@ -202,7 +202,7 @@ function formatDate(val: string): string {
               y1="64"
               x2="304"
               y2="64"
-              stroke="var(--border-default, rgba(255,255,255,0.1))"
+              stroke="var(--border)"
               stroke-width="1"
             />
             <!-- Trend line -->
@@ -210,7 +210,7 @@ function formatDate(val: string): string {
               v-if="trendPoints.length > 1"
               :points="trendPolyline"
               fill="none"
-              stroke="var(--accent, #00d2ff)"
+              stroke="var(--accent)"
               stroke-width="2.5"
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -222,7 +222,7 @@ function formatDate(val: string): string {
               :cx="p.x"
               :cy="p.y"
               r="4"
-              fill="var(--accent, #00d2ff)"
+              fill="var(--accent)"
               class="edu-parent-analytics__chart-dot"
             >
               <title>{{ p.item.label }}: {{ p.item.score }} ({{ formatDate(p.item.date) }})</title>
@@ -347,7 +347,6 @@ function formatDate(val: string): string {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: var(--surface-primary, #1e222b);
 }
 
 .edu-parent-analytics__card-head {
@@ -359,28 +358,29 @@ function formatDate(val: string): string {
 
 .edu-parent-analytics__title {
   margin: 0;
-  font-size: var(--type-h3-size, 15px);
-  line-height: var(--type-h3-line, 20px);
-  font-weight: var(--type-h3-weight, 600);
-  color: var(--text-primary, #fff);
+  font-size: var(--type-h3-size);
+  line-height: var(--type-h3-line);
+  font-weight: var(--type-h3-weight);
+  color: var(--text-1);
 }
 
 .edu-parent-analytics__score-pill {
   padding: 2px 8px;
-  border-radius: var(--radius-card-s, 6px);
-  font-size: var(--type-detail-size, 12px);
-  line-height: var(--type-detail-line, 16px);
-  font-weight: var(--type-h3-weight, 600);
+  border-radius: var(--radius-card-s);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-small-emphasis-weight);
+  border: 1px solid var(--border);
 }
 
 .edu-parent-analytics__score-pill--good {
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--status-success, #10b981);
+  background: var(--surface-2);
+  color: var(--success);
 }
 
 .edu-parent-analytics__score-pill--warn {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--status-danger, #ef4444);
+  background: var(--surface-2);
+  color: var(--danger);
 }
 
 .edu-parent-analytics__progress-bar {
@@ -388,7 +388,7 @@ function formatDate(val: string): string {
   height: 8px;
   border-radius: 4px;
   overflow: hidden;
-  background: var(--surface-secondary, rgba(255, 255, 255, 0.08));
+  background: var(--surface-2);
 }
 
 .edu-parent-analytics__bar-fill {
@@ -397,21 +397,21 @@ function formatDate(val: string): string {
 }
 
 .edu-parent-analytics__bar-fill--present {
-  background: var(--status-success, #10b981);
+  background: var(--success);
 }
 
 .edu-parent-analytics__bar-fill--absent {
-  background: var(--status-danger, #ef4444);
+  background: var(--danger);
 }
 
 .edu-parent-analytics__legend {
   display: flex;
   align-items: center;
   gap: 14px;
-  font-size: var(--type-detail-size, 11px);
-  line-height: var(--type-detail-line, 14px);
-  font-weight: var(--type-detail-weight, 400);
-  color: var(--text-secondary, #9ba3af);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
+  color: var(--text-2);
 }
 
 .edu-parent-analytics__legend-item {
@@ -427,15 +427,15 @@ function formatDate(val: string): string {
 }
 
 .edu-parent-analytics__dot--present {
-  background: var(--status-success, #10b981);
+  background: var(--success);
 }
 
 .edu-parent-analytics__dot--absent {
-  background: var(--status-danger, #ef4444);
+  background: var(--danger);
 }
 
 .edu-parent-analytics__dot--total {
-  background: var(--text-secondary, #9ba3af);
+  background: var(--text-3);
 }
 
 .edu-parent-analytics__chart-wrap {
@@ -459,18 +459,18 @@ function formatDate(val: string): string {
 
 .edu-parent-analytics__empty-hint {
   margin: 0;
-  font-size: var(--type-detail-size, 12px);
-  line-height: var(--type-detail-line, 16px);
-  font-weight: var(--type-detail-weight, 400);
-  color: var(--text-secondary, #9ba3af);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
+  color: var(--text-2);
 }
 
 .edu-parent-analytics__subtle-note {
   margin: 0;
-  font-size: var(--type-detail-size, 11px);
-  line-height: var(--type-detail-line, 14px);
-  font-weight: var(--type-detail-weight, 400);
-  color: var(--text-secondary, #9ba3af);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
+  color: var(--text-2);
 }
 
 /* Debt Banner */
@@ -479,18 +479,19 @@ function formatDate(val: string): string {
   flex-direction: column;
   gap: 10px;
   padding: 12px 16px;
-  border-radius: var(--radius-card-m, 10px);
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-card-m);
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .edu-parent-analytics__debt-banner--alert {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: var(--surface-2);
+  border-color: var(--danger);
 }
 
 .edu-parent-analytics__debt-banner--ok {
-  background: rgba(16, 185, 129, 0.08);
-  border-color: rgba(16, 185, 129, 0.3);
+  background: var(--surface-2);
+  border-color: var(--border);
 }
 
 .edu-parent-analytics__debt-content {
@@ -500,9 +501,9 @@ function formatDate(val: string): string {
 }
 
 .edu-parent-analytics__debt-icon {
-  font-size: var(--type-h3-size, 18px);
-  line-height: var(--type-h3-line, 22px);
-  font-weight: var(--type-h3-weight, 400);
+  font-size: var(--type-h3-size);
+  line-height: var(--type-h3-line);
+  font-weight: var(--type-h3-weight);
 }
 
 .edu-parent-analytics__debt-info {
@@ -512,16 +513,17 @@ function formatDate(val: string): string {
 }
 
 .edu-parent-analytics__debt-info strong {
-  font-size: var(--type-body-caption-size, 13px);
-  line-height: var(--type-body-caption-line, 18px);
-  font-weight: var(--type-h3-weight, 600);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-small-emphasis-weight);
+  color: var(--text-1);
 }
 
 .edu-parent-analytics__debt-desc {
-  font-size: var(--type-detail-size, 12px);
-  line-height: var(--type-detail-line, 16px);
-  font-weight: var(--type-detail-weight, 400);
-  color: var(--text-secondary, #9ba3af);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
+  color: var(--text-2);
 }
 
 .edu-parent-analytics__debt-chips {
@@ -534,22 +536,22 @@ function formatDate(val: string): string {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--surface-primary, #1e222b);
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.1));
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   padding: 4px 8px;
-  border-radius: var(--radius-card-s, 6px);
-  font-size: var(--type-detail-size, 11px);
-  line-height: var(--type-detail-line, 14px);
-  font-weight: var(--type-detail-weight, 400);
+  border-radius: var(--radius-card-s);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
 }
 
 .edu-parent-analytics__chip-title {
-  color: var(--text-primary, #fff);
-  font-weight: var(--type-detail-weight, 500);
+  color: var(--text-1);
+  font-weight: var(--type-body-small-emphasis-weight);
 }
 
 .edu-parent-analytics__chip-due {
-  color: var(--status-danger, #ef4444);
+  color: var(--danger);
 }
 
 /* Feedback Grid */
@@ -565,9 +567,9 @@ function formatDate(val: string): string {
   flex-direction: column;
   gap: 6px;
   padding: 10px;
-  background: var(--surface-secondary, rgba(255, 255, 255, 0.03));
-  border-radius: var(--radius-card-s, 6px);
-  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.08));
+  background: var(--surface-2);
+  border-radius: var(--radius-card-s);
+  border: 1px solid var(--border);
 }
 
 .edu-parent-analytics__feedback-head {
@@ -578,25 +580,25 @@ function formatDate(val: string): string {
 }
 
 .edu-parent-analytics__feedback-subject {
-  font-size: var(--type-body-caption-size, 13px);
-  line-height: var(--type-body-caption-line, 18px);
-  font-weight: var(--type-h3-weight, 600);
-  color: var(--text-primary, #fff);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-small-emphasis-weight);
+  color: var(--text-1);
 }
 
 .edu-parent-analytics__feedback-quote {
   margin: 0;
   font-style: italic;
-  font-size: var(--type-detail-size, 12px);
-  line-height: var(--type-detail-line, 16px);
-  font-weight: var(--type-detail-weight, 400);
-  color: var(--text-secondary, #9ba3af);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
+  color: var(--text-2);
 }
 
 .edu-parent-analytics__feedback-date {
-  font-size: var(--type-detail-size, 10px);
-  line-height: var(--type-detail-line, 14px);
-  font-weight: var(--type-detail-weight, 400);
-  color: var(--text-secondary, #6b7280);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-caption-weight);
+  color: var(--text-2);
 }
 </style>
