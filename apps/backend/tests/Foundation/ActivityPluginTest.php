@@ -131,17 +131,50 @@ final class ActivityPluginTest extends TestCase
 
         // Custom dynamic plugin
         $customPlugin = new class implements ActivityPluginInterface {
-            public function code(): string { return 'custom-plugin'; }
-            public function version(): string { return '1.2.0'; }
-            public function title(): string { return 'Custom Plugin'; }
-            public function description(): string { return 'Custom description'; }
-            public function configSchema(): array { return ['type' => 'object']; }
-            public function defaultConfig(): array { return ['enabled' => true]; }
-            public function validateConfig(array $config): array { return $config; }
-            public function createExercise(array $config, ?array $set = null): array { return ['items' => []]; }
-            public function publicExercise(array $attempt): array { return ['items' => []]; }
-            public function validateState(array $attempt, array $state): array { return $state; }
-            public function evaluate(array $attempt, array $input): array { return ['type' => 'custom', 'metrics' => ['score' => 100]]; }
+            public function code(): string
+            {
+                return 'custom-plugin';
+            }
+            public function version(): string
+            {
+                return '1.2.0';
+            }
+            public function title(): string
+            {
+                return 'Custom Plugin';
+            }
+            public function description(): string
+            {
+                return 'Custom description';
+            }
+            public function configSchema(): array
+            {
+                return ['type' => 'object'];
+            }
+            public function defaultConfig(): array
+            {
+                return ['enabled' => true];
+            }
+            public function validateConfig(array $config): array
+            {
+                return $config;
+            }
+            public function createExercise(array $config, ?array $set = null): array
+            {
+                return ['items' => []];
+            }
+            public function publicExercise(array $attempt): array
+            {
+                return ['items' => []];
+            }
+            public function validateState(array $attempt, array $state): array
+            {
+                return $state;
+            }
+            public function evaluate(array $attempt, array $input): array
+            {
+                return ['type' => 'custom', 'metrics' => ['score' => 100]];
+            }
         };
 
         $registry->register('custom-plugin', $customPlugin);

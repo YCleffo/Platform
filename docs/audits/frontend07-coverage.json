@@ -56,6 +56,7 @@
     "core-rbac.yaml",
     "device-management.yaml",
     "education-activities.yaml",
+    "education-assessments.yaml",
     "education-parent.yaml",
     "education.yaml",
     "homework.yaml",
@@ -96,7 +97,7 @@
     "Education": {
       "FULL": 0,
       "PARTIAL": 155,
-      "MISSING": 0,
+      "MISSING": 16,
       "NOT_UI_REQUIRED": 8,
       "ALTERNATIVE_VERIFIED": 0,
       "INTERNAL": 0,
@@ -116,8 +117,8 @@
   },
   "contractOnly": [],
   "static": {
-    "registered": 470,
-    "hasContract": 405,
+    "registered": 486,
+    "hasContract": 421,
     "hasClient": 416,
     "hasRoutedConsumer": 392
   },
@@ -15115,7 +15116,7 @@
         },
         {
           "file": "apps/frontend/src/modules/education/homework/StudentHomeworkView.vue",
-          "line": 156,
+          "line": 173,
           "routes": [
             "education-student-homework-detail"
           ]
@@ -22388,6 +22389,60 @@
     },
     {
       "plane": "Education",
+      "endpoint": "DELETE /api/education/question-bank/{id}",
+      "backend": {
+        "name": "education/assessment/delete_question_bank_item",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "delete_question_bank_item",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Teacher",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/question-bank/{id}",
+          "operationId": "education_question_bank_delete",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
       "endpoint": "DELETE /api/education/student/homework/{id}/files/{fileId}",
       "backend": {
         "name": "education/homework-integration/unlink",
@@ -22621,6 +22676,222 @@
         "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
+      "endpoint": "GET /api/education/assessments",
+      "backend": {
+        "name": "education/assessment/assessments",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "assessments",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Teacher",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/assessments",
+          "operationId": "education_assessments_list",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
+      "endpoint": "GET /api/education/assessments/{id}",
+      "backend": {
+        "name": "education/assessment/assessment_detail",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "assessment_detail",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Teacher",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/assessments/{id}",
+          "operationId": "education_assessment_get",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
+      "endpoint": "GET /api/education/assessments/{id}/attempts",
+      "backend": {
+        "name": "education/assessment/assessment_attempts_list",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "assessment_attempts_list",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Teacher",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/assessments/{id}/attempts",
+          "operationId": "education_assessment_attempts_list",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
+      "endpoint": "GET /api/education/assessments/{id}/versions",
+      "backend": {
+        "name": "education/assessment/assessment_versions",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "assessment_versions",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Teacher",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/assessments/{id}/versions",
+          "operationId": "education_assessment_versions",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
         "userActionReachable": "NOT_VERIFIED",
         "realBrowserE2ePassed": "NOT_VERIFIED",
         "persistentBackendResultVerified": "NOT_VERIFIED",
@@ -26985,6 +27256,60 @@
     },
     {
       "plane": "Education",
+      "endpoint": "GET /api/education/question-bank",
+      "backend": {
+        "name": "education/assessment/question_bank",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "question_bank",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Teacher",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/question-bank",
+          "operationId": "education_question_bank_list",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
       "endpoint": "GET /api/education/schedule",
       "backend": {
         "name": "education/schedule",
@@ -27407,6 +27732,114 @@
     },
     {
       "plane": "Education",
+      "endpoint": "GET /api/education/student/assessment-attempts/{id}",
+      "backend": {
+        "name": "education/assessment/student_assessment_attempt",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "student_assessment_attempt",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Student",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/student/assessment-attempts/{id}",
+          "operationId": "education_student_assessment_attempt_get",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
+      "endpoint": "GET /api/education/student/assessments",
+      "backend": {
+        "name": "education/assessment/student_assessments",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "student_assessments",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Student",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/student/assessments",
+          "operationId": "education_student_assessments_list",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
       "endpoint": "GET /api/education/student/attempts",
       "backend": {
         "name": "education/student_attempt_history",
@@ -27537,14 +27970,14 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/student/LogicTrainer.vue",
-          "line": 132,
+          "line": 134,
           "routes": [
             "education-student-logic"
           ]
         },
         {
           "file": "apps/frontend/src/modules/education/student/TypingTrainer.vue",
-          "line": 196,
+          "line": 274,
           "routes": [
             "education-student-typing"
           ]
@@ -27979,7 +28412,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/homework/StudentHomeworkView.vue",
-          "line": 23,
+          "line": 25,
           "routes": [
             "education-student-homework-detail"
           ]
@@ -29952,6 +30385,168 @@
         "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
+      "endpoint": "POST /api/education/assessment-attempts/{id}/review",
+      "backend": {
+        "name": "education/assessment/assessment_attempt_review",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "assessment_attempt_review",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Teacher",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/assessment-attempts/{id}/review",
+          "operationId": "education_assessment_attempt_review",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
+      "endpoint": "POST /api/education/assessments",
+      "backend": {
+        "name": "education/assessment/assessments",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "assessments",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Teacher",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/assessments",
+          "operationId": "education_assessments_create",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
+      "endpoint": "POST /api/education/assessments/{id}/publish",
+      "backend": {
+        "name": "education/assessment/publish_assessment",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "publish_assessment",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Teacher",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/assessments/{id}/publish",
+          "operationId": "education_assessment_publish",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
         "userActionReachable": "NOT_VERIFIED",
         "realBrowserE2ePassed": "NOT_VERIFIED",
         "persistentBackendResultVerified": "NOT_VERIFIED",
@@ -32511,6 +33106,60 @@
     },
     {
       "plane": "Education",
+      "endpoint": "POST /api/education/question-bank",
+      "backend": {
+        "name": "education/assessment/question_bank",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "question_bank",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Teacher",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/question-bank",
+          "operationId": "education_question_bank_create",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
       "endpoint": "POST /api/education/student-activate",
       "backend": {
         "name": "education/activate_invite",
@@ -32644,7 +33293,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/student/TypingTrainer.vue",
-          "line": 123,
+          "line": 199,
           "routes": [
             "education-student-typing"
           ]
@@ -32674,6 +33323,114 @@
         "contractDocumented": true,
         "clientCallExists": true,
         "routedUiConsumerExists": true,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
+      "endpoint": "POST /api/education/student/assessment-attempts/{id}/submit",
+      "backend": {
+        "name": "education/assessment/student_submit_assessment_attempt",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "student_submit_assessment_attempt",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Student",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/student/assessment-attempts/{id}/submit",
+          "operationId": "education_student_assessment_attempt_submit",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
+      "endpoint": "POST /api/education/student/assessments/{id}/start",
+      "backend": {
+        "name": "education/assessment/student_start_assessment",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "student_start_assessment",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Student",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/student/assessments/{id}/start",
+          "operationId": "education_student_assessment_start",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
         "userActionReachable": "NOT_VERIFIED",
         "realBrowserE2ePassed": "NOT_VERIFIED",
         "persistentBackendResultVerified": "NOT_VERIFIED",
@@ -32817,14 +33574,14 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/student/LogicTrainer.vue",
-          "line": 115,
+          "line": 117,
           "routes": [
             "education-student-logic"
           ]
         },
         {
           "file": "apps/frontend/src/modules/education/student/TypingTrainer.vue",
-          "line": 122,
+          "line": 198,
           "routes": [
             "education-student-typing"
           ]
@@ -33066,7 +33823,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/homework/StudentHomeworkView.vue",
-          "line": 156,
+          "line": 173,
           "routes": [
             "education-student-homework-detail"
           ]
@@ -34560,6 +35317,60 @@
     },
     {
       "plane": "Education",
+      "endpoint": "PUT /api/education/assessments/{id}",
+      "backend": {
+        "name": "education/assessment/assessment_detail",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "assessment_detail",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Teacher",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/assessments/{id}",
+          "operationId": "education_assessment_update",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
       "endpoint": "PUT /api/education/attempts/{id}/revoke",
       "backend": {
         "name": "education/revoke_activity_attempt",
@@ -35559,6 +36370,60 @@
     },
     {
       "plane": "Education",
+      "endpoint": "PUT /api/education/student/assessment-attempts/{id}/save",
+      "backend": {
+        "name": "education/assessment/student_save_assessment_attempt",
+        "action": "App\\Education\\Api\\AssessmentAction",
+        "operation": "student_save_assessment_attempt",
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "permission": {
+        "context": [
+          "RequireAuthentication",
+          "Operation-specific Education policy and organization/relationship scope"
+        ],
+        "permissions": [],
+        "source": "apps/backend/src/Education/Api/AssessmentAction.php"
+      },
+      "audience": "Student",
+      "contracts": [
+        {
+          "file": "education-assessments.yaml",
+          "path": "/student/assessment-attempts/{id}/save",
+          "operationId": "education_student_assessment_attempt_save",
+          "security": [
+            {
+              "CoreBearer": []
+            }
+          ],
+          "deprecated": false
+        }
+      ],
+      "frontendApi": [],
+      "ui": [],
+      "coverage": "MISSING",
+      "reason": "No matching client call in the static scan; dynamic paths and intentional workflow alternatives require review.",
+      "test": [],
+      "priority": {
+        "level": "P1",
+        "reason": "Existing supporting workflow. Prefer role-level verification before expanding UI."
+      },
+      "previousCoverage": null,
+      "evidenceStages": {
+        "backendRouteExists": true,
+        "contractDocumented": true,
+        "clientCallExists": false,
+        "routedUiConsumerExists": false,
+        "userActionReachable": "NOT_VERIFIED",
+        "realBrowserE2ePassed": "NOT_VERIFIED",
+        "persistentBackendResultVerified": "NOT_VERIFIED",
+        "securityBoundaryVerified": "NOT_VERIFIED"
+      },
+      "expectedScenarios": [],
+      "evidence": []
+    },
+    {
+      "plane": "Education",
       "endpoint": "PUT /api/education/student/attempts/{id}/finish",
       "backend": {
         "name": "education/student_finish_attempt",
@@ -35618,14 +36483,14 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/student/LogicTrainer.vue",
-          "line": 184,
+          "line": 186,
           "routes": [
             "education-student-logic"
           ]
         },
         {
           "file": "apps/frontend/src/modules/education/student/TypingTrainer.vue",
-          "line": 215,
+          "line": 293,
           "routes": [
             "education-student-typing"
           ]
@@ -35713,14 +36578,14 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/student/LogicTrainer.vue",
-          "line": 153,
+          "line": 155,
           "routes": [
             "education-student-logic"
           ]
         },
         {
           "file": "apps/frontend/src/modules/education/student/TypingTrainer.vue",
-          "line": 187,
+          "line": 265,
           "routes": [
             "education-student-typing"
           ]
@@ -35813,7 +36678,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/homework/StudentHomeworkView.vue",
-          "line": 143,
+          "line": 160,
           "routes": [
             "education-student-homework-detail"
           ]

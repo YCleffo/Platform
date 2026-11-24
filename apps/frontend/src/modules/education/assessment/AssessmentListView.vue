@@ -129,7 +129,10 @@ onMounted(() => {
           type="button"
           class="edu-btn edu-btn--sm"
           :class="statusFilter === s ? 'edu-btn--primary' : 'edu-btn--secondary'"
-          @click="statusFilter = s; loadAssessments()"
+          @click="
+            statusFilter = s;
+            loadAssessments();
+          "
         >
           {{ s === '' ? t('education.wholeGroup') : s }}
         </button>
@@ -183,7 +186,9 @@ onMounted(() => {
         </header>
 
         <h2 class="edu-assessment-card__title">{{ item.title }}</h2>
-        <p class="edu-assessment-card__desc">{{ item.description || t('education.assessmentStudio') }}</p>
+        <p class="edu-assessment-card__desc">
+          {{ item.description || t('education.assessmentStudio') }}
+        </p>
 
         <div class="edu-assessment-card__meta">
           <div class="edu-assessment-stat">
@@ -195,7 +200,9 @@ onMounted(() => {
             <span class="edu-assessment-stat__label">{{ t('education.completedAttempts') }}</span>
           </div>
           <div class="edu-assessment-stat">
-            <span class="edu-assessment-stat__val">{{ item.avgScore !== null ? `${item.avgScore}%` : '—' }}</span>
+            <span class="edu-assessment-stat__val">
+              {{ item.avgScore !== null ? `${item.avgScore}%` : '—' }}
+            </span>
             <span class="edu-assessment-stat__label">{{ t('education.averageAccuracy') }}</span>
           </div>
         </div>
@@ -629,4 +636,3 @@ onMounted(() => {
   color: var(--text-2);
 }
 </style>
-

@@ -7,9 +7,7 @@ namespace App\Tests\Foundation;
 use App\Education\Activity\ActivityPluginInterface;
 use App\Education\Application\ActivityHandlerRegistry;
 use App\Education\Application\AssessmentActivityHandler;
-use App\Education\Application\AssessmentService;
 use App\Education\Application\EducationError;
-use App\Education\Application\Scope;
 use PHPUnit\Framework\TestCase;
 
 final class AssessmentDomainTest extends TestCase
