@@ -76,6 +76,8 @@ interface EducationStore
     /** @return list<array<string,mixed>> */
     public function colleagues(Scope $scope): array;
     /** @return list<array<string,mixed>> */
+    public function allowedRecipients(Scope $scope): array;
+    /** @return list<array<string,mixed>> */
     public function threads(Scope $scope, int $offset): array;
     /** @return array<string,mixed>|null */
     public function thread(Scope $scope, string $id): ?array;
@@ -84,9 +86,11 @@ interface EducationStore
     /** @return list<array<string,mixed>> */
     public function messages(Scope $scope, string $threadId, int $offset): array;
     /** @return array<string,mixed> */
-    public function startThread(Scope $scope, string $recipientPersonId, string $subject, string $body): array;
+    public function startThread(Scope $scope, string $recipientPersonId, string $subject, string $body, ?string $contextType = null, ?string $contextId = null): array;
     /** @return array<string,mixed> */
-    public function sendMessage(Scope $scope, string $threadId, string $body): array;
+    public function sendMessage(Scope $scope, string $threadId, ?string $body, ?string $clientKey = null, string $kind = 'text', ?string $mediaAssetId = null, ?string $replyToId = null, array $metadata = []): array;
+    /** @return array{reacted:bool,reactions:list<array{emoji:string,count:int,reacted:bool}>} */
+    public function toggleReaction(Scope $scope, string $threadId, string $messageId, string $emoji): array;
     public function readThread(Scope $scope, string $threadId, string $lastSeenMessageId): void;
     /** @return list<array<string,mixed>> */
     public function notifications(Scope $scope, int $offset): array;

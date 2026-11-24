@@ -740,6 +740,8 @@ jobs:
         run: npm run check:tokens
       - name: Verify shared style variables and animation timings
         run: npm run check:styles
+      - name: Verify RU/EN dictionary parity
+        run: npm run check:i18n
       - name: Verify Vue formatting
         run: npm run format:check
       - name: Typecheck

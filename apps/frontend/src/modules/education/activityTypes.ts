@@ -36,5 +36,8 @@ export interface ActivityProgress {
 }
 export interface GroupActivityProgress { items: (ActivityProgress & { studentId: string; name: string })[]; from: string; to: string }
 export function defaultActivityConfig(code = 'platform-typing'): ActivityConfig {
+  if (code === 'platform-math-sprint') {
+    return { language: 'ru', durationSeconds: 60, difficulty: 1 };
+  }
   return code === 'platform-logic' ? { language: 'ru', difficulty: 1, roundCount: 5 } : { language: 'ru', durationSeconds: 30, mode: 'words', difficulty: 1 };
 }

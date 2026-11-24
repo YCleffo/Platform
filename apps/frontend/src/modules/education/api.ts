@@ -31,8 +31,65 @@ export interface ActivityAssignment { id: string; activityId: string; activityCo
 export interface GroupActivityAttempt { id: string; studentId: string; personId: string; name?: string; status: 'running' | 'finished' | 'expired' | 'failed'; source: string; startedAt: string; finishedAt: string | null; durationSeconds?: number | null; language?: string | null; keystrokes?: number | null; correctChars?: number | null; errors?: number | null; wpm?: number | null; accuracy?: number | null; score?: number | null; correctAnswers?: number | null; totalRounds?: number | null }
 export interface Material { id: string; name: string; mime: string; sizeBytes: number; lessonId?: string | null; lessonStatus?: Lesson['status'] | null; createdAt?: string }
 export interface Attention { date: string; items: { id: string; title: string; absentCount: number }[] }
-export interface Thread { id: string; subject: string; createdAt?: string; unreadCount?: number }
-export interface Message { id: string; senderPersonId: string; senderName?: string | null; body: string | null; createdAt: string }
+export interface Thread {
+  id: string;
+  subject: string;
+  createdAt?: string;
+  lastActivityAt?: string;
+  peerPersonId?: string | null;
+  peerName?: string | null;
+  peerRole?: string | null;
+  contextType?: string | null;
+  contextId?: string | null;
+  lastMessageBody?: string | null;
+  lastMessageAt?: string | null;
+  lastMessageSenderId?: string | null;
+  unreadCount?: number;
+}
+export interface EducationContact {
+  personId: string;
+  name: string;
+  role: 'teacher' | 'student' | 'parent';
+  contextType?: string | null;
+  contextId?: string | null;
+  contextName?: string | null;
+}
+export interface MessageReaction {
+  emoji: string;
+  count: number;
+  reacted?: boolean;
+}
+
+export interface MessageMedia {
+  id: string;
+  kind: string;
+  name?: string;
+  mime?: string;
+  size?: number;
+  status?: string;
+}
+
+export interface MessageReply {
+  id: string;
+  body?: string | null;
+  senderPersonId?: string;
+}
+
+export interface Message {
+  id: string;
+  senderPersonId: string;
+  senderName?: string | null;
+  body: string | null;
+  createdAt: string;
+  clientKey?: string | null;
+  kind?: string;
+  mediaAssetId?: string | null;
+  replyToId?: string | null;
+  metadata?: Record<string, unknown> | null;
+  reactions?: MessageReaction[];
+  media?: MessageMedia | null;
+  replyTo?: MessageReply | null;
+}
 export interface Notification { id: string; threadId: string | null; subject: string; createdAt: string; readAt: string | null; kind?: string; resourceId?: string | null; resourcePath?: string | null; body?: string | null }
 export interface Page<T> { items: T[]; limit: number; offset: number; nextOffset: number | null }
 
@@ -88,7 +145,27 @@ const studentAttendanceGuard: Guard<StudentAttendanceEntry> = (v): v is StudentA
 const studentResultEntryGuard: Guard<StudentResultEntry> = (v): v is StudentResultEntry => record(v) && uuid(v.id) && uuid(v.lessonId) && text(v.lessonTitle) && instant(v.startsAt) && resultStatusGuard(v.status) && nullableText(v.comment) && instant(v.updatedAt);
 const studentProgressGuard: Guard<StudentProgress> = (v): v is StudentProgress => record(v) && date(v.from) && date(v.to) && record(v.attendance) && integer(v.attendance.present) && integer(v.attendance.absent) && record(v.results) && integer(v.results.mastered) && integer(v.results.developing) && integer(v.results.needs_support);
 const savedResultGuard: Guard<SavedLessonResult> = (v): v is SavedLessonResult => record(v) && uuid(v.id) && uuid(v.lessonId) && uuid(v.studentId) && resultStatusGuard(v.status) && nullableText(v.comment) && instant(v.updatedAt);
-const threadGuard: Guard<Thread> = (v): v is Thread => record(v) && uuid(v.id) && text(v.subject) && (v.unreadCount === undefined || integer(v.unreadCount));
+const contactGuard: Guard<EducationContact> = (v): v is EducationContact =>
+  record(v) && uuid(v.personId) && text(v.name) &&
+  ['teacher', 'student', 'parent'].includes(String(v.role)) &&
+  (v.contextType === undefined || v.contextType === null || text(v.contextType)) &&
+  (v.contextId === undefined || v.contextId === null || uuid(v.contextId)) &&
+  (v.contextName === undefined || v.contextName === null || text(v.contextName));
+const threadGuard: Guard<Thread> = (v): v is Thread =>
+  record(v) &&
+  uuid(v.id) &&
+  text(v.subject) &&
+  (v.unreadCount === undefined || integer(v.unreadCount)) &&
+  (!('createdAt' in v) || nullableInstant(v.createdAt)) &&
+  (!('lastActivityAt' in v) || nullableInstant(v.lastActivityAt)) &&
+  (!('peerPersonId' in v) || nullableUuid(v.peerPersonId)) &&
+  (!('peerName' in v) || nullableText(v.peerName)) &&
+  (!('peerRole' in v) || nullableText(v.peerRole)) &&
+  (!('contextType' in v) || nullableText(v.contextType)) &&
+  (!('contextId' in v) || nullableUuid(v.contextId)) &&
+  (!('lastMessageBody' in v) || nullableText(v.lastMessageBody)) &&
+  (!('lastMessageAt' in v) || nullableInstant(v.lastMessageAt)) &&
+  (!('lastMessageSenderId' in v) || nullableUuid(v.lastMessageSenderId));
 const messageGuard: Guard<Message> = (v): v is Message => record(v) && uuid(v.id) && uuid(v.senderPersonId) && nullableText(v.body) && instant(v.createdAt) && (v.senderName === undefined || nullableText(v.senderName));
 const notificationGuard: Guard<Notification> = (v): v is Notification => record(v) && uuid(v.id) && nullableUuid(v.threadId) && text(v.subject) && instant(v.createdAt) && nullableInstant(v.readAt) && (v.kind === undefined || text(v.kind)) && (v.resourceId === undefined || nullableUuid(v.resourceId)) && (v.resourcePath === undefined || nullableText(v.resourcePath)) && (v.body === undefined || nullableText(v.body));
 function pageGuard<T>(guard: Guard<T>): Guard<Page<T>> {
@@ -194,9 +271,26 @@ export const educationApi = {
     (v): v is Page<GroupActivityAttempt> & { activity?: string } => pageGuard(groupActivityAttemptGuard)(v) && ((v as { activity?: unknown }).activity === undefined || text((v as { activity?: unknown }).activity)),
     signal,
   ),
+  contacts: (org: string, signal?: AbortSignal) => get('/contacts', org, (v): v is { items: EducationContact[] } => record(v) && Array.isArray(v.items) && v.items.every(contactGuard), signal),
+  studentContacts: (org: string, signal?: AbortSignal) => get('/student/contacts', org, (v): v is { items: EducationContact[] } => record(v) && Array.isArray(v.items) && v.items.every(contactGuard), signal),
+  studentThreads: (org: string, offset = 0, signal?: AbortSignal) => get(query('/student/threads', offset), org, pageGuard(threadGuard), signal),
+  studentThread: (org: string, id: string, signal?: AbortSignal) => get(`/student/threads/${pathId(id)}`, org, threadGuard, signal),
+  studentMessages: (org: string, id: string, offset = 0, signal?: AbortSignal, before?: string) => {
+    const params = new URLSearchParams({ offset: String(offset) });
+    if (before) params.set('before', before);
+    return get(`/student/threads/${pathId(id)}/messages?${params.toString()}`, org, pageGuard(messageGuard), signal);
+  },
+  studentStartThread: (org: string, recipientPersonId: string, subject: string, body: string, contextType?: string, contextId?: string) => write('/student/threads', org, { recipientPersonId, subject, body, ...(contextType ? { contextType } : {}), ...(contextId ? { contextId } : {}) }, threadGuard),
+  studentSendMessage: (org: string, id: string, body: string | null, clientKey?: string, kind = 'text', mediaAssetId?: string | null, replyToId?: string | null, metadata?: Record<string, unknown>) => write(`/student/threads/${pathId(id)}/messages`, org, { body, ...(clientKey ? { clientKey } : {}), kind, ...(mediaAssetId ? { mediaAssetId } : {}), ...(replyToId ? { replyToId } : {}), ...(metadata ? { metadata } : {}) }, messageGuard),
+  studentToggleReaction: (org: string, id: string, messageId: string, emoji: string) => write(`/student/threads/${pathId(id)}/reactions`, org, { messageId, emoji }, (v): v is { reacted: boolean; reactions: MessageReaction[] } => record(v) && typeof v.reacted === 'boolean' && Array.isArray(v.reactions)),
+  studentReadThread: (org: string, id: string, lastSeenMessageId: string) => write(`/student/threads/${pathId(id)}/read`, org, { lastSeenMessageId }, updated),
   threads: (org: string, offset = 0, signal?: AbortSignal) => get(query('/threads', offset), org, pageGuard(threadGuard), signal),
   thread: (org: string, id: string, signal?: AbortSignal) => get(`/threads/${pathId(id)}`, org, threadGuard, signal),
-  messages: (org: string, id: string, offset = 0, signal?: AbortSignal) => get(query(`/threads/${pathId(id)}/messages`, offset), org, pageGuard(messageGuard), signal),
+  messages: (org: string, id: string, offset = 0, signal?: AbortSignal, before?: string) => {
+    const params = new URLSearchParams({ offset: String(offset) });
+    if (before) params.set('before', before);
+    return get(`/threads/${pathId(id)}/messages?${params.toString()}`, org, pageGuard(messageGuard), signal);
+  },
   notifications: (org: string, offset = 0, signal?: AbortSignal) => get(query('/notifications', offset), org, pageGuard(notificationGuard), signal),
   studentNotifications: (org: string, offset = 0, signal?: AbortSignal) => get(query('/student/notifications', offset), org, pageGuard(notificationGuard), signal),
   readStudentNotification: (org: string, id: string) => write(`/student/notifications/${pathId(id)}/read`, org, {}, updated),
@@ -218,8 +312,9 @@ export const educationApi = {
   createEvent: (org: string, values: { title: string; kind: string; startsAt: string; endsAt: string; location: string }) => write('/events', org, values, eventGuard),
   attendance: (org: string, lessonId: string, studentId: string, status: string) => write(`/lessons/${pathId(lessonId)}/participants/${pathId(studentId)}`, org, { status }, updated, 'PUT'),
   saveProfile: (org: string, displayName: string | null, avatarFileId: string | null) => write('/profile', org, { displayName, avatarFileId }, headerGuard, 'PUT'),
-  startThread: (org: string, recipientPersonId: string, subject: string, body: string) => write('/threads', org, { recipientPersonId, subject, body }, threadGuard),
-  sendMessage: (org: string, id: string, body: string) => write(`/threads/${pathId(id)}/messages`, org, { body }, messageGuard),
+  startThread: (org: string, recipientPersonId: string, subject: string, body: string, contextType?: string, contextId?: string) => write('/threads', org, { recipientPersonId, subject, body, ...(contextType ? { contextType } : {}), ...(contextId ? { contextId } : {}) }, threadGuard),
+  sendMessage: (org: string, id: string, body: string | null, clientKey?: string, kind = 'text', mediaAssetId?: string | null, replyToId?: string | null, metadata?: Record<string, unknown>) => write(`/threads/${pathId(id)}/messages`, org, { body, ...(clientKey ? { clientKey } : {}), kind, ...(mediaAssetId ? { mediaAssetId } : {}), ...(replyToId ? { replyToId } : {}), ...(metadata ? { metadata } : {}) }, messageGuard),
+  toggleReaction: (org: string, id: string, messageId: string, emoji: string) => write(`/threads/${pathId(id)}/reactions`, org, { messageId, emoji }, (v): v is { reacted: boolean; reactions: MessageReaction[] } => record(v) && typeof v.reacted === 'boolean' && Array.isArray(v.reactions)),
   readThread: (org: string, id: string, lastSeenMessageId: string) => write(`/threads/${pathId(id)}/read`, org, { lastSeenMessageId }, updated),
   readNotification: (org: string, id: string) => write(`/notifications/${pathId(id)}/read`, org, {}, updated),
   upload: async (org: string, file: File, lessonId?: string, avatar = false): Promise<Material> => {

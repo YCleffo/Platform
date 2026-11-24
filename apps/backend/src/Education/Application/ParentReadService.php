@@ -77,7 +77,10 @@ final readonly class ParentReadService
             'child' => $this->child($scope),'home' => $this->home($scope),
             'schedule' => $this->schedule($scope, $query),'diary' => $this->diary($scope, $query, $offset),
             'homework' => $this->homework($scope, $offset),'progress' => $this->progress($scope, $query),
-            'notifications' => $this->notifications($scope, $offset),default => throw new EducationError(404, 'not_found'),
+            'notifications' => $this->notifications($scope, $offset),
+            'contacts' => $this->contacts($scope),
+            'threads' => $this->threads($scope, $offset),
+            default => throw new EducationError(404, 'not_found'),
         };
     }
 
@@ -323,5 +326,369 @@ final readonly class ParentReadService
         }
         unset($row);
         return $items;
+    }
+
+    public function contacts(ParentScope $scope): array
+    {
+        $teachers = $this->all(
+            'SELECT DISTINCT t.person_id::text AS "personId", \'teacher\' AS role,
+                g.id::text AS "contextId", g.name AS "contextName"
+            FROM education.group_students gs
+            JOIN education.groups g ON g.id=gs.group_id AND g.organization_id=gs.organization_id
+            JOIN education.teachers t ON t.person_id=g.owner_person_id AND t.organization_id=g.organization_id
+            WHERE gs.organization_id=CAST(:org AS uuid) AND gs.student_id=CAST(:student AS uuid)
+            AND g.archived_at IS NULL ORDER BY "personId"',
+            self::params($scope),
+        );
+        $items = [];
+        foreach ($teachers as $row) {
+            $name = $this->access->personName((string) $row['personId']);
+            if ($name === null) {
+                continue;
+            }
+            $items[] = [
+                'id' => $row['personId'],
+                'personId' => $row['personId'],
+                'name' => $name,
+                'role' => 'teacher',
+                'contextId' => $row['contextId'],
+                'contextName' => $row['contextName'],
+            ];
+        }
+        return ['items' => $items];
+    }
+
+    public function threads(ParentScope $scope, int $offset): array
+    {
+        $items = $this->all(
+            'SELECT t.id::text,t.subject,t.created_at::text AS "createdAt",
+            COALESCE(t.last_activity_at, t.created_at)::text AS "lastActivityAt",
+            t.context_type AS "contextType", t.context_id::text AS "contextId",
+            (SELECT peer.person_id::text FROM education.thread_members peer
+                WHERE peer.thread_id=t.id AND peer.person_id<>CAST(:person AS uuid) LIMIT 1) AS "peerPersonId",
+            (SELECT m.body FROM education.messages m
+                WHERE m.thread_id=t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS "lastMessageBody",
+            (SELECT m.created_at::text FROM education.messages m
+                WHERE m.thread_id=t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS "lastMessageAt",
+            (SELECT m.sender_person_id::text FROM education.messages m
+                WHERE m.thread_id=t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS "lastMessageSenderId",
+            (SELECT count(*) FROM education.messages m WHERE m.thread_id=t.id AND m.sender_person_id<>CAST(:person AS uuid)
+                AND (tm.last_read_at IS NULL OR (m.created_at,m.id)>(tm.last_read_at,COALESCE(tm.last_read_message_id,\'ffffffff-ffff-ffff-ffff-ffffffffffff\'::uuid)))) AS "unreadCount"
+            FROM education.threads t JOIN education.thread_members tm ON tm.thread_id=t.id
+            WHERE t.organization_id=CAST(:org AS uuid) AND tm.person_id=CAST(:person AS uuid)
+            AND t.context_id=CAST(:student AS uuid)
+            ORDER BY COALESCE(t.last_activity_at, t.created_at) DESC,t.id DESC LIMIT 51 OFFSET :offset',
+            [...self::params($scope), ':person' => $scope->personId, ':offset' => $offset],
+        );
+        foreach ($items as &$row) {
+            $peerId = $row['peerPersonId'];
+            $row['peerName'] = $peerId ? $this->access->personName($peerId) : null;
+            $row['peerRole'] = 'teacher';
+        }
+        unset($row);
+        return self::page($items, $offset);
+    }
+
+    public function thread(ParentScope $scope, string $id): array
+    {
+        Input::uuid($id);
+        $thread = $this->db->createCommand(
+            'SELECT t.id::text,t.subject,t.created_at::text AS "createdAt",
+            COALESCE(t.last_activity_at, t.created_at)::text AS "lastActivityAt",
+            t.context_type AS "contextType", t.context_id::text AS "contextId",
+            (SELECT peer.person_id::text FROM education.thread_members peer
+                WHERE peer.thread_id=t.id AND peer.person_id<>CAST(:person AS uuid) LIMIT 1) AS "peerPersonId"
+            FROM education.threads t JOIN education.thread_members tm ON tm.thread_id=t.id
+            WHERE t.organization_id=CAST(:org AS uuid) AND tm.person_id=CAST(:person AS uuid)
+            AND t.id=CAST(:id AS uuid) AND t.context_id=CAST(:student AS uuid)',
+            [...self::params($scope), ':person' => $scope->personId, ':id' => $id],
+        )->queryOne();
+        if (!is_array($thread)) {
+            throw new EducationError(404, 'not_found');
+        }
+        $peerId = $thread['peerPersonId'];
+        $thread['peerName'] = $peerId ? $this->access->personName($peerId) : null;
+        $thread['peerRole'] = 'teacher';
+        return $thread;
+    }
+
+    public function messages(ParentScope $scope, string $threadId, int $offset): array
+    {
+        $this->thread($scope, $threadId);
+        $items = $this->all(
+            'SELECT m.id::text,m.sender_person_id::text AS "senderPersonId",m.body,m.created_at::text AS "createdAt",
+                    COALESCE(m.kind, \'text\') AS "kind",
+                    m.media_asset_id::text AS "mediaAssetId",
+                    m.reply_to_id::text AS "replyToId",
+                    m.metadata::text AS "metadataJson",
+                    ma.kind AS "mediaKind", ma.original_name AS "mediaName", ma.mime_type AS "mediaMime",
+                    ma.byte_size AS "mediaSize", ma.status AS "mediaStatus",
+                    rm.body AS "replyBody", rm.sender_person_id::text AS "replySenderPersonId"
+            FROM education.messages m JOIN education.thread_members tm ON tm.thread_id=m.thread_id
+            LEFT JOIN media.assets ma ON ma.id = m.media_asset_id
+            LEFT JOIN education.messages rm ON rm.id = m.reply_to_id
+            WHERE m.organization_id=CAST(:org AS uuid) AND tm.person_id=CAST(:person AS uuid) AND m.thread_id=CAST(:id AS uuid)
+            ORDER BY m.created_at DESC,m.id DESC LIMIT 51 OFFSET :offset',
+            [...self::params($scope), ':person' => $scope->personId, ':id' => $threadId, ':offset' => $offset],
+        );
+
+        $reactionsRows = $this->all(
+            'SELECT mr.message_id::text AS "messageId", mr.emoji, count(*)::int AS count,
+                    bool_or(mr.person_id=CAST(:person AS uuid)) AS reacted
+             FROM education.message_reactions mr
+             JOIN education.messages m ON m.id = mr.message_id
+             WHERE m.thread_id=CAST(:id AS uuid)
+             GROUP BY mr.message_id, mr.emoji
+             ORDER BY count DESC, mr.emoji',
+            [...self::params($scope), ':person' => $scope->personId, ':id' => $threadId],
+        );
+
+        $reactionsByMessage = [];
+        foreach ($reactionsRows as $rr) {
+            $reactionsByMessage[$rr['messageId']][] = [
+                'emoji' => $rr['emoji'],
+                'count' => (int) $rr['count'],
+                'reacted' => (bool) $rr['reacted'],
+            ];
+        }
+
+        foreach ($items as &$message) {
+            $sender = (string) $message['senderPersonId'];
+            $message['senderName'] = $this->access->member($sender, $scope->organizationId) ? $this->access->personName($sender) : null;
+            if ($message['senderName'] === null || !$this->access->resourceAllowed($sender, 'message', (string) $message['id'])) {
+                $message['body'] = null;
+            }
+            $message['reactions'] = $reactionsByMessage[$message['id']] ?? [];
+            if ($message['mediaAssetId'] !== null) {
+                $message['media'] = [
+                    'id' => $message['mediaAssetId'],
+                    'kind' => $message['mediaKind'] ?? $message['kind'],
+                    'name' => $message['mediaName'] ?? '',
+                    'mime' => $message['mediaMime'] ?? '',
+                    'size' => (int) ($message['mediaSize'] ?? 0),
+                    'status' => $message['mediaStatus'] ?? 'READY',
+                ];
+            } else {
+                $message['media'] = null;
+            }
+            if ($message['replyToId'] !== null) {
+                $message['replyTo'] = [
+                    'id' => $message['replyToId'],
+                    'body' => $message['replyBody'],
+                    'senderPersonId' => $message['replySenderPersonId'],
+                ];
+            } else {
+                $message['replyTo'] = null;
+            }
+            $message['metadata'] = json_decode((string) ($message['metadataJson'] ?? '{}'), true) ?: [];
+            unset($message['metadataJson'], $message['mediaKind'], $message['mediaName'], $message['mediaMime'], $message['mediaSize'], $message['mediaStatus'], $message['replyBody'], $message['replySenderPersonId']);
+        }
+        unset($message);
+        $page = self::page($items, $offset);
+        $page['items'] = array_reverse(array_slice($items, 0, 50));
+        return $page;
+    }
+
+    public function startThread(ParentScope $scope, array $input): array
+    {
+        $recipient = Input::uuid($input['recipientPersonId'] ?? null);
+        $subject = Input::text($input['subject'] ?? null, 160);
+        $body = Input::text($input['body'] ?? null, 5000);
+        $contacts = $this->contacts($scope)['items'];
+        $allowed = array_column($contacts, 'personId');
+        if (!in_array($recipient, $allowed, true)) {
+            throw new EducationError(403, 'recipient_unavailable');
+        }
+        return $this->db->transaction(function () use ($scope, $recipient, $subject, $body): array {
+            $thread = $this->db->createCommand(
+                'INSERT INTO education.threads(organization_id,subject,context_type,context_id,last_activity_at)
+                VALUES(CAST(:org AS uuid),:subject,\'student\',CAST(:student AS uuid),now())
+                RETURNING id::text,subject',
+                [':org' => $scope->organizationId, ':subject' => $subject, ':student' => $scope->studentId],
+            )->queryOne();
+            if (!is_array($thread)) {
+                throw new EducationError(500, 'database_error');
+            }
+            $id = (string) $thread['id'];
+            foreach ([$scope->personId, $recipient] as $personId) {
+                $this->db->createCommand(
+                    'INSERT INTO education.thread_members(thread_id,organization_id,person_id)
+                    VALUES(CAST(:id AS uuid),CAST(:org AS uuid),CAST(:person AS uuid))',
+                    [':id' => $id, ':org' => $scope->organizationId, ':person' => $personId],
+                )->execute();
+            }
+            $this->sendMessage($scope, $id, ['body' => $body]);
+            return $thread;
+        });
+    }
+
+    public function sendMessage(ParentScope $scope, string $threadId, array $input): array
+    {
+        $rawKind = $input['kind'] ?? 'text';
+        $kind = in_array($rawKind, ['text', 'voice', 'video_note', 'image', 'document', 'audio'], true) ? (string) $rawKind : 'text';
+        $mediaAssetId = isset($input['mediaAssetId']) && is_string($input['mediaAssetId']) ? Input::uuid($input['mediaAssetId']) : null;
+        $replyToId = isset($input['replyToId']) && is_string($input['replyToId']) ? Input::uuid($input['replyToId']) : null;
+        $metadata = isset($input['metadata']) && is_array($input['metadata']) ? $input['metadata'] : [];
+
+        $rawBody = $input['body'] ?? null;
+        if ($rawBody === null || trim((string) $rawBody) === '') {
+            if ($mediaAssetId === null) {
+                throw new EducationError(422, 'invalid_input');
+            }
+            $body = null;
+        } else {
+            $body = Input::text((string) $rawBody, 5000);
+        }
+
+        $rawKey = $input['clientKey'] ?? null;
+        $clientKey = is_string($rawKey) && strlen($rawKey) >= 8 && strlen($rawKey) <= 128 ? $rawKey : null;
+        $this->thread($scope, $threadId);
+        $peers = $this->all(
+            'SELECT peer.person_id::text AS id FROM education.thread_members peer
+            WHERE peer.organization_id=CAST(:org AS uuid) AND peer.person_id<>CAST(:person AS uuid) AND peer.thread_id=CAST(:id AS uuid)',
+            [':org' => $scope->organizationId, ':person' => $scope->personId, ':id' => $threadId],
+        );
+        $allowed = array_column($this->contacts($scope)['items'], 'personId');
+        foreach ($peers as $peer) {
+            if (!in_array((string) $peer['id'], $allowed, true)) {
+                throw new EducationError(403, 'recipient_unavailable');
+            }
+        }
+        return $this->db->transaction(function () use ($scope, $threadId, $body, $clientKey, $kind, $mediaAssetId, $replyToId, $metadata): array {
+            $params = [':thread' => $threadId, ':org' => $scope->organizationId, ':person' => $scope->personId];
+            // Idempotency: return existing message if same client_key already received
+            if ($clientKey !== null) {
+                $existing = $this->db->createCommand(
+                    'SELECT id::text,sender_person_id::text AS "senderPersonId",body,created_at::text AS "createdAt",
+                            kind,media_asset_id::text AS "mediaAssetId",reply_to_id::text AS "replyToId",metadata::text AS "metadataJson"
+                     FROM education.messages WHERE thread_id=CAST(:thread AS uuid)
+                     AND organization_id=CAST(:org AS uuid) AND sender_person_id=CAST(:person AS uuid)
+                     AND client_key=:key',
+                    [...$params, ':key' => $clientKey],
+                )->queryOne();
+                if (is_array($existing)) {
+                    $existing['metadata'] = json_decode((string) ($existing['metadataJson'] ?? '{}'), true) ?: [];
+                    unset($existing['metadataJson']);
+                    $existing['reactions'] = [];
+                    return $existing;
+                }
+            }
+            $message = $this->db->createCommand(
+                'INSERT INTO education.messages(thread_id,organization_id,sender_person_id,body,client_key,kind,media_asset_id,reply_to_id,metadata)
+                VALUES(CAST(:thread AS uuid),CAST(:org AS uuid),CAST(:person AS uuid),:body,:key,:kind,CAST(:media AS uuid),CAST(:reply AS uuid),CAST(:meta AS jsonb))
+                RETURNING id::text,sender_person_id::text AS "senderPersonId",body,created_at::text AS "createdAt",kind,media_asset_id::text AS "mediaAssetId",reply_to_id::text AS "replyToId",metadata::text AS "metadataJson"',
+                [
+                    ...$params,
+                    ':body' => $body,
+                    ':key' => $clientKey,
+                    ':kind' => $kind,
+                    ':media' => $mediaAssetId,
+                    ':reply' => $replyToId,
+                    ':meta' => json_encode($metadata, JSON_THROW_ON_ERROR),
+                ],
+            )->queryOne();
+            if (!is_array($message)) {
+                throw new EducationError(500, 'database_error');
+            }
+            $this->db->createCommand(
+                'UPDATE education.threads SET last_activity_at=now() WHERE id=CAST(:thread AS uuid) AND organization_id=CAST(:org AS uuid)',
+                [':thread' => $threadId, ':org' => $scope->organizationId],
+            )->execute();
+            $this->db->createCommand(
+                'INSERT INTO education.notifications(organization_id,person_id,thread_id,message_id)
+                SELECT organization_id,person_id,thread_id,CAST(:message AS uuid) FROM education.thread_members WHERE thread_id=CAST(:thread AS uuid)
+                AND organization_id=CAST(:org AS uuid) AND person_id<>CAST(:person AS uuid)',
+                [...$params, ':message' => (string) $message['id']],
+            )->execute();
+            $message['metadata'] = json_decode((string) ($message['metadataJson'] ?? '{}'), true) ?: [];
+            unset($message['metadataJson']);
+            $message['reactions'] = [];
+            return $message;
+        });
+    }
+
+    public function toggleReaction(ParentScope $scope, string $threadId, array $input): array
+    {
+        $messageId = Input::uuid($input['messageId'] ?? null);
+        $emoji = Input::text($input['emoji'] ?? null, 16);
+        $this->thread($scope, $threadId);
+        return $this->db->transaction(function () use ($scope, $threadId, $messageId, $emoji): array {
+            $msg = $this->db->createCommand(
+                'SELECT id FROM education.messages WHERE id=CAST(:id AS uuid) AND thread_id=CAST(:thread AS uuid) AND organization_id=CAST(:org AS uuid)',
+                [':id' => $messageId, ':thread' => $threadId, ':org' => $scope->organizationId],
+            )->queryOne();
+            if (!is_array($msg)) {
+                throw new EducationError(404, 'not_found');
+            }
+            $existing = $this->db->createCommand(
+                'SELECT id FROM education.message_reactions WHERE message_id=CAST(:msg AS uuid) AND person_id=CAST(:person AS uuid) AND emoji=:emoji',
+                [':msg' => $messageId, ':person' => $scope->personId, ':emoji' => $emoji],
+            )->queryOne();
+            if (is_array($existing)) {
+                $this->db->createCommand(
+                    'DELETE FROM education.message_reactions WHERE id=CAST(:id AS uuid)',
+                    [':id' => $existing['id']],
+                )->execute();
+                $reacted = false;
+            } else {
+                $this->db->createCommand(
+                    'INSERT INTO education.message_reactions(message_id, organization_id, person_id, emoji)
+                     VALUES(CAST(:msg AS uuid), CAST(:org AS uuid), CAST(:person AS uuid), :emoji)',
+                    [':msg' => $messageId, ':org' => $scope->organizationId, ':person' => $scope->personId, ':emoji' => $emoji],
+                )->execute();
+                $reacted = true;
+            }
+
+            $reactionsRows = $this->all(
+                'SELECT emoji, count(*)::int AS count, bool_or(person_id=CAST(:person AS uuid)) AS reacted
+                 FROM education.message_reactions
+                 WHERE message_id=CAST(:msg AS uuid)
+                 GROUP BY emoji ORDER BY count DESC, emoji',
+                [':msg' => $messageId, ':person' => $scope->personId],
+            );
+
+            return [
+                'reacted' => $reacted,
+                'reactions' => array_map(static fn($r) => [
+                    'emoji' => $r['emoji'],
+                    'count' => (int) $r['count'],
+                    'reacted' => (bool) $r['reacted'],
+                ], $reactionsRows),
+            ];
+        });
+    }
+
+    public function readThread(ParentScope $scope, string $threadId, array $input): array
+    {
+        $lastSeenMessageId = Input::uuid($input['lastSeenMessageId'] ?? null);
+        $this->thread($scope, $threadId);
+        $this->db->transaction(function () use ($scope, $threadId, $lastSeenMessageId): void {
+            $params = [':org' => $scope->organizationId, ':person' => $scope->personId, ':id' => $threadId, ':message' => $lastSeenMessageId];
+            $target = $this->db->createCommand(
+                'SELECT m.id::text,m.created_at::text AS "createdAt" FROM education.messages m
+                JOIN education.thread_members tm ON tm.thread_id=m.thread_id WHERE m.organization_id=CAST(:org AS uuid)
+                AND tm.person_id=CAST(:person AS uuid) AND m.thread_id=CAST(:id AS uuid) AND m.id=CAST(:message AS uuid)',
+                $params,
+            )->queryOne();
+            if (!is_array($target)) {
+                throw new EducationError(404, 'not_found');
+            }
+            $params[':at'] = (string) $target['createdAt'];
+            $this->db->createCommand(
+                "UPDATE education.thread_members SET
+                last_read_message_id=CASE WHEN last_read_at IS NULL OR (last_read_at,COALESCE(last_read_message_id,'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid))<(CAST(:at AS timestamptz),CAST(:message AS uuid)) THEN CAST(:message AS uuid) ELSE last_read_message_id END,
+                last_read_at=GREATEST(last_read_at,CAST(:at AS timestamptz))
+                WHERE organization_id=CAST(:org AS uuid) AND person_id=CAST(:person AS uuid) AND thread_id=CAST(:id AS uuid)",
+                $params,
+            )->execute();
+            $this->db->createCommand(
+                'UPDATE education.notifications n SET read_at=now() WHERE n.organization_id=CAST(:org AS uuid)
+                AND n.person_id=CAST(:person AS uuid) AND n.thread_id=CAST(:id AS uuid) AND n.read_at IS NULL AND
+                ((n.message_id IS NULL AND n.created_at<=CAST(:at AS timestamptz)) OR EXISTS(SELECT 1 FROM education.messages m
+                    WHERE m.id=n.message_id AND (m.created_at,m.id)<=(CAST(:at AS timestamptz),CAST(:message AS uuid))))',
+                $params,
+            )->execute();
+        });
+        return ['updated' => true];
     }
 }

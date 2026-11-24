@@ -548,20 +548,88 @@ final readonly class PostgresEducationStore implements EducationStore
             WHERE organization_id=CAST(:org AS uuid) AND account_id<>CAST(:actor AS uuid) ORDER BY person_id LIMIT 501', self::owner($scope));
     }
 
+    /** @return list<array<string,mixed>> */
+    public function allowedRecipients(Scope $scope): array
+    {
+        if ($scope->studentId !== null) {
+            return $this->all(
+                'SELECT DISTINCT t.person_id::text AS "personId", \'teacher\' AS role,
+                    g.id::text AS "contextId", g.name AS "contextName"
+                FROM education.group_students gs
+                JOIN education.groups g ON g.id=gs.group_id AND g.organization_id=gs.organization_id
+                JOIN education.teachers t ON t.person_id=g.owner_person_id AND t.organization_id=g.organization_id
+                WHERE gs.organization_id=CAST(:org AS uuid) AND gs.student_id=CAST(:student AS uuid)
+                AND g.archived_at IS NULL ORDER BY "personId"',
+                [':org' => $scope->organizationId, ':student' => $scope->studentId],
+            );
+        }
+
+        $teachers = $this->all(
+            'SELECT t.person_id::text AS "personId", \'teacher\' AS role,
+                NULL::text AS "contextId", NULL::text AS "contextName"
+            FROM education.teachers t
+            WHERE t.organization_id=CAST(:org AS uuid) AND t.person_id<>CAST(:person AS uuid)
+            ORDER BY t.person_id LIMIT 200',
+            self::recipient($scope),
+        );
+
+        $students = $this->all(
+            'SELECT DISTINCT s.person_id::text AS "personId", \'student\' AS role,
+                g.id::text AS "contextId", g.name AS "contextName"
+            FROM education.groups g
+            JOIN education.group_students gs ON gs.group_id=g.id AND gs.organization_id=g.organization_id
+            JOIN education.students s ON s.id=gs.student_id AND s.organization_id=g.organization_id
+            WHERE g.organization_id=CAST(:org AS uuid) AND g.owner_person_id=CAST(:person AS uuid)
+            AND g.archived_at IS NULL ORDER BY "personId" LIMIT 200',
+            self::recipient($scope),
+        );
+
+        $parents = $this->all(
+            'SELECT DISTINCT sg.guardian_person_id::text AS "personId", \'parent\' AS role,
+                s.id::text AS "contextId", s.person_id::text AS "contextName"
+            FROM education.groups g
+            JOIN education.group_students gs ON gs.group_id=g.id AND gs.organization_id=g.organization_id
+            JOIN education.students s ON s.id=gs.student_id AND s.organization_id=g.organization_id
+            JOIN education.student_guardians sg ON sg.student_id=s.id AND sg.organization_id=g.organization_id
+            JOIN education.parent_accounts pa ON pa.organization_id=g.organization_id AND pa.guardian_person_id=sg.guardian_person_id
+            WHERE g.organization_id=CAST(:org AS uuid) AND g.owner_person_id=CAST(:person AS uuid)
+            AND g.archived_at IS NULL AND sg.status=\'confirmed\' AND pa.revoked_at IS NULL
+            ORDER BY "personId" LIMIT 200',
+            self::recipient($scope),
+        );
+
+        return [...$teachers, ...$students, ...$parents];
+    }
+
     public function threads(Scope $scope, int $offset): array
     {
         return $this->all('SELECT t.id::text,t.subject,t.created_at::text AS "createdAt",
+            COALESCE(t.last_activity_at, t.created_at)::text AS "lastActivityAt",
+            t.context_type AS "contextType", t.context_id::text AS "contextId",
+            (SELECT peer.person_id::text FROM education.thread_members peer
+                WHERE peer.thread_id=t.id AND peer.person_id<>CAST(:person AS uuid) LIMIT 1) AS "peerPersonId",
+            (SELECT m.body FROM education.messages m
+                WHERE m.thread_id=t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS "lastMessageBody",
+            (SELECT m.created_at::text FROM education.messages m
+                WHERE m.thread_id=t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS "lastMessageAt",
+            (SELECT m.sender_person_id::text FROM education.messages m
+                WHERE m.thread_id=t.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS "lastMessageSenderId",
             (SELECT count(*) FROM education.messages m WHERE m.thread_id=t.id AND m.sender_person_id<>CAST(:person AS uuid)
                 AND (tm.last_read_at IS NULL OR (m.created_at,m.id)>(tm.last_read_at,COALESCE(tm.last_read_message_id,\'ffffffff-ffff-ffff-ffff-ffffffffffff\'::uuid)))) AS "unreadCount"
             FROM education.threads t JOIN education.thread_members tm ON tm.thread_id=t.id
             WHERE t.organization_id=CAST(:org AS uuid) AND tm.person_id=CAST(:person AS uuid)
-            ORDER BY t.created_at DESC,t.id LIMIT 51 OFFSET :offset', [...self::recipient($scope), ':offset' => $offset]);
+            ORDER BY COALESCE(t.last_activity_at, t.created_at) DESC,t.id DESC LIMIT 51 OFFSET :offset', [...self::recipient($scope), ':offset' => $offset]);
     }
 
     public function thread(Scope $scope, string $id): ?array
     {
         return $this->one(
-            'SELECT t.id::text,t.subject FROM education.threads t JOIN education.thread_members tm ON tm.thread_id=t.id
+            'SELECT t.id::text,t.subject,t.created_at::text AS "createdAt",
+            COALESCE(t.last_activity_at, t.created_at)::text AS "lastActivityAt",
+            t.context_type AS "contextType", t.context_id::text AS "contextId",
+            (SELECT peer.person_id::text FROM education.thread_members peer
+                WHERE peer.thread_id=t.id AND peer.person_id<>CAST(:person AS uuid) LIMIT 1) AS "peerPersonId"
+            FROM education.threads t JOIN education.thread_members tm ON tm.thread_id=t.id
             WHERE t.organization_id=CAST(:org AS uuid) AND tm.person_id=CAST(:person AS uuid) AND t.id=CAST(:id AS uuid)',
             [...self::recipient($scope), ':id' => $id],
         );
@@ -569,10 +637,77 @@ final readonly class PostgresEducationStore implements EducationStore
 
     public function messages(Scope $scope, string $threadId, int $offset): array
     {
-        return $this->all('SELECT m.id::text,m.sender_person_id::text AS "senderPersonId",m.body,m.created_at::text AS "createdAt"
-            FROM education.messages m JOIN education.thread_members tm ON tm.thread_id=m.thread_id
+        $rows = $this->all(
+            'SELECT m.id::text,m.sender_person_id::text AS "senderPersonId",m.body,m.created_at::text AS "createdAt",
+                    COALESCE(m.kind, \'text\') AS "kind",
+                    m.media_asset_id::text AS "mediaAssetId",
+                    m.reply_to_id::text AS "replyToId",
+                    m.metadata::text AS "metadataJson",
+                    ma.kind AS "mediaKind", ma.original_name AS "mediaName", ma.mime_type AS "mediaMime",
+                    ma.byte_size AS "mediaSize", ma.status AS "mediaStatus",
+                    rm.body AS "replyBody", rm.sender_person_id::text AS "replySenderPersonId"
+            FROM education.messages m
+            JOIN education.thread_members tm ON tm.thread_id=m.thread_id
+            LEFT JOIN media.assets ma ON ma.id = m.media_asset_id
+            LEFT JOIN education.messages rm ON rm.id = m.reply_to_id
             WHERE m.organization_id=CAST(:org AS uuid) AND tm.person_id=CAST(:person AS uuid) AND m.thread_id=CAST(:id AS uuid)
-            ORDER BY m.created_at DESC,m.id DESC LIMIT 51 OFFSET :offset', [...self::recipient($scope), ':id' => $threadId, ':offset' => $offset]);
+            ORDER BY m.created_at DESC,m.id DESC LIMIT 51 OFFSET :offset',
+            [...self::recipient($scope), ':id' => $threadId, ':offset' => $offset],
+        );
+
+        if ($rows === []) {
+            return [];
+        }
+
+        $reactionsRows = $this->all(
+            'SELECT mr.message_id::text AS "messageId", mr.emoji, count(*)::int AS count,
+                    bool_or(mr.person_id=CAST(:person AS uuid)) AS reacted
+             FROM education.message_reactions mr
+             JOIN education.messages m ON m.id = mr.message_id
+             WHERE m.thread_id=CAST(:id AS uuid)
+             GROUP BY mr.message_id, mr.emoji
+             ORDER BY count DESC, mr.emoji',
+            [...self::recipient($scope), ':id' => $threadId],
+        );
+
+        $reactionsByMessage = [];
+        foreach ($reactionsRows as $rr) {
+            $reactionsByMessage[$rr['messageId']][] = [
+                'emoji' => $rr['emoji'],
+                'count' => (int) $rr['count'],
+                'reacted' => (bool) $rr['reacted'],
+            ];
+        }
+
+        foreach ($rows as &$row) {
+            $row['reactions'] = $reactionsByMessage[$row['id']] ?? [];
+            if ($row['mediaAssetId'] !== null) {
+                $row['media'] = [
+                    'id' => $row['mediaAssetId'],
+                    'kind' => $row['mediaKind'] ?? $row['kind'],
+                    'name' => $row['mediaName'] ?? '',
+                    'mime' => $row['mediaMime'] ?? '',
+                    'size' => (int) ($row['mediaSize'] ?? 0),
+                    'status' => $row['mediaStatus'] ?? 'READY',
+                ];
+            } else {
+                $row['media'] = null;
+            }
+            if ($row['replyToId'] !== null) {
+                $row['replyTo'] = [
+                    'id' => $row['replyToId'],
+                    'body' => $row['replyBody'],
+                    'senderPersonId' => $row['replySenderPersonId'],
+                ];
+            } else {
+                $row['replyTo'] = null;
+            }
+            $row['metadata'] = json_decode((string) ($row['metadataJson'] ?? '{}'), true) ?: [];
+            unset($row['metadataJson'], $row['mediaKind'], $row['mediaName'], $row['mediaMime'], $row['mediaSize'], $row['mediaStatus'], $row['replyBody'], $row['replySenderPersonId']);
+        }
+        unset($row);
+
+        return $rows;
     }
 
     public function threadPeers(Scope $scope, string $id): array
@@ -587,11 +722,26 @@ final readonly class PostgresEducationStore implements EducationStore
         return array_map(static fn(array $row): string => (string) $row['id'], $rows);
     }
 
-    public function startThread(Scope $scope, string $recipientPersonId, string $subject, string $body): array
-    {
-        return $this->db->transaction(function () use ($scope, $recipientPersonId, $subject, $body): array {
-            $thread = $this->required('INSERT INTO education.threads(organization_id,subject)
-                VALUES(CAST(:org AS uuid),:subject) RETURNING id::text,subject', [':org' => $scope->organizationId, ':subject' => $subject]);
+    public function startThread(
+        Scope $scope,
+        string $recipientPersonId,
+        string $subject,
+        string $body,
+        ?string $contextType = null,
+        ?string $contextId = null,
+    ): array {
+        return $this->db->transaction(function () use ($scope, $recipientPersonId, $subject, $body, $contextType, $contextId): array {
+            $thread = $this->required(
+                'INSERT INTO education.threads(organization_id,subject,context_type,context_id,last_activity_at)
+                VALUES(CAST(:org AS uuid),:subject,:contextType,CAST(:contextId AS uuid),now())
+                RETURNING id::text,subject,context_type AS "contextType",context_id::text AS "contextId"',
+                [
+                    ':org' => $scope->organizationId,
+                    ':subject' => $subject,
+                    ':contextType' => $contextType,
+                    ':contextId' => $contextId,
+                ],
+            );
             $id = (string) $thread['id'];
             foreach ([$scope->personId, $recipientPersonId] as $personId) {
                 $this->db->createCommand(
@@ -605,20 +755,119 @@ final readonly class PostgresEducationStore implements EducationStore
         });
     }
 
-    public function sendMessage(Scope $scope, string $threadId, string $body): array
-    {
-        return $this->db->transaction(function () use ($scope, $threadId, $body): array {
+    public function sendMessage(
+        Scope $scope,
+        string $threadId,
+        ?string $body,
+        ?string $clientKey = null,
+        string $kind = 'text',
+        ?string $mediaAssetId = null,
+        ?string $replyToId = null,
+        array $metadata = [],
+    ): array {
+        return $this->db->transaction(function () use ($scope, $threadId, $body, $clientKey, $kind, $mediaAssetId, $replyToId, $metadata): array {
             if ($this->thread($scope, $threadId) === null) {
                 throw new EducationError(404, 'not_found');
             }
             $params = [...self::recipient($scope), ':thread' => $threadId];
-            $message = $this->required('INSERT INTO education.messages(thread_id,organization_id,sender_person_id,body)
-                VALUES(CAST(:thread AS uuid),CAST(:org AS uuid),CAST(:person AS uuid),:body)
-                RETURNING id::text,sender_person_id::text AS "senderPersonId",body,created_at::text AS "createdAt"', [...$params, ':body' => $body]);
+            // Idempotency: if client_key provided, return existing message on duplicate send (HTTP retry safety)
+            if ($clientKey !== null) {
+                $existing = $this->one(
+                    'SELECT id::text,sender_person_id::text AS "senderPersonId",body,created_at::text AS "createdAt",
+                            kind,media_asset_id::text AS "mediaAssetId",reply_to_id::text AS "replyToId",metadata::text AS "metadataJson"
+                     FROM education.messages WHERE thread_id=CAST(:thread AS uuid)
+                     AND organization_id=CAST(:org AS uuid) AND sender_person_id=CAST(:person AS uuid)
+                     AND client_key=:key',
+                    [...$params, ':key' => $clientKey],
+                );
+                if ($existing !== null) {
+                    $existing['metadata'] = json_decode((string) ($existing['metadataJson'] ?? '{}'), true) ?: [];
+                    unset($existing['metadataJson']);
+                    $existing['reactions'] = [];
+                    return $existing;
+                }
+            }
+            $message = $this->required(
+                'INSERT INTO education.messages(thread_id,organization_id,sender_person_id,body,client_key,kind,media_asset_id,reply_to_id,metadata)
+                VALUES(CAST(:thread AS uuid),CAST(:org AS uuid),CAST(:person AS uuid),:body,:key,:kind,CAST(:media AS uuid),CAST(:reply AS uuid),CAST(:meta AS jsonb))
+                RETURNING id::text,sender_person_id::text AS "senderPersonId",body,created_at::text AS "createdAt",kind,media_asset_id::text AS "mediaAssetId",reply_to_id::text AS "replyToId",metadata::text AS "metadataJson"',
+                [
+                    ...$params,
+                    ':body' => $body,
+                    ':key' => $clientKey,
+                    ':kind' => $kind,
+                    ':media' => $mediaAssetId,
+                    ':reply' => $replyToId,
+                    ':meta' => json_encode($metadata, JSON_THROW_ON_ERROR),
+                ],
+            );
+            $this->db->createCommand(
+                'UPDATE education.threads SET last_activity_at=now() WHERE id=CAST(:thread AS uuid) AND organization_id=CAST(:org AS uuid)',
+                $params,
+            )->execute();
             $this->db->createCommand('INSERT INTO education.notifications(organization_id,person_id,thread_id,message_id)
                 SELECT organization_id,person_id,thread_id,CAST(:message AS uuid) FROM education.thread_members WHERE thread_id=CAST(:thread AS uuid)
                 AND organization_id=CAST(:org AS uuid) AND person_id<>CAST(:person AS uuid)', [...$params, ':message' => (string) $message['id']])->execute();
+
+            $message['metadata'] = json_decode((string) ($message['metadataJson'] ?? '{}'), true) ?: [];
+            unset($message['metadataJson']);
+            $message['reactions'] = [];
             return $message;
+        });
+    }
+
+    /** @return array{reacted:bool,reactions:list<array{emoji:string,count:int,reacted:bool}>} */
+    public function toggleReaction(Scope $scope, string $threadId, string $messageId, string $emoji): array
+    {
+        return $this->db->transaction(function () use ($scope, $threadId, $messageId, $emoji): array {
+            if ($this->thread($scope, $threadId) === null) {
+                throw new EducationError(404, 'not_found');
+            }
+            $msg = $this->one(
+                'SELECT id FROM education.messages WHERE id=CAST(:id AS uuid) AND thread_id=CAST(:thread AS uuid) AND organization_id=CAST(:org AS uuid)',
+                [':id' => $messageId, ':thread' => $threadId, ':org' => $scope->organizationId],
+            );
+            if ($msg === null) {
+                throw new EducationError(404, 'not_found');
+            }
+            $existing = $this->one(
+                'SELECT id FROM education.message_reactions WHERE message_id=CAST(:msg AS uuid) AND person_id=CAST(:person AS uuid) AND emoji=:emoji',
+                [':msg' => $messageId, ':person' => $scope->personId, ':emoji' => $emoji],
+            );
+            if ($existing !== null) {
+                $this->db->createCommand(
+                    'DELETE FROM education.message_reactions WHERE id=CAST(:id AS uuid)',
+                    [':id' => (string) $existing['id']],
+                )->execute();
+                $reacted = false;
+            } else {
+                $this->db->createCommand(
+                    'INSERT INTO education.message_reactions(message_id, organization_id, person_id, emoji)
+                     VALUES(CAST(:msg AS uuid), CAST(:org AS uuid), CAST(:person AS uuid), :emoji)',
+                    [':msg' => $messageId, ':org' => $scope->organizationId, ':person' => $scope->personId, ':emoji' => $emoji],
+                )->execute();
+                $reacted = true;
+            }
+
+            $reactionsRows = $this->all(
+                'SELECT emoji, count(*)::int AS count, bool_or(person_id=CAST(:person AS uuid)) AS reacted
+                 FROM education.message_reactions
+                 WHERE message_id=CAST(:msg AS uuid)
+                 GROUP BY emoji ORDER BY count DESC, emoji',
+                [':msg' => $messageId, ':person' => $scope->personId],
+            );
+
+            /** @var list<array{emoji:string,count:int,reacted:bool}> $reactions */
+            $reactions = array_values(array_map(static fn(array $r): array => [
+                'emoji' => (string) $r['emoji'],
+                'count' => (int) $r['count'],
+                'reacted' => (bool) $r['reacted'],
+            ], $reactionsRows));
+
+            return [
+                'reacted' => $reacted,
+                'reactions' => $reactions,
+            ];
         });
     }
 
@@ -917,13 +1166,15 @@ final readonly class PostgresEducationStore implements EducationStore
         );
     }
 
+    /** @return list<string> */
     public function studentOrganizations(string $accountId): array
     {
-        return array_column($this->all(
+        /** @var list<string> */
+        return array_values(array_map('strval', array_column($this->all(
             'SELECT organization_id::text AS org FROM education.student_accounts
             WHERE account_id=CAST(:account AS uuid) AND revoked_at IS NULL',
             [':account' => $accountId],
-        ), 'org');
+        ), 'org')));
     }
 
     public function studentGroupList(Scope $scope): array

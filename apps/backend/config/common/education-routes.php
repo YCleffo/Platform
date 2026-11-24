@@ -47,9 +47,14 @@ $definitions = [
     ['POST', '/events', 'create_event'], ['GET', '/files', 'files'], ['POST', '/files', 'upload_file'],
     ['DELETE', '/files/{id}', 'delete_file'], ['GET', '/files/{id}', 'file_download'],
     ['GET', '/profile', 'profile'], ['PUT', '/profile', 'save_profile'],
-    ['GET', '/colleagues', 'colleagues'], ['GET', '/threads', 'threads'], ['POST', '/threads', 'start_thread'],
+    ['GET', '/colleagues', 'colleagues'], ['GET', '/contacts', 'contacts'],
+    ['GET', '/threads', 'threads'], ['POST', '/threads', 'start_thread'],
     ['GET', '/threads/{id}', 'thread'], ['GET', '/threads/{id}/messages', 'messages'],
-    ['POST', '/threads/{id}/messages', 'send_message'], ['POST', '/threads/{id}/read', 'read_thread'],
+    ['POST', '/threads/{id}/messages', 'send_message'], ['POST', '/threads/{id}/reactions', 'react_message'], ['POST', '/threads/{id}/read', 'read_thread'],
+    ['GET', '/student/contacts', 'student_contacts'],
+    ['GET', '/student/threads', 'student_threads'], ['POST', '/student/threads', 'student_start_thread'],
+    ['GET', '/student/threads/{id}', 'student_thread'], ['GET', '/student/threads/{id}/messages', 'student_messages'],
+    ['POST', '/student/threads/{id}/messages', 'student_send_message'], ['POST', '/student/threads/{id}/reactions', 'student_react_message'], ['POST', '/student/threads/{id}/read', 'student_read_thread'],
     ['GET', '/notifications', 'notifications'], ['POST', '/notifications/{id}/read', 'read_notification'],
 ];
 $routes = (static fn(): array => require __DIR__ . '/parent-routes.php')();

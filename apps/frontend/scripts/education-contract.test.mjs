@@ -87,8 +87,8 @@ test('Education OpenAPI covers precisely the registered optional HTTP operations
   }
   documented.sort();
 
-  assert.equal(actual.length, 101);
-  assert.equal(documented.length, 101);
+  assert.equal(actual.length, 111);
+  assert.equal(documented.length, 111);
   assert.deepEqual(documented, actual);
 });
 

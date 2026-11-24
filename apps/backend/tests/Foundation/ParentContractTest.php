@@ -66,7 +66,8 @@ final class ParentContractTest extends TestCase
                 }
                 self::assertSame('POST', $method);
                 self::assertTrue(in_array($path, ['/api/education/parent/activate', '/api/education/parent/register'], true)
-                    || $path === '/api/education/parent/children/{studentId}/notifications/{id}/read', $method . ' ' . $path);
+                    || $path === '/api/education/parent/children/{studentId}/notifications/{id}/read'
+                    || str_starts_with($path, '/api/education/parent/children/{studentId}/threads'), $method . ' ' . $path);
             }
         }
     }

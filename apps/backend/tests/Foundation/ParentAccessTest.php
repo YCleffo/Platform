@@ -545,6 +545,97 @@ final class ParentAccessTest extends HomeworkFixture
         )->execute();
     }
 
+    public function testParentMessagingWithTeacherAndImmediateRevocation(): void
+    {
+        $parent = $this->parent();
+        $this->activate($parent);
+        $scope = $this->scopeFor($parent);
+
+        $contacts = $this->parents->contacts($scope);
+        self::assertNotEmpty($contacts['items']);
+        self::assertContains($this->teacher->personId, array_column($contacts['items'], 'personId'));
+
+        $thread = $this->parents->startThread($scope, [
+            'recipientPersonId' => $this->teacher->personId,
+            'subject' => 'Parent question',
+            'body' => 'How is my child doing?',
+        ]);
+        self::assertSame('Parent question', $thread['subject']);
+
+        $messages = $this->education->read('messages', $this->teacher, [], $thread['id']);
+        self::assertSame('How is my child doing?', $messages['items'][0]['body']);
+
+        $reply = $this->education->write('send_message', $this->teacher, ['body' => 'Doing great!'], $thread['id']);
+
+        $parentMsgs = $this->parents->messages($scope, $thread['id'], 0);
+        self::assertCount(2, $parentMsgs['items']);
+
+        // Idempotency: repeated send with same clientKey returns identical message without duplicate
+        $msg1 = $this->parents->sendMessage($scope, $thread['id'], ['body' => 'Follow up question', 'clientKey' => 'idem-key-12345678']);
+        $msg2 = $this->parents->sendMessage($scope, $thread['id'], ['body' => 'Follow up question', 'clientKey' => 'idem-key-12345678']);
+        self::assertSame($msg1['id'], $msg2['id']);
+        $afterIdem = $this->parents->messages($scope, $thread['id'], 0);
+        self::assertCount(3, $afterIdem['items']);
+
+        $this->parents->readThread($scope, $thread['id'], ['lastSeenMessageId' => $msg1['id']]);
+
+        // Rich Media & Replies: send reply message with replyToId
+        $replyMsg = $this->education->write('send_message', $this->teacher, [
+            'body' => 'Here is a detailed explanation',
+            'replyToId' => $msg1['id'],
+            'kind' => 'text',
+        ], $thread['id']);
+        self::assertNotNull($replyMsg['id']);
+
+        // Reactions: parent reacts to message
+        $reactRes = $this->parents->toggleReaction($scope, $thread['id'], ['messageId' => $replyMsg['id'], 'emoji' => '👍']);
+        self::assertTrue($reactRes['reacted']);
+        self::assertSame(1, $reactRes['reactions'][0]['count']);
+
+        // Teacher also reacts to same message with same emoji
+        $teachReact = $this->education->write('react_message', $this->teacher, ['messageId' => $replyMsg['id'], 'emoji' => '👍'], $thread['id']);
+        self::assertTrue($teachReact['reacted']);
+        self::assertSame(2, $teachReact['reactions'][0]['count']);
+
+        // Messages listing reflects reactions and reply details
+        $enrichedList = $this->parents->messages($scope, $thread['id'], 0);
+        $lastEnriched = end($enrichedList['items']);
+        self::assertSame($msg1['id'], $lastEnriched['replyTo']['id']);
+        self::assertSame('👍', $lastEnriched['reactions'][0]['emoji']);
+        self::assertSame(2, $lastEnriched['reactions'][0]['count']);
+
+        // Parent toggles off reaction
+        $unreactRes = $this->parents->toggleReaction($scope, $thread['id'], ['messageId' => $replyMsg['id'], 'emoji' => '👍']);
+        self::assertFalse($unreactRes['reacted']);
+        self::assertSame(1, $unreactRes['reactions'][0]['count']);
+
+        // Link second child to same parent (A and B isolation test)
+        $this->confirmed($parent, $this->peer['id']);
+        $this->family->activate($parent['identity'], ['code' => $this->invite($parent, $this->peer['id'])['code']]);
+        $scopeChild2 = $this->scopeFor($parent, $this->peer['id']);
+
+        // Thread created under child A must NOT be visible under child B
+        $threadsChild2 = $this->parents->threads($scopeChild2, 0);
+        self::assertNotContains($thread['id'], array_column($threadsChild2['items'], 'id'));
+        $this->rejection([403, 404], fn() => $this->parents->thread($scopeChild2, $thread['id']));
+
+        // Revoke guardianship for child A
+        $this->family->write('revoke', $this->teacher, $this->learner['id'], $parent['personId']);
+
+        // Immediate rejection for child A
+        $this->rejection([403, 404], fn() => $this->parents->threads($scope, 0));
+        $this->rejection([403, 404], fn() => $this->parents->messages($scope, $thread['id'], 0));
+        $this->rejection([403, 404], fn() => $this->parents->sendMessage($scope, $thread['id'], ['body' => 'Blocked']));
+        $this->rejection([403, 404], fn() => $this->parents->startThread($scope, [
+            'recipientPersonId' => $this->teacher->personId,
+            'subject' => 'Blocked',
+            'body' => 'Blocked',
+        ]));
+
+        // Child B remains accessible and intact
+        self::assertIsArray($this->parents->threads($scopeChild2, 0));
+    }
+
     private function confirmed(array $parent, ?string $student = null, ?Scope $teacher = null): void
     {
         $teacher ??= $this->teacher;

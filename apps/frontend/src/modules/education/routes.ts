@@ -7,7 +7,7 @@ export const educationRoutes: RouteRecordRaw[] = [
   { path: '/education/student-activate', name: 'education-student-activate', component: () => import('./student/StudentActivationView.vue'), meta: { requiresEducationAuth: true } },
   { path: '/parent', component: () => import('./parent/ParentLayout.vue'), meta: { requiresEducationAuth: true }, children: [
     { path: '', redirect: '/parent/home' },
-    ...['home', 'schedule', 'diary', 'homework', 'progress', 'notifications'].map(section => ({ path: section, name: `education-parent-${section}`, component: () => import('./parent/ParentSectionView.vue'), meta: { parentSection: section } })),
+    ...['home', 'schedule', 'diary', 'homework', 'progress', 'messages', 'notifications'].map(section => ({ path: section, name: `education-parent-${section}`, component: () => import('./parent/ParentSectionView.vue'), meta: { parentSection: section } })),
   ] },
 
   { path: '/education/login', name: 'education-login', component: () => import('./EducationLoginView.vue') },
@@ -43,6 +43,8 @@ export const educationRoutes: RouteRecordRaw[] = [
       { path: '', redirect: { name: 'education-student-home' } },
       { path: 'homework', name: 'education-student-homework', component: () => import('./homework/HomeworkListView.vue'), props: { student: true }, meta: { educationTab: 'none' } },
       { path: 'homework/:id', name: 'education-student-homework-detail', component: () => import('./homework/StudentHomeworkView.vue'), meta: { educationTab: 'none', studentNavigation: 'education-student-homework' } },
+      { path: 'messages', name: 'education-student-messages', component: () => import('./student/StudentMessagesView.vue'), meta: { educationTab: 'none', studentNavigation: 'education-student-messages' } },
+      { path: 'messages/:id', name: 'education-student-thread', component: () => import('./student/StudentMessagesView.vue'), meta: { educationTab: 'none', studentNavigation: 'education-student-messages' } },
       { path: 'notifications', name: 'education-student-notifications', component: () => import('./NotificationsView.vue'), props: { student: true }, meta: { educationTab: 'none' } },
       { path: 'home', name: 'education-student-home', component: () => import('./student/StudentHomeView.vue'), meta: { educationTab: 'none' } },
       { path: 'diary', name: 'education-student-diary', component: () => import('./student/StudentDiaryView.vue'), meta: { educationTab: 'none' } },

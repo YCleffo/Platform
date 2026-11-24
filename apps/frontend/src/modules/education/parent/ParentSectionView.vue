@@ -19,6 +19,7 @@ import { parentChildKey, useParentWorkspace } from './workspace';
 import { useParentResource } from './resources';
 import ParentLessonList from './ParentLessonList.vue';
 import ParentHomeworkList from './ParentHomeworkList.vue';
+import EducationMessenger from '../messaging/EducationMessenger.vue';
 const workspace = useParentWorkspace();
 const route = useRoute();
 const { t, locale } = useEducationI18n();
@@ -82,6 +83,8 @@ const { data, error, loading, refresh } = useParentResource<SectionData>(
         const page: Page<Notification> = await parentApi.notifications(child, offset.value, signal);
         return { notifications: page.items, nextOffset: page.nextOffset };
       }
+      case 'messages':
+        return {};
       default:
         return { home: await parentApi.home(child, signal) };
     }
@@ -412,6 +415,17 @@ const notificationLabel = (notification: Notification) =>
             </button>
           </li>
         </ul>
+      </template>
+      <template v-else-if="section === 'messages'">
+        <EducationMessenger
+          v-if="workspace.child && workspace.context"
+          role="parent"
+          :organization-id="workspace.child.organizationId"
+          :current-person-id="workspace.context.personId"
+          :parent-child="workspace.child"
+          :timezone="workspace.context.timezone"
+          :initial-thread-id="typeof route.query.thread === 'string' ? route.query.thread : ''"
+        />
       </template>
       <div
         v-if="offset || data.nextOffset != null"

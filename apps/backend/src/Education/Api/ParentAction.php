@@ -71,6 +71,25 @@ final readonly class ParentAction
                 }
                 return $responses->success($parents->readNotification($scope, Input::uuid($route->getArgument('id'))));
             }
+            if ($operation === 'parent_start_thread') {
+                return $responses->success($parents->startThread($scope, $body))->withStatus(201);
+            }
+            if ($operation === 'parent_send_message') {
+                return $responses->success($parents->sendMessage($scope, Input::uuid($route->getArgument('id')), $body));
+            }
+            if ($operation === 'parent_react_message') {
+                return $responses->success($parents->toggleReaction($scope, Input::uuid($route->getArgument('id')), $body));
+            }
+            if ($operation === 'parent_read_thread') {
+                return $responses->success($parents->readThread($scope, Input::uuid($route->getArgument('id')), $body));
+            }
+            if ($operation === 'parent_thread') {
+                return $responses->success($parents->thread($scope, Input::uuid($route->getArgument('id'))));
+            }
+            if ($operation === 'parent_messages') {
+                $offset = (int) ($request->getQueryParams()['offset'] ?? 0);
+                return $responses->success($parents->messages($scope, Input::uuid($route->getArgument('id')), $offset));
+            }
             return $responses->success($parents->read($operation, $scope, $request->getQueryParams()));
         } catch (EducationError $error) {
             return $responses->error(match ($error->status) {

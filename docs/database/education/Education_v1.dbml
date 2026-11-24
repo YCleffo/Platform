@@ -621,17 +621,37 @@ Table education.logic_results {
   Note: 'logic_results_accuracy_check: CHECK (accuracy >= 0::numeric AND accuracy <= 100::numeric)\nlogic_results_accuracy_not_null: NOT NULL accuracy\nlogic_results_attempt_id_fkey: FOREIGN KEY (attempt_id) REFERENCES education.activity_results(attempt_id)\nlogic_results_attempt_id_not_null: NOT NULL attempt_id\nlogic_results_check: CHECK (correct_answers <= total_rounds)\nlogic_results_correct_answers_check: CHECK (correct_answers >= 0)\nlogic_results_correct_answers_not_null: NOT NULL correct_answers\nlogic_results_created_at_not_null: NOT NULL created_at\nlogic_results_organization_id_not_null: NOT NULL organization_id\nlogic_results_score_check: CHECK (score >= 0 AND score <= 1000)\nlogic_results_score_not_null: NOT NULL score\nlogic_results_student_id_not_null: NOT NULL student_id\nlogic_results_total_rounds_check: CHECK (total_rounds = ANY (ARRAY[5, 10]))\nlogic_results_total_rounds_not_null: NOT NULL total_rounds\nCREATE INDEX logic_results_student ON education.logic_results USING btree (organization_id, student_id, created_at DESC, attempt_id)'
 }
 
+Table education.message_reactions {
+  id uuid [pk, not null, default: `uuidv7()`]
+  message_id uuid [not null]
+  organization_id uuid [not null]
+  person_id uuid [not null]
+  emoji "character varying(16)" [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    message_id [name: 'message_reactions_message_idx', type: btree]
+    (organization_id, person_id) [name: 'message_reactions_person_idx', type: btree]
+    (message_id, person_id, emoji) [name: 'uq_message_person_emoji', type: btree, unique]
+  }
+  Note: 'message_reactions_created_at_not_null: NOT NULL created_at\nmessage_reactions_emoji_not_null: NOT NULL emoji\nmessage_reactions_id_not_null: NOT NULL id\nmessage_reactions_message_id_fkey: FOREIGN KEY (message_id) REFERENCES education.messages(id) ON DELETE CASCADE\nmessage_reactions_message_id_not_null: NOT NULL message_id\nmessage_reactions_organization_id_not_null: NOT NULL organization_id\nmessage_reactions_person_id_not_null: NOT NULL person_id\nuq_message_person_emoji: UNIQUE (message_id, person_id, emoji)\nCREATE INDEX message_reactions_message_idx ON education.message_reactions USING btree (message_id)\nCREATE INDEX message_reactions_person_idx ON education.message_reactions USING btree (organization_id, person_id)\nCREATE UNIQUE INDEX uq_message_person_emoji ON education.message_reactions USING btree (message_id, person_id, emoji)'
+}
+
 Table education.messages {
   id uuid [pk, not null, default: `uuidv7()`]
   thread_id uuid [not null]
   organization_id uuid [not null]
   sender_person_id uuid [not null]
-  body text [not null]
+  body text [null]
   created_at "timestamp with time zone" [not null, default: `now()`]
+  client_key "character varying(128)" [null, default: `NULL::character varying`]
+  kind "character varying(20)" [not null, default: `'text'::character varying`]
+  media_asset_id uuid [null]
+  reply_to_id uuid [null]
+  metadata jsonb [not null, default: `'{}'::jsonb`]
   indexes {
     (thread_id, created_at, id) [name: 'messages_thread_time', type: btree]
   }
-  Note: 'messages_body_check: CHECK (length(body) >= 1 AND length(body) <= 5000)\nmessages_body_not_null: NOT NULL body\nmessages_created_at_not_null: NOT NULL created_at\nmessages_id_not_null: NOT NULL id\nmessages_organization_id_not_null: NOT NULL organization_id\nmessages_sender_person_id_not_null: NOT NULL sender_person_id\nmessages_thread_id_not_null: NOT NULL thread_id\nmessages_thread_id_organization_id_fkey: FOREIGN KEY (thread_id, organization_id) REFERENCES education.threads(id, organization_id)\nCREATE INDEX messages_thread_time ON education.messages USING btree (thread_id, created_at, id)'
+  Note: 'messages_body_or_media_check: CHECK (body IS NOT NULL AND length(body) >= 1 AND length(body) <= 5000 OR media_asset_id IS NOT NULL)\nmessages_created_at_not_null: NOT NULL created_at\nmessages_id_not_null: NOT NULL id\nmessages_kind_not_null: NOT NULL kind\nmessages_metadata_not_null: NOT NULL metadata\nmessages_organization_id_not_null: NOT NULL organization_id\nmessages_sender_person_id_not_null: NOT NULL sender_person_id\nmessages_thread_id_not_null: NOT NULL thread_id\nmessages_thread_id_organization_id_fkey: FOREIGN KEY (thread_id, organization_id) REFERENCES education.threads(id, organization_id)\nCREATE UNIQUE INDEX messages_idempotency ON education.messages USING btree (thread_id, sender_person_id, client_key) WHERE (client_key IS NOT NULL)\nCREATE INDEX messages_media_asset_idx ON education.messages USING btree (media_asset_id) WHERE (media_asset_id IS NOT NULL)\nCREATE INDEX messages_reply_to_idx ON education.messages USING btree (reply_to_id) WHERE (reply_to_id IS NOT NULL)\nCREATE INDEX messages_thread_time ON education.messages USING btree (thread_id, created_at, id)'
 }
 
 Table education.module_migrations {
@@ -849,10 +869,14 @@ Table education.threads {
   organization_id uuid [not null]
   subject "character varying(160)" [not null]
   created_at "timestamp with time zone" [not null, default: `now()`]
+  context_type "character varying(30)" [null]
+  context_id uuid [null]
+  last_activity_at "timestamp with time zone" [not null, default: `now()`]
   indexes {
     (id, organization_id) [name: 'threads_id_organization_id_key', type: btree, unique]
+    (organization_id, last_activity_at) [name: 'threads_last_activity', type: btree]
   }
-  Note: 'threads_created_at_not_null: NOT NULL created_at\nthreads_id_not_null: NOT NULL id\nthreads_id_organization_id_key: UNIQUE (id, organization_id)\nthreads_organization_id_not_null: NOT NULL organization_id\nthreads_subject_check: CHECK (btrim(subject::text) <> \'\'::text)\nthreads_subject_not_null: NOT NULL subject\nCREATE UNIQUE INDEX threads_id_organization_id_key ON education.threads USING btree (id, organization_id)'
+  Note: 'threads_created_at_not_null: NOT NULL created_at\nthreads_id_not_null: NOT NULL id\nthreads_id_organization_id_key: UNIQUE (id, organization_id)\nthreads_last_activity_at_not_null: NOT NULL last_activity_at\nthreads_organization_id_not_null: NOT NULL organization_id\nthreads_subject_check: CHECK (btrim(subject::text) <> \'\'::text)\nthreads_subject_not_null: NOT NULL subject\nCREATE UNIQUE INDEX threads_id_organization_id_key ON education.threads USING btree (id, organization_id)\nCREATE INDEX threads_last_activity ON education.threads USING btree (organization_id, last_activity_at DESC)'
 }
 
 Table education.typing_results {
@@ -929,6 +953,7 @@ Ref: education.lessons.(curriculum_lesson_id, organization_id) > education.curri
 Ref: education.lessons.(group_program_id, organization_id) > education.group_programs.(id, organization_id) [delete: no action, update: no action]
 Ref: education.lessons.(group_id, organization_id, owner_account_id) > education.groups.(id, organization_id, owner_account_id) [delete: no action, update: no action]
 Ref: education.logic_results.attempt_id > education.activity_results.attempt_id [delete: no action, update: no action]
+Ref: education.message_reactions.message_id > education.messages.id [delete: cascade, update: no action]
 Ref: education.messages.(thread_id, organization_id) > education.threads.(id, organization_id) [delete: no action, update: no action]
 Ref: education.notifications.message_id > education.messages.id [delete: no action, update: no action]
 Ref: education.notifications.thread_id > education.threads.id [delete: no action, update: no action]

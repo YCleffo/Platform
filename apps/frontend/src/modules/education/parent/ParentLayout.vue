@@ -16,7 +16,7 @@ const route = useRoute();
 const router = useRouter();
 const { t, locale } = useEducationI18n();
 const { isDark, toggleTheme } = useTheme();
-const tabs = ['home', 'schedule', 'diary', 'homework', 'progress', 'notifications'] as const;
+const tabs = ['home', 'schedule', 'diary', 'homework', 'progress', 'messages', 'notifications'] as const;
 const navigation = ref<HTMLElement | null>(null);
 const activeSection = computed(() => route.meta.parentSection);
 function alignNavigation(): void {

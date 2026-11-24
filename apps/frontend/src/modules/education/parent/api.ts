@@ -2,7 +2,7 @@ import { coreAdminHttp } from '@/shared/api/core/adminHttp';
 import { ApiResponseError } from '@/shared/api/errors';
 import type { ActivityProgress, Achievement } from '../activityTypes';
 import { progressGuard as activityProgressGuard, achievementGuard } from '../activityApi';
-import type { Page, ProgramProgress, Notification, PersonChoice } from '../api';
+import type { Page, ProgramProgress, Notification, PersonChoice, Thread, Message, EducationContact } from '../api';
 
 export interface ParentChild {
   id: string;
@@ -128,6 +128,7 @@ const text = (v: unknown): v is string => typeof v === 'string';
 const nullableText = (v: unknown): v is string | null => v === null || text(v);
 const uuid = (v: unknown): v is string =>
   text(v) && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(v);
+const nullableUuid = (v: unknown): v is string | null => v === null || uuid(v);
 const numeric = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
 const integer = (v: unknown): v is number => numeric(v) && Number.isSafeInteger(v);
 const instant = (v: unknown): v is string => text(v) && Number.isFinite(Date.parse(v));
@@ -240,6 +241,28 @@ const progressGuard: Guard<ParentProgress> = (v): v is ParentProgress =>
   arrayOf(v.achievements, achievementGuard) && activityProgressGuard(v.activityProgress);
 const notificationGuard: Guard<Notification> = (v): v is Notification =>
   record(v) && uuid(v.id) && text(v.subject) && instant(v.createdAt) && nullableInstant(v.readAt);
+const contactGuard: Guard<EducationContact> = (v): v is EducationContact =>
+  record(v) && uuid(v.personId) && text(v.name) && ['teacher', 'student', 'parent'].includes(String(v.role)) &&
+  (!('context' in v) || nullableText(v.context)) &&
+  (!('groupId' in v) || nullableUuid(v.groupId)) &&
+  (!('childName' in v) || nullableText(v.childName));
+const threadGuard: Guard<Thread> = (v): v is Thread =>
+  record(v) &&
+  uuid(v.id) &&
+  text(v.subject) &&
+  (v.unreadCount === undefined || integer(v.unreadCount)) &&
+  (!('createdAt' in v) || nullableInstant(v.createdAt)) &&
+  (!('lastActivityAt' in v) || nullableInstant(v.lastActivityAt)) &&
+  (!('peerPersonId' in v) || nullableUuid(v.peerPersonId)) &&
+  (!('peerName' in v) || nullableText(v.peerName)) &&
+  (!('peerRole' in v) || nullableText(v.peerRole)) &&
+  (!('contextType' in v) || nullableText(v.contextType)) &&
+  (!('contextId' in v) || nullableUuid(v.contextId)) &&
+  (!('lastMessageBody' in v) || nullableText(v.lastMessageBody)) &&
+  (!('lastMessageAt' in v) || nullableInstant(v.lastMessageAt)) &&
+  (!('lastMessageSenderId' in v) || nullableUuid(v.lastMessageSenderId));
+const messageGuard: Guard<Message> = (v): v is Message =>
+  record(v) && uuid(v.id) && uuid(v.senderPersonId) && nullableText(v.body) && instant(v.createdAt) && (v.senderName === undefined || nullableText(v.senderName));
 const guardianGuard: Guard<Guardian> = (v): v is Guardian =>
   record(v) &&
   uuid(v.personId) &&
@@ -358,6 +381,97 @@ export const parentApi = {
       signal,
       'POST',
       {},
+    ),
+  contacts: (child: ParentChild, signal?: AbortSignal) =>
+    request(
+      childPath(child, 'contacts'),
+      (v): v is { items: EducationContact[] } => record(v) && arrayOf(v.items, contactGuard),
+      child.organizationId,
+      signal,
+    ),
+  threads: (child: ParentChild, offset = 0, signal?: AbortSignal) =>
+    request(
+      `${childPath(child, 'threads')}?offset=${offset}`,
+      page(threadGuard),
+      child.organizationId,
+      signal,
+    ),
+  thread: (child: ParentChild, id: string, signal?: AbortSignal) =>
+    request(
+      childPath(child, `threads/${encodeURIComponent(id)}`),
+      threadGuard,
+      child.organizationId,
+      signal,
+    ),
+  messages: (child: ParentChild, id: string, offset = 0, signal?: AbortSignal, before?: string) => {
+    const params = new URLSearchParams({ offset: String(offset) });
+    if (before) params.set('before', before);
+    return request(
+      `${childPath(child, `threads/${encodeURIComponent(id)}/messages`)}?${params.toString()}`,
+      page(messageGuard),
+      child.organizationId,
+      signal,
+    );
+  },
+  startThread: (child: ParentChild, recipientPersonId: string, subject: string, body: string, signal?: AbortSignal) =>
+    request(
+      childPath(child, 'threads'),
+      threadGuard,
+      child.organizationId,
+      signal,
+      'POST',
+      { recipientPersonId, subject, body },
+    ),
+  sendMessage: (
+    child: ParentChild,
+    id: string,
+    body: string | null,
+    clientKey?: string,
+    kind = 'text',
+    mediaAssetId?: string | null,
+    replyToId?: string | null,
+    metadata?: Record<string, unknown>,
+    signal?: AbortSignal,
+  ) =>
+    request(
+      childPath(child, `threads/${encodeURIComponent(id)}/messages`),
+      messageGuard,
+      child.organizationId,
+      signal,
+      'POST',
+      {
+        body,
+        ...(clientKey ? { clientKey } : {}),
+        kind,
+        ...(mediaAssetId ? { mediaAssetId } : {}),
+        ...(replyToId ? { replyToId } : {}),
+        ...(metadata ? { metadata } : {}),
+      },
+    ),
+  toggleReaction: (
+    child: ParentChild,
+    id: string,
+    messageId: string,
+    emoji: string,
+    signal?: AbortSignal,
+  ) =>
+    request(
+      childPath(child, `threads/${encodeURIComponent(id)}/reactions`),
+      (v): v is { reacted: boolean; reactions: unknown[] } =>
+        typeof v === 'object' && v !== null && 'reacted' in v && 'reactions' in v,
+      child.organizationId,
+      signal,
+      'POST',
+      { messageId, emoji },
+    ),
+  readThread: (child: ParentChild, id: string, lastSeenMessageId: string, signal?: AbortSignal) =>
+    request(
+      childPath(child, `threads/${encodeURIComponent(id)}/read`),
+      success,
+      child.organizationId,
+      signal,
+      'POST',
+      { lastSeenMessageId },
     ),
   guardians: (org: string, student: string, signal?: AbortSignal) =>
     request(familyPath(student), familyGuard, org, signal),

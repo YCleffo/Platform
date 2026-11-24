@@ -61,6 +61,37 @@ function statusLabel(status: string): string {
     `education.${status === 'pending' ? 'notAssessed' : status === 'needs_support' ? 'needsSupport' : status}`,
   );
 }
+
+const viewMode = ref<'table' | 'cards'>('table');
+
+const sortedLessons = computed(() => {
+  if (!data.value) return [];
+  return [...data.value.journal.items].reverse();
+});
+
+function studentLessonResult(
+  results: Array<{ studentId: string; status: string; comment?: string | null; name: string }>,
+  sId: string,
+) {
+  return results.find((r) => r.studentId === sId);
+}
+
+function studentAttendanceStats(sId: string) {
+  if (!data.value) return { attended: 0, total: 0, percent: 0 };
+  let attended = 0;
+  let total = 0;
+  for (const lesson of data.value.journal.items) {
+    const res = lesson.results.find((r) => r.studentId === sId);
+    if (res) {
+      total++;
+      if (res.status !== 'pending') {
+        attended++;
+      }
+    }
+  }
+  const percent = total > 0 ? Math.round((attended / total) * 100) : 0;
+  return { attended, total, percent };
+}
 </script>
 <template>
   <section>
@@ -124,10 +155,105 @@ function statusLabel(status: string): string {
       </div>
     </form>
     <template v-if="data">
+      <div
+        v-if="data.journal.items.length"
+        class="edu-form-actions"
+        style="margin-bottom: 12px;"
+      >
+        <button
+          type="button"
+          class="edu-button"
+          :class="{ 'edu-button--primary': viewMode === 'table' }"
+          @click="viewMode = 'table'"
+        >
+          {{ t('education.journalTable') }}
+        </button>
+        <button
+          type="button"
+          class="edu-button"
+          :class="{ 'edu-button--primary': viewMode === 'cards' }"
+          @click="viewMode = 'cards'"
+        >
+          {{ t('education.journalCards') }}
+        </button>
+      </div>
+
       <EducationState
         v-if="!data.journal.items.length"
         :empty="from || to ? t('education.noJournalPeriod') : t('education.noJournal')"
       />
+
+      <!-- Tabular Grid Mode -->
+      <div
+        v-else-if="viewMode === 'table'"
+        class="edu-journal__matrix-wrapper"
+      >
+        <table class="edu-journal__matrix">
+          <thead>
+            <tr>
+              <th class="edu-journal__th-student">
+                {{ t('education.students') }}
+              </th>
+              <th
+                v-for="entry in sortedLessons"
+                :key="entry.id"
+              >
+                <RouterLink
+                  :to="`/lessons/${entry.id}/results`"
+                  class="edu-journal__col-header"
+                >
+                  <span class="edu-journal__col-date">{{ date(entry.startsAt) }}</span>
+                  <span
+                    class="edu-journal__col-topic"
+                    :title="entry.report?.topic || entry.title"
+                  >
+                    {{ entry.report?.topic || entry.title }}
+                  </span>
+                </RouterLink>
+              </th>
+              <th>
+                {{ t('education.attendanceRate') }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="student in data.roster.items"
+              :key="student.id"
+            >
+              <td class="edu-journal__td-student">
+                <strong>{{ student.name ?? student.id }}</strong>
+              </td>
+              <td
+                v-for="entry in sortedLessons"
+                :key="entry.id"
+              >
+                <template v-if="studentLessonResult(entry.results, student.id)">
+                  <span
+                    class="edu-status"
+                    :class="`edu-status--${studentLessonResult(entry.results, student.id)!.status === 'needs_support' ? 'cancelled' : studentLessonResult(entry.results, student.id)!.status}`"
+                    :title="studentLessonResult(entry.results, student.id)!.comment || undefined"
+                  >
+                    {{ statusLabel(studentLessonResult(entry.results, student.id)!.status) }}
+                  </span>
+                </template>
+                <span
+                  v-else
+                  class="edu-subtle"
+                >—</span>
+              </td>
+              <td>
+                <span class="edu-subtle">
+                  {{ studentAttendanceStats(student.id).attended }}/{{ studentAttendanceStats(student.id).total }}
+                  ({{ studentAttendanceStats(student.id).percent }}%)
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Classic Cards/List Mode -->
       <ul
         v-else
         class="edu-list"

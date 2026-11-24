@@ -13413,6 +13413,287 @@
     },
     {
       "rls": false,
+      "name": "message_reactions",
+      "schema": "education",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "message_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "emoji",
+          "type": "character varying(16)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "message_id"
+          ],
+          "name": "message_reactions_message_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX message_reactions_message_idx ON education.message_reactions USING btree (message_id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "organization_id",
+            "person_id"
+          ],
+          "name": "message_reactions_person_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX message_reactions_person_idx ON education.message_reactions USING btree (organization_id, person_id)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "message_reactions_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX message_reactions_pkey ON education.message_reactions USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "message_id",
+            "person_id",
+            "emoji"
+          ],
+          "name": "uq_message_person_emoji",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX uq_message_person_emoji ON education.message_reactions USING btree (message_id, person_id, emoji)",
+          "attribute_count": 3
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "message_reactions_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "message_reactions_emoji_not_null",
+          "columns": [
+            "emoji"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL emoji",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "message_reactions_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "message_reactions_message_id_fkey",
+          "columns": [
+            "message_id"
+          ],
+          "on_delete": "c",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (message_id) REFERENCES education.messages(id) ON DELETE CASCADE",
+          "target_table": "messages",
+          "target_schema": "education",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "message_reactions_message_id_not_null",
+          "columns": [
+            "message_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL message_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "message_reactions_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "message_reactions_person_id_not_null",
+          "columns": [
+            "person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL person_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "message_reactions_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "uq_message_person_emoji",
+          "columns": [
+            "message_id",
+            "person_id",
+            "emoji"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (message_id, person_id, emoji)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
       "name": "messages",
       "schema": "education",
       "columns": [
@@ -13471,7 +13752,7 @@
           "default": null,
           "is_enum": false,
           "identity": "",
-          "nullable": false,
+          "nullable": true,
           "generated": "",
           "type_name": "text",
           "type_schema": "pg_catalog"
@@ -13487,10 +13768,98 @@
           "generated": "",
           "type_name": "timestamptz",
           "type_schema": "pg_catalog"
+        },
+        {
+          "name": "client_key",
+          "type": "character varying(128)",
+          "comment": null,
+          "default": "NULL::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "kind",
+          "type": "character varying(20)",
+          "comment": null,
+          "default": "'text'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "media_asset_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "reply_to_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "metadata",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
         }
       ],
       "comment": null,
       "indexes": [
+        {
+          "keys": [
+            "thread_id",
+            "sender_person_id",
+            "client_key"
+          ],
+          "name": "messages_idempotency",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 3,
+          "predicate": "(client_key IS NOT NULL)",
+          "definition": "CREATE UNIQUE INDEX messages_idempotency ON education.messages USING btree (thread_id, sender_person_id, client_key) WHERE (client_key IS NOT NULL)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "media_asset_id"
+          ],
+          "name": "messages_media_asset_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": "(media_asset_id IS NOT NULL)",
+          "definition": "CREATE INDEX messages_media_asset_idx ON education.messages USING btree (media_asset_id) WHERE (media_asset_id IS NOT NULL)",
+          "attribute_count": 1
+        },
         {
           "keys": [
             "id"
@@ -13502,6 +13871,19 @@
           "key_count": 1,
           "predicate": null,
           "definition": "CREATE UNIQUE INDEX messages_pkey ON education.messages USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "reply_to_id"
+          ],
+          "name": "messages_reply_to_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": "(reply_to_id IS NOT NULL)",
+          "definition": "CREATE INDEX messages_reply_to_idx ON education.messages USING btree (reply_to_id) WHERE (reply_to_id IS NOT NULL)",
           "attribute_count": 1
         },
         {
@@ -13526,29 +13908,15 @@
       "constraints": [
         {
           "kind": "c",
-          "name": "messages_body_check",
+          "name": "messages_body_or_media_check",
           "columns": [
-            "body"
+            "body",
+            "media_asset_id"
           ],
           "on_delete": " ",
           "on_update": " ",
           "deferrable": false,
-          "definition": "CHECK (length(body) >= 1 AND length(body) <= 5000)",
-          "target_table": null,
-          "target_schema": null,
-          "target_columns": null,
-          "initially_deferred": false
-        },
-        {
-          "kind": "n",
-          "name": "messages_body_not_null",
-          "columns": [
-            "body"
-          ],
-          "on_delete": " ",
-          "on_update": " ",
-          "deferrable": false,
-          "definition": "NOT NULL body",
+          "definition": "CHECK (body IS NOT NULL AND length(body) >= 1 AND length(body) <= 5000 OR media_asset_id IS NOT NULL)",
           "target_table": null,
           "target_schema": null,
           "target_columns": null,
@@ -13579,6 +13947,36 @@
           "on_update": " ",
           "deferrable": false,
           "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "messages_kind_not_null",
+          "columns": [
+            "kind"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL kind",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "messages_metadata_not_null",
+          "columns": [
+            "metadata"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL metadata",
           "target_table": null,
           "target_schema": null,
           "target_columns": null,
@@ -17801,6 +18199,42 @@
           "generated": "",
           "type_name": "timestamptz",
           "type_schema": "pg_catalog"
+        },
+        {
+          "name": "context_type",
+          "type": "character varying(30)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "context_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "last_activity_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
         }
       ],
       "comment": null,
@@ -17817,6 +18251,20 @@
           "key_count": 2,
           "predicate": null,
           "definition": "CREATE UNIQUE INDEX threads_id_organization_id_key ON education.threads USING btree (id, organization_id)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "organization_id",
+            "last_activity_at"
+          ],
+          "name": "threads_last_activity",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX threads_last_activity ON education.threads USING btree (organization_id, last_activity_at DESC)",
           "attribute_count": 2
         },
         {
@@ -17878,6 +18326,21 @@
           "on_update": " ",
           "deferrable": false,
           "definition": "UNIQUE (id, organization_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "threads_last_activity_at_not_null",
+          "columns": [
+            "last_activity_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL last_activity_at",
           "target_table": null,
           "target_schema": null,
           "target_columns": null,
@@ -19686,7 +20149,11 @@
     "013_parent_family.sql",
     "014_activities_achievements.sql",
     "015_s3_file_transfers.sql",
-    "016_platform_brand.sql"
+    "016_platform_brand.sql",
+    "017_messaging_enhancements.sql",
+    "018_parent_thread_context.sql",
+    "019_message_idempotency.sql",
+    "020_messaging_rich_media.sql"
   ],
   "migration_sources": [
     {
@@ -19752,6 +20219,22 @@
     {
       "path": "apps/backend/migrations/education/016_platform_brand.sql",
       "sha256": "8af6f234266d66b5580d6cf4000dfad4b49f39c78de3a76a2985959c25aaff16"
+    },
+    {
+      "path": "apps/backend/migrations/education/017_messaging_enhancements.sql",
+      "sha256": "b68040dc3eda6e2e30e9fc1e8f2bf59f045c63fc6bcff7bf1a0d2c3e0122fa33"
+    },
+    {
+      "path": "apps/backend/migrations/education/018_parent_thread_context.sql",
+      "sha256": "e3b27fbb9997d589164c4e154db7cc94f71c0d4b395204cf0052a7eedf443dd1"
+    },
+    {
+      "path": "apps/backend/migrations/education/019_message_idempotency.sql",
+      "sha256": "632286d49c90fd8e1c0a7081378dc97928f4b5629167b2daf03dbb8298a32db6"
+    },
+    {
+      "path": "apps/backend/migrations/education/020_messaging_rich_media.sql",
+      "sha256": "81b1b6b09d1043f28ca01556d309e2ef8f78bd0eb70f76dfae77850f761eabe6"
     }
   ]
 }

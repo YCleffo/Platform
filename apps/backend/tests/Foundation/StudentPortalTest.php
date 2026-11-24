@@ -292,6 +292,67 @@ final class StudentPortalTest extends TestCase
         $this->assertError(404, fn() => $this->service->read('group_activity_results', $otherScope, ['activity' => 'platform-typing'], $group['id']));
     }
 
+    public function testStudentMessagingWithTeacherAndSecurityBoundaries(): void
+    {
+        $group = $this->service->write('create_group', $this->teacherScope, ['name' => 'Messaging group']);
+        $person = $this->person('Chat student');
+        $this->member($person);
+        $student = $this->service->write('enroll_student', $this->teacherScope, ['groupId' => $group['id'], 'personId' => $person]);
+
+        $account = $this->account($person, 'Chat student');
+        $identity = new AuthenticatedIdentity($account, $person, $this->id(), ['education.student'], [], 'ru-RU', 'Europe/Moscow');
+        $invite = $this->service->write('invite_student', $this->teacherScope, [], $student['id']);
+        $this->service->activateInvite($identity, $person, ['code' => $invite['code']]);
+
+        $studentScope = $this->access->studentScope($identity, $this->organization, 'education.student.use');
+
+        // Check contacts
+        $contacts = $this->service->read('student_contacts', $studentScope, []);
+        self::assertNotEmpty($contacts['items']);
+        self::assertContains($this->teacherScope->personId, array_column($contacts['items'], 'personId'));
+
+        // Teacher contacts include student
+        $teacherContacts = $this->service->read('contacts', $this->teacherScope, []);
+        self::assertContains($person, array_column($teacherContacts['items'], 'personId'));
+
+        // Student starts thread with teacher
+        $thread = $this->service->write('student_start_thread', $studentScope, [
+            'recipientPersonId' => $this->teacherScope->personId,
+            'subject' => 'Need help',
+            'body' => 'I have a question',
+        ]);
+        self::assertSame('Need help', $thread['subject']);
+
+        // Teacher reads and replies
+        $teacherMsgs = $this->service->read('messages', $this->teacherScope, [], $thread['id']);
+        self::assertSame('I have a question', $teacherMsgs['items'][0]['body']);
+        $reply = $this->service->write('send_message', $this->teacherScope, ['body' => 'What is your question?'], $thread['id']);
+
+        // Student reads messages and marks read
+        $studentMsgs = $this->service->read('student_messages', $studentScope, [], $thread['id']);
+        self::assertCount(2, $studentMsgs['items']);
+        $this->service->write('student_read_thread', $studentScope, ['lastSeenMessageId' => $reply['id']], $thread['id']);
+
+        // Idempotency: repeated send with same clientKey returns identical message
+        $studentMsg1 = $this->service->write('student_send_message', $studentScope, [
+            'body' => 'Still need help',
+            'clientKey' => 'idem-student-12345678',
+        ], $thread['id']);
+        $studentMsg2 = $this->service->write('student_send_message', $studentScope, [
+            'body' => 'Still need help',
+            'clientKey' => 'idem-student-12345678',
+        ], $thread['id']);
+        self::assertSame($studentMsg1['id'], $studentMsg2['id']);
+
+        // Security boundaries: student cannot message a stranger
+        $stranger = $this->person('Stranger');
+        $this->assertError(403, fn() => $this->service->write('student_start_thread', $studentScope, [
+            'recipientPersonId' => $stranger,
+            'subject' => 'Spam',
+            'body' => 'Hello',
+        ]));
+    }
+
     private function fixedClock(): ClockInterface
     {
         return new class implements ClockInterface {

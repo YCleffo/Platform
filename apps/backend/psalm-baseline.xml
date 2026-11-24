@@ -1,5 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <files psalm-version="6.17.2@dd625545733d24633e5d386a26c13004dae80e19">
+  <file src="src/Branding/BrandingFiles.php">
+    <MixedMethodCall>
+      <code><![CDATA[buffer]]></code>
+    </MixedMethodCall>
+    <UndefinedClass>
+      <code><![CDATA[\finfo]]></code>
+    </UndefinedClass>
+    <UndefinedConstant>
+      <code><![CDATA[FILEINFO_MIME_TYPE]]></code>
+    </UndefinedConstant>
+  </file>
+  <file src="src/Core/Auth/Infrastructure/SodiumAuthenticationPayloadCipher.php">
+    <MixedArgument>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+    </MixedArgument>
+    <UndefinedConstant>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES]]></code>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+    </UndefinedConstant>
+  </file>
+  <file src="src/Core/Auth/Infrastructure/SodiumTotpSecretCipher.php">
+    <MixedArgument>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+    </MixedArgument>
+    <UndefinedConstant>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES]]></code>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+      <code><![CDATA[SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES]]></code>
+    </UndefinedConstant>
+  </file>
+  <file src="src/Core/Internationalization/Application/LocaleNormalizer.php">
+    <UndefinedClass>
+      <code><![CDATA[\Locale]]></code>
+    </UndefinedClass>
+  </file>
+  <file src="src/Core/Shared/Domain/ValueNormalizer.php">
+    <InternalMethod>
+      <code><![CDATA[Normalizer::normalize($value, Normalizer::FORM_C)]]></code>
+      <code><![CDATA[Normalizer::normalize(trim($value), Normalizer::FORM_C)]]></code>
+      <code><![CDATA[Normalizer::normalize(trim($value), Normalizer::FORM_C)]]></code>
+    </InternalMethod>
+    <MixedArgument>
+      <code><![CDATA[$asciiDomain]]></code>
+    </MixedArgument>
+    <MixedOperand>
+      <code><![CDATA[$asciiDomain]]></code>
+    </MixedOperand>
+  </file>
+  <file src="src/Core/Time/Application/DateTimeFormatter.php">
+    <MixedMethodCall>
+      <code><![CDATA[format]]></code>
+    </MixedMethodCall>
+    <MixedReturnStatement>
+      <code><![CDATA[$result]]></code>
+    </MixedReturnStatement>
+    <UndefinedClass>
+      <code><![CDATA[IntlDateFormatter]]></code>
+      <code><![CDATA[IntlDateFormatter]]></code>
+      <code><![CDATA[IntlDateFormatter]]></code>
+      <code><![CDATA[IntlDateFormatter]]></code>
+    </UndefinedClass>
+  </file>
   <file src="src/Education/Application/AchievementService.php">
     <MixedArgument>
       <code><![CDATA[$definition]]></code>
@@ -158,6 +229,8 @@
       <code><![CDATA[$input['state']]]></code>
       <code><![CDATA[$lesson['id']]]></code>
       <code><![CDATA[$lesson['id']]]></code>
+      <code><![CDATA[$peerId]]></code>
+      <code><![CDATA[$peerId]]></code>
       <code><![CDATA[$row['studentId']]]></code>
       <code><![CDATA[$start]]></code>
       <code><![CDATA[$start]]></code>
@@ -189,9 +262,10 @@
             'create_event' => $this->createEvent($scope, $input),
             'mark_attendance' => $this->attendance($scope, Input::uuid($id), Input::uuid($studentId), $input),
             'save_profile' => $this->profile($scope, $input),
-            'start_thread' => $this->startThread($scope, $input),
-            'send_message' => $this->sendMessage($scope, Input::uuid($id), $input),
-            'read_thread' => $this->readThread($scope, Input::uuid($id), $input),
+            'start_thread', 'student_start_thread' => $this->startThread($scope, $input),
+            'send_message', 'student_send_message' => $this->sendMessage($scope, Input::uuid($id), $input),
+            'react_message', 'student_react_message' => $this->toggleReaction($scope, Input::uuid($id), $input),
+            'read_thread', 'student_read_thread' => $this->readThread($scope, Input::uuid($id), $input),
             'read_notification' => $this->readNotification($scope, Input::uuid($id)),
             default => throw new EducationError(404, 'not_found'),
         }]]></code>
@@ -211,6 +285,7 @@
             'students' => $this->peoplePage($scope, $this->store->students($scope, $offset), $offset),
             'candidates' => self::page(array_slice($this->access->candidates($scope), $offset, 51), $offset),
             'colleagues' => self::page(array_slice($this->colleagues($scope), $offset, 51), $offset),
+            'contacts', 'student_contacts' => self::page(array_slice($this->contacts($scope), $offset, 51), $offset),
             'schedule' => $this->schedule($scope, $query),
             'timeline' => $this->timeline($scope, Input::date($query['date'] ?? null)),
             'next' => $this->nextLesson($scope, $now, false),
@@ -221,9 +296,9 @@
             'materials' => $this->materials($scope, Input::uuid($id), $offset),
             'files' => $this->resourcePage($scope, $this->store->files($scope, null, $offset), $offset, 'file'),
             'attention' => $this->attention($scope, $now),
-            'threads' => $this->resourcePage($scope, $this->store->threads($scope, $offset), $offset, 'thread'),
-            'thread' => $this->thread($scope, Input::uuid($id)),
-            'messages' => $this->messages($scope, Input::uuid($id), $offset),
+            'threads', 'student_threads' => $this->threads($scope, $offset),
+            'thread', 'student_thread' => $this->thread($scope, Input::uuid($id)),
+            'messages', 'student_messages' => $this->messages($scope, Input::uuid($id), $offset),
             'notifications', 'student_notifications' => $this->notifications($scope, $offset),
             'group_journal' => $this->journal($scope, Input::uuid($id), $query),
             'student' => $this->student($scope, Input::uuid($id)),
@@ -264,6 +339,7 @@
       <code><![CDATA[(string) $file['sha256']]]></code>
       <code><![CDATA[(string) $file['sha256']]]></code>
       <code><![CDATA[(string) $file['storageKey']]]></code>
+      <code><![CDATA[(string) $rawKind]]></code>
     </RedundantCastGivenDocblockType>
   </file>
   <file src="src/Education/Application/FileStore.php">
@@ -438,6 +514,21 @@
       <code><![CDATA[$choices]]></code>
     </PossiblyUndefinedVariable>
   </file>
+  <file src="src/Education/Application/MathSprintActivityHandler.php">
+    <MixedArgument>
+      <code><![CDATA[$problems]]></code>
+      <code><![CDATA[($config['durationSeconds'] ?? 60) * 0.8]]></code>
+    </MixedArgument>
+    <MixedArrayAccess>
+      <code><![CDATA[$ans['id']]]></code>
+      <code><![CDATA[$ans['value']]]></code>
+      <code><![CDATA[$p['answer']]]></code>
+      <code><![CDATA[$p['id']]]></code>
+    </MixedArrayAccess>
+    <MixedOperand>
+      <code><![CDATA[$config['durationSeconds'] ?? 60]]></code>
+    </MixedOperand>
+  </file>
   <file src="src/Education/Application/ParentFamily.php">
     <MixedArgument>
       <code><![CDATA[$invite['created_by_account_id']]]></code>
@@ -478,6 +569,7 @@
     </ArgumentTypeCoercion>
     <MixedArgument>
       <code><![CDATA[$a['id']]]></code>
+      <code><![CDATA[$contacts]]></code>
       <code><![CDATA[$end]]></code>
       <code><![CDATA[$end]]></code>
       <code><![CDATA[$end]]></code>
@@ -489,6 +581,8 @@
       <code><![CDATA[$p['groupId']]]></code>
       <code><![CDATA[$p['programId']]]></code>
       <code><![CDATA[$page['items']]]></code>
+      <code><![CDATA[$peerId]]></code>
+      <code><![CDATA[$peerId]]></code>
       <code><![CDATA[$programs]]></code>
       <code><![CDATA[$row['groupId']]]></code>
       <code><![CDATA[$row['groupId']]]></code>
@@ -500,6 +594,7 @@
       <code><![CDATA[$start]]></code>
       <code><![CDATA[$start]]></code>
       <code><![CDATA[$start]]></code>
+      <code><![CDATA[$this->contacts($scope)['items']]]></code>
       <code><![CDATA[$this->homework($scope, 0)['items']]]></code>
     </MixedArgument>
     <MixedArgumentTypeCoercion>
@@ -513,11 +608,45 @@
       <code><![CDATA[$games['typing']['history']]]></code>
       <code><![CDATA[$lesson['endsAt']]]></code>
       <code><![CDATA[$lesson['status']]]></code>
+      <code><![CDATA[$message['id']]]></code>
+      <code><![CDATA[$message['id']]]></code>
+      <code><![CDATA[$message['kind']]]></code>
+      <code><![CDATA[$message['mediaAssetId']]]></code>
+      <code><![CDATA[$message['mediaAssetId']]]></code>
+      <code><![CDATA[$message['mediaKind']]]></code>
+      <code><![CDATA[$message['mediaKind']]]></code>
+      <code><![CDATA[$message['mediaMime']]]></code>
+      <code><![CDATA[$message['mediaMime']]]></code>
+      <code><![CDATA[$message['mediaName']]]></code>
+      <code><![CDATA[$message['mediaName']]]></code>
+      <code><![CDATA[$message['mediaSize']]]></code>
+      <code><![CDATA[$message['mediaSize']]]></code>
+      <code><![CDATA[$message['mediaStatus']]]></code>
+      <code><![CDATA[$message['mediaStatus']]]></code>
+      <code><![CDATA[$message['metadataJson']]]></code>
+      <code><![CDATA[$message['metadataJson']]]></code>
+      <code><![CDATA[$message['replyBody']]]></code>
+      <code><![CDATA[$message['replyBody']]]></code>
+      <code><![CDATA[$message['replySenderPersonId']]]></code>
+      <code><![CDATA[$message['replySenderPersonId']]]></code>
+      <code><![CDATA[$message['replyToId']]]></code>
+      <code><![CDATA[$message['replyToId']]]></code>
+      <code><![CDATA[$message['senderPersonId']]]></code>
+      <code><![CDATA[$peer['id']]]></code>
+      <code><![CDATA[$r['count']]]></code>
+      <code><![CDATA[$r['emoji']]]></code>
+      <code><![CDATA[$r['reacted']]]></code>
+      <code><![CDATA[$row['contextId']]]></code>
+      <code><![CDATA[$row['contextName']]]></code>
       <code><![CDATA[$row['groupId']]]></code>
       <code><![CDATA[$row['id']]]></code>
       <code><![CDATA[$row['id']]]></code>
       <code><![CDATA[$row['id']]]></code>
       <code><![CDATA[$row['organizationId']]]></code>
+      <code><![CDATA[$row['peerPersonId']]]></code>
+      <code><![CDATA[$row['personId']]]></code>
+      <code><![CDATA[$row['personId']]]></code>
+      <code><![CDATA[$row['personId']]]></code>
       <code><![CDATA[$row['reviewComment']]]></code>
       <code><![CDATA[$row['reviewComment']]]></code>
       <code><![CDATA[$row['reviewCreatedAt']]]></code>
@@ -528,14 +657,33 @@
       <code><![CDATA[$row['reviewResultStatus']]]></code>
       <code><![CDATA[$row['reviewResultStatus']]]></code>
       <code><![CDATA[$row['status']]]></code>
+      <code><![CDATA[$rr['count']]]></code>
+      <code><![CDATA[$rr['emoji']]]></code>
+      <code><![CDATA[$rr['messageId']]]></code>
+      <code><![CDATA[$rr['reacted']]]></code>
     </MixedArrayAccess>
     <MixedArrayAssignment>
+      <code><![CDATA[$message['body']]]></code>
+      <code><![CDATA[$message['media']]]></code>
+      <code><![CDATA[$message['media']]]></code>
+      <code><![CDATA[$message['metadata']]]></code>
+      <code><![CDATA[$message['reactions']]]></code>
+      <code><![CDATA[$message['replyTo']]]></code>
+      <code><![CDATA[$message['replyTo']]]></code>
+      <code><![CDATA[$message['senderName']]]></code>
+      <code><![CDATA[$row['peerName']]]></code>
+      <code><![CDATA[$row['peerRole']]]></code>
       <code><![CDATA[$row['review']]]></code>
     </MixedArrayAssignment>
     <MixedArrayOffset>
       <code><![CDATA[$counts[$row['status']]]]></code>
       <code><![CDATA[$counts[$row['status']]]]></code>
+      <code><![CDATA[$reactionsByMessage[$message['id']]]]></code>
+      <code><![CDATA[$reactionsByMessage[$rr['messageId']]]]></code>
     </MixedArrayOffset>
+    <RedundantCast>
+      <code><![CDATA[(string) $rawKind]]></code>
+    </RedundantCast>
   </file>
   <file src="src/Education/Application/StudentFamily.php">
     <MixedArgument>
@@ -744,6 +892,11 @@
       <code><![CDATA[$evaluation['requestHash']]]></code>
       <code><![CDATA[$payload['typedSha256']]]></code>
       <code><![CDATA[$row['requestHash']]]></code>
+      <code><![CDATA[array_column($this->all(
+            'SELECT organization_id::text AS org FROM education.student_accounts
+            WHERE account_id=CAST(:account AS uuid) AND revoked_at IS NULL',
+            [':account' => $accountId],
+        ), 'org')]]></code>
     </MixedArgument>
     <MixedArgumentTypeCoercion>
       <code><![CDATA[[':attempt' => $attemptId, ':org' => $scope->organizationId, ':student' => (string) $scope->studentId,
@@ -769,14 +922,10 @@
       <code><![CDATA[$stored['typedLength']]]></code>
       <code><![CDATA[$stored['typedSha256']]]></code>
     </MixedArrayAccess>
-    <MixedReturnTypeCoercion>
-      <code><![CDATA[array]]></code>
-      <code><![CDATA[array_column($this->all(
-            'SELECT organization_id::text AS org FROM education.student_accounts
-            WHERE account_id=CAST(:account AS uuid) AND revoked_at IS NULL',
-            [':account' => $accountId],
-        ), 'org')]]></code>
-    </MixedReturnTypeCoercion>
+    <MixedArrayOffset>
+      <code><![CDATA[$reactionsByMessage[$row['id']]]]></code>
+      <code><![CDATA[$reactionsByMessage[$rr['messageId']]]]></code>
+    </MixedArrayOffset>
     <MoreSpecificReturnType>
       <code><![CDATA[?array]]></code>
       <code><![CDATA[?array]]></code>
@@ -792,6 +941,8 @@
       <code><![CDATA[$stored['typedSha256']]]></code>
     </PossiblyNullArrayAccess>
     <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+      <code><![CDATA[array_values]]></code>
       <code><![CDATA[array_values]]></code>
     </RedundantFunctionCall>
   </file>
@@ -881,10 +1032,31 @@
       <code><![CDATA[str_replace(['\\','%','_'], ['\\\\','\\%','\\_'], $filters['search'])]]></code>
     </PossiblyInvalidOperand>
   </file>
+  <file src="src/Education/Infrastructure/S3FileStore.php">
+    <MixedMethodCall>
+      <code><![CDATA[buffer]]></code>
+    </MixedMethodCall>
+    <UndefinedClass>
+      <code><![CDATA[\finfo]]></code>
+    </UndefinedClass>
+    <UndefinedConstant>
+      <code><![CDATA[FILEINFO_MIME_TYPE]]></code>
+    </UndefinedConstant>
+  </file>
   <file src="src/Education/Infrastructure/WorkspaceErasureHandler.php">
     <MixedArgument>
       <code><![CDATA[$transfer['final_key']]]></code>
     </MixedArgument>
+  </file>
+  <file src="src/PlatformRuntime/SodiumEntitlementSignatureVerifier.php">
+    <UndefinedConstant>
+      <code><![CDATA[SODIUM_CRYPTO_SIGN_BYTES]]></code>
+    </UndefinedConstant>
+  </file>
+  <file src="src/PlatformRuntime/TrustedEntitlementKeyRegistry.php">
+    <UndefinedConstant>
+      <code><![CDATA[SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES]]></code>
+    </UndefinedConstant>
   </file>
   <file src="src/Storage/Application/StorageService.php">
     <ArgumentTypeCoercion>

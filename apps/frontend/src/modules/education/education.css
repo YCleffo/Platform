@@ -248,3 +248,83 @@ html:has(.education-shell), html:has(.education-login) { scrollbar-gutter: auto;
 .edu-card > summary { cursor: pointer; padding: 8px 0; overflow-wrap: anywhere; }
 @media (max-width: 480px) { .edu-typing__stats { gap: 8px 14px; } .edu-typing__text { max-height: 160px; } .edu-activity-card .edu-button { justify-self: stretch; } .edu-form-actions > label { min-width: 0; flex: 1 1 140px; } }
 @media (prefers-reduced-motion: reduce) { .edu-typing__text { scroll-behavior: auto; } .edu-typing__char--caret::before { animation: none; } }
+
+.edu-journal__matrix-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control-m);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  margin-top: 14px;
+  transition: var(--theme-transition);
+}
+
+.edu-journal__matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  line-height: var(--type-body-small-line);
+}
+
+.edu-journal__matrix th,
+.edu-journal__matrix td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.edu-journal__matrix th {
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: var(--type-body-caption-size);
+  font-weight: var(--type-body-small-emphasis-weight);
+  line-height: var(--type-body-caption-line);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.edu-journal__th-student,
+.edu-journal__td-student {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  z-index: 2;
+  box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.1);
+  font-weight: var(--type-body-small-emphasis-weight);
+}
+
+.edu-journal__matrix th.edu-journal__th-student {
+  background: var(--surface-2);
+  z-index: 3;
+}
+
+.edu-journal__col-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-decoration: none;
+  color: inherit;
+  transition: var(--theme-transition);
+}
+
+.edu-journal__col-header:hover {
+  color: var(--accent);
+}
+
+.edu-journal__col-date {
+  font-weight: var(--type-body-small-emphasis-weight);
+  color: var(--text-1);
+}
+
+.edu-journal__col-topic {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--type-body-caption-size);
+  font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
+  color: var(--text-2);
+}

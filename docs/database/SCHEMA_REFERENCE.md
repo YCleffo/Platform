@@ -12,7 +12,7 @@ DBML служит представлением для диаграммы, а н�
 | `core` | 50 | 561 | 86 | 195 | 161 | 19 |
 | `platform_runtime` | 3 | 36 | 1 | 18 | 7 | 2 |
 | `commercial` | 62 | 619 | 98 | 273 | 177 | 53 |
-| `education` | 53 | 449 | 79 | 104 | 139 | 11 |
+| `education` | 54 | 463 | 80 | 104 | 147 | 11 |
 
 Технические `public.platform_migrations` и `public.doctrine_migration_versions` не являются бизнес-таблицами и не включены в инвентарь.
 Межсистемный идентификатор в подписанном документе не создаёт внешний ключ между базами.
@@ -3630,6 +3630,25 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 
 Проверок CHECK: 5; индексов: 2; пользовательских триггеров: 0.
 
+## education.message_reactions
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `message_id` | `uuid` | нет | — | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `person_id` | `uuid` | нет | — | — |
+| `emoji` | `character varying(16)` | нет | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `message_reactions_message_id_fkey`: `FOREIGN KEY (message_id) REFERENCES education.messages(id) ON DELETE CASCADE`.
+
+Проверок CHECK: 0; индексов: 4; пользовательских триггеров: 0.
+
 ## education.messages
 
 | Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
@@ -3638,8 +3657,13 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 | `thread_id` | `uuid` | нет | — | — |
 | `organization_id` | `uuid` | нет | — | — |
 | `sender_person_id` | `uuid` | нет | — | — |
-| `body` | `text` | нет | — | — |
+| `body` | `text` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
+| `client_key` | `character varying(128)` | да | NULL::character varying | — |
+| `kind` | `character varying(20)` | нет | 'text'::character varying | — |
+| `media_asset_id` | `uuid` | да | — | — |
+| `reply_to_id` | `uuid` | да | — | — |
+| `metadata` | `jsonb` | нет | '{}'::jsonb | — |
 
 **Первичный ключ:** `PRIMARY KEY (id)`.
 
@@ -3647,7 +3671,7 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 
 - `messages_thread_id_organization_id_fkey`: `FOREIGN KEY (thread_id, organization_id) REFERENCES education.threads(id, organization_id)`.
 
-Проверок CHECK: 1; индексов: 2; пользовательских триггеров: 0.
+Проверок CHECK: 1; индексов: 5; пользовательских триггеров: 0.
 
 ## education.module_migrations
 
@@ -3955,12 +3979,15 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 | `organization_id` | `uuid` | нет | — | — |
 | `subject` | `character varying(160)` | нет | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
+| `context_type` | `character varying(30)` | да | — | — |
+| `context_id` | `uuid` | да | — | — |
+| `last_activity_at` | `timestamp with time zone` | нет | now() | — |
 
 **Первичный ключ:** `PRIMARY KEY (id)`.
 
 Внешние ключи SQL из этой таблицы отсутствуют.
 
-Проверок CHECK: 1; индексов: 2; пользовательских триггеров: 0.
+Проверок CHECK: 1; индексов: 3; пользовательских триггеров: 0.
 
 ## education.typing_results
 

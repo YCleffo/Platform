@@ -4702,7 +4702,8 @@
     "001_spaces.sql",
     "002_verified_manifests.sql",
     "003_lifecycle_consistency.sql",
-    "004_s3_transfers.sql"
+    "004_s3_transfers.sql",
+    "005_media_foundation.sql"
   ],
   "migration_sources": [
     {
@@ -4720,6 +4721,10 @@
     {
       "path": "apps/backend/migrations/storage/004_s3_transfers.sql",
       "sha256": "883ec71d127e0b2df62d1837010b9efbe9216cc4b84e7335bba651bdbcc84517"
+    },
+    {
+      "path": "apps/backend/migrations/storage/005_media_foundation.sql",
+      "sha256": "e1d27d0a95fa80528e0d2a6b1c4d301cdc993e6213f2981d61b8c2900312d952"
     }
   ]
 }

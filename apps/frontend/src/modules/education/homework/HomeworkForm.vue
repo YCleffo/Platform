@@ -28,6 +28,12 @@ const { t } = useEducationI18n(),
 const groupOffset = ref(0),
   studentOffset = ref(0);
 const lessonDate = ref(workspace.header?.date ?? new Date().toISOString().slice(0, 10));
+const queryLessonId =
+  typeof route.query.lessonId === 'string'
+    ? route.query.lessonId
+    : typeof route.query.lesson === 'string'
+      ? route.query.lesson
+      : null;
 const initial = (): HomeworkInput => ({
   title: '',
   description: '',
@@ -35,7 +41,7 @@ const initial = (): HomeworkInput => ({
   type: 'text',
   groupId: typeof route.query.groupId === 'string' ? route.query.groupId : null,
   studentIds: typeof route.query.studentId === 'string' ? [route.query.studentId] : [],
-  lessonId: null,
+  lessonId: queryLessonId,
   dueAt: null,
   allowLate: false,
   activityCode: null,
@@ -44,6 +50,14 @@ const initial = (): HomeworkInput => ({
   attemptPolicy: 'best',
 });
 const form = reactive<HomeworkInput>(initial());
+if (queryLessonId && !props.assignment && workspace.organizationId) {
+  void educationApi.lesson(workspace.organizationId, queryLessonId).then((lesson) => {
+    if (lesson) {
+      if (!form.groupId) form.groupId = lesson.groupId;
+      if (!form.title) form.title = lesson.title;
+    }
+  }).catch(() => {});
+}
 const dueLocal = ref('');
 const localError = ref('');
 function localDate(value: string | null): string {
@@ -360,6 +374,7 @@ async function save(): Promise<void> {
         :options="[
           { value: 'platform-typing', label: 'Platform Typing' },
           { value: 'platform-logic', label: 'Platform Logic' },
+          { value: 'platform-math-sprint', label: 'Platform Math Sprint' },
         ]"
         :disabled="busy || (!!assignment && assignment.status !== 'DRAFT')"
       />

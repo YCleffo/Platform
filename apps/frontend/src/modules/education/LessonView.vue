@@ -285,6 +285,12 @@ async function saveResult(id: string): Promise<void> {
           {{ t('education.materials') }}
         </RouterLink>
         <RouterLink
+          :to="`/homework/new?lessonId=${data.lesson.id}&groupId=${data.lesson.groupId}`"
+          class="edu-button"
+        >
+          {{ t('education.homeworkCreateFromLesson') }}
+        </RouterLink>
+        <RouterLink
           v-if="data.lesson.status === 'scheduled'"
           :to="`/lessons/${data.lesson.id}/edit`"
           class="edu-button"

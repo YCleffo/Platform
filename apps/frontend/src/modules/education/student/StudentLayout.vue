@@ -11,7 +11,7 @@ import { scopeEducationCache } from '../cache';
 import { studentSession } from './session';
 import EducationState from '../EducationState.vue';
 import AppBottomNav from '@/shared/ui/navigation/AppBottomNav.vue';
-import { Home, Calendar, LayoutGrid, CircleCheck, Backpack } from '@/shared/ui/icons';
+import { Home, Calendar, LayoutGrid, CircleCheck, Backpack, Message } from '@/shared/ui/icons';
 import { activeNavigationRoute } from '@/shared/navigation/activeRoute';
 
 const { t } = useEducationI18n();
@@ -21,6 +21,7 @@ const navigation = computed(() => [
   { label: t('education.studentHome'), icon: Home, routeName: 'education-student-home' },
   { label: t('education.myDiary'), icon: Calendar, routeName: 'education-student-diary' },
   { label: t('education.myHomework'), icon: LayoutGrid, routeName: 'education-student-homework' },
+  { label: t('education.messages'), icon: Message, routeName: 'education-student-messages' },
   { label: t('education.myProgress'), icon: CircleCheck, routeName: 'education-student-progress' },
   { label: t('education.documents'), icon: Backpack, routeName: 'education-student-documents' },
 ]);
@@ -61,6 +62,7 @@ watch(
     studentSession.organizationId = '';
     studentSession.displayName = null;
     studentSession.timezone = 'UTC';
+    studentSession.personId = '';
     selectedOrganization.value = '';
     void refresh();
   },
@@ -71,6 +73,7 @@ onScopeDispose(() => {
   studentSession.organizationId = '';
   studentSession.displayName = null;
   studentSession.timezone = 'UTC';
+  studentSession.personId = '';
 });
 const studentOrganizations = computed(() =>
   (data.value?.organizations ?? []).filter((org) => org.student),
@@ -86,6 +89,7 @@ watch(
   ([context, org]) => {
     studentSession.displayName = context?.displayName ?? null;
     studentSession.timezone = context?.timezone ?? 'UTC';
+    studentSession.personId = context?.personId ?? '';
     if (org) scopeEducationCache(org.id);
     studentSession.organizationId = org?.id ?? '';
   },

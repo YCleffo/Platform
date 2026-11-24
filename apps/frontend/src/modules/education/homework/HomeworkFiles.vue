@@ -64,8 +64,8 @@ async function upload(event: Event): Promise<void> {
   if (!file || busy.value || uncertain.value || props.disabled) return;
   if (
     !file.size ||
-    file.size > 10 * 1024 * 1024 ||
-    !/\.(pdf|png|jpe?g|webp|txt)$/i.test(file.name)
+    file.size > 25 * 1024 * 1024 ||
+    !/\.(pdf|png|jpe?g|webp|txt|mp3|wav|ogg|m4a|mp4|webm)$/i.test(file.name)
   ) {
     validation.value = t('education.homeworkFileHint');
     return;
@@ -174,7 +174,7 @@ async function remove(file: HomeworkFile): Promise<void> {
       <input
         type="file"
         :disabled="busy || uncertain || disabled"
-        accept=".pdf,.png,.jpg,.jpeg,.webp,.txt"
+        accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.mp3,.wav,.ogg,.m4a,.mp4,.webm"
         @change="upload"
       />
       <small class="edu-subtle">{{ t('education.homeworkFileHint') }}</small>

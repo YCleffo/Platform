@@ -51,6 +51,7 @@ final readonly class EducationService
             'students' => $this->peoplePage($scope, $this->store->students($scope, $offset), $offset),
             'candidates' => self::page(array_slice($this->access->candidates($scope), $offset, 51), $offset),
             'colleagues' => self::page(array_slice($this->colleagues($scope), $offset, 51), $offset),
+            'contacts', 'student_contacts' => self::page(array_slice($this->contacts($scope), $offset, 51), $offset),
             'schedule' => $this->schedule($scope, $query),
             'timeline' => $this->timeline($scope, Input::date($query['date'] ?? null)),
             'next' => $this->nextLesson($scope, $now, false),
@@ -61,9 +62,9 @@ final readonly class EducationService
             'materials' => $this->materials($scope, Input::uuid($id), $offset),
             'files' => $this->resourcePage($scope, $this->store->files($scope, null, $offset), $offset, 'file'),
             'attention' => $this->attention($scope, $now),
-            'threads' => $this->resourcePage($scope, $this->store->threads($scope, $offset), $offset, 'thread'),
-            'thread' => $this->thread($scope, Input::uuid($id)),
-            'messages' => $this->messages($scope, Input::uuid($id), $offset),
+            'threads', 'student_threads' => $this->threads($scope, $offset),
+            'thread', 'student_thread' => $this->thread($scope, Input::uuid($id)),
+            'messages', 'student_messages' => $this->messages($scope, Input::uuid($id), $offset),
             'notifications', 'student_notifications' => $this->notifications($scope, $offset),
             'group_journal' => $this->journal($scope, Input::uuid($id), $query),
             'student' => $this->student($scope, Input::uuid($id)),
@@ -152,9 +153,10 @@ final readonly class EducationService
             'create_event' => $this->createEvent($scope, $input),
             'mark_attendance' => $this->attendance($scope, Input::uuid($id), Input::uuid($studentId), $input),
             'save_profile' => $this->profile($scope, $input),
-            'start_thread' => $this->startThread($scope, $input),
-            'send_message' => $this->sendMessage($scope, Input::uuid($id), $input),
-            'read_thread' => $this->readThread($scope, Input::uuid($id), $input),
+            'start_thread', 'student_start_thread' => $this->startThread($scope, $input),
+            'send_message', 'student_send_message' => $this->sendMessage($scope, Input::uuid($id), $input),
+            'react_message', 'student_react_message' => $this->toggleReaction($scope, Input::uuid($id), $input),
+            'read_thread', 'student_read_thread' => $this->readThread($scope, Input::uuid($id), $input),
             'read_notification' => $this->readNotification($scope, Input::uuid($id)),
             default => throw new EducationError(404, 'not_found'),
         });
@@ -456,6 +458,54 @@ final readonly class EducationService
             throw new EducationError(422, 'directory_too_large');
         }
         return array_map(static fn(array $row): array => [...$row, 'id' => $row['personId']], $this->namedPeople($scope, $items));
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function contacts(Scope $scope): array
+    {
+        $raw = $this->store->allowedRecipients($scope);
+        $items = [];
+        foreach ($raw as $row) {
+            $personId = (string) $row['personId'];
+            if (!$this->access->member($personId, $scope->organizationId)
+                || !$this->access->resourceAllowed($personId, 'person', $personId)) {
+                continue;
+            }
+            $name = $this->access->personName($personId);
+            if ($name === null) {
+                continue;
+            }
+            $contextName = $row['contextName'] ?? null;
+            if ($row['role'] === 'parent' && $row['contextName'] !== null) {
+                $childName = $this->access->personName((string) $row['contextName']);
+                $contextName = $childName ? $childName : 'Родитель';
+            }
+            $items[] = [
+                'id' => $personId,
+                'personId' => $personId,
+                'name' => $name,
+                'role' => $row['role'],
+                'contextId' => $row['contextId'],
+                'contextName' => $contextName,
+            ];
+        }
+        return $items;
+    }
+
+    /** @return array<string,mixed> */
+    private function threads(Scope $scope, int $offset): array
+    {
+        $items = $this->store->threads($scope, $offset);
+        foreach ($items as &$thread) {
+            $peerId = $thread['peerPersonId'] ?? null;
+            if ($peerId && $this->access->member($peerId, $scope->organizationId)) {
+                $thread['peerName'] = $this->access->personName($peerId);
+            } else {
+                $thread['peerName'] = null;
+            }
+        }
+        unset($thread);
+        return $this->resourcePage($scope, $items, $offset, 'thread');
     }
 
     /** @return array<string,mixed> */
@@ -1163,13 +1213,27 @@ final readonly class EducationService
      */
     private function startThread(Scope $scope, array $input): array
     {
-        self::only($input, ['recipientPersonId', 'subject', 'body']);
+        self::only($input, ['recipientPersonId', 'subject', 'body', 'contextType', 'contextId']);
         $recipient = Input::uuid($input['recipientPersonId'] ?? null);
-        $allowed = array_column($this->colleagues($scope), 'personId');
+        $allowed = array_column($this->contacts($scope), 'personId');
         if (!in_array($recipient, $allowed, true)) {
-            throw new EducationError(403, 'recipient_unavailable');
+            $colleagues = array_column($this->colleagues($scope), 'personId');
+            if (!in_array($recipient, $colleagues, true)) {
+                throw new EducationError(403, 'recipient_unavailable');
+            }
         }
-        return $this->store->startThread($scope, $recipient, Input::text($input['subject'] ?? null, 160), Input::text($input['body'] ?? null, 5000));
+        $contextType = $input['contextType'] ?? null;
+        $contextId = $input['contextId'] ?? null;
+        $contextType = is_string($contextType) ? $contextType : null;
+        $contextId = is_string($contextId) ? Input::uuid($contextId) : null;
+        return $this->store->startThread(
+            $scope,
+            $recipient,
+            Input::text($input['subject'] ?? null, 160),
+            Input::text($input['body'] ?? null, 5000),
+            $contextType,
+            $contextId,
+        );
     }
 
     /**
@@ -1178,19 +1242,55 @@ final readonly class EducationService
      */
     private function sendMessage(Scope $scope, string $id, array $input): array
     {
-        self::only($input, ['body']);
+        self::only($input, ['body', 'clientKey', 'kind', 'mediaAssetId', 'replyToId', 'metadata']);
         $this->access->assertResource($scope, 'thread', $id);
         $peers = $this->store->threadPeers($scope, $id);
         if ($peers === []) {
             throw new EducationError(404, 'not_found');
         }
-        $allowed = array_column($this->colleagues($scope), 'personId');
+        $allowed = array_column($this->contacts($scope), 'personId');
+        $colleagues = array_column($this->colleagues($scope), 'personId');
+        $allAllowed = array_merge($allowed, $colleagues);
         foreach ($peers as $peer) {
-            if (!in_array($peer, $allowed, true)) {
+            if (!in_array($peer, $allAllowed, true)) {
                 throw new EducationError(403, 'recipient_unavailable');
             }
         }
-        return $this->store->sendMessage($scope, $id, Input::text($input['body'] ?? null, 5000));
+        // Extract idempotency key (8-128 chars, supplied by client for retry safety)
+        $rawKey = $input['clientKey'] ?? null;
+        $clientKey = is_string($rawKey) && strlen($rawKey) >= 8 && strlen($rawKey) <= 128 ? $rawKey : null;
+
+        $rawKind = $input['kind'] ?? 'text';
+        $kind = in_array($rawKind, ['text', 'voice', 'video_note', 'image', 'document', 'audio'], true) ? (string) $rawKind : 'text';
+
+        $mediaAssetId = isset($input['mediaAssetId']) && is_string($input['mediaAssetId']) ? Input::uuid($input['mediaAssetId']) : null;
+        $replyToId = isset($input['replyToId']) && is_string($input['replyToId']) ? Input::uuid($input['replyToId']) : null;
+        $metadata = isset($input['metadata']) && is_array($input['metadata']) ? $input['metadata'] : [];
+
+        $rawBody = $input['body'] ?? null;
+        if ($rawBody === null || trim((string) $rawBody) === '') {
+            if ($mediaAssetId === null) {
+                throw new EducationError(422, 'invalid_input');
+            }
+            $body = null;
+        } else {
+            $body = Input::text((string) $rawBody, 5000);
+        }
+
+        return $this->store->sendMessage($scope, $id, $body, $clientKey, $kind, $mediaAssetId, $replyToId, $metadata);
+    }
+
+    /**
+     * @param array<array-key,mixed> $input
+     * @return array<string,mixed>
+     */
+    private function toggleReaction(Scope $scope, string $id, array $input): array
+    {
+        self::only($input, ['messageId', 'emoji']);
+        $this->access->assertResource($scope, 'thread', $id);
+        $messageId = Input::uuid($input['messageId'] ?? null);
+        $emoji = Input::text($input['emoji'] ?? null, 16);
+        return $this->store->toggleReaction($scope, $id, $messageId, $emoji);
     }
 
     /**
@@ -1208,7 +1308,12 @@ final readonly class EducationService
     private function thread(Scope $scope, string $id): array
     {
         $this->access->assertResource($scope, 'thread', $id);
-        return $this->store->thread($scope, $id) ?? throw new EducationError(404, 'not_found');
+        $thread = $this->store->thread($scope, $id) ?? throw new EducationError(404, 'not_found');
+        $peerId = $thread['peerPersonId'] ?? null;
+        $thread['peerName'] = $peerId && $this->access->member($peerId, $scope->organizationId)
+            ? $this->access->personName($peerId)
+            : null;
+        return $thread;
     }
 
     /** @return array<string,mixed> */

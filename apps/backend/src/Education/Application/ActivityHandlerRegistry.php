@@ -11,8 +11,31 @@ final class ActivityHandlerRegistry
         return match ($code) {
             'platform-typing' => new TypingActivityHandler(),
             'platform-logic' => new LogicActivityHandler(),
+            'platform-math-sprint' => new MathSprintActivityHandler(),
             default => throw new EducationError(422, 'activity_unsupported'),
         };
+    }
+
+    /** @return list<array{code:string,title:string,description:string,version:string}> */
+    public function plugins(): array
+    {
+        $handlers = [
+            new TypingActivityHandler(),
+            new LogicActivityHandler(),
+            new MathSprintActivityHandler(),
+        ];
+        $list = [];
+        foreach ($handlers as $h) {
+            if ($h instanceof \App\Education\Activity\ActivityPluginInterface) {
+                $list[] = [
+                    'code' => $h->code(),
+                    'title' => $h->title(),
+                    'description' => $h->description(),
+                    'version' => $h->version(),
+                ];
+            }
+        }
+        return $list;
     }
 
     /** Public configuration contains no server-only exercise/answer fields. */

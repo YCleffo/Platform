@@ -53,7 +53,7 @@ final readonly class EducationAction
                 'create_lesson', 'update_lesson', 'complete_lesson', 'cancel_lesson', 'create_event',
                 'mark_attendance', 'save_lesson_report', 'save_lesson_result' => 'education.schedule.manage',
                 'upload_file', 'file_download', 'files', 'materials', 'delete_file' => 'education.files.manage',
-                'threads', 'thread', 'messages', 'colleagues', 'start_thread', 'send_message', 'read_thread',
+                'threads', 'thread', 'messages', 'colleagues', 'contacts', 'start_thread', 'send_message', 'react_message', 'read_thread',
                 'read_notification', 'notifications' => 'education.messages.use',
                 'activities_assign', 'activity_assignments', 'group_activity_results', 'activity_catalog', 'group_activity_progress', 'revoke_activity_attempt' => 'education.activities.manage',
                 default => 'education.access',
@@ -61,7 +61,8 @@ final readonly class EducationAction
             $studentOperations = ['student_home', 'student_schedule', 'student_lessons', 'student_lesson',
                 'student_activity_catalog', 'student_activity_config', 'student_attempt_history',
                 'student_attempt','student_save_attempt_state','student_achievements','student_activity_progress',
-                'student_typing_history', 'student_start_attempt', 'student_finish_attempt', 'student_notifications', 'student_read_notification'];
+                'student_typing_history', 'student_start_attempt', 'student_finish_attempt', 'student_notifications', 'student_read_notification',
+                'student_contacts', 'student_threads', 'student_thread', 'student_messages', 'student_start_thread', 'student_send_message', 'student_react_message', 'student_read_thread'];
             $scope = in_array($operation, $studentOperations, true)
                 ? $access->studentScope(
                     $identity,
