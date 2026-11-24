@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Core\Auth\Infrastructure\RequireAuthentication;
 use App\Education\Api\EducationAction;
 use App\Education\Api\CurriculumAction;
+use App\Education\Api\AssessmentAction;
 use App\Education\Api\PrivateResponse;
 use Yiisoft\Router\Route;
 
@@ -78,6 +79,34 @@ foreach ($curriculumDefinitions as [$method, $path, $operation]) {
     };
     $routes[] = $route->defaults(['operation' => $operation])->middleware(PrivateResponse::class, RequireAuthentication::class)
         ->action(CurriculumAction::class)->name('education/curriculum/' . $operation);
+}
+$assessmentDefinitions = [
+    ['GET', '/assessments', 'assessments'],
+    ['POST', '/assessments', 'assessments'],
+    ['GET', '/assessments/{id}', 'assessment_detail'],
+    ['PUT', '/assessments/{id}', 'assessment_detail'],
+    ['POST', '/assessments/{id}/publish', 'publish_assessment'],
+    ['GET', '/assessments/{id}/versions', 'assessment_versions'],
+    ['GET', '/assessments/{id}/attempts', 'assessment_attempts_list'],
+    ['POST', '/assessment-attempts/{id}/review', 'assessment_attempt_review'],
+    ['GET', '/question-bank', 'question_bank'],
+    ['POST', '/question-bank', 'question_bank'],
+    ['DELETE', '/question-bank/{id}', 'delete_question_bank_item'],
+    ['GET', '/student/assessments', 'student_assessments'],
+    ['POST', '/student/assessments/{id}/start', 'student_start_assessment'],
+    ['GET', '/student/assessment-attempts/{id}', 'student_assessment_attempt'],
+    ['PUT', '/student/assessment-attempts/{id}/save', 'student_save_assessment_attempt'],
+    ['POST', '/student/assessment-attempts/{id}/submit', 'student_submit_assessment_attempt'],
+];
+foreach ($assessmentDefinitions as [$method, $path, $operation]) {
+    $route = match ($method) {
+        'GET' => Route::get('/api/education' . $path),
+        'POST' => Route::post('/api/education' . $path),
+        'PUT' => Route::put('/api/education' . $path),
+        'DELETE' => Route::delete('/api/education' . $path),
+    };
+    $routes[] = $route->defaults(['operation' => $operation])->middleware(PrivateResponse::class, RequireAuthentication::class)
+        ->action(AssessmentAction::class)->name('education/assessment/' . $operation);
 }
 foreach ($definitions as [$method, $path, $operation]) {
     $route = match ($method) {

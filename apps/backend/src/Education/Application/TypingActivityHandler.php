@@ -4,8 +4,58 @@ declare(strict_types=1);
 
 namespace App\Education\Application;
 
-final class TypingActivityHandler implements ActivityHandler
+use App\Education\Activity\ActivityPluginInterface;
+
+final class TypingActivityHandler implements ActivityPluginInterface
 {
+    public function code(): string
+    {
+        return 'platform-typing';
+    }
+
+    public function version(): string
+    {
+        return '3.0.0';
+    }
+
+    public function title(): string
+    {
+        return 'Typing 3.0';
+    }
+
+    public function description(): string
+    {
+        return 'Adaptive touch typing and speed trainer with multi-mode text engines and real-time telemetry.';
+    }
+
+    public function configSchema(): array
+    {
+        return [
+            'type' => 'object',
+            'properties' => [
+                'language' => ['type' => 'string', 'enum' => ['ru', 'en']],
+                'durationSeconds' => ['type' => 'integer', 'enum' => [15, 30, 60]],
+                'mode' => ['type' => 'string', 'enum' => ['words', 'sentences', 'numbers', 'code', 'accuracy']],
+                'difficulty' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 3],
+                'minAccuracy' => ['type' => 'number', 'minimum' => 0, 'maximum' => 100],
+                'targetWpm' => ['type' => 'number', 'minimum' => 0, 'maximum' => 500],
+                'maxAttempts' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 20],
+            ],
+        ];
+    }
+
+    public function defaultConfig(): array
+    {
+        return [
+            'language' => 'en',
+            'durationSeconds' => 30,
+            'mode' => 'words',
+            'difficulty' => 1,
+            'minAccuracy' => 0,
+            'targetWpm' => 0,
+            'maxAttempts' => 20,
+        ];
+    }
     public function validateConfig(array $config): array
     {
         ActivityHandlerRegistry::only($config, ['language','durationSeconds','mode','difficulty','minAccuracy','targetWpm','maxAttempts']);

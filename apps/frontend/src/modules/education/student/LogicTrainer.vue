@@ -81,7 +81,9 @@ watch(
 );
 function accept(value: ActivityExercise): void {
   exercise.value = value;
-  const valid = value.attempt.state?.answers ?? [];
+  const valid = (
+    Array.isArray(value.attempt.state?.answers) ? value.attempt.state.answers : []
+  ) as LogicAnswer[];
   answers.value = valid.filter((a) =>
     value.exercise.rounds?.some(
       (r) => r.id === a.roundId && r.options.some((o) => o.id === a.optionId),
@@ -140,7 +142,7 @@ async function resume(attemptId: string): Promise<void> {
     accept(value);
     if (value.attempt.status === 'finished') {
       if (!value.result) throw new Error('Finished result unavailable');
-      result.value = value.result;
+      result.value = value.result as LogicResult;
     }
   }, 'resume');
 }

@@ -25,6 +25,17 @@ const { t } = useEducationI18n();
       <p>{{ t('education.completedAttempts') }}: {{ progress.logic.attempts }}</p>
       <p>{{ t('education.bestScore') }}: {{ progress.logic.bestScore ?? '—' }}</p>
     </div>
+    <div
+      v-if="progress.assessments"
+      class="edu-card"
+    >
+      <strong>{{ t('education.assessmentStudio') }}</strong>
+      <p>{{ t('education.completedAttempts') }}: {{ progress.assessments.attempts }}</p>
+      <p>
+        {{ t('education.averageAccuracy') }}:
+        {{ progress.assessments.avgScore !== null ? `${progress.assessments.avgScore}%` : '—' }}
+      </p>
+    </div>
     <div class="edu-card">
       <strong>{{ t('education.completedAssignments') }}</strong>
       <p>{{ progress.completedAssignments }}</p>

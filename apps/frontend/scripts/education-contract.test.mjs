@@ -70,7 +70,7 @@ test('Education OpenAPI covers precisely the registered optional HTTP operations
     }
   }
 
-  // Also include operations defined in externalDocs (activities)
+  // Also include operations defined in externalDocs (activities and assessments)
   const activitiesContract = loadDoc('./education-activities.yaml');
   if (activitiesContract?.paths) {
     for (const [routePath, item] of Object.entries(activitiesContract.paths)) {
@@ -85,10 +85,25 @@ test('Education OpenAPI covers precisely the registered optional HTTP operations
       }
     }
   }
+
+  const assessmentsContract = loadDoc('./education-assessments.yaml');
+  if (assessmentsContract?.paths) {
+    for (const [routePath, item] of Object.entries(assessmentsContract.paths)) {
+      for (const method of Object.keys(item)) {
+        if (['get', 'post', 'put', 'delete'].includes(method)) {
+          const cleanPath = routePath.replace('/api/education', '');
+          const op = `${method.toUpperCase()} ${cleanPath}`;
+          if (actual.includes(op) && !documented.includes(op)) {
+            documented.push(op);
+          }
+        }
+      }
+    }
+  }
   documented.sort();
 
-  assert.equal(actual.length, 111);
-  assert.equal(documented.length, 111);
+  assert.equal(actual.length, 127);
+  assert.equal(documented.length, 127);
   assert.deepEqual(documented, actual);
 });
 

@@ -110,4 +110,91 @@ final class ActivityPluginTest extends TestCase
         $this->assertEqualsWithDelta(66.67, $metrics['accuracy'], 0.1);
         $this->assertSame(30, $metrics['score']); // 2*10 + 2*5
     }
+
+    public function testDynamicPluginRegistrationAndSchemaRetrieval(): void
+    {
+        $registry = new ActivityHandlerRegistry();
+        $this->assertTrue($registry->has('platform-assessment'));
+        $this->assertTrue($registry->has('platform-typing'));
+        $this->assertTrue($registry->has('platform-logic'));
+        $this->assertTrue($registry->has('platform-math-sprint'));
+
+        $assessmentHandler = $registry->handler('platform-assessment');
+        $this->assertInstanceOf(\App\Education\Application\AssessmentActivityHandler::class, $assessmentHandler);
+
+        $schema = $registry->schema('platform-assessment');
+        $this->assertArrayHasKey('properties', $schema);
+        $this->assertArrayHasKey('passingScorePercent', $schema['properties']);
+
+        $defaultConfig = $registry->defaultConfig('platform-assessment');
+        $this->assertSame(60, $defaultConfig['passingScorePercent']);
+
+        // Custom dynamic plugin
+        $customPlugin = new class implements ActivityPluginInterface {
+            public function code(): string { return 'custom-plugin'; }
+            public function version(): string { return '1.2.0'; }
+            public function title(): string { return 'Custom Plugin'; }
+            public function description(): string { return 'Custom description'; }
+            public function configSchema(): array { return ['type' => 'object']; }
+            public function defaultConfig(): array { return ['enabled' => true]; }
+            public function validateConfig(array $config): array { return $config; }
+            public function createExercise(array $config, ?array $set = null): array { return ['items' => []]; }
+            public function publicExercise(array $attempt): array { return ['items' => []]; }
+            public function validateState(array $attempt, array $state): array { return $state; }
+            public function evaluate(array $attempt, array $input): array { return ['type' => 'custom', 'metrics' => ['score' => 100]]; }
+        };
+
+        $registry->register('custom-plugin', $customPlugin);
+        $this->assertTrue($registry->has('custom-plugin'));
+        $this->assertSame($customPlugin, $registry->handler('custom-plugin'));
+        $plugins = $registry->plugins();
+        $codes = array_column($plugins, 'code');
+        $this->assertContains('custom-plugin', $codes);
+    }
+
+    public function testAssessmentActivityHandlerMaskingAndEvaluation(): void
+    {
+        $handler = new \App\Education\Application\AssessmentActivityHandler();
+        $config = $handler->validateConfig(['passingScorePercent' => 75, 'timeLimitSeconds' => 600]);
+        $this->assertSame(75, $config['passingScorePercent']);
+        $this->assertSame(600, $config['timeLimitSeconds']);
+
+        $exercise = $handler->createExercise($config);
+        $this->assertNotEmpty($exercise['questions']);
+
+        // Test public exercise masks answers
+        $attempt = ['config' => $config, 'exercisePayload' => $exercise];
+        $public = $handler->publicExercise($attempt);
+        $this->assertNotEmpty($public['questions']);
+        foreach ($public['questions'] as $q) {
+            $this->assertArrayNotHasKey('answerKey', $q);
+            $this->assertArrayNotHasKey('explanation', $q);
+        }
+
+        // Test evaluation with sample questions
+        $answers = [
+            'q1' => 'opt_stack', // correct single choice
+            'q2' => ['opt_http', 'opt_dns'], // correct multi choice
+            'q3' => true, // correct true/false
+            'q4' => 1024, // correct numeric
+            'q5' => 'git switch -c', // correct short text
+        ];
+        $evaluated = $handler->evaluate($attempt, ['answers' => $answers, 'elapsedSeconds' => 120]);
+        $this->assertTrue($evaluated['metrics']['passed']);
+        $this->assertEquals(100.0, $evaluated['metrics']['percentage']);
+        $this->assertSame(7, $evaluated['metrics']['score']);
+
+        // Test evaluation with incorrect answers
+        $wrongAnswers = [
+            'q1' => 'opt_queue',
+            'q2' => ['opt_tcp'],
+            'q3' => false,
+            'q4' => 999,
+            'q5' => 'unknown',
+        ];
+        $evaluatedWrong = $handler->evaluate($attempt, ['answers' => $wrongAnswers, 'elapsedSeconds' => 50]);
+        $this->assertFalse($evaluatedWrong['metrics']['passed']);
+        $this->assertEquals(0.0, $evaluatedWrong['metrics']['percentage']);
+        $this->assertSame(0, $evaluatedWrong['metrics']['score']);
+    }
 }

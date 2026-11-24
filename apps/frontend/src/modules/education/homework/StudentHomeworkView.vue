@@ -11,6 +11,8 @@ import HomeworkFiles from './HomeworkFiles.vue';
 import HomeworkAnswerHistory from './HomeworkAnswerHistory.vue';
 import InteractiveQuiz from '@/shared/ui/learning/InteractiveQuiz.vue';
 import type { QuizActivityData, QuizResult } from '@/shared/ui/learning/types';
+import StudentAssessmentRunner from '../assessment/StudentAssessmentRunner.vue';
+import type { AssessmentResult } from '../activityTypes';
 import { homeworkApi } from './api';
 import { useHomeworkMutation, useHomeworkResource } from './resources';
 const route = useRoute(),
@@ -136,6 +138,21 @@ function onQuizComplete(res: QuizResult): void {
     passed: res.passed,
   };
 }
+
+const showAssessmentModal = ref(false);
+
+function onAssessmentComplete(res: AssessmentResult): void {
+  if (!data.value) return;
+  data.value.submission.activityResult = {
+    attemptId: crypto.randomUUID(),
+    type: 'assessment',
+    score: res.score,
+    accuracy: res.percentage,
+    errors: res.maxScore - res.score,
+    passed: res.passed,
+  };
+  showAssessmentModal.value = false;
+}
 async function save(): Promise<void> {
   if (!data.value || !editable.value) return;
   const version = data.value.submission.version;
@@ -241,6 +258,24 @@ async function reconcile(): Promise<void> {
               @complete="onQuizComplete"
             />
           </div>
+          <template v-else-if="data.assignment.activityCode === 'platform-assessment'">
+            <div class="edu-homework-assessment-box">
+              <button
+                v-if="!showAssessmentModal && editable"
+                type="button"
+                class="edu-button edu-button--primary"
+                @click="showAssessmentModal = true"
+              >
+                {{ t('education.takeAssessment') }}
+              </button>
+              <StudentAssessmentRunner
+                v-if="showAssessmentModal"
+                :assessment-id="data.assignment.activityConfig?.assessmentId"
+                @finished="onAssessmentComplete"
+                @close="showAssessmentModal = false"
+              />
+            </div>
+          </template>
           <template v-else>
             <p>
               {{

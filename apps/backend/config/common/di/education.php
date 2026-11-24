@@ -42,6 +42,10 @@ return [
         'families' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\StudentFamily::class),
     ]],
     FileStore::class => ['class' => S3FileStore::class],
+    \App\Education\Application\AssessmentService::class => ['__construct()' => [
+        'db' => \Yiisoft\Definitions\Reference::to(\Yiisoft\Db\Connection\ConnectionInterface::class),
+        'activityHandlers' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\ActivityHandlerRegistry::class),
+    ]],
     Mutation::class => ['class' => PostgresMutation::class],
     MigrationRunner::class => ['__construct()' => ['directory' => $root . '/migrations/education']],
 ];

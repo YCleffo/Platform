@@ -4,38 +4,81 @@ declare(strict_types=1);
 
 namespace App\Education\Application;
 
+use App\Education\Activity\ActivityPluginInterface;
+
 final class ActivityHandlerRegistry
 {
-    public function handler(string $code): ActivityHandler
+    /** @var array<string, ActivityHandler> */
+    private array $handlers = [];
+
+    /**
+     * @param array<string, ActivityHandler> $handlers
+     */
+    public function __construct(array $handlers = [])
     {
-        return match ($code) {
+        $this->handlers = [
             'platform-typing' => new TypingActivityHandler(),
             'platform-logic' => new LogicActivityHandler(),
             'platform-math-sprint' => new MathSprintActivityHandler(),
-            default => throw new EducationError(422, 'activity_unsupported'),
-        };
+            'platform-assessment' => new AssessmentActivityHandler(),
+        ];
+        foreach ($handlers as $code => $handler) {
+            $this->register((string) $code, $handler);
+        }
     }
 
-    /** @return list<array{code:string,title:string,description:string,version:string}> */
+    public function register(string $code, ActivityHandler $handler): self
+    {
+        $this->handlers[$code] = $handler;
+        return $this;
+    }
+
+    public function has(string $code): bool
+    {
+        return isset($this->handlers[$code]);
+    }
+
+    public function handler(string $code): ActivityHandler
+    {
+        return $this->handlers[$code] ?? throw new EducationError(422, 'activity_unsupported');
+    }
+
+    /** @return list<array{code:string,title:string,description:string,version:string,schema?:array,defaultConfig?:array}> */
     public function plugins(): array
     {
-        $handlers = [
-            new TypingActivityHandler(),
-            new LogicActivityHandler(),
-            new MathSprintActivityHandler(),
-        ];
         $list = [];
-        foreach ($handlers as $h) {
-            if ($h instanceof \App\Education\Activity\ActivityPluginInterface) {
+        foreach ($this->handlers as $code => $h) {
+            if ($h instanceof ActivityPluginInterface) {
                 $list[] = [
                     'code' => $h->code(),
                     'title' => $h->title(),
                     'description' => $h->description(),
                     'version' => $h->version(),
+                    'schema' => $h->configSchema(),
+                    'defaultConfig' => $h->defaultConfig(),
+                ];
+            } else {
+                $list[] = [
+                    'code' => $code,
+                    'title' => $code,
+                    'description' => '',
+                    'version' => '1.0.0',
                 ];
             }
         }
         return $list;
+    }
+
+    public function schema(string $code): array
+    {
+        $handler = $this->handler($code);
+        return $handler instanceof ActivityPluginInterface ? $handler->configSchema() : [];
+    }
+
+    public function defaultConfig(string $code): array
+    {
+        $handler = $this->handler($code);
+        return $handler instanceof ActivityPluginInterface ? $handler->defaultConfig() : [];
     }
 
     /** Public configuration contains no server-only exercise/answer fields. */

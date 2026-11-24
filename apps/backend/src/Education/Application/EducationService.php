@@ -997,7 +997,6 @@ final readonly class EducationService
 
     private function startAttempt(Scope $scope, string $code, array $input, bool $fromHomework = false): array
     {
-        ActivityHandlerRegistry::only($input, ['durationSeconds', 'language', 'mode', 'difficulty', 'minAccuracy', 'targetWpm', 'maxAttempts', 'roundCount', 'source', 'assignmentId']);
         $definition = $this->store->activityDefinition(Input::text($code, 60));
         if ($definition === null || !in_array($definition['enabled'], [true, 't', 1], true)) {
             throw new EducationError(404, 'not_found');
@@ -1027,7 +1026,7 @@ final readonly class EducationService
         $exercise['configSnapshot'] = $config;
         $snapshotConfig = $code === 'platform-typing' && array_diff(array_keys($configInput), ['durationSeconds', 'language']) === []
             ? $configInput : $config;
-        $attempt = $this->store->createAttempt($scope, (string) $definition['id'], $assignmentId, $source, $exercise['text'] ?? '', $snapshotConfig);
+        $attempt = $this->store->createAttempt($scope, (string) $definition['id'], $assignmentId, $source, $exercise['text'] ?? ($exercise['title'] ?? ''), $snapshotConfig);
         $this->store->snapshotAttempt($scope, $attempt['id'], (int) $definition['contractVersion'], $exercise);
         return $this->attemptView($scope, $attempt['id']);
     }

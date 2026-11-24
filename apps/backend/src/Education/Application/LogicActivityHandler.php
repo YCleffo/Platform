@@ -4,9 +4,55 @@ declare(strict_types=1);
 
 namespace App\Education\Application;
 
+use App\Education\Activity\ActivityPluginInterface;
+
 /** Exercises and answer keys are generated and persisted exclusively on the server. */
-final class LogicActivityHandler implements ActivityHandler
+final class LogicActivityHandler implements ActivityPluginInterface
 {
+    public function code(): string
+    {
+        return 'platform-logic';
+    }
+
+    public function version(): string
+    {
+        return '1.0.0';
+    }
+
+    public function title(): string
+    {
+        return 'Logic Trainer';
+    }
+
+    public function description(): string
+    {
+        return 'Pattern recognition, logical sequences, and algorithmic problem-solving tasks.';
+    }
+
+    public function configSchema(): array
+    {
+        return [
+            'type' => 'object',
+            'properties' => [
+                'language' => ['type' => 'string', 'enum' => ['ru', 'en']],
+                'difficulty' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 3],
+                'roundCount' => ['type' => 'integer', 'enum' => [5, 10]],
+                'minAccuracy' => ['type' => 'number', 'minimum' => 0, 'maximum' => 100],
+                'maxAttempts' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 20],
+            ],
+        ];
+    }
+
+    public function defaultConfig(): array
+    {
+        return [
+            'language' => 'ru',
+            'difficulty' => 1,
+            'roundCount' => 5,
+            'minAccuracy' => 60,
+            'maxAttempts' => 20,
+        ];
+    }
     public function validateConfig(array $config): array
     {
         ActivityHandlerRegistry::only($config, ['language','difficulty','roundCount','minAccuracy','maxAttempts']);
