@@ -12,7 +12,7 @@ DBML служит представлением для диаграммы, а н�
 | `core` | 50 | 561 | 86 | 195 | 161 | 19 |
 | `platform_runtime` | 3 | 36 | 1 | 18 | 7 | 2 |
 | `commercial` | 62 | 619 | 98 | 273 | 177 | 53 |
-| `education` | 58 | 517 | 85 | 125 | 156 | 11 |
+| `education` | 58 | 522 | 85 | 125 | 157 | 11 |
 
 Технические `public.platform_migrations` и `public.doctrine_migration_versions` не являются бизнес-таблицами и не включены в инвентарь.
 Межсистемный идентификатор в подписанном документе не создаёт внешний ключ между базами.
@@ -3044,6 +3044,10 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 | `manual_review_notes` | `text` | да | — | — |
 | `reviewed_by_person_id` | `uuid` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
+| `revision` | `integer` | нет | 1 | — |
+| `question_order` | `jsonb` | нет | '[]'::jsonb | — |
+| `option_order` | `jsonb` | нет | '{}'::jsonb | — |
+| `review_history` | `jsonb` | нет | '[]'::jsonb | — |
 
 **Первичный ключ:** `PRIMARY KEY (id)`.
 
@@ -3053,7 +3057,7 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 - `assessment_attempts_student_id_fkey`: `FOREIGN KEY (student_id) REFERENCES education.students(id) ON DELETE CASCADE`.
 - `assessment_attempts_version_id_fkey`: `FOREIGN KEY (version_id) REFERENCES education.assessment_versions(id) ON DELETE CASCADE`.
 
-Проверок CHECK: 6; индексов: 2; пользовательских триггеров: 0.
+Проверок CHECK: 6; индексов: 3; пользовательских триггеров: 0.
 
 ## education.assessment_versions
 
@@ -3095,6 +3099,7 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 | `latest_version_id` | `uuid` | да | — | — |
 | `created_at` | `timestamp with time zone` | нет | now() | — |
 | `updated_at` | `timestamp with time zone` | нет | now() | — |
+| `open_practice` | `boolean` | нет | false | — |
 
 **Первичный ключ:** `PRIMARY KEY (id)`.
 

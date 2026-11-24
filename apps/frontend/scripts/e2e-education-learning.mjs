@@ -265,7 +265,117 @@ async function verifyActivities(teacher, student, first) {
   );
 }
 
+async function verifyAssessment(teacher, student, first) {
+  // 1. Teacher creates assessment via API
+  const assessment = await teacher.api('/assessments', {
+    method: 'POST',
+    body: {
+      title: 'Основы алгоритмов',
+      description: 'Проверочный тест по модулю',
+      passingScorePercent: 75,
+      timeLimitSeconds: 600,
+      revealAnswersPolicy: 'after_grading',
+      questions: [
+        {
+          id: 'q1',
+          type: 'single_choice',
+          prompt: 'Что такое стек?',
+          points: 5,
+          options: [
+            { id: 'opt1', label: 'LIFO структура' },
+            { id: 'opt2', label: 'FIFO структура' },
+          ],
+          answerKey: 'opt1',
+          explanation: 'Стек работает по принципу Last In First Out',
+        },
+        {
+          id: 'q2',
+          type: 'true_false',
+          prompt: 'Двоичный поиск требует отсортированного массива?',
+          points: 5,
+          answerKey: true,
+          explanation: 'Да, двоичный поиск работает только на отсортированных данных',
+        },
+      ],
+    },
+    status: 201,
+  });
+  assert.ok(assessment.id);
+
+  // 2. Teacher publishes assessment
+  const published = await teacher.api(`/assessments/${assessment.id}/publish`, {
+    method: 'POST',
+    body: {},
+  });
+  assert.equal(published.status, 'PUBLISHED');
+
+  // 3. Teacher assigns assessment to the group as homework
+  const groupId = first.groupId ?? first.lesson.groupId;
+  const homework = await teacher.api('/homework', {
+    method: 'POST',
+    body: {
+      title: 'Тест: Алгоритмы',
+      description: 'Пройдите контрольный тест',
+      instructions: 'Ответьте на все вопросы',
+      type: 'assessment',
+      activityCode: 'platform-assessment',
+      activityConfig: { assessmentId: assessment.id },
+      groupId,
+      dueAt: new Date(Date.now() + 86400000).toISOString(),
+    },
+    status: 201,
+  });
+  const hwId = homework.assignment.id;
+  await teacher.api(`/homework/${hwId}/publish`, { method: 'POST', body: {} });
+
+  // 4. Student starts attempt
+  const attempt = await student.api(`/student/assessments/${assessment.id}/start`, {
+    method: 'POST',
+    body: { assignmentId: hwId },
+    status: 201,
+  });
+  assert.ok(attempt.id);
+  assert.equal(attempt.state, 'IN_PROGRESS');
+  // Anti-cheat verification: student view does NOT contain answerKey
+  assert.equal(attempt.questions[0].answerKey, undefined);
+
+  // 5. Student autosaves draft answer with revision
+  const saved = await student.api(`/student/assessment-attempts/${attempt.id}/save`, {
+    method: 'PUT',
+    body: {
+      revision: attempt.revision,
+      answers: { q1: 'opt1' },
+    },
+  });
+  assert.ok(saved.saved);
+
+  // 6. Student submits attempt
+  const submitted = await student.api(`/student/assessment-attempts/${attempt.id}/submit`, {
+    method: 'POST',
+    body: {
+      answers: { q1: 'opt1', q2: true },
+      elapsedSeconds: 45,
+    },
+  });
+  assert.ok(submitted.passed !== undefined);
+
+  // 7. Teacher reviews attempt with score bounds and feedback
+  const reviewed = await teacher.api(`/assessment-attempts/${attempt.id}/review`, {
+    method: 'POST',
+    body: {
+      score: 10,
+      feedback: 'Отличный результат!',
+    },
+  });
+  assert.equal(reviewed.success, true);
+  assert.equal(reviewed.score, 10);
+  console.log(
+    'Assessment Studio full lifecycle verified: teacher builder -> publish -> homework -> student runner -> anti-cheat mask -> submit -> teacher review.',
+  );
+}
+
 export async function verifyLearning({ teacher, student, first }) {
   await verifyHomework(teacher, student, first);
   await verifyActivities(teacher, student, first);
+  await verifyAssessment(teacher, student, first);
 }

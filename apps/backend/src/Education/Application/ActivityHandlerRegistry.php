@@ -16,19 +16,43 @@ final class ActivityHandlerRegistry
      */
     public function __construct(array $handlers = [])
     {
-        $this->handlers = [
-            'platform-typing' => new TypingActivityHandler(),
-            'platform-logic' => new LogicActivityHandler(),
-            'platform-math-sprint' => new MathSprintActivityHandler(),
-            'platform-assessment' => new AssessmentActivityHandler(),
-        ];
-        foreach ($handlers as $code => $handler) {
-            $this->register($code, $handler);
+        if ($handlers !== []) {
+            foreach ($handlers as $code => $handler) {
+                $this->register($code, $handler);
+            }
+        } else {
+            $defaults = [
+                'platform-typing' => new TypingActivityHandler(),
+                'platform-logic' => new LogicActivityHandler(),
+                'platform-math-sprint' => new MathSprintActivityHandler(),
+                'platform-assessment' => new AssessmentActivityHandler(),
+            ];
+            foreach ($defaults as $code => $handler) {
+                $this->register($code, $handler);
+            }
         }
     }
 
-    public function register(string $code, ActivityHandler $handler): self
+    public function register(string $code, ActivityHandler $handler, bool $replace = false): self
     {
+        if (trim($code) === '') {
+            throw new EducationError(422, 'activity_plugin_code_empty');
+        }
+
+        if (isset($this->handlers[$code]) && !$replace) {
+            throw new EducationError(409, 'activity_plugin_code_conflict');
+        }
+
+        if ($handler instanceof ActivityPluginInterface) {
+            if ($handler->code() !== $code) {
+                throw new EducationError(422, 'activity_plugin_code_mismatch');
+            }
+            $version = $handler->version();
+            if (!preg_match('/^\d+\.\d+(\.\d+)?$/', $version)) {
+                throw new EducationError(422, 'activity_plugin_invalid_version');
+            }
+        }
+
         $this->handlers[$code] = $handler;
         return $this;
     }

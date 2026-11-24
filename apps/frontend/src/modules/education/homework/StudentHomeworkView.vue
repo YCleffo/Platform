@@ -141,10 +141,10 @@ function onQuizComplete(res: QuizResult): void {
 
 const showAssessmentModal = ref(false);
 
-function onAssessmentComplete(res: AssessmentResult): void {
+function onAssessmentComplete(res: AssessmentResult & { attemptId?: string }): void {
   if (!data.value) return;
   data.value.submission.activityResult = {
-    attemptId: crypto.randomUUID(),
+    attemptId: res.attemptId || crypto.randomUUID(),
     type: 'assessment',
     score: res.score,
     accuracy: res.percentage,

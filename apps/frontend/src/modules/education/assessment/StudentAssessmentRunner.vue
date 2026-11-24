@@ -22,6 +22,7 @@ const submitting = ref(false);
 const showSubmitConfirm = ref(false);
 
 const activeAttemptId = ref<string | null>(props.attemptId || null);
+const revision = ref(1);
 const title = ref('');
 const instructions = ref('');
 const timeLimitSeconds = ref<number | null>(null);
@@ -82,6 +83,7 @@ async function startOrLoad(): Promise<void> {
     passingScorePercent.value = data.passingScorePercent;
     questions.value = (data.questions as AssessmentQuestion[]) || [];
     answers.value = (data.answers as Record<string, unknown>) || {};
+    revision.value = (data as any).revision || 1;
 
     if (data.state === 'EVALUATED' && data.result) {
       evaluatedResult.value = data.result as AssessmentResult;
@@ -143,11 +145,23 @@ function debouncedSave(): void {
   saveTimer = window.setTimeout(async () => {
     if (activeAttemptId.value) {
       try {
-        await assessmentApi.saveStudentAssessmentAttempt(activeAttemptId.value, {
+        const saveRes = await assessmentApi.saveStudentAssessmentAttempt(activeAttemptId.value, {
           answers: answers.value,
+          revision: revision.value,
         });
+        if (saveRes && saveRes.revision) {
+          revision.value = saveRes.revision;
+        }
       } catch {
-        // auto-save retry on next keystroke
+        // Optimistic refresh on conflict
+        try {
+          if (activeAttemptId.value) {
+            const fresh = await assessmentApi.getStudentAssessmentAttempt(activeAttemptId.value);
+            revision.value = (fresh as any).revision || 1;
+          }
+        } catch {
+          // ignore
+        }
       }
     }
   }, 800);
@@ -169,7 +183,14 @@ async function submitTest(): Promise<void> {
     });
     evaluatedResult.value = res.result;
     showSubmitConfirm.value = false;
-    emit('finished', res.result);
+    emit('finished', {
+      ...res.result,
+      attemptId: res.id,
+      score: res.score ?? 0,
+      maxScore: res.maxScore ?? 0,
+      percentage: res.percentage ?? 0,
+      passed: res.passed ?? false,
+    });
   } catch {
     // handle error
   } finally {

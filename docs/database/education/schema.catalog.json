@@ -3331,6 +3331,54 @@
           "generated": "",
           "type_name": "timestamptz",
           "type_schema": "pg_catalog"
+        },
+        {
+          "name": "revision",
+          "type": "integer",
+          "comment": null,
+          "default": "1",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "question_order",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'[]'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "option_order",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "review_history",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'[]'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
         }
       ],
       "comment": null,
@@ -3347,6 +3395,22 @@
           "predicate": null,
           "definition": "CREATE UNIQUE INDEX assessment_attempts_pkey ON education.assessment_attempts USING btree (id)",
           "attribute_count": 1
+        },
+        {
+          "keys": [
+            "organization_id",
+            "student_id",
+            "version_id",
+            "state"
+          ],
+          "name": "assessment_attempts_student_active_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 4,
+          "predicate": null,
+          "definition": "CREATE INDEX assessment_attempts_student_active_idx ON education.assessment_attempts USING btree (organization_id, student_id, version_id, state)",
+          "attribute_count": 4
         },
         {
           "keys": [
@@ -3463,6 +3527,21 @@
         },
         {
           "kind": "n",
+          "name": "assessment_attempts_option_order_not_null",
+          "columns": [
+            "option_order"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL option_order",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
           "name": "assessment_attempts_organization_id_not_null",
           "columns": [
             "organization_id"
@@ -3507,6 +3586,21 @@
           "initially_deferred": false
         },
         {
+          "kind": "n",
+          "name": "assessment_attempts_question_order_not_null",
+          "columns": [
+            "question_order"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL question_order",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
           "kind": "c",
           "name": "assessment_attempts_result_check",
           "columns": [
@@ -3531,6 +3625,36 @@
           "on_update": " ",
           "deferrable": false,
           "definition": "NOT NULL result",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "assessment_attempts_review_history_not_null",
+          "columns": [
+            "review_history"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL review_history",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "assessment_attempts_revision_not_null",
+          "columns": [
+            "revision"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL revision",
           "target_table": null,
           "target_schema": null,
           "target_columns": null,
@@ -4376,6 +4500,18 @@
           "generated": "",
           "type_name": "timestamptz",
           "type_schema": "pg_catalog"
+        },
+        {
+          "name": "open_practice",
+          "type": "boolean",
+          "comment": null,
+          "default": "false",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bool",
+          "type_schema": "pg_catalog"
         }
       ],
       "comment": null,
@@ -4488,6 +4624,21 @@
           "target_columns": [
             "id"
           ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "assessments_open_practice_not_null",
+          "columns": [
+            "open_practice"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL open_practice",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
           "initially_deferred": false
         },
         {
@@ -22124,7 +22275,8 @@
     "018_parent_thread_context.sql",
     "019_message_idempotency.sql",
     "020_messaging_rich_media.sql",
-    "021_assessments.sql"
+    "021_assessments.sql",
+    "022_assessment_hardening.sql"
   ],
   "migration_sources": [
     {
@@ -22210,6 +22362,10 @@
     {
       "path": "apps/backend/migrations/education/021_assessments.sql",
       "sha256": "77aa59070416763561edf690c7ee6c31b915d30cd330352aea467f3d8fb49195"
+    },
+    {
+      "path": "apps/backend/migrations/education/022_assessment_hardening.sql",
+      "sha256": "e7e56bcf3beec4893cf91b6580bd8cf5c4d72d014949295c4cdea49143cbcf4d"
     }
   ]
 }

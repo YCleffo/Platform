@@ -74,4 +74,99 @@ final class MediaServiceTest extends TestCase
         // Exceeds 50MB voice limit
         $service->reserveUpload($scope, 'voice', 'note.ogg', 'audio/ogg', 60 * 1024 * 1024, $sha);
     }
+
+    public function testConfirmUploadRejectsExpiredOrMissingSession(): void
+    {
+        $db = $this->createMock(ConnectionInterface::class);
+        $command = $this->createMock(\Yiisoft\Db\Command\CommandInterface::class);
+
+        $db->method('transaction')->willReturnCallback(fn($callback) => $callback());
+        $db->method('createCommand')->willReturn($command);
+
+        // First call: find asset (success)
+        // Second call: find session (returns false / null)
+        $command->method('queryOne')->willReturnOnConsecutiveCalls(
+            [
+                'id' => '00000000-0000-0000-0000-000000000010',
+                'status' => 'reserved',
+                'kind' => 'voice',
+                'original_mime' => 'audio/ogg',
+                'size_bytes' => 1024,
+                'sha256' => str_repeat('a', 64),
+                'storageKey' => 'voice/00000000-0000-0000-0000-000000000010.ogg',
+            ],
+            null, // expired or missing session
+        );
+
+        $service = new MediaService($db);
+        $scope = new MediaScope('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000003');
+
+        $this->expectException(MediaError::class);
+        $this->expectExceptionMessage('session_expired_or_invalid');
+        $service->confirmUpload($scope, '00000000-0000-0000-0000-000000000010');
+    }
+
+    public function testConfirmUploadRejectsChecksumMismatch(): void
+    {
+        $db = $this->createMock(ConnectionInterface::class);
+        $command = $this->createMock(\Yiisoft\Db\Command\CommandInterface::class);
+
+        $db->method('transaction')->willReturnCallback(fn($callback) => $callback());
+        $db->method('createCommand')->willReturn($command);
+
+        $command->method('queryOne')->willReturnOnConsecutiveCalls(
+            [
+                'id' => '00000000-0000-0000-0000-000000000010',
+                'status' => 'reserved',
+                'kind' => 'voice',
+                'original_mime' => 'audio/ogg',
+                'size_bytes' => 1024,
+                'sha256' => str_repeat('a', 64),
+                'storageKey' => 'voice/00000000-0000-0000-0000-000000000010.ogg',
+            ],
+            [
+                'staging_key' => 'staging/00000000-0000-0000-0000-000000000010.ogg',
+                'expires_at' => '2026-11-25 00:00:00',
+            ],
+        );
+
+        $service = new MediaService($db);
+        $scope = new MediaScope('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000003');
+
+        $this->expectException(MediaError::class);
+        $this->expectExceptionMessage('checksum_mismatch');
+        $service->confirmUpload($scope, '00000000-0000-0000-0000-000000000010', ['sha256' => str_repeat('b', 64)]);
+    }
+
+    public function testConfirmUploadRejectsSizeMismatch(): void
+    {
+        $db = $this->createMock(ConnectionInterface::class);
+        $command = $this->createMock(\Yiisoft\Db\Command\CommandInterface::class);
+
+        $db->method('transaction')->willReturnCallback(fn($callback) => $callback());
+        $db->method('createCommand')->willReturn($command);
+
+        $command->method('queryOne')->willReturnOnConsecutiveCalls(
+            [
+                'id' => '00000000-0000-0000-0000-000000000010',
+                'status' => 'reserved',
+                'kind' => 'voice',
+                'original_mime' => 'audio/ogg',
+                'size_bytes' => 1024,
+                'sha256' => str_repeat('a', 64),
+                'storageKey' => 'voice/00000000-0000-0000-0000-000000000010.ogg',
+            ],
+            [
+                'staging_key' => 'staging/00000000-0000-0000-0000-000000000010.ogg',
+                'expires_at' => '2026-11-25 00:00:00',
+            ],
+        );
+
+        $service = new MediaService($db);
+        $scope = new MediaScope('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000003');
+
+        $this->expectException(MediaError::class);
+        $this->expectExceptionMessage('size_mismatch');
+        $service->confirmUpload($scope, '00000000-0000-0000-0000-000000000010', ['sizeBytes' => 99999]);
+    }
 }

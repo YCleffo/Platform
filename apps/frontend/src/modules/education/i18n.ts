@@ -30,7 +30,7 @@ export const educationCopy = {
   activityHistoryLimit: ['Графики показывают последние {count} завершённых попыток.', 'Charts show the latest {count} completed attempts.'],
   exerciseSettings: ['Настройки упражнения', 'Exercise settings'],
   difficulty: ['Сложность', 'Difficulty'], difficulty1: ['Начальный', 'Beginner'], difficulty2: ['Средний', 'Intermediate'], difficulty3: ['Продвинутый', 'Advanced'],
-  typingMode: ['Режим', 'Mode'], typingMode_words: ['Слова', 'Words'], typingMode_sentences: ['Предложения', 'Sentences'], typingMode_numbers: ['Цифры и знаки', 'Numbers and punctuation'], typingMode_code: ['Простой код', 'Simple code'], typingMode_accuracy: ['Точность', 'Accuracy'],
+  typingMode: ['Режим', 'Mode'], typingMode_words: ['Слова', 'Words'], typingMode_sentences: ['Предложения', 'Sentences'], typingMode_numbers: ['Цифры и знаки', 'Numbers and punctuation'], typingMode_code: ['Простой код', 'Simple code'], typingMode_accuracy: ['Точность', 'Accuracy'], typingMode_zen: ['Дзен', 'Zen'], typingMode_quote: ['Цитаты', 'Quotes'],
   minAccuracy: ['Минимальная точность, %', 'Minimum accuracy, %'], targetWpm: ['Целевая скорость, WPM (0 — без цели)', 'Target speed, WPM (0 — no target)'],
   typingHint: ['Печатайте показанный текст. WPM — слова по 5 символов в минуту. Следующее упражнение повышает сложность до уровня 3.', 'Type the displayed text. WPM uses five-character words per minute. The next exercise increases difficulty up to level 3.'],
   typingEditHint: ['Вы можете выделять текст, исправлять ошибки и использовать Backspace.', 'You can select text, correct mistakes, and use Backspace.'],
@@ -472,8 +472,13 @@ export const educationCopy = {
   modeQuote: ['Цитата', 'Quote'],
   modeCustom: ['Свой текст', 'Custom'],
   modeCode: ['Код', 'Code'],
+  modeZen: ['Дзен', 'Zen'],
   speedGraph: ['График скорости (WPM)', 'Speed graph (WPM)'],
   errorsBreakdown: ['Анализ ошибок', 'Error breakdown'],
+  selectAssessment: ['Выберите тест', 'Select assessment'],
+  selectAssessmentPlaceholder: ['Выберите опубликованный тест...', 'Select a published assessment...'],
+  repeatText: ['Повторить текст', 'Repeat text'],
+  nextText: ['Следующий текст', 'Next text'],
 } as const;
 for (const [locale, index] of [['ru', 0], ['en', 1]] as const) {
   i18n.global.mergeLocaleMessage(locale, { education: Object.fromEntries(Object.entries(educationCopy).map(([key, value]) => [key, value[index]])) });

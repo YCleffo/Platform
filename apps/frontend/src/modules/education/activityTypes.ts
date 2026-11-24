@@ -1,5 +1,5 @@
 export type ActivityLanguage = 'ru' | 'en';
-export type TypingMode = 'words' | 'sentences' | 'numbers' | 'code' | 'accuracy';
+export type TypingMode = 'words' | 'sentences' | 'numbers' | 'code' | 'accuracy' | 'zen' | 'quote' | 'custom' | 'time';
 
 export type QuestionType = 'single_choice' | 'multi_choice' | 'true_false' | 'short_text' | 'numeric' | 'matching';
 
@@ -65,6 +65,7 @@ export interface AssessmentQuestionEvaluation {
 }
 
 export interface AssessmentResult {
+  attemptId?: string;
   score: number;
   maxScore: number;
   percentage: number;
@@ -81,6 +82,7 @@ export interface AssessmentAttempt {
   versionId: string;
   studentId: string;
   state: 'IN_PROGRESS' | 'SUBMITTED' | 'EVALUATED' | 'AWAITING_MANUAL_REVIEW';
+  revision?: number;
   startedAt: string;
   submittedAt?: string | null;
   answers: Record<string, unknown>;

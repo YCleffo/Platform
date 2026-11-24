@@ -378,6 +378,35 @@ function charClass(index: number): string[] {
   ];
 }
 
+watch(typed, (val) => {
+  if (status.value === 'running' && text.value.length > 0 && val === text.value) {
+    void finish();
+  }
+});
+
+async function restartSameText(): Promise<void> {
+  if (!exercise.value) {
+    await start();
+    return;
+  }
+  typed.value = '';
+  corrections.value = 0;
+  inputErrors.value = 0;
+  selection.value = 0;
+  composing.value = false;
+  startedAt.value = Date.now();
+  elapsed.value = 0;
+  status.value = 'running';
+  result.value = null;
+  wpmSamples.value = [];
+  lastSampleSecond = 0;
+  stopTimer();
+  timer = window.setInterval(tick, 100);
+  await nextTick();
+  input.value?.focus();
+  observeBoard();
+}
+
 // Quick restart with Tab + Enter
 function handleKeydown(event: KeyboardEvent): void {
   if (event.key === 'Tab') {
@@ -415,7 +444,7 @@ onBeforeUnmount(() => {
     >
       <div class="edu-typing__mode-group">
         <button
-          v-for="mode in ['words', 'sentences', 'numbers', 'code', 'accuracy'] as const"
+          v-for="mode in ['words', 'sentences', 'numbers', 'code', 'accuracy', 'zen'] as const"
           :key="mode"
           type="button"
           class="edu-typing__mode-btn"
@@ -428,7 +457,7 @@ onBeforeUnmount(() => {
 
       <div class="edu-typing__mode-group">
         <button
-          v-for="duration in [15, 30, 60] as const"
+          v-for="duration in [15, 30, 60, 120] as const"
           :key="duration"
           type="button"
           class="edu-typing__mode-btn"
@@ -714,6 +743,13 @@ onBeforeUnmount(() => {
       </p>
 
       <div class="edu-form-actions">
+        <button
+          type="button"
+          class="edu-button"
+          @click="restartSameText()"
+        >
+          {{ t('education.repeatText') }}
+        </button>
         <button
           type="button"
           class="edu-button"

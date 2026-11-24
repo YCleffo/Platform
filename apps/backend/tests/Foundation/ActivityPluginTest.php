@@ -185,6 +185,118 @@ final class ActivityPluginTest extends TestCase
         $this->assertContains('custom-plugin', $codes);
     }
 
+    public function testDuplicatePluginCodeThrowsConflict(): void
+    {
+        $registry = new ActivityHandlerRegistry();
+        $this->expectException(EducationError::class);
+        $this->expectExceptionMessage('activity_plugin_code_conflict');
+
+        $duplicate = new class implements ActivityPluginInterface {
+            public function code(): string
+            {
+                return 'platform-typing';
+            }
+            public function version(): string
+            {
+                return '1.0.0';
+            }
+            public function title(): string
+            {
+                return 'Typing Duplicate';
+            }
+            public function description(): string
+            {
+                return 'Duplicate';
+            }
+            public function configSchema(): array
+            {
+                return [];
+            }
+            public function defaultConfig(): array
+            {
+                return [];
+            }
+            public function validateConfig(array $config): array
+            {
+                return $config;
+            }
+            public function createExercise(array $config, ?array $set = null): array
+            {
+                return [];
+            }
+            public function publicExercise(array $attempt): array
+            {
+                return [];
+            }
+            public function validateState(array $attempt, array $state): array
+            {
+                return $state;
+            }
+            public function evaluate(array $attempt, array $input): array
+            {
+                return [];
+            }
+        };
+
+        $registry->register('platform-typing', $duplicate);
+    }
+
+    public function testInvalidPluginVersionThrowsException(): void
+    {
+        $registry = new ActivityHandlerRegistry();
+        $this->expectException(EducationError::class);
+        $this->expectExceptionMessage('activity_plugin_invalid_version');
+
+        $invalidVersionPlugin = new class implements ActivityPluginInterface {
+            public function code(): string
+            {
+                return 'plugin-bad-ver';
+            }
+            public function version(): string
+            {
+                return 'not-a-semver';
+            }
+            public function title(): string
+            {
+                return 'Bad Ver';
+            }
+            public function description(): string
+            {
+                return 'Bad Ver';
+            }
+            public function configSchema(): array
+            {
+                return [];
+            }
+            public function defaultConfig(): array
+            {
+                return [];
+            }
+            public function validateConfig(array $config): array
+            {
+                return $config;
+            }
+            public function createExercise(array $config, ?array $set = null): array
+            {
+                return [];
+            }
+            public function publicExercise(array $attempt): array
+            {
+                return [];
+            }
+            public function validateState(array $attempt, array $state): array
+            {
+                return $state;
+            }
+            public function evaluate(array $attempt, array $input): array
+            {
+                return [];
+            }
+        };
+
+        $registry->register('plugin-bad-ver', $invalidVersionPlugin);
+    }
+
     public function testAssessmentActivityHandlerMaskingAndEvaluation(): void
     {
         $handler = new \App\Education\Application\AssessmentActivityHandler();

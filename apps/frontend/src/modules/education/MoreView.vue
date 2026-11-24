@@ -129,6 +129,12 @@ async function reconcile(): Promise<void> {
         {{ t('education.materials') }}
       </RouterLink>
       <RouterLink
+        to="/assessments"
+        class="edu-button"
+      >
+        {{ t('education.assessments') }}
+      </RouterLink>
+      <RouterLink
         to="/notifications"
         class="edu-button"
       >

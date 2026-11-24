@@ -42,6 +42,17 @@ return [
         'families' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\StudentFamily::class),
     ]],
     FileStore::class => ['class' => S3FileStore::class],
+    \App\Education\Application\ActivityHandlerRegistry::class => [
+        'class' => \App\Education\Application\ActivityHandlerRegistry::class,
+        '__construct()' => [
+            'handlers' => [
+                'platform-typing' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\TypingActivityHandler::class),
+                'platform-logic' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\LogicActivityHandler::class),
+                'platform-math-sprint' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\MathSprintActivityHandler::class),
+                'platform-assessment' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\AssessmentActivityHandler::class),
+            ],
+        ],
+    ],
     \App\Education\Application\AssessmentService::class => ['__construct()' => [
         'db' => \Yiisoft\Definitions\Reference::to(\Yiisoft\Db\Connection\ConnectionInterface::class),
         'activityHandlers' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\ActivityHandlerRegistry::class),

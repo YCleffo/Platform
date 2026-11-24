@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useEducationI18n } from './i18n';
-import type { ActivityConfig } from './activityTypes';
+import type { ActivityConfig, AssessmentItem } from './activityTypes';
+import { assessmentApi } from './assessment/assessmentApi';
 
 const props = defineProps<{
   modelValue: ActivityConfig;
@@ -15,6 +16,26 @@ const { t } = useEducationI18n();
 
 const logic = computed(() => props.activityCode === 'platform-logic');
 const assessment = computed(() => props.activityCode === 'platform-assessment');
+const publishedAssessments = ref<AssessmentItem[]>([]);
+
+watch(
+  [() => props.activityCode, () => props.assignment],
+  async ([code, isAssign]) => {
+    if (code === 'platform-assessment' && isAssign && publishedAssessments.value.length === 0) {
+      try {
+        const res = await assessmentApi.listAssessments({ status: 'PUBLISHED' });
+        publishedAssessments.value = res.items;
+        const first = res.items[0];
+        if (!props.modelValue.assessmentId && first) {
+          emit('update:modelValue', { ...props.modelValue, assessmentId: first.id });
+        }
+      } catch {
+        // ignore
+      }
+    }
+  },
+  { immediate: true },
+);
 
 function update(key: keyof ActivityConfig, event: Event, numeric = false): void {
   const target = event.target as HTMLInputElement;
@@ -33,6 +54,29 @@ function update(key: keyof ActivityConfig, event: Event, numeric = false): void 
 
     <!-- Assessment Specific Settings -->
     <template v-if="assessment">
+      <label v-if="assignment">
+        {{ t('education.selectAssessment') }}
+        <select
+          class="edu-input"
+          :value="modelValue.assessmentId || ''"
+          @change="update('assessmentId', $event)"
+        >
+          <option
+            value=""
+            disabled
+          >
+            {{ t('education.selectAssessmentPlaceholder') }}
+          </option>
+          <option
+            v-for="test in publishedAssessments"
+            :key="test.id"
+            :value="test.id"
+          >
+            {{ test.title }} ({{ test.questionsCount }} {{ t('education.questionsCount') }})
+          </option>
+        </select>
+      </label>
+
       <label>
         {{ t('education.assessmentPassingScore') }}
         <input

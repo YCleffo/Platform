@@ -6,6 +6,7 @@ namespace App\Media\Application;
 
 use App\Media\Domain\MediaKind;
 use App\Media\Domain\MediaStatus;
+use App\Storage\Application\StorageFileAdapter;
 use DateTimeImmutable;
 use Yiisoft\Db\Connection\ConnectionInterface;
 
@@ -13,6 +14,7 @@ final readonly class MediaService
 {
     public function __construct(
         private ConnectionInterface $db,
+        private ?StorageFileAdapter $storage = null,
     ) {}
 
     /**
@@ -136,6 +138,38 @@ final readonly class MediaService
 
             if ($asset['status'] === MediaStatus::Ready->value) {
                 return $this->asset($scope, $assetId) ?? throw new MediaError(500, 'database_error');
+            }
+
+            // Verify upload session exists and has not expired
+            $session = $this->db->createCommand(
+                'SELECT staging_key, expires_at FROM media.upload_sessions
+                 WHERE asset_id = CAST(:id AS uuid) AND expires_at > now()',
+                [':id' => $assetId],
+            )->queryOne();
+
+            if (!is_array($session)) {
+                throw new MediaError(409, 'session_expired_or_invalid');
+            }
+
+            // Verify storage object if storage adapter is present
+            if ($this->storage !== null) {
+                $storageKey = (string) $asset['storageKey'];
+                $stagingKey = (string) $session['staging_key'];
+                if (!$this->storage->exists($storageKey) && !$this->storage->exists($stagingKey)) {
+                    throw new MediaError(422, 'storage_object_missing');
+                }
+            }
+
+            // Verify size and checksum if provided in metadata
+            if (isset($metadata['sha256']) && is_string($metadata['sha256'])) {
+                if (strtolower($metadata['sha256']) !== strtolower((string) $asset['sha256'])) {
+                    throw new MediaError(422, 'checksum_mismatch');
+                }
+            }
+            if (isset($metadata['sizeBytes']) && is_int($metadata['sizeBytes'])) {
+                if ($metadata['sizeBytes'] !== (int) $asset['size_bytes']) {
+                    throw new MediaError(422, 'size_mismatch');
+                }
             }
 
             $duration = isset($metadata['durationSeconds']) && is_numeric($metadata['durationSeconds'])

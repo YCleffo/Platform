@@ -69,8 +69,8 @@ export const assessmentApi = {
     return api<AssessmentAttempt & { title: string; instructions: string; questions: unknown[]; timeLimitSeconds: number | null; passingScorePercent: number }>(`/student/assessment-attempts/${encodeURIComponent(attemptId)}`);
   },
 
-  async saveStudentAssessmentAttempt(attemptId: string, data: { answers: Record<string, unknown> }): Promise<{ saved: boolean }> {
-    return api<{ saved: boolean }>(`/student/assessment-attempts/${encodeURIComponent(attemptId)}/save`, 'PUT', data);
+  async saveStudentAssessmentAttempt(attemptId: string, data: { answers: Record<string, unknown>; revision?: number }): Promise<{ saved: boolean; revision?: number }> {
+    return api<{ saved: boolean; revision?: number }>(`/student/assessment-attempts/${encodeURIComponent(attemptId)}/save`, 'PUT', data);
   },
 
   async submitStudentAssessmentAttempt(attemptId: string, data: { answers: Record<string, unknown>; elapsedSeconds: number }): Promise<AssessmentAttempt & { result: AssessmentResult }> {
