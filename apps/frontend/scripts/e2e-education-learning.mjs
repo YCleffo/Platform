@@ -317,7 +317,7 @@ async function verifyAssessment(teacher, student, first) {
       title: 'Тест: Алгоритмы',
       description: 'Пройдите контрольный тест',
       instructions: 'Ответьте на все вопросы',
-      type: 'assessment',
+      type: 'activity',
       activityCode: 'platform-assessment',
       activityConfig: { assessmentId: assessment.id },
       groupId,
@@ -326,7 +326,10 @@ async function verifyAssessment(teacher, student, first) {
     status: 201,
   });
   const hwId = homework.assignment.id;
-  await teacher.api(`/homework/${hwId}/publish`, { method: 'POST', body: {} });
+  await teacher.api(`/homework/${hwId}/publish`, {
+    method: 'POST',
+    body: { version: homework.assignment.version },
+  });
 
   // 4. Student starts attempt
   const attempt = await student.api(`/student/assessments/${assessment.id}/start`, {
