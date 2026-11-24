@@ -674,17 +674,17 @@ onScopeDispose(() => {
 
       <ul
         v-if="filteredThreads.length > 0"
-        class="edu-messenger__thread-list"
+        class="edu-messenger__thread-list edu-list"
       >
         <li
           v-for="th in filteredThreads"
           :key="th.id"
         >
-          <button
-            type="button"
-            class="edu-messenger__thread-item"
+          <a
+            :href="`/messages/${th.id}`"
+            class="edu-messenger__thread-item edu-list__item"
             :class="{ 'edu-messenger__thread-item--active': th.id === selectedThreadId }"
-            @click="selectThread(th.id)"
+            @click.prevent="selectThread(th.id)"
           >
             <div
               class="edu-messenger__avatar"
@@ -716,7 +716,7 @@ onScopeDispose(() => {
               </div>
               <div class="edu-messenger__thread-bottom">
                 <span class="edu-messenger__last-msg">
-                  {{ th.lastMessageBody || t('education.noMessagesInThread') }}
+                  {{ th.lastMessageBody ? (th.lastMessageSenderId === currentPersonId ? `${t('education.you')}: ${th.lastMessageBody}` : th.lastMessageBody) : t('education.noMessagesInThread') }}
                 </span>
                 <span
                   v-if="(th.unreadCount || 0) > 0"
@@ -726,7 +726,7 @@ onScopeDispose(() => {
                 </span>
               </div>
             </div>
-          </button>
+          </a>
         </li>
       </ul>
     </aside>
@@ -943,20 +943,22 @@ onScopeDispose(() => {
 
                   <!-- Text message parts -->
                   <template v-if="msg.body">
-                    <template
-                      v-for="(part, pIdx) in linkify(msg.body)"
-                      :key="pIdx"
-                    >
-                      <a
-                        v-if="part.isUrl"
-                        :href="part.url"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <p class="edu-message">
+                      <template
+                        v-for="(part, pIdx) in linkify(msg.body)"
+                        :key="pIdx"
                       >
-                        {{ part.text }}
-                      </a>
-                      <template v-else>{{ part.text }}</template>
-                    </template>
+                        <a
+                          v-if="part.isUrl"
+                          :href="part.url"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {{ part.text }}
+                        </a>
+                        <template v-else>{{ part.text }}</template>
+                      </template>
+                    </p>
                   </template>
 
                   <div class="edu-messenger__bubble-meta">
@@ -1031,6 +1033,7 @@ onScopeDispose(() => {
           @submit.prevent="handleSendMessage"
         >
           <textarea
+            id="education-reply"
             v-model="composerText"
             class="edu-messenger__composer-input"
             :placeholder="t('education.typeMessage')"

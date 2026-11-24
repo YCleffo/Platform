@@ -120,6 +120,7 @@
   cursor: pointer;
   color: inherit;
   font: inherit;
+  text-decoration: none;
   transition: var(--theme-transition);
 }
 
@@ -384,6 +385,10 @@
   line-height: var(--type-body-small-line);
   box-shadow: var(--shadow-soft);
   transition: var(--theme-transition);
+}
+
+.edu-messenger__bubble .edu-message {
+  margin: 0;
 }
 
 .edu-messenger__bubble--incoming {
