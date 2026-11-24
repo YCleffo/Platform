@@ -664,7 +664,7 @@ final readonly class PostgresEducationStore implements EducationStore
                     bool_or(mr.person_id=CAST(:person AS uuid)) AS reacted
              FROM education.message_reactions mr
              JOIN education.messages m ON m.id = mr.message_id
-             WHERE m.thread_id=CAST(:id AS uuid)
+             WHERE m.organization_id=CAST(:org AS uuid) AND m.thread_id=CAST(:id AS uuid)
              GROUP BY mr.message_id, mr.emoji
              ORDER BY count DESC, mr.emoji',
             [...self::recipient($scope), ':id' => $threadId],
@@ -809,7 +809,7 @@ final readonly class PostgresEducationStore implements EducationStore
             );
             $this->db->createCommand(
                 'UPDATE education.threads SET last_activity_at=now() WHERE id=CAST(:thread AS uuid) AND organization_id=CAST(:org AS uuid)',
-                $params,
+                [':thread' => $threadId, ':org' => $scope->organizationId],
             )->execute();
             $this->db->createCommand('INSERT INTO education.notifications(organization_id,person_id,thread_id,message_id)
                 SELECT organization_id,person_id,thread_id,CAST(:message AS uuid) FROM education.thread_members WHERE thread_id=CAST(:thread AS uuid)

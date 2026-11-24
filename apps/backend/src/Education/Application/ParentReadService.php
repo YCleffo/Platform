@@ -363,6 +363,7 @@ final readonly class ParentReadService
 
     public function threads(ParentScope $scope, int $offset): array
     {
+        $this->read('child', $scope);
         $items = $this->all(
             'SELECT t.id::text,t.subject,t.created_at::text AS "createdAt",
             COALESCE(t.last_activity_at, t.created_at)::text AS "lastActivityAt",
@@ -395,6 +396,7 @@ final readonly class ParentReadService
 
     public function thread(ParentScope $scope, string $id): array
     {
+        $this->read('child', $scope);
         Input::uuid($id);
         $thread = $this->db->createCommand(
             'SELECT t.id::text,t.subject,t.created_at::text AS "createdAt",
@@ -433,7 +435,7 @@ final readonly class ParentReadService
             LEFT JOIN education.messages rm ON rm.id = m.reply_to_id
             WHERE m.organization_id=CAST(:org AS uuid) AND tm.person_id=CAST(:person AS uuid) AND m.thread_id=CAST(:id AS uuid)
             ORDER BY m.created_at DESC,m.id DESC LIMIT 51 OFFSET :offset',
-            [...self::params($scope), ':person' => $scope->personId, ':id' => $threadId, ':offset' => $offset],
+            [':org' => $scope->organizationId, ':person' => $scope->personId, ':id' => $threadId, ':offset' => $offset],
         );
 
         $reactionsRows = $this->all(
@@ -441,10 +443,10 @@ final readonly class ParentReadService
                     bool_or(mr.person_id=CAST(:person AS uuid)) AS reacted
              FROM education.message_reactions mr
              JOIN education.messages m ON m.id = mr.message_id
-             WHERE m.thread_id=CAST(:id AS uuid)
+             WHERE m.organization_id=CAST(:org AS uuid) AND m.thread_id=CAST(:id AS uuid)
              GROUP BY mr.message_id, mr.emoji
              ORDER BY count DESC, mr.emoji',
-            [...self::params($scope), ':person' => $scope->personId, ':id' => $threadId],
+            [':org' => $scope->organizationId, ':person' => $scope->personId, ':id' => $threadId],
         );
 
         $reactionsByMessage = [];

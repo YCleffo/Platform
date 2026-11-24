@@ -38,7 +38,7 @@ final readonly class EducationService
      */
     public function read(string $operation, Scope $scope, array $query, ?string $id = null): ?array
     {
-        if (str_starts_with($operation, 'student_') && !in_array($operation, ['student_attendance','student_results','student_progress'], true)) {
+        if (str_starts_with($operation, 'student_') && !in_array($operation, ['student_attendance', 'student_results', 'student_progress'], true)) {
             $this->assertActivityStudent($scope);
         }
         $offset = Input::page($query['offset'] ?? null);
@@ -174,11 +174,17 @@ final readonly class EducationService
             $avatarId = null;
         }
         $hour = (int) $now->format('G');
-        return ['displayName' => $profile['displayName'] ?? $this->access->personName($scope->personId),
-            'avatarFileId' => $avatarId, 'personId' => $scope->personId,
-            'date' => $now->format('Y-m-d'), 'now' => $now->format(DATE_ATOM),
+        return [
+            'displayName' => $profile['displayName'] ?? $this->access->personName($scope->personId),
+            'avatarFileId' => $avatarId,
+            'personId' => $scope->personId,
+            'date' => $now->format('Y-m-d'),
+            'now' => $now->format(DATE_ATOM),
             'greeting' => $hour < 6 ? 'night' : ($hour < 12 ? 'morning' : ($hour < 18 ? 'afternoon' : 'evening')),
-            'locale' => $scope->locale, 'timezone' => $scope->timezone, 'unreadCount' => $this->store->unreadCount($scope)];
+            'locale' => $scope->locale,
+            'timezone' => $scope->timezone,
+            'unreadCount' => $this->store->unreadCount($scope),
+        ];
     }
 
     /**
@@ -210,8 +216,7 @@ final readonly class EducationService
         /** @var list<array<string,mixed>> $events */
         $events = $schedule['events'];
         $items = [...array_map(static fn(array $lesson): array => [...$lesson, 'kind' => 'lesson'], $lessons), ...$events];
-        usort($items, static fn(array $a, array $b): int =>
-            (new DateTimeImmutable((string) $a['startsAt'])) <=> (new DateTimeImmutable((string) $b['startsAt']))
+        usort($items, static fn(array $a, array $b): int => (new DateTimeImmutable((string) $a['startsAt'])) <=> (new DateTimeImmutable((string) $b['startsAt']))
             ?: strcmp((string) $a['id'], (string) $b['id']));
         return ['date' => $date, 'timezone' => $scope->timezone, 'items' => $items];
     }
@@ -299,7 +304,7 @@ final readonly class EducationService
         $items = $this->store->journal($scope, $id, $start, $end, $studentId, $offset);
         $page = self::page($items, $offset);
         $items = array_values(array_filter(array_slice($items, 0, 50), fn(array $row): bool =>
-            $this->access->resourceAllowed($scope->personId, 'lesson', (string) $row['id'])));
+        $this->access->resourceAllowed($scope->personId, 'lesson', (string) $row['id'])));
         $page['items'] = $items;
         if ($items === []) {
             return $page;
@@ -318,16 +323,22 @@ final readonly class EducationService
             $entries = [];
             foreach ($results[$id] ?? [] as $entry) {
                 $personId = (string) $entry['personId'];
-                if (!$this->access->member($personId, $scope->organizationId)
-                    || !$this->access->resourceAllowed($personId, 'student', (string) $entry['studentId'])) {
+                if (
+                    !$this->access->member($personId, $scope->organizationId)
+                    || !$this->access->resourceAllowed($personId, 'student', (string) $entry['studentId'])
+                ) {
                     continue;
                 }
                 $name = $this->access->personName($personId);
                 if ($name === null) {
                     continue;
                 }
-                $entries[] = ['studentId' => (string) $entry['studentId'], 'name' => $name,
-                    'status' => (string) $entry['status'], 'comment' => $entry['comment'] ?? null];
+                $entries[] = [
+                    'studentId' => (string) $entry['studentId'],
+                    'name' => $name,
+                    'status' => (string) $entry['status'],
+                    'comment' => $entry['comment'] ?? null,
+                ];
             }
             return [...$row, 'report' => $reports[$id] ?? null, 'results' => $entries];
         }, $items);
@@ -347,8 +358,13 @@ final readonly class EducationService
         if ($name === null) {
             throw new EducationError(404, 'not_found');
         }
-        return [...$student, 'name' => $name, 'groups' => $this->store->studentGroups($scope, $id),
-            'account' => $this->store->studentAccount($scope, $id), 'guardians' => $this->families?->guardians($scope, $id) ?? []];
+        return [
+            ...$student,
+            'name' => $name,
+            'groups' => $this->store->studentGroups($scope, $id),
+            'account' => $this->store->studentAccount($scope, $id),
+            'guardians' => $this->families?->guardians($scope, $id) ?? [],
+        ];
     }
 
     /**
@@ -362,7 +378,7 @@ final readonly class EducationService
         $items = $this->store->studentAttendance($scope, $id, $from, $to, $offset);
         $page = self::page($items, $offset);
         $page['items'] = array_values(array_filter(array_slice($items, 0, 50), fn(array $row): bool =>
-            $this->access->resourceAllowed($scope->personId, 'lesson', (string) $row['lessonId'])));
+        $this->access->resourceAllowed($scope->personId, 'lesson', (string) $row['lessonId'])));
         $page['from'] = (string) $query['from'];
         $page['to'] = (string) $query['to'];
         return $page;
@@ -375,7 +391,7 @@ final readonly class EducationService
         $items = $this->store->studentResults($scope, $id, $offset);
         $page = self::page($items, $offset);
         $page['items'] = array_values(array_filter(array_slice($items, 0, 50), fn(array $row): bool =>
-            $this->access->resourceAllowed($scope->personId, 'lesson', (string) $row['lessonId'])));
+        $this->access->resourceAllowed($scope->personId, 'lesson', (string) $row['lessonId'])));
         return $page;
     }
 
@@ -413,7 +429,7 @@ final readonly class EducationService
             throw new EducationError(422, 'range_too_large');
         }
         return ['date' => $date, 'items' => array_values(array_filter($items, fn(array $row): bool =>
-            $this->access->resourceAllowed($scope->personId, 'lesson', (string) $row['id'])))];
+        $this->access->resourceAllowed($scope->personId, 'lesson', (string) $row['id'])))];
     }
 
     /**
@@ -467,8 +483,10 @@ final readonly class EducationService
         $items = [];
         foreach ($raw as $row) {
             $personId = (string) $row['personId'];
-            if (!$this->access->member($personId, $scope->organizationId)
-                || !$this->access->resourceAllowed($personId, 'person', $personId)) {
+            if (
+                !$this->access->member($personId, $scope->organizationId)
+                || !$this->access->resourceAllowed($personId, 'person', $personId)
+            ) {
                 continue;
             }
             $name = $this->access->personName($personId);
@@ -656,10 +674,12 @@ final readonly class EducationService
     {
         self::only($input, ['topic', 'summary', 'teacherComment']);
         $this->lesson($scope, $id);
-        return $this->store->saveLessonReport($scope, ['lessonId' => $id,
+        return $this->store->saveLessonReport($scope, [
+            'lessonId' => $id,
             'topic' => Input::text($input['topic'] ?? null, 240),
             'summary' => Input::text($input['summary'] ?? null, 4000),
-            'teacherComment' => self::optionalText($input['teacherComment'] ?? null, 4000)]);
+            'teacherComment' => self::optionalText($input['teacherComment'] ?? null, 4000),
+        ]);
     }
 
     /**
@@ -712,7 +732,7 @@ final readonly class EducationService
         );
         $next = array_values(array_filter($schedule, static fn(array $row): bool => $row['status'] !== 'cancelled'))[0] ?? null;
         $lessons = $this->store->studentLessons($scope, 0);
-        $results = array_values(array_filter(array_slice($lessons, 0, 10), static fn(array $row): bool => $row['resultStatus'] !== 'pending')) ;
+        $results = array_values(array_filter(array_slice($lessons, 0, 10), static fn(array $row): bool => $row['resultStatus'] !== 'pending'));
         $attempts = array_slice($this->store->studentAttempts($scope, 0), 0, 5);
         return [
             'nextLesson' => $next,
@@ -735,8 +755,11 @@ final readonly class EducationService
     private function studentSchedule(Scope $scope, array $query): array
     {
         [$from, $to] = Input::range((string) ($query['from'] ?? null), (string) ($query['to'] ?? null), $scope->timezone);
-        return ['from' => (string) $query['from'], 'to' => (string) $query['to'],
-            'items' => array_slice($this->store->studentSchedule($scope, $from, $to), 0, 100)];
+        return [
+            'from' => (string) $query['from'],
+            'to' => (string) $query['to'],
+            'items' => array_slice($this->store->studentSchedule($scope, $from, $to), 0, 100),
+        ];
     }
 
     /** @return array<string,mixed> */
@@ -930,7 +953,7 @@ final readonly class EducationService
         $this->group($scope, $groupId);
         $code = Input::text($query['activity'] ?? null, 60);
         $definition = $this->store->activityDefinition($code) ?? throw new EducationError(404, 'not_found');
-        [$from,$to,$start,$end] = $this->activityRange($scope, $query);
+        [$from, $to, $start, $end] = $this->activityRange($scope, $query);
         $items = $this->store->groupActivityResults(
             $scope,
             $groupId,
@@ -945,8 +968,10 @@ final readonly class EducationService
             if (!$this->access->resourceAllowed($personId, 'attempt', (string) $row['id'])) {
                 return null;
             }
-            if (!$this->access->member($personId, $scope->organizationId)
-                || !$this->access->resourceAllowed($personId, 'student', (string) $row['studentId'])) {
+            if (
+                !$this->access->member($personId, $scope->organizationId)
+                || !$this->access->resourceAllowed($personId, 'student', (string) $row['studentId'])
+            ) {
                 return null;
             }
             $name = $this->access->personName($personId);
@@ -972,18 +997,18 @@ final readonly class EducationService
 
     private function startAttempt(Scope $scope, string $code, array $input, bool $fromHomework = false): array
     {
-        ActivityHandlerRegistry::only($input, ['durationSeconds','language','mode','difficulty','minAccuracy','targetWpm','maxAttempts','roundCount','source','assignmentId']);
+        ActivityHandlerRegistry::only($input, ['durationSeconds', 'language', 'mode', 'difficulty', 'minAccuracy', 'targetWpm', 'maxAttempts', 'roundCount', 'source', 'assignmentId']);
         $definition = $this->store->activityDefinition(Input::text($code, 60));
-        if ($definition === null || !in_array($definition['enabled'], [true,'t',1], true)) {
+        if ($definition === null || !in_array($definition['enabled'], [true, 't', 1], true)) {
             throw new EducationError(404, 'not_found');
         }
         if (!$this->permissionsAllowed($scope, (string) $definition['requiredPermission'])) {
             throw new EducationError(403, 'access_denied');
         }
-        $configInput = array_diff_key($input, array_flip(['source','assignmentId']));
+        $configInput = array_diff_key($input, array_flip(['source', 'assignmentId']));
         $config = $this->handlers()->validateConfig($code, $configInput);
         $source = $input['source'] ?? 'browser';
-        if (!in_array($source, ['browser','managed-device','native-app'], true)) {
+        if (!in_array($source, ['browser', 'managed-device', 'native-app'], true)) {
             throw new EducationError(422, 'invalid_input');
         }
         $assignmentId = isset($input['assignmentId']) ? Input::uuid($input['assignmentId']) : null;
@@ -1000,7 +1025,7 @@ final readonly class EducationService
         $set = $code === 'platform-typing' ? $this->store->exerciseSet($code, $config['language'], $config['mode'], $config['difficulty']) : null;
         $exercise = $this->handlers()->handler($code)->createExercise($config, $set);
         $exercise['configSnapshot'] = $config;
-        $snapshotConfig = $code === 'platform-typing' && array_diff(array_keys($configInput), ['durationSeconds','language']) === []
+        $snapshotConfig = $code === 'platform-typing' && array_diff(array_keys($configInput), ['durationSeconds', 'language']) === []
             ? $configInput : $config;
         $attempt = $this->store->createAttempt($scope, (string) $definition['id'], $assignmentId, $source, $exercise['text'] ?? '', $snapshotConfig);
         $this->store->snapshotAttempt($scope, $attempt['id'], (int) $definition['contractVersion'], $exercise);
@@ -1040,7 +1065,7 @@ final readonly class EducationService
             throw new EducationError(409, 'attempt_revoked');
         }
         $definition = $this->store->activityDefinition((string) $attempt['activityCode']);
-        if ($definition === null || !in_array($definition['enabled'], [true,'t',1], true) || !$this->permissionsAllowed($scope, (string) $definition['requiredPermission'])) {
+        if ($definition === null || !in_array($definition['enabled'], [true, 't', 1], true) || !$this->permissionsAllowed($scope, (string) $definition['requiredPermission'])) {
             throw new EducationError(403, 'access_denied');
         }
         $this->access->assertResource($scope, 'attempt', $id);
@@ -1051,22 +1076,22 @@ final readonly class EducationService
     private function attemptView(Scope $scope, string $id): array
     {
         $attempt = $this->authorizedAttempt($scope, $id);
-        $public = array_intersect_key($attempt, array_flip(['id','studentId','activityId','activityCode','assignmentId','status','source','contractVersion','startedAt','finishedAt']));
+        $public = array_intersect_key($attempt, array_flip(['id', 'studentId', 'activityId', 'activityCode', 'assignmentId', 'status', 'source', 'contractVersion', 'startedAt', 'finishedAt']));
         $public['config'] = ActivityHandlerRegistry::json($attempt['config']);
         $state = ActivityHandlerRegistry::json($attempt['state'] ?? []);
         $public['state'] = $state === [] ? (object) [] : $state;
         $public['stateVersion'] = (int) ($attempt['stateVersion'] ?? 0);
-        $out = ['attempt' => $public,'exercise' => $this->handlers()->handler($attempt['activityCode'])->publicExercise($attempt)];
+        $out = ['attempt' => $public, 'exercise' => $this->handlers()->handler($attempt['activityCode'])->publicExercise($attempt)];
         if ($attempt['status'] === 'finished') {
             $out['result'] = $this->activityView?->forAttempt($scope->organizationId, $id)
-                ?? (isset($attempt['result']) ? ['attemptId' => $id,...ActivityHandlerRegistry::json($attempt['result'])] : null);
+                ?? (isset($attempt['result']) ? ['attemptId' => $id, ...ActivityHandlerRegistry::json($attempt['result'])] : null);
         }
         return $out;
     }
 
     private function saveAttemptState(Scope $scope, string $id, array $input): array
     {
-        ActivityHandlerRegistry::only($input, ['version','state']);
+        ActivityHandlerRegistry::only($input, ['version', 'state']);
         $version = ActivityHandlerRegistry::integer($input['version'] ?? null, 0, 2147483646);
         if (!is_array($input['state'] ?? null)) {
             throw new EducationError(422, 'invalid_input');
@@ -1090,24 +1115,24 @@ final readonly class EducationService
         $now = $this->clock->now()->setTimezone(new DateTimeZone($scope->timezone));
         $from = Input::date($query['from'] ?? $now->modify('-30 days')->format('Y-m-d'));
         $to = Input::date($query['to'] ?? $now->format('Y-m-d'));
-        [$start,$end] = Input::range($from, $to, $scope->timezone);
+        [$start, $end] = Input::range($from, $to, $scope->timezone);
         $code = isset($query['activity']) ? Input::text($query['activity'], 60) : null;
         if ($code !== null) {
             $this->handlers()->handler($code);
         }
-        return [$from,$to,$start,$end,$code];
+        return [$from, $to, $start, $end, $code];
     }
 
     private function studentActivityProgress(Scope $scope, array $query): array
     {
-        [$from,$to,$start,$end,$code] = $this->activityRange($scope, $query);
-        return [...($this->achievements?->progressForStudent($scope->organizationId, (string) $scope->studentId, $start, $end, $code, fn(string $type, string $resource): bool => $this->access->resourceAllowed($scope->personId, $type, $resource)) ?? []),'from' => $from,'to' => $to];
+        [$from, $to, $start, $end, $code] = $this->activityRange($scope, $query);
+        return [...($this->achievements?->progressForStudent($scope->organizationId, (string) $scope->studentId, $start, $end, $code, fn(string $type, string $resource): bool => $this->access->resourceAllowed($scope->personId, $type, $resource)) ?? []), 'from' => $from, 'to' => $to];
     }
 
     private function groupActivityProgress(Scope $scope, string $id, array $query): array
     {
         $this->group($scope, $id);
-        [$from,$to,$start,$end,$code] = $this->activityRange($scope, $query);
+        [$from, $to, $start, $end, $code] = $this->activityRange($scope, $query);
         $items = [];
         $offset = Input::page($query['offset'] ?? null);
         foreach (array_slice($this->store->groupStudents($scope, $id, $offset), 0, 50) as $student) {
@@ -1120,9 +1145,9 @@ final readonly class EducationService
             if ($name === null) {
                 continue;
             }
-            $items[] = ['studentId' => $studentId,'name' => $name,...($this->achievements?->progressForStudent($scope->organizationId, $studentId, $start, $end, $code, fn(string $type, string $resource): bool => $this->access->resourceAllowed($personId, $type, $resource) && $this->access->resourceAllowed($scope->personId, $type, $resource)) ?? [])];
+            $items[] = ['studentId' => $studentId, 'name' => $name, ...($this->achievements?->progressForStudent($scope->organizationId, $studentId, $start, $end, $code, fn(string $type, string $resource): bool => $this->access->resourceAllowed($personId, $type, $resource) && $this->access->resourceAllowed($scope->personId, $type, $resource)) ?? [])];
         }
-        return ['items' => $items,'from' => $from,'to' => $to,'offset' => $offset,'limit' => 50];
+        return ['items' => $items, 'from' => $from, 'to' => $to, 'offset' => $offset, 'limit' => 50];
     }
 
     /**
@@ -1152,8 +1177,12 @@ final readonly class EducationService
         if ($seconds <= 0 || $seconds > 86400) {
             throw new EducationError(422, 'invalid_time');
         }
-        return ['title' => Input::text($input['title'] ?? null, 160), 'startsAt' => $start, 'endsAt' => $end,
-            'location' => Input::text($input['location'] ?? '', 240, false)];
+        return [
+            'title' => Input::text($input['title'] ?? null, 160),
+            'startsAt' => $start,
+            'endsAt' => $end,
+            'location' => Input::text($input['location'] ?? '', 240, false),
+        ];
     }
 
     /**
@@ -1261,7 +1290,7 @@ final readonly class EducationService
         $clientKey = is_string($rawKey) && strlen($rawKey) >= 8 && strlen($rawKey) <= 128 ? $rawKey : null;
 
         $rawKind = $input['kind'] ?? 'text';
-        $kind = in_array($rawKind, ['text', 'voice', 'video_note', 'image', 'document', 'audio'], true) ? (string) $rawKind : 'text';
+        $kind = in_array($rawKind, ['text', 'voice', 'video_note', 'image', 'document', 'audio'], true) ? $rawKind : 'text';
 
         $mediaAssetId = isset($input['mediaAssetId']) && is_string($input['mediaAssetId']) ? Input::uuid($input['mediaAssetId']) : null;
         $replyToId = isset($input['replyToId']) && is_string($input['replyToId']) ? Input::uuid($input['replyToId']) : null;
@@ -1368,8 +1397,15 @@ final readonly class EducationService
         $this->assertFileUpload($scope, $lessonId, $avatar);
         try {
             return $this->mutations->run($scope, 'upload_file', fn(): array =>
-                $this->store->createFile($scope, ['lessonId' => $lessonId, 'name' => $file->name, 'mime' => $file->mime,
-                    'purpose' => $avatar ? 'avatar' : 'material', 'sizeBytes' => $file->size, 'sha256' => $file->sha256, 'storageKey' => $file->key]));
+            $this->store->createFile($scope, [
+                'lessonId' => $lessonId,
+                'name' => $file->name,
+                'mime' => $file->mime,
+                'purpose' => $avatar ? 'avatar' : 'material',
+                'sizeBytes' => $file->size,
+                'sha256' => $file->sha256,
+                'storageKey' => $file->key,
+            ]));
         } catch (\Throwable $error) {
             $this->files->remove($file->key);
             throw $error;
@@ -1423,8 +1459,16 @@ final readonly class EducationService
     {
         $file = $this->fileForDownload($scope, $id);
         $stream = $this->files->open((string) $file['storageKey'], (int) $file['sizeBytes'], (string) $file['sha256']);
-        return ['stream' => $stream, 'name' => (string) $file['name'],
-            'mime' => (string) $file['mime'], 'size' => (int) $file['sizeBytes'], 'sha256' => (string) $file['sha256']];
+        if (!is_resource($stream)) {
+            throw new EducationError(500, 'file_open_failed');
+        }
+        return [
+            'stream' => $stream,
+            'name' => (string) $file['name'],
+            'mime' => (string) $file['mime'],
+            'size' => (int) $file['sizeBytes'],
+            'sha256' => (string) $file['sha256'],
+        ];
     }
 
     /**
@@ -1433,8 +1477,12 @@ final readonly class EducationService
      */
     private static function page(array $items, int $offset): array
     {
-        return ['items' => array_slice($items, 0, 50), 'limit' => 50, 'offset' => $offset,
-            'nextOffset' => count($items) > 50 ? $offset + 50 : null];
+        return [
+            'items' => array_slice($items, 0, 50),
+            'limit' => 50,
+            'offset' => $offset,
+            'nextOffset' => count($items) > 50 ? $offset + 50 : null,
+        ];
     }
 
     /**

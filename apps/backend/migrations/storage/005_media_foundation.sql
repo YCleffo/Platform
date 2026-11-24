@@ -62,3 +62,9 @@ CREATE INDEX IF NOT EXISTS media_upload_sessions_expiry ON media.upload_sessions
 INSERT INTO core.modules(code, name, description, version, enabled) VALUES
     ('media', 'Media Foundation', 'Reusable media assets, processing pipelines, voice and video notes', '1.0.0', false)
     ON CONFLICT(code) DO NOTHING;
+
+GRANT USAGE ON SCHEMA media TO PUBLIC;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA media TO PUBLIC;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA media TO PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA media GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO PUBLIC;
+

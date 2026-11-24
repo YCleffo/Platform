@@ -201,11 +201,8 @@
     </MixedArgumentTypeCoercion>
     <MixedReturnTypeCoercion>
       <code><![CDATA[$this->uploadStored($scope, $this->files->store($upload, $avatar), $lessonId, $avatar)]]></code>
-      <code><![CDATA[['stream' => $stream, 'name' => (string) $file['name'],
-            'mime' => (string) $file['mime'], 'size' => (int) $file['sizeBytes'], 'sha256' => (string) $file['sha256']]]]></code>
       <code><![CDATA[array<string,mixed>]]></code>
       <code><![CDATA[array<string,mixed>|null]]></code>
-      <code><![CDATA[array{stream:resource,name:string,mime:string,size:int,sha256:string}]]></code>
       <code><![CDATA[match ($operation) {
             'header', 'profile' => $this->header($scope, $now),
             'groups' => $this->resourcePage($scope, $this->store->groups($scope, $offset), $offset, 'group'),
