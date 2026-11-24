@@ -1108,6 +1108,7 @@ export default {
     cameraUnavailable: 'Camera or microphone is unavailable',
     micUnavailable: 'Microphone is unavailable or access was denied',
     preview: 'Preview',
+    retake: 'Retake',
     discard: 'Discard',
     playbackError: 'Failed to play media file',
     close: 'Close',

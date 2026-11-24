@@ -4,6 +4,7 @@ import MediaPlayer from './MediaPlayer.vue';
 import AudioPlayer from './AudioPlayer.vue';
 import AudioWaveform from './AudioWaveform.vue';
 import VideoNotePlayer from './VideoNotePlayer.vue';
+import VideoNoteRecorder from './VideoNoteRecorder.vue';
 import FileAttachment from './FileAttachment.vue';
 import type { MediaAsset } from './types';
 
@@ -113,5 +114,16 @@ describe('Media UI Kit', () => {
 
     await speedBtn.trigger('click');
     expect(speedBtn.text()).toBe('1x');
+  });
+
+  it('renders VideoNoteRecorder and handles cancel', async () => {
+    const wrapper = mount(VideoNoteRecorder, {
+      props: { size: 240 },
+    });
+    expect(wrapper.find('.app-video-note-recorder__bubble').exists()).toBe(true);
+    const cancelBtn = wrapper.find('.app-video-note-recorder__btn--cancel');
+    expect(cancelBtn.exists()).toBe(true);
+    await cancelBtn.trigger('click');
+    expect(wrapper.emitted('cancel')).toBeTruthy();
   });
 });

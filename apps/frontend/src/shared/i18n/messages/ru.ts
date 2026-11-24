@@ -1108,6 +1108,7 @@ export default {
     cameraUnavailable: 'Камера или микрофон недоступны',
     micUnavailable: 'Микрофон недоступен или доступ отклонён',
     preview: 'Предпросмотр',
+    retake: 'Переснять',
     discard: 'Сбросить',
     playbackError: 'Не удалось воспроизвести медиафайл',
     close: 'Закрыть',

@@ -36,10 +36,46 @@ const currentTime = ref(0);
 const duration = ref(props.asset?.durationSeconds ?? 0);
 const playbackRate = ref(1);
 const speeds = [1, 1.5, 2];
+const extractedBars = ref<number[] | null>(null);
 
 const effectiveSrc = computed(() => {
   return props.src || props.asset?.playbackUrl || '';
 });
+
+const effectiveBars = computed(() => {
+  return props.waveformBars || extractedBars.value || undefined;
+});
+
+async function extractWaveformPeaks(url: string, barCount = 36): Promise<void> {
+  if (typeof window === 'undefined' || !url) return;
+  const AudioCtx =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  if (!AudioCtx) return;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const arrayBuffer = await res.arrayBuffer();
+    const ctx = new AudioCtx();
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    const channelData = audioBuffer.getChannelData(0);
+    const blockSize = Math.max(1, Math.floor(channelData.length / barCount));
+    const peaks: number[] = [];
+    for (let i = 0; i < barCount; i++) {
+      const start = i * blockSize;
+      let sum = 0;
+      for (let j = 0; j < blockSize && start + j < channelData.length; j++) {
+        sum += Math.abs(channelData[start + j] || 0);
+      }
+      peaks.push(sum / blockSize);
+    }
+    const max = Math.max(...peaks, 0.001);
+    await ctx.close();
+    extractedBars.value = peaks.map((p) => Math.min(1, Math.max(0.12, p / max)));
+  } catch {
+    extractedBars.value = null;
+  }
+}
 
 const progressRatio = computed(() => {
   if (!duration.value || duration.value <= 0) return 0;
@@ -101,13 +137,21 @@ function cycleSpeed(): void {
   }
 }
 
-watch(effectiveSrc, () => {
-  currentTime.value = 0;
-  isPlaying.value = false;
-  if (props.asset?.durationSeconds) {
-    duration.value = props.asset.durationSeconds;
-  }
-});
+watch(
+  effectiveSrc,
+  (src) => {
+    currentTime.value = 0;
+    isPlaying.value = false;
+    extractedBars.value = null;
+    if (props.asset?.durationSeconds) {
+      duration.value = props.asset.durationSeconds;
+    }
+    if (src && !props.waveformBars) {
+      void extractWaveformPeaks(src);
+    }
+  },
+  { immediate: true },
+);
 
 onBeforeUnmount(() => {
   if (audioRef.value) {
@@ -166,7 +210,7 @@ onBeforeUnmount(() => {
     <div class="app-audio-player__content">
       <AudioWaveform
         :progress="progressRatio"
-        :bars="waveformBars"
+        :bars="effectiveBars"
         @seek="handleSeek"
       />
       <div class="app-audio-player__meta">

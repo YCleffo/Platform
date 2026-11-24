@@ -5,6 +5,7 @@ import { ChevronLeft, Plus, RotateCw, X, Message as MessageIcon, Check } from '@
 import AudioPlayer from '@/shared/ui/media/AudioPlayer.vue';
 import AudioRecorder from '@/shared/ui/media/AudioRecorder.vue';
 import VideoNotePlayer from '@/shared/ui/media/VideoNotePlayer.vue';
+import VideoNoteRecorder from '@/shared/ui/media/VideoNoteRecorder.vue';
 import FileAttachment from '@/shared/ui/media/FileAttachment.vue';
 import {
   educationApi,
@@ -61,6 +62,7 @@ const searchQuery = ref('');
 const activeTab = ref<'all' | 'unread'>('all');
 const composerText = ref('');
 const isRecordingVoice = ref(false);
+const isRecordingVideo = ref(false);
 const replyingTo = ref<Message | null>(null);
 const isNewChatModalOpen = ref(false);
 const contactSearchQuery = ref('');
@@ -469,11 +471,84 @@ async function onVoiceRecorded(payload: {
     }
     replyingTo.value = null;
     isRecordingVoice.value = false;
+    isRecordingVideo.value = false;
     messages.value.push(sentMsg);
     scrollToBottom();
     const th = threads.value.find((item) => item.id === threadId);
     if (th) {
       th.lastMessageBody = `🎤 ${t('education.voiceMessage')} (${payload.durationSeconds}s)`;
+      th.lastMessageAt = sentMsg.createdAt;
+      th.lastMessageSenderId = sentMsg.senderPersonId;
+    }
+  } catch (err) {
+    errorAction.value = err;
+  } finally {
+    sendingMessage.value = false;
+  }
+}
+
+async function onVideoNoteRecorded(payload: {
+  blob: Blob;
+  durationSeconds: number;
+  mimeType: string;
+  previewUrl: string;
+}): Promise<void> {
+  const threadId = selectedThreadId.value;
+  if (!threadId || sendingMessage.value) return;
+
+  sendingMessage.value = true;
+  errorAction.value = null;
+  try {
+    let sentMsg: Message;
+    const clientKey = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const replyToId = replyingTo.value?.id ?? null;
+    const metadata = {
+      durationSeconds: payload.durationSeconds,
+      mimeType: payload.mimeType,
+      playbackUrl: payload.previewUrl,
+    };
+    if (props.role === 'teacher') {
+      sentMsg = await educationApi.sendMessage(
+        props.organizationId,
+        threadId,
+        null,
+        clientKey,
+        'video_note',
+        null,
+        replyToId,
+        metadata,
+      );
+    } else if (props.role === 'student') {
+      sentMsg = await educationApi.studentSendMessage(
+        props.organizationId,
+        threadId,
+        null,
+        clientKey,
+        'video_note',
+        null,
+        replyToId,
+        metadata,
+      );
+    } else {
+      sentMsg = await parentApi.sendMessage(
+        props.parentChild!,
+        threadId,
+        null,
+        clientKey,
+        'video_note',
+        null,
+        replyToId,
+        metadata,
+      );
+    }
+    replyingTo.value = null;
+    isRecordingVoice.value = false;
+    isRecordingVideo.value = false;
+    messages.value.push(sentMsg);
+    scrollToBottom();
+    const th = threads.value.find((item) => item.id === threadId);
+    if (th) {
+      th.lastMessageBody = `📹 ${t('education.videoNote')} (${payload.durationSeconds}s)`;
       th.lastMessageAt = sentMsg.createdAt;
       th.lastMessageSenderId = sentMsg.senderPersonId;
     }
@@ -897,14 +972,16 @@ onScopeDispose(() => {
                     class="edu-messenger__media-block"
                   >
                     <AudioPlayer
+                      :src="(msg.metadata?.playbackUrl as string) || undefined"
                       :asset="{
                         id: msg.id,
                         kind: 'voice',
                         originalName: 'voice-note.webm',
-                        originalMime: 'audio/webm',
+                        originalMime: (msg.metadata?.mimeType as string) || 'audio/webm',
                         sizeBytes: 0,
                         status: 'READY',
                         durationSeconds: Number(msg.metadata?.durationSeconds ?? 5),
+                        playbackUrl: (msg.metadata?.playbackUrl as string) || undefined,
                       }"
                     />
                   </div>
@@ -915,14 +992,16 @@ onScopeDispose(() => {
                     class="edu-messenger__media-block"
                   >
                     <VideoNotePlayer
+                      :src="(msg.metadata?.playbackUrl as string) || undefined"
                       :asset="{
                         id: msg.id,
                         kind: 'video_note',
                         originalName: 'video-note.mp4',
-                        originalMime: 'video/mp4',
+                        originalMime: (msg.metadata?.mimeType as string) || 'video/mp4',
                         sizeBytes: 0,
                         status: 'READY',
                         durationSeconds: Number(msg.metadata?.durationSeconds ?? 10),
+                        playbackUrl: (msg.metadata?.playbackUrl as string) || undefined,
                       }"
                     />
                   </div>
@@ -1020,9 +1099,20 @@ onScopeDispose(() => {
           </button>
         </div>
 
+        <!-- Inline Video Note Recorder -->
+        <div
+          v-if="isRecordingVideo"
+          class="edu-messenger__composer"
+        >
+          <VideoNoteRecorder
+            @record-complete="onVideoNoteRecorded"
+            @cancel="isRecordingVideo = false"
+          />
+        </div>
+
         <!-- Inline Voice Recorder -->
         <div
-          v-if="isRecordingVoice"
+          v-else-if="isRecordingVoice"
           class="edu-messenger__composer"
         >
           <AudioRecorder
@@ -1051,10 +1141,26 @@ onScopeDispose(() => {
             <button
               type="button"
               class="edu-button edu-button--secondary"
+              :title="t('education.recordVideoNote')"
+              :aria-label="t('education.recordVideoNote')"
+              :disabled="sendingMessage"
+              @click="
+                isRecordingVideo = true;
+                isRecordingVoice = false;
+              "
+            >
+              📹
+            </button>
+            <button
+              type="button"
+              class="edu-button edu-button--secondary"
               :title="t('education.recordVoice')"
               :aria-label="t('education.recordVoice')"
               :disabled="sendingMessage"
-              @click="isRecordingVoice = true"
+              @click="
+                isRecordingVoice = true;
+                isRecordingVideo = false;
+              "
             >
               🎤
             </button>

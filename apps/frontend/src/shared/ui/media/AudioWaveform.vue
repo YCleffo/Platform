@@ -56,6 +56,8 @@ function handleClick(event: MouseEvent): void {
     @click="handleClick"
     @keydown.left.prevent="emit('seek', Math.max(0, progress - 0.05))"
     @keydown.right.prevent="emit('seek', Math.min(1, progress + 0.05))"
+    @keydown.home.prevent="emit('seek', 0)"
+    @keydown.end.prevent="emit('seek', 1)"
   >
     <div
       v-for="(bar, index) in normalizedBars"

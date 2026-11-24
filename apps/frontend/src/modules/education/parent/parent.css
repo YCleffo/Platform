@@ -89,6 +89,7 @@
   overflow-wrap: anywhere;
 }
 .edu-family-invite code {
+  -webkit-user-select: all;
   user-select: all;
   white-space: pre-wrap;
 }

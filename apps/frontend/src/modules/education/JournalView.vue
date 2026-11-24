@@ -76,10 +76,28 @@ function studentLessonResult(
   return results.find((r) => r.studentId === sId);
 }
 
-function studentAttendanceStats(sId: string) {
-  if (!data.value) return { attended: 0, total: 0, percent: 0 };
+function gradeScore(status: string): number | null {
+  if (status === 'mastered') return 5;
+  if (status === 'developing') return 4;
+  if (status === 'needs_support') return 3;
+  return null;
+}
+
+function studentGradeStats(sId: string) {
+  if (!data.value) {
+    return {
+      attended: 0,
+      total: 0,
+      percent: 0,
+      absences: 0,
+      avgGrade: null,
+      avgFormatted: '—',
+      gradeClass: '',
+    };
+  }
   let attended = 0;
   let total = 0;
+  const grades: number[] = [];
   for (const lesson of data.value.journal.items) {
     const res = lesson.results.find((r) => r.studentId === sId);
     if (res) {
@@ -87,10 +105,154 @@ function studentAttendanceStats(sId: string) {
       if (res.status !== 'pending') {
         attended++;
       }
+      const score = gradeScore(res.status);
+      if (score !== null) {
+        grades.push(score);
+      }
     }
   }
   const percent = total > 0 ? Math.round((attended / total) * 100) : 0;
-  return { attended, total, percent };
+  const absences = total - attended;
+  const avg = grades.length > 0 ? grades.reduce((a, b) => a + b, 0) / grades.length : null;
+  const avgFormatted = avg !== null ? avg.toFixed(1) : '—';
+  const gradeClass =
+    avg !== null ? (avg >= 4.5 ? 'completed' : avg >= 3.5 ? 'now' : 'cancelled') : '';
+  return { attended, total, percent, absences, avgGrade: avg, avgFormatted, gradeClass };
+}
+
+const activeQuarter = ref<'all' | 'q1' | 'q2' | 'q3' | 'q4' | 'sem1' | 'sem2'>('all');
+
+function setQuarterPreset(preset: 'all' | 'q1' | 'q2' | 'q3' | 'q4' | 'sem1' | 'sem2'): void {
+  activeQuarter.value = preset;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const baseYear = now.getMonth() >= 7 ? currentYear : currentYear - 1;
+  const nextYear = baseYear + 1;
+
+  if (preset === 'q1') {
+    from.value = `${baseYear}-09-01`;
+    to.value = `${baseYear}-10-31`;
+  } else if (preset === 'q2') {
+    from.value = `${baseYear}-11-01`;
+    to.value = `${baseYear}-12-31`;
+  } else if (preset === 'q3') {
+    from.value = `${nextYear}-01-10`;
+    to.value = `${nextYear}-03-25`;
+  } else if (preset === 'q4') {
+    from.value = `${nextYear}-04-01`;
+    to.value = `${nextYear}-05-31`;
+  } else if (preset === 'sem1') {
+    from.value = `${baseYear}-09-01`;
+    to.value = `${baseYear}-12-31`;
+  } else if (preset === 'sem2') {
+    from.value = `${nextYear}-01-10`;
+    to.value = `${nextYear}-05-31`;
+  } else {
+    from.value = '';
+    to.value = '';
+  }
+}
+
+const studentFilterMode = ref<'all' | 'needs_support' | 'low_attendance'>('all');
+
+const filteredRoster = computed(() => {
+  if (!data.value) return [];
+  if (studentFilterMode.value === 'all') return data.value.roster.items;
+  return data.value.roster.items.filter((student) => {
+    const stats = studentGradeStats(student.id);
+    if (studentFilterMode.value === 'needs_support') {
+      return stats.avgGrade !== null && stats.avgGrade < 3.8;
+    }
+    if (studentFilterMode.value === 'low_attendance') {
+      return stats.percent < 80;
+    }
+    return true;
+  });
+});
+
+const lessonSummaryMap = computed(() => {
+  if (!data.value) return {};
+  const map: Record<string, { avg: string; attendancePercent: number }> = {};
+  for (const lesson of data.value.journal.items) {
+    let attended = 0;
+    const total = lesson.results.length;
+    const scores: number[] = [];
+    for (const res of lesson.results) {
+      if (res.status !== 'pending') {
+        attended++;
+      }
+      const s = gradeScore(res.status);
+      if (s !== null) scores.push(s);
+    }
+    const pct = total > 0 ? Math.round((attended / total) * 100) : 0;
+    const avg =
+      scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '—';
+    map[lesson.id] = { avg, attendancePercent: pct };
+  }
+  return map;
+});
+
+const overallGroupStats = computed(() => {
+  if (!data.value) return { avgGrade: '—', attendancePercent: 0, totalAbsences: 0 };
+  let totalAttended = 0;
+  let totalLessons = 0;
+  let totalAbsences = 0;
+  const allScores: number[] = [];
+  for (const student of data.value.roster.items) {
+    const stats = studentGradeStats(student.id);
+    totalAttended += stats.attended;
+    totalLessons += stats.total;
+    totalAbsences += stats.absences;
+    if (stats.avgGrade !== null) {
+      allScores.push(stats.avgGrade);
+    }
+  }
+  const pct = totalLessons > 0 ? Math.round((totalAttended / totalLessons) * 100) : 0;
+  const avg =
+    allScores.length > 0
+      ? (allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(1)
+      : '—';
+  return { avgGrade: avg, attendancePercent: pct, totalAbsences };
+});
+
+function exportGradebookCsv(): void {
+  if (!data.value) return;
+  const headers = [
+    t('education.students'),
+    ...sortedLessons.value.map((l) => `${date(l.startsAt)} (${l.report?.topic || l.title})`),
+    t('education.averageGrade'),
+    t('education.attendanceRate'),
+    t('education.absences'),
+  ];
+  const rows = data.value.roster.items.map((student) => {
+    const stats = studentGradeStats(student.id);
+    const lessonCols = sortedLessons.value.map((lesson) => {
+      const res = studentLessonResult(lesson.results, student.id);
+      if (!res) return '—';
+      const score = gradeScore(res.status);
+      return score !== null ? `${score} (${statusLabel(res.status)})` : statusLabel(res.status);
+    });
+    return [
+      student.name ?? student.id,
+      ...lessonCols,
+      stats.avgFormatted,
+      `${stats.percent}%`,
+      String(stats.absences),
+    ];
+  });
+
+  const csvContent =
+    '\uFEFF' +
+    [headers, ...rows]
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute('download', `${data.value.group.name || 'group'}-gradebook.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 </script>
 <template>
@@ -118,6 +280,66 @@ function studentAttendanceStats(sId: string) {
       class="edu-form edu-card"
       @submit.prevent="refresh"
     >
+      <!-- Quarter / Period presets -->
+      <div class="edu-journal__presets">
+        <button
+          type="button"
+          class="edu-button"
+          :class="{ 'edu-button--primary': activeQuarter === 'all' && !from && !to }"
+          @click="setQuarterPreset('all')"
+        >
+          {{ t('education.filterAll') }}
+        </button>
+        <button
+          type="button"
+          class="edu-button"
+          :class="{ 'edu-button--primary': activeQuarter === 'q1' }"
+          @click="setQuarterPreset('q1')"
+        >
+          {{ t('education.quarter1') }}
+        </button>
+        <button
+          type="button"
+          class="edu-button"
+          :class="{ 'edu-button--primary': activeQuarter === 'q2' }"
+          @click="setQuarterPreset('q2')"
+        >
+          {{ t('education.quarter2') }}
+        </button>
+        <button
+          type="button"
+          class="edu-button"
+          :class="{ 'edu-button--primary': activeQuarter === 'q3' }"
+          @click="setQuarterPreset('q3')"
+        >
+          {{ t('education.quarter3') }}
+        </button>
+        <button
+          type="button"
+          class="edu-button"
+          :class="{ 'edu-button--primary': activeQuarter === 'q4' }"
+          @click="setQuarterPreset('q4')"
+        >
+          {{ t('education.quarter4') }}
+        </button>
+        <button
+          type="button"
+          class="edu-button"
+          :class="{ 'edu-button--primary': activeQuarter === 'sem1' }"
+          @click="setQuarterPreset('sem1')"
+        >
+          {{ t('education.semester1') }}
+        </button>
+        <button
+          type="button"
+          class="edu-button"
+          :class="{ 'edu-button--primary': activeQuarter === 'sem2' }"
+          @click="setQuarterPreset('sem2')"
+        >
+          {{ t('education.semester2') }}
+        </button>
+      </div>
+
       <div class="edu-form-actions">
         <AppInput
           id="education-journal-from"
@@ -158,23 +380,61 @@ function studentAttendanceStats(sId: string) {
       <div
         v-if="data.journal.items.length"
         class="edu-form-actions"
-        style="margin-bottom: 12px"
+        style="margin-bottom: 12px; justify-content: space-between"
       >
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
+          <button
+            type="button"
+            class="edu-button"
+            :class="{ 'edu-button--primary': viewMode === 'table' }"
+            @click="viewMode = 'table'"
+          >
+            {{ t('education.journalTable') }}
+          </button>
+          <button
+            type="button"
+            class="edu-button"
+            :class="{ 'edu-button--primary': viewMode === 'cards' }"
+            @click="viewMode = 'cards'"
+          >
+            {{ t('education.journalCards') }}
+          </button>
+
+          <!-- Focus filters in table mode -->
+          <template v-if="viewMode === 'table'">
+            <button
+              type="button"
+              class="edu-button"
+              :class="{ 'edu-button--primary': studentFilterMode === 'all' }"
+              @click="studentFilterMode = 'all'"
+            >
+              {{ t('education.filterAll') }}
+            </button>
+            <button
+              type="button"
+              class="edu-button"
+              :class="{ 'edu-button--primary': studentFilterMode === 'needs_support' }"
+              @click="studentFilterMode = 'needs_support'"
+            >
+              {{ t('education.filterNeedsSupport') }}
+            </button>
+            <button
+              type="button"
+              class="edu-button"
+              :class="{ 'edu-button--primary': studentFilterMode === 'low_attendance' }"
+              @click="studentFilterMode = 'low_attendance'"
+            >
+              {{ t('education.filterLowAttendance') }}
+            </button>
+          </template>
+        </div>
+
         <button
           type="button"
           class="edu-button"
-          :class="{ 'edu-button--primary': viewMode === 'table' }"
-          @click="viewMode = 'table'"
+          @click="exportGradebookCsv"
         >
-          {{ t('education.journalTable') }}
-        </button>
-        <button
-          type="button"
-          class="edu-button"
-          :class="{ 'edu-button--primary': viewMode === 'cards' }"
-          @click="viewMode = 'cards'"
-        >
-          {{ t('education.journalCards') }}
+          📥 {{ t('education.exportCsv') }}
         </button>
       </div>
 
@@ -212,13 +472,19 @@ function studentAttendanceStats(sId: string) {
                 </RouterLink>
               </th>
               <th>
+                {{ t('education.averageGrade') }}
+              </th>
+              <th>
                 {{ t('education.attendanceRate') }}
+              </th>
+              <th>
+                {{ t('education.absences') }}
               </th>
             </tr>
           </thead>
           <tbody>
             <tr
-              v-for="student in data.roster.items"
+              v-for="student in filteredRoster"
               :key="student.id"
             >
               <td class="edu-journal__td-student">
@@ -227,14 +493,19 @@ function studentAttendanceStats(sId: string) {
               <td
                 v-for="entry in sortedLessons"
                 :key="entry.id"
+                class="edu-journal__score-cell"
               >
                 <template v-if="studentLessonResult(entry.results, student.id)">
                   <span
                     class="edu-status"
                     :class="`edu-status--${studentLessonResult(entry.results, student.id)!.status === 'needs_support' ? 'cancelled' : studentLessonResult(entry.results, student.id)!.status}`"
-                    :title="studentLessonResult(entry.results, student.id)!.comment || undefined"
+                    :title="`${statusLabel(studentLessonResult(entry.results, student.id)!.status)}${studentLessonResult(entry.results, student.id)!.comment ? ': ' + studentLessonResult(entry.results, student.id)!.comment : ''}`"
                   >
-                    {{ statusLabel(studentLessonResult(entry.results, student.id)!.status) }}
+                    <strong class="edu-journal__score-val">
+                      {{
+                        gradeScore(studentLessonResult(entry.results, student.id)!.status) ?? '✓'
+                      }}
+                    </strong>
                   </span>
                 </template>
                 <span
@@ -245,16 +516,91 @@ function studentAttendanceStats(sId: string) {
                 </span>
               </td>
               <td>
+                <span
+                  v-if="studentGradeStats(student.id).avgGrade !== null"
+                  class="edu-status"
+                  :class="`edu-status--${studentGradeStats(student.id).gradeClass}`"
+                >
+                  {{ studentGradeStats(student.id).avgFormatted }}
+                </span>
+                <span
+                  v-else
+                  class="edu-subtle"
+                >
+                  —
+                </span>
+              </td>
+              <td>
                 <span class="edu-subtle">
-                  {{ studentAttendanceStats(student.id).attended }}/{{
-                    studentAttendanceStats(student.id).total
+                  {{ studentGradeStats(student.id).attended }}/{{
+                    studentGradeStats(student.id).total
                   }}
-                  ({{ studentAttendanceStats(student.id).percent }}%)
+                  ({{ studentGradeStats(student.id).percent }}%)
+                </span>
+              </td>
+              <td>
+                <span
+                  class="edu-subtle"
+                  :style="
+                    studentGradeStats(student.id).absences > 0
+                      ? 'color: var(--danger-text); font-weight: 600;'
+                      : ''
+                  "
+                >
+                  {{ studentGradeStats(student.id).absences }}
                 </span>
               </td>
             </tr>
           </tbody>
+          <tfoot>
+            <tr>
+              <th class="edu-journal__th-student">
+                {{ t('education.groupSummary') }}
+              </th>
+              <td
+                v-for="entry in sortedLessons"
+                :key="entry.id"
+                class="edu-journal__score-cell"
+              >
+                <div style="font-size: var(--type-body-caption-size); display: grid; gap: 2px">
+                  <span>Ø {{ lessonSummaryMap[entry.id]?.avg ?? '—' }}</span>
+                  <span class="edu-subtle">
+                    {{ lessonSummaryMap[entry.id]?.attendancePercent ?? 0 }}%
+                  </span>
+                </div>
+              </td>
+              <td>
+                <span
+                  class="edu-status edu-status--now"
+                  style="font-weight: 700"
+                >
+                  Ø {{ overallGroupStats.avgGrade }}
+                </span>
+              </td>
+              <td>
+                <span
+                  class="edu-subtle"
+                  style="font-weight: 600"
+                >
+                  {{ overallGroupStats.attendancePercent }}%
+                </span>
+              </td>
+              <td>
+                <span class="edu-subtle">
+                  {{ overallGroupStats.totalAbsences }}
+                </span>
+              </td>
+            </tr>
+          </tfoot>
         </table>
+
+        <!-- Grade Legend -->
+        <div class="edu-journal__legend">
+          <span>{{ t('education.legendMastered') }}</span>
+          <span>{{ t('education.legendDeveloping') }}</span>
+          <span>{{ t('education.legendNeedsSupport') }}</span>
+          <span>{{ t('education.legendPending') }}</span>
+        </div>
       </div>
 
       <!-- Classic Cards/List Mode -->
