@@ -22391,7 +22391,7 @@
       "plane": "Education",
       "endpoint": "DELETE /api/education/question-bank/{id}",
       "backend": {
-        "name": "education/assessment/delete_question_bank_item",
+        "name": "education/assessment/delete_delete_question_bank_item",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "delete_question_bank_item",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -22688,7 +22688,7 @@
       "plane": "Education",
       "endpoint": "GET /api/education/assessments",
       "backend": {
-        "name": "education/assessment/assessments",
+        "name": "education/assessment/get_assessments",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "assessments",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -22742,7 +22742,7 @@
       "plane": "Education",
       "endpoint": "GET /api/education/assessments/{id}",
       "backend": {
-        "name": "education/assessment/assessment_detail",
+        "name": "education/assessment/get_assessment_detail",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "assessment_detail",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -22796,7 +22796,7 @@
       "plane": "Education",
       "endpoint": "GET /api/education/assessments/{id}/attempts",
       "backend": {
-        "name": "education/assessment/assessment_attempts_list",
+        "name": "education/assessment/get_assessment_attempts_list",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "assessment_attempts_list",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -22850,7 +22850,7 @@
       "plane": "Education",
       "endpoint": "GET /api/education/assessments/{id}/versions",
       "backend": {
-        "name": "education/assessment/assessment_versions",
+        "name": "education/assessment/get_assessment_versions",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "assessment_versions",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -27258,7 +27258,7 @@
       "plane": "Education",
       "endpoint": "GET /api/education/question-bank",
       "backend": {
-        "name": "education/assessment/question_bank",
+        "name": "education/assessment/get_question_bank",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "question_bank",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -27734,7 +27734,7 @@
       "plane": "Education",
       "endpoint": "GET /api/education/student/assessment-attempts/{id}",
       "backend": {
-        "name": "education/assessment/student_assessment_attempt",
+        "name": "education/assessment/get_student_assessment_attempt",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "student_assessment_attempt",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -27788,7 +27788,7 @@
       "plane": "Education",
       "endpoint": "GET /api/education/student/assessments",
       "backend": {
-        "name": "education/assessment/student_assessments",
+        "name": "education/assessment/get_student_assessments",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "student_assessments",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -30397,7 +30397,7 @@
       "plane": "Education",
       "endpoint": "POST /api/education/assessment-attempts/{id}/review",
       "backend": {
-        "name": "education/assessment/assessment_attempt_review",
+        "name": "education/assessment/post_assessment_attempt_review",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "assessment_attempt_review",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -30451,7 +30451,7 @@
       "plane": "Education",
       "endpoint": "POST /api/education/assessments",
       "backend": {
-        "name": "education/assessment/assessments",
+        "name": "education/assessment/post_assessments",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "assessments",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -30505,7 +30505,7 @@
       "plane": "Education",
       "endpoint": "POST /api/education/assessments/{id}/publish",
       "backend": {
-        "name": "education/assessment/publish_assessment",
+        "name": "education/assessment/post_publish_assessment",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "publish_assessment",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -33108,7 +33108,7 @@
       "plane": "Education",
       "endpoint": "POST /api/education/question-bank",
       "backend": {
-        "name": "education/assessment/question_bank",
+        "name": "education/assessment/post_question_bank",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "question_bank",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -33335,7 +33335,7 @@
       "plane": "Education",
       "endpoint": "POST /api/education/student/assessment-attempts/{id}/submit",
       "backend": {
-        "name": "education/assessment/student_submit_assessment_attempt",
+        "name": "education/assessment/post_student_submit_assessment_attempt",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "student_submit_assessment_attempt",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -33389,7 +33389,7 @@
       "plane": "Education",
       "endpoint": "POST /api/education/student/assessments/{id}/start",
       "backend": {
-        "name": "education/assessment/student_start_assessment",
+        "name": "education/assessment/post_student_start_assessment",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "student_start_assessment",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -35319,7 +35319,7 @@
       "plane": "Education",
       "endpoint": "PUT /api/education/assessments/{id}",
       "backend": {
-        "name": "education/assessment/assessment_detail",
+        "name": "education/assessment/put_assessment_detail",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "assessment_detail",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"
@@ -36372,7 +36372,7 @@
       "plane": "Education",
       "endpoint": "PUT /api/education/student/assessment-attempts/{id}/save",
       "backend": {
-        "name": "education/assessment/student_save_assessment_attempt",
+        "name": "education/assessment/put_student_save_assessment_attempt",
         "action": "App\\Education\\Api\\AssessmentAction",
         "operation": "student_save_assessment_attempt",
         "source": "apps/backend/src/Education/Api/AssessmentAction.php"

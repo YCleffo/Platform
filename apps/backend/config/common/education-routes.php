@@ -106,7 +106,7 @@ foreach ($assessmentDefinitions as [$method, $path, $operation]) {
         'DELETE' => Route::delete('/api/education' . $path),
     };
     $routes[] = $route->defaults(['operation' => $operation])->middleware(PrivateResponse::class, RequireAuthentication::class)
-        ->action(AssessmentAction::class)->name('education/assessment/' . $operation);
+        ->action(AssessmentAction::class)->name('education/assessment/' . strtolower($method) . '_' . $operation);
 }
 foreach ($definitions as [$method, $path, $operation]) {
     $route = match ($method) {
