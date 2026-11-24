@@ -378,6 +378,7 @@ async function save(): Promise<void> {
           { value: 'platform-typing', label: 'Platform Typing' },
           { value: 'platform-logic', label: 'Platform Logic' },
           { value: 'platform-math-sprint', label: 'Platform Math Sprint' },
+          { value: 'platform-quiz', label: 'Platform Quiz' },
         ]"
         :disabled="busy || (!!assignment && assignment.status !== 'DRAFT')"
       />

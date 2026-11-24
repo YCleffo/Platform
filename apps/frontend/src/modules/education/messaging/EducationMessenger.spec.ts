@@ -440,4 +440,78 @@ describe('EducationMessenger', () => {
       expect(parentApi.messages).toHaveBeenCalledWith(parentChild, 'th-parent', 0);
     });
   });
+
+  it('renders interactive quiz message in thread when message kind is quiz', async () => {
+    vi.mocked(educationApi.threads).mockResolvedValueOnce({
+      items: [
+        {
+          id: 'th-quiz',
+          subject: 'Python Quiz',
+          peerPersonId: 'p-student-1',
+          peerName: 'Alex Student',
+          peerRole: 'student',
+          lastMessageBody: 'Check your knowledge',
+          lastMessageAt: '2026-11-24T10:00:00Z',
+          unreadCount: 0,
+        },
+      ],
+      limit: 50,
+      offset: 0,
+      nextOffset: null,
+    });
+    vi.mocked(educationApi.messages).mockResolvedValueOnce({
+      items: [
+        {
+          id: 'm-quiz-1',
+          senderPersonId: 'p-teacher-1',
+          senderName: 'Teacher',
+          body: '💡 Экспресс-квиз по Python',
+          kind: 'quiz',
+          metadata: {
+            quiz: {
+              id: 'q-101',
+              title: 'Переменные и типы',
+              description: 'Квиз для проверки усвоения',
+              questions: [
+                {
+                  id: 'q1',
+                  type: 'single_choice',
+                  prompt: 'Какой тип хранит целые числа?',
+                  options: [
+                    { id: 'o1', text: 'int' },
+                    { id: 'o2', text: 'str' },
+                  ],
+                  correctAnswer: 'o1',
+                },
+              ],
+            },
+          },
+          createdAt: '2026-11-24T10:00:00Z',
+        },
+      ],
+      limit: 50,
+      offset: 0,
+      nextOffset: null,
+    });
+
+    const wrapper = mount(EducationMessenger, {
+      props: {
+        role: 'teacher',
+        organizationId: 'org-1',
+        currentPersonId: 'p-teacher-1',
+        initialThreadId: 'th-quiz',
+      },
+      global: {
+        stubs: {
+          EducationState: true,
+        },
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('Переменные и типы');
+      expect(wrapper.text()).toContain('Какой тип хранит целые числа?');
+      expect(wrapper.find('.app-quiz').exists()).toBe(true);
+    });
+  });
 });

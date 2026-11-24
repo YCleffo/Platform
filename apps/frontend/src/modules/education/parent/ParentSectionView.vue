@@ -20,6 +20,7 @@ import { useParentResource } from './resources';
 import ParentLessonList from './ParentLessonList.vue';
 import ParentHomeworkList from './ParentHomeworkList.vue';
 import EducationMessenger from '../messaging/EducationMessenger.vue';
+import ParentAnalyticsPanel from './ParentAnalyticsPanel.vue';
 const workspace = useParentWorkspace();
 const route = useRoute();
 const { t, locale } = useEducationI18n();
@@ -230,6 +231,12 @@ const notificationLabel = (notification: Notification) =>
     />
     <template v-if="data && !loading && !error">
       <template v-if="data.home">
+        <ParentAnalyticsPanel
+          :attendance="data.home.attendance"
+          :results="data.home.results"
+          :homework="data.home.homework"
+          :timezone="timezone"
+        />
         <div class="edu-parent-grid">
           <article class="edu-card">
             <h2>{{ t('education.nextLesson') }}</h2>
@@ -313,6 +320,12 @@ const notificationLabel = (notification: Notification) =>
         />
       </template>
       <template v-if="data.progress">
+        <ParentAnalyticsPanel
+          :attendance="data.progress.attendance"
+          :results="[]"
+          :homework="[]"
+          :timezone="timezone"
+        />
         <article class="edu-card">
           <h2>{{ t('education.programs') }}</h2>
           <EducationState

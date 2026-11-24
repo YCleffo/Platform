@@ -15115,7 +15115,7 @@
         },
         {
           "file": "apps/frontend/src/modules/education/homework/StudentHomeworkView.vue",
-          "line": 94,
+          "line": 156,
           "routes": [
             "education-student-homework-detail"
           ]
@@ -22841,7 +22841,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 329,
+          "line": 333,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -25851,7 +25851,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 333,
+          "line": 337,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -25927,7 +25927,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/parent/ParentSectionView.vue",
-          "line": 73,
+          "line": 74,
           "routes": [
             "education-parent-${section}"
           ]
@@ -26005,7 +26005,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/parent/ParentSectionView.vue",
-          "line": 89,
+          "line": 90,
           "routes": [
             "education-parent-${section}"
           ]
@@ -26083,7 +26083,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/parent/ParentSectionView.vue",
-          "line": 77,
+          "line": 78,
           "routes": [
             "education-parent-${section}"
           ]
@@ -26161,7 +26161,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/parent/ParentSectionView.vue",
-          "line": 83,
+          "line": 84,
           "routes": [
             "education-parent-${section}"
           ]
@@ -26245,7 +26245,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/parent/ParentSectionView.vue",
-          "line": 81,
+          "line": 82,
           "routes": [
             "education-parent-${section}"
           ]
@@ -26323,7 +26323,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/parent/ParentSectionView.vue",
-          "line": 69,
+          "line": 70,
           "routes": [
             "education-parent-${section}"
           ]
@@ -26401,7 +26401,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 264,
+          "line": 268,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -26541,7 +26541,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 291,
+          "line": 295,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -27626,7 +27626,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 331,
+          "line": 335,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -27979,7 +27979,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/homework/StudentHomeworkView.vue",
-          "line": 21,
+          "line": 23,
           "routes": [
             "education-student-homework-detail"
           ]
@@ -28490,7 +28490,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 262,
+          "line": 266,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -28640,7 +28640,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 289,
+          "line": 293,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -29462,7 +29462,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 260,
+          "line": 264,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -29612,7 +29612,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 287,
+          "line": 291,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -31949,7 +31949,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/parent/ParentSectionView.vue",
-          "line": 122,
+          "line": 123,
           "routes": [
             "education-parent-${section}"
           ]
@@ -32021,7 +32021,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 641,
+          "line": 710,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -32097,7 +32097,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 395,
+          "line": 399,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -32173,7 +32173,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 572,
+          "line": 641,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -32249,7 +32249,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 315,
+          "line": 319,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -33066,7 +33066,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/homework/StudentHomeworkView.vue",
-          "line": 94,
+          "line": 156,
           "routes": [
             "education-student-homework-detail"
           ]
@@ -33238,7 +33238,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 632,
+          "line": 701,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -33319,7 +33319,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 385,
+          "line": 389,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -33400,7 +33400,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 570,
+          "line": 639,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -33481,7 +33481,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 313,
+          "line": 317,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -34278,7 +34278,7 @@
         },
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 623,
+          "line": 692,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -34359,7 +34359,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 375,
+          "line": 379,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -34440,7 +34440,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 568,
+          "line": 637,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -34521,7 +34521,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/messaging/EducationMessenger.vue",
-          "line": 311,
+          "line": 315,
           "routes": [
             "education-messages",
             "education-parent-${section}",
@@ -35813,7 +35813,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/homework/StudentHomeworkView.vue",
-          "line": 81,
+          "line": 143,
           "routes": [
             "education-student-homework-detail"
           ]

@@ -741,3 +741,8 @@
   margin: 4px 0;
   max-width: 320px;
 }
+
+.edu-messenger__media-block--quiz {
+  max-width: 480px;
+  width: 100%;
+}

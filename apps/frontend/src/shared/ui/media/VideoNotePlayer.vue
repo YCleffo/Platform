@@ -33,6 +33,18 @@ const isPlaying = ref(false);
 const isMuted = ref(props.muted);
 const currentTime = ref(0);
 const duration = ref(props.asset?.durationSeconds ?? 0);
+const playbackRate = ref(1);
+const speeds = [1, 1.5, 2];
+
+function cycleSpeed(e: MouseEvent): void {
+  e.stopPropagation();
+  const idx = speeds.indexOf(playbackRate.value);
+  const next = speeds[(idx + 1) % speeds.length] ?? 1;
+  playbackRate.value = next;
+  if (videoRef.value) {
+    videoRef.value.playbackRate = next;
+  }
+}
 
 const effectiveSrc = computed(() => {
   return props.src || props.asset?.playbackUrl || '';
@@ -159,6 +171,17 @@ onBeforeUnmount(() => {
         </svg>
       </div>
     </div>
+
+    <!-- Speed cycle badge when playing -->
+    <button
+      v-if="isPlaying"
+      type="button"
+      class="app-video-note-player__speed"
+      :aria-label="`${t('media.speed')}: ${playbackRate}x`"
+      @click="cycleSpeed"
+    >
+      {{ playbackRate }}x
+    </button>
   </div>
 </template>
 
@@ -254,5 +277,28 @@ onBeforeUnmount(() => {
   width: 24px;
   height: 24px;
   margin-left: 2px;
+}
+
+.app-video-note-player__speed {
+  position: absolute;
+  bottom: 8px;
+  z-index: 4;
+  border: none;
+  border-radius: var(--radius-card-s, 4px);
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: var(--type-detail-size, 11px);
+  line-height: var(--type-detail-line, 14px);
+  font-weight: var(--type-detail-weight, 500);
+  cursor: pointer;
+  transition:
+    background-color var(--theme-transition),
+    transform var(--motion-control-duration) var(--motion-linear);
+}
+
+.app-video-note-player__speed:hover {
+  background: rgba(0, 0, 0, 0.85);
+  transform: scale(1.08);
 }
 </style>

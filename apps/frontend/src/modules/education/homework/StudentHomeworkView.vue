@@ -9,6 +9,8 @@ import { studentSession } from '../student/session';
 import EducationState from '../EducationState.vue';
 import HomeworkFiles from './HomeworkFiles.vue';
 import HomeworkAnswerHistory from './HomeworkAnswerHistory.vue';
+import InteractiveQuiz from '@/shared/ui/learning/InteractiveQuiz.vue';
+import type { QuizActivityData, QuizResult } from '@/shared/ui/learning/types';
 import { homeworkApi } from './api';
 import { useHomeworkMutation, useHomeworkResource } from './resources';
 const route = useRoute(),
@@ -73,6 +75,66 @@ function date(value: string): string {
     timeStyle: 'short',
     timeZone: studentSession.timezone,
   }).format(new Date(value));
+}
+
+const quizActivityData = computed<QuizActivityData>(() => ({
+  id: `hw-quiz-${id.value}`,
+  title: data.value?.assignment.title || 'Platform Quiz',
+  description: data.value?.assignment.instructions || 'Интерактивный тест для закрепления темы',
+  passingScorePercent: 70,
+  questions: [
+    {
+      id: 'q1',
+      type: 'single_choice',
+      prompt: 'Какое ключевое слово используется для объявления функции в Python?',
+      options: [
+        { id: 'o1', text: 'def' },
+        { id: 'o2', text: 'function' },
+        { id: 'o3', text: 'fun' },
+        { id: 'o4', text: 'fn' },
+      ],
+      correctAnswer: 'o1',
+      explanation: 'В Python функции определяются с помощью инструкции def имя_функции():',
+    },
+    {
+      id: 'q2',
+      type: 'multi_choice',
+      prompt: 'Какие типы коллекций поддерживают индексацию по порядковому номеру?',
+      options: [
+        { id: 'c1', text: 'list (список)' },
+        { id: 'c2', text: 'tuple (кортеж)' },
+        { id: 'c3', text: 'set (множество)' },
+      ],
+      correctAnswer: ['c1', 'c2'],
+      explanation:
+        'Списки и кортежи являются упорядоченными последовательностями, а множества неупорядочены.',
+    },
+    {
+      id: 'q3',
+      type: 'ordering',
+      prompt: 'Упорядочите шаги алгоритма обработки данных:',
+      options: [
+        { id: 's1', text: '1. Чтение входных данных' },
+        { id: 's2', text: '2. Валидация и фильтрация' },
+        { id: 's3', text: '3. Вычисления и агрегация' },
+        { id: 's4', text: '4. Вывод результата' },
+      ],
+      correctAnswer: ['s1', 's2', 's3', 's4'],
+      explanation: 'Стандартный конвейер: чтение -> валидация -> вычисление -> вывод.',
+    },
+  ],
+}));
+
+function onQuizComplete(res: QuizResult): void {
+  if (!data.value) return;
+  data.value.submission.activityResult = {
+    attemptId: crypto.randomUUID(),
+    type: 'quiz',
+    score: res.score,
+    accuracy: res.percent,
+    errors: res.totalPoints - res.score,
+    passed: res.passed,
+  };
 }
 async function save(): Promise<void> {
   if (!data.value || !editable.value) return;
@@ -164,36 +226,50 @@ async function reconcile(): Promise<void> {
             {{
               data.assignment.activityCode === 'platform-logic'
                 ? 'Platform Logic'
-                : 'Platform Typing'
+                : data.assignment.activityCode === 'platform-quiz'
+                  ? 'Platform Quiz'
+                  : 'Platform Typing'
             }}
           </p>
-          <p>
-            {{
-              data.assignment.activityConfig.durationSeconds
-                ? `${data.assignment.activityConfig.durationSeconds} ${t('education.seconds')}`
-                : `${data.assignment.activityConfig.roundCount ?? 5} ${t('education.logicRounds')}`
-            }}
-            · {{ data.assignment.activityConfig.language.toUpperCase() }} ·
-            {{ t('education.homeworkMaxAttempts') }}: {{ data.assignment.maxAttempts }} ·
-            {{
-              t(
-                `education.homework${data.assignment.attemptPolicy[0]!.toUpperCase()}${data.assignment.attemptPolicy.slice(1)}`,
-              )
-            }}
-          </p>
-          <RouterLink
-            v-if="editable"
-            :to="{
-              path:
-                data.assignment.activityCode === 'platform-logic'
-                  ? '/student/logic/platform-logic'
-                  : '/student/typing/platform-typing',
-              query: { homework: id },
-            }"
-            class="edu-button edu-button--primary"
+          <div
+            v-if="data.assignment.activityCode === 'platform-quiz'"
+            class="edu-homework-quiz"
           >
-            {{ t('education.homeworkRunActivity') }}
-          </RouterLink>
+            <InteractiveQuiz
+              :quiz="quizActivityData"
+              :disabled="!editable"
+              @complete="onQuizComplete"
+            />
+          </div>
+          <template v-else>
+            <p>
+              {{
+                data.assignment.activityConfig.durationSeconds
+                  ? `${data.assignment.activityConfig.durationSeconds} ${t('education.seconds')}`
+                  : `${data.assignment.activityConfig.roundCount ?? 5} ${t('education.logicRounds')}`
+              }}
+              · {{ data.assignment.activityConfig.language.toUpperCase() }} ·
+              {{ t('education.homeworkMaxAttempts') }}: {{ data.assignment.maxAttempts }} ·
+              {{
+                t(
+                  `education.homework${data.assignment.attemptPolicy[0]!.toUpperCase()}${data.assignment.attemptPolicy.slice(1)}`,
+                )
+              }}
+            </p>
+            <RouterLink
+              v-if="editable"
+              :to="{
+                path:
+                  data.assignment.activityCode === 'platform-logic'
+                    ? '/student/logic/platform-logic'
+                    : '/student/typing/platform-typing',
+                query: { homework: id },
+              }"
+              class="edu-button edu-button--primary"
+            >
+              {{ t('education.homeworkRunActivity') }}
+            </RouterLink>
+          </template>
           <p v-if="data.submission.activityResult">
             <strong>
               {{ t('education.homeworkActivityResult') }}:

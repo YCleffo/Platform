@@ -7,6 +7,9 @@ import AudioRecorder from '@/shared/ui/media/AudioRecorder.vue';
 import VideoNotePlayer from '@/shared/ui/media/VideoNotePlayer.vue';
 import VideoNoteRecorder from '@/shared/ui/media/VideoNoteRecorder.vue';
 import FileAttachment from '@/shared/ui/media/FileAttachment.vue';
+import InteractiveQuiz from '@/shared/ui/learning/InteractiveQuiz.vue';
+import QuizBuilder from '@/shared/ui/learning/QuizBuilder.vue';
+import type { QuizActivityData } from '@/shared/ui/learning/types';
 import {
   educationApi,
   type Thread,
@@ -63,6 +66,7 @@ const activeTab = ref<'all' | 'unread'>('all');
 const composerText = ref('');
 const isRecordingVoice = ref(false);
 const isRecordingVideo = ref(false);
+const isCreatingQuiz = ref(false);
 const replyingTo = ref<Message | null>(null);
 const isNewChatModalOpen = ref(false);
 const contactSearchQuery = ref('');
@@ -559,6 +563,71 @@ async function onVideoNoteRecorded(payload: {
   }
 }
 
+async function onQuizCreated(quiz: QuizActivityData): Promise<void> {
+  if (!selectedThreadId.value || sendingMessage.value) return;
+  const threadId = selectedThreadId.value;
+  const clientKey = crypto.randomUUID();
+  const replyToId = replyingTo.value?.id ?? null;
+  const body = `💡 ${t('education.interactiveQuiz')}: ${quiz.title}`;
+
+  sendingMessage.value = true;
+  errorAction.value = null;
+
+  try {
+    let sentMsg: Message;
+    const metadata = { quiz };
+
+    if (props.role === 'teacher') {
+      sentMsg = await educationApi.sendMessage(
+        props.organizationId,
+        threadId,
+        body,
+        clientKey,
+        'quiz',
+        null,
+        replyToId,
+        metadata,
+      );
+    } else if (props.role === 'parent' && props.parentChild) {
+      sentMsg = await parentApi.sendMessage(
+        props.parentChild,
+        threadId,
+        body,
+        clientKey,
+        'quiz',
+        null,
+        replyToId,
+        metadata,
+      );
+    } else {
+      sentMsg = await educationApi.studentSendMessage(
+        props.organizationId,
+        threadId,
+        body,
+        clientKey,
+        'quiz',
+        null,
+        replyToId,
+        metadata,
+      );
+    }
+    replyingTo.value = null;
+    isCreatingQuiz.value = false;
+    messages.value.push(sentMsg);
+    scrollToBottom();
+    const th = threads.value.find((item) => item.id === threadId);
+    if (th) {
+      th.lastMessageBody = body;
+      th.lastMessageAt = sentMsg.createdAt;
+      th.lastMessageSenderId = sentMsg.senderPersonId;
+    }
+  } catch (err) {
+    errorAction.value = err;
+  } finally {
+    sendingMessage.value = false;
+  }
+}
+
 async function handleToggleReaction(msg: Message, emoji: string): Promise<void> {
   const threadId = selectedThreadId.value;
   if (!threadId) return;
@@ -1024,6 +1093,22 @@ onScopeDispose(() => {
                     />
                   </div>
 
+                  <!-- Interactive Quiz Message -->
+                  <div
+                    v-else-if="msg.kind === 'quiz' || msg.metadata?.quiz"
+                    class="edu-messenger__media-block edu-messenger__media-block--quiz"
+                  >
+                    <InteractiveQuiz
+                      :quiz="
+                        (msg.metadata?.quiz as QuizActivityData) || {
+                          id: msg.id,
+                          title: msg.body,
+                          questions: [],
+                        }
+                      "
+                    />
+                  </div>
+
                   <!-- Text message parts -->
                   <template v-if="msg.body">
                     <p class="edu-message">
@@ -1099,9 +1184,20 @@ onScopeDispose(() => {
           </button>
         </div>
 
+        <!-- Inline Quiz Builder -->
+        <div
+          v-if="isCreatingQuiz"
+          class="edu-messenger__composer"
+        >
+          <QuizBuilder
+            @create="onQuizCreated"
+            @cancel="isCreatingQuiz = false"
+          />
+        </div>
+
         <!-- Inline Video Note Recorder -->
         <div
-          v-if="isRecordingVideo"
+          v-else-if="isRecordingVideo"
           class="edu-messenger__composer"
         >
           <VideoNoteRecorder
@@ -1141,12 +1237,27 @@ onScopeDispose(() => {
             <button
               type="button"
               class="edu-button edu-button--secondary"
+              :title="t('education.quizAttach')"
+              :aria-label="t('education.quizAttach')"
+              :disabled="sendingMessage"
+              @click="
+                isCreatingQuiz = !isCreatingQuiz;
+                isRecordingVideo = false;
+                isRecordingVoice = false;
+              "
+            >
+              💡
+            </button>
+            <button
+              type="button"
+              class="edu-button edu-button--secondary"
               :title="t('education.recordVideoNote')"
               :aria-label="t('education.recordVideoNote')"
               :disabled="sendingMessage"
               @click="
                 isRecordingVideo = true;
                 isRecordingVoice = false;
+                isCreatingQuiz = false;
               "
             >
               📹
@@ -1160,6 +1271,7 @@ onScopeDispose(() => {
               @click="
                 isRecordingVoice = true;
                 isRecordingVideo = false;
+                isCreatingQuiz = false;
               "
             >
               🎤

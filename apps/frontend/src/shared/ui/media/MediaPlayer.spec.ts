@@ -59,6 +59,27 @@ describe('Media UI Kit', () => {
     expect(wrapper.find('.app-video-note-player').exists()).toBe(true);
   });
 
+  it('cycles playback speed on VideoNotePlayer', async () => {
+    const wrapper = mount(VideoNotePlayer, {
+      props: {
+        src: '/test.mp4',
+        autoplay: false,
+      },
+    });
+
+    // Simulate play so speed button is visible
+    await wrapper.trigger('click');
+    const speedBtn = wrapper.find('.app-video-note-player__speed');
+    expect(speedBtn.exists()).toBe(true);
+    expect(speedBtn.text()).toBe('1x');
+
+    await speedBtn.trigger('click');
+    expect(speedBtn.text()).toBe('1.5x');
+
+    await speedBtn.trigger('click');
+    expect(speedBtn.text()).toBe('2x');
+  });
+
   it('renders FileAttachment for document media kind', () => {
     const asset: MediaAsset = {
       id: 'ast-doc-1',
@@ -94,6 +115,12 @@ describe('Media UI Kit', () => {
 
     await wrapper.trigger('keydown.left');
     expect(wrapper.emitted('seek')?.[1]).toEqual([0.25]);
+
+    await wrapper.trigger('keydown.home');
+    expect(wrapper.emitted('seek')?.[2]).toEqual([0]);
+
+    await wrapper.trigger('keydown.end');
+    expect(wrapper.emitted('seek')?.[3]).toEqual([1]);
   });
 
   it('toggles playback speed in AudioPlayer', async () => {
