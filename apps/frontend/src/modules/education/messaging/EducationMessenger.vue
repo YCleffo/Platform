@@ -718,9 +718,7 @@ onScopeDispose(() => {
                 <span class="edu-messenger__last-msg">
                   {{
                     th.lastMessageBody
-                      ? th.lastMessageSenderId === currentPersonId
-                        ? `${t('education.you')}: ${th.lastMessageBody}`
-                        : th.lastMessageBody
+                      ? `${th.lastMessageSenderId === currentPersonId ? t('education.you') : th.peerName || t('education.message')}: ${th.lastMessageBody}`
                       : t('education.noMessagesInThread')
                   }}
                 </span>
