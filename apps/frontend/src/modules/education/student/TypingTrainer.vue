@@ -94,7 +94,9 @@ watch(
 // Unicode Grapheme Cluster Tokenization
 function segmentText(str: string, locale = 'en'): string[] {
   if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
-    const segmenter = new Intl.Segmenter(locale === 'ru' ? 'ru' : 'en', { granularity: 'grapheme' });
+    const segmenter = new Intl.Segmenter(locale === 'ru' ? 'ru' : 'en', {
+      granularity: 'grapheme',
+    });
     return Array.from(segmenter.segment(str), (s) => s.segment);
   }
   return [...str];
@@ -191,9 +193,11 @@ async function start(next = false): Promise<void> {
   lastSampleSecond = 0;
 
   try {
-    const durationSec = ([15, 30, 60].includes(Number(config.value.durationSeconds))
-      ? Number(config.value.durationSeconds)
-      : 30) as 15 | 30 | 60;
+    const durationSec = (
+      [15, 30, 60].includes(Number(config.value.durationSeconds))
+        ? Number(config.value.durationSeconds)
+        : 30
+    ) as 15 | 30 | 60;
     const started = props.homeworkId
       ? await homeworkApi.startActivity(props.organizationId, props.homeworkId)
       : await studentPortalApi.startAttempt(props.organizationId, 'platform-typing', {
@@ -504,7 +508,9 @@ onBeforeUnmount(() => {
         <span class="edu-typing__stat-pill">{{ wpm }} WPM</span>
         <span class="edu-typing__stat-pill">{{ rawWpm }} {{ t('education.rawWpm') }}</span>
         <span class="edu-typing__stat-pill">{{ accuracy }}%</span>
-        <span class="edu-typing__stat-pill">{{ consistency }}% {{ t('education.consistency') }}</span>
+        <span class="edu-typing__stat-pill">
+          {{ consistency }}% {{ t('education.consistency') }}
+        </span>
         <span>{{ t('education.errors') }}: {{ errors }}</span>
       </div>
 
@@ -569,7 +575,8 @@ onBeforeUnmount(() => {
         class="edu-caption"
       >
         {{ focused ? t('education.typingEditHint') : t('education.typingFocusHint') }}
-        {{ t('education.timerContinues') }} · <kbd class="edu-kbd">{{ t('education.restartHint') }}</kbd>
+        {{ t('education.timerContinues') }} ·
+        <kbd class="edu-kbd">{{ t('education.restartHint') }}</kbd>
       </p>
 
       <!-- Action Buttons -->
@@ -601,7 +608,9 @@ onBeforeUnmount(() => {
       <!-- Big Key Metrics Grid -->
       <div class="edu-typing__result-grid">
         <div class="edu-typing__metric-card">
-          <span class="edu-typing__metric-val edu-typing__metric-val--primary">{{ result.wpm }}</span>
+          <span class="edu-typing__metric-val edu-typing__metric-val--primary">
+            {{ result.wpm }}
+          </span>
           <span class="edu-typing__metric-label">WPM</span>
         </div>
         <div class="edu-typing__metric-card">
@@ -661,12 +670,16 @@ onBeforeUnmount(() => {
             stroke="var(--text-2)"
             stroke-width="1.5"
             stroke-dasharray="2 2"
-            :points="wpmSamples.map((s, idx) => {
-              const x = (idx / (wpmSamples.length - 1)) * 480 + 10;
-              const maxVal = Math.max(...wpmSamples.map(p => Math.max(p.rawWpm, p.wpm, 10)));
-              const y = 110 - (s.rawWpm / maxVal) * 90;
-              return `${x},${y}`;
-            }).join(' ')"
+            :points="
+              wpmSamples
+                .map((s, idx) => {
+                  const x = (idx / (wpmSamples.length - 1)) * 480 + 10;
+                  const maxVal = Math.max(...wpmSamples.map((p) => Math.max(p.rawWpm, p.wpm, 10)));
+                  const y = 110 - (s.rawWpm / maxVal) * 90;
+                  return `${x},${y}`;
+                })
+                .join(' ')
+            "
           />
 
           <!-- Net WPM line (solid accent) -->
@@ -676,20 +689,24 @@ onBeforeUnmount(() => {
             stroke-width="3"
             stroke-linecap="round"
             stroke-linejoin="round"
-            :points="wpmSamples.map((s, idx) => {
-              const x = (idx / (wpmSamples.length - 1)) * 480 + 10;
-              const maxVal = Math.max(...wpmSamples.map(p => Math.max(p.rawWpm, p.wpm, 10)));
-              const y = 110 - (s.wpm / maxVal) * 90;
-              return `${x},${y}`;
-            }).join(' ')"
+            :points="
+              wpmSamples
+                .map((s, idx) => {
+                  const x = (idx / (wpmSamples.length - 1)) * 480 + 10;
+                  const maxVal = Math.max(...wpmSamples.map((p) => Math.max(p.rawWpm, p.wpm, 10)));
+                  const y = 110 - (s.wpm / maxVal) * 90;
+                  return `${x},${y}`;
+                })
+                .join(' ')
+            "
           />
         </svg>
       </div>
 
       <p>
         {{ t('education.typedCharacters') }}: {{ result.typedCharacters ?? result.keystrokes }} ·
-        {{ result.durationSeconds }} {{ t('education.seconds') }} ·
-        {{ t('education.errors') }}: {{ result.errors }}
+        {{ result.durationSeconds }} {{ t('education.seconds') }} · {{ t('education.errors') }}:
+        {{ result.errors }}
       </p>
       <p class="edu-caption">
         {{ t('education.corrections') }}: {{ corrections }} · {{ t('education.observedErrors') }}:
@@ -746,7 +763,9 @@ onBeforeUnmount(() => {
   padding: 0.25rem 0.625rem;
   border-radius: 9999px;
   cursor: pointer;
-  transition: color var(--theme-transition), background var(--theme-transition);
+  transition:
+    color var(--theme-transition),
+    background var(--theme-transition);
 }
 
 .edu-typing__mode-btn:hover {
