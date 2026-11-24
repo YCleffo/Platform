@@ -72,7 +72,14 @@ final readonly class AssessmentAction
                 default => throw new EducationError(404, 'not_found'),
             };
 
-            return $responses->success($result);
+            $statusCode = match ($operation) {
+                'assessments' => $request->getMethod() === 'POST' ? 201 : 200,
+                'question_bank' => $request->getMethod() === 'POST' ? 201 : 200,
+                'student_start_assessment' => 201,
+                default => 200,
+            };
+
+            return $responses->success($result)->withStatus($statusCode);
         } catch (EducationError $error) {
             return $responses->error(match ($error->status) {
                 403 => ApiMessage::AUTH_PERMISSION_DENIED,

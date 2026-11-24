@@ -541,7 +541,6 @@
   <file src="src/Education/Application/TypingActivityHandler.php">
     <MixedArgument>
       <code><![CDATA[$config['durationSeconds']]]></code>
-      <code><![CDATA[$config['durationSeconds']]]></code>
       <code><![CDATA[$exercise['configSnapshot'] ?? ActivityHandlerRegistry::json($attempt['config'] ?? [])]]></code>
       <code><![CDATA[$part]]></code>
     </MixedArgument>
