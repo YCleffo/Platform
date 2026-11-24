@@ -43,12 +43,7 @@ const answeredCount = computed(() => {
   let count = 0;
   for (const q of questions.value) {
     const ans = answers.value[q.id];
-    if (
-      ans !== undefined &&
-      ans !== null &&
-      ans !== '' &&
-      !(Array.isArray(ans) && ans.length === 0)
-    ) {
+    if (ans !== undefined && ans !== null && ans !== '' && !(Array.isArray(ans) && ans.length === 0)) {
       count++;
     }
   }
@@ -224,9 +219,7 @@ onUnmounted(() => {
           <div
             v-if="formattedTimeLeft !== null"
             class="edu-runner__timer"
-            :class="{
-              'edu-runner__timer--urgent': remainingSeconds !== null && remainingSeconds < 120,
-            }"
+            :class="{ 'edu-runner__timer--urgent': remainingSeconds !== null && remainingSeconds < 120 }"
           >
             <span class="edu-runner__timer-icon">⏱</span>
             <span class="edu-runner__timer-val">{{ formattedTimeLeft }}</span>
@@ -275,7 +268,9 @@ onUnmounted(() => {
         class="edu-runner__card"
       >
         <div class="edu-runner__card-header">
-          <span class="edu-runner__card-idx">{{ currentIndex + 1 }} / {{ questions.length }}</span>
+          <span class="edu-runner__card-idx">
+            {{ currentIndex + 1 }} / {{ questions.length }}
+          </span>
           <span class="edu-badge edu-badge--neutral">
             {{ currentQuestion.points }} {{ t('education.score') }}
           </span>
@@ -341,10 +336,7 @@ onUnmounted(() => {
             type="button"
             class="edu-runner__option edu-runner__option--tf"
             :class="{ 'edu-runner__option--selected': answers[currentQuestion.id] === true }"
-            @click="
-              answers[currentQuestion.id] = true;
-              debouncedSave();
-            "
+            @click="answers[currentQuestion.id] = true; debouncedSave()"
           >
             {{ t('education.correctAnswer') }} (True)
           </button>
@@ -352,10 +344,7 @@ onUnmounted(() => {
             type="button"
             class="edu-runner__option edu-runner__option--tf"
             :class="{ 'edu-runner__option--selected': answers[currentQuestion.id] === false }"
-            @click="
-              answers[currentQuestion.id] = false;
-              debouncedSave();
-            "
+            @click="answers[currentQuestion.id] = false; debouncedSave()"
           >
             {{ t('education.incorrectAnswer') }} (False)
           </button>
@@ -508,15 +497,15 @@ onUnmounted(() => {
 
 .edu-runner__title {
   font-size: var(--type-h1-size);
-  line-height: var(--type-h1-line);
   font-weight: var(--type-h1-weight);
+  line-height: var(--type-h1-line);
   margin: 0;
 }
 
 .edu-runner__inst {
   font-size: var(--type-body-small-size);
-  line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
+  line-height: var(--type-body-small-line);
   color: var(--text-2);
   margin: 0.25rem 0 0;
 }
@@ -536,24 +525,14 @@ onUnmounted(() => {
   background: var(--surface-2);
   border: 1px solid var(--border);
   font-size: var(--type-body-medium-emphasis-size);
-  line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
+  line-height: var(--type-body-medium-emphasis-line);
 }
 
 .edu-runner__timer--urgent {
   background: var(--danger-soft);
   color: var(--danger-text);
   border-color: var(--danger-soft);
-  animation: pulse var(--motion-caret-duration) infinite alternate;
-}
-
-@keyframes pulse {
-  from {
-    opacity: 0.8;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 .edu-runner__nav {
@@ -573,11 +552,11 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   font-size: var(--type-body-small-emphasis-size);
-  line-height: var(--type-body-small-emphasis-line);
   font-weight: var(--type-body-small-emphasis-weight);
+  line-height: var(--type-body-small-line);
   cursor: pointer;
   position: relative;
-  transition: var(--theme-transition);
+  transition: color var(--theme-transition), background var(--theme-transition), border-color var(--theme-transition);
 }
 
 .edu-runner__nav-btn--current {
@@ -596,8 +575,8 @@ onUnmounted(() => {
   right: 3px;
   color: var(--warning-text);
   font-size: var(--type-body-caption-size);
-  line-height: var(--type-body-caption-line);
   font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
 }
 
 .edu-runner__card {
@@ -618,15 +597,15 @@ onUnmounted(() => {
 
 .edu-runner__card-idx {
   font-size: var(--type-body-small-emphasis-size);
-  line-height: var(--type-body-small-emphasis-line);
   font-weight: var(--type-body-small-emphasis-weight);
+  line-height: var(--type-body-small-line);
   color: var(--text-2);
 }
 
 .edu-runner__prompt {
   font-size: var(--type-h2-size);
-  line-height: var(--type-h2-line);
   font-weight: var(--type-h2-weight);
+  line-height: var(--type-h2-line);
   margin: 0;
 }
 
@@ -647,10 +626,10 @@ onUnmounted(() => {
   color: var(--text-1);
   text-align: left;
   cursor: pointer;
-  font-size: var(--type-body-large-size);
-  line-height: var(--type-body-large-line);
-  font-weight: var(--type-body-large-weight);
-  transition: var(--theme-transition);
+  font-size: var(--type-body-medium-size);
+  font-weight: var(--type-body-medium-weight);
+  line-height: var(--type-body-medium-line);
+  transition: color var(--theme-transition), background var(--theme-transition), border-color var(--theme-transition);
 }
 
 .edu-runner__option:hover {
@@ -661,9 +640,7 @@ onUnmounted(() => {
 .edu-runner__option--selected {
   background: var(--accent-soft);
   border-color: var(--accent);
-  font-size: var(--type-body-large-emphasis-size);
-  line-height: var(--type-body-large-emphasis-line);
-  font-weight: var(--type-body-large-emphasis-weight);
+  font-weight: var(--type-body-medium-emphasis-weight);
 }
 
 .edu-runner__option-radio,
@@ -731,9 +708,9 @@ onUnmounted(() => {
 }
 
 .edu-modal__title {
-  font-size: var(--type-h2-size);
-  line-height: var(--type-h2-line);
-  font-weight: var(--type-h2-weight);
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  line-height: var(--type-h3-line);
   margin: 0;
 }
 

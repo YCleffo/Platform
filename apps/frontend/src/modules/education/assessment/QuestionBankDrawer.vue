@@ -95,10 +95,7 @@ onMounted(() => {
             type="button"
             class="edu-btn edu-btn--sm"
             :class="selectedDifficulty === d ? 'edu-btn--primary' : 'edu-btn--secondary'"
-            @click="
-              selectedDifficulty = d;
-              loadQuestions();
-            "
+            @click="selectedDifficulty = d; loadQuestions()"
           >
             {{ d === null ? t('education.wholeGroup') : `${d} · ${t(`education.difficulty${d}`)}` }}
           </button>
@@ -191,9 +188,9 @@ onMounted(() => {
 }
 
 .edu-bank-drawer__title {
-  font-size: var(--type-h2-size);
-  line-height: var(--type-h2-line);
-  font-weight: var(--type-h2-weight);
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  line-height: var(--type-h3-line);
   margin: 0;
 }
 
@@ -251,16 +248,16 @@ onMounted(() => {
 
 .edu-bank-item__prompt {
   font-size: var(--type-body-medium-emphasis-size);
-  line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
+  line-height: var(--type-body-medium-emphasis-line);
   margin: 0 0 0.25rem;
   word-break: break-word;
 }
 
 .edu-bank-item__exp {
-  font-size: var(--type-body-caption-size);
-  line-height: var(--type-body-caption-line);
-  font-weight: var(--type-body-caption-weight);
+  font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  line-height: var(--type-body-small-line);
   color: var(--text-2);
   margin: 0;
 }
@@ -272,3 +269,4 @@ onMounted(() => {
   color: var(--text-2);
 }
 </style>
+

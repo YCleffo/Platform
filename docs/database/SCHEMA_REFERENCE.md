@@ -12,7 +12,7 @@ DBML служит представлением для диаграммы, а н�
 | `core` | 50 | 561 | 86 | 195 | 161 | 19 |
 | `platform_runtime` | 3 | 36 | 1 | 18 | 7 | 2 |
 | `commercial` | 62 | 619 | 98 | 273 | 177 | 53 |
-| `education` | 54 | 463 | 80 | 104 | 147 | 11 |
+| `education` | 58 | 517 | 85 | 125 | 156 | 11 |
 
 Технические `public.platform_migrations` и `public.doctrine_migration_versions` не являются бизнес-таблицами и не включены в инвентарь.
 Межсистемный идентификатор в подписанном документе не создаёт внешний ключ между базами.
@@ -3022,6 +3022,88 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 
 Проверок CHECK: 3; индексов: 2; пользовательских триггеров: 0.
 
+## education.assessment_attempts
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `version_id` | `uuid` | нет | — | — |
+| `student_id` | `uuid` | нет | — | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `assignment_id` | `uuid` | да | — | — |
+| `state` | `character varying(30)` | нет | 'IN_PROGRESS'::character varying | — |
+| `seed` | `bigint` | нет | 0 | — |
+| `started_at` | `timestamp with time zone` | нет | now() | — |
+| `submitted_at` | `timestamp with time zone` | да | — | — |
+| `answers` | `jsonb` | нет | '{}'::jsonb | — |
+| `result` | `jsonb` | нет | '{}'::jsonb | — |
+| `score` | `integer` | да | — | — |
+| `max_score` | `integer` | да | — | — |
+| `percentage` | `numeric(5,2)` | да | — | — |
+| `passed` | `boolean` | да | — | — |
+| `manual_review_notes` | `text` | да | — | — |
+| `reviewed_by_person_id` | `uuid` | да | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `assessment_attempts_assignment_id_fkey`: `FOREIGN KEY (assignment_id) REFERENCES education.activity_assignments(id) ON DELETE SET NULL`.
+- `assessment_attempts_student_id_fkey`: `FOREIGN KEY (student_id) REFERENCES education.students(id) ON DELETE CASCADE`.
+- `assessment_attempts_version_id_fkey`: `FOREIGN KEY (version_id) REFERENCES education.assessment_versions(id) ON DELETE CASCADE`.
+
+Проверок CHECK: 6; индексов: 2; пользовательских триггеров: 0.
+
+## education.assessment_versions
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `assessment_id` | `uuid` | нет | — | — |
+| `version_number` | `integer` | нет | — | — |
+| `title` | `character varying(200)` | нет | — | — |
+| `instructions` | `text` | нет | ''::text | — |
+| `time_limit_seconds` | `integer` | да | — | — |
+| `passing_score_percent` | `integer` | нет | 60 | — |
+| `max_attempts` | `integer` | нет | 1 | — |
+| `shuffle_questions` | `boolean` | нет | false | — |
+| `shuffle_options` | `boolean` | нет | false | — |
+| `reveal_answers_policy` | `character varying(30)` | нет | 'after_grading'::character varying | — |
+| `grading_policy` | `character varying(30)` | нет | 'highest'::character varying | — |
+| `questions_snapshot` | `jsonb` | нет | '[]'::jsonb | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `assessment_versions_assessment_id_fkey`: `FOREIGN KEY (assessment_id) REFERENCES education.assessments(id) ON DELETE CASCADE`.
+
+Проверок CHECK: 8; индексов: 3; пользовательских триггеров: 0.
+
+## education.assessments
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `author_person_id` | `uuid` | нет | — | — |
+| `title` | `character varying(200)` | нет | — | — |
+| `description` | `text` | нет | ''::text | — |
+| `status` | `character varying(20)` | нет | 'DRAFT'::character varying | — |
+| `latest_version_id` | `uuid` | да | — | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+| `updated_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+**Реальные внешние ключи:**
+
+- `assessments_latest_version_fkey`: `FOREIGN KEY (latest_version_id) REFERENCES education.assessment_versions(id) ON DELETE SET NULL`.
+
+Проверок CHECK: 2; индексов: 2; пользовательских триггеров: 0.
+
 ## education.attendance
 
 | Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
@@ -3831,6 +3913,30 @@ SQL-комментарии приводятся из PostgreSQL; отсутст�
 Внешние ключи SQL из этой таблицы отсутствуют.
 
 Проверок CHECK: 3; индексов: 3; пользовательских триггеров: 0.
+
+## education.question_bank
+
+| Поле | Тип PostgreSQL | Допускает NULL | По умолчанию / вычисляемое | Пояснение к полю БД |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | нет | uuidv7() | — |
+| `organization_id` | `uuid` | нет | — | — |
+| `author_person_id` | `uuid` | нет | — | — |
+| `category` | `character varying(100)` | нет | 'general'::character varying | — |
+| `tags` | `jsonb` | нет | '[]'::jsonb | — |
+| `difficulty` | `integer` | нет | 1 | — |
+| `question_type` | `character varying(30)` | нет | — | — |
+| `content` | `jsonb` | нет | — | — |
+| `answer_key` | `jsonb` | нет | — | — |
+| `explanation` | `text` | нет | ''::text | — |
+| `default_points` | `integer` | нет | 1 | — |
+| `created_at` | `timestamp with time zone` | нет | now() | — |
+| `updated_at` | `timestamp with time zone` | нет | now() | — |
+
+**Первичный ключ:** `PRIMARY KEY (id)`.
+
+Внешние ключи SQL из этой таблицы отсутствуют.
+
+Проверок CHECK: 5; индексов: 2; пользовательских триггеров: 0.
 
 ## education.result_revisions
 

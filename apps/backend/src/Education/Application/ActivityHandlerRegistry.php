@@ -23,7 +23,7 @@ final class ActivityHandlerRegistry
             'platform-assessment' => new AssessmentActivityHandler(),
         ];
         foreach ($handlers as $code => $handler) {
-            $this->register((string) $code, $handler);
+            $this->register($code, $handler);
         }
     }
 

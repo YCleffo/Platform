@@ -1026,7 +1026,8 @@ final readonly class EducationService
         $exercise['configSnapshot'] = $config;
         $snapshotConfig = $code === 'platform-typing' && array_diff(array_keys($configInput), ['durationSeconds', 'language']) === []
             ? $configInput : $config;
-        $attempt = $this->store->createAttempt($scope, (string) $definition['id'], $assignmentId, $source, $exercise['text'] ?? ($exercise['title'] ?? ''), $snapshotConfig);
+        $exerciseText = (string) ($exercise['text'] ?? ($exercise['title'] ?? ''));
+        $attempt = $this->store->createAttempt($scope, (string) $definition['id'], $assignmentId, $source, $exerciseText, $snapshotConfig);
         $this->store->snapshotAttempt($scope, $attempt['id'], (int) $definition['contractVersion'], $exercise);
         return $this->attemptView($scope, $attempt['id']);
     }

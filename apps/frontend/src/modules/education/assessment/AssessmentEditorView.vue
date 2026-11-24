@@ -31,9 +31,7 @@ const timeLimitSeconds = ref<number | null>(1800);
 const maxAttempts = ref(1);
 const shuffleQuestions = ref(false);
 const shuffleOptions = ref(false);
-const revealAnswersPolicy = ref<'never' | 'immediate' | 'after_grading' | 'deadline'>(
-  'after_grading',
-);
+const revealAnswersPolicy = ref<'never' | 'immediate' | 'after_grading' | 'deadline'>('after_grading');
 const gradingPolicy = ref<'highest' | 'latest' | 'average'>('highest');
 const questions = ref<AssessmentQuestion[]>([]);
 
@@ -43,7 +41,9 @@ const publishing = ref(false);
 const showBankDrawer = ref(false);
 const toastMessage = ref<string | null>(null);
 
-const totalPoints = computed(() => questions.value.reduce((acc, q) => acc + (q.points || 1), 0));
+const totalPoints = computed(() =>
+  questions.value.reduce((acc, q) => acc + (q.points || 1), 0),
+);
 
 function showToast(msg: string): void {
   toastMessage.value = msg;
@@ -86,11 +86,11 @@ function removeQuestion(index: number): void {
 function moveQuestion(index: number, direction: -1 | 1): void {
   const target = index + direction;
   if (target < 0 || target >= questions.value.length) return;
-  const temp = questions.value[index];
-  const targetItem = questions.value[target];
-  if (!temp || !targetItem) return;
-  questions.value[index] = targetItem;
-  questions.value[target] = temp;
+  const currentQ = questions.value[index];
+  const targetQ = questions.value[target];
+  if (!currentQ || !targetQ) return;
+  questions.value[index] = targetQ;
+  questions.value[target] = currentQ;
 }
 
 function addOption(question: AssessmentQuestion): void {
@@ -259,8 +259,7 @@ onMounted(() => {
           {{ assessmentId ? t('education.editAssessment') : t('education.createAssessment') }}
         </h1>
         <p class="edu-assessment-editor__subtitle">
-          {{ t('education.assessmentStudio') }} · {{ questions.length }}
-          {{ t('education.questionsCount') }} ({{ totalPoints }} {{ t('education.score') }})
+          {{ t('education.assessmentStudio') }} · {{ questions.length }} {{ t('education.questionsCount') }} ({{ totalPoints }} {{ t('education.score') }})
         </p>
       </div>
 
@@ -630,15 +629,10 @@ onMounted(() => {
                 <label class="edu-field">
                   <span class="edu-field__label">{{ t('education.acceptedAnswers') }}</span>
                   <input
-                    :value="Array.isArray(q.answerKey) ? q.answerKey.join(', ') : q.answerKey || ''"
+                    :value="Array.isArray(q.answerKey) ? q.answerKey.join(', ') : (q.answerKey || '')"
                     type="text"
                     class="edu-input"
-                    @input="
-                      q.answerKey = ($event.target as HTMLInputElement).value
-                        .split(',')
-                        .map((s) => s.trim())
-                        .filter(Boolean)
-                    "
+                    @input="q.answerKey = ($event.target as HTMLInputElement).value.split(',').map(s => s.trim()).filter(Boolean)"
                   />
                 </label>
               </div>
@@ -715,15 +709,15 @@ onMounted(() => {
 
 .edu-assessment-editor__title {
   font-size: var(--type-h1-size);
-  line-height: var(--type-h1-line);
   font-weight: var(--type-h1-weight);
+  line-height: var(--type-h1-line);
   margin: 0 0 0.25rem;
 }
 
 .edu-assessment-editor__subtitle {
   font-size: var(--type-body-small-size);
-  line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
+  line-height: var(--type-body-small-line);
   color: var(--text-2);
   margin: 0;
 }
@@ -740,8 +734,8 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: var(--type-body-small-size);
-  line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
+  line-height: var(--type-body-small-line);
 }
 
 .edu-assessment-editor__layout {
@@ -768,9 +762,9 @@ onMounted(() => {
 }
 
 .edu-assessment-settings__title {
-  font-size: var(--type-h2-size);
-  line-height: var(--type-h2-line);
-  font-weight: var(--type-h2-weight);
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  line-height: var(--type-h3-line);
   margin: 0;
 }
 
@@ -781,9 +775,9 @@ onMounted(() => {
 }
 
 .edu-field__label {
-  font-size: var(--type-body-small-emphasis-size);
-  line-height: var(--type-body-small-emphasis-line);
-  font-weight: var(--type-body-small-emphasis-weight);
+  font-size: var(--type-body-caption-size);
+  font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
   color: var(--text-2);
 }
 
@@ -808,9 +802,9 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: var(--type-body-medium-size);
-  line-height: var(--type-body-medium-line);
-  font-weight: var(--type-body-medium-weight);
+  font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  line-height: var(--type-body-small-line);
   cursor: pointer;
 }
 
@@ -848,8 +842,8 @@ onMounted(() => {
 
 .edu-assessment-questions__empty-hint {
   font-size: var(--type-body-small-size);
-  line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
+  line-height: var(--type-body-small-line);
   margin-top: 0.25rem;
 }
 
@@ -876,9 +870,9 @@ onMounted(() => {
 }
 
 .edu-question-card__index {
-  font-size: var(--type-body-large-emphasis-size);
-  line-height: var(--type-body-large-emphasis-line);
-  font-weight: var(--type-body-large-emphasis-weight);
+  font-size: var(--type-body-medium-emphasis-size);
+  font-weight: var(--type-body-medium-emphasis-weight);
+  line-height: var(--type-body-medium-emphasis-line);
 }
 
 .edu-question-card__points {
@@ -894,8 +888,8 @@ onMounted(() => {
 
 .edu-question-card__points-label {
   font-size: var(--type-body-caption-size);
-  line-height: var(--type-body-caption-line);
   font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
   color: var(--text-2);
 }
 

@@ -102,8 +102,8 @@ final readonly class AssessmentService
                 ? ActivityHandlerRegistry::integer($input['timeLimitSeconds'], 30, 14400)
                 : null;
             $maxAttempts = isset($input['maxAttempts']) ? ActivityHandlerRegistry::integer($input['maxAttempts'], 1, 20) : 1;
-            $shuffleQ = Boolean::cast($input['shuffleQuestions'] ?? false);
-            $shuffleOpt = Boolean::cast($input['shuffleOptions'] ?? false);
+            $shuffleQ = (bool) ($input['shuffleQuestions'] ?? false);
+            $shuffleOpt = (bool) ($input['shuffleOptions'] ?? false);
             $revealPolicy = in_array($input['revealAnswersPolicy'] ?? '', ['never', 'immediate', 'after_grading', 'deadline'], true)
                 ? (string) $input['revealAnswersPolicy']
                 : 'after_grading';
@@ -181,8 +181,8 @@ final readonly class AssessmentService
             'timeLimitSeconds' => $row['time_limit_seconds'] !== null ? (int) $row['time_limit_seconds'] : null,
             'passingScorePercent' => $row['passing_score_percent'] !== null ? (int) $row['passing_score_percent'] : 60,
             'maxAttempts' => $row['max_attempts'] !== null ? (int) $row['max_attempts'] : 1,
-            'shuffleQuestions' => Boolean::cast($row['shuffle_questions'] ?? false),
-            'shuffleOptions' => Boolean::cast($row['shuffle_options'] ?? false),
+            'shuffleQuestions' => (bool) ($row['shuffle_questions'] ?? false),
+            'shuffleOptions' => (bool) ($row['shuffle_options'] ?? false),
             'revealAnswersPolicy' => (string) ($row['reveal_answers_policy'] ?? 'after_grading'),
             'gradingPolicy' => (string) ($row['grading_policy'] ?? 'highest'),
             'questions' => $questions,
@@ -228,8 +228,8 @@ final readonly class AssessmentService
                     ? ($input['timeLimitSeconds'] !== null ? ActivityHandlerRegistry::integer($input['timeLimitSeconds'], 30, 14400) : null)
                     : $current['timeLimitSeconds'];
                 $maxAttempts = isset($input['maxAttempts']) ? ActivityHandlerRegistry::integer($input['maxAttempts'], 1, 20) : $current['maxAttempts'];
-                $shuffleQ = isset($input['shuffleQuestions']) ? Boolean::cast($input['shuffleQuestions']) : $current['shuffleQuestions'];
-                $shuffleOpt = isset($input['shuffleOptions']) ? Boolean::cast($input['shuffleOptions']) : $current['shuffleOptions'];
+                $shuffleQ = isset($input['shuffleQuestions']) ? (bool) $input['shuffleQuestions'] : $current['shuffleQuestions'];
+                $shuffleOpt = isset($input['shuffleOptions']) ? (bool) $input['shuffleOptions'] : $current['shuffleOptions'];
                 $revealPolicy = in_array($input['revealAnswersPolicy'] ?? '', ['never', 'immediate', 'after_grading', 'deadline'], true)
                     ? (string) $input['revealAnswersPolicy']
                     : $current['revealAnswersPolicy'];
@@ -293,8 +293,8 @@ final readonly class AssessmentService
                 ? ($input['timeLimitSeconds'] !== null ? ActivityHandlerRegistry::integer($input['timeLimitSeconds'], 30, 14400) : null)
                 : $current['timeLimitSeconds'];
             $maxAttempts = isset($input['maxAttempts']) ? ActivityHandlerRegistry::integer($input['maxAttempts'], 1, 20) : $current['maxAttempts'];
-            $shuffleQ = isset($input['shuffleQuestions']) ? Boolean::cast($input['shuffleQuestions']) : $current['shuffleQuestions'];
-            $shuffleOpt = isset($input['shuffleOptions']) ? Boolean::cast($input['shuffleOptions']) : $current['shuffleOptions'];
+            $shuffleQ = isset($input['shuffleQuestions']) ? (bool) $input['shuffleQuestions'] : $current['shuffleQuestions'];
+            $shuffleOpt = isset($input['shuffleOptions']) ? (bool) $input['shuffleOptions'] : $current['shuffleOptions'];
             $revealPolicy = in_array($input['revealAnswersPolicy'] ?? '', ['never', 'immediate', 'after_grading', 'deadline'], true)
                 ? (string) $input['revealAnswersPolicy']
                 : $current['revealAnswersPolicy'];
@@ -451,7 +451,9 @@ final readonly class AssessmentService
         $category = isset($input['category']) && is_string($input['category']) ? mb_substr(trim($input['category']), 0, 100) : 'general';
         $difficulty = isset($input['difficulty']) ? ActivityHandlerRegistry::integer($input['difficulty'], 1, 3) : 1;
         $points = isset($input['defaultPoints']) ? ActivityHandlerRegistry::integer($input['defaultPoints'], 1, 100) : 1;
-        $tags = isset($input['tags']) && is_array($input['tags']) ? array_values(array_map('strval', $input['tags'])) : [];
+        $tags = isset($input['tags']) && is_array($input['tags'])
+            ? array_values(array_map(static fn(mixed $t): string => is_scalar($t) ? (string) $t : '', $input['tags']))
+            : [];
         $explanation = (string) ($input['explanation'] ?? '');
 
         $row = $this->db->createCommand(
@@ -583,7 +585,9 @@ final readonly class AssessmentService
             )->queryOne();
 
             if (is_array($running)) {
-                return $this->buildAttemptResponse($assessment, (string) $running['id'], (string) $running['started_at'], ActivityHandlerRegistry::json($running['answers'] ?? []));
+                /** @var array<string, mixed> $savedAnswers */
+                $savedAnswers = ActivityHandlerRegistry::json($running['answers'] ?? []);
+                return $this->buildAttemptResponse($assessment, (string) $running['id'], (string) $running['started_at'], $savedAnswers);
             }
 
             // Check attempt limits
@@ -649,7 +653,9 @@ final readonly class AssessmentService
             throw new EducationError(404, 'not_found');
         }
 
-        $questions = ActivityHandlerRegistry::json($attempt['questions_snapshot'] ?? []);
+        $questionsRaw = ActivityHandlerRegistry::json($attempt['questions_snapshot'] ?? []);
+        /** @var list<array<string, mixed>> $questions */
+        $questions = array_values(array_filter($questionsRaw, 'is_array'));
         $revealPolicy = (string) ($attempt['reveal_answers_policy'] ?? 'after_grading');
         $isEvaluated = in_array($attempt['state'], ['EVALUATED', 'AWAITING_MANUAL_REVIEW'], true);
         $shouldReveal = $isEvaluated && ($revealPolicy === 'immediate' || $revealPolicy === 'after_grading');
@@ -691,7 +697,7 @@ final readonly class AssessmentService
             'score' => $attempt['score'] !== null ? (int) $attempt['score'] : null,
             'maxScore' => $attempt['max_score'] !== null ? (int) $attempt['max_score'] : null,
             'percentage' => $attempt['percentage'] !== null ? (float) $attempt['percentage'] : null,
-            'passed' => $attempt['passed'] !== null ? Boolean::cast($attempt['passed']) : null,
+            'passed' => $attempt['passed'] !== null ? (bool) $attempt['passed'] : null,
             'manualReviewNotes' => $attempt['manual_review_notes'] !== null ? (string) $attempt['manual_review_notes'] : null,
         ];
     }
@@ -772,11 +778,12 @@ final readonly class AssessmentService
                 'elapsedSeconds' => $elapsedSeconds,
             ]);
 
-            $metrics = $evaluated['metrics'];
+            /** @var array{score: int|float, maxScore: int|float, percentage: int|float, passed: bool} $metrics */
+            $metrics = is_array($evaluated['metrics'] ?? null) ? $evaluated['metrics'] : ['score' => 0, 'maxScore' => 0, 'percentage' => 0.0, 'passed' => false];
             $score = (int) $metrics['score'];
             $maxScore = (int) $metrics['maxScore'];
             $percentage = (float) $metrics['percentage'];
-            $passed = (bool) $metrics['passed'];
+            $passed = $metrics['passed'];
 
             $this->db->createCommand(
                 'UPDATE education.assessment_attempts
@@ -831,7 +838,7 @@ final readonly class AssessmentService
             'score' => $r['score'] !== null ? (int) $r['score'] : null,
             'maxScore' => $r['max_score'] !== null ? (int) $r['max_score'] : null,
             'percentage' => $r['percentage'] !== null ? (float) $r['percentage'] : null,
-            'passed' => $r['passed'] !== null ? Boolean::cast($r['passed']) : null,
+            'passed' => $r['passed'] !== null ? (bool) $r['passed'] : null,
             'startedAt' => (string) $r['started_at'],
             'submittedAt' => $r['submitted_at'] !== null ? (string) $r['submitted_at'] : null,
             'manualReviewNotes' => $r['manual_review_notes'] !== null ? (string) $r['manual_review_notes'] : null,
@@ -848,7 +855,7 @@ final readonly class AssessmentService
         $notes = isset($input['manualReviewNotes']) ? (string) $input['manualReviewNotes'] : null;
         $score = isset($input['score']) ? (int) $input['score'] : null;
         $percentage = isset($input['percentage']) ? (float) $input['percentage'] : null;
-        $passed = isset($input['passed']) ? Boolean::cast($input['passed']) : null;
+        $passed = isset($input['passed']) ? (bool) $input['passed'] : null;
 
         $this->db->createCommand(
             'UPDATE education.assessment_attempts
@@ -880,15 +887,17 @@ final readonly class AssessmentService
      */
     private function buildAttemptResponse(array $assessment, string $attemptId, string $startedAt, array $answers): array
     {
-        $questions = ActivityHandlerRegistry::json($assessment['questions_snapshot'] ?? []);
-        if (Boolean::cast($assessment['shuffle_questions'] ?? false)) {
+        $questionsRaw = ActivityHandlerRegistry::json($assessment['questions_snapshot'] ?? []);
+        /** @var list<array<string, mixed>> $questions */
+        $questions = array_values(array_filter($questionsRaw, 'is_array'));
+        if (!empty($assessment['shuffle_questions'])) {
             shuffle($questions);
         }
 
         $publicQuestions = [];
         foreach ($questions as $q) {
-            $options = $q['options'] ?? [];
-            if (Boolean::cast($assessment['shuffle_options'] ?? false) && is_array($options) && count($options) > 1) {
+            $options = isset($q['options']) && is_array($q['options']) ? $q['options'] : [];
+            if (!empty($assessment['shuffle_options']) && count($options) > 1) {
                 shuffle($options);
             }
             $publicQ = [
@@ -897,7 +906,7 @@ final readonly class AssessmentService
                 'prompt' => (string) ($q['prompt'] ?? ''),
                 'points' => (int) ($q['points'] ?? 1),
             ];
-            if (is_array($options) && $options !== []) {
+            if ($options !== []) {
                 $publicQ['options'] = array_map(static fn(array $opt): array => [
                     'id' => (string) ($opt['id'] ?? ''),
                     'label' => (string) ($opt['label'] ?? ''),

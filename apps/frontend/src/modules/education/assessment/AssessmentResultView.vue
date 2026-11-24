@@ -57,9 +57,7 @@ function formatTime(sec: number): string {
         </span>
       </div>
       <div class="edu-stat-box">
-        <span class="edu-stat-box__val">
-          {{ result.correctQuestions }} / {{ result.totalQuestions }}
-        </span>
+        <span class="edu-stat-box__val">{{ result.correctQuestions }} / {{ result.totalQuestions }}</span>
         <span class="edu-stat-box__label">{{ t('education.answered') }}</span>
       </div>
       <div class="edu-stat-box">
@@ -84,11 +82,7 @@ function formatTime(sec: number): string {
         >
           <header class="edu-breakdown-card__header">
             <span class="edu-breakdown-card__status">
-              {{
-                evalQ.correct
-                  ? '✓ ' + t('education.correctAnswer')
-                  : '✗ ' + t('education.incorrectAnswer')
-              }}
+              {{ evalQ.correct ? '✓ ' + t('education.correctAnswer') : '✗ ' + t('education.incorrectAnswer') }}
             </span>
             <span class="edu-breakdown-card__score">
               {{ evalQ.earnedPoints }} / {{ evalQ.possiblePoints }} {{ t('education.score') }}
@@ -167,21 +161,21 @@ function formatTime(sec: number): string {
 
 .edu-result-banner__icon {
   font-size: var(--type-display-size);
-  line-height: var(--type-display-line);
   font-weight: var(--type-display-weight);
+  line-height: var(--type-display-line);
 }
 
 .edu-result-banner__title {
   font-size: var(--type-h1-size);
-  line-height: var(--type-h1-line);
   font-weight: var(--type-h1-weight);
+  line-height: var(--type-h1-line);
   margin: 0;
 }
 
 .edu-result-banner__subtitle {
   font-size: var(--type-body-medium-size);
-  line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);
+  line-height: var(--type-body-medium-line);
   margin: 0.25rem 0 0;
   opacity: 0.9;
 }
@@ -206,8 +200,8 @@ function formatTime(sec: number): string {
 
 .edu-stat-box__val {
   font-size: var(--type-metric-number-size);
-  line-height: var(--type-metric-number-line);
   font-weight: var(--type-metric-number-weight);
+  line-height: var(--type-metric-number-line);
 }
 
 .edu-stat-box__val--passed {
@@ -220,8 +214,8 @@ function formatTime(sec: number): string {
 
 .edu-stat-box__label {
   font-size: var(--type-body-caption-size);
-  line-height: var(--type-body-caption-line);
   font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
   color: var(--text-2);
 }
 
@@ -232,9 +226,9 @@ function formatTime(sec: number): string {
 }
 
 .edu-result-breakdown__title {
-  font-size: var(--type-h2-size);
-  line-height: var(--type-h2-line);
-  font-weight: var(--type-h2-weight);
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  line-height: var(--type-h3-line);
   margin: 0;
 }
 
@@ -270,8 +264,8 @@ function formatTime(sec: number): string {
 
 .edu-breakdown-card__status {
   font-size: var(--type-body-small-emphasis-size);
-  line-height: var(--type-body-small-emphasis-line);
   font-weight: var(--type-body-small-emphasis-weight);
+  line-height: var(--type-body-small-line);
 }
 
 .edu-breakdown-card--correct .edu-breakdown-card__status {
@@ -284,8 +278,8 @@ function formatTime(sec: number): string {
 
 .edu-breakdown-card__score {
   font-size: var(--type-body-caption-size);
-  line-height: var(--type-body-caption-line);
   font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
   color: var(--text-2);
 }
 
@@ -294,13 +288,11 @@ function formatTime(sec: number): string {
   flex-direction: column;
   gap: 0.25rem;
   font-size: var(--type-body-small-size);
-  line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
+  line-height: var(--type-body-small-line);
 }
 
 .edu-breakdown-label {
-  font-size: var(--type-body-small-emphasis-size);
-  line-height: var(--type-body-small-emphasis-line);
   font-weight: var(--type-body-small-emphasis-weight);
   color: var(--text-2);
   margin-right: 0.375rem;
@@ -316,8 +308,8 @@ function formatTime(sec: number): string {
 
 .edu-breakdown-card__exp {
   font-size: var(--type-body-caption-size);
-  line-height: var(--type-body-caption-line);
   font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
   color: var(--text-2);
   margin: 0;
 }
@@ -328,3 +320,4 @@ function formatTime(sec: number): string {
   padding-top: 1rem;
 }
 </style>
+

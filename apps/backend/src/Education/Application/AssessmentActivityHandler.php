@@ -110,8 +110,10 @@ final class AssessmentActivityHandler implements ActivityPluginInterface
 
         if ($config['shuffleOptions'] ?? false) {
             foreach ($questions as &$q) {
-                if (isset($q['options']) && is_array($q['options']) && count($q['options']) > 1) {
-                    shuffle($q['options']);
+                if (is_array($q) && isset($q['options']) && is_array($q['options']) && count($q['options']) > 1) {
+                    $optionsCopy = $q['options'];
+                    shuffle($optionsCopy);
+                    $q['options'] = $optionsCopy;
                 }
             }
             unset($q);
@@ -133,7 +135,9 @@ final class AssessmentActivityHandler implements ActivityPluginInterface
     public function publicExercise(array $attempt): array
     {
         $exercise = ActivityHandlerRegistry::json($attempt['exercisePayload'] ?? []);
-        $questions = $exercise['questions'] ?? [];
+        $questionsRaw = ActivityHandlerRegistry::json($exercise['questions'] ?? []);
+        /** @var list<array<string, mixed>> $questions */
+        $questions = array_values(array_filter($questionsRaw, 'is_array'));
         $publicQuestions = [];
 
         foreach ($questions as $q) {
@@ -195,7 +199,9 @@ final class AssessmentActivityHandler implements ActivityPluginInterface
         }
 
         $exercise = ActivityHandlerRegistry::json($attempt['exercisePayload'] ?? []);
-        $questions = $exercise['questions'] ?? [];
+        $questionsRaw = ActivityHandlerRegistry::json($exercise['questions'] ?? []);
+        /** @var list<array<string, mixed>> $questions */
+        $questions = array_values(array_filter($questionsRaw, 'is_array'));
         $passingScorePercent = (int) ($exercise['passingScorePercent'] ?? 60);
 
         $earnedPoints = 0;
@@ -219,8 +225,8 @@ final class AssessmentActivityHandler implements ActivityPluginInterface
 
                 case 'multi_choice':
                     if (is_array($clientAnswer) && is_array($answerKey)) {
-                        $cSorted = array_values(array_unique(array_map('strval', $clientAnswer)));
-                        $aSorted = array_values(array_unique(array_map('strval', $answerKey)));
+                        $cSorted = array_values(array_unique(array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $clientAnswer)));
+                        $aSorted = array_values(array_unique(array_map(static fn(mixed $v): string => is_scalar($v) ? (string) $v : '', $answerKey)));
                         sort($cSorted);
                         sort($aSorted);
                         $isCorrect = $cSorted === $aSorted;

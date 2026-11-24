@@ -44,7 +44,7 @@ export interface AssessmentItem {
   description: string;
   status: 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED';
   latestVersionId: string | null;
-  latestVersionNumber?: number;
+  latestVersionNumber?: number | null;
   questionsCount?: number;
   versionsCount?: number;
   attemptsCount?: number;

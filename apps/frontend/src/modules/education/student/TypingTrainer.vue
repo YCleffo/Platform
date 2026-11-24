@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
 import { studentPortalApi, type TypingExercise, type TypingInput, type TypingResult } from './api';
 import { coreAdminSession, coreAdminSessionEpoch } from '@/core/admin/session';
@@ -94,9 +94,7 @@ watch(
 // Unicode Grapheme Cluster Tokenization
 function segmentText(str: string, locale = 'en'): string[] {
   if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
-    const segmenter = new Intl.Segmenter(locale === 'ru' ? 'ru' : 'en', {
-      granularity: 'grapheme',
-    });
+    const segmenter = new Intl.Segmenter(locale === 'ru' ? 'ru' : 'en', { granularity: 'grapheme' });
     return Array.from(segmenter.segment(str), (s) => s.segment);
   }
   return [...str];
@@ -193,13 +191,14 @@ async function start(next = false): Promise<void> {
   lastSampleSecond = 0;
 
   try {
+    const durationSec = ([15, 30, 60].includes(Number(config.value.durationSeconds))
+      ? Number(config.value.durationSeconds)
+      : 30) as 15 | 30 | 60;
     const started = props.homeworkId
       ? await homeworkApi.startActivity(props.organizationId, props.homeworkId)
       : await studentPortalApi.startAttempt(props.organizationId, 'platform-typing', {
           ...config.value,
-          durationSeconds: [15, 30, 60].includes(Number(config.value.durationSeconds))
-            ? (Number(config.value.durationSeconds) as 15 | 30 | 60)
-            : 30,
+          durationSeconds: durationSec,
           ...(props.assignmentId ? { assignmentId: props.assignmentId } : {}),
         });
     if (!current()) return;
@@ -505,9 +504,7 @@ onBeforeUnmount(() => {
         <span class="edu-typing__stat-pill">{{ wpm }} WPM</span>
         <span class="edu-typing__stat-pill">{{ rawWpm }} {{ t('education.rawWpm') }}</span>
         <span class="edu-typing__stat-pill">{{ accuracy }}%</span>
-        <span class="edu-typing__stat-pill">
-          {{ consistency }}% {{ t('education.consistency') }}
-        </span>
+        <span class="edu-typing__stat-pill">{{ consistency }}% {{ t('education.consistency') }}</span>
         <span>{{ t('education.errors') }}: {{ errors }}</span>
       </div>
 
@@ -572,8 +569,7 @@ onBeforeUnmount(() => {
         class="edu-caption"
       >
         {{ focused ? t('education.typingEditHint') : t('education.typingFocusHint') }}
-        {{ t('education.timerContinues') }} ·
-        <kbd class="edu-kbd">{{ t('education.restartHint') }}</kbd>
+        {{ t('education.timerContinues') }} · <kbd class="edu-kbd">{{ t('education.restartHint') }}</kbd>
       </p>
 
       <!-- Action Buttons -->
@@ -605,9 +601,7 @@ onBeforeUnmount(() => {
       <!-- Big Key Metrics Grid -->
       <div class="edu-typing__result-grid">
         <div class="edu-typing__metric-card">
-          <span class="edu-typing__metric-val edu-typing__metric-val--primary">
-            {{ result.wpm }}
-          </span>
+          <span class="edu-typing__metric-val edu-typing__metric-val--primary">{{ result.wpm }}</span>
           <span class="edu-typing__metric-label">WPM</span>
         </div>
         <div class="edu-typing__metric-card">
@@ -667,43 +661,35 @@ onBeforeUnmount(() => {
             stroke="var(--text-2)"
             stroke-width="1.5"
             stroke-dasharray="2 2"
-            :points="
-              wpmSamples
-                .map((s, idx) => {
-                  const x = (idx / (wpmSamples.length - 1)) * 480 + 10;
-                  const maxVal = Math.max(...wpmSamples.map((p) => Math.max(p.rawWpm, p.wpm, 10)));
-                  const y = 110 - (s.rawWpm / maxVal) * 90;
-                  return `${x},${y}`;
-                })
-                .join(' ')
-            "
+            :points="wpmSamples.map((s, idx) => {
+              const x = (idx / (wpmSamples.length - 1)) * 480 + 10;
+              const maxVal = Math.max(...wpmSamples.map(p => Math.max(p.rawWpm, p.wpm, 10)));
+              const y = 110 - (s.rawWpm / maxVal) * 90;
+              return `${x},${y}`;
+            }).join(' ')"
           />
 
           <!-- Net WPM line (solid accent) -->
           <polyline
             fill="none"
-            stroke="var(--accent)"
+            stroke="var(--primary)"
             stroke-width="3"
             stroke-linecap="round"
             stroke-linejoin="round"
-            :points="
-              wpmSamples
-                .map((s, idx) => {
-                  const x = (idx / (wpmSamples.length - 1)) * 480 + 10;
-                  const maxVal = Math.max(...wpmSamples.map((p) => Math.max(p.rawWpm, p.wpm, 10)));
-                  const y = 110 - (s.wpm / maxVal) * 90;
-                  return `${x},${y}`;
-                })
-                .join(' ')
-            "
+            :points="wpmSamples.map((s, idx) => {
+              const x = (idx / (wpmSamples.length - 1)) * 480 + 10;
+              const maxVal = Math.max(...wpmSamples.map(p => Math.max(p.rawWpm, p.wpm, 10)));
+              const y = 110 - (s.wpm / maxVal) * 90;
+              return `${x},${y}`;
+            }).join(' ')"
           />
         </svg>
       </div>
 
       <p>
         {{ t('education.typedCharacters') }}: {{ result.typedCharacters ?? result.keystrokes }} ·
-        {{ result.durationSeconds }} {{ t('education.seconds') }} · {{ t('education.errors') }}:
-        {{ result.errors }}
+        {{ result.durationSeconds }} {{ t('education.seconds') }} ·
+        {{ t('education.errors') }}: {{ result.errors }}
       </p>
       <p class="edu-caption">
         {{ t('education.corrections') }}: {{ corrections }} · {{ t('education.observedErrors') }}:
@@ -754,13 +740,13 @@ onBeforeUnmount(() => {
   background: transparent;
   border: none;
   color: var(--text-2);
-  font-size: var(--type-body-small-emphasis-size);
-  line-height: var(--type-body-small-emphasis-line);
+  font-size: var(--type-body-small-size);
   font-weight: var(--type-body-small-emphasis-weight);
+  line-height: var(--type-body-small-line);
   padding: 0.25rem 0.625rem;
   border-radius: 9999px;
   cursor: pointer;
-  transition: var(--theme-transition);
+  transition: color var(--theme-transition), background var(--theme-transition);
 }
 
 .edu-typing__mode-btn:hover {
@@ -770,8 +756,6 @@ onBeforeUnmount(() => {
 .edu-typing__mode-btn--active {
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: var(--type-body-small-emphasis-size);
-  line-height: var(--type-body-small-emphasis-line);
   font-weight: var(--type-body-small-emphasis-weight);
 }
 
@@ -780,9 +764,9 @@ onBeforeUnmount(() => {
   border: 1px solid var(--border);
   padding: 0.125rem 0.5rem;
   border-radius: 4px;
-  font-size: var(--type-body-caption-size);
-  line-height: var(--type-body-caption-line);
-  font-weight: var(--type-body-caption-weight);
+  font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  line-height: var(--type-body-small-line);
 }
 
 .edu-kbd {
@@ -791,8 +775,8 @@ onBeforeUnmount(() => {
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
   font-size: var(--type-body-caption-size);
-  line-height: var(--type-body-caption-line);
   font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
 }
 
 .edu-typing__result-grid {
@@ -815,8 +799,8 @@ onBeforeUnmount(() => {
 
 .edu-typing__metric-val {
   font-size: var(--type-metric-number-size);
-  line-height: var(--type-metric-number-line);
   font-weight: var(--type-metric-number-weight);
+  line-height: var(--type-metric-number-line);
 }
 
 .edu-typing__metric-val--primary {
@@ -825,8 +809,8 @@ onBeforeUnmount(() => {
 
 .edu-typing__metric-label {
   font-size: var(--type-body-caption-size);
-  line-height: var(--type-body-caption-line);
   font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
   color: var(--text-2);
 }
 

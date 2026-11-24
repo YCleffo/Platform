@@ -129,10 +129,7 @@ onMounted(() => {
           type="button"
           class="edu-btn edu-btn--sm"
           :class="statusFilter === s ? 'edu-btn--primary' : 'edu-btn--secondary'"
-          @click="
-            statusFilter = s;
-            loadAssessments();
-          "
+          @click="statusFilter = s; loadAssessments()"
         >
           {{ s === '' ? t('education.wholeGroup') : s }}
         </button>
@@ -186,9 +183,7 @@ onMounted(() => {
         </header>
 
         <h2 class="edu-assessment-card__title">{{ item.title }}</h2>
-        <p class="edu-assessment-card__desc">
-          {{ item.description || t('education.assessmentStudio') }}
-        </p>
+        <p class="edu-assessment-card__desc">{{ item.description || t('education.assessmentStudio') }}</p>
 
         <div class="edu-assessment-card__meta">
           <div class="edu-assessment-stat">
@@ -200,9 +195,7 @@ onMounted(() => {
             <span class="edu-assessment-stat__label">{{ t('education.completedAttempts') }}</span>
           </div>
           <div class="edu-assessment-stat">
-            <span class="edu-assessment-stat__val">
-              {{ item.avgScore !== null ? `${item.avgScore}%` : '—' }}
-            </span>
+            <span class="edu-assessment-stat__val">{{ item.avgScore !== null ? `${item.avgScore}%` : '—' }}</span>
             <span class="edu-assessment-stat__label">{{ t('education.averageAccuracy') }}</span>
           </div>
         </div>
@@ -387,15 +380,15 @@ onMounted(() => {
 
 .edu-assessment-list-view__title {
   font-size: var(--type-h1-size);
-  line-height: var(--type-h1-line);
   font-weight: var(--type-h1-weight);
+  line-height: var(--type-h1-line);
   margin: 0;
 }
 
 .edu-assessment-list-view__subtitle {
   font-size: var(--type-body-small-size);
-  line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
+  line-height: var(--type-body-small-line);
   color: var(--text-2);
   margin: 0.25rem 0 0;
 }
@@ -441,22 +434,22 @@ onMounted(() => {
 
 .edu-assessment-card__ver {
   font-size: var(--type-body-caption-size);
+  font-weight: var(--type-body-caption-weight);
   line-height: var(--type-body-caption-line);
-  font-weight: var(--type-body-small-emphasis-weight);
   color: var(--text-2);
 }
 
 .edu-assessment-card__title {
-  font-size: var(--type-h2-size);
-  line-height: var(--type-h2-line);
-  font-weight: var(--type-h2-weight);
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  line-height: var(--type-h3-line);
   margin: 0;
 }
 
 .edu-assessment-card__desc {
   font-size: var(--type-body-small-size);
-  line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
+  line-height: var(--type-body-small-line);
   color: var(--text-2);
   margin: 0;
   display: -webkit-box;
@@ -483,15 +476,15 @@ onMounted(() => {
 }
 
 .edu-assessment-stat__val {
-  font-size: var(--type-h2-size);
-  line-height: var(--type-h2-line);
-  font-weight: var(--type-h2-weight);
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  line-height: var(--type-h3-line);
 }
 
 .edu-assessment-stat__label {
-  font-size: var(--type-body-caption-size);
-  line-height: var(--type-body-caption-line);
-  font-weight: var(--type-body-caption-weight);
+  font-size: var(--type-body-ultra-small-size);
+  font-weight: var(--type-body-ultra-small-weight);
+  line-height: var(--type-body-ultra-small-line);
   color: var(--text-2);
 }
 
@@ -508,8 +501,8 @@ onMounted(() => {
   padding: 0.25rem 0.625rem;
   border-radius: 9999px;
   font-size: var(--type-body-caption-size);
+  font-weight: var(--type-body-caption-weight);
   line-height: var(--type-body-caption-line);
-  font-weight: var(--type-body-small-emphasis-weight);
 }
 
 .edu-pill--success {
@@ -563,15 +556,15 @@ onMounted(() => {
 
 .edu-modal__title {
   font-size: var(--type-h2-size);
-  line-height: var(--type-h2-line);
   font-weight: var(--type-h2-weight);
+  line-height: var(--type-h2-line);
   margin: 0;
 }
 
 .edu-modal__subtitle {
   font-size: var(--type-body-caption-size);
-  line-height: var(--type-body-caption-line);
   font-weight: var(--type-body-caption-weight);
+  line-height: var(--type-body-caption-line);
   color: var(--text-2);
   margin: 0.25rem 0 0;
 }
@@ -587,9 +580,9 @@ onMounted(() => {
 .edu-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--type-table-text-size);
-  line-height: var(--type-table-text-line);
-  font-weight: var(--type-table-text-weight);
+  font-size: var(--type-body-small-size);
+  font-weight: var(--type-body-small-weight);
+  line-height: var(--type-body-small-line);
 }
 
 .edu-table th,
@@ -601,9 +594,7 @@ onMounted(() => {
 
 .edu-table th {
   color: var(--text-2);
-  font-size: var(--type-table-header-size);
-  line-height: var(--type-table-header-line);
-  font-weight: var(--type-table-header-weight);
+  font-weight: var(--type-body-small-emphasis-weight);
 }
 
 .edu-review-form {
@@ -618,8 +609,8 @@ onMounted(() => {
 
 .edu-review-form__title {
   font-size: var(--type-body-medium-emphasis-size);
-  line-height: var(--type-body-medium-emphasis-line);
   font-weight: var(--type-body-medium-emphasis-weight);
+  line-height: var(--type-body-medium-emphasis-line);
   margin: 0;
 }
 
@@ -638,3 +629,4 @@ onMounted(() => {
   color: var(--text-2);
 }
 </style>
+

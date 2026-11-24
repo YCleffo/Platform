@@ -153,7 +153,6 @@
       <code><![CDATA[$config['mode']]]></code>
       <code><![CDATA[$end]]></code>
       <code><![CDATA[$end]]></code>
-      <code><![CDATA[$exercise['text'] ?? '']]></code>
       <code><![CDATA[$input['config'] ?? []]]></code>
       <code><![CDATA[$input['state']]]></code>
       <code><![CDATA[$lesson['id']]]></code>
