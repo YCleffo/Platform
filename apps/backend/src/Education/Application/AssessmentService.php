@@ -278,7 +278,7 @@ final readonly class AssessmentService
 
     /**
      * Validates question structure strictly at publication.
-     * @param list<array<string, mixed>> $questions
+     * @param array<array-key, mixed> $questions
      */
     public function validateQuestionDefinitions(array $questions): void
     {
@@ -311,7 +311,7 @@ final readonly class AssessmentService
                 throw new EducationError(422, 'invalid_question_prompt');
             }
 
-            $points = isset($q['points']) ? ActivityHandlerRegistry::integer($q['points'], 1, 100) : 1;
+            ActivityHandlerRegistry::integer($q['points'] ?? 1, 1, 100);
 
             if ($type === 'single_choice' || $type === 'multi_choice') {
                 $options = isset($q['options']) && is_array($q['options']) ? $q['options'] : [];
@@ -354,7 +354,7 @@ final readonly class AssessmentService
                 if (!isset($q['answerKey']) || !is_numeric($q['answerKey'])) {
                     throw new EducationError(422, 'invalid_answer_key');
                 }
-            } elseif ($type === 'short_text') {
+            } else {
                 $answerKey = $q['answerKey'] ?? null;
                 if (is_string($answerKey)) {
                     if (trim($answerKey) === '') {
@@ -388,7 +388,9 @@ final readonly class AssessmentService
 
             $title = isset($input['title']) ? Input::text($input['title'], 200) : $current['title'];
             $instructions = (string) ($input['instructions'] ?? $current['instructions']);
-            $questions = isset($input['questions']) && is_array($input['questions']) ? $input['questions'] : $current['questions'];
+            $rawQuestions = isset($input['questions']) && is_array($input['questions']) ? $input['questions'] : $current['questions'];
+            /** @var array<array-key, mixed> $questions */
+            $questions = is_array($rawQuestions) ? $rawQuestions : [];
 
             // Strict question validation
             $this->validateQuestionDefinitions($questions);
@@ -714,7 +716,8 @@ final readonly class AssessmentService
             $openPractice = (bool) ($assessment['open_practice'] ?? false);
 
             // Verify student assignment authorization and deadline
-            $verifiedAssignmentId = $this->resolveAndVerifyStudentAssignment($scope, $assessmentId, $openPractice, $input['assignmentId'] ?? null);
+            $assignmentId = isset($input['assignmentId']) && is_string($input['assignmentId']) ? $input['assignmentId'] : null;
+            $verifiedAssignmentId = $this->resolveAndVerifyStudentAssignment($scope, $assessmentId, $openPractice, $assignmentId);
 
             // Check if there is an active running attempt
             $running = $this->db->createCommand(
@@ -728,7 +731,7 @@ final readonly class AssessmentService
             if (is_array($running)) {
                 $now = $this->clock ? $this->clock->now()->getTimestamp() : time();
                 $startedTime = strtotime((string) $running['started_at']);
-                $serverElapsed = max(0, $now - $startedTime);
+                $serverElapsed = max(0, $now - ($startedTime !== false ? $startedTime : $now));
                 $timeLimit = $assessment['time_limit_seconds'] !== null ? (int) $assessment['time_limit_seconds'] : null;
 
                 if ($timeLimit !== null && $serverElapsed > ($timeLimit + 30)) {
@@ -738,14 +741,18 @@ final readonly class AssessmentService
                     // Resume existing running attempt
                     /** @var array<string, mixed> $savedAnswers */
                     $savedAnswers = ActivityHandlerRegistry::json($running['answers'] ?? []);
+                    /** @var list<string> $runningQOrder */
+                    $runningQOrder = array_values(array_filter(ActivityHandlerRegistry::json($running['question_order'] ?? []), 'is_string'));
+                    /** @var array<string, list<string>> $runningOptOrder */
+                    $runningOptOrder = ActivityHandlerRegistry::json($running['option_order'] ?? []);
                     return $this->buildAttemptResponse(
                         $assessment,
                         (string) $running['id'],
                         (string) $running['started_at'],
                         $savedAnswers,
                         (int) ($running['revision'] ?? 1),
-                        ActivityHandlerRegistry::json($running['question_order'] ?? []),
-                        ActivityHandlerRegistry::json($running['option_order'] ?? []),
+                        $runningQOrder,
+                        $runningOptOrder,
                     );
                 }
             }
@@ -785,7 +792,8 @@ final readonly class AssessmentService
 
             foreach ($questionsList as $q) {
                 $qId = (string) ($q['id'] ?? '');
-                $opts = isset($q['options']) && is_array($q['options']) ? $q['options'] : [];
+                /** @var list<array<string, mixed>> $opts */
+                $opts = isset($q['options']) && is_array($q['options']) ? array_values(array_filter($q['options'], 'is_array')) : [];
                 if (!empty($assessment['shuffle_options']) && count($opts) > 1) {
                     $optIndices = range(0, count($opts) - 1);
                     shuffle($optIndices);
@@ -876,11 +884,13 @@ final readonly class AssessmentService
             $questionsById[(string) ($q['id'] ?? '')] = $q;
         }
 
-        $questionOrder = ActivityHandlerRegistry::json($attempt['question_order'] ?? []);
+        /** @var list<string> $questionOrder */
+        $questionOrder = array_values(array_filter(ActivityHandlerRegistry::json($attempt['question_order'] ?? []), 'is_string'));
+        /** @var array<string, list<string>> $optionOrder */
         $optionOrder = ActivityHandlerRegistry::json($attempt['option_order'] ?? []);
 
         $orderedQuestions = [];
-        if (is_array($questionOrder) && $questionOrder !== []) {
+        if ($questionOrder !== []) {
             foreach ($questionOrder as $qId) {
                 if (isset($questionsById[$qId])) {
                     $orderedQuestions[] = $questionsById[$qId];
@@ -900,10 +910,12 @@ final readonly class AssessmentService
                 $deadlinePassed = (bool) $attempt['deadline_passed'];
             } elseif (isset($attempt['due_at']) && is_string($attempt['due_at'])) {
                 $now = $this->clock ? $this->clock->now()->getTimestamp() : time();
-                $deadlinePassed = $now >= strtotime($attempt['due_at']);
+                $dueTs = strtotime($attempt['due_at']);
+                $deadlinePassed = $dueTs !== false && $now >= $dueTs;
             } elseif (isset($attempt['dueAt']) && is_string($attempt['dueAt'])) {
                 $now = $this->clock ? $this->clock->now()->getTimestamp() : time();
-                $deadlinePassed = $now >= strtotime($attempt['dueAt']);
+                $dueTs = strtotime($attempt['dueAt']);
+                $deadlinePassed = $dueTs !== false && $now >= $dueTs;
             } elseif (!empty($attempt['assignment_id'])) {
                 $deadline = $this->db->createCommand(
                     'SELECT due_at FROM education.activity_assignments WHERE id = CAST(:id AS uuid)
@@ -916,7 +928,8 @@ final readonly class AssessmentService
 
                 if (is_string($deadline)) {
                     $now = $this->clock ? $this->clock->now()->getTimestamp() : time();
-                    $deadlinePassed = $now >= strtotime($deadline);
+                    $dueTs = strtotime($deadline);
+                    $deadlinePassed = $dueTs !== false && $now >= $dueTs;
                 }
             }
         }
@@ -931,9 +944,10 @@ final readonly class AssessmentService
         $publicQuestions = [];
         foreach ($orderedQuestions as $q) {
             $qId = (string) ($q['id'] ?? '');
-            $options = isset($q['options']) && is_array($q['options']) ? $q['options'] : [];
+            /** @var list<array<string, mixed>> $options */
+            $options = isset($q['options']) && is_array($q['options']) ? array_values(array_filter($q['options'], 'is_array')) : [];
 
-            if (isset($optionOrder[$qId]) && is_array($optionOrder[$qId])) {
+            if (isset($optionOrder[$qId])) {
                 $optsById = [];
                 foreach ($options as $opt) {
                     $optsById[(string) ($opt['id'] ?? '')] = $opt;
@@ -1047,7 +1061,7 @@ final readonly class AssessmentService
         // Time limit check
         $now = $this->clock ? $this->clock->now()->getTimestamp() : time();
         $startedTime = strtotime((string) $attempt['started_at']);
-        $serverElapsed = max(0, $now - $startedTime);
+        $serverElapsed = max(0, $now - ($startedTime !== false ? $startedTime : $now));
         $timeLimit = $attempt['time_limit_seconds'] !== null ? (int) $attempt['time_limit_seconds'] : null;
         if ($timeLimit !== null && $serverElapsed > ($timeLimit + 30)) {
             throw new EducationError(409, 'attempt_time_expired');
@@ -1114,7 +1128,7 @@ final readonly class AssessmentService
 
             $now = $this->clock ? $this->clock->now()->getTimestamp() : time();
             $startedTime = strtotime((string) $attempt['started_at']);
-            $serverElapsed = max(0, $now - $startedTime);
+            $serverElapsed = max(0, $now - ($startedTime !== false ? $startedTime : $now));
             $timeLimit = $attempt['time_limit_seconds'] !== null ? (int) $attempt['time_limit_seconds'] : null;
             $elapsedSeconds = $timeLimit !== null ? min($serverElapsed, $timeLimit) : $serverElapsed;
 
@@ -1243,9 +1257,6 @@ final readonly class AssessmentService
             $passed = $percentage >= $passingScore;
 
             $history = ActivityHandlerRegistry::json($attempt['review_history'] ?? []);
-            if (!is_array($history)) {
-                $history = [];
-            }
             $history[] = [
                 'reviewedByPersonId' => $scope->personId,
                 'reviewedAt' => date(DATE_ATOM),
@@ -1340,7 +1351,8 @@ final readonly class AssessmentService
 
         if (is_array($hw)) {
             if ($hw['due_at'] !== null && empty($hw['allow_late'])) {
-                if ($now > (strtotime((string) $hw['due_at']) + 30)) {
+                $dueTs = strtotime((string) $hw['due_at']);
+                if ($dueTs !== false && $now > ($dueTs + 30)) {
                     throw new EducationError(409, 'assignment_deadline_passed');
                 }
             }
@@ -1348,11 +1360,17 @@ final readonly class AssessmentService
         }
 
         if (is_array($act)) {
-            if ($act['opens_at'] !== null && $now < strtotime((string) $act['opens_at'])) {
-                throw new EducationError(403, 'assignment_not_started');
+            if ($act['opens_at'] !== null) {
+                $opensTs = strtotime((string) $act['opens_at']);
+                if ($opensTs !== false && $now < $opensTs) {
+                    throw new EducationError(403, 'assignment_not_started');
+                }
             }
-            if ($act['due_at'] !== null && $now > (strtotime((string) $act['due_at']) + 30)) {
-                throw new EducationError(409, 'assignment_deadline_passed');
+            if ($act['due_at'] !== null) {
+                $dueTs = strtotime((string) $act['due_at']);
+                if ($dueTs !== false && $now > ($dueTs + 30)) {
+                    throw new EducationError(409, 'assignment_deadline_passed');
+                }
             }
             return (string) $act['id'];
         }
@@ -1443,9 +1461,10 @@ final readonly class AssessmentService
         $publicQuestions = [];
         foreach ($orderedQuestions as $q) {
             $qId = (string) ($q['id'] ?? '');
-            $options = isset($q['options']) && is_array($q['options']) ? $q['options'] : [];
+            /** @var list<array<string, mixed>> $options */
+            $options = isset($q['options']) && is_array($q['options']) ? array_values(array_filter($q['options'], 'is_array')) : [];
 
-            if (isset($optionOrder[$qId]) && is_array($optionOrder[$qId])) {
+            if (isset($optionOrder[$qId])) {
                 $optsById = [];
                 foreach ($options as $opt) {
                     $optsById[(string) ($opt['id'] ?? '')] = $opt;

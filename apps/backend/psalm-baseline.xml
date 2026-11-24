@@ -540,29 +540,14 @@
   </file>
   <file src="src/Education/Application/TypingActivityHandler.php">
     <MixedArgument>
-      <code><![CDATA[$config['difficulty']]]></code>
       <code><![CDATA[$config['durationSeconds']]]></code>
       <code><![CDATA[$config['durationSeconds']]]></code>
-      <code><![CDATA[$config['language']]]></code>
-      <code><![CDATA[$config['mode']]]></code>
-      <code><![CDATA[$correct / 5 / ($config['durationSeconds'] / 60)]]></code>
       <code><![CDATA[$exercise['configSnapshot'] ?? ActivityHandlerRegistry::json($attempt['config'] ?? [])]]></code>
       <code><![CDATA[$part]]></code>
-      <code><![CDATA[500 * 5 * $config['durationSeconds'] / 60]]></code>
     </MixedArgument>
     <MixedArgumentTypeCoercion>
       <code><![CDATA[$parts]]></code>
     </MixedArgumentTypeCoercion>
-    <MixedOperand>
-      <code><![CDATA[$config['durationSeconds']]]></code>
-      <code><![CDATA[$config['durationSeconds']]]></code>
-      <code><![CDATA[$config['durationSeconds'] / 60]]></code>
-      <code><![CDATA[500 * 5 * $config['durationSeconds']]]></code>
-    </MixedOperand>
-    <PossiblyUndefinedArrayOffset>
-      <code><![CDATA[$out[$key]]]></code>
-      <code><![CDATA[$out[$key]]]></code>
-    </PossiblyUndefinedArrayOffset>
   </file>
   <file src="src/Education/Infrastructure/ActivityAwardNotifications.php">
     <MixedArgument>

@@ -34,7 +34,7 @@ final class TypingActivityHandler implements ActivityPluginInterface
             'type' => 'object',
             'properties' => [
                 'language' => ['type' => 'string', 'enum' => ['ru', 'en']],
-                'durationSeconds' => ['type' => 'integer', 'minimum' => 10, 'maximum' => 3600],
+                'durationSeconds' => ['type' => 'integer', 'enum' => [15, 30, 60, 120]],
                 'mode' => ['type' => 'string', 'enum' => ['words', 'time', 'sentences', 'numbers', 'code', 'accuracy', 'zen', 'quote', 'custom']],
                 'wordCount' => ['type' => 'integer', 'minimum' => 5, 'maximum' => 1000],
                 'difficulty' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 3],
@@ -49,7 +49,7 @@ final class TypingActivityHandler implements ActivityPluginInterface
     {
         return [
             'language' => 'en',
-            'durationSeconds' => 30,
+            'durationSeconds' => 15,
             'mode' => 'words',
             'wordCount' => 25,
             'difficulty' => 1,
@@ -66,7 +66,7 @@ final class TypingActivityHandler implements ActivityPluginInterface
         if (!in_array($out['language'], ['ru', 'en'], true)) {
             throw new EducationError(422, 'invalid_input');
         }
-        if (!is_int($out['durationSeconds']) || $out['durationSeconds'] < 10 || $out['durationSeconds'] > 3600) {
+        if (!is_int($out['durationSeconds']) || !in_array($out['durationSeconds'], [15, 30, 60, 120], true)) {
             throw new EducationError(422, 'invalid_input');
         }
         if (!in_array($out['mode'], ['words', 'time', 'sentences', 'numbers', 'code', 'accuracy', 'zen', 'quote', 'custom'], true)) {
@@ -90,8 +90,10 @@ final class TypingActivityHandler implements ActivityPluginInterface
 
     public function createExercise(array $config, ?array $set = null): array
     {
-        $mode = $config['mode'] ?? 'words';
-        $texts = $set === null ? TypingExerciseSets::texts($config['language'], $mode, $config['difficulty'])
+        $mode = isset($config['mode']) && is_string($config['mode']) ? $config['mode'] : 'words';
+        $language = isset($config['language']) && is_string($config['language']) ? $config['language'] : 'en';
+        $difficulty = isset($config['difficulty']) && is_int($config['difficulty']) ? $config['difficulty'] : 1;
+        $texts = $set === null ? TypingExerciseSets::texts($language, $mode, $difficulty)
             : ActivityHandlerRegistry::json($set['content'] ?? []);
         if ($texts === [] || !array_is_list($texts) || count(array_filter($texts, 'is_string')) !== count($texts)) {
             throw new EducationError(503, 'exercise_unavailable');
@@ -102,7 +104,8 @@ final class TypingActivityHandler implements ActivityPluginInterface
             $wordCount = isset($config['wordCount']) && is_int($config['wordCount']) ? $config['wordCount'] : 25;
             $allWords = [];
             foreach ($texts as $chunk) {
-                foreach (preg_split('/\s+/', trim($chunk)) ?: [] as $w) {
+                $chunkStr = is_string($chunk) ? trim($chunk) : '';
+                foreach (preg_split('/\s+/', $chunkStr) ?: [] as $w) {
                     if ($w !== '') {
                         $allWords[] = $w;
                     }
@@ -122,7 +125,8 @@ final class TypingActivityHandler implements ActivityPluginInterface
             ];
         }
 
-        $maximum = (int) ceil(500 * 5 * $config['durationSeconds'] / 60);
+        $durationSec = isset($config['durationSeconds']) && is_int($config['durationSeconds']) ? $config['durationSeconds'] : 30;
+        $maximum = (int) ceil(500 * 5 * $durationSec / 60);
         $target = max(50, $maximum - 100);
         $parts = [];
         $length = 0;
@@ -177,7 +181,8 @@ final class TypingActivityHandler implements ActivityPluginInterface
             throw new EducationError(422, 'invalid_input');
         }
 
-        $effectiveDuration = $config['durationSeconds'];
+        $configuredDuration = isset($config['durationSeconds']) && is_int($config['durationSeconds']) ? $config['durationSeconds'] : 30;
+        $effectiveDuration = $configuredDuration;
         $isWordOrZen = in_array($config['mode'], ['words', 'zen', 'custom', 'sentences', 'quote', 'code'], true);
         if ($isWordOrZen && isset($input['elapsedSeconds'])) {
             if ((!is_int($input['elapsedSeconds']) && !is_float($input['elapsedSeconds'])) || $input['elapsedSeconds'] <= 0) {
@@ -188,7 +193,7 @@ final class TypingActivityHandler implements ActivityPluginInterface
             throw new EducationError(422, 'invalid_input');
         }
 
-        $typed = $this->typed($input['typed'] ?? null, max($effectiveDuration, $config['durationSeconds']));
+        $typed = $this->typed($input['typed'] ?? null, max($effectiveDuration, $configuredDuration));
         foreach (['corrections', 'inputErrors'] as $key) {
             if (isset($input[$key])) {
                 ActivityHandlerRegistry::integer($input[$key], 0, 100000);
@@ -204,8 +209,9 @@ final class TypingActivityHandler implements ActivityPluginInterface
         }
         $count = count($chars);
         $accuracy = $count > 0 ? round($correct / $count * 100, 2) : 0.0;
-        $wpm = round($correct / 5 / ($effectiveDuration / 60), 1);
-        $rawWpm = round($count / 5 / ($effectiveDuration / 60), 1);
+        $durationMinutes = (float) $effectiveDuration / 60.0;
+        $wpm = $durationMinutes > 0.0 ? round(((float) $correct / 5.0) / $durationMinutes, 1) : 0.0;
+        $rawWpm = $durationMinutes > 0.0 ? round(((float) $count / 5.0) / $durationMinutes, 1) : 0.0;
 
         $result = [
             'durationSeconds' => $effectiveDuration,
@@ -233,7 +239,7 @@ final class TypingActivityHandler implements ActivityPluginInterface
         ];
         return [
             'type' => 'typing',
-            'version' => 3,
+            'version' => 2,
             'metrics' => $result,
             'requestHash' => hash('sha256', json_encode($canonical, JSON_THROW_ON_ERROR)),
             'evidence' => [
