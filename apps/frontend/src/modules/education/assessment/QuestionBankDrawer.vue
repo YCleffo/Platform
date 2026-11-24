@@ -95,10 +95,7 @@ onMounted(() => {
             type="button"
             class="edu-btn edu-btn--sm"
             :class="selectedDifficulty === d ? 'edu-btn--primary' : 'edu-btn--secondary'"
-            @click="
-              selectedDifficulty = d;
-              loadQuestions();
-            "
+            @click="selectedDifficulty = d; loadQuestions()"
           >
             {{ d === null ? t('education.wholeGroup') : `${d} · ${t(`education.difficulty${d}`)}` }}
           </button>
@@ -272,3 +269,4 @@ onMounted(() => {
   color: var(--text-2);
 }
 </style>
+

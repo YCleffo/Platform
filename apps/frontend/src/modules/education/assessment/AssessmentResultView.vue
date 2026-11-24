@@ -57,9 +57,7 @@ function formatTime(sec: number): string {
         </span>
       </div>
       <div class="edu-stat-box">
-        <span class="edu-stat-box__val">
-          {{ result.correctQuestions }} / {{ result.totalQuestions }}
-        </span>
+        <span class="edu-stat-box__val">{{ result.correctQuestions }} / {{ result.totalQuestions }}</span>
         <span class="edu-stat-box__label">{{ t('education.answered') }}</span>
       </div>
       <div class="edu-stat-box">
@@ -84,11 +82,7 @@ function formatTime(sec: number): string {
         >
           <header class="edu-breakdown-card__header">
             <span class="edu-breakdown-card__status">
-              {{
-                evalQ.correct
-                  ? '✓ ' + t('education.correctAnswer')
-                  : '✗ ' + t('education.incorrectAnswer')
-              }}
+              {{ evalQ.correct ? '✓ ' + t('education.correctAnswer') : '✗ ' + t('education.incorrectAnswer') }}
             </span>
             <span class="edu-breakdown-card__score">
               {{ evalQ.earnedPoints }} / {{ evalQ.possiblePoints }} {{ t('education.score') }}
@@ -326,3 +320,4 @@ function formatTime(sec: number): string {
   padding-top: 1rem;
 }
 </style>
+

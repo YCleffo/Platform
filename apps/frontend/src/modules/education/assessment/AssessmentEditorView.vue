@@ -31,9 +31,7 @@ const timeLimitSeconds = ref<number | null>(1800);
 const maxAttempts = ref(1);
 const shuffleQuestions = ref(false);
 const shuffleOptions = ref(false);
-const revealAnswersPolicy = ref<'never' | 'immediate' | 'after_grading' | 'deadline'>(
-  'after_grading',
-);
+const revealAnswersPolicy = ref<'never' | 'immediate' | 'after_grading' | 'deadline'>('after_grading');
 const gradingPolicy = ref<'highest' | 'latest' | 'average'>('highest');
 const questions = ref<AssessmentQuestion[]>([]);
 
@@ -43,7 +41,9 @@ const publishing = ref(false);
 const showBankDrawer = ref(false);
 const toastMessage = ref<string | null>(null);
 
-const totalPoints = computed(() => questions.value.reduce((acc, q) => acc + (q.points || 1), 0));
+const totalPoints = computed(() =>
+  questions.value.reduce((acc, q) => acc + (q.points || 1), 0),
+);
 
 function showToast(msg: string): void {
   toastMessage.value = msg;
@@ -259,8 +259,7 @@ onMounted(() => {
           {{ assessmentId ? t('education.editAssessment') : t('education.createAssessment') }}
         </h1>
         <p class="edu-assessment-editor__subtitle">
-          {{ t('education.assessmentStudio') }} · {{ questions.length }}
-          {{ t('education.questionsCount') }} ({{ totalPoints }} {{ t('education.score') }})
+          {{ t('education.assessmentStudio') }} · {{ questions.length }} {{ t('education.questionsCount') }} ({{ totalPoints }} {{ t('education.score') }})
         </p>
       </div>
 
@@ -630,15 +629,10 @@ onMounted(() => {
                 <label class="edu-field">
                   <span class="edu-field__label">{{ t('education.acceptedAnswers') }}</span>
                   <input
-                    :value="Array.isArray(q.answerKey) ? q.answerKey.join(', ') : q.answerKey || ''"
+                    :value="Array.isArray(q.answerKey) ? q.answerKey.join(', ') : (q.answerKey || '')"
                     type="text"
                     class="edu-input"
-                    @input="
-                      q.answerKey = ($event.target as HTMLInputElement).value
-                        .split(',')
-                        .map((s) => s.trim())
-                        .filter(Boolean)
-                    "
+                    @input="q.answerKey = ($event.target as HTMLInputElement).value.split(',').map(s => s.trim()).filter(Boolean)"
                   />
                 </label>
               </div>

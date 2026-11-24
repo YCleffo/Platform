@@ -43,12 +43,7 @@ const answeredCount = computed(() => {
   let count = 0;
   for (const q of questions.value) {
     const ans = answers.value[q.id];
-    if (
-      ans !== undefined &&
-      ans !== null &&
-      ans !== '' &&
-      !(Array.isArray(ans) && ans.length === 0)
-    ) {
+    if (ans !== undefined && ans !== null && ans !== '' && !(Array.isArray(ans) && ans.length === 0)) {
       count++;
     }
   }
@@ -224,9 +219,7 @@ onUnmounted(() => {
           <div
             v-if="formattedTimeLeft !== null"
             class="edu-runner__timer"
-            :class="{
-              'edu-runner__timer--urgent': remainingSeconds !== null && remainingSeconds < 120,
-            }"
+            :class="{ 'edu-runner__timer--urgent': remainingSeconds !== null && remainingSeconds < 120 }"
           >
             <span class="edu-runner__timer-icon">⏱</span>
             <span class="edu-runner__timer-val">{{ formattedTimeLeft }}</span>
@@ -275,7 +268,9 @@ onUnmounted(() => {
         class="edu-runner__card"
       >
         <div class="edu-runner__card-header">
-          <span class="edu-runner__card-idx">{{ currentIndex + 1 }} / {{ questions.length }}</span>
+          <span class="edu-runner__card-idx">
+            {{ currentIndex + 1 }} / {{ questions.length }}
+          </span>
           <span class="edu-badge edu-badge--neutral">
             {{ currentQuestion.points }} {{ t('education.score') }}
           </span>
@@ -341,10 +336,7 @@ onUnmounted(() => {
             type="button"
             class="edu-runner__option edu-runner__option--tf"
             :class="{ 'edu-runner__option--selected': answers[currentQuestion.id] === true }"
-            @click="
-              answers[currentQuestion.id] = true;
-              debouncedSave();
-            "
+            @click="answers[currentQuestion.id] = true; debouncedSave()"
           >
             {{ t('education.correctAnswer') }} (True)
           </button>
@@ -352,10 +344,7 @@ onUnmounted(() => {
             type="button"
             class="edu-runner__option edu-runner__option--tf"
             :class="{ 'edu-runner__option--selected': answers[currentQuestion.id] === false }"
-            @click="
-              answers[currentQuestion.id] = false;
-              debouncedSave();
-            "
+            @click="answers[currentQuestion.id] = false; debouncedSave()"
           >
             {{ t('education.incorrectAnswer') }} (False)
           </button>
@@ -567,10 +556,7 @@ onUnmounted(() => {
   line-height: var(--type-body-small-line);
   cursor: pointer;
   position: relative;
-  transition:
-    color var(--theme-transition),
-    background var(--theme-transition),
-    border-color var(--theme-transition);
+  transition: color var(--theme-transition), background var(--theme-transition), border-color var(--theme-transition);
 }
 
 .edu-runner__nav-btn--current {
@@ -643,10 +629,7 @@ onUnmounted(() => {
   font-size: var(--type-body-medium-size);
   font-weight: var(--type-body-medium-weight);
   line-height: var(--type-body-medium-line);
-  transition:
-    color var(--theme-transition),
-    background var(--theme-transition),
-    border-color var(--theme-transition);
+  transition: color var(--theme-transition), background var(--theme-transition), border-color var(--theme-transition);
 }
 
 .edu-runner__option:hover {

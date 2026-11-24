@@ -27977,7 +27977,7 @@
         },
         {
           "file": "apps/frontend/src/modules/education/student/TypingTrainer.vue",
-          "line": 274,
+          "line": 278,
           "routes": [
             "education-student-typing"
           ]
@@ -33293,7 +33293,7 @@
       "ui": [
         {
           "file": "apps/frontend/src/modules/education/student/TypingTrainer.vue",
-          "line": 199,
+          "line": 203,
           "routes": [
             "education-student-typing"
           ]
@@ -33581,7 +33581,7 @@
         },
         {
           "file": "apps/frontend/src/modules/education/student/TypingTrainer.vue",
-          "line": 198,
+          "line": 202,
           "routes": [
             "education-student-typing"
           ]
@@ -36490,7 +36490,7 @@
         },
         {
           "file": "apps/frontend/src/modules/education/student/TypingTrainer.vue",
-          "line": 293,
+          "line": 297,
           "routes": [
             "education-student-typing"
           ]
@@ -36585,7 +36585,7 @@
         },
         {
           "file": "apps/frontend/src/modules/education/student/TypingTrainer.vue",
-          "line": 265,
+          "line": 269,
           "routes": [
             "education-student-typing"
           ]
