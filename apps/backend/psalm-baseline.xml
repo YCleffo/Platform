@@ -514,21 +514,6 @@
       <code><![CDATA[$choices]]></code>
     </PossiblyUndefinedVariable>
   </file>
-  <file src="src/Education/Application/MathSprintActivityHandler.php">
-    <MixedArgument>
-      <code><![CDATA[$problems]]></code>
-      <code><![CDATA[($config['durationSeconds'] ?? 60) * 0.8]]></code>
-    </MixedArgument>
-    <MixedArrayAccess>
-      <code><![CDATA[$ans['id']]]></code>
-      <code><![CDATA[$ans['value']]]></code>
-      <code><![CDATA[$p['answer']]]></code>
-      <code><![CDATA[$p['id']]]></code>
-    </MixedArrayAccess>
-    <MixedOperand>
-      <code><![CDATA[$config['durationSeconds'] ?? 60]]></code>
-    </MixedOperand>
-  </file>
   <file src="src/Education/Application/ParentFamily.php">
     <MixedArgument>
       <code><![CDATA[$invite['created_by_account_id']]]></code>
@@ -569,10 +554,6 @@
     </ArgumentTypeCoercion>
     <MixedArgument>
       <code><![CDATA[$a['id']]]></code>
-      <code><![CDATA[$contacts]]></code>
-      <code><![CDATA[$end]]></code>
-      <code><![CDATA[$end]]></code>
-      <code><![CDATA[$end]]></code>
       <code><![CDATA[$fact['id']]]></code>
       <code><![CDATA[$g['id']]]></code>
       <code><![CDATA[$games['typing']['history']]]></code>
@@ -581,8 +562,6 @@
       <code><![CDATA[$p['groupId']]]></code>
       <code><![CDATA[$p['programId']]]></code>
       <code><![CDATA[$page['items']]]></code>
-      <code><![CDATA[$peerId]]></code>
-      <code><![CDATA[$peerId]]></code>
       <code><![CDATA[$programs]]></code>
       <code><![CDATA[$row['groupId']]]></code>
       <code><![CDATA[$row['groupId']]]></code>
@@ -591,10 +570,6 @@
       <code><![CDATA[$row['id']]]></code>
       <code><![CDATA[$row['id']]]></code>
       <code><![CDATA[$row['organizationId']]]></code>
-      <code><![CDATA[$start]]></code>
-      <code><![CDATA[$start]]></code>
-      <code><![CDATA[$start]]></code>
-      <code><![CDATA[$this->contacts($scope)['items']]]></code>
       <code><![CDATA[$this->homework($scope, 0)['items']]]></code>
     </MixedArgument>
     <MixedArgumentTypeCoercion>
@@ -608,45 +583,11 @@
       <code><![CDATA[$games['typing']['history']]]></code>
       <code><![CDATA[$lesson['endsAt']]]></code>
       <code><![CDATA[$lesson['status']]]></code>
-      <code><![CDATA[$message['id']]]></code>
-      <code><![CDATA[$message['id']]]></code>
-      <code><![CDATA[$message['kind']]]></code>
-      <code><![CDATA[$message['mediaAssetId']]]></code>
-      <code><![CDATA[$message['mediaAssetId']]]></code>
-      <code><![CDATA[$message['mediaKind']]]></code>
-      <code><![CDATA[$message['mediaKind']]]></code>
-      <code><![CDATA[$message['mediaMime']]]></code>
-      <code><![CDATA[$message['mediaMime']]]></code>
-      <code><![CDATA[$message['mediaName']]]></code>
-      <code><![CDATA[$message['mediaName']]]></code>
-      <code><![CDATA[$message['mediaSize']]]></code>
-      <code><![CDATA[$message['mediaSize']]]></code>
-      <code><![CDATA[$message['mediaStatus']]]></code>
-      <code><![CDATA[$message['mediaStatus']]]></code>
-      <code><![CDATA[$message['metadataJson']]]></code>
-      <code><![CDATA[$message['metadataJson']]]></code>
-      <code><![CDATA[$message['replyBody']]]></code>
-      <code><![CDATA[$message['replyBody']]]></code>
-      <code><![CDATA[$message['replySenderPersonId']]]></code>
-      <code><![CDATA[$message['replySenderPersonId']]]></code>
-      <code><![CDATA[$message['replyToId']]]></code>
-      <code><![CDATA[$message['replyToId']]]></code>
-      <code><![CDATA[$message['senderPersonId']]]></code>
-      <code><![CDATA[$peer['id']]]></code>
-      <code><![CDATA[$r['count']]]></code>
-      <code><![CDATA[$r['emoji']]]></code>
-      <code><![CDATA[$r['reacted']]]></code>
-      <code><![CDATA[$row['contextId']]]></code>
-      <code><![CDATA[$row['contextName']]]></code>
       <code><![CDATA[$row['groupId']]]></code>
       <code><![CDATA[$row['id']]]></code>
       <code><![CDATA[$row['id']]]></code>
       <code><![CDATA[$row['id']]]></code>
       <code><![CDATA[$row['organizationId']]]></code>
-      <code><![CDATA[$row['peerPersonId']]]></code>
-      <code><![CDATA[$row['personId']]]></code>
-      <code><![CDATA[$row['personId']]]></code>
-      <code><![CDATA[$row['personId']]]></code>
       <code><![CDATA[$row['reviewComment']]]></code>
       <code><![CDATA[$row['reviewComment']]]></code>
       <code><![CDATA[$row['reviewCreatedAt']]]></code>
@@ -657,33 +598,14 @@
       <code><![CDATA[$row['reviewResultStatus']]]></code>
       <code><![CDATA[$row['reviewResultStatus']]]></code>
       <code><![CDATA[$row['status']]]></code>
-      <code><![CDATA[$rr['count']]]></code>
-      <code><![CDATA[$rr['emoji']]]></code>
-      <code><![CDATA[$rr['messageId']]]></code>
-      <code><![CDATA[$rr['reacted']]]></code>
     </MixedArrayAccess>
     <MixedArrayAssignment>
-      <code><![CDATA[$message['body']]]></code>
-      <code><![CDATA[$message['media']]]></code>
-      <code><![CDATA[$message['media']]]></code>
-      <code><![CDATA[$message['metadata']]]></code>
-      <code><![CDATA[$message['reactions']]]></code>
-      <code><![CDATA[$message['replyTo']]]></code>
-      <code><![CDATA[$message['replyTo']]]></code>
-      <code><![CDATA[$message['senderName']]]></code>
-      <code><![CDATA[$row['peerName']]]></code>
-      <code><![CDATA[$row['peerRole']]]></code>
       <code><![CDATA[$row['review']]]></code>
     </MixedArrayAssignment>
     <MixedArrayOffset>
       <code><![CDATA[$counts[$row['status']]]]></code>
       <code><![CDATA[$counts[$row['status']]]]></code>
-      <code><![CDATA[$reactionsByMessage[$message['id']]]]></code>
-      <code><![CDATA[$reactionsByMessage[$rr['messageId']]]]></code>
     </MixedArrayOffset>
-    <RedundantCast>
-      <code><![CDATA[(string) $rawKind]]></code>
-    </RedundantCast>
   </file>
   <file src="src/Education/Application/StudentFamily.php">
     <MixedArgument>
@@ -892,11 +814,6 @@
       <code><![CDATA[$evaluation['requestHash']]]></code>
       <code><![CDATA[$payload['typedSha256']]]></code>
       <code><![CDATA[$row['requestHash']]]></code>
-      <code><![CDATA[array_column($this->all(
-            'SELECT organization_id::text AS org FROM education.student_accounts
-            WHERE account_id=CAST(:account AS uuid) AND revoked_at IS NULL',
-            [':account' => $accountId],
-        ), 'org')]]></code>
     </MixedArgument>
     <MixedArgumentTypeCoercion>
       <code><![CDATA[[':attempt' => $attemptId, ':org' => $scope->organizationId, ':student' => (string) $scope->studentId,
@@ -922,10 +839,6 @@
       <code><![CDATA[$stored['typedLength']]]></code>
       <code><![CDATA[$stored['typedSha256']]]></code>
     </MixedArrayAccess>
-    <MixedArrayOffset>
-      <code><![CDATA[$reactionsByMessage[$row['id']]]]></code>
-      <code><![CDATA[$reactionsByMessage[$rr['messageId']]]]></code>
-    </MixedArrayOffset>
     <MoreSpecificReturnType>
       <code><![CDATA[?array]]></code>
       <code><![CDATA[?array]]></code>
@@ -941,8 +854,6 @@
       <code><![CDATA[$stored['typedSha256']]]></code>
     </PossiblyNullArrayAccess>
     <RedundantFunctionCall>
-      <code><![CDATA[array_values]]></code>
-      <code><![CDATA[array_values]]></code>
       <code><![CDATA[array_values]]></code>
     </RedundantFunctionCall>
   </file>

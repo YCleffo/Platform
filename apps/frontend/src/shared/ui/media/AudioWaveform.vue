@@ -96,7 +96,9 @@ function handleClick(event: MouseEvent): void {
   min-width: 2px;
   border-radius: 1px;
   background-color: var(--border-default, rgba(255, 255, 255, 0.2));
-  transition: background-color var(--theme-transition), height var(--theme-transition);
+  transition:
+    background-color var(--theme-transition),
+    height var(--theme-transition);
 }
 
 .app-audio-waveform__bar--played {

@@ -670,17 +670,23 @@ final readonly class PostgresEducationStore implements EducationStore
             [...self::recipient($scope), ':id' => $threadId],
         );
 
+        /** @var array<string, list<array{emoji: string, count: int, reacted: bool}>> $reactionsByMessage */
         $reactionsByMessage = [];
+        /** @var array<string, mixed> $rr */
         foreach ($reactionsRows as $rr) {
-            $reactionsByMessage[$rr['messageId']][] = [
-                'emoji' => $rr['emoji'],
-                'count' => (int) $rr['count'],
-                'reacted' => (bool) $rr['reacted'],
-            ];
+            $msgId = is_scalar($rr['messageId'] ?? null) ? (string) $rr['messageId'] : '';
+            if ($msgId !== '') {
+                $reactionsByMessage[$msgId][] = [
+                    'emoji' => is_scalar($rr['emoji'] ?? null) ? (string) $rr['emoji'] : '',
+                    'count' => (int) ($rr['count'] ?? 0),
+                    'reacted' => (bool) ($rr['reacted'] ?? false),
+                ];
+            }
         }
 
         foreach ($rows as &$row) {
-            $row['reactions'] = $reactionsByMessage[$row['id']] ?? [];
+            $rowId = is_scalar($row['id'] ?? null) ? (string) $row['id'] : '';
+            $row['reactions'] = $reactionsByMessage[$rowId] ?? [];
             if ($row['mediaAssetId'] !== null) {
                 $row['media'] = [
                     'id' => $row['mediaAssetId'],
@@ -1169,12 +1175,19 @@ final readonly class PostgresEducationStore implements EducationStore
     /** @return list<string> */
     public function studentOrganizations(string $accountId): array
     {
-        /** @var list<string> */
-        return array_values(array_map('strval', array_column($this->all(
+        $rows = $this->all(
             'SELECT organization_id::text AS org FROM education.student_accounts
             WHERE account_id=CAST(:account AS uuid) AND revoked_at IS NULL',
             [':account' => $accountId],
-        ), 'org')));
+        );
+        $result = [];
+        /** @var array<string, mixed> $r */
+        foreach ($rows as $r) {
+            if (isset($r['org']) && is_scalar($r['org'])) {
+                $result[] = (string) $r['org'];
+            }
+        }
+        return $result;
     }
 
     public function studentGroupList(Scope $scope): array
@@ -1855,7 +1868,7 @@ final readonly class PostgresEducationStore implements EducationStore
     private static function inParams(string $prefix, array $ids): array
     {
         $params = [];
-        foreach (array_values($ids) as $index => $id) {
+        foreach ($ids as $index => $id) {
             $params[$prefix . $index] = $id;
         }
         return $params;

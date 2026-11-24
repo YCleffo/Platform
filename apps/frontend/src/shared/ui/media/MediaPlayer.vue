@@ -42,7 +42,10 @@ const resolvedName = computed(() => {
       :src="resolvedSrc"
     />
 
-    <div v-else-if="resolvedKind === 'image'" class="app-media-player__image-wrapper">
+    <div
+      v-else-if="resolvedKind === 'image'"
+      class="app-media-player__image-wrapper"
+    >
       <img
         :src="resolvedSrc"
         :alt="resolvedName"
@@ -51,7 +54,10 @@ const resolvedName = computed(() => {
       />
     </div>
 
-    <div v-else-if="resolvedKind === 'video'" class="app-media-player__video-wrapper">
+    <div
+      v-else-if="resolvedKind === 'video'"
+      class="app-media-player__video-wrapper"
+    >
       <video
         :src="resolvedSrc"
         controls

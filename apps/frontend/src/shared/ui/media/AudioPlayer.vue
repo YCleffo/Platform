@@ -124,8 +124,14 @@ onBeforeUnmount(() => {
       ref="audioRef"
       :src="effectiveSrc"
       preload="metadata"
-      @play="isPlaying = true; emit('play')"
-      @pause="isPlaying = false; emit('pause')"
+      @play="
+        isPlaying = true;
+        emit('play');
+      "
+      @pause="
+        isPlaying = false;
+        emit('pause');
+      "
       @timeupdate="handleTimeUpdate"
       @loadedmetadata="handleLoadedMetadata"
       @ended="handleEnded"
@@ -197,7 +203,12 @@ onBeforeUnmount(() => {
       >
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
         <polyline points="7 10 12 15 17 10" />
-        <line x1="12" y1="15" x2="12" y2="3" />
+        <line
+          x1="12"
+          y1="15"
+          x2="12"
+          y2="3"
+        />
       </svg>
     </a>
   </div>
@@ -231,7 +242,9 @@ onBeforeUnmount(() => {
   color: #000;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform var(--theme-transition), opacity var(--theme-transition);
+  transition:
+    transform var(--theme-transition),
+    opacity var(--theme-transition);
 }
 
 .app-audio-player__play-btn:hover {
@@ -275,7 +288,9 @@ onBeforeUnmount(() => {
   font-weight: var(--type-detail-weight, 500);
   color: var(--text-secondary, #9ba3af);
   cursor: pointer;
-  transition: background-color var(--theme-transition), color var(--theme-transition);
+  transition:
+    background-color var(--theme-transition),
+    color var(--theme-transition);
 }
 
 .app-audio-player__speed-btn:hover {

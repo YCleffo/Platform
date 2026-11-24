@@ -6,7 +6,13 @@ import AudioPlayer from '@/shared/ui/media/AudioPlayer.vue';
 import AudioRecorder from '@/shared/ui/media/AudioRecorder.vue';
 import VideoNotePlayer from '@/shared/ui/media/VideoNotePlayer.vue';
 import FileAttachment from '@/shared/ui/media/FileAttachment.vue';
-import { educationApi, type Thread, type Message, type MessageReaction, type EducationContact } from '../api';
+import {
+  educationApi,
+  type Thread,
+  type Message,
+  type MessageReaction,
+  type EducationContact,
+} from '../api';
 import { parentApi, type ParentChild } from '../parent/api';
 import { useEducationI18n } from '../i18n';
 import { useEducationError } from '../resources';
@@ -70,8 +76,8 @@ let active = true;
 
 const tz = computed(() => props.timezone || 'UTC');
 
-const selectedThread = computed(() =>
-  threads.value.find((th) => th.id === selectedThreadId.value) || null,
+const selectedThread = computed(
+  () => threads.value.find((th) => th.id === selectedThreadId.value) || null,
 );
 
 const totalUnread = computed(() =>
@@ -187,7 +193,10 @@ function formatRelativeTime(dateIso?: string | null): string {
     if (isToday) {
       return formatZonedTime(dateIso, locale.value, tz.value);
     }
-    return formatCalendarDate(dateIso.slice(0, 10), locale.value, { month: 'short', day: 'numeric' });
+    return formatCalendarDate(dateIso.slice(0, 10), locale.value, {
+      month: 'short',
+      day: 'numeric',
+    });
   } catch {
     return '';
   }
@@ -361,11 +370,35 @@ async function handleSendMessage(): Promise<void> {
     const clientKey = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const replyToId = replyingTo.value?.id ?? null;
     if (props.role === 'teacher') {
-      sentMsg = await educationApi.sendMessage(props.organizationId, threadId, body, clientKey, 'text', null, replyToId);
+      sentMsg = await educationApi.sendMessage(
+        props.organizationId,
+        threadId,
+        body,
+        clientKey,
+        'text',
+        null,
+        replyToId,
+      );
     } else if (props.role === 'student') {
-      sentMsg = await educationApi.studentSendMessage(props.organizationId, threadId, body, clientKey, 'text', null, replyToId);
+      sentMsg = await educationApi.studentSendMessage(
+        props.organizationId,
+        threadId,
+        body,
+        clientKey,
+        'text',
+        null,
+        replyToId,
+      );
     } else {
-      sentMsg = await parentApi.sendMessage(props.parentChild!, threadId, body, clientKey, 'text', null, replyToId);
+      sentMsg = await parentApi.sendMessage(
+        props.parentChild!,
+        threadId,
+        body,
+        clientKey,
+        'text',
+        null,
+        replyToId,
+      );
     }
     composerText.value = '';
     replyingTo.value = null;
@@ -385,7 +418,11 @@ async function handleSendMessage(): Promise<void> {
   }
 }
 
-async function onVoiceRecorded(payload: { blob: Blob; durationSeconds: number; mimeType: string }): Promise<void> {
+async function onVoiceRecorded(payload: {
+  blob: Blob;
+  durationSeconds: number;
+  mimeType: string;
+}): Promise<void> {
   const threadId = selectedThreadId.value;
   if (!threadId || sendingMessage.value) return;
 
@@ -397,11 +434,38 @@ async function onVoiceRecorded(payload: { blob: Blob; durationSeconds: number; m
     const replyToId = replyingTo.value?.id ?? null;
     const metadata = { durationSeconds: payload.durationSeconds, mimeType: payload.mimeType };
     if (props.role === 'teacher') {
-      sentMsg = await educationApi.sendMessage(props.organizationId, threadId, null, clientKey, 'voice', null, replyToId, metadata);
+      sentMsg = await educationApi.sendMessage(
+        props.organizationId,
+        threadId,
+        null,
+        clientKey,
+        'voice',
+        null,
+        replyToId,
+        metadata,
+      );
     } else if (props.role === 'student') {
-      sentMsg = await educationApi.studentSendMessage(props.organizationId, threadId, null, clientKey, 'voice', null, replyToId, metadata);
+      sentMsg = await educationApi.studentSendMessage(
+        props.organizationId,
+        threadId,
+        null,
+        clientKey,
+        'voice',
+        null,
+        replyToId,
+        metadata,
+      );
     } else {
-      sentMsg = await parentApi.sendMessage(props.parentChild!, threadId, null, clientKey, 'voice', null, replyToId, metadata);
+      sentMsg = await parentApi.sendMessage(
+        props.parentChild!,
+        threadId,
+        null,
+        clientKey,
+        'voice',
+        null,
+        replyToId,
+        metadata,
+      );
     }
     replyingTo.value = null;
     isRecordingVoice.value = false;
@@ -430,7 +494,10 @@ async function handleToggleReaction(msg: Message, emoji: string): Promise<void> 
     } else if (props.role === 'student') {
       res = await educationApi.studentToggleReaction(props.organizationId, threadId, msg.id, emoji);
     } else {
-      res = (await parentApi.toggleReaction(props.parentChild!, threadId, msg.id, emoji)) as { reacted: boolean; reactions: MessageReaction[] };
+      res = (await parentApi.toggleReaction(props.parentChild!, threadId, msg.id, emoji)) as {
+        reacted: boolean;
+        reactions: MessageReaction[];
+      };
     }
     msg.reactions = res.reactions;
   } catch {
@@ -496,12 +563,7 @@ async function handleStartThread(): Promise<void> {
         contextId ?? undefined,
       );
     } else {
-      newThread = await parentApi.startThread(
-        props.parentChild!,
-        contact.personId,
-        subject,
-        body,
-      );
+      newThread = await parentApi.startThread(props.parentChild!, contact.personId, subject, body);
     }
     closeNewChatModal();
     await fetchThreads(true);
@@ -816,7 +878,11 @@ onScopeDispose(() => {
                     class="edu-messenger__reply-quote"
                   >
                     <strong>
-                      {{ msg.replyTo.senderPersonId === currentPersonId ? t('education.you') : t('education.message') }}
+                      {{
+                        msg.replyTo.senderPersonId === currentPersonId
+                          ? t('education.you')
+                          : t('education.message')
+                      }}
                     </strong>
                     <span>{{ msg.replyTo.body }}</span>
                   </div>
@@ -930,8 +996,12 @@ onScopeDispose(() => {
           class="edu-messenger__reply-banner"
         >
           <div>
-            <strong>{{ t('education.replyingTo') }}: {{ replyingTo.senderName || t('education.message') }}</strong>
-            <span>{{ replyingTo.body ? replyingTo.body.slice(0, 60) : t('education.voiceMessage') }}</span>
+            <strong>
+              {{ t('education.replyingTo') }}: {{ replyingTo.senderName || t('education.message') }}
+            </strong>
+            <span>
+              {{ replyingTo.body ? replyingTo.body.slice(0, 60) : t('education.voiceMessage') }}
+            </span>
           </div>
           <button
             type="button"
@@ -1051,7 +1121,11 @@ onScopeDispose(() => {
 
           <EducationState
             :loading="loadingContacts"
-            :empty="!loadingContacts && !filteredContacts.length ? t('education.noContactsFound') : undefined"
+            :empty="
+              !loadingContacts && !filteredContacts.length
+                ? t('education.noContactsFound')
+                : undefined
+            "
           />
 
           <div
@@ -1063,7 +1137,10 @@ onScopeDispose(() => {
               :key="contact.personId"
               type="button"
               class="edu-messenger__contact-item"
-              :class="{ 'edu-messenger__contact-item--selected': selectedContact?.personId === contact.personId }"
+              :class="{
+                'edu-messenger__contact-item--selected':
+                  selectedContact?.personId === contact.personId,
+              }"
               @click="selectContact(contact)"
             >
               <div
@@ -1136,7 +1213,12 @@ onScopeDispose(() => {
             <button
               type="submit"
               class="edu-button edu-button--primary"
-              :disabled="!selectedContact || !newChatSubject.trim() || !newChatMessage.trim() || startingThread"
+              :disabled="
+                !selectedContact ||
+                !newChatSubject.trim() ||
+                !newChatMessage.trim() ||
+                startingThread
+              "
             >
               {{ t(startingThread ? 'education.loading' : 'education.startConversation') }}
             </button>

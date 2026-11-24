@@ -62,7 +62,7 @@ function statusLabel(status: string): string {
   );
 }
 
-const viewMode = ref<'table' | 'cards'>('table');
+const viewMode = ref<'table' | 'cards'>('cards');
 
 const sortedLessons = computed(() => {
   if (!data.value) return [];
@@ -158,7 +158,7 @@ function studentAttendanceStats(sId: string) {
       <div
         v-if="data.journal.items.length"
         class="edu-form-actions"
-        style="margin-bottom: 12px;"
+        style="margin-bottom: 12px"
       >
         <button
           type="button"
@@ -240,11 +240,15 @@ function studentAttendanceStats(sId: string) {
                 <span
                   v-else
                   class="edu-subtle"
-                >—</span>
+                >
+                  —
+                </span>
               </td>
               <td>
                 <span class="edu-subtle">
-                  {{ studentAttendanceStats(student.id).attended }}/{{ studentAttendanceStats(student.id).total }}
+                  {{ studentAttendanceStats(student.id).attended }}/{{
+                    studentAttendanceStats(student.id).total
+                  }}
                   ({{ studentAttendanceStats(student.id).percent }}%)
                 </span>
               </td>

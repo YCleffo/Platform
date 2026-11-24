@@ -6,7 +6,9 @@ import EducationMessenger from '../messaging/EducationMessenger.vue';
 
 const route = useRoute();
 const router = useRouter();
-const initialThreadId = computed(() => (typeof route.params.id === 'string' ? route.params.id : ''));
+const initialThreadId = computed(() =>
+  typeof route.params.id === 'string' ? route.params.id : '',
+);
 
 function onSelectThread(id: string): void {
   if (route.params.id !== id) {

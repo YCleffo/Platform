@@ -76,8 +76,11 @@ final class MathSprintActivityHandler implements ActivityPluginInterface
     public function createExercise(array $config, ?array $set = null): array
     {
         $difficulty = (int) ($config['difficulty'] ?? 1);
-        $operations = (array) ($config['operations'] ?? ['add', 'sub']);
-        $count = (int) ceil(($config['durationSeconds'] ?? 60) * 0.8);
+        $rawOps = $config['operations'] ?? null;
+        /** @var list<string> $operations */
+        $operations = is_array($rawOps) ? array_values(array_filter($rawOps, 'is_string')) : ['add', 'sub'];
+        $durationSeconds = (int) ($config['durationSeconds'] ?? 60);
+        $count = (int) ceil($durationSeconds * 0.8);
         $count = max(20, min(80, $count));
 
         $problems = [];
@@ -125,16 +128,17 @@ final class MathSprintActivityHandler implements ActivityPluginInterface
     {
         $config = $this->config($attempt);
         $payload = ActivityHandlerRegistry::json($attempt['exercisePayload'] ?? []);
-        $problems = $payload['problems'] ?? [];
+        /** @var list<array{id?: int|string, prompt?: string}> $problems */
+        $problems = is_array($payload['problems'] ?? null) ? $payload['problems'] : [];
         $publicProblems = array_map(static fn(array $p): array => [
-            'id' => (int) $p['id'],
-            'prompt' => (string) $p['prompt'],
+            'id' => (int) ($p['id'] ?? 0),
+            'prompt' => $p['prompt'] ?? '',
         ], $problems);
 
         return [
             'problems' => $publicProblems,
-            'durationSeconds' => $config['durationSeconds'],
-            'difficulty' => $config['difficulty'],
+            'durationSeconds' => (int) ($config['durationSeconds'] ?? 60),
+            'difficulty' => (int) ($config['difficulty'] ?? 1),
             'version' => (int) ($payload['version'] ?? 1),
         ];
     }
@@ -150,12 +154,14 @@ final class MathSprintActivityHandler implements ActivityPluginInterface
         ActivityHandlerRegistry::only($input, ['durationSeconds', 'answers', 'completed']);
         $config = $this->config($attempt);
         $payload = ActivityHandlerRegistry::json($attempt['exercisePayload'] ?? []);
-        $expected = $payload['problems'] ?? [];
+        /** @var list<array{id?: int|string, answer?: int|string}> $expected */
+        $expected = is_array($payload['problems'] ?? null) ? $payload['problems'] : [];
         $expectedMap = [];
         foreach ($expected as $p) {
-            $expectedMap[(int) $p['id']] = (int) $p['answer'];
+            $expectedMap[(int) ($p['id'] ?? 0)] = (int) ($p['answer'] ?? 0);
         }
 
+        /** @var list<array{id?: int|string, value?: int|string}> $answers */
         $answers = is_array($input['answers'] ?? null) ? $input['answers'] : [];
         $correct = 0;
         $incorrect = 0;

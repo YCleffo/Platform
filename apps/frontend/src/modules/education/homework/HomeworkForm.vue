@@ -51,12 +51,15 @@ const initial = (): HomeworkInput => ({
 });
 const form = reactive<HomeworkInput>(initial());
 if (queryLessonId && !props.assignment && workspace.organizationId) {
-  void educationApi.lesson(workspace.organizationId, queryLessonId).then((lesson) => {
-    if (lesson) {
-      if (!form.groupId) form.groupId = lesson.groupId;
-      if (!form.title) form.title = lesson.title;
-    }
-  }).catch(() => {});
+  void educationApi
+    .lesson(workspace.organizationId, queryLessonId)
+    .then((lesson) => {
+      if (lesson) {
+        if (!form.groupId) form.groupId = lesson.groupId;
+        if (!form.title) form.title = lesson.title;
+      }
+    })
+    .catch(() => {});
 }
 const dueLocal = ref('');
 const localError = ref('');

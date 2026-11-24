@@ -98,7 +98,11 @@ onBeforeUnmount(() => {
     @keydown.space.prevent="togglePlayback"
   >
     <!-- SVG Circular Progress Ring -->
-    <svg class="app-video-note-player__ring" :width="size" :height="size">
+    <svg
+      class="app-video-note-player__ring"
+      :width="size"
+      :height="size"
+    >
       <circle
         class="app-video-note-player__ring-bg"
         :cx="size / 2"
@@ -126,8 +130,14 @@ onBeforeUnmount(() => {
         playsinline
         :muted="isMuted"
         class="app-video-note-player__video"
-        @play="isPlaying = true; emit('play')"
-        @pause="isPlaying = false; emit('pause')"
+        @play="
+          isPlaying = true;
+          emit('play');
+        "
+        @pause="
+          isPlaying = false;
+          emit('pause');
+        "
         @timeupdate="handleTimeUpdate"
         @loadedmetadata="handleLoadedMetadata"
         @ended="handleEnded"
@@ -135,9 +145,16 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Play/Pause Overlay indicator when paused -->
-    <div v-if="!isPlaying" class="app-video-note-player__overlay">
+    <div
+      v-if="!isPlaying"
+      class="app-video-note-player__overlay"
+    >
       <div class="app-video-note-player__play-badge">
-        <svg class="app-video-note-player__icon" viewBox="0 0 24 24" fill="currentColor">
+        <svg
+          class="app-video-note-player__icon"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
           <path d="M8 5v14l11-7z" />
         </svg>
       </div>
@@ -156,7 +173,9 @@ onBeforeUnmount(() => {
   user-select: none;
   background-color: var(--surface-primary, #000);
   box-shadow: var(--shadow-soft, 0 4px 16px rgba(0, 0, 0, 0.25));
-  transition: transform var(--motion-control-duration) var(--motion-linear), background-color var(--theme-transition);
+  transition:
+    transform var(--motion-control-duration) var(--motion-linear),
+    background-color var(--theme-transition);
 }
 
 .app-video-note-player:hover {
@@ -186,7 +205,9 @@ onBeforeUnmount(() => {
   fill: none;
   stroke: var(--accent, #00d2ff);
   stroke-linecap: round;
-  transition: stroke-dashoffset var(--motion-fast-duration) var(--motion-linear), stroke var(--theme-transition);
+  transition:
+    stroke-dashoffset var(--motion-fast-duration) var(--motion-linear),
+    stroke var(--theme-transition);
 }
 
 .app-video-note-player__media {

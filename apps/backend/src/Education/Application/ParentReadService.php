@@ -294,6 +294,7 @@ final readonly class ParentReadService
         return $type === null || $this->allowed($scope, $type, $notice['resourceId']);
     }
 
+    /** @return array{string, string, string, string} */
     private function range(ParentScope $scope, array $query): array
     {
         $now = $this->clock->now()->setTimezone(new DateTimeZone($scope->timezone));
@@ -341,18 +342,20 @@ final readonly class ParentReadService
             self::params($scope),
         );
         $items = [];
+        /** @var array<string, mixed> $row */
         foreach ($teachers as $row) {
-            $name = $this->access->personName((string) $row['personId']);
+            $personId = is_scalar($row['personId'] ?? null) ? (string) $row['personId'] : '';
+            $name = $this->access->personName($personId);
             if ($name === null) {
                 continue;
             }
             $items[] = [
-                'id' => $row['personId'],
-                'personId' => $row['personId'],
+                'id' => $personId,
+                'personId' => $personId,
                 'name' => $name,
                 'role' => 'teacher',
-                'contextId' => $row['contextId'],
-                'contextName' => $row['contextName'],
+                'contextId' => is_scalar($row['contextId'] ?? null) ? (string) $row['contextId'] : '',
+                'contextName' => is_scalar($row['contextName'] ?? null) ? (string) $row['contextName'] : '',
             ];
         }
         return ['items' => $items];
@@ -380,9 +383,10 @@ final readonly class ParentReadService
             ORDER BY COALESCE(t.last_activity_at, t.created_at) DESC,t.id DESC LIMIT 51 OFFSET :offset',
             [...self::params($scope), ':person' => $scope->personId, ':offset' => $offset],
         );
+        /** @var array<string, mixed> $row */
         foreach ($items as &$row) {
-            $peerId = $row['peerPersonId'];
-            $row['peerName'] = $peerId ? $this->access->personName($peerId) : null;
+            $peerId = is_scalar($row['peerPersonId'] ?? null) ? (string) $row['peerPersonId'] : null;
+            $row['peerName'] = $peerId !== null ? $this->access->personName($peerId) : null;
             $row['peerRole'] = 'teacher';
         }
         unset($row);
@@ -406,8 +410,8 @@ final readonly class ParentReadService
         if (!is_array($thread)) {
             throw new EducationError(404, 'not_found');
         }
-        $peerId = $thread['peerPersonId'];
-        $thread['peerName'] = $peerId ? $this->access->personName($peerId) : null;
+        $peerId = is_scalar($thread['peerPersonId'] ?? null) ? (string) $thread['peerPersonId'] : null;
+        $thread['peerName'] = $peerId !== null ? $this->access->personName($peerId) : null;
         $thread['peerRole'] = 'teacher';
         return $thread;
     }
@@ -444,43 +448,62 @@ final readonly class ParentReadService
         );
 
         $reactionsByMessage = [];
+        /** @var array<string, mixed> $rr */
         foreach ($reactionsRows as $rr) {
-            $reactionsByMessage[$rr['messageId']][] = [
-                'emoji' => $rr['emoji'],
-                'count' => (int) $rr['count'],
-                'reacted' => (bool) $rr['reacted'],
+            $msgKey = is_scalar($rr['messageId'] ?? null) ? (string) $rr['messageId'] : '';
+            $reactionsByMessage[$msgKey][] = [
+                'emoji' => is_scalar($rr['emoji'] ?? null) ? (string) $rr['emoji'] : '',
+                'count' => (int) ($rr['count'] ?? 0),
+                'reacted' => (bool) ($rr['reacted'] ?? false),
             ];
         }
 
+        /** @var list<array<string, mixed>> $items */
         foreach ($items as &$message) {
-            $sender = (string) $message['senderPersonId'];
-            $message['senderName'] = $this->access->member($sender, $scope->organizationId) ? $this->access->personName($sender) : null;
-            if ($message['senderName'] === null || !$this->access->resourceAllowed($sender, 'message', (string) $message['id'])) {
+            $sender = isset($message['senderPersonId']) && is_scalar($message['senderPersonId']) ? (string) $message['senderPersonId'] : '';
+            $msgId = isset($message['id']) && is_scalar($message['id']) ? (string) $message['id'] : '';
+            $senderName = $sender !== '' && $this->access->member($sender, $scope->organizationId) ? $this->access->personName($sender) : null;
+            $message['senderName'] = $senderName;
+            if ($senderName === null || !$this->access->resourceAllowed($sender, 'message', $msgId)) {
                 $message['body'] = null;
             }
-            $message['reactions'] = $reactionsByMessage[$message['id']] ?? [];
-            if ($message['mediaAssetId'] !== null) {
+            $message['reactions'] = $reactionsByMessage[$msgId] ?? [];
+
+            $rawMediaId = $message['mediaAssetId'] ?? null;
+            if ($rawMediaId !== null) {
+                $rawMediaKind = $message['mediaKind'] ?? null;
+                $rawKind = $message['kind'] ?? null;
+                $rawMediaName = $message['mediaName'] ?? null;
+                $rawMediaMime = $message['mediaMime'] ?? null;
+                $rawMediaSize = $message['mediaSize'] ?? null;
+                $rawMediaStatus = $message['mediaStatus'] ?? null;
                 $message['media'] = [
-                    'id' => $message['mediaAssetId'],
-                    'kind' => $message['mediaKind'] ?? $message['kind'],
-                    'name' => $message['mediaName'] ?? '',
-                    'mime' => $message['mediaMime'] ?? '',
-                    'size' => (int) ($message['mediaSize'] ?? 0),
-                    'status' => $message['mediaStatus'] ?? 'READY',
+                    'id' => (string) $rawMediaId,
+                    'kind' => is_string($rawMediaKind) ? $rawMediaKind : (is_string($rawKind) ? $rawKind : 'text'),
+                    'name' => is_string($rawMediaName) ? $rawMediaName : '',
+                    'mime' => is_string($rawMediaMime) ? $rawMediaMime : '',
+                    'size' => (int) ($rawMediaSize ?? 0),
+                    'status' => is_string($rawMediaStatus) ? $rawMediaStatus : 'READY',
                 ];
             } else {
                 $message['media'] = null;
             }
-            if ($message['replyToId'] !== null) {
+
+            $rawReplyId = $message['replyToId'] ?? null;
+            if ($rawReplyId !== null) {
+                $rawReplyBody = $message['replyBody'] ?? null;
+                $rawReplySender = $message['replySenderPersonId'] ?? null;
                 $message['replyTo'] = [
-                    'id' => $message['replyToId'],
-                    'body' => $message['replyBody'],
-                    'senderPersonId' => $message['replySenderPersonId'],
+                    'id' => (string) $rawReplyId,
+                    'body' => is_string($rawReplyBody) ? $rawReplyBody : null,
+                    'senderPersonId' => is_string($rawReplySender) ? $rawReplySender : null,
                 ];
             } else {
                 $message['replyTo'] = null;
             }
-            $message['metadata'] = json_decode((string) ($message['metadataJson'] ?? '{}'), true) ?: [];
+
+            $rawMeta = $message['metadataJson'] ?? null;
+            $message['metadata'] = is_string($rawMeta) ? (json_decode($rawMeta, true) ?: []) : [];
             unset($message['metadataJson'], $message['mediaKind'], $message['mediaName'], $message['mediaMime'], $message['mediaSize'], $message['mediaStatus'], $message['replyBody'], $message['replySenderPersonId']);
         }
         unset($message);
@@ -494,8 +517,11 @@ final readonly class ParentReadService
         $recipient = Input::uuid($input['recipientPersonId'] ?? null);
         $subject = Input::text($input['subject'] ?? null, 160);
         $body = Input::text($input['body'] ?? null, 5000);
-        $contacts = $this->contacts($scope)['items'];
-        $allowed = array_column($contacts, 'personId');
+        $contacts = $this->contacts($scope);
+        /** @var list<array<string, mixed>> $contactItems */
+        $contactItems = is_array($contacts['items'] ?? null) ? $contacts['items'] : [];
+        /** @var list<string> $allowed */
+        $allowed = array_column($contactItems, 'personId');
         if (!in_array($recipient, $allowed, true)) {
             throw new EducationError(403, 'recipient_unavailable');
         }
@@ -525,7 +551,7 @@ final readonly class ParentReadService
     public function sendMessage(ParentScope $scope, string $threadId, array $input): array
     {
         $rawKind = $input['kind'] ?? 'text';
-        $kind = in_array($rawKind, ['text', 'voice', 'video_note', 'image', 'document', 'audio'], true) ? (string) $rawKind : 'text';
+        $kind = in_array($rawKind, ['text', 'voice', 'video_note', 'image', 'document', 'audio'], true) ? $rawKind : 'text';
         $mediaAssetId = isset($input['mediaAssetId']) && is_string($input['mediaAssetId']) ? Input::uuid($input['mediaAssetId']) : null;
         $replyToId = isset($input['replyToId']) && is_string($input['replyToId']) ? Input::uuid($input['replyToId']) : null;
         $metadata = isset($input['metadata']) && is_array($input['metadata']) ? $input['metadata'] : [];
@@ -548,9 +574,15 @@ final readonly class ParentReadService
             WHERE peer.organization_id=CAST(:org AS uuid) AND peer.person_id<>CAST(:person AS uuid) AND peer.thread_id=CAST(:id AS uuid)',
             [':org' => $scope->organizationId, ':person' => $scope->personId, ':id' => $threadId],
         );
-        $allowed = array_column($this->contacts($scope)['items'], 'personId');
+        $contacts = $this->contacts($scope);
+        /** @var list<array<string, mixed>> $contactItems */
+        $contactItems = is_array($contacts['items'] ?? null) ? $contacts['items'] : [];
+        /** @var list<string> $allowed */
+        $allowed = array_column($contactItems, 'personId');
+        /** @var array<string, mixed> $peer */
         foreach ($peers as $peer) {
-            if (!in_array((string) $peer['id'], $allowed, true)) {
+            $peerId = is_scalar($peer['id'] ?? null) ? (string) $peer['id'] : '';
+            if (!in_array($peerId, $allowed, true)) {
                 throw new EducationError(403, 'recipient_unavailable');
             }
         }
@@ -649,10 +681,10 @@ final readonly class ParentReadService
 
             return [
                 'reacted' => $reacted,
-                'reactions' => array_map(static fn($r) => [
-                    'emoji' => $r['emoji'],
-                    'count' => (int) $r['count'],
-                    'reacted' => (bool) $r['reacted'],
+                'reactions' => array_map(static fn(array $r): array => [
+                    'emoji' => is_scalar($r['emoji'] ?? null) ? (string) $r['emoji'] : '',
+                    'count' => (int) ($r['count'] ?? 0),
+                    'reacted' => (bool) ($r['reacted'] ?? false),
                 ], $reactionsRows),
             ];
         });

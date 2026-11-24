@@ -197,17 +197,29 @@ onBeforeUnmount(() => {
         aria-hidden="true"
       >
         <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+        <path
+          d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"
+        />
       </svg>
     </button>
 
     <!-- Active Recording State -->
-    <div v-else-if="isRecording" class="app-audio-recorder__active">
-      <div class="app-audio-recorder__pulse" :class="{ 'app-audio-recorder__pulse--paused': isPaused }" />
+    <div
+      v-else-if="isRecording"
+      class="app-audio-recorder__active"
+    >
+      <div
+        class="app-audio-recorder__pulse"
+        :class="{ 'app-audio-recorder__pulse--paused': isPaused }"
+      />
       <span class="app-audio-recorder__timer">{{ formattedTime }}</span>
 
       <div class="app-audio-recorder__waveform-wrapper">
-        <AudioWaveform :progress="1" :bar-count="24" :interactive="false" />
+        <AudioWaveform
+          :progress="1"
+          :bar-count="24"
+          :interactive="false"
+        />
       </div>
 
       <button
@@ -217,7 +229,11 @@ onBeforeUnmount(() => {
         :aria-label="t('media.pause')"
         @click="pauseRecording"
       >
-        <svg class="app-audio-recorder__icon-sm" viewBox="0 0 24 24" fill="currentColor">
+        <svg
+          class="app-audio-recorder__icon-sm"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
           <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
         </svg>
       </button>
@@ -229,7 +245,11 @@ onBeforeUnmount(() => {
         :aria-label="t('media.play')"
         @click="resumeRecording"
       >
-        <svg class="app-audio-recorder__icon-sm" viewBox="0 0 24 24" fill="currentColor">
+        <svg
+          class="app-audio-recorder__icon-sm"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
           <path d="M8 5v14l11-7z" />
         </svg>
       </button>
@@ -240,7 +260,11 @@ onBeforeUnmount(() => {
         :aria-label="t('media.stop')"
         @click="stopRecording"
       >
-        <svg class="app-audio-recorder__icon-sm" viewBox="0 0 24 24" fill="currentColor">
+        <svg
+          class="app-audio-recorder__icon-sm"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
           <path d="M6 6h12v12H6z" />
         </svg>
       </button>
@@ -251,15 +275,29 @@ onBeforeUnmount(() => {
         :aria-label="t('media.cancel')"
         @click="cancelRecording"
       >
-        <svg class="app-audio-recorder__icon-sm" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+        <svg
+          class="app-audio-recorder__icon-sm"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path
+            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+          />
         </svg>
       </button>
     </div>
 
     <!-- Review / Preview State Before Send -->
-    <div v-else-if="recordedBlob" class="app-audio-recorder__preview">
-      <audio v-if="previewUrl" :src="previewUrl" controls class="app-audio-recorder__audio-preview" />
+    <div
+      v-else-if="recordedBlob"
+      class="app-audio-recorder__preview"
+    >
+      <audio
+        v-if="previewUrl"
+        :src="previewUrl"
+        controls
+        class="app-audio-recorder__audio-preview"
+      />
       <button
         type="button"
         class="app-audio-recorder__action-btn app-audio-recorder__action-btn--discard"
@@ -277,7 +315,11 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Error State -->
-    <div v-if="errorMessage" class="app-audio-recorder__error" role="alert">
+    <div
+      v-if="errorMessage"
+      class="app-audio-recorder__error"
+      role="alert"
+    >
       {{ errorMessage }}
     </div>
   </div>
@@ -301,7 +343,9 @@ onBeforeUnmount(() => {
   background-color: var(--surface-secondary, rgba(255, 255, 255, 0.08));
   color: var(--text-primary, #fff);
   cursor: pointer;
-  transition: transform var(--theme-transition), background-color var(--theme-transition);
+  transition:
+    transform var(--theme-transition),
+    background-color var(--theme-transition);
 }
 
 .app-audio-recorder__btn:hover {
@@ -340,8 +384,14 @@ onBeforeUnmount(() => {
 }
 
 @keyframes pulse {
-  from { opacity: 0.4; transform: scale(0.85); }
-  to { opacity: 1; transform: scale(1.15); }
+  from {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.15);
+  }
 }
 
 .app-audio-recorder__timer {
