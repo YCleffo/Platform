@@ -643,8 +643,8 @@ final readonly class PostgresEducationStore implements EducationStore
                     m.media_asset_id::text AS "mediaAssetId",
                     m.reply_to_id::text AS "replyToId",
                     m.metadata::text AS "metadataJson",
-                    ma.kind AS "mediaKind", ma.original_name AS "mediaName", ma.mime_type AS "mediaMime",
-                    ma.byte_size AS "mediaSize", ma.status AS "mediaStatus",
+                    ma.kind AS "mediaKind", ma.original_name AS "mediaName", COALESCE(ma.verified_mime, ma.original_mime) AS "mediaMime",
+                    ma.size_bytes AS "mediaSize", ma.status AS "mediaStatus",
                     rm.body AS "replyBody", rm.sender_person_id::text AS "replySenderPersonId"
             FROM education.messages m
             JOIN education.thread_members tm ON tm.thread_id=m.thread_id

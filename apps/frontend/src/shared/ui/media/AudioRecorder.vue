@@ -106,7 +106,7 @@ async function startRecording(): Promise<void> {
         }
       }
     }, 1000);
-  } catch (err) {
+  } catch {
     errorMessage.value = t('media.micUnavailable');
     cleanupStream();
   }
