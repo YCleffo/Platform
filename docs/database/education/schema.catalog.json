@@ -2136,6 +2136,20 @@
           "predicate": null,
           "definition": "CREATE UNIQUE INDEX activity_definitions_pkey ON education.activity_definitions USING btree (id)",
           "attribute_count": 1
+        },
+        {
+          "keys": [
+            "name",
+            "code"
+          ],
+          "name": "education_activity_defs_trgm_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX education_activity_defs_trgm_idx ON education.activity_definitions USING gin (name gin_trgm_ops, code gin_trgm_ops)",
+          "attribute_count": 2
         }
       ],
       "policies": [],
@@ -8962,6 +8976,19 @@
       "indexes": [
         {
           "keys": [
+            "name"
+          ],
+          "name": "education_groups_name_trgm_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX education_groups_name_trgm_idx ON education.groups USING gin (name gin_trgm_ops)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
             "id",
             "organization_id"
           ],
@@ -9430,10 +9457,49 @@
           "generated": "",
           "type_name": "timestamptz",
           "type_schema": "pg_catalog"
+        },
+        {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
         }
       ],
       "comment": null,
       "indexes": [
+        {
+          "keys": [
+            "to_tsvector('russian'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text)))"
+          ],
+          "name": "education_homework_fts_ru_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX education_homework_fts_ru_idx ON education.homework_assignments USING gin (to_tsvector('russian'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text))))",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "title",
+            "description"
+          ],
+          "name": "education_homework_search_trgm_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX education_homework_search_trgm_idx ON education.homework_assignments USING gin (title gin_trgm_ops, description gin_trgm_ops)",
+          "attribute_count": 2
+        },
         {
           "keys": [
             "organization_id",
@@ -14246,6 +14312,20 @@
       "indexes": [
         {
           "keys": [
+            "title",
+            "location"
+          ],
+          "name": "education_lessons_title_trgm_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX education_lessons_title_trgm_idx ON education.lessons USING gin (title gin_trgm_ops, location gin_trgm_ops)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
             "group_program_id",
             "curriculum_lesson_id",
             "status"
@@ -17971,6 +18051,18 @@
           "generated": "",
           "type_name": "timestamptz",
           "type_schema": "pg_catalog"
+        },
+        {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
         }
       ],
       "comment": null,
@@ -18227,7 +18319,7 @@
           "on_delete": " ",
           "on_update": " ",
           "deferrable": false,
-          "definition": "CHECK (question_type::text = ANY (ARRAY['single_choice'::character varying, 'multi_choice'::character varying, 'true_false'::character varying, 'short_text'::character varying, 'numeric'::character varying, 'matching'::character varying]::text[]))",
+          "definition": "CHECK (question_type::text = ANY (ARRAY['single_choice'::character varying, 'multi_choice'::character varying, 'true_false'::character varying, 'short_text'::character varying, 'numeric'::character varying, 'matching'::character varying, 'ordering'::character varying, 'long_text'::character varying]::text[]))",
           "target_table": null,
           "target_schema": null,
           "target_columns": null,
@@ -21673,6 +21765,20 @@
       "indexes": [
         {
           "keys": [
+            "name",
+            "code"
+          ],
+          "name": "core_organizations_search_trgm_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX core_organizations_search_trgm_idx ON core.organizations USING gin (name gin_trgm_ops, code gin_trgm_ops)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
             "code"
           ],
           "name": "organizations_code_key",
@@ -22013,6 +22119,47 @@
       ],
       "comment": "Physical individuals separated from accounts. Core v1 base table (1 of 23). Data hygiene constraints applied.",
       "indexes": [
+        {
+          "keys": [
+            "to_tsvector('russian'::regconfig, (((((COALESCE(display_name, ''::character varying))::text || ' '::text) || (given_name)::text) || ' '::text) || (family_name)::text))"
+          ],
+          "name": "core_persons_fts_ru_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX core_persons_fts_ru_idx ON core.persons USING gin (to_tsvector('russian'::regconfig, (((((COALESCE(display_name, ''::character varying))::text || ' '::text) || (given_name)::text) || ' '::text) || (family_name)::text)))",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "to_tsvector('simple'::regconfig, (((((COALESCE(display_name, ''::character varying))::text || ' '::text) || (given_name)::text) || ' '::text) || (family_name)::text))"
+          ],
+          "name": "core_persons_fts_simple_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX core_persons_fts_simple_idx ON core.persons USING gin (to_tsvector('simple'::regconfig, (((((COALESCE(display_name, ''::character varying))::text || ' '::text) || (given_name)::text) || ' '::text) || (family_name)::text)))",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "given_name",
+            "family_name",
+            "COALESCE(display_name, ''::character varying)"
+          ],
+          "name": "core_persons_search_trgm_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE INDEX core_persons_search_trgm_idx ON core.persons USING gin (given_name gin_trgm_ops, family_name gin_trgm_ops, COALESCE(display_name, ''::character varying) gin_trgm_ops)",
+          "attribute_count": 3
+        },
         {
           "keys": [
             "birth_date"

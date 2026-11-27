@@ -23,6 +23,7 @@
   --accent-soft: var(--color-primary-50);
   --accent-soft-2: var(--color-primary-100);
   --accent-strong: var(--color-primary-600);
+  --on-accent: var(--color-white);
 
   --link: var(--color-link);
   --link-hover: var(--color-link-hover);
@@ -81,6 +82,7 @@
   --accent-soft: var(--color-selected-surface);
   --accent-soft-2: var(--color-primary-200);
   --accent-strong: var(--color-primary-300);
+  --on-accent: var(--color-white);
 
   --link: var(--color-link);
   --link-hover: var(--color-link-hover);

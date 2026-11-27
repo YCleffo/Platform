@@ -22,6 +22,11 @@ const cases = [
         "device_management/DeviceManagement_v1.dbml",
     ],
     ["storage", "storage/schema.catalog.json", "storage/Storage_v1.dbml"],
+    ["chat", "chat/schema.catalog.json", "chat/Chat_v1.dbml"],
+    ["realtime", "realtime/schema.catalog.json", "realtime/Realtime_v1.dbml"],
+    ["notifications", "notifications/schema.catalog.json", "notifications/Notifications_v1.dbml"],
+    ["activity", "activity/schema.catalog.json", "activity/Activity_v1.dbml"],
+    ["workspace", "workspace/schema.catalog.json", "workspace/Workspace_v1.dbml"],
 ];
 for (const [schema, catalogFile, dbmlFile] of cases) {
     const catalog = JSON.parse(

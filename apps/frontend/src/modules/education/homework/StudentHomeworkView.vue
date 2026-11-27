@@ -9,8 +9,6 @@ import { studentSession } from '../student/session';
 import EducationState from '../EducationState.vue';
 import HomeworkFiles from './HomeworkFiles.vue';
 import HomeworkAnswerHistory from './HomeworkAnswerHistory.vue';
-import InteractiveQuiz from '@/shared/ui/learning/InteractiveQuiz.vue';
-import type { QuizActivityData, QuizResult } from '@/shared/ui/learning/types';
 import StudentAssessmentRunner from '../assessment/StudentAssessmentRunner.vue';
 import type { AssessmentResult } from '../activityTypes';
 import { homeworkApi } from './api';
@@ -79,72 +77,12 @@ function date(value: string): string {
   }).format(new Date(value));
 }
 
-const quizActivityData = computed<QuizActivityData>(() => ({
-  id: `hw-quiz-${id.value}`,
-  title: data.value?.assignment.title || 'Platform Quiz',
-  description: data.value?.assignment.instructions || 'Интерактивный тест для закрепления темы',
-  passingScorePercent: 70,
-  questions: [
-    {
-      id: 'q1',
-      type: 'single_choice',
-      prompt: 'Какое ключевое слово используется для объявления функции в Python?',
-      options: [
-        { id: 'o1', text: 'def' },
-        { id: 'o2', text: 'function' },
-        { id: 'o3', text: 'fun' },
-        { id: 'o4', text: 'fn' },
-      ],
-      correctAnswer: 'o1',
-      explanation: 'В Python функции определяются с помощью инструкции def имя_функции():',
-    },
-    {
-      id: 'q2',
-      type: 'multi_choice',
-      prompt: 'Какие типы коллекций поддерживают индексацию по порядковому номеру?',
-      options: [
-        { id: 'c1', text: 'list (список)' },
-        { id: 'c2', text: 'tuple (кортеж)' },
-        { id: 'c3', text: 'set (множество)' },
-      ],
-      correctAnswer: ['c1', 'c2'],
-      explanation:
-        'Списки и кортежи являются упорядоченными последовательностями, а множества неупорядочены.',
-    },
-    {
-      id: 'q3',
-      type: 'ordering',
-      prompt: 'Упорядочите шаги алгоритма обработки данных:',
-      options: [
-        { id: 's1', text: '1. Чтение входных данных' },
-        { id: 's2', text: '2. Валидация и фильтрация' },
-        { id: 's3', text: '3. Вычисления и агрегация' },
-        { id: 's4', text: '4. Вывод результата' },
-      ],
-      correctAnswer: ['s1', 's2', 's3', 's4'],
-      explanation: 'Стандартный конвейер: чтение -> валидация -> вычисление -> вывод.',
-    },
-  ],
-}));
-
-function onQuizComplete(res: QuizResult): void {
-  if (!data.value) return;
-  data.value.submission.activityResult = {
-    attemptId: crypto.randomUUID(),
-    type: 'quiz',
-    score: res.score,
-    accuracy: res.percent,
-    errors: res.totalPoints - res.score,
-    passed: res.passed,
-  };
-}
-
 const showAssessmentModal = ref(false);
 
 function onAssessmentComplete(res: AssessmentResult & { attemptId?: string }): void {
-  if (!data.value) return;
+  if (!data.value || !res.attemptId) return;
   data.value.submission.activityResult = {
-    attemptId: res.attemptId || crypto.randomUUID(),
+    attemptId: res.attemptId,
     type: 'assessment',
     score: res.score,
     accuracy: res.percentage,
@@ -152,6 +90,7 @@ function onAssessmentComplete(res: AssessmentResult & { attemptId?: string }): v
     passed: res.passed,
   };
   showAssessmentModal.value = false;
+  void save();
 }
 async function save(): Promise<void> {
   if (!data.value || !editable.value) return;
@@ -243,22 +182,12 @@ async function reconcile(): Promise<void> {
             {{
               data.assignment.activityCode === 'platform-logic'
                 ? 'Platform Logic'
-                : data.assignment.activityCode === 'platform-quiz'
-                  ? 'Platform Quiz'
+                : data.assignment.activityCode === 'platform-assessment'
+                  ? 'Platform Assessment'
                   : 'Platform Typing'
             }}
           </p>
-          <div
-            v-if="data.assignment.activityCode === 'platform-quiz'"
-            class="edu-homework-quiz"
-          >
-            <InteractiveQuiz
-              :quiz="quizActivityData"
-              :disabled="!editable"
-              @complete="onQuizComplete"
-            />
-          </div>
-          <template v-else-if="data.assignment.activityCode === 'platform-assessment'">
+          <template v-if="data.assignment.activityCode === 'platform-assessment'">
             <div class="edu-homework-assessment-box">
               <button
                 v-if="!showAssessmentModal && editable"
@@ -271,6 +200,7 @@ async function reconcile(): Promise<void> {
               <StudentAssessmentRunner
                 v-if="showAssessmentModal"
                 :assessment-id="data.assignment.activityConfig?.assessmentId"
+                :assignment-id="data.assignment.id"
                 @finished="onAssessmentComplete"
                 @close="showAssessmentModal = false"
               />

@@ -237,6 +237,7 @@ services:
 
     volumes:
       - ./apps/backend:/app
+      - ./contracts:/contracts:ro
       - ./deployment/privacy:/run/privacy:ro
 
     healthcheck:
@@ -320,6 +321,39 @@ services:
       <<: *backend_environment
     volumes:
       - ./apps/backend:/app
+      - ./contracts:/contracts:ro
+      - ./deployment/privacy:/run/privacy:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [backend_net]
+  backend-realtime:
+    container_name: ${COMPOSE_PROJECT_NAME:-platform}-backend-realtime
+    logging: *bounded_logs
+    image: platform-backend:latest
+    build:
+      context: ./apps/backend
+      dockerfile: docker/Dockerfile
+      target: dev
+    restart: unless-stopped
+    command: ["php", "yii", "realtime:serve", "--host=0.0.0.0", "--port=8084"]
+    healthcheck:
+      test: ["CMD", "php", "-r", "$$s=@stream_socket_client('tcp://127.0.0.1:8084',$$e,$$m,2);if($$s){fclose($$s);exit(0);}exit(1);"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    environment:
+      <<: *backend_environment
+      CORE_SCHEDULER_ENABLED: "false"
+      CORE_EMAIL_WORKER_ENABLED: "false"
+    ports:
+      - "127.0.0.1:${REALTIME_PORT:-8084}:8084"
+    volumes:
+      - ./apps/backend:/app
+      - ./contracts:/contracts:ro
       - ./deployment/privacy:/run/privacy:ro
     depends_on:
       postgres:
@@ -366,6 +400,7 @@ services:
       CORE_ENTITLEMENT_SYNC_INTERVAL_SECONDS: ${CORE_ENTITLEMENT_SYNC_INTERVAL_SECONDS:-300}
     volumes:
       - ./apps/backend:/app
+      - ./contracts:/contracts:ro
       - ./deployment/privacy:/run/privacy:ro
     depends_on:
       postgres:

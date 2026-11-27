@@ -1,0 +1,260 @@
+{
+  "version": "PLATFORM_12",
+  "gate": "GATE 23",
+  "timestamp": "2026-11-26T18:34:47.866Z",
+  "nonce": "ad01548f57d1",
+  "totalScenarios": 22,
+  "passed": 22,
+  "failed": 0,
+  "skipped": 0,
+  "scenarios": {
+    "SC-01": {
+      "id": "SC-01",
+      "title": "Login -> Universal Shell -> /workspace Dashboard loads real counts/widgets",
+      "status": "PASS",
+      "durationMs": 7467.5,
+      "ids": {
+        "summaryCount": 13
+      }
+    },
+    "SC-02": {
+      "id": "SC-02",
+      "title": "Organization switch updates dashboard & search scope",
+      "status": "PASS",
+      "durationMs": 17643.9,
+      "ids": {
+        "orgA": "01a2191d-d4cb-7373-bcb3-e3e3be560b53",
+        "orgB": "01a2191d-d4ce-75e7-b506-7dbd472369a8"
+      }
+    },
+    "SC-03": {
+      "id": "SC-03",
+      "title": "Command Palette Ctrl+K, arrow navigation + Enter, focus trap & Escape restore focus",
+      "status": "PASS",
+      "durationMs": 145.6,
+      "ids": {
+        "navigatedTo": "/trash"
+      }
+    },
+    "SC-04": {
+      "id": "SC-04",
+      "title": "Dangerous command (trash.empty) requires AppConfirmDialog confirmation",
+      "status": "PASS",
+      "durationMs": 10984.5,
+      "ids": {
+        "emptiedEntityId": "01a2191e-8e58-7783-a746-bb80e8671f66"
+      }
+    },
+    "SC-05": {
+      "id": "SC-05",
+      "title": "Universal Search RU + EN + partial/fuzzy query returns results & highlights",
+      "status": "PASS",
+      "durationMs": 16098.3,
+      "ids": {
+        "resultCount": 14
+      }
+    },
+    "SC-06": {
+      "id": "SC-06",
+      "title": "Zero leakage check in API + UI for student & external org user",
+      "status": "PASS",
+      "durationMs": 25449.2,
+      "ids": {
+        "studentCheckedItems": 9,
+        "outsiderCheckedItems": 3
+      }
+    },
+    "SC-07": {
+      "id": "SC-07",
+      "title": "Media upload cancel mid-upload -> CANCELLED, S3 purged, late confirm 409",
+      "status": "PASS",
+      "durationMs": 22630.3,
+      "ids": {
+        "assetId": "01a2191f-5bf5-71be-9387-fe5b6cd38b5c",
+        "storageKey": "01a2191f-5bf0-7983-ba77-b2063dd9280d"
+      }
+    },
+    "SC-08": {
+      "id": "SC-08",
+      "title": "Trash 409 restore_conflict & renameOnConflict restore via /trash UI",
+      "status": "PASS",
+      "durationMs": 40281,
+      "ids": {
+        "asset1Id": "01a2191f-bc90-7978-b736-1f9085d1aad5",
+        "asset2Id": "01a2191f-fb03-7558-9ca1-e6e4f51b42de",
+        "trash1Id": "01a2191f-ec8e-710f-8224-b59d7297320d"
+      }
+    },
+    "SC-09": {
+      "id": "SC-09",
+      "title": "Permanent delete from /trash UI purges S3 object & returns 404",
+      "status": "PASS",
+      "durationMs": 15778.5,
+      "ids": {
+        "purgedAssetId": "01a2191f-fb03-7558-9ca1-e6e4f51b42de",
+        "purgedTrashId": "01a21920-4946-79df-b89d-e5d53f337b29"
+      }
+    },
+    "SC-10": {
+      "id": "SC-10",
+      "title": "Reversible action -> Undo Toast live countdown -> Undo within window reverses state",
+      "status": "PASS",
+      "durationMs": 8319.2,
+      "ids": {
+        "operationId": "01a21920-9725-77e3-ac4f-a94fe27abcaf"
+      }
+    },
+    "SC-11": {
+      "id": "SC-11",
+      "title": "Expired Undo rejected with 409 undo_window_expired cleanly in API & UI",
+      "status": "PASS",
+      "durationMs": 25660.3,
+      "ids": {
+        "expiredOpId": "01a21920-bf05-7e5f-a1c9-ed1c82ba87bd",
+        "uiOpId": "01a21920-ece2-7bec-9044-1069143008eb"
+      }
+    },
+    "SC-12": {
+      "id": "SC-12",
+      "title": "Activity integrity E2E: assignmentId, reload restores same attemptId, submit, revealAnswersPolicy=never",
+      "status": "PASS",
+      "durationMs": 28415.2,
+      "ids": {
+        "examActivityId": "01a2191e-1438-7630-914c-2fee33c5ca46",
+        "examAssignmentId": "01a2191e-23ac-7066-b4c3-b2195b6465a1",
+        "examAttemptId": "01a21921-2048-792c-8d4c-bf0464963249"
+      }
+    },
+    "SC-13": {
+      "id": "SC-13",
+      "title": "Teacher grades attempt -> confirmed parent sees progress, revoked/unlinked parent gets 403",
+      "status": "PASS",
+      "durationMs": 23546.4,
+      "ids": {
+        "examAttemptId": "01a21921-2048-792c-8d4c-bf0464963249",
+        "studentId": "01a2191d-d57a-7226-b82e-f974e6e8fef0"
+      }
+    },
+    "SC-14": {
+      "id": "SC-14",
+      "title": "Chat E2E dual-browser live WS delivery, reply, reaction, pin & read state",
+      "status": "PASS",
+      "durationMs": 17905.2,
+      "ids": {
+        "sharedRoomId": "01a2191d-f6f8-7ff7-9615-d0570dbe9da2",
+        "liveMsgId": "01a21921-f213-7b1b-94b7-dfb5eaf8a219"
+      }
+    },
+    "SC-15": {
+      "id": "SC-15",
+      "title": "Remove/revoke chat member evicts WS room delivery & denies access",
+      "status": "PASS",
+      "durationMs": 15796,
+      "ids": {
+        "sharedRoomId": "01a2191d-f6f8-7ff7-9615-d0570dbe9da2",
+        "evictedPersonId": "01a2191d-d568-7ed5-8306-df8e734f08a0"
+      }
+    },
+    "SC-16": {
+      "id": "SC-16",
+      "title": "Notifications Center grouped toggle, category filter, bulk read & bulk archive",
+      "status": "PASS",
+      "durationMs": 30470.1,
+      "ids": {
+        "notifRoomId": "01a21922-69c4-764e-91bc-a8b798950a9f",
+        "deletableMsgId": "01a21922-7114-7ba8-8f95-7f4d8812450f"
+      }
+    },
+    "SC-17": {
+      "id": "SC-17",
+      "title": "Notifications Center unavailable resource badge/disabled + honest Web Push status",
+      "status": "PASS",
+      "durationMs": 4254.6,
+      "ids": {
+        "pushText": "Web Push Delivery\nNot configured on server\nvapid_keys_not_configured"
+      }
+    },
+    "SC-18": {
+      "id": "SC-18",
+      "title": "Mobile viewport 360x780: zero overflow + AppMobileMenu & AppBottomNav",
+      "status": "PASS",
+      "durationMs": 1725.3,
+      "ids": {
+        "viewport": "360x780",
+        "checkedRoutes": [
+          "/workspace",
+          "/search",
+          "/trash",
+          "/notifications-center"
+        ]
+      }
+    },
+    "SC-19": {
+      "id": "SC-19",
+      "title": "Mobile viewport 390x844: zero overflow + AppMobileMenu & AppBottomNav",
+      "status": "PASS",
+      "durationMs": 1719.3,
+      "ids": {
+        "viewport": "390x844",
+        "checkedRoutes": [
+          "/workspace",
+          "/search",
+          "/trash",
+          "/notifications-center"
+        ]
+      }
+    },
+    "SC-20": {
+      "id": "SC-20",
+      "title": "Themes Light / Dark / Monochrome / Custom accent palette + contrast & zero errors",
+      "status": "PASS",
+      "durationMs": 2167.7,
+      "ids": {
+        "lightCheck": {
+          "theme": "light",
+          "color": "rgb(16, 24, 40)",
+          "bg": "rgb(246, 248, 252)",
+          "textLen": 1541
+        },
+        "darkCheck": {
+          "theme": "dark",
+          "color": "rgb(248, 250, 252)",
+          "bg": "rgb(11, 16, 32)",
+          "textLen": 1541
+        },
+        "monoCheck": {
+          "theme": "dark",
+          "color": "rgb(248, 250, 252)",
+          "bg": "rgb(11, 16, 32)",
+          "textLen": 1596
+        },
+        "customCheck": {
+          "theme": "dark",
+          "color": "rgb(16, 24, 40)",
+          "bg": "rgb(246, 248, 252)",
+          "textLen": 1630
+        }
+      }
+    },
+    "SC-21": {
+      "id": "SC-21",
+      "title": "Locale switch RU / EN renders non-empty UI with zero console/page errors",
+      "status": "PASS",
+      "durationMs": 3009.7,
+      "ids": {
+        "ruSample": "Рабочее пространство\n\nОбзор по роли, ожидающие действия и бы",
+        "enSample": "Workspace\n\nRole-driven overview, pending actions, and quick "
+      }
+    },
+    "SC-22": {
+      "id": "SC-22",
+      "title": "Direct API security checks: CAS 409, expired attempt 409, overrideCfg tampering ignored, unconfirmed parent 403",
+      "status": "PASS",
+      "durationMs": 32915.9,
+      "ids": {
+        "secActId": "01a21923-0bef-7fad-a5f6-e5003ebed0ac",
+        "tamperAttemptId": "01a21923-272a-702e-80a1-4bdba34922c5"
+      }
+    }
+  }
+}

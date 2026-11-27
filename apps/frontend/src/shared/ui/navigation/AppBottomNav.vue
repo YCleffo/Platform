@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
 import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, ref, toRaw, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router';
 import { activeNavigationRoute } from '@/shared/navigation/activeRoute';
 
 export interface BottomNavItem {
   label: string;
   icon: Component;
   routeName: string;
+  to?: RouteLocationRaw;
+  badge?: number;
 }
 
 const props = defineProps<{ items: BottomNavItem[]; activeRouteName?: string }>();
@@ -20,6 +22,8 @@ const sanitizedItems = computed(() =>
   props.items.map((item) => ({
     label: item.label,
     routeName: item.routeName,
+    to: item.to ?? { name: item.routeName },
+    badge: item.badge ?? 0,
     icon: markRaw(toRaw(item.icon)),
   })),
 );
@@ -125,7 +129,7 @@ function finishDrag(offset: number): void {
   suppressClickUntil = performance.now() + 300;
 
   if (target && target.routeName !== active.value) {
-    void router.push({ name: target.routeName }).then(() => nextTick(updatePill));
+    void router.push(target.to ?? { name: target.routeName }).then(() => nextTick(updatePill));
   } else {
     void nextTick(() => {
       updatePill();
@@ -339,7 +343,7 @@ const pillStyle = computed(() => {
             :ref="(el) => setLinkRef(item.routeName, el)"
             class="app-bottom-nav__link"
             :class="{ 'app-bottom-nav__link--active': active === item.routeName }"
-            :to="{ name: item.routeName }"
+            :to="item.to"
             :aria-current="active === item.routeName ? 'page' : undefined"
             :draggable="false"
             active-class=""
@@ -355,6 +359,12 @@ const pillStyle = computed(() => {
                 :is="markRaw(item.icon)"
                 :size="22"
               />
+              <span
+                v-if="item.badge > 0"
+                class="app-bottom-nav__badge"
+              >
+                {{ Math.min(item.badge, 99) }}
+              </span>
             </span>
             <span class="app-bottom-nav__label">{{ item.label }}</span>
           </RouterLink>
@@ -424,7 +434,7 @@ const pillStyle = computed(() => {
   background: var(--accent-soft);
   border: 1px solid var(--border);
   pointer-events: none;
-  box-shadow: 0 2px 10px rgba(34, 96, 255, 0.1);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 14%, transparent);
   transition:
     var(--theme-transition),
     transform var(--motion-control-duration) var(--motion-ease),
@@ -489,11 +499,30 @@ const pillStyle = computed(() => {
 }
 
 .app-bottom-nav__icon {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   transition: var(--theme-transition);
+}
+
+.app-bottom-nav__badge {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-circle);
+  background: var(--danger);
+  color: var(--on-accent);
+  font-size: var(--type-body-caption-size);
+  line-height: var(--type-body-caption-line);
+  font-weight: var(--type-body-small-emphasis-weight);
 }
 
 .app-bottom-nav__label {

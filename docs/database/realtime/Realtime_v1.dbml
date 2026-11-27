@@ -1,0 +1,61 @@
+// СФОРМИРОВАНО scripts/database/export_schema.py; не редактировать вручную.
+// Только реальные объекты PostgreSQL. Полное определение SQL: schema.catalog.json.
+Project realtime {
+  database_type: 'PostgreSQL'
+  Note: 'Каталог PostgreSQL после миграций. Межбазовые идентификаторы не являются внешними ключами.'
+}
+
+Table realtime.connections {
+  id uuid [pk, not null, default: `uuidv7()`]
+  account_id uuid [not null]
+  person_id uuid [not null]
+  organization_id uuid [not null]
+  client_instance_id "character varying(120)" [null]
+  status "character varying(24)" [not null, default: `'connected'::character varying`]
+  last_seq bigint [not null, default: `0`]
+  connected_at "timestamp with time zone" [not null, default: `now()`]
+  last_seen_at "timestamp with time zone" [not null, default: `now()`]
+  disconnected_at "timestamp with time zone" [null]
+  indexes {
+    (organization_id, person_id, status, last_seen_at) [name: 'realtime_connections_person_idx', type: btree]
+  }
+  Note: 'connections_account_id_not_null: NOT NULL account_id\nconnections_connected_at_not_null: NOT NULL connected_at\nconnections_id_not_null: NOT NULL id\nconnections_last_seen_at_not_null: NOT NULL last_seen_at\nconnections_last_seq_not_null: NOT NULL last_seq\nconnections_organization_id_not_null: NOT NULL organization_id\nconnections_person_id_not_null: NOT NULL person_id\nconnections_status_check: CHECK (status::text = ANY (ARRAY[\'connected\'::character varying, \'disconnected\'::character varying]::text[]))\nconnections_status_not_null: NOT NULL status\nCREATE INDEX realtime_connections_person_idx ON realtime.connections USING btree (organization_id, person_id, status, last_seen_at DESC)'
+}
+
+Table realtime.module_migrations {
+  name text [pk, not null]
+  sha256 character(64) [not null]
+  applied_at "timestamp with time zone" [not null, default: `now()`]
+  Note: 'module_migrations_applied_at_not_null: NOT NULL applied_at\nmodule_migrations_name_not_null: NOT NULL name\nmodule_migrations_sha256_not_null: NOT NULL sha256'
+}
+
+Table realtime.outbox_events {
+  seq bigint [pk, not null, default: `nextval('realtime.outbox_events_seq_seq'::regclass)`]
+  event_id uuid [not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  channel "character varying(200)" [not null]
+  event_type "character varying(100)" [not null]
+  aggregate_type "character varying(64)" [not null, default: `''::character varying`]
+  aggregate_id "character varying(128)" [not null, default: `''::character varying`]
+  actor_account_id uuid [null]
+  actor_person_id uuid [null]
+  payload jsonb [not null, default: `'{}'::jsonb`]
+  target_person_ids jsonb [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  dispatched_at "timestamp with time zone" [null]
+  attempts integer [not null, default: `0`]
+  last_error text [null]
+  locked_until "timestamp with time zone" [null]
+  next_retry_at "timestamp with time zone" [null]
+  max_attempts integer [not null, default: `12`]
+  dead_lettered_at "timestamp with time zone" [null]
+  indexes {
+    event_id [name: 'outbox_events_event_id_key', type: btree, unique]
+    (channel, seq) [name: 'realtime_outbox_channel_seq_idx', type: btree]
+    created_at [name: 'realtime_outbox_created_idx', type: btree]
+    (organization_id, channel, seq) [name: 'realtime_outbox_org_channel_seq_idx', type: btree]
+    (organization_id, seq) [name: 'realtime_outbox_org_seq_idx', type: btree]
+  }
+  Note: 'outbox_events_aggregate_id_not_null: NOT NULL aggregate_id\noutbox_events_aggregate_type_not_null: NOT NULL aggregate_type\noutbox_events_attempts_not_null: NOT NULL attempts\noutbox_events_channel_not_null: NOT NULL channel\noutbox_events_created_at_not_null: NOT NULL created_at\noutbox_events_event_id_key: UNIQUE (event_id)\noutbox_events_event_id_not_null: NOT NULL event_id\noutbox_events_event_type_not_null: NOT NULL event_type\noutbox_events_max_attempts_not_null: NOT NULL max_attempts\noutbox_events_organization_id_not_null: NOT NULL organization_id\noutbox_events_payload_check: CHECK (jsonb_typeof(payload) = \'object\'::text)\noutbox_events_payload_not_null: NOT NULL payload\noutbox_events_seq_not_null: NOT NULL seq\noutbox_events_target_person_ids_check: CHECK (target_person_ids IS NULL OR jsonb_typeof(target_person_ids) = \'array\'::text)\nCREATE UNIQUE INDEX outbox_events_event_id_key ON realtime.outbox_events USING btree (event_id)\nCREATE INDEX realtime_outbox_channel_seq_idx ON realtime.outbox_events USING btree (channel, seq)\nCREATE INDEX realtime_outbox_created_idx ON realtime.outbox_events USING btree (created_at)\nCREATE INDEX realtime_outbox_org_channel_seq_idx ON realtime.outbox_events USING btree (organization_id, channel, seq)\nCREATE INDEX realtime_outbox_org_seq_idx ON realtime.outbox_events USING btree (organization_id, seq)\nCREATE INDEX realtime_outbox_pending_idx ON realtime.outbox_events USING btree (seq) WHERE ((dispatched_at IS NULL) AND (dead_lettered_at IS NULL))'
+}
+

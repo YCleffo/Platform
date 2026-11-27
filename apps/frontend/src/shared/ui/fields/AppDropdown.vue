@@ -262,7 +262,7 @@ watch(
 .app-dropdown__trigger:focus-visible,
 .app-dropdown__trigger[aria-expanded='true'] {
   border-color: var(--focus-border);
-  box-shadow: var(--focus-ring);
+  box-shadow: none;
   outline: none;
   transition: var(--theme-transition);
 }

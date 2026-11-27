@@ -1,0 +1,78 @@
+// СФОРМИРОВАНО scripts/database/export_schema.py; не редактировать вручную.
+// Только реальные объекты PostgreSQL. Полное определение SQL: schema.catalog.json.
+Project notifications {
+  database_type: 'PostgreSQL'
+  Note: 'Каталог PostgreSQL после миграций. Межбазовые идентификаторы не являются внешними ключами.'
+}
+
+Table notifications.items {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  person_id uuid [not null]
+  account_id uuid [null]
+  category "character varying(40)" [not null, default: `'general'::character varying`]
+  kind "character varying(80)" [not null, default: `'message'::character varying`]
+  title "character varying(255)" [not null, default: `''::character varying`]
+  body text [not null, default: `''::text`]
+  room_id uuid [null]
+  message_id uuid [null]
+  resource_type "character varying(60)" [null]
+  resource_id uuid [null]
+  resource_path "character varying(500)" [null]
+  event_key "character varying(240)" [null]
+  parent_student_id uuid [null]
+  priority "character varying(16)" [not null, default: `'normal'::character varying`]
+  payload jsonb [not null, default: `'{}'::jsonb`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  read_at "timestamp with time zone" [null]
+  archived_at "timestamp with time zone" [null]
+  group_key "character varying(160)" [null]
+  indexes {
+    (organization_id, person_id, category, archived_at, created_at, id) [name: 'notifications_category_list_idx', type: btree]
+    (organization_id, person_id, created_at, id) [name: 'notifications_recipient_idx', type: btree]
+  }
+  Note: 'items_body_not_null: NOT NULL body\nitems_category_check: CHECK (category::text = ANY (ARRAY[\'message\'::character varying, \'homework\'::character varying, \'assessment\'::character varying, \'activity\'::character varying, \'schedule\'::character varying, \'family\'::character varying, \'security\'::character varying, \'system\'::character varying, \'general\'::character varying]::text[]))\nitems_category_not_null: NOT NULL category\nitems_created_at_not_null: NOT NULL created_at\nitems_id_not_null: NOT NULL id\nitems_kind_not_null: NOT NULL kind\nitems_organization_id_not_null: NOT NULL organization_id\nitems_payload_check: CHECK (jsonb_typeof(payload) = \'object\'::text)\nitems_payload_not_null: NOT NULL payload\nitems_person_id_not_null: NOT NULL person_id\nitems_priority_check: CHECK (priority::text = ANY (ARRAY[\'low\'::character varying, \'normal\'::character varying, \'high\'::character varying, \'urgent\'::character varying]::text[]))\nitems_priority_not_null: NOT NULL priority\nitems_title_not_null: NOT NULL title\nCREATE INDEX notifications_category_list_idx ON notifications.items USING btree (organization_id, person_id, category, archived_at, created_at DESC, id DESC)\nCREATE UNIQUE INDEX notifications_event_key_idx ON notifications.items USING btree (organization_id, person_id, event_key) WHERE (event_key IS NOT NULL)\nCREATE INDEX notifications_group_key_idx ON notifications.items USING btree (organization_id, person_id, group_key, created_at DESC) WHERE ((group_key IS NOT NULL) AND (archived_at IS NULL))\nCREATE INDEX notifications_items_org_person_read_idx ON notifications.items USING btree (organization_id, person_id, read_at) WHERE (archived_at IS NULL)\nCREATE INDEX notifications_recipient_idx ON notifications.items USING btree (organization_id, person_id, created_at DESC, id DESC)\nCREATE INDEX notifications_resource_lookup_idx ON notifications.items USING btree (resource_type, resource_id) WHERE (resource_id IS NOT NULL)\nCREATE INDEX notifications_room_idx ON notifications.items USING btree (room_id, message_id) WHERE (room_id IS NOT NULL)\nCREATE INDEX notifications_unread_idx ON notifications.items USING btree (person_id, organization_id, read_at) WHERE ((read_at IS NULL) AND (archived_at IS NULL))'
+}
+
+Table notifications.module_migrations {
+  name text [pk, not null]
+  sha256 character(64) [not null]
+  applied_at "timestamp with time zone" [not null, default: `now()`]
+  Note: 'module_migrations_applied_at_not_null: NOT NULL applied_at\nmodule_migrations_name_not_null: NOT NULL name\nmodule_migrations_sha256_not_null: NOT NULL sha256'
+}
+
+Table notifications.preferences {
+  account_id uuid [not null]
+  organization_id uuid [not null, default: `'00000000-0000-0000-0000-000000000000'::uuid`]
+  category "character varying(40)" [not null]
+  in_app boolean [not null, default: `true`]
+  realtime boolean [not null, default: `true`]
+  web_push boolean [not null, default: `true`]
+  email boolean [not null, default: `false`]
+  sound boolean [not null, default: `true`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (account_id, organization_id, category) [pk]
+  }
+  Note: 'preferences_account_id_not_null: NOT NULL account_id\npreferences_category_not_null: NOT NULL category\npreferences_email_not_null: NOT NULL email\npreferences_in_app_not_null: NOT NULL in_app\npreferences_organization_id_not_null: NOT NULL organization_id\npreferences_realtime_not_null: NOT NULL realtime\npreferences_sound_not_null: NOT NULL sound\npreferences_updated_at_not_null: NOT NULL updated_at\npreferences_web_push_not_null: NOT NULL web_push'
+}
+
+Table notifications.push_subscriptions {
+  id uuid [pk, not null, default: `uuidv7()`]
+  account_id uuid [not null]
+  person_id uuid [not null]
+  organization_id uuid [null]
+  endpoint text [not null]
+  p256dh text [not null, default: `''::text`]
+  auth_secret text [not null, default: `''::text`]
+  user_agent text [null]
+  device_label "character varying(120)" [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  last_used_at "timestamp with time zone" [null]
+  revoked_at "timestamp with time zone" [null]
+  indexes {
+    (account_id, endpoint) [name: 'push_subscriptions_account_id_endpoint_key', type: btree, unique]
+  }
+  Note: 'push_subscriptions_account_id_endpoint_key: UNIQUE (account_id, endpoint)\npush_subscriptions_account_id_not_null: NOT NULL account_id\npush_subscriptions_auth_secret_not_null: NOT NULL auth_secret\npush_subscriptions_created_at_not_null: NOT NULL created_at\npush_subscriptions_endpoint_not_null: NOT NULL endpoint\npush_subscriptions_id_not_null: NOT NULL id\npush_subscriptions_p256dh_not_null: NOT NULL p256dh\npush_subscriptions_person_id_not_null: NOT NULL person_id\nCREATE UNIQUE INDEX push_subscriptions_account_id_endpoint_key ON notifications.push_subscriptions USING btree (account_id, endpoint)'
+}
+

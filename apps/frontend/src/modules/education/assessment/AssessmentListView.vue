@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useEducationI18n } from '../i18n';
+import { useEducationWorkspace } from '../workspace';
+import { educationApi, type Group, type Student } from '../api';
+import { activityApi } from '@/modules/activity/activityApi';
+import { actT } from '@/modules/activity/activityI18n';
 import { assessmentApi } from './assessmentApi';
 import type { AssessmentItem, AssessmentAttempt } from '../activityTypes';
 
@@ -10,7 +15,23 @@ const emit = defineEmits<{
   preview: [id: string];
 }>();
 
+const router = useRouter();
+const workspace = useEducationWorkspace();
 const { t } = useEducationI18n();
+
+function handleCreate(): void {
+  emit('create');
+  if (router) {
+    void router.push({ name: 'education-assessment-create' });
+  }
+}
+
+function handleEdit(id: string): void {
+  emit('edit', id);
+  if (router) {
+    void router.push({ name: 'education-assessment-edit', params: { id } });
+  }
+}
 
 const items = ref<AssessmentItem[]>([]);
 const loading = ref(false);
@@ -29,6 +50,69 @@ const reviewNotes = ref('');
 const reviewScore = ref<number | null>(null);
 const savingReview = ref(false);
 
+// Assign modal state
+const showAssignModal = ref(false);
+const assignAssessment = ref<AssessmentItem | null>(null);
+const assignTargetType = ref<'group' | 'student'>('group');
+const assignTargetId = ref('');
+const assignOpensAt = ref('');
+const assignDueAt = ref('');
+const assignAllowLate = ref(false);
+const assignGroups = ref<Group[]>([]);
+const assignStudents = ref<Student[]>([]);
+const assigning = ref(false);
+const assignMessage = ref('');
+
+async function resolveAssignOrg(): Promise<string> {
+  return workspace.organizationId || '';
+}
+
+async function openAssignModal(item: AssessmentItem): Promise<void> {
+  assignAssessment.value = item;
+  assignTargetType.value = 'group';
+  assignTargetId.value = '';
+  assignOpensAt.value = '';
+  assignDueAt.value = '';
+  assignAllowLate.value = false;
+  assignMessage.value = '';
+  showAssignModal.value = true;
+  const org = await resolveAssignOrg();
+  if (org) {
+    try {
+      const [gRes, sRes] = await Promise.all([educationApi.groups(org), educationApi.students(org)]);
+      assignGroups.value = gRes.items;
+      assignStudents.value = sRes.items;
+      if (gRes.items[0]) assignTargetId.value = gRes.items[0].id;
+    } catch {
+      // ignore
+    }
+  }
+}
+
+async function submitAssign(): Promise<void> {
+  const org = await resolveAssignOrg();
+  if (!org || !assignAssessment.value || !assignTargetId.value) return;
+  assigning.value = true;
+  assignMessage.value = '';
+  try {
+    await activityApi.assignActivity(org, assignAssessment.value.id, {
+      targetType: assignTargetType.value,
+      targetId: assignTargetId.value,
+      opensAt: assignOpensAt.value ? new Date(assignOpensAt.value).toISOString() : undefined,
+      dueAt: assignDueAt.value ? new Date(assignDueAt.value).toISOString() : undefined,
+      allowLate: assignAllowLate.value,
+    });
+    assignMessage.value = actT('assignSuccess');
+    setTimeout(() => {
+      showAssignModal.value = false;
+    }, 600);
+  } catch (err) {
+    assignMessage.value = err instanceof Error ? err.message : 'Assign failed';
+  } finally {
+    assigning.value = false;
+  }
+}
+
 async function loadAssessments(): Promise<void> {
   loading.value = true;
   try {
@@ -45,6 +129,10 @@ async function loadAssessments(): Promise<void> {
 }
 
 async function viewAttempts(assessment: AssessmentItem): Promise<void> {
+  if (router) {
+    void router.push({ name: 'education-assessment-results', params: { id: assessment.id } });
+    return;
+  }
   selectedAssessment.value = assessment;
   showAttemptsDrawer.value = true;
   loadingAttempts.value = true;
@@ -107,7 +195,7 @@ onMounted(() => {
       <button
         class="edu-btn edu-btn--primary"
         type="button"
-        @click="emit('create')"
+        @click="handleCreate"
       >
         + {{ t('education.createAssessment') }}
       </button>
@@ -154,7 +242,7 @@ onMounted(() => {
       <button
         class="edu-btn edu-btn--primary"
         type="button"
-        @click="emit('create')"
+        @click="handleCreate"
       >
         + {{ t('education.createAssessment') }}
       </button>
@@ -211,7 +299,7 @@ onMounted(() => {
           <button
             class="edu-btn edu-btn--sm edu-btn--secondary"
             type="button"
-            @click="emit('edit', item.id)"
+            @click="handleEdit(item.id)"
           >
             {{ t('education.editAssessment') }}
           </button>
@@ -221,6 +309,14 @@ onMounted(() => {
             @click="viewAttempts(item)"
           >
             {{ t('education.reviewAttempts') }}
+          </button>
+          <button
+            v-if="item.status === 'PUBLISHED'"
+            class="edu-btn edu-btn--sm edu-btn--primary"
+            type="button"
+            @click="openAssignModal(item)"
+          >
+            {{ actT('assignAssessment') }}
           </button>
           <button
             v-if="item.status === 'DRAFT'"
@@ -360,6 +456,113 @@ onMounted(() => {
                 {{ t('education.draftNotice') }}
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assign Modal -->
+    <div
+      v-if="showAssignModal"
+      class="edu-modal-backdrop"
+      @click.self="showAssignModal = false"
+    >
+      <div
+        class="edu-modal"
+        role="dialog"
+        :aria-label="actT('assignAssessment')"
+      >
+        <header class="edu-modal__header">
+          <div>
+            <h2 class="edu-modal__title">{{ actT('assignAssessment') }}</h2>
+            <p class="edu-modal__subtitle">{{ assignAssessment?.title }}</p>
+          </div>
+          <button
+            class="edu-btn edu-btn--ghost"
+            type="button"
+            @click="showAssignModal = false"
+          >
+            ✕
+          </button>
+        </header>
+        <div class="edu-modal__body">
+          <label class="edu-field">
+            <span class="edu-field__label">{{ actT('assignTargetType') }}</span>
+            <select
+              v-model="assignTargetType"
+              class="edu-input"
+              @change="
+                assignTargetId =
+                  assignTargetType === 'group'
+                    ? (assignGroups[0]?.id ?? '')
+                    : (assignStudents[0]?.id ?? '')
+              "
+            >
+              <option value="group">{{ actT('assignGroup') }}</option>
+              <option value="student">{{ actT('assignStudent') }}</option>
+            </select>
+          </label>
+          <label class="edu-field">
+            <span class="edu-field__label">{{ actT('assignTarget') }}</span>
+            <select
+              v-model="assignTargetId"
+              class="edu-input"
+            >
+              <template v-if="assignTargetType === 'group'">
+                <option
+                  v-for="g in assignGroups"
+                  :key="g.id"
+                  :value="g.id"
+                >
+                  {{ g.name }}
+                </option>
+              </template>
+              <template v-else>
+                <option
+                  v-for="s in assignStudents"
+                  :key="s.id"
+                  :value="s.id"
+                >
+                  {{ s.name }}
+                </option>
+              </template>
+            </select>
+          </label>
+          <div class="edu-grid-2">
+            <label class="edu-field">
+              <span class="edu-field__label">{{ actT('opensAtLabel') }}</span>
+              <input
+                v-model="assignOpensAt"
+                type="datetime-local"
+                class="edu-input"
+              />
+            </label>
+            <label class="edu-field">
+              <span class="edu-field__label">{{ actT('dueAtLabel') }}</span>
+              <input
+                v-model="assignDueAt"
+                type="datetime-local"
+                class="edu-input"
+              />
+            </label>
+          </div>
+          <label class="edu-checkbox">
+            <input
+              v-model="assignAllowLate"
+              type="checkbox"
+            />
+            <span>{{ actT('allowLateLabel') }}</span>
+          </label>
+          <p v-if="assignMessage">{{ assignMessage }}</p>
+          <div class="edu-review-form__actions">
+            <button
+              class="edu-btn edu-btn--primary"
+              type="button"
+              :disabled="assigning || !assignTargetId"
+              @click="submitAssign"
+            >
+              {{ actT('assignSubmit') }}
+            </button>
           </div>
         </div>
       </div>

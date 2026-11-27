@@ -1,7 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { mediaController } from '@/shared/media/mediaController';
 import MediaPlayer from './MediaPlayer.vue';
 import AudioPlayer from './AudioPlayer.vue';
+import VoiceMessagePlayer from './VoiceMessagePlayer.vue';
+import VideoPlayer from './VideoPlayer.vue';
+import ImageViewer from './ImageViewer.vue';
+import DocumentPreview from './DocumentPreview.vue';
 import AudioWaveform from './AudioWaveform.vue';
 import VideoNotePlayer from './VideoNotePlayer.vue';
 import VideoNoteRecorder from './VideoNoteRecorder.vue';
@@ -15,7 +20,14 @@ vi.mock('vue-i18n', () => ({
 }));
 
 describe('Media UI Kit', () => {
-  it('renders AudioPlayer for voice media kind', () => {
+  beforeEach(() => {
+    mediaController.reset();
+    mediaController.setPlaybackRate(1);
+    mediaController.setVolume(1);
+    window.localStorage.clear();
+  });
+
+  it('renders VoiceMessagePlayer for voice media kind', () => {
     const asset: MediaAsset = {
       id: 'ast-voice-1',
       kind: 'voice',
@@ -33,6 +45,7 @@ describe('Media UI Kit', () => {
       props: { asset },
     });
 
+    expect(wrapper.findComponent(VoiceMessagePlayer).exists()).toBe(true);
     expect(wrapper.findComponent(AudioPlayer).exists()).toBe(true);
     expect(wrapper.text()).toContain('0:00 / 0:12');
   });
@@ -152,5 +165,60 @@ describe('Media UI Kit', () => {
     expect(cancelBtn.exists()).toBe(true);
     await cancelBtn.trigger('click');
     expect(wrapper.emitted('cancel')).toBeTruthy();
+  });
+
+  it('renders VideoPlayer for video media kind with controls', () => {
+    const wrapper = mount(MediaPlayer, {
+      props: {
+        kind: 'video',
+        src: '/clip.mp4',
+        name: 'Lesson Video',
+      },
+    });
+    expect(wrapper.findComponent(VideoPlayer).exists()).toBe(true);
+    expect(wrapper.find('video').exists()).toBe(true);
+    expect(wrapper.find('.app-video-player__controls').exists()).toBe(true);
+  });
+
+  it('navigates and zooms in ImageViewer gallery', async () => {
+    const wrapper = mount(ImageViewer, {
+      props: {
+        items: [
+          { id: '1', src: '/img1.png', alt: 'First' },
+          { id: '2', src: '/img2.png', alt: 'Second' },
+        ],
+      },
+    });
+    expect(wrapper.text()).toContain('1 / 2');
+    expect(wrapper.find('.app-image-viewer__img').attributes('src')).toBe('/img1.png');
+
+    await wrapper.find('.app-image-viewer__nav--next').trigger('click');
+    expect(wrapper.text()).toContain('2 / 2');
+    expect(wrapper.find('.app-image-viewer__img').attributes('src')).toBe('/img2.png');
+
+    await wrapper.find('[aria-label="media.zoomIn"]').trigger('click');
+    expect(wrapper.text()).toContain('125%');
+  });
+
+  it('renders PDF iframe and unsupported document fallback in DocumentPreview', () => {
+    const pdfWrapper = mount(DocumentPreview, {
+      props: {
+        src: '/api/media/stream/pdf-1',
+        name: 'syllabus.pdf',
+        mime: 'application/pdf',
+      },
+    });
+    expect(pdfWrapper.find('iframe.app-document-preview__pdf').exists()).toBe(true);
+
+    const docxWrapper = mount(DocumentPreview, {
+      props: {
+        src: '/api/media/stream/doc-1',
+        name: 'report.docx',
+        mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      },
+    });
+    expect(docxWrapper.find('iframe').exists()).toBe(false);
+    expect(docxWrapper.text()).toContain('media.unsupportedPreview');
+    expect(docxWrapper.find('a[download="report.docx"]').exists()).toBe(true);
   });
 });

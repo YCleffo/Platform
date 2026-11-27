@@ -52,6 +52,11 @@ export default defineConfig(({ mode }) => {
             }
           : undefined,
       proxy: {
+        '/ws': {
+          target: env.VITE_REALTIME_PROXY_TARGET || coreTarget.replace(/^http/, 'ws'),
+          ws: true,
+          changeOrigin: true,
+        },
         '/api/control': {
           target: commercialTarget,
           changeOrigin: true,

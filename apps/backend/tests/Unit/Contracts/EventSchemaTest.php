@@ -46,7 +46,17 @@ final class EventSchemaTest extends Unit
 
     private function contractsDirectory(): string
     {
-        $container = '/contracts/events';
-        return is_dir($container) ? $container : dirname(__DIR__, 5) . '/contracts/events';
+        $candidates = [
+            '/contracts/events',
+            dirname(__DIR__, 5) . '/contracts/events',
+            dirname(__DIR__, 4) . '/contracts/events',
+        ];
+        foreach ($candidates as $candidate) {
+            if (is_dir($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return dirname(__DIR__, 5) . '/contracts/events';
     }
 }

@@ -41,33 +41,33 @@ final readonly class AssessmentAction
 
             $result = match ($operation) {
                 'assessments' => $request->getMethod() === 'POST'
-                    ? $assessments->createAssessment($scope, $body)
-                    : $assessments->listAssessments($scope, $queryParams),
+                    ? $assessments->createAssessment($scope, $body, $identity)
+                    : $assessments->listAssessments($scope, $queryParams, $identity),
 
                 'assessment_detail' => $request->getMethod() === 'PUT'
-                    ? $assessments->updateAssessment($scope, (string) $id, $body)
-                    : $assessments->getAssessment($scope, (string) $id),
+                    ? $assessments->updateAssessment($scope, (string) $id, $body, $identity)
+                    : $assessments->getAssessment($scope, (string) $id, $identity),
 
-                'publish_assessment' => $assessments->publishAssessment($scope, (string) $id, $body),
-                'assessment_versions' => $assessments->listVersions($scope, (string) $id),
+                'publish_assessment' => $assessments->publishAssessment($scope, (string) $id, $body, $identity),
+                'assessment_versions' => $assessments->listVersions($scope, (string) $id, $identity),
 
                 'question_bank' => $request->getMethod() === 'POST'
-                    ? $assessments->createQuestionBankItem($scope, $body)
-                    : $assessments->listQuestionBank($scope, $queryParams),
+                    ? $assessments->createQuestionBankItem($scope, $body, $identity)
+                    : $assessments->listQuestionBank($scope, $queryParams, $identity),
 
-                'delete_question_bank_item' => (function () use ($assessments, $scope, $id): array {
-                    $assessments->deleteQuestionBankItem($scope, (string) $id);
+                'delete_question_bank_item' => (function () use ($assessments, $scope, $id, $identity): array {
+                    $assessments->deleteQuestionBankItem($scope, (string) $id, $identity);
                     return ['deleted' => true];
                 })(),
 
-                'assessment_attempts_list' => $assessments->listAssessmentAttempts($scope, (string) $id),
-                'assessment_attempt_review' => $assessments->reviewAttempt($scope, (string) $id, $body),
+                'assessment_attempts_list' => $assessments->listAssessmentAttempts($scope, (string) $id, $identity),
+                'assessment_attempt_review' => $assessments->reviewAttempt($scope, (string) $id, $body, $identity),
 
-                'student_assessments' => $assessments->listStudentAssessments($scope),
-                'student_start_assessment' => $assessments->startStudentAttempt($scope, (string) $id, $body),
-                'student_assessment_attempt' => $assessments->getStudentAttempt($scope, (string) $id),
-                'student_save_assessment_attempt' => $assessments->saveStudentAttempt($scope, (string) $id, $body),
-                'student_submit_assessment_attempt' => $assessments->submitStudentAttempt($scope, (string) $id, $body),
+                'student_assessments' => $assessments->listStudentAssessments($scope, $identity),
+                'student_start_assessment' => $assessments->startStudentAttempt($scope, (string) $id, $body, $identity),
+                'student_assessment_attempt' => $assessments->getStudentAttempt($scope, (string) $id, $identity),
+                'student_save_assessment_attempt' => $assessments->saveStudentAttempt($scope, (string) $id, $body, $identity),
+                'student_submit_assessment_attempt' => $assessments->submitStudentAttempt($scope, (string) $id, $body, $identity),
 
                 default => throw new EducationError(404, 'not_found'),
             };

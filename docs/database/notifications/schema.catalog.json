@@ -1,0 +1,1374 @@
+{
+  "enums": [],
+  "views": [],
+  "tables": [
+    {
+      "rls": false,
+      "name": "items",
+      "schema": "notifications",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "category",
+          "type": "character varying(40)",
+          "comment": null,
+          "default": "'general'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "kind",
+          "type": "character varying(80)",
+          "comment": null,
+          "default": "'message'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "title",
+          "type": "character varying(255)",
+          "comment": null,
+          "default": "''::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "comment": null,
+          "default": "''::text",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "room_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "message_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "resource_type",
+          "type": "character varying(60)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "resource_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "resource_path",
+          "type": "character varying(500)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "event_key",
+          "type": "character varying(240)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "parent_student_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "priority",
+          "type": "character varying(16)",
+          "comment": null,
+          "default": "'normal'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "payload",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "read_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "group_key",
+          "type": "character varying(160)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "items_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX items_pkey ON notifications.items USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "organization_id",
+            "person_id",
+            "category",
+            "archived_at",
+            "created_at",
+            "id"
+          ],
+          "name": "notifications_category_list_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 6,
+          "predicate": null,
+          "definition": "CREATE INDEX notifications_category_list_idx ON notifications.items USING btree (organization_id, person_id, category, archived_at, created_at DESC, id DESC)",
+          "attribute_count": 6
+        },
+        {
+          "keys": [
+            "organization_id",
+            "person_id",
+            "event_key"
+          ],
+          "name": "notifications_event_key_idx",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 3,
+          "predicate": "(event_key IS NOT NULL)",
+          "definition": "CREATE UNIQUE INDEX notifications_event_key_idx ON notifications.items USING btree (organization_id, person_id, event_key) WHERE (event_key IS NOT NULL)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "organization_id",
+            "person_id",
+            "group_key",
+            "created_at"
+          ],
+          "name": "notifications_group_key_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 4,
+          "predicate": "((group_key IS NOT NULL) AND (archived_at IS NULL))",
+          "definition": "CREATE INDEX notifications_group_key_idx ON notifications.items USING btree (organization_id, person_id, group_key, created_at DESC) WHERE ((group_key IS NOT NULL) AND (archived_at IS NULL))",
+          "attribute_count": 4
+        },
+        {
+          "keys": [
+            "organization_id",
+            "person_id",
+            "read_at"
+          ],
+          "name": "notifications_items_org_person_read_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": "(archived_at IS NULL)",
+          "definition": "CREATE INDEX notifications_items_org_person_read_idx ON notifications.items USING btree (organization_id, person_id, read_at) WHERE (archived_at IS NULL)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "organization_id",
+            "person_id",
+            "created_at",
+            "id"
+          ],
+          "name": "notifications_recipient_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 4,
+          "predicate": null,
+          "definition": "CREATE INDEX notifications_recipient_idx ON notifications.items USING btree (organization_id, person_id, created_at DESC, id DESC)",
+          "attribute_count": 4
+        },
+        {
+          "keys": [
+            "resource_type",
+            "resource_id"
+          ],
+          "name": "notifications_resource_lookup_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "(resource_id IS NOT NULL)",
+          "definition": "CREATE INDEX notifications_resource_lookup_idx ON notifications.items USING btree (resource_type, resource_id) WHERE (resource_id IS NOT NULL)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "room_id",
+            "message_id"
+          ],
+          "name": "notifications_room_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "(room_id IS NOT NULL)",
+          "definition": "CREATE INDEX notifications_room_idx ON notifications.items USING btree (room_id, message_id) WHERE (room_id IS NOT NULL)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "person_id",
+            "organization_id",
+            "read_at"
+          ],
+          "name": "notifications_unread_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": "((read_at IS NULL) AND (archived_at IS NULL))",
+          "definition": "CREATE INDEX notifications_unread_idx ON notifications.items USING btree (person_id, organization_id, read_at) WHERE ((read_at IS NULL) AND (archived_at IS NULL))",
+          "attribute_count": 3
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "items_body_not_null",
+          "columns": [
+            "body"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL body",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "items_category_check",
+          "columns": [
+            "category"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (category::text = ANY (ARRAY['message'::character varying, 'homework'::character varying, 'assessment'::character varying, 'activity'::character varying, 'schedule'::character varying, 'family'::character varying, 'security'::character varying, 'system'::character varying, 'general'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "items_category_not_null",
+          "columns": [
+            "category"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL category",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "items_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "items_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "items_kind_not_null",
+          "columns": [
+            "kind"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL kind",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "items_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "items_payload_check",
+          "columns": [
+            "payload"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (jsonb_typeof(payload) = 'object'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "items_payload_not_null",
+          "columns": [
+            "payload"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL payload",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "items_person_id_not_null",
+          "columns": [
+            "person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL person_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "items_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "items_priority_check",
+          "columns": [
+            "priority"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (priority::text = ANY (ARRAY['low'::character varying, 'normal'::character varying, 'high'::character varying, 'urgent'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "items_priority_not_null",
+          "columns": [
+            "priority"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL priority",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "items_title_not_null",
+          "columns": [
+            "title"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL title",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "module_migrations",
+      "schema": "notifications",
+      "columns": [
+        {
+          "name": "name",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "applied_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "name"
+          ],
+          "name": "module_migrations_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX module_migrations_pkey ON notifications.module_migrations USING btree (name)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "module_migrations_applied_at_not_null",
+          "columns": [
+            "applied_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL applied_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "module_migrations_name_not_null",
+          "columns": [
+            "name"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL name",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "module_migrations_pkey",
+          "columns": [
+            "name"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (name)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "module_migrations_sha256_not_null",
+          "columns": [
+            "sha256"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL sha256",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "preferences",
+      "schema": "notifications",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": "'00000000-0000-0000-0000-000000000000'::uuid",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "category",
+          "type": "character varying(40)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "in_app",
+          "type": "boolean",
+          "comment": null,
+          "default": "true",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bool",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "realtime",
+          "type": "boolean",
+          "comment": null,
+          "default": "true",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bool",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "web_push",
+          "type": "boolean",
+          "comment": null,
+          "default": "true",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bool",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "email",
+          "type": "boolean",
+          "comment": null,
+          "default": "false",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bool",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "sound",
+          "type": "boolean",
+          "comment": null,
+          "default": "true",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bool",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "account_id",
+            "organization_id",
+            "category"
+          ],
+          "name": "preferences_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX preferences_pkey ON notifications.preferences USING btree (account_id, organization_id, category)",
+          "attribute_count": 3
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "preferences_account_id_not_null",
+          "columns": [
+            "account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "preferences_category_not_null",
+          "columns": [
+            "category"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL category",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "preferences_email_not_null",
+          "columns": [
+            "email"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL email",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "preferences_in_app_not_null",
+          "columns": [
+            "in_app"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL in_app",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "preferences_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "preferences_pkey",
+          "columns": [
+            "account_id",
+            "organization_id",
+            "category"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (account_id, organization_id, category)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "preferences_realtime_not_null",
+          "columns": [
+            "realtime"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL realtime",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "preferences_sound_not_null",
+          "columns": [
+            "sound"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL sound",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "preferences_updated_at_not_null",
+          "columns": [
+            "updated_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL updated_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "preferences_web_push_not_null",
+          "columns": [
+            "web_push"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL web_push",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "push_subscriptions",
+      "schema": "notifications",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "endpoint",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "p256dh",
+          "type": "text",
+          "comment": null,
+          "default": "''::text",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "auth_secret",
+          "type": "text",
+          "comment": null,
+          "default": "''::text",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "user_agent",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "device_label",
+          "type": "character varying(120)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "last_used_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "account_id",
+            "endpoint"
+          ],
+          "name": "push_subscriptions_account_id_endpoint_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX push_subscriptions_account_id_endpoint_key ON notifications.push_subscriptions USING btree (account_id, endpoint)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "push_subscriptions_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX push_subscriptions_pkey ON notifications.push_subscriptions USING btree (id)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "u",
+          "name": "push_subscriptions_account_id_endpoint_key",
+          "columns": [
+            "account_id",
+            "endpoint"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (account_id, endpoint)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "push_subscriptions_account_id_not_null",
+          "columns": [
+            "account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "push_subscriptions_auth_secret_not_null",
+          "columns": [
+            "auth_secret"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL auth_secret",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "push_subscriptions_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "push_subscriptions_endpoint_not_null",
+          "columns": [
+            "endpoint"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL endpoint",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "push_subscriptions_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "push_subscriptions_p256dh_not_null",
+          "columns": [
+            "p256dh"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL p256dh",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "push_subscriptions_person_id_not_null",
+          "columns": [
+            "person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL person_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "push_subscriptions_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    }
+  ],
+  "schemas": [
+    "notifications"
+  ],
+  "functions": [],
+  "server_version": "18.6 (Debian 18.6-1.pgdg13+2)",
+  "applied_migrations": [
+    "001_notifications_foundation.sql",
+    "002_notifications_enhancements.sql"
+  ],
+  "migration_sources": [
+    {
+      "path": "apps/backend/migrations/notifications/001_notifications_foundation.sql",
+      "sha256": "7ad9f96a4214f49214008552ef94878181d5b3609c65197327da09c97dbcc1b4"
+    },
+    {
+      "path": "apps/backend/migrations/notifications/002_notifications_enhancements.sql",
+      "sha256": "cc69818f79995e9c4114fbcc2266806f103a4fe55296d767ed8367a6a72ee37f"
+    }
+  ]
+}

@@ -8,6 +8,14 @@ import { educationApi } from './api';
 import { useEducationWorkspace } from './workspace';
 import { useEducationResource } from './resources';
 import { useEducationI18n } from './i18n';
+import {
+  computeLessonSummaryMap,
+  computeOverallGroupStats,
+  computeStudentJournalStats,
+  resultStatusKey,
+  resultStatusToScore,
+  resultStatusTone,
+} from './journal';
 import EducationState from './EducationState.vue';
 import HomeworkSummary from './homework/HomeworkSummary.vue';
 const route = useRoute();
@@ -57,9 +65,7 @@ function date(value: string): string {
   );
 }
 function statusLabel(status: string): string {
-  return t(
-    `education.${status === 'pending' ? 'notAssessed' : status === 'needs_support' ? 'needsSupport' : status}`,
-  );
+  return t(`education.${resultStatusKey(status)}`);
 }
 
 const viewMode = ref<'table' | 'cards'>('cards');
@@ -76,48 +82,10 @@ function studentLessonResult(
   return results.find((r) => r.studentId === sId);
 }
 
-function gradeScore(status: string): number | null {
-  if (status === 'mastered') return 5;
-  if (status === 'developing') return 4;
-  if (status === 'needs_support') return 3;
-  return null;
-}
+const gradeScore = resultStatusToScore;
 
 function studentGradeStats(sId: string) {
-  if (!data.value) {
-    return {
-      attended: 0,
-      total: 0,
-      percent: 0,
-      absences: 0,
-      avgGrade: null,
-      avgFormatted: '—',
-      gradeClass: '',
-    };
-  }
-  let attended = 0;
-  let total = 0;
-  const grades: number[] = [];
-  for (const lesson of data.value.journal.items) {
-    const res = lesson.results.find((r) => r.studentId === sId);
-    if (res) {
-      total++;
-      if (res.status !== 'pending') {
-        attended++;
-      }
-      const score = gradeScore(res.status);
-      if (score !== null) {
-        grades.push(score);
-      }
-    }
-  }
-  const percent = total > 0 ? Math.round((attended / total) * 100) : 0;
-  const absences = total - attended;
-  const avg = grades.length > 0 ? grades.reduce((a, b) => a + b, 0) / grades.length : null;
-  const avgFormatted = avg !== null ? avg.toFixed(1) : '—';
-  const gradeClass =
-    avg !== null ? (avg >= 4.5 ? 'completed' : avg >= 3.5 ? 'now' : 'cancelled') : '';
-  return { attended, total, percent, absences, avgGrade: avg, avgFormatted, gradeClass };
+  return computeStudentJournalStats(data.value?.journal.items ?? [], sId);
 }
 
 const activeQuarter = ref<'all' | 'q1' | 'q2' | 'q3' | 'q4' | 'sem1' | 'sem2'>('all');
@@ -170,50 +138,16 @@ const filteredRoster = computed(() => {
   });
 });
 
-const lessonSummaryMap = computed(() => {
-  if (!data.value) return {};
-  const map: Record<string, { avg: string; attendancePercent: number }> = {};
-  for (const lesson of data.value.journal.items) {
-    let attended = 0;
-    const total = lesson.results.length;
-    const scores: number[] = [];
-    for (const res of lesson.results) {
-      if (res.status !== 'pending') {
-        attended++;
-      }
-      const s = gradeScore(res.status);
-      if (s !== null) scores.push(s);
-    }
-    const pct = total > 0 ? Math.round((attended / total) * 100) : 0;
-    const avg =
-      scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '—';
-    map[lesson.id] = { avg, attendancePercent: pct };
-  }
-  return map;
-});
+const lessonSummaryMap = computed(() =>
+  computeLessonSummaryMap(data.value?.journal.items ?? []),
+);
 
-const overallGroupStats = computed(() => {
-  if (!data.value) return { avgGrade: '—', attendancePercent: 0, totalAbsences: 0 };
-  let totalAttended = 0;
-  let totalLessons = 0;
-  let totalAbsences = 0;
-  const allScores: number[] = [];
-  for (const student of data.value.roster.items) {
-    const stats = studentGradeStats(student.id);
-    totalAttended += stats.attended;
-    totalLessons += stats.total;
-    totalAbsences += stats.absences;
-    if (stats.avgGrade !== null) {
-      allScores.push(stats.avgGrade);
-    }
-  }
-  const pct = totalLessons > 0 ? Math.round((totalAttended / totalLessons) * 100) : 0;
-  const avg =
-    allScores.length > 0
-      ? (allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(1)
-      : '—';
-  return { avgGrade: avg, attendancePercent: pct, totalAbsences };
-});
+const overallGroupStats = computed(() =>
+  computeOverallGroupStats(
+    data.value?.journal.items ?? [],
+    (data.value?.roster.items ?? []).map((s) => s.id),
+  ),
+);
 
 function exportGradebookCsv(): void {
   if (!data.value) return;
@@ -496,9 +430,10 @@ function exportGradebookCsv(): void {
                 class="edu-journal__score-cell"
               >
                 <template v-if="studentLessonResult(entry.results, student.id)">
-                  <span
+                  <RouterLink
+                    :to="`/lessons/${entry.id}/results`"
                     class="edu-status"
-                    :class="`edu-status--${studentLessonResult(entry.results, student.id)!.status === 'needs_support' ? 'cancelled' : studentLessonResult(entry.results, student.id)!.status}`"
+                    :class="`edu-status--${resultStatusTone(studentLessonResult(entry.results, student.id)!.status)}`"
                     :title="`${statusLabel(studentLessonResult(entry.results, student.id)!.status)}${studentLessonResult(entry.results, student.id)!.comment ? ': ' + studentLessonResult(entry.results, student.id)!.comment : ''}`"
                   >
                     <strong class="edu-journal__score-val">
@@ -506,7 +441,7 @@ function exportGradebookCsv(): void {
                         gradeScore(studentLessonResult(entry.results, student.id)!.status) ?? '✓'
                       }}
                     </strong>
-                  </span>
+                  </RouterLink>
                 </template>
                 <span
                   v-else

@@ -143,4 +143,36 @@ describe('appearance preferences', () => {
     expect(document.documentElement.dataset.motion).toBe('reduced');
     expect(document.documentElement.style.getPropertyValue('--ui-motion-scale')).toBe('0');
   });
+
+  it('applies monochrome and custom palettes with WCAG contrast and font families', () => {
+    stop = initAppearance();
+    const { updateAppearance, resetAppearance } = useAppearance();
+
+    updateAppearance({
+      colorMode: 'monochrome',
+      accentColor: '#0f766e',
+      fontFamily: 'mono',
+    });
+    expect(document.documentElement.dataset.colorMode).toBe('monochrome');
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#0F766E');
+    expect(document.documentElement.style.getPropertyValue('--on-accent')).toBe('#FFFFFF');
+    expect(document.documentElement.style.getPropertyValue('--bg')).not.toBe('');
+    expect(document.documentElement.style.getPropertyValue('--font-sans')).toContain('Space Mono');
+
+    updateAppearance({
+      colorMode: 'custom',
+      accentColor: '#FDE047',
+      backgroundColor: '#1E1B4B',
+      fontFamily: 'roboto',
+    });
+    expect(document.documentElement.dataset.colorMode).toBe('custom');
+    expect(document.documentElement.style.getPropertyValue('--on-accent')).toBe('#0B1020');
+    expect(document.documentElement.style.getPropertyValue('--bg')).toBe('#1E1B4B');
+    expect(document.documentElement.style.getPropertyValue('--font-sans')).toContain('Roboto');
+
+    resetAppearance();
+    expect(document.documentElement.dataset.colorMode).toBeUndefined();
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--font-sans')).toBe('');
+  });
 });

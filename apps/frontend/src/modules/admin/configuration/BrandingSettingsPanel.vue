@@ -6,6 +6,7 @@ import { coreAdminSessionEpoch } from '@/core/admin/session';
 import { loadPlatformBranding, platformBranding } from '@/shared/branding';
 import { resolveErrorMessage } from '@/shared/errors/humanize';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
+import AppFileDropzone from '@/shared/ui/fields/AppFileDropzone.vue';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import { brandingApi } from './brandingApi';
 
@@ -59,8 +60,8 @@ async function run(action: () => Promise<unknown>): Promise<void> {
   }
 }
 
-function choose(event: Event): void {
-  const candidate = (event.target as HTMLInputElement).files?.[0] ?? null;
+function onSelectFiles(files: File[]): void {
+  const candidate = files[0] ?? null;
   file.value = null;
   error.value = '';
   saved.value = false;
@@ -126,19 +127,23 @@ async function upload(): Promise<void> {
         height="48"
       />
       <p>{{ t('branding.iconHint') }}</p>
-      <label for="platform-favicon-file">{{ t('branding.chooseIcon') }}</label>
-      <input
-        id="platform-favicon-file"
-        type="file"
+      <AppFileDropzone
+        v-model="file"
         accept=".png,.ico,image/png,image/x-icon,image/vnd.microsoft.icon"
+        :label="t('branding.chooseIcon')"
+        :hint="t('branding.iconHint')"
         :disabled="busy || !canManage"
-        @change="choose"
-      />
-      <progress
-        v-if="busy && uploading"
-        :value="progress"
-        max="100"
-        :aria-label="t('branding.uploadProgress')"
+        :busy="busy && uploading"
+        :progress="busy && uploading ? progress : null"
+        :status-text="t('branding.uploadProgress')"
+        cancellable
+        @select="onSelectFiles"
+        @clear="
+          file = null;
+          error = '';
+          saved = false;
+        "
+        @cancel="controller?.abort()"
       />
       <div class="config-actions">
         <AppButton
@@ -146,13 +151,6 @@ async function upload(): Promise<void> {
           @click="upload"
         >
           {{ t('branding.upload') }}
-        </AppButton>
-        <AppButton
-          v-if="busy && uploading"
-          variant="secondary"
-          @click="controller?.abort()"
-        >
-          {{ t('common.cancel') }}
         </AppButton>
         <AppButton
           v-if="platformBranding.favicon"

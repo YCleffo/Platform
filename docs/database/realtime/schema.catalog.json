@@ -1,0 +1,1026 @@
+{
+  "enums": [],
+  "views": [],
+  "tables": [
+    {
+      "rls": false,
+      "name": "connections",
+      "schema": "realtime",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "client_instance_id",
+          "type": "character varying(120)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "status",
+          "type": "character varying(24)",
+          "comment": null,
+          "default": "'connected'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "last_seq",
+          "type": "bigint",
+          "comment": null,
+          "default": "0",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int8",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "connected_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "disconnected_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "connections_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX connections_pkey ON realtime.connections USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "organization_id",
+            "person_id",
+            "status",
+            "last_seen_at"
+          ],
+          "name": "realtime_connections_person_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 4,
+          "predicate": null,
+          "definition": "CREATE INDEX realtime_connections_person_idx ON realtime.connections USING btree (organization_id, person_id, status, last_seen_at DESC)",
+          "attribute_count": 4
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "connections_account_id_not_null",
+          "columns": [
+            "account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "connections_connected_at_not_null",
+          "columns": [
+            "connected_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL connected_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "connections_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "connections_last_seen_at_not_null",
+          "columns": [
+            "last_seen_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL last_seen_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "connections_last_seq_not_null",
+          "columns": [
+            "last_seq"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL last_seq",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "connections_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "connections_person_id_not_null",
+          "columns": [
+            "person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL person_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "connections_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "connections_status_check",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (status::text = ANY (ARRAY['connected'::character varying, 'disconnected'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "connections_status_not_null",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL status",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "module_migrations",
+      "schema": "realtime",
+      "columns": [
+        {
+          "name": "name",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "applied_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "name"
+          ],
+          "name": "module_migrations_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX module_migrations_pkey ON realtime.module_migrations USING btree (name)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "module_migrations_applied_at_not_null",
+          "columns": [
+            "applied_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL applied_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "module_migrations_name_not_null",
+          "columns": [
+            "name"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL name",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "module_migrations_pkey",
+          "columns": [
+            "name"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (name)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "module_migrations_sha256_not_null",
+          "columns": [
+            "sha256"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL sha256",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "outbox_events",
+      "schema": "realtime",
+      "columns": [
+        {
+          "name": "seq",
+          "type": "bigint",
+          "comment": null,
+          "default": "nextval('realtime.outbox_events_seq_seq'::regclass)",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int8",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "event_id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "channel",
+          "type": "character varying(200)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "event_type",
+          "type": "character varying(100)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "aggregate_type",
+          "type": "character varying(64)",
+          "comment": null,
+          "default": "''::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "aggregate_id",
+          "type": "character varying(128)",
+          "comment": null,
+          "default": "''::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "actor_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "actor_person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "payload",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "target_person_ids",
+          "type": "jsonb",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "dispatched_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "attempts",
+          "type": "integer",
+          "comment": null,
+          "default": "0",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "last_error",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "locked_until",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "next_retry_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "max_attempts",
+          "type": "integer",
+          "comment": null,
+          "default": "12",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "dead_lettered_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "event_id"
+          ],
+          "name": "outbox_events_event_id_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX outbox_events_event_id_key ON realtime.outbox_events USING btree (event_id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "seq"
+          ],
+          "name": "outbox_events_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX outbox_events_pkey ON realtime.outbox_events USING btree (seq)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "channel",
+            "seq"
+          ],
+          "name": "realtime_outbox_channel_seq_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX realtime_outbox_channel_seq_idx ON realtime.outbox_events USING btree (channel, seq)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "created_at"
+          ],
+          "name": "realtime_outbox_created_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX realtime_outbox_created_idx ON realtime.outbox_events USING btree (created_at)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "organization_id",
+            "channel",
+            "seq"
+          ],
+          "name": "realtime_outbox_org_channel_seq_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE INDEX realtime_outbox_org_channel_seq_idx ON realtime.outbox_events USING btree (organization_id, channel, seq)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "organization_id",
+            "seq"
+          ],
+          "name": "realtime_outbox_org_seq_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX realtime_outbox_org_seq_idx ON realtime.outbox_events USING btree (organization_id, seq)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "seq"
+          ],
+          "name": "realtime_outbox_pending_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": "((dispatched_at IS NULL) AND (dead_lettered_at IS NULL))",
+          "definition": "CREATE INDEX realtime_outbox_pending_idx ON realtime.outbox_events USING btree (seq) WHERE ((dispatched_at IS NULL) AND (dead_lettered_at IS NULL))",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "outbox_events_aggregate_id_not_null",
+          "columns": [
+            "aggregate_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL aggregate_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "outbox_events_aggregate_type_not_null",
+          "columns": [
+            "aggregate_type"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL aggregate_type",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "outbox_events_attempts_not_null",
+          "columns": [
+            "attempts"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL attempts",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "outbox_events_channel_not_null",
+          "columns": [
+            "channel"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL channel",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "outbox_events_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "outbox_events_event_id_key",
+          "columns": [
+            "event_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (event_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "outbox_events_event_id_not_null",
+          "columns": [
+            "event_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL event_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "outbox_events_event_type_not_null",
+          "columns": [
+            "event_type"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL event_type",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "outbox_events_max_attempts_not_null",
+          "columns": [
+            "max_attempts"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL max_attempts",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "outbox_events_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "outbox_events_payload_check",
+          "columns": [
+            "payload"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (jsonb_typeof(payload) = 'object'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "outbox_events_payload_not_null",
+          "columns": [
+            "payload"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL payload",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "outbox_events_pkey",
+          "columns": [
+            "seq"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (seq)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "outbox_events_seq_not_null",
+          "columns": [
+            "seq"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL seq",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "outbox_events_target_person_ids_check",
+          "columns": [
+            "target_person_ids"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (target_person_ids IS NULL OR jsonb_typeof(target_person_ids) = 'array'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    }
+  ],
+  "schemas": [
+    "realtime"
+  ],
+  "functions": [],
+  "server_version": "18.6 (Debian 18.6-1.pgdg13+2)",
+  "applied_migrations": [
+    "001_realtime_foundation.sql",
+    "002_outbox_reliability.sql"
+  ],
+  "migration_sources": [
+    {
+      "path": "apps/backend/migrations/realtime/001_realtime_foundation.sql",
+      "sha256": "594b392d8b1371530dcd37696790040b49095a7cc08d9f1c957848db91c6e51f"
+    },
+    {
+      "path": "apps/backend/migrations/realtime/002_outbox_reliability.sql",
+      "sha256": "2aefed9b0959d4ad8ad9462ce2c41718758b3f41637ea1a0a7e0e2ee6475ab64"
+    }
+  ]
+}

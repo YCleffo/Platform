@@ -1,0 +1,149 @@
+// СФОРМИРОВАНО scripts/database/export_schema.py; не редактировать вручную.
+// Только реальные объекты PostgreSQL. Полное определение SQL: schema.catalog.json.
+Project chat {
+  database_type: 'PostgreSQL'
+  Note: 'Каталог PostgreSQL после миграций. Межбазовые идентификаторы не являются внешними ключами.'
+}
+
+Table chat.delivery_receipts {
+  message_id uuid [not null]
+  person_id uuid [not null]
+  status "character varying(16)" [not null]
+  delivered_at "timestamp with time zone" [null]
+  read_at "timestamp with time zone" [null]
+  indexes {
+    (message_id, person_id) [pk]
+    (message_id, person_id) [name: 'chat_delivery_receipts_msg_person_idx', type: btree]
+    (person_id, read_at) [name: 'chat_receipts_person_idx', type: btree]
+  }
+  Note: 'delivery_receipts_message_id_fkey: FOREIGN KEY (message_id) REFERENCES chat.messages(id) ON DELETE CASCADE\ndelivery_receipts_message_id_not_null: NOT NULL message_id\ndelivery_receipts_person_id_not_null: NOT NULL person_id\ndelivery_receipts_status_check: CHECK (status::text = ANY (ARRAY[\'delivered\'::character varying, \'read\'::character varying]::text[]))\ndelivery_receipts_status_not_null: NOT NULL status\nCREATE INDEX chat_delivery_receipts_msg_person_idx ON chat.delivery_receipts USING btree (message_id, person_id)\nCREATE INDEX chat_receipts_person_idx ON chat.delivery_receipts USING btree (person_id, read_at)'
+}
+
+Table chat.members {
+  room_id uuid [not null]
+  organization_id uuid [not null]
+  person_id uuid [not null]
+  account_id uuid [null]
+  role "character varying(24)" [not null, default: `'member'::character varying`]
+  can_write boolean [not null, default: `true`]
+  last_read_at "timestamp with time zone" [null]
+  last_read_message_id uuid [null]
+  muted_until "timestamp with time zone" [null]
+  archived_at "timestamp with time zone" [null]
+  pinned_order integer [null]
+  draft_text text [null]
+  draft_reply_to_id uuid [null]
+  draft_updated_at "timestamp with time zone" [null]
+  joined_at "timestamp with time zone" [not null, default: `now()`]
+  left_at "timestamp with time zone" [null]
+  indexes {
+    (room_id, person_id) [pk]
+  }
+  Note: 'members_can_write_not_null: NOT NULL can_write\nmembers_joined_at_not_null: NOT NULL joined_at\nmembers_organization_id_not_null: NOT NULL organization_id\nmembers_person_id_not_null: NOT NULL person_id\nmembers_role_check: CHECK (role::text = ANY (ARRAY[\'owner\'::character varying, \'admin\'::character varying, \'moderator\'::character varying, \'member\'::character varying, \'guest\'::character varying, \'readonly\'::character varying]::text[]))\nmembers_role_not_null: NOT NULL role\nmembers_room_id_not_null: NOT NULL room_id\nmembers_room_id_organization_id_fkey: FOREIGN KEY (room_id, organization_id) REFERENCES chat.rooms(id, organization_id) ON DELETE CASCADE\nCREATE INDEX chat_members_person_idx ON chat.members USING btree (person_id, organization_id, room_id) WHERE (left_at IS NULL)\nCREATE INDEX chat_members_person_org_active_idx ON chat.members USING btree (person_id, organization_id) WHERE (left_at IS NULL)\nCREATE INDEX chat_members_room_active_idx ON chat.members USING btree (room_id, organization_id, person_id) WHERE (left_at IS NULL)'
+}
+
+Table chat.message_deletions {
+  message_id uuid [not null]
+  person_id uuid [not null]
+  deleted_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (message_id, person_id) [pk]
+  }
+  Note: 'message_deletions_deleted_at_not_null: NOT NULL deleted_at\nmessage_deletions_message_id_fkey: FOREIGN KEY (message_id) REFERENCES chat.messages(id) ON DELETE CASCADE\nmessage_deletions_message_id_not_null: NOT NULL message_id\nmessage_deletions_person_id_not_null: NOT NULL person_id'
+}
+
+Table chat.message_edits {
+  id uuid [pk, not null, default: `uuidv7()`]
+  message_id uuid [not null]
+  editor_person_id uuid [not null]
+  previous_body text [null]
+  new_body text [null]
+  edited_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (message_id, edited_at) [name: 'chat_message_edits_msg_idx', type: btree]
+  }
+  Note: 'message_edits_edited_at_not_null: NOT NULL edited_at\nmessage_edits_editor_person_id_not_null: NOT NULL editor_person_id\nmessage_edits_id_not_null: NOT NULL id\nmessage_edits_message_id_fkey: FOREIGN KEY (message_id) REFERENCES chat.messages(id) ON DELETE CASCADE\nmessage_edits_message_id_not_null: NOT NULL message_id\nCREATE INDEX chat_message_edits_msg_idx ON chat.message_edits USING btree (message_id, edited_at DESC)'
+}
+
+Table chat.messages {
+  id uuid [pk, not null, default: `uuidv7()`]
+  room_id uuid [not null]
+  organization_id uuid [not null]
+  sender_person_id uuid [not null]
+  sender_account_id uuid [null]
+  seq bigint [not null, default: `nextval('chat.messages_seq_seq'::regclass)`]
+  kind "character varying(32)" [not null, default: `'text'::character varying`]
+  body text [null]
+  media_asset_id uuid [null]
+  reply_to_id uuid [null]
+  forwarded_from_message_id uuid [null]
+  forwarded_from_room_id uuid [null]
+  metadata jsonb [not null, default: `'{}'::jsonb`]
+  client_key "character varying(128)" [null]
+  edited_at "timestamp with time zone" [null]
+  deleted_at "timestamp with time zone" [null]
+  deleted_for_all boolean [not null, default: `false`]
+  pinned_at "timestamp with time zone" [null]
+  pinned_by_person_id uuid [null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (room_id, seq) [name: 'chat_messages_room_seq_idx', type: btree]
+    (room_id, created_at, id) [name: 'chat_messages_room_time_idx', type: btree]
+  }
+  Note: 'chat_messages_content_check: CHECK (deleted_at IS NOT NULL OR body IS NOT NULL AND length(body) >= 1 AND length(body) <= 10000 OR media_asset_id IS NOT NULL OR (kind::text = ANY (ARRAY[\'activity_card\'::character varying, \'assessment_card\'::character varying, \'homework_card\'::character varying, \'system\'::character varying, \'poll\'::character varying]::text[])))\nmessages_created_at_not_null: NOT NULL created_at\nmessages_deleted_for_all_not_null: NOT NULL deleted_for_all\nmessages_id_not_null: NOT NULL id\nmessages_kind_not_null: NOT NULL kind\nmessages_metadata_check: CHECK (jsonb_typeof(metadata) = \'object\'::text)\nmessages_metadata_not_null: NOT NULL metadata\nmessages_organization_id_not_null: NOT NULL organization_id\nmessages_reply_to_id_fkey: FOREIGN KEY (reply_to_id) REFERENCES chat.messages(id) ON DELETE SET NULL\nmessages_room_id_not_null: NOT NULL room_id\nmessages_room_id_organization_id_fkey: FOREIGN KEY (room_id, organization_id) REFERENCES chat.rooms(id, organization_id) ON DELETE CASCADE\nmessages_sender_person_id_not_null: NOT NULL sender_person_id\nmessages_seq_not_null: NOT NULL seq\nmessages_updated_at_not_null: NOT NULL updated_at\nCREATE INDEX chat_messages_body_trgm_idx ON chat.messages USING gin (COALESCE(body, \'\'::text) gin_trgm_ops)\nCREATE INDEX chat_messages_fts_idx ON chat.messages USING gin (to_tsvector(\'simple\'::regconfig, COALESCE(body, \'\'::text)))\nCREATE INDEX chat_messages_fts_ru_idx ON chat.messages USING gin (to_tsvector(\'russian\'::regconfig, COALESCE(body, \'\'::text)))\nCREATE UNIQUE INDEX chat_messages_idempotency_idx ON chat.messages USING btree (room_id, sender_person_id, client_key) WHERE (client_key IS NOT NULL)\nCREATE INDEX chat_messages_media_idx ON chat.messages USING btree (media_asset_id) WHERE (media_asset_id IS NOT NULL)\nCREATE INDEX chat_messages_room_active_time_idx ON chat.messages USING btree (room_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL)\nCREATE INDEX chat_messages_room_seq_idx ON chat.messages USING btree (room_id, seq DESC)\nCREATE INDEX chat_messages_room_time_idx ON chat.messages USING btree (room_id, created_at DESC, id DESC)'
+}
+
+Table chat.module_migrations {
+  name text [pk, not null]
+  sha256 character(64) [not null]
+  applied_at "timestamp with time zone" [not null, default: `now()`]
+  Note: 'module_migrations_applied_at_not_null: NOT NULL applied_at\nmodule_migrations_name_not_null: NOT NULL name\nmodule_migrations_sha256_not_null: NOT NULL sha256'
+}
+
+Table chat.reactions {
+  id uuid [pk, not null, default: `uuidv7()`]
+  message_id uuid [not null]
+  organization_id uuid [not null]
+  person_id uuid [not null]
+  emoji "character varying(32)" [not null]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    message_id [name: 'chat_reactions_message_idx', type: btree]
+    (organization_id, person_id) [name: 'chat_reactions_person_idx', type: btree]
+    (message_id, person_id, emoji) [name: 'uq_chat_reaction_person_emoji', type: btree, unique]
+  }
+  Note: 'reactions_created_at_not_null: NOT NULL created_at\nreactions_emoji_not_null: NOT NULL emoji\nreactions_id_not_null: NOT NULL id\nreactions_message_id_fkey: FOREIGN KEY (message_id) REFERENCES chat.messages(id) ON DELETE CASCADE\nreactions_message_id_not_null: NOT NULL message_id\nreactions_organization_id_not_null: NOT NULL organization_id\nreactions_person_id_not_null: NOT NULL person_id\nuq_chat_reaction_person_emoji: UNIQUE (message_id, person_id, emoji)\nCREATE INDEX chat_reactions_message_idx ON chat.reactions USING btree (message_id)\nCREATE INDEX chat_reactions_person_idx ON chat.reactions USING btree (organization_id, person_id)\nCREATE UNIQUE INDEX uq_chat_reaction_person_emoji ON chat.reactions USING btree (message_id, person_id, emoji)'
+}
+
+Table chat.rooms {
+  id uuid [pk, not null, default: `uuidv7()`]
+  organization_id uuid [not null]
+  room_type "character varying(24)" [not null, default: `'direct'::character varying`]
+  title "character varying(180)" [not null]
+  description text [not null, default: `''::text`]
+  context_type "character varying(40)" [null]
+  context_id uuid [null]
+  created_by_person_id uuid [null]
+  created_by_account_id uuid [null]
+  last_message_id uuid [null]
+  pinned_message_id uuid [null]
+  last_activity_at "timestamp with time zone" [not null, default: `now()`]
+  archived_at "timestamp with time zone" [null]
+  settings jsonb [not null, default: `'{}'::jsonb`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+  indexes {
+    (organization_id, last_activity_at, id) [name: 'chat_rooms_org_activity_idx', type: btree]
+    (id, organization_id) [name: 'rooms_id_organization_id_key', type: btree, unique]
+  }
+  Note: 'rooms_created_at_not_null: NOT NULL created_at\nrooms_description_not_null: NOT NULL description\nrooms_id_not_null: NOT NULL id\nrooms_id_organization_id_key: UNIQUE (id, organization_id)\nrooms_last_activity_at_not_null: NOT NULL last_activity_at\nrooms_organization_id_not_null: NOT NULL organization_id\nrooms_room_type_check: CHECK (room_type::text = ANY (ARRAY[\'direct\'::character varying, \'group\'::character varying, \'organization\'::character varying, \'support\'::character varying, \'context\'::character varying]::text[]))\nrooms_room_type_not_null: NOT NULL room_type\nrooms_settings_check: CHECK (jsonb_typeof(settings) = \'object\'::text)\nrooms_settings_not_null: NOT NULL settings\nrooms_title_check: CHECK (btrim(title::text) <> \'\'::text)\nrooms_title_not_null: NOT NULL title\nrooms_updated_at_not_null: NOT NULL updated_at\nCREATE INDEX chat_rooms_context_idx ON chat.rooms USING btree (organization_id, context_type, context_id) WHERE (context_id IS NOT NULL)\nCREATE INDEX chat_rooms_fts_ru_idx ON chat.rooms USING gin (to_tsvector(\'russian\'::regconfig, (((COALESCE(title, \'\'::character varying))::text || \' \'::text) || COALESCE(description, \'\'::text))))\nCREATE INDEX chat_rooms_org_activity_idx ON chat.rooms USING btree (organization_id, last_activity_at DESC, id DESC)\nCREATE INDEX chat_rooms_search_trgm_idx ON chat.rooms USING gin (title gin_trgm_ops, description gin_trgm_ops)\nCREATE UNIQUE INDEX rooms_id_organization_id_key ON chat.rooms USING btree (id, organization_id)'
+}
+
+Ref: chat.delivery_receipts.message_id > chat.messages.id [delete: cascade, update: no action]
+Ref: chat.members.(room_id, organization_id) > chat.rooms.(id, organization_id) [delete: cascade, update: no action]
+Ref: chat.message_deletions.message_id > chat.messages.id [delete: cascade, update: no action]
+Ref: chat.message_edits.message_id > chat.messages.id [delete: cascade, update: no action]
+Ref: chat.messages.reply_to_id > chat.messages.id [delete: set null, update: no action]
+Ref: chat.messages.(room_id, organization_id) > chat.rooms.(id, organization_id) [delete: cascade, update: no action]
+Ref: chat.reactions.message_id > chat.messages.id [delete: cascade, update: no action]

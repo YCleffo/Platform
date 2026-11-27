@@ -1,0 +1,1666 @@
+{
+  "enums": [],
+  "views": [],
+  "tables": [
+    {
+      "rls": false,
+      "name": "module_migrations",
+      "schema": "workspace",
+      "columns": [
+        {
+          "name": "name",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "applied_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "name"
+          ],
+          "name": "module_migrations_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX module_migrations_pkey ON workspace.module_migrations USING btree (name)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "module_migrations_applied_at_not_null",
+          "columns": [
+            "applied_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL applied_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "module_migrations_name_not_null",
+          "columns": [
+            "name"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL name",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "module_migrations_pkey",
+          "columns": [
+            "name"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (name)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "module_migrations_sha256_not_null",
+          "columns": [
+            "sha256"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL sha256",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "operations",
+      "schema": "workspace",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "action_key",
+          "type": "character varying(120)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "entity_type",
+          "type": "character varying(80)",
+          "comment": null,
+          "default": "''::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "entity_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "payload",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "mode",
+          "type": "character varying(24)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "status",
+          "type": "character varying(24)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "undo_deadline",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "execute_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "revision",
+          "type": "integer",
+          "comment": null,
+          "default": "1",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "result",
+          "type": "jsonb",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "error_code",
+          "type": "character varying(80)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "error_message",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "finalized_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "operations_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX operations_pkey ON workspace.operations USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "organization_id",
+            "account_id",
+            "created_at",
+            "id"
+          ],
+          "name": "workspace_operations_actor_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 4,
+          "predicate": null,
+          "definition": "CREATE INDEX workspace_operations_actor_idx ON workspace.operations USING btree (organization_id, account_id, created_at DESC, id DESC)",
+          "attribute_count": 4
+        },
+        {
+          "keys": [
+            "status",
+            "execute_at"
+          ],
+          "name": "workspace_operations_deferred_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "(((status)::text = 'pending'::text) AND (finalized_at IS NULL))",
+          "definition": "CREATE INDEX workspace_operations_deferred_idx ON workspace.operations USING btree (status, execute_at) WHERE (((status)::text = 'pending'::text) AND (finalized_at IS NULL))",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "entity_type",
+            "entity_id"
+          ],
+          "name": "workspace_operations_entity_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "(entity_id IS NOT NULL)",
+          "definition": "CREATE INDEX workspace_operations_entity_idx ON workspace.operations USING btree (entity_type, entity_id) WHERE (entity_id IS NOT NULL)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "person_id",
+            "created_at"
+          ],
+          "name": "workspace_operations_person_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "(person_id IS NOT NULL)",
+          "definition": "CREATE INDEX workspace_operations_person_idx ON workspace.operations USING btree (person_id, created_at DESC) WHERE (person_id IS NOT NULL)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "status",
+            "undo_deadline"
+          ],
+          "name": "workspace_operations_undoable_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "(((status)::text = 'undoable'::text) AND (finalized_at IS NULL))",
+          "definition": "CREATE INDEX workspace_operations_undoable_idx ON workspace.operations USING btree (status, undo_deadline) WHERE (((status)::text = 'undoable'::text) AND (finalized_at IS NULL))",
+          "attribute_count": 2
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "operations_account_id_not_null",
+          "columns": [
+            "account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "operations_action_key_check",
+          "columns": [
+            "action_key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (btrim(action_key::text) <> ''::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "operations_action_key_not_null",
+          "columns": [
+            "action_key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL action_key",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "operations_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "operations_entity_type_not_null",
+          "columns": [
+            "entity_type"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL entity_type",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "operations_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "operations_mode_check",
+          "columns": [
+            "mode"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (mode::text = ANY (ARRAY['immediate'::character varying, 'reversible'::character varying, 'deferred'::character varying, 'background'::character varying, 'irreversible'::character varying, 'confirmed'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "operations_mode_not_null",
+          "columns": [
+            "mode"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL mode",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "operations_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "operations_payload_check",
+          "columns": [
+            "payload"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (jsonb_typeof(payload) = 'object'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "operations_payload_not_null",
+          "columns": [
+            "payload"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL payload",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "operations_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "operations_revision_check",
+          "columns": [
+            "revision"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (revision > 0)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "operations_revision_not_null",
+          "columns": [
+            "revision"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL revision",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "operations_status_check",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (status::text = ANY (ARRAY['pending'::character varying, 'running'::character varying, 'undoable'::character varying, 'committed'::character varying, 'completed'::character varying, 'undone'::character varying, 'cancelled'::character varying, 'failed'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "operations_status_not_null",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL status",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "operations_updated_at_not_null",
+          "columns": [
+            "updated_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL updated_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "preferences",
+      "schema": "workspace",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "key",
+          "type": "character varying(120)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "value",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "account_id",
+            "organization_id",
+            "key"
+          ],
+          "name": "preferences_account_id_organization_id_key_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX preferences_account_id_organization_id_key_key ON workspace.preferences USING btree (account_id, organization_id, key) NULLS NOT DISTINCT",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "preferences_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX preferences_pkey ON workspace.preferences USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "account_id",
+            "organization_id",
+            "key"
+          ],
+          "name": "workspace_preferences_account_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE INDEX workspace_preferences_account_idx ON workspace.preferences USING btree (account_id, organization_id, key)",
+          "attribute_count": 3
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "preferences_account_id_not_null",
+          "columns": [
+            "account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "preferences_account_id_organization_id_key_key",
+          "columns": [
+            "account_id",
+            "organization_id",
+            "key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE NULLS NOT DISTINCT (account_id, organization_id, key)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "preferences_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "preferences_key_check",
+          "columns": [
+            "key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (btrim(key::text) <> ''::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "preferences_key_not_null",
+          "columns": [
+            "key"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL key",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "preferences_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "preferences_updated_at_not_null",
+          "columns": [
+            "updated_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL updated_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "preferences_value_not_null",
+          "columns": [
+            "value"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL value",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "privacy_receipts",
+      "schema": "workspace",
+      "columns": [
+        {
+          "name": "item_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "result",
+          "type": "character varying(30)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "item_id"
+          ],
+          "name": "privacy_receipts_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX privacy_receipts_pkey ON workspace.privacy_receipts USING btree (item_id)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "privacy_receipts_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "privacy_receipts_item_id_not_null",
+          "columns": [
+            "item_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL item_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "privacy_receipts_pkey",
+          "columns": [
+            "item_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (item_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "privacy_receipts_result_not_null",
+          "columns": [
+            "result"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL result",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "trash_items",
+      "schema": "workspace",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "deleted_by_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "deleted_by_person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "entity_type",
+          "type": "character varying(80)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "entity_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "module_code",
+          "type": "character varying(60)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "title",
+          "type": "character varying(255)",
+          "comment": null,
+          "default": "''::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "subtitle",
+          "type": "character varying(255)",
+          "comment": null,
+          "default": "''::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "metadata",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "payload",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "restore_status",
+          "type": "character varying(24)",
+          "comment": null,
+          "default": "'trashed'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "(now() + '30 days'::interval)",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "restored_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "purged_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "trash_items_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX trash_items_pkey ON workspace.trash_items USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "entity_type",
+            "entity_id"
+          ],
+          "name": "workspace_trash_active_entity_idx",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "((restore_status)::text = 'trashed'::text)",
+          "definition": "CREATE UNIQUE INDEX workspace_trash_active_entity_idx ON workspace.trash_items USING btree (entity_type, entity_id) WHERE ((restore_status)::text = 'trashed'::text)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "deleted_by_account_id",
+            "deleted_by_person_id"
+          ],
+          "name": "workspace_trash_actor_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX workspace_trash_actor_idx ON workspace.trash_items USING btree (deleted_by_account_id, deleted_by_person_id)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "restore_status",
+            "expires_at"
+          ],
+          "name": "workspace_trash_expiry_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "((restore_status)::text = 'trashed'::text)",
+          "definition": "CREATE INDEX workspace_trash_expiry_idx ON workspace.trash_items USING btree (restore_status, expires_at) WHERE ((restore_status)::text = 'trashed'::text)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "organization_id",
+            "restore_status",
+            "deleted_at",
+            "id"
+          ],
+          "name": "workspace_trash_org_list_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 4,
+          "predicate": null,
+          "definition": "CREATE INDEX workspace_trash_org_list_idx ON workspace.trash_items USING btree (organization_id, restore_status, deleted_at DESC, id DESC)",
+          "attribute_count": 4
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "trash_items_deleted_at_not_null",
+          "columns": [
+            "deleted_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL deleted_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "trash_items_deleted_by_account_id_not_null",
+          "columns": [
+            "deleted_by_account_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL deleted_by_account_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "trash_items_entity_id_not_null",
+          "columns": [
+            "entity_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL entity_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "trash_items_entity_type_check",
+          "columns": [
+            "entity_type"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (btrim(entity_type::text) <> ''::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "trash_items_entity_type_not_null",
+          "columns": [
+            "entity_type"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL entity_type",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "trash_items_expires_at_not_null",
+          "columns": [
+            "expires_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL expires_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "trash_items_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "trash_items_metadata_check",
+          "columns": [
+            "metadata"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (jsonb_typeof(metadata) = 'object'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "trash_items_metadata_not_null",
+          "columns": [
+            "metadata"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL metadata",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "trash_items_module_code_check",
+          "columns": [
+            "module_code"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (btrim(module_code::text) <> ''::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "trash_items_module_code_not_null",
+          "columns": [
+            "module_code"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL module_code",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "trash_items_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "trash_items_payload_check",
+          "columns": [
+            "payload"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (jsonb_typeof(payload) = 'object'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "trash_items_payload_not_null",
+          "columns": [
+            "payload"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL payload",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "trash_items_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "trash_items_restore_status_check",
+          "columns": [
+            "restore_status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (restore_status::text = ANY (ARRAY['trashed'::character varying, 'restored'::character varying, 'purged'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "trash_items_restore_status_not_null",
+          "columns": [
+            "restore_status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL restore_status",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "trash_items_subtitle_not_null",
+          "columns": [
+            "subtitle"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL subtitle",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "trash_items_title_not_null",
+          "columns": [
+            "title"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL title",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    }
+  ],
+  "schemas": [
+    "workspace"
+  ],
+  "functions": [],
+  "server_version": "18.6 (Debian 18.6-1.pgdg13+2)",
+  "applied_migrations": [
+    "001_universal_workspace.sql"
+  ],
+  "migration_sources": [
+    {
+      "path": "apps/backend/migrations/workspace/001_universal_workspace.sql",
+      "sha256": "d7d907bb1fe88dd5c8913742cef9f688451e267b115b82e9fbc24aa81d2ce877"
+    }
+  ]
+}

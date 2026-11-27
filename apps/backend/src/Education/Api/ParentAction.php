@@ -16,6 +16,7 @@ use App\Education\Application\ParentFamily;
 use App\Education\Application\ParentReadService;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\StreamFactoryInterface;
 use Yiisoft\Router\CurrentRoute;
 
 final readonly class ParentAction
@@ -27,6 +28,7 @@ final readonly class ParentAction
         ParentFamily $family,
         ParentReadService $parents,
         ResponseFactory $responses,
+        StreamFactoryInterface $streams,
     ): ResponseInterface {
         try {
             $operation = (string) $route->getArgument('operation');
@@ -65,6 +67,14 @@ final readonly class ParentAction
                 return $responses->success($result)->withStatus($operation === 'staff_add' ? 201 : 200);
             }
             $scope = $access->parentScope($identity, $organization, Input::uuid($route->getArgument('studentId')));
+            if ($operation === 'homework_material_download') {
+                $file = $parents->homeworkMaterialDownload($scope, Input::uuid($route->getArgument('id')));
+                return $responses->success()->withBody($streams->createStreamFromResource($file['stream']))
+                    ->withHeader('Content-Type', $file['mime'])
+                    ->withHeader('Content-Length', (string) $file['size'])
+                    ->withHeader('Content-Security-Policy', "default-src 'none'; sandbox")
+                    ->withHeader('Content-Disposition', "attachment; filename=\"download\"; filename*=UTF-8''" . rawurlencode($file['name']));
+            }
             if ($operation === 'read_notification') {
                 if ($body !== []) {
                     throw new EducationError(422, 'invalid_input');

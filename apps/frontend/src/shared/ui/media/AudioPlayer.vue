@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useControlledMediaElement } from '@/shared/media/useControlledMediaElement';
+import type { MediaSessionPolicy } from '@/shared/media/types';
 import AudioWaveform from './AudioWaveform.vue';
 import type { MediaAsset } from './types';
 
@@ -11,6 +13,11 @@ const props = withDefaults(
     waveformBars?: number[];
     autoplay?: boolean;
     showDownload?: boolean;
+    showVolume?: boolean;
+    compact?: boolean;
+    durationHint?: number;
+    title?: string;
+    policy?: MediaSessionPolicy;
   }>(),
   {
     src: undefined,
@@ -18,6 +25,11 @@ const props = withDefaults(
     waveformBars: undefined,
     autoplay: false,
     showDownload: false,
+    showVolume: true,
+    compact: false,
+    durationHint: undefined,
+    title: undefined,
+    policy: 'exclusive',
   },
 );
 
@@ -26,24 +38,49 @@ const emit = defineEmits<{
   (e: 'pause'): void;
   (e: 'ended'): void;
   (e: 'timeupdate', currentTime: number): void;
+  (e: 'error', message: string): void;
 }>();
 
 const { t } = useI18n();
 
 const audioRef = ref<HTMLAudioElement | null>(null);
-const isPlaying = ref(false);
-const currentTime = ref(0);
-const duration = ref(props.asset?.durationSeconds ?? 0);
-const playbackRate = ref(1);
-const speeds = [1, 1.5, 2];
 const extractedBars = ref<number[] | null>(null);
 
-const effectiveSrc = computed(() => {
-  return props.src || props.asset?.playbackUrl || '';
-});
+const effectiveSrc = computed(() => props.src || props.asset?.playbackUrl || '');
+const effectiveBars = computed(() => props.waveformBars || extractedBars.value || undefined);
 
-const effectiveBars = computed(() => {
-  return props.waveformBars || extractedBars.value || undefined;
+const {
+  isPlaying,
+  isLoading,
+  isBuffering,
+  currentTime,
+  duration,
+  progressRatio,
+  muted,
+  playbackRate,
+  errorMessage,
+  togglePlay,
+  seekToRatio,
+  seekBy,
+  toggleMute,
+  cycleSpeed,
+  mediaEvents,
+} = useControlledMediaElement({
+  elementRef: audioRef,
+  policy: props.policy,
+  durationHint: () => props.durationHint ?? props.asset?.durationSeconds ?? null,
+  getTrack: () => ({
+    kind: props.compact ? 'voice' : 'audio',
+    src: effectiveSrc.value,
+    title: props.title || props.asset?.originalName || t('media.voiceMessage'),
+    durationHint: props.durationHint ?? props.asset?.durationSeconds ?? undefined,
+    asset: props.asset,
+  }),
+  onPlay: () => emit('play'),
+  onPause: () => emit('pause'),
+  onEnded: () => emit('ended'),
+  onTimeUpdate: (time) => emit('timeupdate', time),
+  onError: (msg) => emit('error', msg),
 });
 
 async function extractWaveformPeaks(url: string, barCount = 36): Promise<void> {
@@ -77,11 +114,6 @@ async function extractWaveformPeaks(url: string, barCount = 36): Promise<void> {
   }
 }
 
-const progressRatio = computed(() => {
-  if (!duration.value || duration.value <= 0) return 0;
-  return Math.min(1, Math.max(0, currentTime.value / duration.value));
-});
-
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const m = Math.floor(seconds / 60);
@@ -89,102 +121,68 @@ function formatTime(seconds: number): string {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-function togglePlay(): void {
-  const el = audioRef.value;
-  if (!el) return;
-  if (isPlaying.value) {
-    el.pause();
-  } else {
-    void el.play();
-  }
-}
-
-function handleTimeUpdate(): void {
-  const el = audioRef.value;
-  if (!el) return;
-  currentTime.value = el.currentTime;
-  emit('timeupdate', el.currentTime);
-}
-
-function handleLoadedMetadata(): void {
-  const el = audioRef.value;
-  if (!el) return;
-  if (Number.isFinite(el.duration) && el.duration > 0) {
-    duration.value = el.duration;
-  }
-}
-
-function handleEnded(): void {
-  isPlaying.value = false;
-  currentTime.value = 0;
-  emit('ended');
-}
-
-function handleSeek(ratio: number): void {
-  const el = audioRef.value;
-  if (!el || !duration.value) return;
-  const target = ratio * duration.value;
-  el.currentTime = target;
-  currentTime.value = target;
-}
-
-function cycleSpeed(): void {
-  const idx = speeds.indexOf(playbackRate.value);
-  const next = speeds[(idx + 1) % speeds.length] ?? 1;
-  playbackRate.value = next;
-  if (audioRef.value) {
-    audioRef.value.playbackRate = next;
+function handleKeydown(event: KeyboardEvent): void {
+  if (event.target instanceof HTMLInputElement) return;
+  if (event.key === ' ') {
+    event.preventDefault();
+    togglePlay();
+  } else if (event.key === 'ArrowLeft') {
+    event.preventDefault();
+    seekBy(-5);
+  } else if (event.key === 'ArrowRight') {
+    event.preventDefault();
+    seekBy(5);
+  } else if (event.key.toLowerCase() === 'm') {
+    event.preventDefault();
+    toggleMute();
   }
 }
 
 watch(
   effectiveSrc,
   (src) => {
-    currentTime.value = 0;
-    isPlaying.value = false;
     extractedBars.value = null;
-    if (props.asset?.durationSeconds) {
-      duration.value = props.asset.durationSeconds;
-    }
     if (src && !props.waveformBars) {
       void extractWaveformPeaks(src);
     }
   },
   { immediate: true },
 );
-
-onBeforeUnmount(() => {
-  if (audioRef.value) {
-    audioRef.value.pause();
-    audioRef.value.src = '';
-  }
-});
 </script>
 
 <template>
-  <div class="app-audio-player">
+  <div
+    class="app-audio-player"
+    :class="{
+      'app-audio-player--compact': compact,
+      'app-audio-player--error': Boolean(errorMessage),
+    }"
+    tabindex="0"
+    @keydown="handleKeydown"
+  >
     <audio
       v-if="effectiveSrc"
       ref="audioRef"
       :src="effectiveSrc"
+      :autoplay="autoplay"
       preload="metadata"
-      @play="
-        isPlaying = true;
-        emit('play');
-      "
-      @pause="
-        isPlaying = false;
-        emit('pause');
-      "
-      @timeupdate="handleTimeUpdate"
-      @loadedmetadata="handleLoadedMetadata"
-      @ended="handleEnded"
+      @loadstart="mediaEvents.loadstart"
+      @canplay="mediaEvents.canplay"
+      @waiting="mediaEvents.waiting"
+      @playing="mediaEvents.playing"
+      @play="mediaEvents.play"
+      @pause="mediaEvents.pause"
+      @timeupdate="mediaEvents.timeupdate"
+      @loadedmetadata="mediaEvents.loadedmetadata"
+      @ended="mediaEvents.ended"
+      @error="mediaEvents.error"
     />
 
     <button
       type="button"
       class="app-audio-player__play-btn"
       :aria-label="isPlaying ? t('media.pause') : t('media.play')"
+      :disabled="!effectiveSrc || Boolean(errorMessage)"
       @click="togglePlay"
     >
       <svg
@@ -211,20 +209,42 @@ onBeforeUnmount(() => {
       <AudioWaveform
         :progress="progressRatio"
         :bars="effectiveBars"
-        @seek="handleSeek"
+        @seek="seekToRatio"
       />
       <div class="app-audio-player__meta">
         <span class="app-audio-player__time">
-          {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+          <template v-if="errorMessage">
+            {{ t('media.playbackError') }}
+          </template>
+          <template v-else-if="isBuffering">
+            {{ t('media.buffering') }}
+          </template>
+          <template v-else-if="isLoading && duration === 0">
+            {{ t('media.loading') }}
+          </template>
+          <template v-else>
+            {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+          </template>
         </span>
-        <button
-          type="button"
-          class="app-audio-player__speed-btn"
-          :aria-label="`${t('media.speed')}: ${playbackRate}x`"
-          @click="cycleSpeed"
-        >
-          {{ playbackRate }}x
-        </button>
+        <div class="app-audio-player__actions">
+          <button
+            v-if="showVolume"
+            type="button"
+            class="app-audio-player__mute-btn"
+            :aria-label="muted ? t('media.unmute') : t('media.mute')"
+            @click="toggleMute"
+          >
+            {{ muted ? '🔇' : '🔊' }}
+          </button>
+          <button
+            type="button"
+            class="app-audio-player__speed-btn"
+            :aria-label="`${t('media.speed')}: ${playbackRate}x`"
+            @click="cycleSpeed()"
+          >
+            {{ playbackRate }}x
+          </button>
+        </div>
       </div>
     </div>
 
@@ -272,6 +292,15 @@ onBeforeUnmount(() => {
   box-sizing: border-box;
   color: var(--text-primary, #fff);
   box-shadow: var(--shadow-soft, 0 2px 8px rgba(0, 0, 0, 0.15));
+  outline: none;
+}
+
+.app-audio-player:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent, #00d2ff);
+}
+
+.app-audio-player--error {
+  border-color: var(--danger, #ef4444);
 }
 
 .app-audio-player__play-btn {
@@ -291,7 +320,12 @@ onBeforeUnmount(() => {
     opacity var(--theme-transition);
 }
 
-.app-audio-player__play-btn:hover {
+.app-audio-player__play-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.app-audio-player__play-btn:hover:not(:disabled) {
   opacity: 0.9;
   transform: scale(1.05);
 }
@@ -313,6 +347,13 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
+}
+
+.app-audio-player__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .app-audio-player__time {
@@ -320,8 +361,10 @@ onBeforeUnmount(() => {
   line-height: var(--type-detail-line, 14px);
   font-weight: var(--type-detail-weight, 400);
   color: var(--text-secondary, #9ba3af);
+  font-variant-numeric: tabular-nums;
 }
 
+.app-audio-player__mute-btn,
 .app-audio-player__speed-btn {
   background: var(--surface-secondary, rgba(255, 255, 255, 0.08));
   border: none;

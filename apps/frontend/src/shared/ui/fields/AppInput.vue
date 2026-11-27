@@ -268,7 +268,7 @@ onBeforeUnmount(() => {
 
 .app-input__control:focus-within {
   border-color: var(--focus-border);
-  box-shadow: var(--focus-ring);
+  box-shadow: none;
   transition: var(--theme-transition);
 }
 

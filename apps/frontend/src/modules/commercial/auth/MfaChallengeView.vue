@@ -429,8 +429,8 @@ async function onSubmit(): Promise<void> {
 }
 
 .mfa-pin__cell--active {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-focus-ring);
+  border-color: var(--focus-border);
+  box-shadow: none;
   transform: translateY(-2px);
 }
 

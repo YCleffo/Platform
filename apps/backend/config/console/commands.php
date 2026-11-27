@@ -18,6 +18,23 @@ return [
         'storage:cleanup' => \App\Storage\Console\CleanupCommand::class,
         'storage:migrate-objects' => \App\Storage\Console\MigrateObjectsCommand::class,
     ] : []),
+    ...(class_exists(\App\Chat\Console\MigrateCommand::class) ? [
+        'chat:migrate' => \App\Chat\Console\MigrateCommand::class,
+    ] : []),
+    ...(class_exists(\App\Realtime\Console\ServeCommand::class) ? [
+        'realtime:migrate' => \App\Realtime\Console\MigrateCommand::class,
+        'realtime:serve' => \App\Realtime\Console\ServeCommand::class,
+    ] : []),
+    ...(class_exists(\App\Notifications\Console\MigrateCommand::class) ? [
+        'notifications:migrate' => \App\Notifications\Console\MigrateCommand::class,
+    ] : []),
+    ...(class_exists(\App\Activity\Console\MigrateCommand::class) ? [
+        'activity:migrate' => \App\Activity\Console\MigrateCommand::class,
+    ] : []),
+    ...(class_exists(\App\Workspace\Console\MigrateCommand::class) ? [
+        'workspace:migrate' => \App\Workspace\Console\MigrateCommand::class,
+        'workspace:process-operations' => \App\Workspace\Console\ProcessOperationsCommand::class,
+    ] : []),
     'scheduler:run' => Console\SchedulerRunCommand::class,
     'ops:status' => Console\OpsStatusCommand::class,
     'ops:health' => Console\OpsHealthCommand::class,

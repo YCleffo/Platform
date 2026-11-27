@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useEducationI18n } from '../i18n';
+import { resultStatusToScore } from '../journal';
 import type { AttendanceTotals, ParentHomework, ParentLesson } from './api';
 
 const props = withDefaults(
@@ -9,25 +10,27 @@ const props = withDefaults(
     results?: ParentLesson[];
     homework?: ParentHomework[];
     timezone?: string;
+    hideDebts?: boolean;
   }>(),
   {
     attendance: null,
     results: () => [],
     homework: () => [],
     timezone: 'UTC',
+    hideDebts: false,
   },
 );
 
 const { t, locale } = useEducationI18n();
 
-// 1. Attendance analytics
+// 1. Attendance analytics (no synthetic 100% when no completed lessons exist)
 const attendanceRate = computed(() => {
-  if (!props.attendance || !props.attendance.total) return 100;
+  if (!props.attendance || !props.attendance.total) return null;
   return Math.round((props.attendance.present / props.attendance.total) * 100);
 });
 
 const presentPercent = computed(() => {
-  if (!props.attendance || !props.attendance.total) return 100;
+  if (!props.attendance || !props.attendance.total) return 0;
   return Math.round((props.attendance.present / props.attendance.total) * 100);
 });
 
@@ -36,23 +39,26 @@ const absentPercent = computed(() => {
   return Math.round((props.attendance.absent / props.attendance.total) * 100);
 });
 
-// 2. Academic Progress & Grade Dynamics
-const numericResults = computed(() => {
-  const map: Record<string, number> = {
-    excellent: 5,
-    good: 4,
-    satisfactory: 3,
-    needs_support: 2,
-    pass: 5,
-  };
+// 2. Academic Progress & Grade Dynamics (reuses canonical journal.ts mapping + legacy aliases)
+const legacyScoreMap: Record<string, number> = {
+  excellent: 5,
+  good: 4,
+  satisfactory: 3,
+  pass: 5,
+};
+const toScore = (status?: string | null): number | null => {
+  if (!status) return null;
+  return resultStatusToScore(status) ?? legacyScoreMap[status] ?? null;
+};
 
+const numericResults = computed(() => {
   return props.results
-    .filter((r) => r.resultStatus && map[r.resultStatus] !== undefined)
+    .filter((r) => toScore(r.resultStatus) !== null)
     .slice()
     .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
     .map((r) => ({
       lesson: r,
-      score: map[r.resultStatus!] ?? 4,
+      score: toScore(r.resultStatus)!,
       date: r.startsAt,
       label: r.title,
     }));
@@ -134,11 +140,11 @@ function formatDate(val: string): string {
           <span
             class="edu-parent-analytics__score-pill"
             :class="{
-              'edu-parent-analytics__score-pill--good': attendanceRate >= 85,
-              'edu-parent-analytics__score-pill--warn': attendanceRate < 85,
+              'edu-parent-analytics__score-pill--good': attendanceRate !== null && attendanceRate >= 85,
+              'edu-parent-analytics__score-pill--warn': attendanceRate !== null && attendanceRate < 85,
             }"
           >
-            {{ attendanceRate }}%
+            {{ attendanceRate !== null ? `${attendanceRate}%` : '—' }}
           </span>
         </div>
 
@@ -244,6 +250,7 @@ function formatDate(val: string): string {
 
     <!-- Row 2: Homework Debts & Alerts Banner -->
     <div
+      v-if="!hideDebts"
       class="edu-parent-analytics__debt-banner"
       :class="{
         'edu-parent-analytics__debt-banner--alert': homeworkDebts.length > 0,

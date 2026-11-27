@@ -4,13 +4,25 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import { Calendar, Home, People, Message, LayoutGrid, Book, Bell } from '@/shared/ui/icons';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
+import AppBottomNav from '@/shared/ui/navigation/AppBottomNav.vue';
 import { useEducationWorkspace } from './workspace';
+import { realtimeClient } from '@/shared/realtime/realtimeClient';
 import { useEducationI18n } from './i18n';
 import EducationState from './EducationState.vue';
 import { educationApi } from './api';
 import { calendarWeek } from '@/shared/formatting/calendar';
+import WorkspaceShellControls from '@/modules/workspace/WorkspaceShellControls.vue';
+import { useOperationsCenter } from '@/modules/workspace/useOperationsCenter';
 import './education.css';
 const workspace = useEducationWorkspace();
+const operations = useOperationsCenter();
+watch(
+  () => workspace.organizationId,
+  (orgId) => {
+    operations.setOrganizationId(orgId || null);
+  },
+  { immediate: true },
+);
 const auth = useAdminAuthStore();
 const route = useRoute();
 const router = useRouter();
@@ -51,6 +63,15 @@ const sectionLabel = computed(() =>
 const mobileSection = computed(() =>
   route.meta.educationTab === 'homework' ? 'more' : route.meta.educationTab,
 );
+const bottomNavigation = computed(() =>
+  navigation.map((item) => ({
+    label: t(`education.${item.key}`),
+    icon: item.icon,
+    routeName: item.key,
+    to: item.path,
+    badge: item.key === 'messages' ? (workspace.header?.unreadCount ?? 0) : 0,
+  })),
+);
 watch(
   () => auth.isAuthenticated,
   (value) => {
@@ -83,7 +104,27 @@ onMounted(() => {
     if (!studentPortal.value && !document.hidden) void workspace.refreshHeader();
   }, 60000);
 });
+let unsubLayoutRealtime: (() => void) | null = null;
+watch(
+  () => [workspace.organizationId, workspace.header?.personId] as const,
+  ([org, pid]) => {
+    unsubLayoutRealtime?.();
+    if (!org || !pid) return;
+    void realtimeClient.connect(org);
+    unsubLayoutRealtime = realtimeClient.subscribe(`user:${pid}`, (ev) => {
+      if (
+        ev.eventType === 'notification.created' ||
+        ev.eventType === 'chat.room.updated' ||
+        ev.eventType === 'notification.read'
+      ) {
+        void workspace.refreshHeader();
+      }
+    });
+  },
+  { immediate: true },
+);
 onBeforeUnmount(() => {
+  unsubLayoutRealtime?.();
   if (timer) clearInterval(timer);
   workspace.cancelRequests();
 });
@@ -178,6 +219,24 @@ onBeforeUnmount(() => {
       </nav>
       <div class="edu-sidebar__footer">
         <RouterLink
+          to="/workspace"
+          class="edu-link"
+        >
+          {{ $t('nav.workspace') }}
+        </RouterLink>
+        <RouterLink
+          to="/search"
+          class="edu-link"
+        >
+          {{ $t('nav.search') }}
+        </RouterLink>
+        <RouterLink
+          to="/trash"
+          class="edu-link"
+        >
+          {{ $t('nav.trash') }}
+        </RouterLink>
+        <RouterLink
           to="/education/contexts"
           class="edu-link"
         >
@@ -218,6 +277,13 @@ onBeforeUnmount(() => {
         >
           {{ currentOrganization?.name }}
         </span>
+        <WorkspaceShellControls
+          v-if="!studentPortal"
+          :show-search-input="true"
+          :show-search-link="true"
+          :show-workspace-links="true"
+          :show-back="true"
+        />
         <RouterLink
           v-if="workspace.header && !studentPortal"
           to="/notifications"
@@ -301,35 +367,10 @@ onBeforeUnmount(() => {
         </template>
       </main>
     </div>
-    <nav
+    <AppBottomNav
       v-if="!studentPortal"
-      class="edu-navigation"
-      :aria-label="t('education.workspace')"
-    >
-      <RouterLink
-        v-for="item in navigation"
-        :key="item.key"
-        :to="item.path"
-        class="edu-navigation__link"
-        :class="{ 'edu-navigation__link--active': mobileSection === item.key }"
-        :aria-current="mobileSection === item.key ? 'page' : undefined"
-      >
-        <span class="edu-navigation__icon">
-          <component
-            :is="item.icon"
-            :size="23"
-            aria-hidden="true"
-          />
-          <span
-            v-if="item.key === 'messages' && workspace.header?.unreadCount"
-            class="edu-dot"
-            aria-hidden="true"
-          >
-            {{ Math.min(workspace.header.unreadCount, 99) }}
-          </span>
-        </span>
-        <span>{{ t(`education.${item.key}`) }}</span>
-      </RouterLink>
-    </nav>
+      :items="bottomNavigation"
+      :active-route-name="String(mobileSection || 'today')"
+    />
   </div>
 </template>

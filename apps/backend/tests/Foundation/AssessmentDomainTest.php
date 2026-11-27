@@ -218,15 +218,30 @@ final class AssessmentDomainTest extends TestCase
         $validateMethod = $reflection->getMethod('validateQuestionDefinitions');
         $validateMethod->setAccessible(true);
 
-        // 1. Unsupported type: matching
+        // 1. Supported type: matching (validates pairs)
+        $validateMethod->invoke($service, [
+            [
+                'id' => 'q1',
+                'type' => 'matching',
+                'prompt' => 'Match pairs',
+                'points' => 5,
+                'pairs' => [
+                    ['left' => 'A', 'right' => '1'],
+                    ['left' => 'B', 'right' => '2'],
+                ],
+                'answerKey' => ['A' => '1', 'B' => '2'],
+            ],
+        ]);
+
+        // 1b. Invalid matching pairs
         try {
             $validateMethod->invoke($service, [
-                ['id' => 'q1', 'type' => 'matching', 'prompt' => 'Match pairs', 'points' => 5],
+                ['id' => 'q1_bad', 'type' => 'matching', 'prompt' => 'Match pairs', 'points' => 5, 'pairs' => []],
             ]);
-            $this->fail('Expected exception for matching question type');
+            $this->fail('Expected exception for insufficient matching pairs');
         } catch (\App\Education\Application\EducationError $e) {
             $this->assertSame(422, $e->status);
-            $this->assertSame('unsupported_question_type', $e->reason);
+            $this->assertSame('insufficient_matching_pairs', $e->reason);
         }
 
         // 2. Unsupported type: unknown
@@ -477,6 +492,159 @@ final class AssessmentDomainTest extends TestCase
 
         foreach ($tables as $table) {
             $this->assertNotEmpty($table);
+        }
+    }
+
+    public function testQuestionBankRejectsUnknownType(): void
+    {
+        $db = $this->createMock(\Yiisoft\Db\Connection\ConnectionInterface::class);
+        $service = new \App\Education\Application\AssessmentService($db, $this->registry);
+        $scope = new \App\Education\Application\Scope(
+            'a0000000-0000-4000-8000-000000000010',
+            'a0000000-0000-4000-8000-000000000020',
+            'a0000000-0000-4000-8000-000000000030',
+            'en',
+            'UTC',
+        );
+
+        try {
+            $service->createQuestionBankItem($scope, [
+                'questionType' => 'drag_and_drop',
+                'prompt' => 'Drop items',
+                'answerKey' => 'test',
+                'content' => [],
+            ]);
+            $this->fail('Expected exception for unknown type');
+        } catch (\App\Education\Application\EducationError $e) {
+            $this->assertSame(422, $e->status);
+            $this->assertSame('invalid_question_type', $e->reason);
+        }
+    }
+
+    public function testSaveStudentAttemptCasConflictDetectsRevisionMismatch(): void
+    {
+        $db = $this->createMock(\Yiisoft\Db\Connection\ConnectionInterface::class);
+        $command = $this->createMock(\Yiisoft\Db\Command\CommandInterface::class);
+
+        $db->method('transaction')->willReturnCallback(fn($callback) => $callback());
+        $db->method('createCommand')->willReturn($command);
+
+        $attemptId = 'a0000000-0000-4000-8000-000000000099';
+        $attemptRow = [
+            'id' => $attemptId,
+            'assessment_id' => 'a0000000-0000-4000-8000-000000000001',
+            'student_id' => 'a0000000-0000-4000-8000-000000000030',
+            'state' => 'IN_PROGRESS',
+            'revision' => 2,
+            'time_limit_seconds' => 3600,
+            'started_at' => (new \DateTimeImmutable('-5 minutes'))->format(\DateTimeInterface::ATOM),
+            'answers' => json_encode(['q1' => 'optA']),
+        ];
+
+        $command->method('queryOne')->willReturn($attemptRow);
+        $command->method('execute')->willReturn(0);
+
+        $service = new \App\Education\Application\AssessmentService($db, $this->registry);
+        $scope = new \App\Education\Application\Scope(
+            'a0000000-0000-4000-8000-000000000010',
+            'a0000000-0000-4000-8000-000000000020',
+            'a0000000-0000-4000-8000-000000000030',
+            'en',
+            'UTC',
+            'a0000000-0000-4000-8000-000000000030',
+        );
+
+        try {
+            $service->saveStudentAttempt($scope, $attemptId, ['answers' => ['q1' => 'optB'], 'revision' => 1]);
+            $this->fail('Expected revision_conflict exception');
+        } catch (\App\Education\Application\EducationError $e) {
+            $this->assertSame(409, $e->status);
+            $this->assertSame('revision_conflict', $e->reason);
+        }
+    }
+
+    public function testSaveStudentAttemptEnforcesServerDeadline(): void
+    {
+        $db = $this->createMock(\Yiisoft\Db\Connection\ConnectionInterface::class);
+        $command = $this->createMock(\Yiisoft\Db\Command\CommandInterface::class);
+
+        $db->method('transaction')->willReturnCallback(fn($callback) => $callback());
+        $db->method('createCommand')->willReturn($command);
+
+        $attemptId = 'a0000000-0000-4000-8000-000000000099';
+        $attemptRow = [
+            'id' => $attemptId,
+            'assessment_id' => 'a0000000-0000-4000-8000-000000000001',
+            'student_id' => 'a0000000-0000-4000-8000-000000000030',
+            'state' => 'IN_PROGRESS',
+            'revision' => 1,
+            'time_limit_seconds' => 60,
+            'started_at' => (new \DateTimeImmutable('-600 seconds'))->format(\DateTimeInterface::ATOM),
+            'answers' => json_encode(['q1' => 'optA']),
+        ];
+
+        $command->method('queryOne')->willReturn($attemptRow);
+
+        $service = new \App\Education\Application\AssessmentService($db, $this->registry);
+        $scope = new \App\Education\Application\Scope(
+            'a0000000-0000-4000-8000-000000000010',
+            'a0000000-0000-4000-8000-000000000020',
+            'a0000000-0000-4000-8000-000000000030',
+            'en',
+            'UTC',
+            'a0000000-0000-4000-8000-000000000030',
+        );
+
+        try {
+            $service->saveStudentAttempt($scope, $attemptId, ['answers' => ['q1' => 'optB'], 'revision' => 1]);
+            $this->fail('Expected attempt_expired exception');
+        } catch (\App\Education\Application\EducationError $e) {
+            $this->assertSame(409, $e->status);
+            $this->assertSame('attempt_time_expired', $e->reason);
+        }
+    }
+
+    public function testResolveAndVerifyStudentAssignmentRejectsNonMember(): void
+    {
+        $db = $this->createMock(\Yiisoft\Db\Connection\ConnectionInterface::class);
+        $command = $this->createMock(\Yiisoft\Db\Command\CommandInterface::class);
+
+        $db->method('createCommand')->willReturn($command);
+
+        $assignmentId = 'a0000000-0000-4000-8000-000000000100';
+        $assignmentRow = [
+            'id' => $assignmentId,
+            'status' => 'published',
+            'student_id' => null,
+            'group_id' => 'a0000000-0000-4000-8000-000000000200',
+            'due_at' => null,
+            'allow_late' => true,
+        ];
+
+        $command->method('queryOne')->willReturn($assignmentRow);
+        $command->method('queryScalar')->willReturn(false);
+
+        $service = new \App\Education\Application\AssessmentService($db, $this->registry);
+        $scope = new \App\Education\Application\Scope(
+            'a0000000-0000-4000-8000-000000000010',
+            'a0000000-0000-4000-8000-000000000020',
+            'a0000000-0000-4000-8000-000000000030',
+            'en',
+            'UTC',
+            'a0000000-0000-4000-8000-000000000030',
+        );
+
+        try {
+            $service->resolveAndVerifyStudentAssignment(
+                $scope,
+                'a0000000-0000-4000-8000-000000000001',
+                false,
+                $assignmentId,
+            );
+            $this->fail('Expected access_denied exception');
+        } catch (\App\Education\Application\EducationError $e) {
+            $this->assertSame(403, $e->status);
+            $this->assertSame('student_not_in_group', $e->reason);
         }
     }
 }

@@ -132,7 +132,7 @@ const isDisabled = computed(() => props.disabled || props.loading);
 
 .app-button--primary {
   background: var(--accent);
-  color: var(--color-white);
+  color: var(--on-accent);
   transition: var(--theme-transition);
 }
 

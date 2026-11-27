@@ -41,7 +41,7 @@ Table storage.files {
     (space_id, deleted_at, path) [name: 'files_space', type: btree]
     (space_id, path) [name: 'files_space_id_path_key', type: btree, unique]
   }
-  Note: 'files_created_at_not_null: NOT NULL created_at\nfiles_id_not_null: NOT NULL id\nfiles_path_check: CHECK (btrim(path::text) <> \'\'::text AND path::text !~~ \'%..%\'::text)\nfiles_path_not_null: NOT NULL path\nfiles_space_id_fkey: FOREIGN KEY (space_id) REFERENCES storage.spaces(id)\nfiles_space_id_not_null: NOT NULL space_id\nfiles_space_id_path_key: UNIQUE (space_id, path)\nCREATE INDEX files_space ON storage.files USING btree (space_id, deleted_at, path)\nCREATE UNIQUE INDEX files_space_id_path_key ON storage.files USING btree (space_id, path)'
+  Note: 'files_created_at_not_null: NOT NULL created_at\nfiles_id_not_null: NOT NULL id\nfiles_path_check: CHECK (btrim(path::text) <> \'\'::text AND path::text !~~ \'%..%\'::text)\nfiles_path_not_null: NOT NULL path\nfiles_space_id_fkey: FOREIGN KEY (space_id) REFERENCES storage.spaces(id)\nfiles_space_id_not_null: NOT NULL space_id\nfiles_space_id_path_key: UNIQUE (space_id, path)\nCREATE INDEX files_space ON storage.files USING btree (space_id, deleted_at, path)\nCREATE UNIQUE INDEX files_space_id_path_key ON storage.files USING btree (space_id, path)\nCREATE INDEX storage_files_path_trgm_idx ON storage.files USING gin (path gin_trgm_ops)'
 }
 
 Table storage.manifest_entries {

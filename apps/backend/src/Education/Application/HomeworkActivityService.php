@@ -35,8 +35,14 @@ final readonly class HomeworkActivityService
                 throw new EducationError(409, 'activity_unavailable');
             }
             $activity = (string) $recipient['activity_assignment_id'];
-            $count = (int) $this->db->createCommand('SELECT count(*) FROM education.activity_attempts
-                WHERE assignment_id=CAST(:id AS uuid)', [':id' => $activity])->queryScalar();
+            $count = (int) $this->db->createCommand(
+                "SELECT count(*) FROM (
+                    SELECT id FROM education.activity_attempts WHERE assignment_id = CAST(:id AS uuid) AND revoked_at IS NULL
+                    UNION
+                    SELECT id FROM activity.attempts WHERE assignment_id = CAST(:id AS uuid) AND state NOT IN ('CANCELLED', 'INVALIDATED')
+                ) u",
+                [':id' => $activity],
+            )->queryScalar();
             if ($count >= (int) $detail['assignment']['maxAttempts']) {
                 throw new EducationError(409, 'attempt_limit_reached');
             }

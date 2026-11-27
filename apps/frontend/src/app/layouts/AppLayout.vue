@@ -14,6 +14,8 @@ import {
   Sun,
 } from '@/shared/ui/icons';
 import { useAuthStore } from '@/core/auth/authStore';
+import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
+import WorkspaceShellControls from '@/modules/workspace/WorkspaceShellControls.vue';
 import { useTheme } from '@/app/theme';
 import { setLocale } from '@/shared/i18n';
 import AppHeader from '@/shared/ui/navigation/AppHeader.vue';
@@ -28,6 +30,7 @@ import AppIconButton from '@/shared/ui/actions/AppIconButton.vue';
 import SiteContextMenu from './SiteContextMenu.vue';
 
 const auth = useAuthStore();
+const adminAuth = useAdminAuthStore();
 const router = useRouter();
 const route = useRoute();
 const { t, locale } = useI18n();
@@ -158,7 +161,7 @@ async function logout(): Promise<void> {
             class="brand__mark"
             aria-hidden="true"
           >
-            <Layers :size="18" />
+            <Layers :size="22" />
           </span>
           <span class="brand__name">{{ $t('app.name') }}</span>
         </RouterLink>
@@ -189,6 +192,13 @@ async function logout(): Promise<void> {
       </template>
 
       <template #actions>
+        <WorkspaceShellControls
+          :show-search-input="adminAuth.isAuthenticated"
+          :show-search-link="adminAuth.isAuthenticated"
+          :show-notifications="adminAuth.isAuthenticated"
+          :show-workspace-links="adminAuth.isAuthenticated"
+          :show-back="true"
+        />
         <AppIconButton
           class="app-layout__desktop-action"
           :label="isDark ? $t('theme.light') : $t('theme.dark')"
@@ -305,11 +315,11 @@ async function logout(): Promise<void> {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-control-s);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-control-m);
   background: var(--accent);
-  color: var(--color-white);
+  color: var(--on-accent);
   transition: var(--theme-transition);
 }
 
@@ -355,15 +365,15 @@ async function logout(): Promise<void> {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 5px;
-  width: 20px;
-  height: 20px;
+  gap: 4px;
+  width: 16px;
+  height: 16px;
 }
 
 .hamburger span {
   display: block;
   width: 100%;
-  height: 2px;
+  height: 1.5px;
   border-radius: 2px;
   background: currentColor;
   transform-origin: center;
@@ -374,7 +384,7 @@ async function logout(): Promise<void> {
 }
 
 .hamburger--open span:nth-child(1) {
-  transform: translateY(7px) rotate(45deg);
+  transform: translateY(5.5px) rotate(45deg);
 }
 
 .hamburger--open span:nth-child(2) {
@@ -383,10 +393,12 @@ async function logout(): Promise<void> {
 }
 
 .hamburger--open span:nth-child(3) {
-  transform: translateY(-7px) rotate(-45deg);
+  transform: translateY(-5.5px) rotate(-45deg);
 }
 
 .app-layout__menu-button {
+  min-width: 36px;
+  min-height: 36px;
   transition:
     var(--theme-transition),
     background-color var(--motion-fast-duration) var(--motion-ease),

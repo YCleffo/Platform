@@ -565,6 +565,19 @@
           "predicate": null,
           "definition": "CREATE UNIQUE INDEX files_space_id_path_key ON storage.files USING btree (space_id, path)",
           "attribute_count": 2
+        },
+        {
+          "keys": [
+            "path"
+          ],
+          "name": "storage_files_path_trgm_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX storage_files_path_trgm_idx ON storage.files USING gin (path gin_trgm_ops)",
+          "attribute_count": 1
         }
       ],
       "policies": [],

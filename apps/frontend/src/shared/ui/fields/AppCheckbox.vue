@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, useAttrs } from 'vue';
 import { Check } from '@/shared/ui/icons';
 
@@ -233,7 +233,6 @@ onBeforeUnmount(() => {
 @media (hover: hover) {
   .app-checkbox:hover:not(.app-checkbox--disabled) .app-checkbox__box {
     border-color: var(--accent);
-    box-shadow: var(--focus-ring);
   }
 }
 @media (forced-colors: active) {

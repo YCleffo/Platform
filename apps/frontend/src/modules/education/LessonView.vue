@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { onBeforeRouteLeave, useRoute } from 'vue-router';
 import AppConfirmDialog from '@/shared/ui/overlays/AppConfirmDialog.vue';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
@@ -10,6 +10,7 @@ import { curriculumSnapshotLabel } from './curriculum';
 import { useEducationWorkspace } from './workspace';
 import { useEducationMutation, useEducationResource, useEducationError } from './resources';
 import { useEducationI18n } from './i18n';
+import { resultStatusKey } from './journal';
 import { lessonDisplayStatus, lessonStarted } from './status';
 import EducationState from './EducationState.vue';
 import MaterialList from './MaterialList.vue';
@@ -45,7 +46,7 @@ const { data, loading, error, refresh } = useEducationResource(
           : null,
     };
   },
-  [offset],
+  [offset, () => route.params.id, () => props.mode],
 );
 const mutation = useEducationMutation();
 const { busy, error: actionError, uncertain } = mutation;
@@ -139,18 +140,36 @@ async function reconcile(): Promise<void> {
 const resultStatuses: ResultStatus[] = ['pending', 'mastered', 'developing', 'needs_support'];
 const reportDraft = reactive({ topic: '', summary: '', teacherComment: '' });
 const resultDrafts = reactive(new Map<string, { status: ResultStatus; comment: string }>());
+const dirtyResults = reactive(new Set<string>());
+const dirtyReport = ref(false);
+const draftKey = (lessonId: string, studentId: string) => `${lessonId}:${studentId}`;
+
+onBeforeRouteLeave(() => {
+  if (dirtyReport.value || dirtyResults.size > 0) {
+    return window.confirm(t('education.unsavedChangesConfirm'));
+  }
+  return true;
+});
+
 watch(
-  () => data.value?.results,
-  (value) => {
-    if (!value) return;
-    if (value.report) {
-      reportDraft.topic = value.report.topic;
-      reportDraft.summary = value.report.summary;
-      reportDraft.teacherComment = value.report.teacherComment ?? '';
+  () => [data.value?.lesson?.id, data.value?.results] as const,
+  ([lessonId, value]) => {
+    if (!lessonId || !value) return;
+    if (!dirtyReport.value) {
+      if (value.report) {
+        reportDraft.topic = value.report.topic;
+        reportDraft.summary = value.report.summary;
+        reportDraft.teacherComment = value.report.teacherComment ?? '';
+      } else {
+        reportDraft.topic = '';
+        reportDraft.summary = '';
+        reportDraft.teacherComment = '';
+      }
     }
     for (const item of value.items) {
-      if (!resultDrafts.has(item.id)) {
-        resultDrafts.set(item.id, { status: item.status, comment: item.comment ?? '' });
+      const key = draftKey(lessonId, item.id);
+      if (!dirtyResults.has(key)) {
+        resultDrafts.set(key, { status: item.status, comment: item.comment ?? '' });
       }
     }
   },
@@ -167,20 +186,27 @@ async function saveReport(): Promise<void> {
         teacherComment:
           reportDraft.teacherComment.trim() === '' ? null : reportDraft.teacherComment,
       }),
-    () => refresh(),
+    async () => {
+      dirtyReport.value = false;
+      await refresh();
+    },
   );
 }
-async function saveResult(id: string): Promise<void> {
+async function saveResult(studentId: string): Promise<void> {
   const lesson = data.value?.lesson;
-  const draft = resultDrafts.get(id);
+  const key = lesson ? draftKey(lesson.id, studentId) : '';
+  const draft = key ? resultDrafts.get(key) : undefined;
   if (!lesson || !draft) return;
   await mutation.run(
     () =>
-      educationApi.saveLessonResult(workspace.organizationId, lesson.id, id, {
+      educationApi.saveLessonResult(workspace.organizationId, lesson.id, studentId, {
         status: draft.status,
         comment: draft.comment.trim() === '' ? null : draft.comment,
       }),
-    () => refresh(),
+    async () => {
+      dirtyResults.delete(key);
+      await refresh();
+    },
   );
 }
 </script>
@@ -412,6 +438,7 @@ async function saveResult(id: string): Promise<void> {
               :maxlength="240"
               required
               :disabled="busy || uncertain"
+              @update:model-value="dirtyReport = true"
             />
             <label>
               {{ t('education.reportSummary') }}
@@ -420,6 +447,7 @@ async function saveResult(id: string): Promise<void> {
                 :maxlength="4000"
                 required
                 :disabled="busy || uncertain"
+                @input="dirtyReport = true"
               />
             </label>
             <label>
@@ -428,6 +456,7 @@ async function saveResult(id: string): Promise<void> {
                 v-model="reportDraft.teacherComment"
                 :maxlength="4000"
                 :disabled="busy || uncertain"
+                @input="dirtyReport = true"
               />
             </label>
             <div class="edu-form-actions">
@@ -461,21 +490,23 @@ async function saveResult(id: string): Promise<void> {
                   <AppDropdown
                     :id="`education-result-${person.id}`"
                     :label="`${t('education.results')}: ${person.name}`"
-                    :model-value="resultDrafts.get(person.id)?.status ?? person.status"
+                    :model-value="
+                      resultDrafts.get(draftKey(data.lesson.id, person.id))?.status ?? person.status
+                    "
                     :options="
                       resultStatuses.map((value) => ({
                         value,
-                        label: t(
-                          `education.${value === 'pending' ? 'notAssessed' : value === 'needs_support' ? 'needsSupport' : value}`,
-                        ),
+                        label: t(`education.${resultStatusKey(value)}`),
                       }))
                     "
                     :disabled="busy || uncertain"
                     @update:model-value="
                       (value) => {
-                        resultDrafts.set(person.id, {
+                        const key = draftKey(data!.lesson!.id, person.id);
+                        dirtyResults.add(key);
+                        resultDrafts.set(key, {
                           status: String(value) as ResultStatus,
-                          comment: resultDrafts.get(person.id)?.comment ?? '',
+                          comment: resultDrafts.get(key)?.comment ?? person.comment ?? '',
                         });
                       }
                     "
@@ -483,17 +514,23 @@ async function saveResult(id: string): Promise<void> {
                   <label class="edu-subtle">
                     {{ t('education.resultComment') }}
                     <textarea
-                      :value="resultDrafts.get(person.id)?.comment ?? person.comment ?? ''"
+                      :value="
+                        resultDrafts.get(draftKey(data.lesson.id, person.id))?.comment ??
+                        person.comment ??
+                        ''
+                      "
                       :maxlength="1000"
                       :disabled="busy || uncertain"
                       @input="
                         (event) => {
-                          const draft = resultDrafts.get(person.id) ?? {
+                          const key = draftKey(data!.lesson!.id, person.id);
+                          dirtyResults.add(key);
+                          const draft = resultDrafts.get(key) ?? {
                             status: person.status,
                             comment: '',
                           };
                           draft.comment = String((event.target as HTMLTextAreaElement).value);
-                          resultDrafts.set(person.id, draft);
+                          resultDrafts.set(key, draft);
                         }
                       "
                     />

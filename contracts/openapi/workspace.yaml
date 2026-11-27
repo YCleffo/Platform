@@ -1,0 +1,170 @@
+openapi: 3.0.3
+info:
+  title: Platform Universal Workspace API
+  version: 1.0.0
+  description: >-
+    Универсальный Workspace Dashboard (provider-based), единый FTS/trigram поиск с ACL-изоляцией,
+    Action Engine (включая отложенные и обратимые операции с 10-секундным окном Undo и CAS),
+    единая корзина (Trash с 409 restore_conflict и очисткой S3), центр операций,
+    отмена загрузки медиа и расширенный центр уведомлений.
+security:
+  - bearerAuth: {}
+paths:
+  /api/workspace/dashboard:
+    get:
+      summary: Получить агрегированный workspace dashboard с учётом модулей и прав
+      responses:
+        "200":
+          description: Успех
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+  /api/workspace/search:
+    get:
+      summary: Единый RU/EN FTS и trigram поиск с нулевой утечкой между организациями и ролями
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: scope
+          schema:
+            type: string
+            enum: [organization, global, current_org, all]
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: offset
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Результаты и фасеты
+        "401":
+          description: Требуется аутентификация
+        "403":
+          description: Доступ запрещён
+  /api/workspace/preferences:
+    get:
+      summary: Прочитать настройки рабочего пространства пользователя
+      responses:
+        "200":
+          description: Предпочтения пользователя
+    put:
+      summary: Сохранить настройку рабочего пространства пользователя
+      responses:
+        "200":
+          description: Обновлённые предпочтения
+  /api/workspace/actions/execute:
+    post:
+      summary: Выполнить действие через Universal Action Engine
+      responses:
+        "200":
+          description: Запись операции (completed, undoable, pending, running)
+        "422":
+          description: Требуется подтверждение (confirmation_required) или недопустимый режим
+  /api/workspace/operations:
+    get:
+      summary: Список операций пользователя в текущем центре операций
+      responses:
+        "200":
+          description: Список операций
+    post:
+      summary: Зарегистрировать или обновить фоновую операцию
+      responses:
+        "201":
+          description: Операция создана/обновлена
+  /api/workspace/operations/{id}/undo:
+    post:
+      summary: Атомарно отменить обратимую операцию в окне Undo (CAS)
+      responses:
+        "200":
+          description: Операция отменена и откат выполнен
+        "409":
+          description: Окно отмены истекло или операция уже финализирована (undo_window_expired)
+  /api/workspace/operations/{id}/cancel:
+    post:
+      summary: Отменить ожидающую/выполняемую операцию
+      responses:
+        "200":
+          description: Операция отменена
+        "409":
+          description: Недопустимый статус для отмены
+  /api/workspace/operations/{id}/retry:
+    post:
+      summary: Повторить отменённую или упавшую операцию
+      responses:
+        "200":
+          description: Операция повторно выполнена
+  /api/workspace/trash:
+    get:
+      summary: Список объектов в универсальной корзине
+      responses:
+        "200":
+          description: Элементы корзины
+    post:
+      summary: Переместить поддерживаемую сущность в корзину
+      responses:
+        "201":
+          description: Элемент перемещён в корзину
+  /api/workspace/trash/{id}/restore:
+    post:
+      summary: Восстановить элемент из корзины
+      responses:
+        "200":
+          description: Элемент восстановлен
+        "409":
+          description: Конфликт восстановления (restore_conflict); требуется renameOnConflict=true
+  /api/workspace/trash/{id}:
+    delete:
+      summary: Окончательно удалить элемент из корзины и очистить S3-объекты
+      responses:
+        "200":
+          description: Удалено окончательно
+  /api/workspace/trash/empty:
+    post:
+      summary: Очистить доступные элементы корзины и связанные S3-объекты
+      responses:
+        "200":
+          description: Корзина очищена
+  /api/media/{id}/cancel:
+    post:
+      summary: Реальная отмена загрузки медиа с очисткой staging-объекта S3 и статусом CANCELLED
+      responses:
+        "200":
+          description: Загрузка отменена
+        "409":
+          description: Загрузка уже подтверждена или отменена
+  /api/notifications/bulk-read:
+    post:
+      summary: Массовая отметка уведомлений как прочитанных
+      responses:
+        "200":
+          description: Обновлено
+  /api/notifications/bulk-archive:
+    post:
+      summary: Массовое архивирование уведомлений
+      responses:
+        "200":
+          description: Архивировано
+  /api/notifications/push-status:
+    get:
+      summary: Честный статус конфигурации и подписок Web Push
+      responses:
+        "200":
+          description: Статус Web Push
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

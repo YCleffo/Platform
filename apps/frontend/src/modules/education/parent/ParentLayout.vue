@@ -8,9 +8,19 @@ import { setLocale } from '@/shared/i18n';
 import { useEducationI18n } from '../i18n';
 import EducationState from '../EducationState.vue';
 import { parentChildKey, useParentWorkspace } from './workspace';
+import WorkspaceShellControls from '@/modules/workspace/WorkspaceShellControls.vue';
+import { useOperationsCenter } from '@/modules/workspace/useOperationsCenter';
 import '../education.css';
 import './parent.css';
 const workspace = useParentWorkspace();
+const operations = useOperationsCenter();
+watch(
+  () => workspace.child?.organizationId ?? null,
+  (orgId) => {
+    operations.setOrganizationId(orgId);
+  },
+  { immediate: true },
+);
 const auth = useAdminAuthStore();
 const route = useRoute();
 const router = useRouter();
@@ -122,6 +132,10 @@ onBeforeUnmount(() => {
         <strong>Education</strong>
       </RouterLink>
       <div class="edu-form-actions">
+        <WorkspaceShellControls
+          :show-search-link="true"
+          :show-back="true"
+        />
         <RouterLink
           to="/education/contexts"
           class="edu-link"

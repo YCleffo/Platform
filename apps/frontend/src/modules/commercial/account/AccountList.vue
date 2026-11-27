@@ -102,8 +102,9 @@ defineEmits<{
 }
 
 .account-list__link:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+  outline: 1px solid var(--focus-border);
+  outline-offset: 2px;
+  box-shadow: none;
   transition: var(--theme-transition);
 }
 

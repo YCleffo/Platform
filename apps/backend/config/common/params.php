@@ -64,18 +64,34 @@ if (Environment::isProd() && $totpEncryptionKey === null) {
     throw new \RuntimeException('AUTH_TOTP_ENCRYPTION_KEY is required in production.');
 }
 
+$educationParams = (getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\Education\Infrastructure\Configuration::class))
+    ? \App\Education\Infrastructure\Configuration::params()
+    : [];
+$workspaceParams = class_exists(\App\Workspace\Infrastructure\Configuration::class)
+    ? \App\Workspace\Infrastructure\Configuration::params()
+    : [];
+
 $auditEventDefinitions = [
-    ...((getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\Education\Infrastructure\Configuration::class))
-        ? (\App\Education\Infrastructure\Configuration::params()['auditEventDefinitions'] ?? []) : []),
+    ...($educationParams['auditEventDefinitions'] ?? []),
     ...(class_exists(\App\DeviceManagement\Infrastructure\Configuration::class)
         ? (\App\DeviceManagement\Infrastructure\Configuration::params()['auditEventDefinitions'] ?? []) : []),
     ...(class_exists(\App\Storage\Infrastructure\Configuration::class)
         ? (\App\Storage\Infrastructure\Configuration::params()['auditEventDefinitions'] ?? []) : []),
+    ...($workspaceParams['auditEventDefinitions'] ?? []),
 ];
 
+$mergedPrivacy = array_diff_key($educationParams, ['auditEventDefinitions' => true]);
+foreach (['additionalDataCategoryDefinitions', 'personalDataContributors', 'personalDataErasureHandlers'] as $mergeKey) {
+    if (isset($workspaceParams[$mergeKey]) && is_array($workspaceParams[$mergeKey])) {
+        $mergedPrivacy[$mergeKey] = [
+            ...($mergedPrivacy[$mergeKey] ?? []),
+            ...$workspaceParams[$mergeKey],
+        ];
+    }
+}
+
 return [
-    ...((getenv('EDUCATION_ENABLED') === '1' && class_exists(\App\Education\Infrastructure\Configuration::class))
-        ? array_diff_key(\App\Education\Infrastructure\Configuration::params(), ['auditEventDefinitions' => true]) : []),
+    ...$mergedPrivacy,
     'auditEventDefinitions' => $auditEventDefinitions,
     'runtimeTrustedEntitlementKeys' => json_decode($envOr('RUNTIME_ENTITLEMENT_TRUSTED_KEYS', '{}'), true, 16, JSON_THROW_ON_ERROR),
     'runtimeControlPlaneUrl' => $envOr('CONTROL_PLANE_URL', ''),

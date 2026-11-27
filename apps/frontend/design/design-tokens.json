@@ -495,8 +495,8 @@
           "$value": {
             "fontFamily": "Inter",
             "fontWeight": "Semi Bold",
-            "fontSize": 32,
-            "lineHeight": 40,
+            "fontSize": 28,
+            "lineHeight": 36,
             "letterSpacing": "-1%",
             "paragraphSpacing": 0,
             "paragraphIndent": 0,
@@ -509,8 +509,8 @@
           "$value": {
             "fontFamily": "Inter",
             "fontWeight": "Semi Bold",
-            "fontSize": 24,
-            "lineHeight": 32,
+            "fontSize": 22,
+            "lineHeight": 28,
             "letterSpacing": "-0.5%",
             "paragraphSpacing": 0,
             "paragraphIndent": 0,
@@ -523,8 +523,8 @@
           "$value": {
             "fontFamily": "Inter",
             "fontWeight": "Semi Bold",
-            "fontSize": 20,
-            "lineHeight": 28,
+            "fontSize": 18,
+            "lineHeight": 24,
             "letterSpacing": "-0.25%",
             "paragraphSpacing": 0,
             "paragraphIndent": 0,
@@ -537,8 +537,8 @@
           "$value": {
             "fontFamily": "Inter",
             "fontWeight": "Semi Bold",
-            "fontSize": 18,
-            "lineHeight": 24,
+            "fontSize": 16,
+            "lineHeight": 22,
             "letterSpacing": "0%",
             "paragraphSpacing": 0,
             "paragraphIndent": 0,
@@ -552,8 +552,8 @@
             "$value": {
               "fontFamily": "Inter",
               "fontWeight": "Regular",
-              "fontSize": 16,
-              "lineHeight": 24,
+              "fontSize": 14,
+              "lineHeight": 20,
               "letterSpacing": "0%",
               "paragraphSpacing": 0,
               "paragraphIndent": 0,
@@ -566,8 +566,8 @@
             "$value": {
               "fontFamily": "Inter",
               "fontWeight": "Medium",
-              "fontSize": 16,
-              "lineHeight": 24,
+              "fontSize": 14,
+              "lineHeight": 20,
               "letterSpacing": "0%",
               "paragraphSpacing": 0,
               "paragraphIndent": 0,
@@ -580,8 +580,8 @@
             "$value": {
               "fontFamily": "Inter",
               "fontWeight": "Regular",
-              "fontSize": 14,
-              "lineHeight": 20,
+              "fontSize": 13,
+              "lineHeight": 19,
               "letterSpacing": "0%",
               "paragraphSpacing": 0,
               "paragraphIndent": 0,
@@ -594,8 +594,8 @@
             "$value": {
               "fontFamily": "Inter",
               "fontWeight": "Medium",
-              "fontSize": 14,
-              "lineHeight": 20,
+              "fontSize": 13,
+              "lineHeight": 19,
               "letterSpacing": "0%",
               "paragraphSpacing": 0,
               "paragraphIndent": 0,
@@ -680,8 +680,8 @@
             "$value": {
               "fontFamily": "Inter",
               "fontWeight": "Medium",
-              "fontSize": 14,
-              "lineHeight": 20,
+              "fontSize": 13,
+              "lineHeight": 18,
               "letterSpacing": "0%",
               "paragraphSpacing": 0,
               "paragraphIndent": 0,
@@ -694,8 +694,8 @@
             "$value": {
               "fontFamily": "Inter",
               "fontWeight": "Medium",
-              "fontSize": 16,
-              "lineHeight": 24,
+              "fontSize": 15,
+              "lineHeight": 22,
               "letterSpacing": "0%",
               "paragraphSpacing": 0,
               "paragraphIndent": 0,
@@ -710,8 +710,8 @@
             "$value": {
               "fontFamily": "Inter",
               "fontWeight": "Regular",
-              "fontSize": 14,
-              "lineHeight": 20,
+              "fontSize": 13,
+              "lineHeight": 18,
               "letterSpacing": "0%",
               "paragraphSpacing": 0,
               "paragraphIndent": 0,
@@ -772,8 +772,8 @@
             "$value": {
               "fontFamily": "Inter",
               "fontWeight": "Medium",
-              "fontSize": 14,
-              "lineHeight": 20,
+              "fontSize": 13,
+              "lineHeight": 18,
               "letterSpacing": "0%",
               "paragraphSpacing": 0,
               "paragraphIndent": 0,
@@ -833,8 +833,8 @@
           "$value": {
             "fontFamily": "Inter",
             "fontWeight": "Semi Bold",
-            "fontSize": 28,
-            "lineHeight": 34,
+            "fontSize": 24,
+            "lineHeight": 30,
             "letterSpacing": "-1%",
             "paragraphSpacing": 0,
             "paragraphIndent": 0,
@@ -847,8 +847,8 @@
           "$value": {
             "fontFamily": "Inter",
             "fontWeight": "Semi Bold",
-            "fontSize": 22,
-            "lineHeight": 28,
+            "fontSize": 19,
+            "lineHeight": 25,
             "letterSpacing": "-0.5%",
             "paragraphSpacing": 0,
             "paragraphIndent": 0,
@@ -861,8 +861,8 @@
           "$value": {
             "fontFamily": "Inter",
             "fontWeight": "Semi Bold",
-            "fontSize": 18,
-            "lineHeight": 24,
+            "fontSize": 17,
+            "lineHeight": 22,
             "letterSpacing": "-0.25%",
             "paragraphSpacing": 0,
             "paragraphIndent": 0,
@@ -890,8 +890,8 @@
             "$value": {
               "fontFamily": "Inter",
               "fontWeight": "Regular",
-              "fontSize": 16,
-              "lineHeight": 24,
+              "fontSize": 14,
+              "lineHeight": 20,
               "letterSpacing": "0%",
               "paragraphSpacing": 0,
               "paragraphIndent": 0,
@@ -904,8 +904,8 @@
             "$value": {
               "fontFamily": "Inter",
               "fontWeight": "Medium",
-              "fontSize": 16,
-              "lineHeight": 24,
+              "fontSize": 14,
+              "lineHeight": 20,
               "letterSpacing": "0%",
               "paragraphSpacing": 0,
               "paragraphIndent": 0,
@@ -1032,8 +1032,8 @@
             "$value": {
               "fontFamily": "Inter",
               "fontWeight": "Medium",
-              "fontSize": 16,
-              "lineHeight": 24,
+              "fontSize": 14,
+              "lineHeight": 20,
               "letterSpacing": "0%",
               "paragraphSpacing": 0,
               "paragraphIndent": 0,
@@ -1080,8 +1080,8 @@
             "$value": {
               "fontFamily": "Inter",
               "fontWeight": "Medium",
-              "fontSize": 14,
-              "lineHeight": 20,
+              "fontSize": 13,
+              "lineHeight": 18,
               "letterSpacing": "0%",
               "paragraphSpacing": 0,
               "paragraphIndent": 0,
@@ -1185,12 +1185,12 @@
         },
         "Focus Ring": {
           "$value": {
-            "color": "#2260FF40",
+            "color": "#2260FF29",
             "type": "dropShadow",
             "x": 0,
             "y": 0,
             "blur": 0,
-            "spread": 3
+            "spread": 1
           },
           "$type": "boxShadow"
         }
@@ -1242,12 +1242,12 @@
         },
         "Focus Ring": {
           "$value": {
-            "color": "#5B86FF59",
+            "color": "#5B86FF33",
             "type": "dropShadow",
             "x": 0,
             "y": 0,
             "blur": 0,
-            "spread": 3
+            "spread": 1
           },
           "$type": "boxShadow"
         }

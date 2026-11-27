@@ -1,0 +1,45 @@
+# Production Reverse Proxy (Native Caddy on host)
+# Serves built Vue SPA (apps/frontend/dist) and proxies API / WebSocket to loopback-bound containers.
+# Replace {$APP_HOSTNAME} with your production domain (e.g. app.example.com).
+
+{$APP_HOSTNAME} {
+	encode zstd gzip
+
+	# Block internal-only endpoints from public internet access
+	@internal path /metrics /health/isolation /api/health/isolation
+	respond @internal 404
+
+	# Commercial Control Plane API
+	handle /api/control* {
+		reverse_proxy 127.0.0.1:8090 {
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+
+	# WebSocket Realtime
+	handle /ws* {
+		reverse_proxy 127.0.0.1:8084 {
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+
+	# Core API & Healthchecks
+	handle /api* {
+		reverse_proxy 127.0.0.1:8080 {
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+	handle /health* {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	# Vue SPA static assets
+	handle {
+		root * /var/www/platform/frontend/dist
+		try_files {path} /index.html
+		file_server
+	}
+}

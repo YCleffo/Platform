@@ -51,3 +51,7 @@ export const Backpack = icon('backpack');
 export const Upload = icon('upload');
 export const UserPlus = icon('user-plus');
 export const Book = icon('book');
+export const Search = icon('search');
+export const Command = icon('command');
+export const Undo2 = icon('undo');
+export const Archive = icon('archive');

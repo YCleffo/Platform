@@ -17,6 +17,8 @@ use App\PlatformRuntime\Scheduler\ScheduledJob;
 use App\PlatformRuntime\Scheduler\SchedulerConfig as Config;
 use App\PlatformRuntime\Scheduler\SchedulerLoop;
 use App\PlatformRuntime\Scheduler\BackgroundJobStatusRecorder;
+use App\Workspace\Application\WorkspaceOperationService;
+use App\Workspace\Application\WorkspaceTrashService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -37,6 +39,8 @@ final class SchedulerRunCommand extends Command
         private readonly DestructionEvidencePolicy $evidencePolicy,
         private readonly RuntimeEntitlementSynchronizer $entitlements,
         private readonly BackgroundJobStatusRecorder $status,
+        private readonly ?WorkspaceOperationService $workspaceOperations = null,
+        private readonly ?WorkspaceTrashService $workspaceTrash = null,
     ) {
         parent::__construct();
     }
@@ -126,6 +130,30 @@ final class SchedulerRunCommand extends Command
                         }
                         $this->entitlements->sync();
                         return 1;
+                    },
+                ),
+                new ScheduledJob(
+                    'workspace_operations_process',
+                    Config::integer('WORKSPACE_OPERATIONS_INTERVAL_SECONDS', 5, 1, 3600),
+                    $enabled && Config::enabled('WORKSPACE_OPERATIONS_ENABLED', true),
+                    Config::integer('WORKSPACE_OPERATIONS_BATCH_LIMIT', 100, 1, 500),
+                    function (int $limit): int {
+                        if ($this->workspaceOperations === null) {
+                            throw new JobSkipped('workspace_unavailable');
+                        }
+                        return $this->workspaceOperations->processDue($limit);
+                    },
+                ),
+                new ScheduledJob(
+                    'workspace_trash_cleanup',
+                    Config::integer('WORKSPACE_TRASH_CLEANUP_INTERVAL_SECONDS', 3600, 60, 86400),
+                    $enabled && Config::enabled('WORKSPACE_TRASH_CLEANUP_ENABLED', true),
+                    Config::integer('WORKSPACE_TRASH_CLEANUP_BATCH_LIMIT', 100, 1, 500),
+                    function (int $limit): int {
+                        if ($this->workspaceTrash === null) {
+                            throw new JobSkipped('workspace_unavailable');
+                        }
+                        return $this->workspaceTrash->cleanupExpired($limit);
                     },
                 ),
             ];

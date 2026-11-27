@@ -28,6 +28,12 @@ final readonly class S3StorageFileAdapter implements StorageObjectAdapter
         return $this->objects->open($this->config->bucketStorage, S3Objects::objectKey($key));
     }
 
+    /** @return resource */
+    public function openRange(string $key, int $start, int $end)
+    {
+        return $this->objects->openRange($this->config->bucketStorage, S3Objects::objectKey($key), $start, $end);
+    }
+
     public function delete(string $key): void
     {
         $this->objects->delete($this->config->bucketStorage, S3Objects::objectKey($key));

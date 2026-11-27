@@ -1,0 +1,31 @@
+{
+  "version": "PLATFORM_10",
+  "timestamp": "2026-11-25T15:39:37.594Z",
+  "nonce": "b25eb195b6c1",
+  "tests": [
+    {
+      "id": "P10-SEC-01",
+      "title": "Forged WS Ticket (401) & Cross-Org Ticket Rejection (403)",
+      "status": "PASS",
+      "details": {}
+    },
+    {
+      "id": "P10-API-01",
+      "title": "Group Room, Idempotency, Edit, Pin, Draft Sync, Search, Delete-for-Me, Notifications Prefs",
+      "status": "PASS",
+      "details": {}
+    },
+    {
+      "id": "P10-E2E-REALTIME",
+      "title": "Dual-Browser Real WebSocket Message Delivery, Typing Indicator, Live Reactions, Synced Draft & Notifications Center",
+      "status": "PASS",
+      "details": {
+        "roomId": "01a2135c-f547-7ee0-9c21-a6b7b16956bc",
+        "screenshotChat": "docs/audits/screenshots/p10-realtime-chat.png",
+        "screenshotNotifications": "docs/audits/screenshots/p10-notifications.png"
+      }
+    }
+  ],
+  "passed": 3,
+  "failed": 0
+}

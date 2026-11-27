@@ -8,18 +8,21 @@ import { useEducationI18n } from '../i18n';
 import EducationState from '../EducationState.vue';
 import ActivityProgressPanel from '../ActivityProgressPanel.vue';
 import type { Notification, Page } from '../api';
+import { workspaceApi, type WorkspaceDashboardResponse } from '@/shared/api/workspaceApi';
 import {
   parentApi,
+  type ParentActivityResult,
   type ParentHome,
   type ParentHomework,
   type ParentLesson,
   type ParentProgress,
+  type ParentUpcomingAssessment,
 } from './api';
 import { parentChildKey, useParentWorkspace } from './workspace';
 import { useParentResource } from './resources';
 import ParentLessonList from './ParentLessonList.vue';
 import ParentHomeworkList from './ParentHomeworkList.vue';
-import EducationMessenger from '../messaging/EducationMessenger.vue';
+import UniversalMessenger from '@/modules/chat/UniversalMessenger.vue';
 import ParentAnalyticsPanel from './ParentAnalyticsPanel.vue';
 const workspace = useParentWorkspace();
 const route = useRoute();
@@ -56,6 +59,7 @@ watch(
 );
 interface SectionData {
   home?: ParentHome;
+  dashboard?: WorkspaceDashboardResponse | null;
   lessons?: ParentLesson[];
   homework?: ParentHomework[];
   progress?: ParentProgress;
@@ -86,12 +90,46 @@ const { data, error, loading, refresh } = useParentResource<SectionData>(
       }
       case 'messages':
         return {};
-      default:
-        return { home: await parentApi.home(child, signal) };
+      default: {
+        const [home, dashboard] = await Promise.all([
+          parentApi.home(child, signal),
+          workspaceApi.getDashboard(child.organizationId, { studentId: child.id, signal }).catch(() => null),
+        ]);
+        return { home, dashboard };
+      }
     }
   },
   [section, offset],
 );
+
+const dashboardOverview = computed(() => {
+  const widget = data.value?.dashboard?.widgets.find((w) => w.id === 'education.overview') as
+    | {
+        data?: {
+          upcomingAssessments?: ParentUpcomingAssessment[];
+          activityResults?: ParentActivityResult[];
+        };
+      }
+    | undefined;
+  return widget?.data ?? {};
+});
+
+const upcomingAssessments = computed<ParentUpcomingAssessment[]>(
+  () => dashboardOverview.value.upcomingAssessments ?? data.value?.home?.upcomingAssessments ?? [],
+);
+
+const homeActivityResults = computed<ParentActivityResult[]>(
+  () => dashboardOverview.value.activityResults ?? data.value?.home?.activityResults ?? [],
+);
+
+const dashboardRecentNotifications = computed<
+  { id: string; title: string; body?: string | null; createdAt: string }[]
+>(() => {
+  const widget = data.value?.dashboard?.widgets.find((w) => w.id === 'notifications.unread') as
+    | { data?: { items?: { id: string; title: string; body?: string | null; createdAt: string }[] } }
+    | undefined;
+  return widget?.data?.items ?? [];
+});
 const readError = shallowRef<unknown>(null);
 const readBusy = ref(false);
 let readController: AbortController | null = null;
@@ -295,9 +333,86 @@ const notificationLabel = (notification: Notification) =>
             compact
           />
         </article>
+        <div class="edu-parent-grid">
+          <article class="edu-card">
+            <h2>{{ t('education.parentUpcomingAssessments') }}</h2>
+            <EducationState
+              v-if="!upcomingAssessments.length"
+              :empty="t('education.parentNoUpcomingAssessments')"
+            />
+            <ul
+              v-else
+              class="edu-list"
+            >
+              <li
+                v-for="item in upcomingAssessments"
+                :key="item.id"
+                class="edu-list__item"
+              >
+                <div>
+                  <strong>{{ item.title }}</strong>
+                  <p class="edu-subtle">
+                    {{ t('education.homeworkDue') }}:
+                    {{ item.dueAt ? when(item.dueAt) : t('education.homeworkNoDue') }}
+                  </p>
+                </div>
+                <span class="edu-status">{{ item.pluginCode }}</span>
+              </li>
+            </ul>
+          </article>
+          <article class="edu-card">
+            <h2>{{ t('education.parentActivityResults') }}</h2>
+            <EducationState
+              v-if="!homeActivityResults.length"
+              :empty="t('education.parentNoActivityResults')"
+            />
+            <ul
+              v-else
+              class="edu-list"
+            >
+              <li
+                v-for="res in homeActivityResults"
+                :key="res.id ?? res.activityName"
+                class="edu-list__item"
+              >
+                <div>
+                  <strong>{{ res.activityName }}</strong>
+                  <p
+                    v-if="res.finishedAt"
+                    class="edu-subtle"
+                  >
+                    {{ when(res.finishedAt) }}
+                  </p>
+                </div>
+                <span class="edu-status">
+                  <template v-if="res.accuracy != null">{{ Math.round(res.accuracy) }}%</template>
+                  <template v-else-if="res.rawScore != null && res.maxScore != null">
+                    {{ res.rawScore }} / {{ res.maxScore }}
+                  </template>
+                  <template v-else>{{ res.status ?? 'finished' }}</template>
+                </span>
+              </li>
+            </ul>
+          </article>
+        </div>
         <article class="edu-card">
           <h2>{{ t('education.notifications') }}</h2>
           <p>{{ t('education.parentUnread', { count: data.home.unreadCount }) }}</p>
+          <ul
+            v-if="dashboardRecentNotifications.length"
+            class="edu-list"
+          >
+            <li
+              v-for="n in dashboardRecentNotifications.slice(0, 3)"
+              :key="n.id"
+              class="edu-list__item"
+            >
+              <div>
+                <strong>{{ n.title }}</strong>
+                <p class="edu-subtle">{{ when(n.createdAt) }}</p>
+              </div>
+            </li>
+          </ul>
           <RouterLink
             :to="childSection('/parent/notifications')"
             class="edu-link"
@@ -325,6 +440,7 @@ const notificationLabel = (notification: Notification) =>
           :results="[]"
           :homework="[]"
           :timezone="timezone"
+          hide-debts
         />
         <article class="edu-card">
           <h2>{{ t('education.programs') }}</h2>
@@ -391,6 +507,53 @@ const notificationLabel = (notification: Notification) =>
           :progress="data.progress.activityProgress"
           show-achievements
         />
+        <article class="edu-card">
+          <h2>{{ t('education.parentActivityResults') }}</h2>
+          <EducationState
+            v-if="!data.progress.activities.length"
+            :empty="t('education.parentNoActivityResults')"
+          />
+          <ul
+            v-else
+            class="edu-list"
+          >
+            <li
+              v-for="act in data.progress.activities"
+              :key="act.id ?? act.activityName"
+              class="edu-list__item"
+            >
+              <div>
+                <strong>{{ act.activityName }}</strong>
+                <p
+                  v-if="act.finishedAt"
+                  class="edu-subtle"
+                >
+                  {{ when(act.finishedAt) }}
+                </p>
+              </div>
+              <div class="edu-form-actions">
+                <span
+                  v-if="act.rawScore != null && act.maxScore != null"
+                  class="edu-status"
+                >
+                  {{ t('education.parentScore') }}: {{ act.rawScore }} / {{ act.maxScore }}
+                </span>
+                <span
+                  v-if="act.accuracy != null"
+                  class="edu-status"
+                >
+                  {{ Math.round(act.accuracy) }}%
+                </span>
+                <span
+                  v-if="act.passed !== undefined && act.passed !== null"
+                  class="edu-status"
+                >
+                  {{ t(act.passed ? 'education.parentPassed' : 'education.parentNotPassed') }}
+                </span>
+              </div>
+            </li>
+          </ul>
+        </article>
       </template>
       <template v-if="data.notifications">
         <EducationState
@@ -430,14 +593,15 @@ const notificationLabel = (notification: Notification) =>
         </ul>
       </template>
       <template v-else-if="section === 'messages'">
-        <EducationMessenger
+        <UniversalMessenger
           v-if="workspace.child && workspace.context"
-          role="parent"
+          :key="`${workspace.child.organizationId}:${workspace.child.id}`"
           :organization-id="workspace.child.organizationId"
           :current-person-id="workspace.context.personId"
-          :parent-child="workspace.child"
+          context-type="student"
+          :context-id="workspace.child.id"
           :timezone="workspace.context.timezone"
-          :initial-thread-id="typeof route.query.thread === 'string' ? route.query.thread : ''"
+          :initial-room-id="typeof route.query.thread === 'string' ? route.query.thread : ''"
         />
       </template>
       <div

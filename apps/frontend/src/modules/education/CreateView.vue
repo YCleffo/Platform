@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
+import AppFileDropzone from '@/shared/ui/fields/AppFileDropzone.vue';
 import { validDate } from '@/shared/formatting/temporal';
 import { zonedDateTimeToIso } from '@/shared/formatting/calendar';
 import { educationApi, type Page, type Group, type PersonChoice } from './api';
@@ -444,22 +445,15 @@ async function submit(): Promise<void> {
             :disabled="busy || uncertain"
           ></textarea>
         </label>
-        <label
+        <AppFileDropzone
           v-if="kind === 'material'"
-          for="education-material-file"
-        >
-          {{ t('education.file') }}
-          <input
-            id="education-material-file"
-            type="file"
-            class="edu-file-input"
-            accept="application/pdf,text/plain,image/png,image/jpeg,image/webp"
-            required
-            :disabled="busy || uncertain"
-            @change="file = ($event.target as HTMLInputElement).files?.[0] ?? null"
-          />
-          <small>{{ t('education.fileHint') }}</small>
-        </label>
+          v-model="file"
+          accept="application/pdf,text/plain,image/png,image/jpeg,image/webp"
+          :label="t('education.file')"
+          :hint="t('education.fileHint')"
+          :disabled="busy || uncertain"
+          :busy="busy"
+        />
         <p
           v-if="moreError"
           role="alert"

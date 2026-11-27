@@ -1964,6 +1964,20 @@
       "indexes": [
         {
           "keys": [
+            "name",
+            "number"
+          ],
+          "name": "device_management_devices_trgm_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX device_management_devices_trgm_idx ON device_management.devices USING gin (name gin_trgm_ops, number gin_trgm_ops)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
             "classroom_id",
             "number"
           ],

@@ -10,10 +10,15 @@
 }
 
 {$SERVER_NAME::80} {
-	encode zstd br gzip
-	php_server {
-		try_files {path} index.php
-		root /app/public
+	handle /ws* {
+		reverse_proxy {$REALTIME_UPSTREAM:backend-realtime:8084}
+	}
+	handle {
+		encode zstd br gzip
+		php_server {
+			try_files {path} index.php
+			root /app/public
+		}
 	}
 }
 

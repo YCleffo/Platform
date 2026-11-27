@@ -1,0 +1,100 @@
+{
+  "version": "PLATFORM_09_R2",
+  "timestamp": "2026-11-25T15:41:24.533Z",
+  "gitHead": "8cd4437e",
+  "backendTarget": "http://127.0.0.1:8083",
+  "frontendTarget": "http://127.0.0.1:5175",
+  "nonce": "a538c808ca62",
+  "realDependencies": [
+    "postgresql",
+    "redis",
+    "seaweedfs-s3",
+    "frankenphp-caddy",
+    "chromium-playwright"
+  ],
+  "tests": [
+    {
+      "id": "E2E-01",
+      "title": "Assessment Lifecycle, Homework Linking, Parent View & PostgreSQL Persistence",
+      "status": "PASS",
+      "timestamp": "2026-11-25T15:42:34.675Z",
+      "details": {
+        "assessmentId": "01a2135e-816b-7e66-ba3b-9459906fd079",
+        "versionId": "01a2135e-87e2-759c-8694-5b7b063f88ab",
+        "assignmentId": "01a2135e-9381-7b1b-bdfc-fc5dc5d4df8d",
+        "attemptId": "01a2135e-db22-76b2-b7bf-5f1e03972fdf",
+        "pgVerifiedScore": 18,
+        "pgHomeworkLinkAttemptId": "01a2135e-db22-76b2-b7bf-5f1e03972fdf",
+        "screenshots": [
+          "docs/audits/screenshots/e2e01-student-assessment.png",
+          "docs/audits/screenshots/e2e01-parent-progress.png"
+        ]
+      }
+    },
+    {
+      "id": "E2E-02",
+      "title": "Voice Message Lifecycle, Codec Params, SeaweedFS S3 SHA-256, RFC 9110 Range & Chromium Playback",
+      "status": "PASS",
+      "timestamp": "2026-11-25T15:43:35.972Z",
+      "details": {
+        "voiceAssetId": "01a2135f-9192-7600-9750-2efe87efbccd",
+        "s3VerifiedBytes": 2048,
+        "s3VerifiedSha256": "a374df254a66d46a177e91f64cf7784d635ac33e523d58b3733766705bff530b",
+        "range206": "bytes 0-499/2048",
+        "suffix206": "bytes 1548-2047/2048",
+        "open206": "bytes 1024-2047/2048",
+        "range416": "bytes */2048",
+        "screenshot": "docs/audits/screenshots/e2e02-voice-player.png"
+      }
+    },
+    {
+      "id": "E2E-03",
+      "title": "Video Note Playback, S3 Integrity & Independent Browser Context",
+      "status": "PASS",
+      "timestamp": "2026-11-25T15:43:57.149Z",
+      "details": {
+        "videoAssetId": "01a21360-7251-777a-9267-517065e07379",
+        "s3VerifiedBytes": 4096,
+        "s3VerifiedSha256": "0d376b4c2ca6caeebcfaf3b9afee35b99c3dad20d68ec59415537287c7f637bb",
+        "playbackStatus": 200,
+        "screenshot": "docs/audits/screenshots/e2e03-video-player.png"
+      }
+    },
+    {
+      "id": "E2E-04",
+      "title": "Uniform Media ACL Isolation (Cross-Org, Unrelated Teacher, Family-2 Parent, Student-2, Forged Ticket, Spoofing)",
+      "status": "PASS",
+      "timestamp": "2026-11-25T15:44:55.720Z",
+      "details": {
+        "unauthorizedActorsBlocked403": [
+          "outsider_orgB",
+          "unrelated_teacher_orgA",
+          "unrelated_parent2_orgA",
+          "unrelated_student2_orgA"
+        ],
+        "forgedTicketHttp": 401,
+        "crossAssetTicketHttp": 401,
+        "foreignAttachmentSpoofingHttp": 403,
+        "checksumMismatchHttp": 422
+      }
+    },
+    {
+      "id": "E2E-05",
+      "title": "Dual-Session Assessment Concurrency CAS & Server Deadline Enforcement",
+      "status": "PASS",
+      "timestamp": "2026-11-25T15:45:43.237Z",
+      "details": {
+        "casSaveConflictHttp": 409,
+        "casSubmitConflictHttp": 409,
+        "expiredAutosaveHttp": 409,
+        "serverAuthoritativeScore": 10,
+        "screenshot": "docs/audits/screenshots/e2e05-concurrency.png"
+      }
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0
+  }
+}

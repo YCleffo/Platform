@@ -13,9 +13,12 @@ import EducationState from '../EducationState.vue';
 import AppBottomNav from '@/shared/ui/navigation/AppBottomNav.vue';
 import { Home, Calendar, LayoutGrid, CircleCheck, Backpack, Message } from '@/shared/ui/icons';
 import { activeNavigationRoute } from '@/shared/navigation/activeRoute';
+import WorkspaceShellControls from '@/modules/workspace/WorkspaceShellControls.vue';
+import { useOperationsCenter } from '@/modules/workspace/useOperationsCenter';
 
 const { t } = useEducationI18n();
 const route = useRoute();
+const operations = useOperationsCenter();
 const activeSection = computed(() => activeNavigationRoute(route, 'studentNavigation'));
 const navigation = computed(() => [
   { label: t('education.studentHome'), icon: Home, routeName: 'education-student-home' },
@@ -92,6 +95,7 @@ watch(
     studentSession.personId = context?.personId ?? '';
     if (org) scopeEducationCache(org.id);
     studentSession.organizationId = org?.id ?? '';
+    operations.setOrganizationId(org?.id ?? null);
   },
   { immediate: true, flush: 'sync' },
 );
@@ -106,6 +110,10 @@ watch(
     <template v-if="current">
       <header class="edu-page-title">
         <h1>{{ t('education.studentCabinet') }}</h1>
+        <WorkspaceShellControls
+          :show-search-link="true"
+          :show-back="true"
+        />
         <RouterLink
           to="/student/notifications"
           class="edu-link"

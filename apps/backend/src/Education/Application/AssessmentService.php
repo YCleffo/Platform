@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Education\Application;
 
+use App\Activity\Application\ActivityEngineService;
+use App\Activity\Infrastructure\Plugins\AssessmentActivityPlugin;
+use App\Core\Auth\Application\AuthenticatedIdentity;
 use App\Core\Time\Application\ClockInterface;
+use App\Shared\Application\HttpError;
 use Yiisoft\Db\Connection\ConnectionInterface;
 
 final readonly class AssessmentService
@@ -13,13 +17,29 @@ final readonly class AssessmentService
         private ConnectionInterface $db,
         private ActivityHandlerRegistry $activityHandlers,
         private ?ClockInterface $clock = null,
+        private ?ActivityResultSink $activityResults = null,
+        private ?ActivityEngineService $engine = null,
     ) {}
 
     /**
      * @return array<string, mixed>
      */
-    public function listAssessments(Scope $scope, array $query = []): array
+    public function listAssessments(Scope $scope, array $query = [], ?AuthenticatedIdentity $identity = null): array
     {
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                $res = $this->engine->listActivities($identity, $scope->organizationId, [
+                    'pluginCode' => 'platform-assessment',
+                    'status' => isset($query['status']) && is_string($query['status']) ? $query['status'] : null,
+                    'q' => isset($query['search']) && is_string($query['search']) ? $query['search'] : null,
+                ]);
+                return [
+                    'items' => array_map(fn(array $row): array => $this->mapActivityListRow($row), $res['items'] ?? []),
+                ];
+            } catch (HttpError $e) {
+                throw new EducationError($e->status, $e->reason);
+            }
+        }
         $status = isset($query['status']) && is_string($query['status']) ? $query['status'] : null;
         $search = isset($query['search']) && is_string($query['search']) ? trim($query['search']) : null;
 
@@ -73,8 +93,17 @@ final readonly class AssessmentService
      * Creates an assessment always as DRAFT to guarantee immutable version transitions.
      * @return array<string, mixed>
      */
-    public function createAssessment(Scope $scope, array $input): array
+    public function createAssessment(Scope $scope, array $input, ?AuthenticatedIdentity $identity = null): array
     {
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                $payload = $this->mapEducationInputToActivityPayload($input, false);
+                $activity = $this->engine->createActivity($identity, $scope->organizationId, $payload);
+                return $this->mapActivityToAssessment($activity);
+            } catch (HttpError $e) {
+                throw new EducationError($e->status, $e->reason);
+            }
+        }
         $title = Input::text($input['title'] ?? null, 200);
         $description = Input::text($input['description'] ?? '', 5000, false);
         $openPractice = (bool) ($input['openPractice'] ?? false);
@@ -142,6 +171,26 @@ final readonly class AssessmentService
                     'UPDATE education.assessments SET latest_version_id = CAST(:vId AS uuid) WHERE id = CAST(:aId AS uuid)',
                     [':vId' => $version['id'], ':aId' => $assessmentId],
                 )->execute();
+
+                $this->syncAssessmentToActivityEngine(
+                    $scope,
+                    $assessmentId,
+                    $title,
+                    $description,
+                    'DRAFT',
+                    $openPractice,
+                    (string) $version['id'],
+                    1,
+                    (string) ($input['instructions'] ?? ''),
+                    $timeLimit,
+                    $passingScore,
+                    $maxAttempts,
+                    $shuffleQ,
+                    $shuffleOpt,
+                    $revealPolicy,
+                    $gradingPolicy,
+                    $questions,
+                );
             }
 
             return $this->getAssessment($scope, $assessmentId);
@@ -151,9 +200,20 @@ final readonly class AssessmentService
     /**
      * @return array<string, mixed>
      */
-    public function getAssessment(Scope $scope, string $id): array
+    public function getAssessment(Scope $scope, string $id, ?AuthenticatedIdentity $identity = null): array
     {
         $id = Input::uuid($id);
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                $activity = $this->engine->getActivity($identity, $scope->organizationId, $id);
+                return $this->mapActivityToAssessment($activity);
+            } catch (HttpError $e) {
+                if ($e->status !== 404) {
+                    throw new EducationError($e->status, $e->reason);
+                }
+                // Fall back to legacy table only for pre-migration assessments not yet in activity.items
+            }
+        }
         $row = $this->db->createCommand(
             'SELECT a.id::text, a.title, a.description, a.status, a.open_practice,
                     a.latest_version_id::text, a.created_at, a.updated_at,
@@ -161,7 +221,9 @@ final readonly class AssessmentService
                     v.max_attempts, v.shuffle_questions, v.shuffle_options, v.reveal_answers_policy,
                     v.grading_policy, v.questions_snapshot
              FROM education.assessments a
-             LEFT JOIN education.assessment_versions v ON a.latest_version_id = v.id
+             LEFT JOIN education.assessment_versions v ON v.id = COALESCE(a.latest_version_id, (
+                 SELECT id FROM education.assessment_versions WHERE assessment_id = a.id ORDER BY version_number DESC LIMIT 1
+             ))
              WHERE a.id = CAST(:id AS uuid) AND a.organization_id = CAST(:org AS uuid)',
             [':id' => $id, ':org' => $scope->organizationId],
         )->queryOne();
@@ -198,9 +260,22 @@ final readonly class AssessmentService
     /**
      * @return array<string, mixed>
      */
-    public function updateAssessment(Scope $scope, string $id, array $input): array
+    public function updateAssessment(Scope $scope, string $id, array $input, ?AuthenticatedIdentity $identity = null): array
     {
         $id = Input::uuid($id);
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                $current = $this->engine->getActivity($identity, $scope->organizationId, $id);
+                if (isset($input['status']) && $input['status'] === 'PUBLISHED' && ($current['status'] ?? '') !== 'PUBLISHED') {
+                    throw new EducationError(422, 'use_publish_endpoint');
+                }
+                $payload = $this->mapEducationInputToActivityPayload($input, false, $current);
+                $activity = $this->engine->updateActivity($identity, $scope->organizationId, $id, $payload);
+                return $this->mapActivityToAssessment($activity);
+            } catch (HttpError $e) {
+                throw new EducationError($e->status, $e->reason);
+            }
+        }
         return $this->db->transaction(function () use ($scope, $id, $input): array {
             $current = $this->getAssessment($scope, $id);
 
@@ -270,6 +345,35 @@ final readonly class AssessmentService
                         ':id' => $id,
                     ],
                 )->execute();
+
+                $this->syncAssessmentToActivityEngine(
+                    $scope,
+                    $id,
+                    (string) $title,
+                    (string) $description,
+                    (string) $status,
+                    (bool) $openPractice,
+                    (string) $current['latestVersionId'],
+                    (int) ($current['versionNumber'] ?? 1),
+                    (string) ($input['instructions'] ?? $current['instructions']),
+                    is_numeric($timeLimit) ? (int) $timeLimit : null,
+                    (int) $passingScore,
+                    (int) $maxAttempts,
+                    (bool) $shuffleQ,
+                    (bool) $shuffleOpt,
+                    (string) $revealPolicy,
+                    (string) $gradingPolicy,
+                    is_array($questions) ? $questions : [],
+                );
+            } else {
+                $this->syncAssessmentMetadataToActivityEngine(
+                    $scope->organizationId,
+                    $id,
+                    (string) $title,
+                    (string) $description,
+                    (string) $status,
+                    (bool) $openPractice,
+                );
             }
 
             return $this->getAssessment($scope, $id);
@@ -282,97 +386,11 @@ final readonly class AssessmentService
      */
     public function validateQuestionDefinitions(array $questions): void
     {
-        if ($questions === []) {
-            throw new EducationError(422, 'empty_assessment_questions');
-        }
-
-        $seenIds = [];
-        foreach ($questions as $q) {
-            if (!is_array($q)) {
-                throw new EducationError(422, 'invalid_question_structure');
-            }
-
-            $id = isset($q['id']) && is_string($q['id']) ? trim($q['id']) : '';
-            if ($id === '' || isset($seenIds[$id])) {
-                throw new EducationError(422, 'duplicate_or_empty_question_id');
-            }
-            $seenIds[$id] = true;
-
-            $type = (string) ($q['type'] ?? '');
-            if ($type === 'matching') {
-                throw new EducationError(422, 'unsupported_question_type');
-            }
-            if (!in_array($type, ['single_choice', 'multi_choice', 'true_false', 'short_text', 'numeric'], true)) {
-                throw new EducationError(422, 'unsupported_question_type');
-            }
-
-            $prompt = isset($q['prompt']) && is_string($q['prompt']) ? trim($q['prompt']) : '';
-            if ($prompt === '' || mb_strlen($prompt, 'UTF-8') > 4000) {
-                throw new EducationError(422, 'invalid_question_prompt');
-            }
-
-            ActivityHandlerRegistry::integer($q['points'] ?? 1, 1, 100);
-
-            if ($type === 'single_choice' || $type === 'multi_choice') {
-                $options = isset($q['options']) && is_array($q['options']) ? $q['options'] : [];
-                if (count($options) < 2) {
-                    throw new EducationError(422, 'insufficient_options');
-                }
-                $seenOptIds = [];
-                foreach ($options as $opt) {
-                    if (!is_array($opt)) {
-                        throw new EducationError(422, 'invalid_option_structure');
-                    }
-                    $optId = isset($opt['id']) && is_string($opt['id']) ? trim($opt['id']) : '';
-                    $label = isset($opt['label']) && is_string($opt['label']) ? trim($opt['label']) : '';
-                    if ($optId === '' || $label === '' || isset($seenOptIds[$optId])) {
-                        throw new EducationError(422, 'invalid_option_id_or_label');
-                    }
-                    $seenOptIds[$optId] = true;
-                }
-
-                $answerKey = $q['answerKey'] ?? null;
-                if ($type === 'single_choice') {
-                    if (!is_string($answerKey) || !isset($seenOptIds[$answerKey])) {
-                        throw new EducationError(422, 'invalid_answer_key');
-                    }
-                } else {
-                    if (!is_array($answerKey) || $answerKey === []) {
-                        throw new EducationError(422, 'invalid_answer_key');
-                    }
-                    foreach ($answerKey as $k) {
-                        if (!is_string($k) || !isset($seenOptIds[$k])) {
-                            throw new EducationError(422, 'invalid_answer_key');
-                        }
-                    }
-                }
-            } elseif ($type === 'true_false') {
-                if (!isset($q['answerKey']) || !is_bool($q['answerKey'])) {
-                    throw new EducationError(422, 'invalid_answer_key');
-                }
-            } elseif ($type === 'numeric') {
-                if (!isset($q['answerKey']) || !is_numeric($q['answerKey'])) {
-                    throw new EducationError(422, 'invalid_answer_key');
-                }
-            } else {
-                $answerKey = $q['answerKey'] ?? null;
-                if (is_string($answerKey)) {
-                    if (trim($answerKey) === '') {
-                        throw new EducationError(422, 'invalid_answer_key');
-                    }
-                } elseif (is_array($answerKey)) {
-                    if ($answerKey === []) {
-                        throw new EducationError(422, 'invalid_answer_key');
-                    }
-                    foreach ($answerKey as $ak) {
-                        if (!is_string($ak) || trim($ak) === '') {
-                            throw new EducationError(422, 'invalid_answer_key');
-                        }
-                    }
-                } else {
-                    throw new EducationError(422, 'invalid_answer_key');
-                }
-            }
+        try {
+            AssessmentActivityPlugin::validateQuestions($questions);
+        } catch (HttpError $e) {
+            $reason = $e->reason === 'invalid_question_points' ? 'invalid_input' : $e->reason;
+            throw new EducationError($e->status, $reason);
         }
     }
 
@@ -380,9 +398,19 @@ final readonly class AssessmentService
      * Creates an immutable new published version snapshot after thorough question validation.
      * @return array<string, mixed>
      */
-    public function publishAssessment(Scope $scope, string $id, array $input = []): array
+    public function publishAssessment(Scope $scope, string $id, array $input = [], ?AuthenticatedIdentity $identity = null): array
     {
         $id = Input::uuid($id);
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                $current = $this->engine->getActivity($identity, $scope->organizationId, $id);
+                $payload = $this->mapEducationInputToActivityPayload($input, true, $current);
+                $activity = $this->engine->updateActivity($identity, $scope->organizationId, $id, $payload);
+                return $this->mapActivityToAssessment($activity);
+            } catch (HttpError $e) {
+                throw new EducationError($e->status, $e->reason);
+            }
+        }
         return $this->db->transaction(function () use ($scope, $id, $input): array {
             $current = $this->getAssessment($scope, $id);
 
@@ -451,6 +479,26 @@ final readonly class AssessmentService
                 [':vId' => $versionId, ':id' => $id, ':org' => $scope->organizationId],
             )->execute();
 
+            $this->syncAssessmentToActivityEngine(
+                $scope,
+                $id,
+                (string) $title,
+                (string) ($current['description'] ?? ''),
+                'PUBLISHED',
+                (bool) ($current['openPractice'] ?? false),
+                $versionId,
+                $nextNumber,
+                $instructions,
+                is_numeric($timeLimit) ? (int) $timeLimit : null,
+                (int) $passingScore,
+                (int) $maxAttempts,
+                (bool) $shuffleQ,
+                (bool) $shuffleOpt,
+                (string) $revealPolicy,
+                (string) $gradingPolicy,
+                $questions,
+            );
+
             return $this->getAssessment($scope, $id);
         });
     }
@@ -458,9 +506,16 @@ final readonly class AssessmentService
     /**
      * @return list<array<string, mixed>>
      */
-    public function listVersions(Scope $scope, string $assessmentId): array
+    public function listVersions(Scope $scope, string $assessmentId, ?AuthenticatedIdentity $identity = null): array
     {
         $id = Input::uuid($assessmentId);
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                return $this->engine->listVersions($identity, $scope->organizationId, $id);
+            } catch (HttpError $e) {
+                throw new EducationError($e->status, $e->reason);
+            }
+        }
         $rows = $this->db->createCommand(
             'SELECT v.id::text, v.version_number, v.title, v.instructions,
                     v.time_limit_seconds, v.passing_score_percent, v.max_attempts,
@@ -495,8 +550,15 @@ final readonly class AssessmentService
      * Question Bank operations
      * @return array<string, mixed>
      */
-    public function listQuestionBank(Scope $scope, array $query = []): array
+    public function listQuestionBank(Scope $scope, array $query = [], ?AuthenticatedIdentity $identity = null): array
     {
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                return $this->engine->listQuestionBank($identity, $scope->organizationId, $query);
+            } catch (HttpError $e) {
+                throw new EducationError($e->status, $e->reason);
+            }
+        }
         $category = isset($query['category']) && is_string($query['category']) ? trim($query['category']) : null;
         $difficulty = isset($query['difficulty']) ? (int) $query['difficulty'] : null;
         $type = isset($query['type']) && is_string($query['type']) ? trim($query['type']) : null;
@@ -547,10 +609,17 @@ final readonly class AssessmentService
     /**
      * @return array<string, mixed>
      */
-    public function createQuestionBankItem(Scope $scope, array $input): array
+    public function createQuestionBankItem(Scope $scope, array $input, ?AuthenticatedIdentity $identity = null): array
     {
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                return $this->engine->createQuestionBankItem($identity, $scope->organizationId, $input);
+            } catch (HttpError $e) {
+                throw new EducationError($e->status, $e->reason);
+            }
+        }
         $type = (string) ($input['questionType'] ?? 'single_choice');
-        if (!in_array($type, ['single_choice', 'multi_choice', 'true_false', 'short_text', 'numeric', 'matching'], true)) {
+        if (!in_array($type, ['single_choice', 'multi_choice', 'true_false', 'short_text', 'long_text', 'numeric', 'matching', 'ordering'], true)) {
             throw new EducationError(422, 'invalid_question_type');
         }
 
@@ -592,6 +661,27 @@ final readonly class AssessmentService
             throw new EducationError(500, 'database_error');
         }
 
+        $this->db->createCommand(
+            'INSERT INTO activity.question_bank
+             (id, organization_id, author_person_id, category, tags, difficulty, question_type, content, answer_key, explanation, default_points)
+             VALUES
+             (CAST(:id AS uuid), CAST(:org AS uuid), CAST(:author AS uuid), :cat, CAST(:tags AS jsonb), :diff, :type, CAST(:content AS jsonb), CAST(:answerKey AS jsonb), :explanation, :points)
+             ON CONFLICT (id) DO NOTHING',
+            [
+                ':id' => (string) $row['id'],
+                ':org' => $scope->organizationId,
+                ':author' => $scope->personId,
+                ':cat' => $category,
+                ':tags' => json_encode($tags, JSON_THROW_ON_ERROR),
+                ':diff' => $difficulty,
+                ':type' => $type,
+                ':content' => json_encode($content, JSON_THROW_ON_ERROR),
+                ':answerKey' => json_encode($answerKey, JSON_THROW_ON_ERROR),
+                ':explanation' => $explanation,
+                ':points' => $points,
+            ],
+        )->execute();
+
         return [
             'id' => (string) $row['id'],
             'category' => (string) $row['category'],
@@ -607,11 +697,23 @@ final readonly class AssessmentService
         ];
     }
 
-    public function deleteQuestionBankItem(Scope $scope, string $id): void
+    public function deleteQuestionBankItem(Scope $scope, string $id, ?AuthenticatedIdentity $identity = null): void
     {
         $id = Input::uuid($id);
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                $this->engine->archiveQuestionBankItem($identity, $scope->organizationId, $id, false);
+            } catch (HttpError $e) {
+                throw new EducationError($e->status, $e->reason);
+            }
+        }
         $this->db->createCommand(
             'DELETE FROM education.question_bank WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid)',
+            [':id' => $id, ':org' => $scope->organizationId],
+        )->execute();
+        $this->db->createCommand(
+            'UPDATE activity.question_bank SET archived_at = COALESCE(archived_at, now()), updated_at = now()
+             WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid)',
             [':id' => $id, ':org' => $scope->organizationId],
         )->execute();
     }
@@ -621,13 +723,62 @@ final readonly class AssessmentService
      * Only open practice assessments OR tests assigned through active homework / activity assignments.
      * @return array<string, mixed>
      */
-    public function listStudentAssessments(Scope $scope): array
+    public function listStudentAssessments(Scope $scope, ?AuthenticatedIdentity $identity = null): array
     {
         if ($scope->studentId === null) {
             throw new EducationError(403, 'access_denied');
         }
 
         $this->assertStudentActive($scope);
+
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                $activitiesRes = $this->engine->listActivities($identity, $scope->organizationId, [
+                    'pluginCode' => 'platform-assessment',
+                    'status' => 'PUBLISHED',
+                ]);
+                $assignmentsRes = $this->engine->listAssignments($identity, $scope->organizationId);
+                $assignmentsByActivity = [];
+                foreach ($assignmentsRes['items'] ?? [] as $asgn) {
+                    if (!is_array($asgn) || ($asgn['pluginCode'] ?? '') !== 'platform-assessment') {
+                        continue;
+                    }
+                    $aid = (string) ($asgn['activityId'] ?? '');
+                    if ($aid !== '' && !isset($assignmentsByActivity[$aid])) {
+                        $assignmentsByActivity[$aid] = $asgn;
+                    }
+                }
+
+                $items = [];
+                foreach ($activitiesRes['items'] ?? [] as $row) {
+                    if (!is_array($row)) {
+                        continue;
+                    }
+                    $aid = (string) ($row['id'] ?? '');
+                    $asgn = $assignmentsByActivity[$aid] ?? null;
+                    $items[] = [
+                        'id' => $aid,
+                        'title' => (string) ($row['title'] ?? ''),
+                        'description' => (string) ($row['description'] ?? ''),
+                        'versionId' => (string) ($asgn['versionId'] ?? $row['activeVersionId'] ?? ''),
+                        'versionNumber' => (int) ($asgn['versionNumber'] ?? $row['versionNumber'] ?? 1),
+                        'timeLimitSeconds' => $asgn['timeLimitSeconds'] ?? $row['timeLimitSeconds'] ?? null,
+                        'passingScorePercent' => (int) ($asgn['passingScorePercent'] ?? $row['passingScorePercent'] ?? 60),
+                        'maxAttempts' => (int) ($asgn['maxAttempts'] ?? $row['maxAttempts'] ?? 0),
+                        'questionsCount' => (int) ($row['questionsCount'] ?? 0),
+                        'studentAttemptsCount' => (int) ($asgn['myAttemptsCount'] ?? $row['myAttemptsCount'] ?? 0),
+                        'bestPercentage' => $asgn['myBestPercentage'] ?? $row['myBestPercentage'] ?? null,
+                        'assignmentId' => $asgn['id'] ?? null,
+                        'activeAttemptId' => $asgn['activeAttemptId'] ?? null,
+                        'opensAt' => $asgn['opensAt'] ?? null,
+                        'dueAt' => $asgn['dueAt'] ?? null,
+                    ];
+                }
+                return ['items' => $items];
+            } catch (HttpError $e) {
+                throw new EducationError($e->status, $e->reason);
+            }
+        }
 
         $sql = 'SELECT a.id::text, a.title, a.description, a.open_practice,
                        v.id::text AS version_id, v.version_number, v.time_limit_seconds, v.passing_score_percent,
@@ -654,7 +805,7 @@ final readonly class AssessmentService
                             AND (
                                 aa.student_id = CAST(:student AS uuid)
                                 OR aa.group_id IN (
-                                    SELECT group_id FROM education.group_students WHERE student_id = CAST(:student AS uuid) AND left_at IS NULL
+                                    SELECT group_id FROM education.group_students WHERE student_id = CAST(:student AS uuid) AND organization_id = CAST(:org AS uuid)
                                 )
                             )
                             AND aa.config->>\'assessmentId\' = a.id::text
@@ -686,7 +837,7 @@ final readonly class AssessmentService
      * Answer keys and explanations are masked!
      * @return array<string, mixed>
      */
-    public function startStudentAttempt(Scope $scope, string $assessmentId, array $input = []): array
+    public function startStudentAttempt(Scope $scope, string $assessmentId, array $input = [], ?AuthenticatedIdentity $identity = null): array
     {
         if ($scope->studentId === null) {
             throw new EducationError(403, 'access_denied');
@@ -694,6 +845,18 @@ final readonly class AssessmentService
 
         $assessmentId = Input::uuid($assessmentId);
         $this->assertStudentActive($scope);
+
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                $attempt = $this->engine->startAttempt($identity, $scope->organizationId, $assessmentId, [
+                    ...$input,
+                    'resumeActive' => true,
+                ]);
+                return $this->mapEngineAttemptToLegacy($attempt);
+            } catch (HttpError $e) {
+                throw new EducationError($e->status, $e->reason);
+            }
+        }
 
         return $this->db->transaction(function () use ($scope, $assessmentId, $input): array {
             $assessment = $this->db->createCommand(
@@ -717,15 +880,39 @@ final readonly class AssessmentService
 
             // Verify student assignment authorization and deadline
             $assignmentId = isset($input['assignmentId']) && is_string($input['assignmentId']) ? $input['assignmentId'] : null;
-            $verifiedAssignmentId = $this->resolveAndVerifyStudentAssignment($scope, $assessmentId, $openPractice, $assignmentId);
+            $assignmentInfo = $this->resolveAndVerifyStudentAssignment($scope, $assessmentId, $openPractice, $assignmentId);
+            $verifiedAssignmentId = $assignmentInfo['assignmentId'];
+            $pinnedVersionId = $assignmentInfo['versionId'];
 
-            // Check if there is an active running attempt
+            if ($pinnedVersionId !== null) {
+                $verRow = $this->db->createCommand(
+                    'SELECT v.id AS version_id, v.version_number, v.title AS version_title, v.instructions,
+                            v.time_limit_seconds, v.passing_score_percent, v.max_attempts, v.shuffle_questions,
+                            v.shuffle_options, v.reveal_answers_policy, v.questions_snapshot
+                     FROM education.assessment_versions v
+                     WHERE v.id = CAST(:vId AS uuid) AND v.assessment_id = CAST(:aId AS uuid)',
+                    [':vId' => $pinnedVersionId, ':aId' => $assessmentId],
+                )->queryOne();
+                if (is_array($verRow)) {
+                    $versionId = (string) $verRow['version_id'];
+                    $assessment = array_merge($assessment, $verRow);
+                }
+            }
+
+            // Check if there is an active running attempt scoped to assignment
             $running = $this->db->createCommand(
                 'SELECT id::text, started_at, state, answers, revision, question_order, option_order
                  FROM education.assessment_attempts
-                 WHERE version_id = CAST(:vId AS uuid) AND student_id = CAST(:sId AS uuid) AND state = \'IN_PROGRESS\'
+                 WHERE version_id = CAST(:vId AS uuid)
+                   AND student_id = CAST(:sId AS uuid)
+                   AND organization_id = CAST(:org AS uuid)
+                   AND state = \'IN_PROGRESS\'
+                   AND ' . ($verifiedAssignmentId !== null ? 'assignment_id = CAST(:assignId AS uuid)' : 'assignment_id IS NULL') . '
                  ORDER BY started_at DESC LIMIT 1',
-                [':vId' => $versionId, ':sId' => $scope->studentId],
+                array_merge(
+                    [':vId' => $versionId, ':sId' => $scope->studentId, ':org' => $scope->organizationId],
+                    $verifiedAssignmentId !== null ? [':assignId' => $verifiedAssignmentId] : [],
+                ),
             )->queryOne();
 
             if (is_array($running)) {
@@ -734,34 +921,26 @@ final readonly class AssessmentService
                 $serverElapsed = max(0, $now - ($startedTime !== false ? $startedTime : $now));
                 $timeLimit = $assessment['time_limit_seconds'] !== null ? (int) $assessment['time_limit_seconds'] : null;
 
-                if ($timeLimit !== null && $serverElapsed > ($timeLimit + 30)) {
-                    // Grace period expired: auto-finalize the running attempt deterministically
+                if ($timeLimit !== null && $serverElapsed > $timeLimit) {
+                    // Time limit expired: auto-finalize the running attempt deterministically without accepting new edits
                     $this->finalizeExpiredAttempt($scope, (string) $running['id'], $assessment, $running, $timeLimit);
                 } else {
-                    // Resume existing running attempt
-                    /** @var array<string, mixed> $savedAnswers */
-                    $savedAnswers = ActivityHandlerRegistry::json($running['answers'] ?? []);
-                    /** @var list<string> $runningQOrder */
-                    $runningQOrder = array_values(array_filter(ActivityHandlerRegistry::json($running['question_order'] ?? []), 'is_string'));
-                    /** @var array<string, list<string>> $runningOptOrder */
-                    $runningOptOrder = ActivityHandlerRegistry::json($running['option_order'] ?? []);
-                    return $this->buildAttemptResponse(
-                        $assessment,
-                        (string) $running['id'],
-                        (string) $running['started_at'],
-                        $savedAnswers,
-                        (int) ($running['revision'] ?? 1),
-                        $runningQOrder,
-                        $runningOptOrder,
-                    );
+                    // Resume existing running attempt using its pinned version questions and state
+                    return $this->getStudentAttempt($scope, (string) $running['id']);
                 }
             }
 
-            // Check attempt limits
+            // Check attempt limits scoped to assignment
             $count = (int) $this->db->createCommand(
                 'SELECT count(*) FROM education.assessment_attempts
-                 WHERE version_id = CAST(:vId AS uuid) AND student_id = CAST(:sId AS uuid)',
-                [':vId' => $versionId, ':sId' => $scope->studentId],
+                 WHERE version_id = CAST(:vId AS uuid)
+                   AND student_id = CAST(:sId AS uuid)
+                   AND organization_id = CAST(:org AS uuid)
+                   AND ' . ($verifiedAssignmentId !== null ? 'assignment_id = CAST(:assignId AS uuid)' : 'assignment_id IS NULL'),
+                array_merge(
+                    [':vId' => $versionId, ':sId' => $scope->studentId, ':org' => $scope->organizationId],
+                    $verifiedAssignmentId !== null ? [':assignId' => $verifiedAssignmentId] : [],
+                ),
             )->queryScalar();
 
             if ($count >= $maxAttempts) {
@@ -834,20 +1013,52 @@ final readonly class AssessmentService
                 throw new EducationError(500, 'database_error');
             }
 
-            return $this->buildAttemptResponse($assessment, (string) $attempt['id'], (string) $attempt['started_at'], [], 1, $questionOrder, $optionOrder);
+            $timeLimitSec = $assessment['time_limit_seconds'] !== null ? (int) $assessment['time_limit_seconds'] : null;
+            $expiresAt = $timeLimitSec !== null && $timeLimitSec > 0 ? gmdate(DATE_ATOM, time() + $timeLimitSec) : null;
+            $this->syncAssessmentAttemptStartToEngine(
+                $scope,
+                (string) $attempt['id'],
+                $assessmentId,
+                $versionId,
+                $verifiedAssignmentId,
+                $seed,
+                [
+                    'shuffleQuestions' => (bool) ($assessment['shuffle_questions'] ?? false),
+                    'shuffleOptions' => (bool) ($assessment['shuffle_options'] ?? false),
+                    'revealAnswersPolicy' => (string) ($assessment['reveal_answers_policy'] ?? 'after_grading'),
+                    'passingScorePercent' => (int) ($assessment['passing_score_percent'] ?? 60),
+                    'timeLimitSeconds' => $timeLimitSec,
+                ],
+                ['questionOrder' => $questionOrder, 'optionOrder' => $optionOrder],
+                $expiresAt,
+            );
+
+            return $this->getStudentAttempt($scope, (string) $attempt['id']);
         });
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function getStudentAttempt(Scope $scope, string $attemptId): array
+    public function getStudentAttempt(Scope $scope, string $attemptId, ?AuthenticatedIdentity $identity = null): array
     {
         if ($scope->studentId === null) {
             throw new EducationError(403, 'access_denied');
         }
 
         $attemptId = Input::uuid($attemptId);
+
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                $attempt = $this->engine->getAttempt($identity, $scope->organizationId, $attemptId);
+                return $this->mapEngineAttemptToLegacy($attempt);
+            } catch (HttpError $e) {
+                if ($e->status !== 404 || $e->reason !== 'attempt_not_found') {
+                    throw new EducationError($e->status, $e->reason);
+                }
+                // Fallback to historical education.assessment_attempts only when not found in activity.attempts
+            }
+        }
         $attempt = $this->db->createCommand(
             'SELECT att.id::text, att.version_id::text, att.state, att.started_at, att.submitted_at,
                     att.answers, att.result, att.score, att.max_score, att.percentage, att.passed,
@@ -1025,6 +1236,7 @@ final readonly class AssessmentService
             'percentage' => isset($attempt['percentage']) && $attempt['percentage'] !== null ? (float) $attempt['percentage'] : null,
             'passed' => isset($attempt['passed']) && $attempt['passed'] !== null ? (bool) $attempt['passed'] : null,
             'manualReviewNotes' => isset($attempt['manual_review_notes']) && $attempt['manual_review_notes'] !== null ? (string) $attempt['manual_review_notes'] : null,
+            'assignmentId' => !empty($attempt['assignment_id']) ? (string) $attempt['assignment_id'] : (!empty($attempt['assignmentId']) ? (string) $attempt['assignmentId'] : null),
         ];
     }
 
@@ -1032,22 +1244,36 @@ final readonly class AssessmentService
      * Autosave attempt with optimistic concurrency compare-and-swap and authoritative time enforcement.
      * @return array<string, mixed>
      */
-    public function saveStudentAttempt(Scope $scope, string $attemptId, array $input): array
+    public function saveStudentAttempt(Scope $scope, string $attemptId, array $input, ?AuthenticatedIdentity $identity = null): array
     {
         if ($scope->studentId === null) {
             throw new EducationError(403, 'access_denied');
         }
 
         $attemptId = Input::uuid($attemptId);
+
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                return $this->engine->saveDraft($identity, $scope->organizationId, $attemptId, $input);
+            } catch (HttpError $e) {
+                if ($e->status !== 404 || $e->reason !== 'attempt_not_found') {
+                    throw new EducationError($e->status, $e->reason === 'attempt_expired' ? 'attempt_time_expired' : $e->reason);
+                }
+                // Fallback to historical education.assessment_attempts
+            }
+        }
         $answers = isset($input['answers']) && is_array($input['answers']) ? $input['answers'] : [];
-        $clientRevision = isset($input['revision']) ? (int) $input['revision'] : null;
+
+        if (!isset($input['revision']) || !is_int($input['revision']) || $input['revision'] < 1) {
+            throw new EducationError(422, 'revision_required');
+        }
+        $clientRevision = $input['revision'];
 
         $attempt = $this->db->createCommand(
             'SELECT att.id, att.state, att.started_at, att.revision, v.time_limit_seconds
              FROM education.assessment_attempts att
              JOIN education.assessment_versions v ON att.version_id = v.id
-             WHERE att.id = CAST(:id AS uuid) AND att.student_id = CAST(:sId AS uuid) AND att.organization_id = CAST(:org AS uuid)
-             FOR UPDATE OF att',
+             WHERE att.id = CAST(:id AS uuid) AND att.student_id = CAST(:sId AS uuid) AND att.organization_id = CAST(:org AS uuid)',
             [':id' => $attemptId, ':sId' => $scope->studentId, ':org' => $scope->organizationId],
         )->queryOne();
 
@@ -1058,30 +1284,61 @@ final readonly class AssessmentService
             throw new EducationError(409, 'attempt_not_editable');
         }
 
-        // Time limit check
+        // Server-enforced time limit check
         $now = $this->clock ? $this->clock->now()->getTimestamp() : time();
         $startedTime = strtotime((string) $attempt['started_at']);
         $serverElapsed = max(0, $now - ($startedTime !== false ? $startedTime : $now));
         $timeLimit = $attempt['time_limit_seconds'] !== null ? (int) $attempt['time_limit_seconds'] : null;
-        if ($timeLimit !== null && $serverElapsed > ($timeLimit + 30)) {
+        if ($timeLimit !== null && $serverElapsed > $timeLimit) {
             throw new EducationError(409, 'attempt_time_expired');
         }
 
-        // Optimistic revision compare-and-swap
-        $currentRevision = (int) ($attempt['revision'] ?? 1);
-        if ($clientRevision !== null && $clientRevision !== $currentRevision) {
-            throw new EducationError(409, 'revision_conflict');
-        }
+        $nextRevision = $clientRevision + 1;
 
-        $nextRevision = $currentRevision + 1;
-        $this->db->createCommand(
+        // True atomic Compare-And-Swap on revision, state, student, organization
+        $affected = $this->db->createCommand(
             'UPDATE education.assessment_attempts
              SET answers = CAST(:answers AS jsonb), revision = :nextRev
-             WHERE id = CAST(:id AS uuid)',
+             WHERE id = CAST(:id AS uuid)
+               AND organization_id = CAST(:org AS uuid)
+               AND student_id = CAST(:sId AS uuid)
+               AND state = \'IN_PROGRESS\'
+               AND revision = :expectedRev',
             [
                 ':answers' => json_encode($answers, JSON_THROW_ON_ERROR),
                 ':nextRev' => $nextRevision,
                 ':id' => $attemptId,
+                ':org' => $scope->organizationId,
+                ':sId' => $scope->studentId,
+                ':expectedRev' => $clientRevision,
+            ],
+        )->execute();
+
+        if ($affected === 0) {
+            $current = $this->db->createCommand(
+                'SELECT state, revision FROM education.assessment_attempts
+                 WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid) AND student_id = CAST(:sId AS uuid)',
+                [':id' => $attemptId, ':org' => $scope->organizationId, ':sId' => $scope->studentId],
+            )->queryOne();
+
+            if (!is_array($current)) {
+                throw new EducationError(404, 'not_found');
+            }
+            if ($current['state'] !== 'IN_PROGRESS') {
+                throw new EducationError(409, 'attempt_not_editable');
+            }
+            throw new EducationError(409, 'revision_conflict');
+        }
+
+        $this->db->createCommand(
+            "UPDATE activity.attempts
+             SET answers = CAST(:answers AS jsonb), revision = :nextRev, updated_at = now()
+             WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid) AND state = 'IN_PROGRESS'",
+            [
+                ':answers' => json_encode($answers, JSON_THROW_ON_ERROR),
+                ':nextRev' => $nextRevision,
+                ':id' => $attemptId,
+                ':org' => $scope->organizationId,
             ],
         )->execute();
 
@@ -1092,7 +1349,7 @@ final readonly class AssessmentService
      * Submits and grades the attempt idempotently.
      * @return array<string, mixed>
      */
-    public function submitStudentAttempt(Scope $scope, string $attemptId, array $input): array
+    public function submitStudentAttempt(Scope $scope, string $attemptId, array $input, ?AuthenticatedIdentity $identity = null): array
     {
         if ($scope->studentId === null) {
             throw new EducationError(403, 'access_denied');
@@ -1100,11 +1357,47 @@ final readonly class AssessmentService
 
         $attemptId = Input::uuid($attemptId);
 
+        if ($this->engine !== null && $identity !== null) {
+            try {
+                try {
+                    $attempt = $this->engine->submitAttempt($identity, $scope->organizationId, $attemptId, $input);
+                } catch (HttpError $e) {
+                    if ($e->status === 409 && $e->reason === 'attempt_expired') {
+                        // Server already evaluated saved answers and marked EXPIRED; return the finalized attempt
+                        $attempt = $this->engine->getAttempt($identity, $scope->organizationId, $attemptId);
+                    } else {
+                        throw $e;
+                    }
+                }
+                if ($this->activityResults !== null && in_array((string) ($attempt['state'] ?? ''), ['EVALUATED', 'COMPLETED', 'EXPIRED'], true)) {
+                    $this->activityResults->finished(
+                        $scope->organizationId,
+                        $scope->studentId,
+                        'platform-assessment',
+                        [
+                            'attemptId' => (string) ($attempt['id'] ?? $attemptId),
+                            'type' => 'assessment',
+                            'score' => (float) ($attempt['rawScore'] ?? 0),
+                            'maxScore' => (float) ($attempt['maxScore'] ?? 0),
+                            'accuracy' => (float) ($attempt['percentage'] ?? 0),
+                            'passed' => (bool) ($attempt['passed'] ?? false),
+                        ],
+                    );
+                }
+                return $this->mapEngineAttemptToLegacy($attempt);
+            } catch (HttpError $e) {
+                if ($e->status !== 404 || $e->reason !== 'attempt_not_found') {
+                    throw new EducationError($e->status, $e->reason);
+                }
+                // Fallback to historical education.assessment_attempts
+            }
+        }
+
         return $this->db->transaction(function () use ($scope, $attemptId, $input): array {
             $attempt = $this->db->createCommand(
                 'SELECT att.id, att.version_id, att.state, att.started_at, att.revision,
-                        att.answers, att.assignment_id,
-                        v.questions_snapshot, v.passing_score_percent, v.reveal_answers_policy,
+                        att.answers, att.assignment_id, v.assessment_id::text AS assessment_id,
+                        v.title AS version_title, v.questions_snapshot, v.passing_score_percent, v.reveal_answers_policy,
                         v.time_limit_seconds
                  FROM education.assessment_attempts att
                  JOIN education.assessment_versions v ON att.version_id = v.id
@@ -1122,15 +1415,31 @@ final readonly class AssessmentService
                 return $this->getStudentAttempt($scope, $attemptId);
             }
 
-            $answers = isset($input['answers']) && is_array($input['answers'])
-                ? $input['answers']
-                : ActivityHandlerRegistry::json($attempt['answers'] ?? []);
+            // Optimistic concurrency check: stale revisions cannot overwrite newer server answers
+            if (isset($input['revision']) && (int) $input['revision'] !== (int) $attempt['revision']) {
+                throw new EducationError(409, 'revision_conflict');
+            }
+            if (!isset($input['revision']) && isset($input['answers']) && is_array($input['answers']) && (int) $attempt['revision'] > 1) {
+                throw new EducationError(409, 'revision_conflict');
+            }
 
             $now = $this->clock ? $this->clock->now()->getTimestamp() : time();
             $startedTime = strtotime((string) $attempt['started_at']);
             $serverElapsed = max(0, $now - ($startedTime !== false ? $startedTime : $now));
             $timeLimit = $attempt['time_limit_seconds'] !== null ? (int) $attempt['time_limit_seconds'] : null;
-            $elapsedSeconds = $timeLimit !== null ? min($serverElapsed, $timeLimit) : $serverElapsed;
+
+            // Server-enforced deadline check:
+            // When official time limit expires ($serverElapsed > $timeLimit):
+            // Finalize ONLY previously saved answers from DB. New client answers are NOT accepted.
+            if ($timeLimit !== null && $serverElapsed > $timeLimit) {
+                $answers = ActivityHandlerRegistry::json($attempt['answers'] ?? []);
+                $elapsedSeconds = $timeLimit;
+            } else {
+                $answers = isset($input['answers']) && is_array($input['answers'])
+                    ? $input['answers']
+                    : ActivityHandlerRegistry::json($attempt['answers'] ?? []);
+                $elapsedSeconds = $timeLimit !== null ? min($serverElapsed, $timeLimit) : $serverElapsed;
+            }
 
             $questions = ActivityHandlerRegistry::json($attempt['questions_snapshot'] ?? []);
             $passingScore = (int) ($attempt['passing_score_percent'] ?? 60);
@@ -1170,6 +1479,84 @@ final readonly class AssessmentService
                 ],
             )->execute();
 
+            $this->syncAssessmentAttemptEvaluationToEngine(
+                $scope,
+                $attemptId,
+                $answers,
+                $evaluated,
+                (float) $score,
+                (float) $maxScore,
+                $percentage,
+                $passed,
+                'attempt_submitted',
+            );
+
+            // Synchronize with activity_attempts table & sink to trigger HomeworkAttemptLinker
+            $actDefId = $this->db->createCommand(
+                "SELECT id::text FROM education.activity_definitions WHERE code = 'platform-assessment' LIMIT 1",
+            )->queryScalar();
+
+            if (is_string($actDefId)) {
+                $assignId = !empty($attempt['assignment_id']) ? (string) $attempt['assignment_id'] : null;
+                $configData = [
+                    'assessmentId' => (string) $attempt['assessment_id'],
+                    'versionId' => (string) $attempt['version_id'],
+                    'passingScorePercent' => $passingScore,
+                ];
+                if ($assignId !== null) {
+                    $hwCfg = $this->db->createCommand(
+                        'SELECT ha.activity_config FROM education.homework_recipients hr
+                         JOIN education.homework_assignments ha ON hr.assignment_id = ha.id
+                         WHERE hr.activity_assignment_id = CAST(:assignId AS uuid) OR ha.id = CAST(:assignId AS uuid)
+                         LIMIT 1',
+                        [':assignId' => $assignId],
+                    )->queryScalar();
+                    if (is_string($hwCfg)) {
+                        $decoded = json_decode($hwCfg, true);
+                        if (is_array($decoded)) {
+                            $configData = $decoded;
+                        }
+                    } else {
+                        $actCfg = $this->db->createCommand(
+                            'SELECT aa.config FROM education.activity_assignments aa WHERE aa.id = CAST(:assignId AS uuid) LIMIT 1',
+                            [':assignId' => $assignId],
+                        )->queryScalar();
+                        if (is_string($actCfg)) {
+                            $decoded = json_decode($actCfg, true);
+                            if (is_array($decoded)) {
+                                $configData = $decoded;
+                            }
+                        }
+                    }
+                }
+
+                $this->db->createCommand(
+                    'INSERT INTO education.activity_attempts
+                     (id, organization_id, student_id, account_id, activity_id, assignment_id, status, source, contract_version, started_at, finished_at, exercise_text, config, exercise_payload, result_payload, client_state, state_version)
+                     VALUES
+                     (CAST(:id AS uuid), CAST(:org AS uuid), CAST(:student AS uuid), CAST(:account AS uuid), CAST(:actId AS uuid), CAST(:assignId AS uuid), \'finished\', \'browser\', 1, CAST(:startedAt AS timestamptz), now(), :title, CAST(:config AS jsonb), CAST(:exercise AS jsonb), CAST(:result AS jsonb), \'{}\'::jsonb, 1)
+                     ON CONFLICT (id) DO UPDATE SET
+                         status = \'finished\',
+                         finished_at = now(),
+                         result_payload = EXCLUDED.result_payload',
+                    [
+                        ':id' => $attemptId,
+                        ':org' => $scope->organizationId,
+                        ':student' => $scope->studentId,
+                        ':account' => $scope->accountId,
+                        ':actId' => $actDefId,
+                        ':assignId' => $assignId,
+                        ':startedAt' => (string) $attempt['started_at'],
+                        ':title' => (string) ($attempt['version_title'] ?? 'Assessment'),
+                        ':config' => json_encode($configData, JSON_THROW_ON_ERROR),
+                        ':exercise' => json_encode(['questions' => $questions, 'passingScorePercent' => $passingScore], JSON_THROW_ON_ERROR),
+                        ':result' => json_encode($evaluated, JSON_THROW_ON_ERROR),
+                    ],
+                )->execute();
+
+                $this->activityResults?->finished($scope, $attemptId);
+            }
+
             return $this->getStudentAttempt($scope, $attemptId);
         });
     }
@@ -1178,12 +1565,60 @@ final readonly class AssessmentService
      * Teacher list of attempts for an assessment.
      * @return list<array<string, mixed>>
      */
-    public function listAssessmentAttempts(Scope $scope, string $assessmentId): array
+    public function listAssessmentAttempts(Scope $scope, string $assessmentId, ?AuthenticatedIdentity $identity = null): array
     {
         $assessmentId = Input::uuid($assessmentId);
+        if ($this->engine !== null && $identity !== null) {
+            $engineRows = $this->db->createCommand(
+                'SELECT a.id::text, a.version_id::text, v.version_number,
+                        COALESCE(s.id::text, a.participant_person_id::text) AS student_id,
+                        COALESCE(NULLIF(p.display_name, \'\'), NULLIF(trim(COALESCE(p.given_name, \'\') || \' \' || COALESCE(p.family_name, \'\')), \'\'), \'Student\') AS student_name,
+                        a.state, a.raw_score AS score, a.max_score, a.percentage, a.passed,
+                        a.started_at::text, a.submitted_at::text, a.review_notes AS manual_review_notes
+                 FROM activity.attempts a
+                 JOIN activity.versions v ON a.version_id = v.id
+                 JOIN core.persons p ON a.participant_person_id = p.id
+                 LEFT JOIN education.students s ON s.person_id = a.participant_person_id AND s.organization_id = a.organization_id
+                 WHERE a.activity_id = CAST(:id AS uuid) AND a.organization_id = CAST(:org AS uuid)
+                 ORDER BY a.started_at DESC',
+                [':id' => $assessmentId, ':org' => $scope->organizationId],
+            )->queryAll();
+
+            $legacyRows = $this->db->createCommand(
+                'SELECT att.id::text, att.version_id::text, v.version_number,
+                        att.student_id::text, COALESCE(NULLIF(p.display_name, \'\'), NULLIF(trim(COALESCE(p.given_name, \'\') || \' \' || COALESCE(p.family_name, \'\')), \'\'), \'Student\') AS student_name,
+                        att.state, att.score, att.max_score, att.percentage, att.passed,
+                        att.started_at::text, att.submitted_at::text, att.manual_review_notes
+                 FROM education.assessment_attempts att
+                 JOIN education.assessment_versions v ON att.version_id = v.id
+                 JOIN education.students s ON att.student_id = s.id
+                 JOIN core.persons p ON s.person_id = p.id
+                 WHERE v.assessment_id = CAST(:id AS uuid) AND att.organization_id = CAST(:org AS uuid)
+                   AND NOT EXISTS (SELECT 1 FROM activity.attempts aa WHERE aa.id = att.id)
+                 ORDER BY att.started_at DESC',
+                [':id' => $assessmentId, ':org' => $scope->organizationId],
+            )->queryAll();
+
+            $rows = array_merge($engineRows, $legacyRows);
+            return array_map(static fn(array $r): array => [
+                'id' => (string) $r['id'],
+                'versionId' => (string) $r['version_id'],
+                'versionNumber' => (int) $r['version_number'],
+                'studentId' => (string) $r['student_id'],
+                'studentName' => (string) ($r['student_name'] ?? 'Student'),
+                'state' => (string) $r['state'],
+                'score' => $r['score'] !== null ? (int) round((float) $r['score']) : null,
+                'maxScore' => $r['max_score'] !== null ? (int) round((float) $r['max_score']) : null,
+                'percentage' => $r['percentage'] !== null ? (float) $r['percentage'] : null,
+                'passed' => $r['passed'] !== null ? (bool) $r['passed'] : null,
+                'startedAt' => (string) $r['started_at'],
+                'submittedAt' => $r['submitted_at'] !== null ? (string) $r['submitted_at'] : null,
+                'manualReviewNotes' => $r['manual_review_notes'] !== null ? (string) $r['manual_review_notes'] : null,
+            ], $rows);
+        }
         $rows = $this->db->createCommand(
             'SELECT att.id::text, att.version_id::text, v.version_number,
-                    att.student_id::text, p.full_name AS student_name,
+                    att.student_id::text, COALESCE(NULLIF(p.display_name, \'\'), NULLIF(trim(COALESCE(p.given_name, \'\') || \' \' || COALESCE(p.family_name, \'\')), \'\'), \'Student\') AS student_name,
                     att.state, att.score, att.max_score, att.percentage, att.passed,
                     att.started_at, att.submitted_at, att.manual_review_notes
              FROM education.assessment_attempts att
@@ -1216,7 +1651,7 @@ final readonly class AssessmentService
      * Teacher review & manual score override with audit history.
      * @return array<string, mixed>
      */
-    public function reviewAttempt(Scope $scope, string $attemptId, array $input): array
+    public function reviewAttempt(Scope $scope, string $attemptId, array $input, ?AuthenticatedIdentity $identity = null): array
     {
         $attemptId = Input::uuid($attemptId);
         $notes = isset($input['manualReviewNotes']) && is_string($input['manualReviewNotes'])
@@ -1224,7 +1659,41 @@ final readonly class AssessmentService
             : (isset($input['feedback']) && is_string($input['feedback'])
                 ? trim($input['feedback'])
                 : (isset($input['notes']) && is_string($input['notes']) ? trim($input['notes']) : null));
-        $score = isset($input['score']) && is_int($input['score']) ? $input['score'] : null;
+        $score = isset($input['score']) && is_numeric($input['score']) ? (int) round((float) $input['score']) : null;
+        $questionReviews = is_array($input['questionReviews'] ?? null) ? $input['questionReviews'] : [];
+        $publish = array_key_exists('publish', $input) ? (bool) $input['publish'] : true;
+
+        if ($this->engine !== null && $identity !== null && ($score !== null || $questionReviews !== [])) {
+            try {
+                $payload = [
+                    'reviewNotes' => $notes ?? '',
+                    'publish' => $publish,
+                ];
+                if ($score !== null) {
+                    $payload['rawScore'] = $score;
+                }
+                if ($questionReviews !== []) {
+                    $payload['questionReviews'] = $questionReviews;
+                }
+                $reviewed = $this->engine->reviewAttempt($identity, $scope->organizationId, $attemptId, $payload);
+                $revScore = (float) ($reviewed['rawScore'] ?? $score ?? 0);
+                $revMax = (float) ($reviewed['maxScore'] ?? 0);
+                return [
+                    'success' => true,
+                    'score' => fmod($revScore, 1.0) === 0.0 ? (int) $revScore : $revScore,
+                    'maxScore' => fmod($revMax, 1.0) === 0.0 ? (int) $revMax : $revMax,
+                    'percentage' => (float) ($reviewed['percentage'] ?? 0.0),
+                    'passed' => (bool) ($reviewed['passed'] ?? false),
+                    'state' => (string) ($reviewed['state'] ?? 'EVALUATED'),
+                    'resultsPublished' => (bool) ($reviewed['resultsPublished'] ?? false),
+                    'reviewHistory' => is_array($reviewed['resultHistory'] ?? null) ? $reviewed['resultHistory'] : [],
+                ];
+            } catch (HttpError $e) {
+                if ($e->status !== 404 || $e->reason !== 'attempt_not_found') {
+                    throw new EducationError($e->status, $e->reason);
+                }
+            }
+        }
 
         return $this->db->transaction(function () use ($scope, $attemptId, $notes, $score): array {
             $attempt = $this->db->createCommand(
@@ -1288,6 +1757,18 @@ final readonly class AssessmentService
                 ],
             )->execute();
 
+            $this->syncAssessmentAttemptReviewToEngine(
+                $scope,
+                $attemptId,
+                (string) $attempt['state'],
+                $attempt['score'] !== null ? (float) $attempt['score'] : null,
+                (float) $finalScore,
+                $attempt['passed'] !== null ? (bool) $attempt['passed'] : null,
+                $passed,
+                $percentage,
+                $notes,
+            );
+
             return [
                 'success' => true,
                 'score' => $finalScore,
@@ -1315,11 +1796,108 @@ final readonly class AssessmentService
         }
     }
 
-    private function resolveAndVerifyStudentAssignment(Scope $scope, string $assessmentId, bool $openPractice, ?string $clientAssignmentId): ?string
+    /**
+     * @return array{assignmentId: ?string, versionId: ?string}
+     */
+    public function resolveAndVerifyStudentAssignment(Scope $scope, string $assessmentId, bool $openPractice, ?string $clientAssignmentId): array
     {
-        // 1. Check Homework assignment
+        $now = $this->clock ? $this->clock->now()->getTimestamp() : time();
+
+        if ($clientAssignmentId !== null) {
+            $clientAssignmentId = Input::uuid($clientAssignmentId);
+
+            // 1. Check if clientAssignmentId is a Homework assignment
+            $hw = $this->db->createCommand(
+                'SELECT ha.id::text, ha.due_at, ha.allow_late, ha.status, ha.group_id::text AS group_id,
+                        ha.activity_config->>\'versionId\' AS version_id,
+                        hr.activity_assignment_id::text AS activity_assignment_id
+                 FROM education.homework_recipients hr
+                 JOIN education.homework_assignments ha ON hr.assignment_id = ha.id
+                 WHERE (ha.id = CAST(:assignId AS uuid) OR hr.activity_assignment_id = CAST(:assignId AS uuid))
+                   AND hr.student_id = CAST(:sId AS uuid)
+                   AND ha.organization_id = CAST(:org AS uuid)
+                   AND ha.status = \'PUBLISHED\'
+                   AND ha.activity_code = \'platform-assessment\'
+                   AND ha.activity_config->>\'assessmentId\' = :aId
+                 LIMIT 1',
+                [':assignId' => $clientAssignmentId, ':sId' => $scope->studentId, ':org' => $scope->organizationId, ':aId' => $assessmentId],
+            )->queryOne();
+
+            if (is_array($hw)) {
+                // Check group membership if assignment was targeted to a group
+                if ($hw['group_id'] !== null) {
+                    $inGroup = $this->db->createCommand(
+                        'SELECT 1 FROM education.group_students
+                         WHERE group_id = CAST(:gId AS uuid) AND student_id = CAST(:sId AS uuid) AND organization_id = CAST(:org AS uuid)',
+                        [':gId' => $hw['group_id'], ':sId' => $scope->studentId, ':org' => $scope->organizationId],
+                    )->queryScalar();
+                    if ($inGroup === false) {
+                        throw new EducationError(403, 'student_not_in_group');
+                    }
+                }
+
+                if ($hw['due_at'] !== null && empty($hw['allow_late'])) {
+                    $dueTs = strtotime((string) $hw['due_at']);
+                    if ($dueTs !== false && $now > $dueTs) {
+                        throw new EducationError(409, 'assignment_deadline_passed');
+                    }
+                }
+
+                $assignId = !empty($hw['activity_assignment_id']) ? (string) $hw['activity_assignment_id'] : (string) $hw['id'];
+                $verId = !empty($hw['version_id']) ? (string) $hw['version_id'] : null;
+                return ['assignmentId' => $assignId, 'versionId' => $verId];
+            }
+
+            // 2. Check if clientAssignmentId is an Activity assignment
+            $act = $this->db->createCommand(
+                'SELECT aa.id::text, aa.opens_at, aa.due_at, aa.group_id::text AS group_id,
+                        aa.config->>\'versionId\' AS version_id
+                 FROM education.activity_assignments aa
+                 WHERE aa.id = CAST(:assignId AS uuid)
+                   AND aa.organization_id = CAST(:org AS uuid)
+                   AND (
+                       aa.student_id = CAST(:sId AS uuid)
+                       OR (aa.group_id IS NOT NULL AND EXISTS (
+                           SELECT 1 FROM education.group_students gs
+                           WHERE gs.group_id = aa.group_id AND gs.student_id = CAST(:sId AS uuid) AND gs.organization_id = CAST(:org AS uuid)
+                       ))
+                   )
+                   AND aa.config->>\'assessmentId\' = :aId
+                 LIMIT 1',
+                [':assignId' => $clientAssignmentId, ':sId' => $scope->studentId, ':org' => $scope->organizationId, ':aId' => $assessmentId],
+            )->queryOne();
+
+            if (is_array($act)) {
+                if ($act['opens_at'] !== null) {
+                    $opensTs = strtotime((string) $act['opens_at']);
+                    if ($opensTs !== false && $now < $opensTs) {
+                        throw new EducationError(403, 'assignment_not_started');
+                    }
+                }
+                if ($act['due_at'] !== null) {
+                    $dueTs = strtotime((string) $act['due_at']);
+                    if ($dueTs !== false && $now > $dueTs) {
+                        throw new EducationError(409, 'assignment_deadline_passed');
+                    }
+                }
+                return ['assignmentId' => (string) $act['id'], 'versionId' => !empty($act['version_id']) ? (string) $act['version_id'] : null];
+            }
+
+            // Specific assignment requested was not found or access denied
+            throw new EducationError(404, 'assignment_not_found');
+        }
+
+        // When clientAssignmentId is NULL:
+        // Check if open_practice is allowed
+        if ($openPractice) {
+            return ['assignmentId' => null, 'versionId' => null];
+        }
+
+        // Closed assessment: must resolve active published assignment
         $hw = $this->db->createCommand(
-            'SELECT ha.id::text, ha.due_at, ha.allow_late
+            'SELECT ha.id::text, ha.due_at, ha.allow_late, ha.group_id::text AS group_id,
+                    ha.activity_config->>\'versionId\' AS version_id,
+                    hr.activity_assignment_id::text AS activity_assignment_id
              FROM education.homework_recipients hr
              JOIN education.homework_assignments ha ON hr.assignment_id = ha.id
              WHERE hr.student_id = CAST(:sId AS uuid)
@@ -1327,37 +1905,42 @@ final readonly class AssessmentService
                AND ha.status = \'PUBLISHED\'
                AND ha.activity_code = \'platform-assessment\'
                AND ha.activity_config->>\'assessmentId\' = :aId
+               AND (ha.group_id IS NULL OR EXISTS (
+                   SELECT 1 FROM education.group_students gs
+                   WHERE gs.group_id = ha.group_id AND gs.student_id = CAST(:sId AS uuid) AND gs.organization_id = CAST(:org AS uuid)
+               ))
              ORDER BY ha.created_at DESC LIMIT 1',
             [':sId' => $scope->studentId, ':org' => $scope->organizationId, ':aId' => $assessmentId],
         )->queryOne();
 
-        // 2. Check Activity assignment
+        if (is_array($hw)) {
+            if ($hw['due_at'] !== null && empty($hw['allow_late'])) {
+                $dueTs = strtotime((string) $hw['due_at']);
+                if ($dueTs !== false && $now > $dueTs) {
+                    throw new EducationError(409, 'assignment_deadline_passed');
+                }
+            }
+            $assignId = !empty($hw['activity_assignment_id']) ? (string) $hw['activity_assignment_id'] : (string) $hw['id'];
+            $verId = !empty($hw['version_id']) ? (string) $hw['version_id'] : null;
+            return ['assignmentId' => $assignId, 'versionId' => $verId];
+        }
+
         $act = $this->db->createCommand(
-            'SELECT aa.id::text, aa.opens_at, aa.due_at
+            'SELECT aa.id::text, aa.opens_at, aa.due_at,
+                    aa.config->>\'versionId\' AS version_id
              FROM education.activity_assignments aa
              WHERE aa.organization_id = CAST(:org AS uuid)
                AND (
                    aa.student_id = CAST(:sId AS uuid)
-                   OR aa.group_id IN (
-                       SELECT group_id FROM education.group_students WHERE student_id = CAST(:sId AS uuid) AND left_at IS NULL
-                   )
+                   OR (aa.group_id IS NOT NULL AND EXISTS (
+                       SELECT 1 FROM education.group_students gs
+                       WHERE gs.group_id = aa.group_id AND gs.student_id = CAST(:sId AS uuid) AND gs.organization_id = CAST(:org AS uuid)
+                   ))
                )
                AND aa.config->>\'assessmentId\' = :aId
              ORDER BY aa.created_at DESC LIMIT 1',
             [':sId' => $scope->studentId, ':org' => $scope->organizationId, ':aId' => $assessmentId],
         )->queryOne();
-
-        $now = $this->clock ? $this->clock->now()->getTimestamp() : time();
-
-        if (is_array($hw)) {
-            if ($hw['due_at'] !== null && empty($hw['allow_late'])) {
-                $dueTs = strtotime((string) $hw['due_at']);
-                if ($dueTs !== false && $now > ($dueTs + 30)) {
-                    throw new EducationError(409, 'assignment_deadline_passed');
-                }
-            }
-            return (string) $hw['id'];
-        }
 
         if (is_array($act)) {
             if ($act['opens_at'] !== null) {
@@ -1368,18 +1951,14 @@ final readonly class AssessmentService
             }
             if ($act['due_at'] !== null) {
                 $dueTs = strtotime((string) $act['due_at']);
-                if ($dueTs !== false && $now > ($dueTs + 30)) {
+                if ($dueTs !== false && $now > $dueTs) {
                     throw new EducationError(409, 'assignment_deadline_passed');
                 }
             }
-            return (string) $act['id'];
+            return ['assignmentId' => (string) $act['id'], 'versionId' => !empty($act['version_id']) ? (string) $act['version_id'] : null];
         }
 
-        if (!$openPractice) {
-            throw new EducationError(403, 'assessment_not_assigned');
-        }
-
-        return null;
+        throw new EducationError(403, 'assignment_required');
     }
 
     /**
@@ -1420,6 +1999,83 @@ final readonly class AssessmentService
                 ':id' => $attemptId,
             ],
         )->execute();
+
+        $this->syncAssessmentAttemptEvaluationToEngine(
+            $scope,
+            $attemptId,
+            $answers,
+            $evaluated,
+            (float) $metrics['score'],
+            (float) $metrics['maxScore'],
+            (float) $metrics['percentage'],
+            $metrics['passed'],
+            'deadline_auto_finalized',
+        );
+
+        $actDefId = $this->db->createCommand(
+            "SELECT id::text FROM education.activity_definitions WHERE code = 'platform-assessment' LIMIT 1",
+        )->queryScalar();
+
+        if (is_string($actDefId)) {
+            $assignId = !empty($running['assignment_id']) ? (string) $running['assignment_id'] : null;
+            $configData = [
+                'assessmentId' => (string) ($assessment['id'] ?? $assessment['latest_version_id']),
+                'versionId' => (string) ($assessment['latest_version_id'] ?? $assessment['version_id'] ?? $assessment['id']),
+                'passingScorePercent' => $passingScore,
+            ];
+            if ($assignId !== null) {
+                $hwCfg = $this->db->createCommand(
+                    'SELECT ha.activity_config FROM education.homework_recipients hr
+                     JOIN education.homework_assignments ha ON hr.assignment_id = ha.id
+                     WHERE hr.activity_assignment_id = CAST(:assignId AS uuid) OR ha.id = CAST(:assignId AS uuid)
+                     LIMIT 1',
+                    [':assignId' => $assignId],
+                )->queryScalar();
+                if (is_string($hwCfg)) {
+                    $decoded = json_decode($hwCfg, true);
+                    if (is_array($decoded)) {
+                        $configData = $decoded;
+                    }
+                } else {
+                    $actCfg = $this->db->createCommand(
+                        'SELECT aa.config FROM education.activity_assignments aa WHERE aa.id = CAST(:assignId AS uuid) LIMIT 1',
+                        [':assignId' => $assignId],
+                    )->queryScalar();
+                    if (is_string($actCfg)) {
+                        $decoded = json_decode($actCfg, true);
+                        if (is_array($decoded)) {
+                            $configData = $decoded;
+                        }
+                    }
+                }
+            }
+
+            $this->db->createCommand(
+                'INSERT INTO education.activity_attempts
+                 (id, organization_id, student_id, account_id, activity_id, assignment_id, status, source, contract_version, started_at, finished_at, exercise_text, config, exercise_payload, result_payload, client_state, state_version)
+                 VALUES
+                 (CAST(:id AS uuid), CAST(:org AS uuid), CAST(:student AS uuid), CAST(:account AS uuid), CAST(:actId AS uuid), CAST(:assignId AS uuid), \'finished\', \'browser\', 1, CAST(:startedAt AS timestamptz), now(), :title, CAST(:config AS jsonb), CAST(:exercise AS jsonb), CAST(:result AS jsonb), \'{}\'::jsonb, 1)
+                 ON CONFLICT (id) DO UPDATE SET
+                     status = \'finished\',
+                     finished_at = now(),
+                     result_payload = EXCLUDED.result_payload',
+                [
+                    ':id' => $attemptId,
+                    ':org' => $scope->organizationId,
+                    ':student' => $scope->studentId,
+                    ':account' => $scope->accountId,
+                    ':actId' => $actDefId,
+                    ':assignId' => $assignId,
+                    ':startedAt' => (string) $running['started_at'],
+                    ':title' => (string) ($assessment['title'] ?? 'Assessment'),
+                    ':config' => json_encode($configData, JSON_THROW_ON_ERROR),
+                    ':exercise' => json_encode(['questions' => $questions, 'passingScorePercent' => $passingScore], JSON_THROW_ON_ERROR),
+                    ':result' => json_encode($evaluated, JSON_THROW_ON_ERROR),
+                ],
+            )->execute();
+
+            $this->activityResults?->finished($scope, $attemptId);
+        }
     }
 
     /**
@@ -1505,6 +2161,614 @@ final readonly class AssessmentService
             'passingScorePercent' => (int) $assessment['passing_score_percent'],
             'questions' => $publicQuestions,
             'answers' => $answers,
+        ];
+    }
+
+    /**
+     * @param array<array-key, mixed> $questions
+     */
+    private function syncAssessmentToActivityEngine(
+        Scope $scope,
+        string $assessmentId,
+        string $title,
+        string $description,
+        string $status,
+        bool $openPractice,
+        string $versionId,
+        int $versionNumber,
+        string $instructions,
+        ?int $timeLimit,
+        int $passingScore,
+        int $maxAttempts,
+        bool $shuffleQ,
+        bool $shuffleOpt,
+        string $revealPolicy,
+        string $gradingPolicy,
+        array $questions,
+    ): void {
+        $visibility = $openPractice ? 'public_catalog' : 'organization';
+        $config = [
+            'shuffleQuestions' => $shuffleQ,
+            'shuffleOptions' => $shuffleOpt,
+            'revealAnswersPolicy' => $revealPolicy,
+            'openPractice' => $openPractice,
+            'examOnly' => !$openPractice,
+            'timeLimitSeconds' => $timeLimit,
+            'passingScorePercent' => $passingScore,
+        ];
+        $content = ['questions' => array_values($questions)];
+
+        $this->db->createCommand(
+            "INSERT INTO activity.items (
+                id, organization_id, plugin_code, author_person_id, author_account_id,
+                title, description, status, visibility, source_legacy_type, source_legacy_id
+             ) VALUES (
+                CAST(:id AS uuid), CAST(:org AS uuid), 'platform-assessment', CAST(:person AS uuid), CAST(:account AS uuid),
+                :title, :desc, :status, :vis, 'assessment', CAST(:id AS uuid)
+             )
+             ON CONFLICT (id) DO UPDATE SET
+                title = EXCLUDED.title,
+                description = EXCLUDED.description,
+                status = EXCLUDED.status,
+                visibility = EXCLUDED.visibility,
+                updated_at = now()",
+            [
+                ':id' => $assessmentId,
+                ':org' => $scope->organizationId,
+                ':person' => $scope->personId,
+                ':account' => $scope->accountId,
+                ':title' => mb_substr($title, 0, 200),
+                ':desc' => $description,
+                ':status' => $status,
+                ':vis' => $visibility,
+            ],
+        )->execute();
+
+        $this->db->createCommand(
+            'INSERT INTO activity.versions (
+                id, activity_id, version_number, title, instructions, config, content,
+                time_limit_seconds, max_attempts, passing_score_percent, grading_policy, reveal_answers_policy, created_by_person_id
+             ) VALUES (
+                CAST(:vid AS uuid), CAST(:aid AS uuid), :ver, :title, :inst, CAST(:cfg AS jsonb), CAST(:cnt AS jsonb),
+                :tl, :ma, :pp, :gp, :rp, CAST(:person AS uuid)
+             )
+             ON CONFLICT (id) DO UPDATE SET
+                title = EXCLUDED.title,
+                instructions = EXCLUDED.instructions,
+                config = EXCLUDED.config,
+                content = EXCLUDED.content,
+                time_limit_seconds = EXCLUDED.time_limit_seconds,
+                max_attempts = EXCLUDED.max_attempts,
+                passing_score_percent = EXCLUDED.passing_score_percent,
+                grading_policy = EXCLUDED.grading_policy,
+                reveal_answers_policy = EXCLUDED.reveal_answers_policy',
+            [
+                ':vid' => $versionId,
+                ':aid' => $assessmentId,
+                ':ver' => $versionNumber,
+                ':title' => mb_substr($title, 0, 200),
+                ':inst' => $instructions,
+                ':cfg' => json_encode($config, JSON_THROW_ON_ERROR),
+                ':cnt' => json_encode($content, JSON_THROW_ON_ERROR),
+                ':tl' => $timeLimit,
+                ':ma' => $maxAttempts,
+                ':pp' => $passingScore,
+                ':gp' => $gradingPolicy,
+                ':rp' => $revealPolicy,
+                ':person' => $scope->personId,
+            ],
+        )->execute();
+
+        $this->db->createCommand(
+            'UPDATE activity.items SET active_version_id = CAST(:vid AS uuid), updated_at = now() WHERE id = CAST(:aid AS uuid)',
+            [':vid' => $versionId, ':aid' => $assessmentId],
+        )->execute();
+    }
+
+    private function syncAssessmentMetadataToActivityEngine(
+        string $organizationId,
+        string $assessmentId,
+        string $title,
+        string $description,
+        string $status,
+        bool $openPractice,
+    ): void {
+        $this->db->createCommand(
+            'UPDATE activity.items
+             SET title = :title, description = :desc, status = :status, visibility = :vis, updated_at = now()
+             WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid)',
+            [
+                ':title' => mb_substr($title, 0, 200),
+                ':desc' => $description,
+                ':status' => $status,
+                ':vis' => $openPractice ? 'public_catalog' : 'organization',
+                ':id' => $assessmentId,
+                ':org' => $organizationId,
+            ],
+        )->execute();
+    }
+
+    /**
+     * @param array<string, mixed> $runtimeConfig
+     * @param array<string, mixed> $draftState
+     */
+    private function syncAssessmentAttemptStartToEngine(
+        Scope $scope,
+        string $attemptId,
+        string $assessmentId,
+        string $versionId,
+        ?string $assignmentId,
+        int $seed,
+        array $runtimeConfig,
+        array $draftState,
+        ?string $expiresAt,
+    ): void {
+        $this->db->createCommand(
+            "INSERT INTO activity.attempts (
+                id, organization_id, activity_id, version_id, assignment_id,
+                participant_person_id, participant_account_id,
+                state, revision, seed, runtime_config, draft_state,
+                started_at, expires_at, source_legacy_type, source_legacy_id
+             )
+             SELECT
+                CAST(:id AS uuid), CAST(:org AS uuid), av.activity_id, av.id,
+                CASE WHEN CAST(:asgn AS uuid) IS NOT NULL AND EXISTS (SELECT 1 FROM activity.assignments ag WHERE ag.id = CAST(:asgn AS uuid))
+                     THEN CAST(:asgn AS uuid) ELSE NULL END,
+                CAST(:person AS uuid), CAST(:account AS uuid),
+                'IN_PROGRESS', 1, :seed, CAST(:cfg AS jsonb), CAST(:draft AS jsonb),
+                now(), CAST(:exp AS timestamptz), 'education_assessment_attempt', CAST(:id AS uuid)
+             FROM activity.versions av
+             WHERE av.id = CAST(:vid AS uuid) AND av.activity_id = CAST(:aid AS uuid)
+             ON CONFLICT (id) DO NOTHING",
+            [
+                ':id' => $attemptId,
+                ':org' => $scope->organizationId,
+                ':vid' => $versionId,
+                ':aid' => $assessmentId,
+                ':asgn' => $assignmentId,
+                ':person' => $scope->personId,
+                ':account' => $scope->accountId,
+                ':seed' => $seed,
+                ':cfg' => json_encode($runtimeConfig, JSON_THROW_ON_ERROR),
+                ':draft' => json_encode($draftState, JSON_THROW_ON_ERROR),
+                ':exp' => $expiresAt,
+            ],
+        )->execute();
+
+        $this->db->createCommand(
+            "INSERT INTO activity.attempt_events (attempt_id, from_state, to_state, actor_person_id, reason)
+             SELECT id, 'CREATED', 'IN_PROGRESS', CAST(:person AS uuid), 'attempt_started'
+             FROM activity.attempts
+             WHERE id = CAST(:id AS uuid)
+               AND NOT EXISTS (SELECT 1 FROM activity.attempt_events e WHERE e.attempt_id = activity.attempts.id)",
+            [':id' => $attemptId, ':person' => $scope->personId],
+        )->execute();
+    }
+
+    /**
+     * @param array<array-key, mixed> $answers
+     * @param array<array-key, mixed> $evaluated
+     */
+    private function syncAssessmentAttemptEvaluationToEngine(
+        Scope $scope,
+        string $attemptId,
+        array $answers,
+        array $evaluated,
+        float $rawScore,
+        float $maxScore,
+        float $percentage,
+        bool $passed,
+        string $reason,
+    ): void {
+        $this->db->createCommand(
+            "UPDATE activity.attempts
+             SET state = 'EVALUATED',
+                 revision = revision + 1,
+                 answers = CAST(:ans AS jsonb),
+                 evaluation = CAST(:ev AS jsonb),
+                 raw_score = :raw,
+                 max_score = :max,
+                 percentage = :pct,
+                 passed = :passed,
+                 submitted_at = COALESCE(submitted_at, now()),
+                 evaluated_at = now(),
+                 updated_at = now()
+             WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid)",
+            [
+                ':ans' => json_encode($answers === [] ? (object) [] : $answers, JSON_THROW_ON_ERROR),
+                ':ev' => json_encode($evaluated, JSON_THROW_ON_ERROR),
+                ':raw' => $rawScore,
+                ':max' => $maxScore,
+                ':pct' => $percentage,
+                ':passed' => $passed ? 'true' : 'false',
+                ':id' => $attemptId,
+                ':org' => $scope->organizationId,
+            ],
+        )->execute();
+
+        $this->db->createCommand(
+            "INSERT INTO activity.attempt_events (attempt_id, from_state, to_state, actor_person_id, reason)
+             SELECT id, 'IN_PROGRESS', 'EVALUATED', CAST(:actor AS uuid), :reason
+             FROM activity.attempts
+             WHERE id = CAST(:id AS uuid)",
+            [':actor' => $scope->personId, ':reason' => $reason, ':id' => $attemptId],
+        )->execute();
+    }
+
+    private function syncAssessmentAttemptReviewToEngine(
+        Scope $scope,
+        string $attemptId,
+        string $prevState,
+        ?float $previousScore,
+        float $newScore,
+        ?bool $previousPassed,
+        bool $newPassed,
+        float $percentage,
+        ?string $notes,
+    ): void {
+        $this->db->createCommand(
+            "UPDATE activity.attempts
+             SET state = 'EVALUATED',
+                 raw_score = :raw,
+                 percentage = :pct,
+                 passed = :passed,
+                 reviewer_person_id = CAST(:rev AS uuid),
+                 review_notes = COALESCE(:notes, review_notes),
+                 evaluated_at = now(),
+                 updated_at = now()
+             WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid)",
+            [
+                ':raw' => $newScore,
+                ':pct' => $percentage,
+                ':passed' => $newPassed ? 'true' : 'false',
+                ':rev' => $scope->personId,
+                ':notes' => $notes,
+                ':id' => $attemptId,
+                ':org' => $scope->organizationId,
+            ],
+        )->execute();
+
+        $meta = [
+            'previousScore' => $previousScore,
+            'newScore' => $newScore,
+            'previousPassed' => $previousPassed,
+            'newPassed' => $newPassed,
+            'notes' => $notes ?? '',
+        ];
+        $this->db->createCommand(
+            "INSERT INTO activity.attempt_events (attempt_id, from_state, to_state, actor_person_id, reason, metadata)
+             SELECT id, :fromState, 'EVALUATED', CAST(:actor AS uuid), 'manual_review', CAST(:meta AS jsonb)
+             FROM activity.attempts
+             WHERE id = CAST(:id AS uuid)",
+            [
+                ':fromState' => $prevState === 'AWAITING_MANUAL_REVIEW' ? 'PENDING_REVIEW' : $prevState,
+                ':actor' => $scope->personId,
+                ':meta' => json_encode($meta, JSON_THROW_ON_ERROR),
+                ':id' => $attemptId,
+            ],
+        )->execute();
+    }
+
+    /**
+     * Maps Education assessment input to canonical ActivityEngineService payload.
+     *
+     * @param array<string, mixed> $input
+     * @param array<string, mixed>|null $current
+     * @return array<string, mixed>
+     */
+    private function mapEducationInputToActivityPayload(array $input, bool $publish, ?array $current = null): array
+    {
+        $currentConfig = is_array($current['config'] ?? null) ? $current['config'] : [];
+        $currentContent = is_array($current['content'] ?? null) ? $current['content'] : [];
+        $openPractice = array_key_exists('openPractice', $input)
+            ? (bool) $input['openPractice']
+            : (bool) ($currentConfig['openPractice'] ?? false);
+
+        $questions = isset($input['questions']) && is_array($input['questions'])
+            ? array_values($input['questions'])
+            : (is_array($currentContent['questions'] ?? null) ? $currentContent['questions'] : []);
+
+        $config = [
+            'shuffleQuestions' => array_key_exists('shuffleQuestions', $input) ? (bool) $input['shuffleQuestions'] : (bool) ($currentConfig['shuffleQuestions'] ?? false),
+            'shuffleOptions' => array_key_exists('shuffleOptions', $input) ? (bool) $input['shuffleOptions'] : (bool) ($currentConfig['shuffleOptions'] ?? false),
+            'revealAnswersPolicy' => $input['revealAnswersPolicy'] ?? ($currentConfig['revealAnswersPolicy'] ?? 'after_grading'),
+            'openPractice' => $openPractice,
+            'examOnly' => !$openPractice,
+        ];
+
+        $payload = [
+            'pluginCode' => 'platform-assessment',
+            'title' => array_key_exists('title', $input) ? (string) $input['title'] : (string) ($current['title'] ?? ''),
+            'description' => array_key_exists('description', $input) ? (string) $input['description'] : (string) ($current['description'] ?? ''),
+            'instructions' => array_key_exists('instructions', $input) ? (string) $input['instructions'] : (string) ($current['instructions'] ?? ''),
+            'visibility' => $openPractice ? 'public_catalog' : 'organization',
+            'config' => $config,
+            'content' => ['questions' => $questions],
+            'timeLimitSeconds' => array_key_exists('timeLimitSeconds', $input) ? $input['timeLimitSeconds'] : ($current['timeLimitSeconds'] ?? null),
+            'passingScorePercent' => array_key_exists('passingScorePercent', $input) ? $input['passingScorePercent'] : ($current['passingScorePercent'] ?? 60),
+            'maxAttempts' => array_key_exists('maxAttempts', $input) ? $input['maxAttempts'] : ($current['maxAttempts'] ?? 1),
+            'gradingPolicy' => array_key_exists('gradingPolicy', $input) ? $input['gradingPolicy'] : ($current['gradingPolicy'] ?? 'highest'),
+            'publish' => $publish,
+        ];
+        if (!$publish && isset($input['status']) && is_string($input['status'])) {
+            $payload['status'] = $input['status'];
+        }
+        return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function mapActivityListRow(array $row): array
+    {
+        $id = (string) ($row['id'] ?? '');
+        $verId = isset($row['activeVersionId']) && is_string($row['activeVersionId']) ? $row['activeVersionId'] : null;
+        $stats = $this->db->createCommand(
+            'SELECT COALESCE(jsonb_array_length(v.content->\'questions\'), 0)::int AS q_count,
+                    (SELECT count(*)::int FROM activity.attempts att WHERE att.version_id = v.id) AS att_count,
+                    (SELECT round(avg(att.percentage), 1) FROM activity.attempts att WHERE att.version_id = v.id AND att.percentage IS NOT NULL) AS avg_score
+             FROM activity.versions v WHERE v.id = CAST(:vid AS uuid)',
+            [':vid' => $verId ?? '00000000-0000-0000-0000-000000000000'],
+        )->queryOne();
+
+        return [
+            'id' => $id,
+            'title' => (string) ($row['title'] ?? ''),
+            'description' => (string) ($row['description'] ?? ''),
+            'status' => (string) ($row['status'] ?? 'DRAFT'),
+            'openPractice' => ($row['visibility'] ?? 'organization') === 'public_catalog',
+            'latestVersionId' => $verId,
+            'latestVersionNumber' => isset($row['versionNumber']) ? (int) $row['versionNumber'] : 1,
+            'passingScorePercent' => isset($row['passingScorePercent']) ? (int) $row['passingScorePercent'] : 60,
+            'timeLimitSeconds' => $row['timeLimitSeconds'] !== null ? (int) $row['timeLimitSeconds'] : null,
+            'questionsCount' => is_array($stats) ? (int) ($stats['q_count'] ?? 0) : 0,
+            'attemptsCount' => is_array($stats) ? (int) ($stats['att_count'] ?? 0) : 0,
+            'avgScore' => is_array($stats) && $stats['avg_score'] !== null ? (float) $stats['avg_score'] : null,
+            'createdAt' => (string) ($row['updatedAt'] ?? ''),
+            'updatedAt' => (string) ($row['updatedAt'] ?? ''),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $activity
+     * @return array<string, mixed>
+     */
+    private function mapActivityToAssessment(array $activity): array
+    {
+        $cfg = is_array($activity['config'] ?? null) ? $activity['config'] : [];
+        $content = is_array($activity['content'] ?? null) ? $activity['content'] : [];
+        $questions = is_array($content['questions'] ?? null) ? array_values($content['questions']) : [];
+        $normalizedQuestions = array_map(static function (mixed $q): mixed {
+            if (!is_array($q)) {
+                return $q;
+            }
+            if (!isset($q['type']) && isset($q['questionType'])) {
+                $q['type'] = $q['questionType'];
+            }
+            $qc = is_array($q['content'] ?? null) ? $q['content'] : [];
+            if (!isset($q['prompt']) && isset($qc['prompt'])) {
+                $q['prompt'] = $qc['prompt'];
+            }
+            if (!isset($q['options']) && isset($qc['options'])) {
+                $q['options'] = $qc['options'];
+            }
+            if (!isset($q['pairs']) && isset($qc['pairs'])) {
+                $q['pairs'] = $qc['pairs'];
+            }
+            if (!isset($q['items']) && isset($qc['items'])) {
+                $q['items'] = $qc['items'];
+            }
+            if (!isset($q['tolerance']) && isset($qc['tolerance'])) {
+                $q['tolerance'] = $qc['tolerance'];
+            }
+            if (!isset($q['points']) && isset($q['defaultPoints'])) {
+                $q['points'] = $q['defaultPoints'];
+            }
+            return $q;
+        }, $questions);
+
+        return [
+            'id' => (string) ($activity['id'] ?? ''),
+            'title' => (string) ($activity['title'] ?? ''),
+            'description' => (string) ($activity['description'] ?? ''),
+            'status' => (string) ($activity['status'] ?? 'DRAFT'),
+            'openPractice' => (bool) ($cfg['openPractice'] ?? (($activity['visibility'] ?? '') === 'public_catalog')),
+            'latestVersionId' => $activity['activeVersionId'] ?? null,
+            'versionNumber' => isset($activity['versionNumber']) ? (int) $activity['versionNumber'] : 1,
+            'instructions' => (string) ($activity['instructions'] ?? ''),
+            'timeLimitSeconds' => $activity['timeLimitSeconds'] !== null ? (int) $activity['timeLimitSeconds'] : null,
+            'passingScorePercent' => (int) ($activity['passingScorePercent'] ?? 60),
+            'maxAttempts' => (int) ($activity['maxAttempts'] ?? 1),
+            'shuffleQuestions' => (bool) ($cfg['shuffleQuestions'] ?? false),
+            'shuffleOptions' => (bool) ($cfg['shuffleOptions'] ?? false),
+            'revealAnswersPolicy' => (string) ($activity['revealAnswersPolicy'] ?? $cfg['revealAnswersPolicy'] ?? 'after_grading'),
+            'gradingPolicy' => (string) ($activity['gradingPolicy'] ?? 'highest'),
+            'questions' => $normalizedQuestions,
+            'questionsCount' => count($normalizedQuestions),
+            'createdAt' => (string) ($activity['createdAt'] ?? $activity['updatedAt'] ?? ''),
+            'updatedAt' => (string) ($activity['updatedAt'] ?? ''),
+        ];
+    }
+
+    /**
+     * Compatibility projection: keeps legacy education.assessments / education.assessment_versions
+     * in sync with canonical activity.* records for StudentAssessmentRunner, homework assignments,
+     * and historical attempt queries until PLATFORM_13_B migrates the runner.
+     *
+     * @param array<string, mixed> $activity
+     */
+    private function projectActivityToLegacyAssessment(Scope $scope, array $activity): void
+    {
+        $mapped = $this->mapActivityToAssessment($activity);
+        $assessmentId = (string) $mapped['id'];
+        $versionId = is_string($mapped['latestVersionId']) ? $mapped['latestVersionId'] : null;
+        if ($assessmentId === '' || $versionId === null) {
+            return;
+        }
+
+        $this->db->createCommand(
+            'INSERT INTO education.assessments (id, organization_id, author_person_id, title, description, status, open_practice)
+             VALUES (CAST(:id AS uuid), CAST(:org AS uuid), CAST(:author AS uuid), :title, :desc, :status, :openPractice)
+             ON CONFLICT (id) DO UPDATE SET
+                title = EXCLUDED.title,
+                description = EXCLUDED.description,
+                status = EXCLUDED.status,
+                open_practice = EXCLUDED.open_practice,
+                updated_at = now()',
+            [
+                ':id' => $assessmentId,
+                ':org' => $scope->organizationId,
+                ':author' => $scope->personId,
+                ':title' => mb_substr((string) $mapped['title'], 0, 200),
+                ':desc' => (string) $mapped['description'],
+                ':status' => (string) $mapped['status'],
+                ':openPractice' => $mapped['openPractice'] ? 'true' : 'false',
+            ],
+        )->execute();
+
+        $this->db->createCommand(
+            'INSERT INTO education.assessment_versions
+             (id, assessment_id, version_number, title, instructions, time_limit_seconds, passing_score_percent, max_attempts,
+              shuffle_questions, shuffle_options, reveal_answers_policy, grading_policy, questions_snapshot)
+             VALUES
+             (CAST(:vId AS uuid), CAST(:aId AS uuid), :ver, :title, :inst, :tl, :pp, :ma,
+              :sq, :so, :rp, :gp, CAST(:questions AS jsonb))
+             ON CONFLICT (id) DO UPDATE SET
+                title = EXCLUDED.title,
+                instructions = EXCLUDED.instructions,
+                time_limit_seconds = EXCLUDED.time_limit_seconds,
+                passing_score_percent = EXCLUDED.passing_score_percent,
+                max_attempts = EXCLUDED.max_attempts,
+                shuffle_questions = EXCLUDED.shuffle_questions,
+                shuffle_options = EXCLUDED.shuffle_options,
+                reveal_answers_policy = EXCLUDED.reveal_answers_policy,
+                grading_policy = EXCLUDED.grading_policy,
+                questions_snapshot = EXCLUDED.questions_snapshot',
+            [
+                ':vId' => $versionId,
+                ':aId' => $assessmentId,
+                ':ver' => (int) $mapped['versionNumber'],
+                ':title' => mb_substr((string) $mapped['title'], 0, 200),
+                ':inst' => (string) $mapped['instructions'],
+                ':tl' => $mapped['timeLimitSeconds'],
+                ':pp' => (int) $mapped['passingScorePercent'],
+                ':ma' => max(1, (int) $mapped['maxAttempts']),
+                ':sq' => $mapped['shuffleQuestions'] ? 'true' : 'false',
+                ':so' => $mapped['shuffleOptions'] ? 'true' : 'false',
+                ':rp' => (string) $mapped['revealAnswersPolicy'],
+                ':gp' => in_array($mapped['gradingPolicy'], ['highest', 'latest', 'average'], true) ? $mapped['gradingPolicy'] : 'highest',
+                ':questions' => json_encode($mapped['questions'], JSON_THROW_ON_ERROR),
+            ],
+        )->execute();
+
+        $this->db->createCommand(
+            'UPDATE education.assessments SET latest_version_id = CAST(:vId AS uuid), updated_at = now() WHERE id = CAST(:aId AS uuid)',
+            [':vId' => $versionId, ':aId' => $assessmentId],
+        )->execute();
+    }
+
+    /**
+     * Compatibility projection for legacy education.question_bank.
+     *
+     * @param array<string, mixed> $item
+     */
+    private function projectQuestionBankItemToLegacy(Scope $scope, array $item): void
+    {
+        $id = (string) ($item['id'] ?? '');
+        if ($id === '') {
+            return;
+        }
+        $this->db->createCommand(
+            'INSERT INTO education.question_bank
+             (id, organization_id, author_person_id, category, tags, difficulty, question_type, content, answer_key, explanation, default_points)
+             VALUES
+             (CAST(:id AS uuid), CAST(:org AS uuid), CAST(:author AS uuid), :cat, CAST(:tags AS jsonb), :diff, :type, CAST(:content AS jsonb), CAST(:answerKey AS jsonb), :explanation, :points)
+             ON CONFLICT (id) DO NOTHING',
+            [
+                ':id' => $id,
+                ':org' => $scope->organizationId,
+                ':author' => $scope->personId,
+                ':cat' => (string) ($item['category'] ?? 'general'),
+                ':tags' => json_encode($item['tags'] ?? [], JSON_THROW_ON_ERROR),
+                ':diff' => (int) ($item['difficulty'] ?? 1),
+                ':type' => (string) ($item['questionType'] ?? 'single_choice'),
+                ':content' => json_encode($item['content'] ?? [], JSON_THROW_ON_ERROR),
+                ':answerKey' => json_encode($item['answerKey'] ?? null, JSON_THROW_ON_ERROR),
+                ':explanation' => (string) ($item['explanation'] ?? ''),
+                ':points' => (int) ($item['defaultPoints'] ?? 1),
+            ],
+        )->execute();
+    }
+
+    /**
+     * Maps canonical ActivityEngineService attempt payload to legacy student attempt response shape.
+     *
+     * @param array<string, mixed> $attempt
+     * @return array<string, mixed>
+     */
+    private function mapEngineAttemptToLegacy(array $attempt): array
+    {
+        $cfg = is_array($attempt['config'] ?? null) ? $attempt['config'] : [];
+        $exercise = is_array($attempt['exercise'] ?? null) ? $attempt['exercise'] : [];
+        $answers = is_array($attempt['answers'] ?? null) ? $attempt['answers'] : [];
+        if (isset($answers['answers']) && is_array($answers['answers'])) {
+            $answers = $answers['answers'];
+        }
+        $eval = is_array($attempt['evaluation'] ?? null) ? $attempt['evaluation'] : [];
+        $state = (string) ($attempt['state'] ?? 'IN_PROGRESS');
+        $rawQuestions = is_array($exercise['questions'] ?? null) ? $exercise['questions'] : [];
+        $questions = array_map(static function (mixed $q): array {
+            $qArr = is_array($q) ? $q : [];
+            $content = is_array($qArr['content'] ?? null) ? $qArr['content'] : [];
+            return [
+                'id' => (string) ($qArr['id'] ?? ''),
+                'type' => (string) ($qArr['questionType'] ?? $qArr['type'] ?? 'single_choice'),
+                'questionType' => (string) ($qArr['questionType'] ?? $qArr['type'] ?? 'single_choice'),
+                'prompt' => (string) ($content['prompt'] ?? $qArr['prompt'] ?? ''),
+                'options' => is_array($content['options'] ?? null) ? $content['options'] : ($qArr['options'] ?? []),
+                'items' => is_array($content['items'] ?? null) ? $content['items'] : ($qArr['items'] ?? []),
+                'pairs' => is_array($content['pairs'] ?? null) ? $content['pairs'] : ($qArr['pairs'] ?? []),
+                'points' => (int) ($qArr['points'] ?? 1),
+                'content' => $content,
+            ];
+        }, $rawQuestions);
+
+        $isFinalized = in_array($state, ['EVALUATED', 'COMPLETED', 'PENDING_REVIEW', 'EXPIRED'], true);
+        $result = $isFinalized && $eval !== [] ? [
+            'score' => (float) ($attempt['rawScore'] ?? $eval['rawScore'] ?? 0),
+            'maxScore' => (float) ($attempt['maxScore'] ?? $eval['maxScore'] ?? 0),
+            'percentage' => (float) ($attempt['percentage'] ?? $eval['percentage'] ?? 0),
+            'passed' => (bool) ($attempt['passed'] ?? $eval['passed'] ?? false),
+            'breakdown' => is_array($eval['breakdown'] ?? null) ? $eval['breakdown'] : [],
+            'feedback' => (string) ($eval['feedback'] ?? ''),
+            'requiresManualReview' => (bool) ($eval['requiresManualReview'] ?? false),
+        ] : null;
+
+        return [
+            'id' => (string) ($attempt['id'] ?? ''),
+            'activityId' => (string) ($attempt['activityId'] ?? ''),
+            'versionId' => (string) ($attempt['versionId'] ?? ''),
+            'assignmentId' => $attempt['assignmentId'] ?? null,
+            'state' => $state,
+            'revision' => (int) ($attempt['revision'] ?? 1),
+            'startedAt' => $attempt['startedAt'] ?? null,
+            'expiresAt' => $attempt['expiresAt'] ?? null,
+            'serverNow' => $attempt['serverNow'] ?? gmdate(DATE_ATOM, time()),
+            'remainingSeconds' => $attempt['remainingSeconds'] ?? null,
+            'submittedAt' => $attempt['submittedAt'] ?? null,
+            'title' => (string) ($attempt['activityTitle'] ?? ''),
+            'instructions' => (string) ($cfg['instructions'] ?? ''),
+            'timeLimitSeconds' => $exercise['timeLimitSeconds'] ?? $cfg['timeLimitSeconds'] ?? null,
+            'passingScorePercent' => (int) ($cfg['passingScorePercent'] ?? 60),
+            'questions' => $questions,
+            'answers' => $answers,
+            'score' => $attempt['rawScore'] !== null ? (float) $attempt['rawScore'] : null,
+            'maxScore' => $attempt['maxScore'] !== null ? (float) $attempt['maxScore'] : null,
+            'percentage' => $attempt['percentage'] !== null ? (float) $attempt['percentage'] : null,
+            'passed' => $attempt['passed'] !== null ? (bool) $attempt['passed'] : null,
+            'manualReviewNotes' => $attempt['reviewNotes'] ?? null,
+            'result' => $result,
         ];
     }
 }

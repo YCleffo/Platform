@@ -88,7 +88,7 @@
   --shadow-card: 0px 4px 12px 0px rgb(0 0 0 / calc(0.10196078431372549 * var(--ui-shadow-strength, 1)));
   --shadow-popover: 0px 8px 24px 0px rgb(0 0 0 / calc(0.1411764705882353 * var(--ui-shadow-strength, 1)));
   --shadow-modal: 0px 24px 64px -12px rgb(0 0 0 / calc(0.23921568627450981 * var(--ui-shadow-strength, 1)));
-  --shadow-focus-ring: 0px 0px 0px 3px #2260FF40;
+  --shadow-focus-ring: 0px 0px 0px 1px #2260FF29;
 }
 
 [data-theme='dark'] {
@@ -141,7 +141,7 @@
   --shadow-card: 0px 6px 18px 0px rgb(0 0 0 / calc(0.3215686274509804 * var(--ui-shadow-strength, 1)));
   --shadow-popover: 0px 10px 28px 0px rgb(0 0 0 / calc(0.4 * var(--ui-shadow-strength, 1)));
   --shadow-modal: 0px 28px 72px -12px rgb(0 0 0 / calc(0.5019607843137255 * var(--ui-shadow-strength, 1)));
-  --shadow-focus-ring: 0px 0px 0px 3px #5B86FF59;
+  --shadow-focus-ring: 0px 0px 0px 1px #5B86FF33;
 }
 
 :root {
@@ -232,18 +232,18 @@
 :root {
   /* Typography (mobile values; desktop override below) */
   --type-display-family: "Inter";
-  --type-display-size: calc(28px * var(--ui-font-scale, 1));
-  --type-display-line: calc(34px * var(--ui-font-scale, 1));
+  --type-display-size: calc(24px * var(--ui-font-scale, 1));
+  --type-display-line: calc(30px * var(--ui-font-scale, 1));
   --type-display-weight: 600;
   --type-display-tracking: -0.01em;
   --type-h1-family: "Inter";
-  --type-h1-size: calc(22px * var(--ui-font-scale, 1));
-  --type-h1-line: calc(28px * var(--ui-font-scale, 1));
+  --type-h1-size: calc(19px * var(--ui-font-scale, 1));
+  --type-h1-line: calc(25px * var(--ui-font-scale, 1));
   --type-h1-weight: 600;
   --type-h1-tracking: -0.005em;
   --type-h2-family: "Inter";
-  --type-h2-size: calc(18px * var(--ui-font-scale, 1));
-  --type-h2-line: calc(24px * var(--ui-font-scale, 1));
+  --type-h2-size: calc(17px * var(--ui-font-scale, 1));
+  --type-h2-line: calc(22px * var(--ui-font-scale, 1));
   --type-h2-weight: 600;
   --type-h2-tracking: -0.0025em;
   --type-h3-family: "Inter";
@@ -252,13 +252,13 @@
   --type-h3-weight: 600;
   --type-h3-tracking: 0;
   --type-body-large-family: "Inter";
-  --type-body-large-size: calc(16px * var(--ui-font-scale, 1));
-  --type-body-large-line: calc(24px * var(--ui-font-scale, 1));
+  --type-body-large-size: calc(14px * var(--ui-font-scale, 1));
+  --type-body-large-line: calc(20px * var(--ui-font-scale, 1));
   --type-body-large-weight: 400;
   --type-body-large-tracking: 0;
   --type-body-large-emphasis-family: "Inter";
-  --type-body-large-emphasis-size: calc(16px * var(--ui-font-scale, 1));
-  --type-body-large-emphasis-line: calc(24px * var(--ui-font-scale, 1));
+  --type-body-large-emphasis-size: calc(14px * var(--ui-font-scale, 1));
+  --type-body-large-emphasis-line: calc(20px * var(--ui-font-scale, 1));
   --type-body-large-emphasis-weight: 500;
   --type-body-large-emphasis-tracking: 0;
   --type-body-medium-family: "Inter";
@@ -302,8 +302,8 @@
   --type-button-m-weight: 500;
   --type-button-m-tracking: 0;
   --type-button-l-family: "Inter";
-  --type-button-l-size: calc(16px * var(--ui-font-scale, 1));
-  --type-button-l-line: calc(24px * var(--ui-font-scale, 1));
+  --type-button-l-size: calc(14px * var(--ui-font-scale, 1));
+  --type-button-l-line: calc(20px * var(--ui-font-scale, 1));
   --type-button-l-weight: 500;
   --type-button-l-tracking: 0;
   --type-metric-number-family: "Inter";
@@ -317,8 +317,8 @@
   --type-overline-label-weight: 500;
   --type-overline-label-tracking: 0.02em;
   --type-link-medium-family: "Inter";
-  --type-link-medium-size: calc(14px * var(--ui-font-scale, 1));
-  --type-link-medium-line: calc(20px * var(--ui-font-scale, 1));
+  --type-link-medium-size: calc(13px * var(--ui-font-scale, 1));
+  --type-link-medium-line: calc(18px * var(--ui-font-scale, 1));
   --type-link-medium-weight: 500;
   --type-link-medium-tracking: 0;
   --type-link-small-family: "Inter";
@@ -337,8 +337,8 @@
   --type-strikethrough-small-weight: 400;
   --type-strikethrough-small-tracking: 0;
   --type-table-text-family: "Inter";
-  --type-table-text-size: calc(14px * var(--ui-font-scale, 1));
-  --type-table-text-line: calc(20px * var(--ui-font-scale, 1));
+  --type-table-text-size: calc(13px * var(--ui-font-scale, 1));
+  --type-table-text-line: calc(18px * var(--ui-font-scale, 1));
   --type-table-text-weight: 400;
   --type-table-text-tracking: 0;
   --type-table-header-family: "Inter";
@@ -351,43 +351,43 @@
 @media (min-width: 768px) {
   :root {
     --type-display-family: "Inter";
-    --type-display-size: calc(32px * var(--ui-font-scale, 1));
-    --type-display-line: calc(40px * var(--ui-font-scale, 1));
+    --type-display-size: calc(28px * var(--ui-font-scale, 1));
+    --type-display-line: calc(36px * var(--ui-font-scale, 1));
     --type-display-weight: 600;
     --type-display-tracking: -0.01em;
     --type-h1-family: "Inter";
-    --type-h1-size: calc(24px * var(--ui-font-scale, 1));
-    --type-h1-line: calc(32px * var(--ui-font-scale, 1));
+    --type-h1-size: calc(22px * var(--ui-font-scale, 1));
+    --type-h1-line: calc(28px * var(--ui-font-scale, 1));
     --type-h1-weight: 600;
     --type-h1-tracking: -0.005em;
     --type-h2-family: "Inter";
-    --type-h2-size: calc(20px * var(--ui-font-scale, 1));
-    --type-h2-line: calc(28px * var(--ui-font-scale, 1));
+    --type-h2-size: calc(18px * var(--ui-font-scale, 1));
+    --type-h2-line: calc(24px * var(--ui-font-scale, 1));
     --type-h2-weight: 600;
     --type-h2-tracking: -0.0025em;
     --type-h3-family: "Inter";
-    --type-h3-size: calc(18px * var(--ui-font-scale, 1));
-    --type-h3-line: calc(24px * var(--ui-font-scale, 1));
+    --type-h3-size: calc(16px * var(--ui-font-scale, 1));
+    --type-h3-line: calc(22px * var(--ui-font-scale, 1));
     --type-h3-weight: 600;
     --type-h3-tracking: 0;
     --type-body-large-family: "Inter";
-    --type-body-large-size: calc(16px * var(--ui-font-scale, 1));
-    --type-body-large-line: calc(24px * var(--ui-font-scale, 1));
+    --type-body-large-size: calc(14px * var(--ui-font-scale, 1));
+    --type-body-large-line: calc(20px * var(--ui-font-scale, 1));
     --type-body-large-weight: 400;
     --type-body-large-tracking: 0;
     --type-body-large-emphasis-family: "Inter";
-    --type-body-large-emphasis-size: calc(16px * var(--ui-font-scale, 1));
-    --type-body-large-emphasis-line: calc(24px * var(--ui-font-scale, 1));
+    --type-body-large-emphasis-size: calc(14px * var(--ui-font-scale, 1));
+    --type-body-large-emphasis-line: calc(20px * var(--ui-font-scale, 1));
     --type-body-large-emphasis-weight: 500;
     --type-body-large-emphasis-tracking: 0;
     --type-body-medium-family: "Inter";
-    --type-body-medium-size: calc(14px * var(--ui-font-scale, 1));
-    --type-body-medium-line: calc(20px * var(--ui-font-scale, 1));
+    --type-body-medium-size: calc(13px * var(--ui-font-scale, 1));
+    --type-body-medium-line: calc(19px * var(--ui-font-scale, 1));
     --type-body-medium-weight: 400;
     --type-body-medium-tracking: 0;
     --type-body-medium-emphasis-family: "Inter";
-    --type-body-medium-emphasis-size: calc(14px * var(--ui-font-scale, 1));
-    --type-body-medium-emphasis-line: calc(20px * var(--ui-font-scale, 1));
+    --type-body-medium-emphasis-size: calc(13px * var(--ui-font-scale, 1));
+    --type-body-medium-emphasis-line: calc(19px * var(--ui-font-scale, 1));
     --type-body-medium-emphasis-weight: 500;
     --type-body-medium-emphasis-tracking: 0;
     --type-body-small-family: "Inter";
@@ -416,18 +416,18 @@
     --type-button-s-weight: 500;
     --type-button-s-tracking: 0;
     --type-button-m-family: "Inter";
-    --type-button-m-size: calc(14px * var(--ui-font-scale, 1));
-    --type-button-m-line: calc(20px * var(--ui-font-scale, 1));
+    --type-button-m-size: calc(13px * var(--ui-font-scale, 1));
+    --type-button-m-line: calc(18px * var(--ui-font-scale, 1));
     --type-button-m-weight: 500;
     --type-button-m-tracking: 0;
     --type-button-l-family: "Inter";
-    --type-button-l-size: calc(16px * var(--ui-font-scale, 1));
-    --type-button-l-line: calc(24px * var(--ui-font-scale, 1));
+    --type-button-l-size: calc(15px * var(--ui-font-scale, 1));
+    --type-button-l-line: calc(22px * var(--ui-font-scale, 1));
     --type-button-l-weight: 500;
     --type-button-l-tracking: 0;
     --type-table-text-family: "Inter";
-    --type-table-text-size: calc(14px * var(--ui-font-scale, 1));
-    --type-table-text-line: calc(20px * var(--ui-font-scale, 1));
+    --type-table-text-size: calc(13px * var(--ui-font-scale, 1));
+    --type-table-text-line: calc(18px * var(--ui-font-scale, 1));
     --type-table-text-weight: 400;
     --type-table-text-tracking: 0;
     --type-table-header-family: "Inter";
@@ -446,8 +446,8 @@
     --type-overline-label-weight: 500;
     --type-overline-label-tracking: 0.02em;
     --type-link-medium-family: "Inter";
-    --type-link-medium-size: calc(14px * var(--ui-font-scale, 1));
-    --type-link-medium-line: calc(20px * var(--ui-font-scale, 1));
+    --type-link-medium-size: calc(13px * var(--ui-font-scale, 1));
+    --type-link-medium-line: calc(18px * var(--ui-font-scale, 1));
     --type-link-medium-weight: 500;
     --type-link-medium-tracking: 0;
     --type-link-small-family: "Inter";

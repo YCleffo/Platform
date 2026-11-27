@@ -35,6 +35,13 @@ export interface ParentLesson {
   topic?: string | null;
   summary?: string | null;
 }
+export interface HomeworkMaterial {
+  id: string;
+  name: string;
+  mime: string;
+  sizeBytes: number;
+  createdAt?: string;
+}
 export interface ParentHomework {
   id: string;
   title: string;
@@ -51,6 +58,29 @@ export interface ParentHomework {
     comment: string | null;
     createdAt: string;
   } | null;
+  materials?: HomeworkMaterial[];
+}
+export interface ParentUpcomingAssessment {
+  id: string;
+  activityId: string;
+  title: string;
+  pluginCode: string;
+  dueAt: string | null;
+  opensAt: string | null;
+  status: string;
+}
+export interface ParentActivityResult {
+  id?: string;
+  activityId?: string;
+  activityCode?: string;
+  activityName?: string;
+  status?: string;
+  finishedAt?: string | null;
+  rawScore?: number | null;
+  maxScore?: number | null;
+  accuracy?: number | null;
+  passed?: boolean | null;
+  educationalGrade?: string | null;
 }
 export interface AttendanceTotals {
   present: number;
@@ -64,6 +94,8 @@ export interface ParentHome {
   results: ParentLesson[];
   homework: ParentHomework[];
   attendance: AttendanceTotals;
+  upcomingAssessments?: ParentUpcomingAssessment[];
+  activityResults?: ParentActivityResult[];
   unreadCount: number;
 }
 export interface ParentProgress {
@@ -79,7 +111,7 @@ export interface ParentProgress {
     language?: string;
     durationSeconds?: number;
   }[];
-  activities: { id?: string; activityName?: string; status?: string; finishedAt?: string | null }[];
+  activities: ParentActivityResult[];
   achievements: Achievement[];
   activityProgress: ActivityProgress;
 }
@@ -357,6 +389,12 @@ export const parentApi = {
       `${childPath(child, 'homework')}?offset=${offset}`,
       page(homeworkGuard),
       child.organizationId,
+      signal,
+    ),
+  downloadHomeworkMaterial: (child: ParentChild, fileId: string, signal?: AbortSignal) =>
+    coreAdminHttp.binary(
+      `${childPath(child, `homework/files/${encodeURIComponent(fileId)}`)}`,
+      { 'X-Education-Organization': child.organizationId },
       signal,
     ),
   progress: (child: ParentChild, signal?: AbortSignal, from?: string, to?: string) =>

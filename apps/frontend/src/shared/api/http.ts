@@ -67,7 +67,9 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
     const url = buildUrl(config.baseUrl, path, options.query);
     const headers = new Headers({ Accept: 'application/json', ...config.getClientHeaders?.() });
     const multipart = options.body instanceof FormData;
-    if (options.body !== undefined && !multipart) {
+    const isBinary = typeof Blob !== 'undefined' && options.body instanceof Blob
+      || typeof ArrayBuffer !== 'undefined' && options.body instanceof ArrayBuffer;
+    if (options.body !== undefined && !multipart && !isBinary) {
       headers.set('Content-Type', 'application/json');
     }
     if (options.idempotencyKey !== undefined) {
@@ -80,7 +82,7 @@ export function createHttpClient(config: HttpClientConfig): HttpClient {
       headers.set(key, value);
     }
 
-    const body = multipart ? options.body as FormData : options.body === undefined ? undefined : JSON.stringify(options.body);
+    const body = multipart || isBinary ? (options.body as BodyInit) : options.body === undefined ? undefined : JSON.stringify(options.body);
 
     let response: Response | undefined;
     for (let attempt = 1; response === undefined; attempt += 1) {
@@ -220,11 +222,25 @@ function parseJson(raw: string): unknown {
 
 function toApiError(status: number, payload: unknown, retryAfterHeader: string | null): ApiError {
   const envelope = isErrorEnvelope(payload) ? payload : null;
-  const code = envelope?.error.code ?? 'http_error';
-  const message = envelope?.error.message ?? 'The request failed.';
-  const meta = envelope?.error.meta;
-  return new ApiError(status, code, message, parseRetryAfter(retryAfterHeader),
-    typeof meta === 'object' && meta !== null && !Array.isArray(meta) ? meta as Record<string, unknown> : undefined);
+  if (envelope !== null) {
+    const meta = envelope.error.meta;
+    return new ApiError(
+      status,
+      envelope.error.code,
+      envelope.error.message,
+      parseRetryAfter(retryAfterHeader),
+      typeof meta === 'object' && meta !== null && !Array.isArray(meta)
+        ? (meta as Record<string, unknown>)
+        : undefined,
+    );
+  }
+  if (typeof payload === 'object' && payload !== null && !Array.isArray(payload)) {
+    const obj = payload as Record<string, unknown>;
+    if (typeof obj.error === 'string' && typeof obj.message === 'string') {
+      return new ApiError(status, obj.error, obj.message, parseRetryAfter(retryAfterHeader), obj);
+    }
+  }
+  return new ApiError(status, 'http_error', 'The request failed.', parseRetryAfter(retryAfterHeader));
 }
 
 function isErrorEnvelope(payload: unknown): payload is ApiErrorEnvelope {

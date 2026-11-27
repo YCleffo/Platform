@@ -3,11 +3,12 @@ import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppConfirmDialog from '@/shared/ui/overlays/AppConfirmDialog.vue';
-import { formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
+import { addCalendarDays, formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
 import { educationApi } from './api';
 import { useEducationWorkspace } from './workspace';
 import { useEducationError, useEducationMutation, useEducationResource } from './resources';
 import { useEducationI18n } from './i18n';
+import { resultStatusKey, resultStatusTone } from './journal';
 import EducationState from './EducationState.vue';
 import StudentCurriculumProgress from './StudentCurriculumProgress.vue';
 import HomeworkSummary from './homework/HomeworkSummary.vue';
@@ -19,8 +20,8 @@ const issue = useEducationError();
 const id = computed(() => String(route.params.id ?? ''));
 const attendanceOffset = ref(0);
 const resultsOffset = ref(0);
-const from = ref('');
-const to = ref('');
+const from = ref(addCalendarDays(workspace.header!.date, -30));
+const to = ref(workspace.header!.date);
 const periodInvalid = computed(() => !!from.value && !!to.value && from.value > to.value);
 const period = computed(() => ({ from: from.value, to: to.value }));
 const { data, loading, error, refresh } = useEducationResource(
@@ -62,9 +63,7 @@ function date(value: string): string {
   );
 }
 function statusLabel(status: string): string {
-  return t(
-    `education.${status === 'pending' ? 'notAssessed' : status === 'needs_support' ? 'needsSupport' : status}`,
-  );
+  return t(`education.${resultStatusKey(status)}`);
 }
 const inviteCode = ref('');
 const confirmRevoke = ref(false);
@@ -99,16 +98,22 @@ async function reconcileAccount(): Promise<void> {
 </script>
 <template>
   <section>
-    <HomeworkSummary :student-id="id" />
-    <StudentCurriculumProgress :student-id="id" />
     <header class="edu-page-title">
       <h1>{{ data?.card.name ?? t('education.studentCard') }}</h1>
-      <RouterLink
-        to="/people"
-        class="edu-link"
-      >
-        {{ t('education.students') }}
-      </RouterLink>
+      <div class="edu-form-actions">
+        <RouterLink
+          to="/messages/new"
+          class="edu-button"
+        >
+          {{ t('education.writeMessage') }}
+        </RouterLink>
+        <RouterLink
+          to="/people"
+          class="edu-link"
+        >
+          {{ t('education.students') }}
+        </RouterLink>
+      </div>
     </header>
     <EducationState
       :loading="loading"
@@ -146,6 +151,8 @@ async function reconcileAccount(): Promise<void> {
           </li>
         </ul>
       </article>
+      <HomeworkSummary :student-id="id" />
+      <StudentCurriculumProgress :student-id="id" />
       <article class="edu-card">
         <h2>{{ t('education.studentCabinet') }}</h2>
         <p v-if="data.card.account && !data.card.account.revokedAt">
@@ -338,7 +345,7 @@ async function reconcileAccount(): Promise<void> {
           </div>
           <span
             class="edu-status"
-            :class="`edu-status--${entry.status === 'needs_support' ? 'cancelled' : entry.status}`"
+            :class="`edu-status--${resultStatusTone(entry.status)}`"
           >
             {{ statusLabel(entry.status) }}
           </span>

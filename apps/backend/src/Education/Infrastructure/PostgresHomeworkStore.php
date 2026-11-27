@@ -26,7 +26,8 @@ final readonly class PostgresHomeworkStore implements HomeworkStore
         h.activity_config::text AS "activityConfig",h.max_attempts AS "maxAttempts",h.attempt_policy AS "attemptPolicy",
         h.status,h.version,h.created_at::text AS "createdAt",h.published_at::text AS "publishedAt",h.closed_at::text AS "closedAt",h.archived_at::text AS "archivedAt"';
     private const RECIPIENT = 'r.id::text,r.assignment_id::text AS "assignmentId",r.organization_id::text AS "organizationId",
-        r.student_id::text AS "studentId",r.person_id::text AS "personId",r.assigned_at::text AS "assignedAt"';
+        r.student_id::text AS "studentId",r.person_id::text AS "personId",r.assigned_at::text AS "assignedAt",
+        r.activity_assignment_id::text AS "activityAssignmentId"';
     private const TEACHER = '(h.author_account_id=CAST(:actor AS uuid) OR (h.group_id IS NOT NULL AND education.can_teach_group(h.organization_id,CAST(:actor AS uuid),h.group_id)))';
 
     public function assignment(Scope $scope, string $id, bool $lock = false): array

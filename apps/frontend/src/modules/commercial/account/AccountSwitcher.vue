@@ -70,7 +70,7 @@ const open = ref(false);
 
 .switcher__button:focus-visible {
   border-color: var(--focus-border);
-  box-shadow: var(--focus-ring);
+  box-shadow: none;
   outline: none;
   transition: var(--theme-transition);
 }

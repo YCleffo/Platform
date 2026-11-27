@@ -3,21 +3,30 @@ import { computed, nextTick, onBeforeUnmount, ref, watch, type Component } from 
 import { RouterLink, useRoute, useRouter, type RouteLocationRaw } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
+  Bell,
   Building2,
   ChevronRight,
+  Clock,
+  Command,
   Eye,
+  Inbox,
   Layers,
   LayoutGrid,
   LogIn,
   LogOut,
+  Message,
   Moon,
+  Search,
   Settings,
   ShieldCheck,
   Sun,
   Tag,
+  Trash2,
 } from '@/shared/ui/icons';
 import { useAuthStore } from '@/core/auth/authStore';
+import { useAdminAuthStore } from '@/core/admin/adminAuthStore';
 import { useAccountStore } from '@/core/account/accountStore';
+import { useOperationsCenter } from '@/modules/workspace/useOperationsCenter';
 import { useTheme } from '@/app/theme';
 import { setLocale } from '@/shared/i18n';
 import { lockScroll, unlockScroll } from '@/shared/composables/useScrollLock';
@@ -34,7 +43,9 @@ interface MenuLink {
 const open = defineModel<boolean>({ default: false });
 
 const auth = useAuthStore();
+const adminAuth = useAdminAuthStore();
 const accountStore = useAccountStore();
+const operations = useOperationsCenter();
 const route = useRoute();
 const router = useRouter();
 const { t, locale } = useI18n();
@@ -64,8 +75,30 @@ const accountInitials = computed(() => {
 const mainLinks = computed<MenuLink[]>(() => [
   { label: t('nav.catalog'), to: { name: 'catalog' }, routeName: 'catalog', icon: LayoutGrid },
   { label: t('nav.cabinet'), to: { name: 'cabinet' }, routeName: 'cabinet', icon: Building2 },
+  { label: t('nav.drive'), to: { name: 'drive' }, routeName: 'drive', icon: Inbox },
   { label: t('nav.settings'), to: { name: 'settings' }, routeName: 'settings', icon: Settings },
 ]);
+
+const workspaceLinks = computed<MenuLink[]>(() => {
+  if (!adminAuth.isAuthenticated) return [];
+  return [
+    { label: t('nav.workspace'), to: { name: 'workspace' }, routeName: 'workspace', icon: Layers },
+    { label: t('nav.search'), to: { name: 'search' }, routeName: 'search', icon: Search },
+    {
+      label: t('nav.notifications'),
+      to: { name: 'universal-notifications' },
+      routeName: 'universal-notifications',
+      icon: Bell,
+    },
+    { label: t('nav.trash'), to: { name: 'trash' }, routeName: 'trash', icon: Trash2 },
+    {
+      label: t('navigation.chat'),
+      to: { name: 'universal-chat' },
+      routeName: 'universal-chat',
+      icon: Message,
+    },
+  ];
+});
 
 const accountLinks = computed<MenuLink[]>(() => {
   if (accountId.value === null || detail.value === null) {
@@ -297,6 +330,42 @@ onBeforeUnmount(deactivateOverlay);
               </div>
             </nav>
 
+            <!-- Workspace Navigation -->
+            <nav
+              v-if="workspaceLinks.length > 0"
+              class="mobile-menu__section"
+              :aria-label="$t('nav.workspace')"
+            >
+              <p class="mobile-menu__section-title">{{ $t('nav.workspace') }}</p>
+              <div class="mobile-menu__card">
+                <RouterLink
+                  v-for="link in workspaceLinks"
+                  :key="link.routeName"
+                  class="mobile-menu__link"
+                  :class="{ 'mobile-menu__link--active': currentRoute === link.routeName }"
+                  :to="link.to"
+                  :aria-current="currentRoute === link.routeName ? 'page' : undefined"
+                  @click="close"
+                >
+                  <span
+                    class="mobile-menu__link-icon"
+                    aria-hidden="true"
+                  >
+                    <component
+                      :is="link.icon"
+                      :size="18"
+                    />
+                  </span>
+                  <span class="mobile-menu__link-label">{{ link.label }}</span>
+                  <ChevronRight
+                    class="mobile-menu__link-arrow"
+                    :size="16"
+                    aria-hidden="true"
+                  />
+                </RouterLink>
+              </div>
+            </nav>
+
             <!-- Account Navigation -->
             <nav
               v-if="accountLinks.length > 0"
@@ -375,6 +444,7 @@ onBeforeUnmount(deactivateOverlay);
                 <button
                   type="button"
                   class="mobile-menu__quick-button"
+                  :aria-label="isDark ? $t('theme.light') : $t('theme.dark')"
                   @click="toggleTheme"
                 >
                   <span
@@ -391,17 +461,59 @@ onBeforeUnmount(deactivateOverlay);
                     />
                   </span>
                   <span class="mobile-menu__quick-text">
-                    {{ isDark ? $t('theme.light') : $t('theme.dark') }}
+                    {{ isDark ? $t('theme.shortLight') : $t('theme.shortDark') }}
                   </span>
                 </button>
 
                 <button
                   type="button"
                   class="mobile-menu__quick-button"
+                  :aria-label="`${localeLabel}: ${$t('theme.locale')}`"
                   @click="toggleLocale"
                 >
                   <span class="mobile-menu__locale-tag">{{ localeLabel }}</span>
-                  <span class="mobile-menu__quick-text">{{ $t('theme.locale') }}</span>
+                  <span class="mobile-menu__quick-text">{{ $t('theme.shortLocale') }}</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="mobile-menu__quick-button"
+                  :aria-label="$t('nav.commandPalette')"
+                  @click="
+                    () => {
+                      close();
+                      operations.commandPaletteOpen = true;
+                    }
+                  "
+                >
+                  <span
+                    class="mobile-menu__quick-icon"
+                    aria-hidden="true"
+                  >
+                    <Command :size="18" />
+                  </span>
+                  <span class="mobile-menu__quick-text">{{ $t('nav.commandPalette') }}</span>
+                </button>
+
+                <button
+                  v-if="adminAuth.isAuthenticated"
+                  type="button"
+                  class="mobile-menu__quick-button"
+                  :aria-label="$t('nav.operations')"
+                  @click="
+                    () => {
+                      close();
+                      operations.drawerOpen = true;
+                    }
+                  "
+                >
+                  <span
+                    class="mobile-menu__quick-icon"
+                    aria-hidden="true"
+                  >
+                    <Clock :size="18" />
+                  </span>
+                  <span class="mobile-menu__quick-text">{{ $t('nav.operations') }}</span>
                 </button>
               </div>
             </div>
@@ -518,7 +630,7 @@ onBeforeUnmount(deactivateOverlay);
 
 .mobile-menu__account:hover {
   border-color: var(--accent);
-  box-shadow: 0 4px 16px rgba(34, 96, 255, 0.12);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .mobile-menu__account:active {
@@ -533,12 +645,12 @@ onBeforeUnmount(deactivateOverlay);
   height: 44px;
   border-radius: var(--radius-circle);
   background: var(--accent);
-  color: var(--color-white);
+  color: var(--on-accent);
   font-size: var(--type-body-medium-emphasis-size);
   font-weight: var(--type-body-medium-emphasis-weight);
   line-height: var(--type-body-medium-emphasis-line);
   letter-spacing: var(--type-body-medium-emphasis-tracking);
-  box-shadow: 0 2px 10px rgba(34, 96, 255, 0.3);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 28%, transparent);
   flex: 0 0 auto;
 }
 
@@ -685,13 +797,16 @@ onBeforeUnmount(deactivateOverlay);
 
 .mobile-menu__link--active .mobile-menu__link-icon {
   background: var(--accent);
-  color: var(--color-white);
-  box-shadow: 0 2px 8px rgba(34, 96, 255, 0.3);
+  color: var(--on-accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 .mobile-menu__link-label {
   flex: 1;
   min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: var(--type-body-medium-size);
   font-weight: var(--type-body-medium-weight);
   line-height: var(--type-body-medium-line);
@@ -749,6 +864,13 @@ onBeforeUnmount(deactivateOverlay);
 
 .mobile-menu__quick-button:active {
   opacity: 0.85;
+}
+
+.mobile-menu__quick-text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mobile-menu__quick-icon {
@@ -815,12 +937,12 @@ onBeforeUnmount(deactivateOverlay);
 .mobile-menu__auth--login {
   background: var(--accent);
   border: 1px solid transparent;
-  color: var(--color-white);
-  box-shadow: 0 4px 14px rgba(34, 96, 255, 0.25);
+  color: var(--on-accent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 26%, transparent);
 }
 
 .mobile-menu__auth--login:hover {
-  background: var(--accent-hover, #1d4ed8);
+  background: var(--accent-hover);
 }
 
 /* Animations */

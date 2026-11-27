@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useEducationI18n } from '../i18n';
 import { assessmentApi } from './assessmentApi';
-import type { QuestionBankItem, AssessmentQuestion } from '../activityTypes';
+import { activityApi } from '@/modules/activity/activityApi';
+import type { QuestionBankItem, AssessmentQuestion, QuestionType } from '../activityTypes';
 
-const props = defineProps<{
-  open: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    open: boolean;
+    mode?: 'education' | 'activity';
+    organizationId?: string;
+  }>(),
+  {
+    mode: 'education',
+    organizationId: '',
+  },
+);
 
 const emit = defineEmits<{
   close: [];
@@ -19,16 +28,49 @@ const loading = ref(false);
 const search = ref('');
 const selectedDifficulty = ref<number | null>(null);
 const category = ref('');
+let uidCounter = 0;
+
+function nextUniqueId(prefix: string): string {
+  uidCounter += 1;
+  return `${prefix}_${Date.now()}_${uidCounter}_${Math.random().toString(36).slice(2, 6)}`;
+}
 
 async function loadQuestions(): Promise<void> {
   loading.value = true;
   try {
-    const res = await assessmentApi.listQuestionBank({
-      search: search.value || undefined,
-      difficulty: selectedDifficulty.value ?? undefined,
-      category: category.value || undefined,
-    });
-    items.value = res.items;
+    if (props.mode === 'activity' && props.organizationId) {
+      const res = await activityApi.listQuestionBank(props.organizationId, {
+        q: search.value || undefined,
+        difficulty: selectedDifficulty.value ?? undefined,
+        category: category.value || undefined,
+      });
+      items.value = res.items.map((it) => ({
+        id: it.id,
+        category: it.category,
+        tags: it.tags,
+        difficulty: (it.difficulty as 1 | 2 | 3) || 1,
+        questionType: it.questionType as QuestionType,
+        content: {
+          prompt: String(it.content?.prompt ?? ''),
+          options: Array.isArray(it.content?.options) ? (it.content.options as QuestionBankItem['content']['options']) : undefined,
+          pairs: Array.isArray(it.content?.pairs) ? (it.content.pairs as QuestionBankItem['content']['pairs']) : undefined,
+          items: Array.isArray(it.content?.items) ? (it.content.items as string[]) : undefined,
+          tolerance: typeof it.content?.tolerance === 'number' ? it.content.tolerance : undefined,
+        },
+        answerKey: it.answerKey,
+        explanation: it.explanation,
+        defaultPoints: it.defaultPoints,
+        createdAt: it.updatedAt,
+        updatedAt: it.updatedAt,
+      }));
+    } else {
+      const res = await assessmentApi.listQuestionBank({
+        search: search.value || undefined,
+        difficulty: selectedDifficulty.value ?? undefined,
+        category: category.value || undefined,
+      });
+      items.value = res.items;
+    }
   } catch {
     items.value = [];
   } finally {
@@ -37,18 +79,49 @@ async function loadQuestions(): Promise<void> {
 }
 
 function handleSelect(item: QuestionBankItem): void {
+  const idMap = new Map<string, string>();
+  const clonedOptions = item.content.options
+    ? item.content.options.map((opt) => {
+        const freshId = nextUniqueId('opt');
+        idMap.set(opt.id, freshId);
+        return { id: freshId, label: opt.label };
+      })
+    : undefined;
+
+  let clonedAnswerKey = item.answerKey;
+  if (item.questionType === 'single_choice' && typeof item.answerKey === 'string') {
+    clonedAnswerKey = idMap.get(item.answerKey) ?? clonedOptions?.[0]?.id ?? item.answerKey;
+  } else if (item.questionType === 'multi_choice' && Array.isArray(item.answerKey)) {
+    clonedAnswerKey = item.answerKey.map((k) => idMap.get(String(k)) ?? String(k));
+  } else if (item.questionType === 'matching' && item.answerKey && typeof item.answerKey === 'object') {
+    clonedAnswerKey = { ...(item.answerKey as Record<string, string>) };
+  } else if (item.questionType === 'ordering' && Array.isArray(item.answerKey)) {
+    clonedAnswerKey = [...item.answerKey];
+  }
+
   const q: AssessmentQuestion = {
-    id: `q_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    id: nextUniqueId('q'),
     type: item.questionType,
     prompt: item.content.prompt,
-    points: item.defaultPoints,
-    options: item.content.options ? [...item.content.options] : undefined,
+    points: item.defaultPoints || 1,
+    options: clonedOptions,
+    pairs: item.content.pairs ? item.content.pairs.map((p) => ({ ...p })) : undefined,
+    items: item.content.items ? [...item.content.items] : undefined,
     tolerance: item.content.tolerance,
-    answerKey: item.answerKey,
+    answerKey: clonedAnswerKey,
     explanation: item.explanation,
   };
   emit('select', q);
 }
+
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      void loadQuestions();
+    }
+  },
+);
 
 onMounted(() => {
   if (props.open) {

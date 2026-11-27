@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, useAttrs } from 'vue';
 defineOptions({ inheritAttrs: false });
 const props = withDefaults(
@@ -194,14 +194,10 @@ onBeforeUnmount(() => {
 }
 @media (hover: hover) {
   .app-switch:hover:not(.app-switch--disabled) .app-switch__track {
-    box-shadow:
-      inset 0 0 0 1px var(--text-2),
-      var(--focus-ring);
+    box-shadow: inset 0 0 0 1px var(--text-2);
   }
   .app-switch:hover:not(.app-switch--disabled) input:checked + .app-switch__track {
-    box-shadow:
-      inset 0 0 0 1px var(--accent),
-      var(--focus-ring);
+    box-shadow: inset 0 0 0 1px var(--accent);
   }
 }
 @media (forced-colors: active) {

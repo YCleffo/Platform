@@ -7,7 +7,10 @@
   "vitest.configSearchPatternInclude": "apps/frontend/vitest.config.ts",
   "yaml.customTags": [
     "!override sequence:array",
-    "!reset sequence:array"
+    "!override mapping:object",
+    "!reset sequence:array",
+    "!reset mapping:object"
   ],
-  "git.ignoreLimitWarning": true
+  "git.ignoreLimitWarning": true,
+  "python-envs.defaultEnvManager": "ms-python.python:system"
 }

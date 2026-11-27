@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { coreAdminSession, coreAdminSessionEpoch } from '@/core/admin/session';
 import {
@@ -15,6 +15,7 @@ import { useEducationError } from '../resources';
 import { useEducationI18n } from '../i18n';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
+import AppFileDropzone from '@/shared/ui/fields/AppFileDropzone.vue';
 import EducationState from '../EducationState.vue';
 import type { Page } from '../api';
 import { ApiError } from '@/shared/api/errors';
@@ -248,10 +249,8 @@ async function resolveConflict(conflict: FileConflict): Promise<void> {
       t('education.conflictResolved'),
     );
 }
-async function upload(event: Event): Promise<void> {
-  const input = event.target as HTMLInputElement,
-    file = input.files?.[0];
-  input.value = '';
+async function onFilesSelected(files: File[]): Promise<void> {
+  const file = files[0];
   if (!file || uploadBusy.value || downloading.value !== null) return;
   const path = [uploadFolder.value.trim().replace(/^\/+|\/+$/g, ''), file.name]
     .filter(Boolean)
@@ -440,41 +439,26 @@ function formatDate(value: string | null): string {
           :label="t('education.uploadFolderHint')"
           maxlength="400"
         />
-        <label class="edu-button edu-button--primary">
-          {{ uploadBusy ? t('education.loading') : t('education.uploadFile') }}
-          <input
-            type="file"
-            class="edu-visually-hidden"
-            :disabled="uploadBusy || downloading !== null"
-            @change="upload"
-          />
-        </label>
-        <p>{{ t('education.uploadReselectHint') }}</p>
-        <div
-          v-if="uploadBusy && transferProgress"
-          class="edu-transfer-progress"
-          role="status"
-        >
-          <label for="document-transfer-progress">
-            {{ t(`education.transfer_${transferProgress.phase}`) }}
-          </label>
-          <progress
-            id="document-transfer-progress"
-            :value="transferProgress.loaded"
-            :max="transferProgress.total || 1"
-          ></progress>
-          <span>
-            {{ formatBytes(transferProgress.loaded) }} / {{ formatBytes(transferProgress.total) }}
-          </span>
-          <button
-            v-if="transferProgress.phase !== 'verifying'"
-            class="edu-button"
-            type="button"
-            @click="transferController?.abort()"
-          >
-            {{ t('education.cancelTransfer') }}
-          </button>
-        </div>
+        <AppFileDropzone
+          compact
+          :label="t('education.uploadFile')"
+          :hint="t('education.uploadReselectHint')"
+          :disabled="uploadBusy || downloading !== null"
+          :busy="uploadBusy"
+          :progress="
+            transferProgress
+              ? Math.round((transferProgress.loaded / (transferProgress.total || 1)) * 100)
+              : null
+          "
+          :status-text="
+            transferProgress
+              ? `${t(`education.transfer_${transferProgress.phase}`)} · ${formatBytes(transferProgress.loaded)} / ${formatBytes(transferProgress.total)}`
+              : t('education.loading')
+          "
+          :cancellable="Boolean(transferProgress && transferProgress.phase !== 'verifying')"
+          @select="onFilesSelected"
+          @cancel="transferController?.abort()"
+        />
         <div
           v-if="downloading !== null && downloadProgress"
           class="edu-transfer-progress"

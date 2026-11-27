@@ -32,7 +32,7 @@ export interface HomeworkSubmission {
 }
 export interface HomeworkRecipient { recipientId: string; studentId: string; personId: string; name: string; submissionId: string | null; state: SubmissionState; version: number; submittedAt: string | null; late: boolean; resultStatus: ResultStatus | null }
 export interface HomeworkDetail { assignment: HomeworkAssignment; now: string; counts?: Record<string, number> }
-export interface HomeworkAnswer extends HomeworkDetail { recipient: { id?: string; name?: string; studentId: string }; submission: HomeworkSubmission }
+export interface HomeworkAnswer extends HomeworkDetail { recipient: { id?: string; name?: string; studentId: string; activityAssignmentId?: string | null }; submission: HomeworkSubmission }
 export interface HomeworkHistory { id?: string; version: number; action: string; createdAt: string }
 export interface HomeworkProgress { assigned: number; completed: number; pendingReview: number; returned: number; overdue: number; notStarted?: number; inProgress?: number }
 export type HomeworkPage<T> = Page<T> & { now: string };

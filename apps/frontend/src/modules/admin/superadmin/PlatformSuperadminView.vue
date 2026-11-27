@@ -870,7 +870,7 @@ onMounted(() => {
 }
 
 .superadmin__code {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--type-body-small-size);
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);

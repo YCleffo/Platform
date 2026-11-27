@@ -1,7 +1,16 @@
 import { computed, reactive, readonly, ref } from 'vue';
+import {
+  applyFontFamilyToRoot,
+  applyPaletteToRoot,
+  FONT_STACKS,
+  normalizeHex,
+  type ColorMode,
+  type FontFamilyKey,
+} from '@/app/theme/palette';
 
 export type Density = 'compact' | 'comfortable' | 'spacious';
 export type Shadows = 'none' | 'subtle' | 'normal' | 'strong';
+export type { ColorMode, FontFamilyKey };
 export interface Appearance {
   density: Density;
   fontScale: number;
@@ -13,13 +22,28 @@ export interface Appearance {
   animations: boolean;
   animationSpeed: number;
   themeDuration: number;
+  fontFamily: FontFamilyKey;
+  colorMode: ColorMode;
+  accentColor: string;
+  backgroundColor: string;
 }
 
 export const APPEARANCE_KEY = 'platform.appearance.v1';
 export const DEFAULT_APPEARANCE: Readonly<Appearance> = Object.freeze({
-  density: 'comfortable', fontScale: 1, spacingScale: 1, radiusScale: 1,
-  buttonPaddingX: 16, buttonPaddingY: 10, shadows: 'normal', animations: true,
-  animationSpeed: 1, themeDuration: 200,
+  density: 'comfortable',
+  fontScale: 1,
+  spacingScale: 1,
+  radiusScale: 1,
+  buttonPaddingX: 16,
+  buttonPaddingY: 10,
+  shadows: 'normal',
+  animations: true,
+  animationSpeed: 1,
+  themeDuration: 200,
+  fontFamily: 'inter',
+  colorMode: 'default',
+  accentColor: '#2260FF',
+  backgroundColor: '#F6F8FC',
 });
 
 export const APPEARANCE_PRESETS = {
@@ -30,12 +54,12 @@ export const APPEARANCE_PRESETS = {
 export type AppearancePreset = keyof typeof APPEARANCE_PRESETS;
 
 const NUMERIC_STEPS = {
-  fontScale: { min: .9, max: 1.4, step: .05 },
-  spacingScale: { min: .75, max: 1.25, step: .05 },
-  radiusScale: { min: 0, max: 1.5, step: .1 },
+  fontScale: { min: 0.85, max: 1.4, step: 0.05 },
+  spacingScale: { min: 0.75, max: 1.25, step: 0.05 },
+  radiusScale: { min: 0, max: 1.5, step: 0.1 },
   buttonPaddingX: { min: 8, max: 32, step: 1 },
   buttonPaddingY: { min: 6, max: 16, step: 1 },
-  animationSpeed: { min: .5, max: 2, step: .25 },
+  animationSpeed: { min: 0.5, max: 2, step: 0.25 },
   themeDuration: { min: 0, max: 600, step: 20 },
 } as const;
 
@@ -57,8 +81,16 @@ function stepped(
   return Number(Math.max(limits.min, Math.min(limits.max, aligned)).toFixed(6));
 }
 
+function isColorMode(value: unknown): value is ColorMode {
+  return value === 'default' || value === 'accent' || value === 'custom' || value === 'monochrome';
+}
+
+function isFontFamily(value: unknown): value is FontFamilyKey {
+  return typeof value === 'string' && value in FONT_STACKS;
+}
+
 export function normalizeAppearance(value: unknown): Appearance {
-  const v = typeof value === 'object' && value !== null ? value as Record<string, unknown> : {};
+  const v = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
   const d = DEFAULT_APPEARANCE;
   return {
     density: v.density === 'compact' || v.density === 'spacious' ? v.density : d.density,
@@ -71,6 +103,10 @@ export function normalizeAppearance(value: unknown): Appearance {
     animations: typeof v.animations === 'boolean' ? v.animations : d.animations,
     animationSpeed: stepped(v.animationSpeed, d.animationSpeed, NUMERIC_STEPS.animationSpeed),
     themeDuration: stepped(v.themeDuration, d.themeDuration, NUMERIC_STEPS.themeDuration),
+    fontFamily: isFontFamily(v.fontFamily) ? v.fontFamily : d.fontFamily,
+    colorMode: isColorMode(v.colorMode) ? v.colorMode : d.colorMode,
+    accentColor: normalizeHex(v.accentColor, d.accentColor),
+    backgroundColor: normalizeHex(v.backgroundColor, d.backgroundColor),
   };
 }
 
@@ -110,15 +146,31 @@ function apply(): void {
   if (accountInterfacePolicy?.transparency === false) root.dataset.transparency = 'opaque';
   else delete root.dataset.transparency;
   const values: Record<string, string> = {
-    '--ui-density-scale': String({ compact: .85, comfortable: 1, spacious: 1.15 }[state.density]),
-    '--ui-font-scale': String(state.fontScale), '--ui-spacing-scale': String(state.spacingScale),
+    '--ui-density-scale': String({ compact: 0.85, comfortable: 1, spacious: 1.15 }[state.density]),
+    '--ui-font-scale': String(state.fontScale),
+    '--ui-spacing-scale': String(state.spacingScale),
     '--ui-radius-scale': String(state.radiusScale),
-    '--ui-button-padding-x': `${state.buttonPaddingX}px`, '--ui-button-padding-y': `${state.buttonPaddingY}px`,
-    '--ui-shadow-strength': String({ none: 0, subtle: .6, normal: 1, strong: 1.4 }[state.shadows]),
+    '--ui-button-padding-x': `${state.buttonPaddingX}px`,
+    '--ui-button-padding-y': `${state.buttonPaddingY}px`,
+    '--ui-shadow-strength': String({ none: 0, subtle: 0.6, normal: 1, strong: 1.4 }[state.shadows]),
     '--ui-motion-scale': String(reduced ? 0 : 1 / state.animationSpeed),
     '--ui-theme-duration': `${state.themeDuration}ms`,
   };
   for (const [key, value] of Object.entries(values)) root.style.setProperty(key, value);
+
+  const resolvedTheme = root.dataset.theme === 'dark' ? 'dark' : 'light';
+  applyFontFamilyToRoot(root, state.fontFamily);
+  applyPaletteToRoot(root, {
+    colorMode: state.colorMode,
+    accentColor: state.accentColor,
+    backgroundColor: state.backgroundColor,
+    resolvedTheme,
+  });
+}
+
+/** Re-applies dynamic palette after a light/dark theme switch. */
+export function refreshAppearancePalette(): void {
+  apply();
 }
 
 function persist(): void {
@@ -142,8 +194,11 @@ function undoAppearance(): void {
 }
 const canUndo = computed(() => history.value.length > 0);
 const isDefault = computed(() => equal(state, { ...DEFAULT_APPEARANCE }));
-const activePreset = computed(() => (Object.keys(APPEARANCE_PRESETS) as AppearancePreset[]).find(key =>
-  Object.entries(APPEARANCE_PRESETS[key]).every(([name, value]) => state[name as keyof Appearance] === value)) ?? null);
+const activePreset = computed(() =>
+  (Object.keys(APPEARANCE_PRESETS) as AppearancePreset[]).find((key) =>
+    Object.entries(APPEARANCE_PRESETS[key]).every(([name, value]) => state[name as keyof Appearance] === value),
+  ) ?? null,
+);
 
 export function initAppearance(): () => void {
   stop?.();
@@ -163,11 +218,20 @@ export function initAppearance(): () => void {
 }
 
 export function useAppearance() {
-  return { appearance: readonly(state), systemReduced: readonly(systemReduced),
-    storageAvailable: readonly(storageAvailable), updateAppearance,
-    beginEdit, endEdit, undoAppearance, canUndo, isDefault, activePreset,
+  return {
+    appearance: readonly(state),
+    systemReduced: readonly(systemReduced),
+    storageAvailable: readonly(storageAvailable),
+    updateAppearance,
+    beginEdit,
+    endEdit,
+    undoAppearance,
+    canUndo,
+    isDefault,
+    activePreset,
     applyPreset: (preset: AppearancePreset) => { endEdit(); updateAppearance(APPEARANCE_PRESETS[preset]); },
-    resetAppearance: () => updateAppearance({ ...DEFAULT_APPEARANCE }) };
+    resetAppearance: () => updateAppearance({ ...DEFAULT_APPEARANCE }),
+  };
 }
 
 if (import.meta.hot) import.meta.hot.dispose(() => stop?.());

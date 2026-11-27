@@ -109,6 +109,16 @@ return [
         ? require __DIR__ . '/storage-routes.php' : []),
     ...(class_exists(\App\Media\Api\MediaAction::class)
         ? require __DIR__ . '/media-routes.php' : []),
+    ...(class_exists(\App\Chat\Api\ChatAction::class)
+        ? require __DIR__ . '/chat-routes.php' : []),
+    ...(class_exists(\App\Realtime\Api\RealtimeAction::class)
+        ? require __DIR__ . '/realtime-routes.php' : []),
+    ...(class_exists(\App\Notifications\Api\NotificationsAction::class)
+        ? require __DIR__ . '/notifications-routes.php' : []),
+    ...(class_exists(\App\Activity\Api\ActivityAction::class)
+        ? require __DIR__ . '/activity-routes.php' : []),
+    ...(class_exists(\App\Workspace\Api\WorkspaceAction::class)
+        ? require __DIR__ . '/workspace-routes.php' : []),
     Route::get('/api/core/privacy/work-items/representation')
         ->defaults(['kind' => 'representation'])
         ->middleware(RequireAuthentication::class, $permission('core.privacy.representations.manage'))

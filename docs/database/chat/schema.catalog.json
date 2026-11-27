@@ -1,0 +1,2521 @@
+{
+  "enums": [],
+  "views": [],
+  "tables": [
+    {
+      "rls": false,
+      "name": "delivery_receipts",
+      "schema": "chat",
+      "columns": [
+        {
+          "name": "message_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "status",
+          "type": "character varying(16)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "delivered_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "read_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "message_id",
+            "person_id"
+          ],
+          "name": "chat_delivery_receipts_msg_person_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_delivery_receipts_msg_person_idx ON chat.delivery_receipts USING btree (message_id, person_id)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "person_id",
+            "read_at"
+          ],
+          "name": "chat_receipts_person_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_receipts_person_idx ON chat.delivery_receipts USING btree (person_id, read_at)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "message_id",
+            "person_id"
+          ],
+          "name": "delivery_receipts_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX delivery_receipts_pkey ON chat.delivery_receipts USING btree (message_id, person_id)",
+          "attribute_count": 2
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "f",
+          "name": "delivery_receipts_message_id_fkey",
+          "columns": [
+            "message_id"
+          ],
+          "on_delete": "c",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (message_id) REFERENCES chat.messages(id) ON DELETE CASCADE",
+          "target_table": "messages",
+          "target_schema": "chat",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "delivery_receipts_message_id_not_null",
+          "columns": [
+            "message_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL message_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "delivery_receipts_person_id_not_null",
+          "columns": [
+            "person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL person_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "delivery_receipts_pkey",
+          "columns": [
+            "message_id",
+            "person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (message_id, person_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "delivery_receipts_status_check",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (status::text = ANY (ARRAY['delivered'::character varying, 'read'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "delivery_receipts_status_not_null",
+          "columns": [
+            "status"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL status",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "members",
+      "schema": "chat",
+      "columns": [
+        {
+          "name": "room_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "role",
+          "type": "character varying(24)",
+          "comment": null,
+          "default": "'member'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "can_write",
+          "type": "boolean",
+          "comment": null,
+          "default": "true",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bool",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "last_read_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "last_read_message_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "muted_until",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "pinned_order",
+          "type": "integer",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "int4",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "draft_text",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "draft_reply_to_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "draft_updated_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "joined_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "left_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "person_id",
+            "organization_id",
+            "room_id"
+          ],
+          "name": "chat_members_person_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": "(left_at IS NULL)",
+          "definition": "CREATE INDEX chat_members_person_idx ON chat.members USING btree (person_id, organization_id, room_id) WHERE (left_at IS NULL)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "person_id",
+            "organization_id"
+          ],
+          "name": "chat_members_person_org_active_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": "(left_at IS NULL)",
+          "definition": "CREATE INDEX chat_members_person_org_active_idx ON chat.members USING btree (person_id, organization_id) WHERE (left_at IS NULL)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "room_id",
+            "organization_id",
+            "person_id"
+          ],
+          "name": "chat_members_room_active_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": "(left_at IS NULL)",
+          "definition": "CREATE INDEX chat_members_room_active_idx ON chat.members USING btree (room_id, organization_id, person_id) WHERE (left_at IS NULL)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "room_id",
+            "person_id"
+          ],
+          "name": "members_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX members_pkey ON chat.members USING btree (room_id, person_id)",
+          "attribute_count": 2
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "members_can_write_not_null",
+          "columns": [
+            "can_write"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL can_write",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "members_joined_at_not_null",
+          "columns": [
+            "joined_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL joined_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "members_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "members_person_id_not_null",
+          "columns": [
+            "person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL person_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "members_pkey",
+          "columns": [
+            "room_id",
+            "person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (room_id, person_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "members_role_check",
+          "columns": [
+            "role"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (role::text = ANY (ARRAY['owner'::character varying, 'admin'::character varying, 'moderator'::character varying, 'member'::character varying, 'guest'::character varying, 'readonly'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "members_role_not_null",
+          "columns": [
+            "role"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL role",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "members_room_id_not_null",
+          "columns": [
+            "room_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL room_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "members_room_id_organization_id_fkey",
+          "columns": [
+            "room_id",
+            "organization_id"
+          ],
+          "on_delete": "c",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (room_id, organization_id) REFERENCES chat.rooms(id, organization_id) ON DELETE CASCADE",
+          "target_table": "rooms",
+          "target_schema": "chat",
+          "target_columns": [
+            "id",
+            "organization_id"
+          ],
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "message_deletions",
+      "schema": "chat",
+      "columns": [
+        {
+          "name": "message_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "message_id",
+            "person_id"
+          ],
+          "name": "message_deletions_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX message_deletions_pkey ON chat.message_deletions USING btree (message_id, person_id)",
+          "attribute_count": 2
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "message_deletions_deleted_at_not_null",
+          "columns": [
+            "deleted_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL deleted_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "message_deletions_message_id_fkey",
+          "columns": [
+            "message_id"
+          ],
+          "on_delete": "c",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (message_id) REFERENCES chat.messages(id) ON DELETE CASCADE",
+          "target_table": "messages",
+          "target_schema": "chat",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "message_deletions_message_id_not_null",
+          "columns": [
+            "message_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL message_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "message_deletions_person_id_not_null",
+          "columns": [
+            "person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL person_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "message_deletions_pkey",
+          "columns": [
+            "message_id",
+            "person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (message_id, person_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "message_edits",
+      "schema": "chat",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "message_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "editor_person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "previous_body",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "new_body",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "edited_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "message_id",
+            "edited_at"
+          ],
+          "name": "chat_message_edits_msg_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_message_edits_msg_idx ON chat.message_edits USING btree (message_id, edited_at DESC)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "message_edits_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX message_edits_pkey ON chat.message_edits USING btree (id)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "message_edits_edited_at_not_null",
+          "columns": [
+            "edited_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL edited_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "message_edits_editor_person_id_not_null",
+          "columns": [
+            "editor_person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL editor_person_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "message_edits_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "message_edits_message_id_fkey",
+          "columns": [
+            "message_id"
+          ],
+          "on_delete": "c",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (message_id) REFERENCES chat.messages(id) ON DELETE CASCADE",
+          "target_table": "messages",
+          "target_schema": "chat",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "message_edits_message_id_not_null",
+          "columns": [
+            "message_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL message_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "message_edits_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "messages",
+      "schema": "chat",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "room_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "sender_person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "sender_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "seq",
+          "type": "bigint",
+          "comment": null,
+          "default": "nextval('chat.messages_seq_seq'::regclass)",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "int8",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "kind",
+          "type": "character varying(32)",
+          "comment": null,
+          "default": "'text'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "media_asset_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "reply_to_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "forwarded_from_message_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "forwarded_from_room_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "metadata",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "client_key",
+          "type": "character varying(128)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "edited_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "deleted_for_all",
+          "type": "boolean",
+          "comment": null,
+          "default": "false",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bool",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "pinned_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "pinned_by_person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "COALESCE(body, ''::text)"
+          ],
+          "name": "chat_messages_body_trgm_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_messages_body_trgm_idx ON chat.messages USING gin (COALESCE(body, ''::text) gin_trgm_ops)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "to_tsvector('simple'::regconfig, COALESCE(body, ''::text))"
+          ],
+          "name": "chat_messages_fts_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_messages_fts_idx ON chat.messages USING gin (to_tsvector('simple'::regconfig, COALESCE(body, ''::text)))",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "to_tsvector('russian'::regconfig, COALESCE(body, ''::text))"
+          ],
+          "name": "chat_messages_fts_ru_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_messages_fts_ru_idx ON chat.messages USING gin (to_tsvector('russian'::regconfig, COALESCE(body, ''::text)))",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "room_id",
+            "sender_person_id",
+            "client_key"
+          ],
+          "name": "chat_messages_idempotency_idx",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 3,
+          "predicate": "(client_key IS NOT NULL)",
+          "definition": "CREATE UNIQUE INDEX chat_messages_idempotency_idx ON chat.messages USING btree (room_id, sender_person_id, client_key) WHERE (client_key IS NOT NULL)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "media_asset_id"
+          ],
+          "name": "chat_messages_media_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": "(media_asset_id IS NOT NULL)",
+          "definition": "CREATE INDEX chat_messages_media_idx ON chat.messages USING btree (media_asset_id) WHERE (media_asset_id IS NOT NULL)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "room_id",
+            "created_at",
+            "id"
+          ],
+          "name": "chat_messages_room_active_time_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": "(deleted_at IS NULL)",
+          "definition": "CREATE INDEX chat_messages_room_active_time_idx ON chat.messages USING btree (room_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "room_id",
+            "seq"
+          ],
+          "name": "chat_messages_room_seq_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_messages_room_seq_idx ON chat.messages USING btree (room_id, seq DESC)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "room_id",
+            "created_at",
+            "id"
+          ],
+          "name": "chat_messages_room_time_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_messages_room_time_idx ON chat.messages USING btree (room_id, created_at DESC, id DESC)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "messages_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX messages_pkey ON chat.messages USING btree (id)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "c",
+          "name": "chat_messages_content_check",
+          "columns": [
+            "deleted_at",
+            "body",
+            "media_asset_id",
+            "kind"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (deleted_at IS NOT NULL OR body IS NOT NULL AND length(body) >= 1 AND length(body) <= 10000 OR media_asset_id IS NOT NULL OR (kind::text = ANY (ARRAY['activity_card'::character varying, 'assessment_card'::character varying, 'homework_card'::character varying, 'system'::character varying, 'poll'::character varying]::text[])))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "messages_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "messages_deleted_for_all_not_null",
+          "columns": [
+            "deleted_for_all"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL deleted_for_all",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "messages_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "messages_kind_not_null",
+          "columns": [
+            "kind"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL kind",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "messages_metadata_check",
+          "columns": [
+            "metadata"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (jsonb_typeof(metadata) = 'object'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "messages_metadata_not_null",
+          "columns": [
+            "metadata"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL metadata",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "messages_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "messages_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "messages_reply_to_id_fkey",
+          "columns": [
+            "reply_to_id"
+          ],
+          "on_delete": "n",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (reply_to_id) REFERENCES chat.messages(id) ON DELETE SET NULL",
+          "target_table": "messages",
+          "target_schema": "chat",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "messages_room_id_not_null",
+          "columns": [
+            "room_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL room_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "messages_room_id_organization_id_fkey",
+          "columns": [
+            "room_id",
+            "organization_id"
+          ],
+          "on_delete": "c",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (room_id, organization_id) REFERENCES chat.rooms(id, organization_id) ON DELETE CASCADE",
+          "target_table": "rooms",
+          "target_schema": "chat",
+          "target_columns": [
+            "id",
+            "organization_id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "messages_sender_person_id_not_null",
+          "columns": [
+            "sender_person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL sender_person_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "messages_seq_not_null",
+          "columns": [
+            "seq"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL seq",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "messages_updated_at_not_null",
+          "columns": [
+            "updated_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL updated_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "module_migrations",
+      "schema": "chat",
+      "columns": [
+        {
+          "name": "name",
+          "type": "text",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "sha256",
+          "type": "character(64)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "bpchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "applied_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "name"
+          ],
+          "name": "module_migrations_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX module_migrations_pkey ON chat.module_migrations USING btree (name)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "module_migrations_applied_at_not_null",
+          "columns": [
+            "applied_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL applied_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "module_migrations_name_not_null",
+          "columns": [
+            "name"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL name",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "module_migrations_pkey",
+          "columns": [
+            "name"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (name)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "module_migrations_sha256_not_null",
+          "columns": [
+            "sha256"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL sha256",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "reactions",
+      "schema": "chat",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "message_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "emoji",
+          "type": "character varying(32)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "message_id"
+          ],
+          "name": "chat_reactions_message_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_reactions_message_idx ON chat.reactions USING btree (message_id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "organization_id",
+            "person_id"
+          ],
+          "name": "chat_reactions_person_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_reactions_person_idx ON chat.reactions USING btree (organization_id, person_id)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "reactions_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX reactions_pkey ON chat.reactions USING btree (id)",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "message_id",
+            "person_id",
+            "emoji"
+          ],
+          "name": "uq_chat_reaction_person_emoji",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX uq_chat_reaction_person_emoji ON chat.reactions USING btree (message_id, person_id, emoji)",
+          "attribute_count": 3
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "reactions_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "reactions_emoji_not_null",
+          "columns": [
+            "emoji"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL emoji",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "reactions_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "f",
+          "name": "reactions_message_id_fkey",
+          "columns": [
+            "message_id"
+          ],
+          "on_delete": "c",
+          "on_update": "a",
+          "deferrable": false,
+          "definition": "FOREIGN KEY (message_id) REFERENCES chat.messages(id) ON DELETE CASCADE",
+          "target_table": "messages",
+          "target_schema": "chat",
+          "target_columns": [
+            "id"
+          ],
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "reactions_message_id_not_null",
+          "columns": [
+            "message_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL message_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "reactions_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "reactions_person_id_not_null",
+          "columns": [
+            "person_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL person_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "reactions_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "uq_chat_reaction_person_emoji",
+          "columns": [
+            "message_id",
+            "person_id",
+            "emoji"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (message_id, person_id, emoji)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    },
+    {
+      "rls": false,
+      "name": "rooms",
+      "schema": "chat",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "comment": null,
+          "default": "uuidv7()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "organization_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "room_type",
+          "type": "character varying(24)",
+          "comment": null,
+          "default": "'direct'::character varying",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "title",
+          "type": "character varying(180)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "comment": null,
+          "default": "''::text",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "text",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "context_type",
+          "type": "character varying(40)",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "varchar",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "context_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_by_person_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_by_account_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "last_message_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "pinned_message_id",
+          "type": "uuid",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "uuid",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "last_activity_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": null,
+          "is_enum": false,
+          "identity": "",
+          "nullable": true,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "settings",
+          "type": "jsonb",
+          "comment": null,
+          "default": "'{}'::jsonb",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "jsonb",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "comment": null,
+          "default": "now()",
+          "is_enum": false,
+          "identity": "",
+          "nullable": false,
+          "generated": "",
+          "type_name": "timestamptz",
+          "type_schema": "pg_catalog"
+        }
+      ],
+      "comment": null,
+      "indexes": [
+        {
+          "keys": [
+            "organization_id",
+            "context_type",
+            "context_id"
+          ],
+          "name": "chat_rooms_context_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": "(context_id IS NOT NULL)",
+          "definition": "CREATE INDEX chat_rooms_context_idx ON chat.rooms USING btree (organization_id, context_type, context_id) WHERE (context_id IS NOT NULL)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "to_tsvector('russian'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text)))"
+          ],
+          "name": "chat_rooms_fts_ru_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_rooms_fts_ru_idx ON chat.rooms USING gin (to_tsvector('russian'::regconfig, (((COALESCE(title, ''::character varying))::text || ' '::text) || COALESCE(description, ''::text))))",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "organization_id",
+            "last_activity_at",
+            "id"
+          ],
+          "name": "chat_rooms_org_activity_idx",
+          "method": "btree",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_rooms_org_activity_idx ON chat.rooms USING btree (organization_id, last_activity_at DESC, id DESC)",
+          "attribute_count": 3
+        },
+        {
+          "keys": [
+            "title",
+            "description"
+          ],
+          "name": "chat_rooms_search_trgm_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX chat_rooms_search_trgm_idx ON chat.rooms USING gin (title gin_trgm_ops, description gin_trgm_ops)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "id",
+            "organization_id"
+          ],
+          "name": "rooms_id_organization_id_key",
+          "method": "btree",
+          "unique": true,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX rooms_id_organization_id_key ON chat.rooms USING btree (id, organization_id)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
+            "id"
+          ],
+          "name": "rooms_pkey",
+          "method": "btree",
+          "unique": true,
+          "primary": true,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE UNIQUE INDEX rooms_pkey ON chat.rooms USING btree (id)",
+          "attribute_count": 1
+        }
+      ],
+      "policies": [],
+      "triggers": [],
+      "force_rls": false,
+      "constraints": [
+        {
+          "kind": "n",
+          "name": "rooms_created_at_not_null",
+          "columns": [
+            "created_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL created_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "rooms_description_not_null",
+          "columns": [
+            "description"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL description",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "rooms_id_not_null",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "u",
+          "name": "rooms_id_organization_id_key",
+          "columns": [
+            "id",
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "UNIQUE (id, organization_id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "rooms_last_activity_at_not_null",
+          "columns": [
+            "last_activity_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL last_activity_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "rooms_organization_id_not_null",
+          "columns": [
+            "organization_id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL organization_id",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "p",
+          "name": "rooms_pkey",
+          "columns": [
+            "id"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "PRIMARY KEY (id)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "rooms_room_type_check",
+          "columns": [
+            "room_type"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (room_type::text = ANY (ARRAY['direct'::character varying, 'group'::character varying, 'organization'::character varying, 'support'::character varying, 'context'::character varying]::text[]))",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "rooms_room_type_not_null",
+          "columns": [
+            "room_type"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL room_type",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "rooms_settings_check",
+          "columns": [
+            "settings"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (jsonb_typeof(settings) = 'object'::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "rooms_settings_not_null",
+          "columns": [
+            "settings"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL settings",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "c",
+          "name": "rooms_title_check",
+          "columns": [
+            "title"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "CHECK (btrim(title::text) <> ''::text)",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "rooms_title_not_null",
+          "columns": [
+            "title"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL title",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        },
+        {
+          "kind": "n",
+          "name": "rooms_updated_at_not_null",
+          "columns": [
+            "updated_at"
+          ],
+          "on_delete": " ",
+          "on_update": " ",
+          "deferrable": false,
+          "definition": "NOT NULL updated_at",
+          "target_table": null,
+          "target_schema": null,
+          "target_columns": null,
+          "initially_deferred": false
+        }
+      ]
+    }
+  ],
+  "schemas": [
+    "chat"
+  ],
+  "functions": [],
+  "server_version": "18.6 (Debian 18.6-1.pgdg13+2)",
+  "applied_migrations": [
+    "001_chat_foundation.sql",
+    "002_chat_consolidation.sql"
+  ],
+  "migration_sources": [
+    {
+      "path": "apps/backend/migrations/chat/001_chat_foundation.sql",
+      "sha256": "e4796d10a872f351a58fe5fbad9f0aa87446f10c2ebc9f0b13c5de0dda499144"
+    },
+    {
+      "path": "apps/backend/migrations/chat/002_chat_consolidation.sql",
+      "sha256": "172fb81c0c693376fa75f4a17610971b132b8ed4412e10628daf873d4996a8b0"
+    }
+  ]
+}

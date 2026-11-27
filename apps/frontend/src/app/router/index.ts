@@ -49,7 +49,18 @@ export function createAppRouter(history: RouterHistory = createWebHistory(import
           { path: 'plans', name: 'plans', component: PlanComparisonView, meta: { primaryNavigation: 'catalog' } },
           { path: 'plans/:code', name: 'plan-detail', component: PlanDetailView, meta: { primaryNavigation: 'catalog' } },
           { path: 'cabinet', name: 'cabinet', component: AccountCabinetView, meta: { requiresAuth: true } },
+          { path: 'workspace', name: 'workspace', component: () => import('@/modules/workspace/WorkspaceDashboardView.vue'), meta: { requiresAdminAuth: true, primaryNavigation: 'workspace' } },
+          { path: 'search', name: 'search', component: () => import('@/modules/workspace/GlobalSearchView.vue'), meta: { requiresAdminAuth: true, primaryNavigation: 'search' } },
+          { path: 'trash', name: 'trash', component: () => import('@/modules/workspace/TrashView.vue'), meta: { requiresAdminAuth: true, primaryNavigation: 'trash' } },
           { path: 'drive', name: 'drive', component: () => import('@/modules/storage/CloudDriveView.vue'), meta: { requiresAuth: true, primaryNavigation: 'drive' } },
+          { path: 'chat', name: 'universal-chat', component: () => import('@/modules/chat/UniversalChatPage.vue'), meta: { requiresAdminAuth: true } },
+          { path: 'chat/:id', name: 'universal-chat-room', component: () => import('@/modules/chat/UniversalChatPage.vue'), meta: { requiresAdminAuth: true } },
+          { path: 'notifications-center', name: 'universal-notifications', component: () => import('@/modules/notifications/UniversalNotificationsPage.vue'), meta: { requiresAdminAuth: true } },
+          { path: 'activities', name: 'universal-activities', component: () => import('@/modules/activity/ActivityCatalogView.vue'), meta: { requiresAdminAuth: true } },
+          { path: 'activities/studio', name: 'universal-activity-studio', component: () => import('@/modules/activity/ActivityStudioView.vue'), meta: { requiresAdminAuth: true } },
+          { path: 'activities/studio/:activityId', name: 'universal-activity-studio-edit', component: () => import('@/modules/activity/ActivityStudioView.vue'), props: true, meta: { requiresAdminAuth: true } },
+          { path: 'activities/:activityId/run', name: 'universal-activity-run', component: () => import('@/modules/activity/ActivityRunnerView.vue'), props: true, meta: { requiresAdminAuth: true } },
+          { path: 'activities/attempts/:attemptId', name: 'universal-activity-attempt', component: () => import('@/modules/activity/ActivityRunnerView.vue'), props: true, meta: { requiresAdminAuth: true } },
           {
             path: 'settings', component: SettingsLayout, meta: { primaryNavigation: 'settings' },
             children: [

@@ -92,9 +92,26 @@ svg {
 }
 
 :focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+  outline: 1.5px solid var(--focus-border);
+  outline-offset: 1px;
+  box-shadow: none;
   transition: var(--theme-transition);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--focus-border);
+  outline: none;
+  box-shadow: none;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  border-color: var(--focus-border);
+  outline: none;
+  box-shadow: none;
 }
 
 .visually-hidden {

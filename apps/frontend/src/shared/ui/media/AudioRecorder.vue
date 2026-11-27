@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { mediaController } from '@/shared/media/mediaController';
 import AudioWaveform from './AudioWaveform.vue';
 
 const props = withDefaults(
@@ -62,6 +63,7 @@ function cleanupStream(): void {
 }
 
 async function startRecording(): Promise<void> {
+  mediaController.notifyRecordingStart();
   errorMessage.value = null;
   recordedBlob.value = null;
   previewUrl.value = null;

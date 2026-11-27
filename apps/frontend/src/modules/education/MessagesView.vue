@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useEducationWorkspace } from './workspace';
-import EducationMessenger from './messaging/EducationMessenger.vue';
+import UniversalMessenger from '@/modules/chat/UniversalMessenger.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -20,14 +20,13 @@ function onSelectThread(id: string): void {
 
 <template>
   <section class="edu-messages-page">
-    <EducationMessenger
+    <UniversalMessenger
       v-if="workspace.organizationId && workspace.header"
-      role="teacher"
       :organization-id="workspace.organizationId"
       :current-person-id="workspace.header.personId"
-      :initial-thread-id="initialThreadId"
+      :initial-room-id="initialThreadId"
       :timezone="workspace.header.timezone"
-      @select-thread="onSelectThread"
+      @select-room="onSelectThread"
     />
   </section>
 </template>

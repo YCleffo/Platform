@@ -212,6 +212,12 @@ async function reconcile(): Promise<void> {
             {{ t('education.activities') }}
           </RouterLink>
           <RouterLink
+            :to="`/homework?groupId=${data.group.id}`"
+            class="edu-button"
+          >
+            {{ t('education.homework') }}
+          </RouterLink>
+          <RouterLink
             v-if="!archived"
             :to="`/students/new?group=${data.group.id}`"
             class="edu-button"

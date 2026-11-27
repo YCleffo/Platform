@@ -2,6 +2,8 @@
 
 Корневой `.env` хранит локальную конфигурацию и исключён из Git и проектного архива. `scripts/init-env.ps1` сохраняет заполненные значения, генерирует отсутствующие секреты криптографическим генератором и ограничивает доступ к файлу текущим пользователем Windows и SYSTEM.
 
+Для staging и production используйте шаблон [.env.prod.example](../../.env.prod.example) вместе с переопределением [compose.prod.yaml](../../compose.prod.yaml) (неизменяемые `prod`/`app` образы, `APP_DEBUG=0`, отключённый Mailpit и снятые host-порты БД/Redis) и примером обратного прокси [infra/proxy/Caddyfile.example](../../infra/proxy/Caddyfile.example). Не переносите development-ключи, `TRUSTED_PROXIES=""` или `LOCAL_MAIL_ENABLED=true` в промышленное окружение.
+
 | Параметры | Назначение |
 | --- | --- |
 | `POSTGRES_*`, `CONTROL_POSTGRES_*` | Две независимые базы; значения PASSWORD — пароли существующих ролей PostgreSQL |

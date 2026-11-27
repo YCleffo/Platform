@@ -1,21 +1,40 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import MediaPreviewDialog from './MediaPreviewDialog.vue';
 import type { MediaAsset } from './types';
 
-const props = defineProps<{
-  name?: string;
-  sizeBytes?: number;
-  mime?: string;
-  url?: string;
-  asset?: MediaAsset | null;
+const props = withDefaults(
+  defineProps<{
+    name?: string;
+    sizeBytes?: number;
+    mime?: string;
+    url?: string;
+    asset?: MediaAsset | null;
+    previewable?: boolean;
+  }>(),
+  {
+    name: undefined,
+    sizeBytes: undefined,
+    mime: undefined,
+    url: undefined,
+    asset: null,
+    previewable: true,
+  },
+);
+
+const emit = defineEmits<{
+  (e: 'preview'): void;
 }>();
 
 const { t } = useI18n();
+const previewOpen = ref(false);
 
-const displayName = computed(() => {
-  return props.name || props.asset?.originalName || 'file';
-});
+const displayName = computed(() => props.name || props.asset?.originalName || 'file');
+
+const resolvedMime = computed(
+  () => props.mime || props.asset?.verifiedMime || props.asset?.originalMime || 'application/octet-stream',
+);
 
 const displaySize = computed(() => {
   const bytes = props.sizeBytes ?? props.asset?.sizeBytes ?? 0;
@@ -24,13 +43,28 @@ const displaySize = computed(() => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 });
 
-const downloadUrl = computed(() => {
-  return props.url || props.asset?.playbackUrl || '';
-});
+const downloadUrl = computed(() => props.url || props.asset?.playbackUrl || '');
+
+const isUnavailable = computed(
+  () =>
+    !downloadUrl.value ||
+    props.asset?.status === 'EXPIRED' ||
+    props.asset?.status === 'FAILED' ||
+    props.asset?.status === 'CANCELLED',
+);
+
+function openPreview(): void {
+  if (isUnavailable.value || !props.previewable) return;
+  emit('preview');
+  previewOpen.value = true;
+}
 </script>
 
 <template>
-  <div class="app-file-attachment">
+  <div
+    class="app-file-attachment"
+    :class="{ 'app-file-attachment--unavailable': isUnavailable }"
+  >
     <div class="app-file-attachment__icon-wrapper">
       <svg
         class="app-file-attachment__icon"
@@ -66,35 +100,74 @@ const downloadUrl = computed(() => {
       >
         {{ displayName }}
       </span>
-      <span class="app-file-attachment__size">{{ displaySize }}</span>
+      <span class="app-file-attachment__size">
+        {{ isUnavailable ? t('media.unavailable') : displaySize }}
+      </span>
     </div>
 
-    <a
-      v-if="downloadUrl"
-      :href="downloadUrl"
-      download
-      class="app-file-attachment__download"
-      :aria-label="`${t('media.download')} ${displayName}`"
-    >
-      <svg
-        class="app-file-attachment__dl-icon"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+    <div class="app-file-attachment__actions">
+      <button
+        v-if="previewable && !isUnavailable"
+        type="button"
+        class="app-file-attachment__action"
+        :aria-label="`${t('media.preview')} ${displayName}`"
+        @click="openPreview"
       >
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-        <polyline points="7 10 12 15 17 10" />
-        <line
-          x1="12"
-          y1="15"
-          x2="12"
-          y2="3"
-        />
-      </svg>
-    </a>
+        <svg
+          class="app-file-attachment__dl-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle
+            cx="12"
+            cy="12"
+            r="3"
+          />
+        </svg>
+      </button>
+
+      <a
+        v-if="!isUnavailable"
+        :href="downloadUrl"
+        :download="displayName"
+        class="app-file-attachment__download"
+        :aria-label="`${t('media.download')} ${displayName}`"
+      >
+        <svg
+          class="app-file-attachment__dl-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line
+            x1="12"
+            y1="15"
+            x2="12"
+            y2="3"
+          />
+        </svg>
+      </a>
+    </div>
+
+    <MediaPreviewDialog
+      v-if="previewOpen"
+      v-model:open="previewOpen"
+      :src="downloadUrl"
+      :name="displayName"
+      :mime="resolvedMime"
+      :size-bytes="sizeBytes ?? asset?.sizeBytes"
+      :asset="asset"
+    />
   </div>
 </template>
 
@@ -110,6 +183,10 @@ const downloadUrl = computed(() => {
   max-width: 380px;
   box-sizing: border-box;
   box-shadow: var(--shadow-soft, 0 2px 6px rgba(0, 0, 0, 0.12));
+}
+
+.app-file-attachment--unavailable {
+  opacity: 0.75;
 }
 
 .app-file-attachment__icon-wrapper {
@@ -154,6 +231,13 @@ const downloadUrl = computed(() => {
   margin-top: 2px;
 }
 
+.app-file-attachment__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.app-file-attachment__action,
 .app-file-attachment__download {
   display: flex;
   align-items: center;
@@ -161,6 +245,8 @@ const downloadUrl = computed(() => {
   width: 32px;
   height: 32px;
   border-radius: 50%;
+  border: none;
+  background: transparent;
   color: var(--text-secondary, #9ba3af);
   cursor: pointer;
   transition:
@@ -168,6 +254,7 @@ const downloadUrl = computed(() => {
     background-color var(--theme-transition);
 }
 
+.app-file-attachment__action:hover,
 .app-file-attachment__download:hover {
   color: var(--text-primary, #fff);
   background: var(--surface-tertiary, rgba(255, 255, 255, 0.12));

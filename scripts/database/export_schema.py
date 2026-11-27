@@ -34,6 +34,11 @@ TARGETS = {
     "education": ("education", "docs/database/education/Education_v1.dbml"),
     "device_management": ("device_management", "docs/database/device_management/DeviceManagement_v1.dbml"),
     "storage": ("storage", "docs/database/storage/Storage_v1.dbml"),
+    "chat": ("chat", "docs/database/chat/Chat_v1.dbml"),
+    "realtime": ("realtime", "docs/database/realtime/Realtime_v1.dbml"),
+    "notifications": ("notifications", "docs/database/notifications/Notifications_v1.dbml"),
+    "activity": ("activity", "docs/database/activity/Activity_v1.dbml"),
+    "workspace": ("workspace", "docs/database/workspace/Workspace_v1.dbml"),
 }
 
 COMMENT_TRANSLATIONS: dict[str, str] = json.loads(
@@ -46,6 +51,11 @@ PLANE_SCHEMAS = {
     "education": {"education"},
     "device_management": {"device_management"},
     "storage": {"storage"},
+    "chat": {"chat"},
+    "realtime": {"realtime"},
+    "notifications": {"notifications"},
+    "activity": {"activity"},
+    "workspace": {"workspace"},
 }
 
 SNAPSHOTS = {
@@ -54,6 +64,11 @@ SNAPSHOTS = {
     "education": "docs/database/education/schema.catalog.json",
     "device_management": "docs/database/device_management/schema.catalog.json",
     "storage": "docs/database/storage/schema.catalog.json",
+    "chat": "docs/database/chat/schema.catalog.json",
+    "realtime": "docs/database/realtime/schema.catalog.json",
+    "notifications": "docs/database/notifications/schema.catalog.json",
+    "activity": "docs/database/activity/schema.catalog.json",
+    "workspace": "docs/database/workspace/schema.catalog.json",
 }
 
 PLANE_TARGETS = {
@@ -62,6 +77,11 @@ PLANE_TARGETS = {
     "education": ["education"],
     "device_management": ["device_management"],
     "storage": ["storage"],
+    "chat": ["chat"],
+    "realtime": ["realtime"],
+    "notifications": ["notifications"],
+    "activity": ["activity"],
+    "workspace": ["workspace"],
 }
 
 
@@ -283,7 +303,7 @@ def restrict_catalog(catalog: Catalog, plane: str) -> Catalog:
 def migration_manifest(plane: str) -> list[MigrationSource]:
     if plane == "commercial":
         directory, pattern = "apps/control-plane/migrations", "Version*.php"
-    elif plane in ("education", "device_management", "storage"):
+    elif plane in ("education", "device_management", "storage", "chat", "realtime", "notifications", "activity", "workspace"):
         directory, pattern = f"apps/backend/migrations/{plane}", "*.sql"
     else:
         directory, pattern = "apps/backend/migrations/sql", "*.sql"
@@ -299,7 +319,9 @@ def migration_manifest(plane: str) -> list[MigrationSource]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--plane", choices=["core", "commercial", "education", "device_management", "storage"], required=True
+        "--plane",
+        choices=["core", "commercial", "education", "device_management", "storage", "chat", "realtime", "notifications", "activity", "workspace"],
+        required=True,
     )
     parser.add_argument("--from-snapshot", action="store_true")
     parser.add_argument(
@@ -321,10 +343,10 @@ def main() -> None:
         )
     else:
         database = args.database or (
-            "platform" if plane == "core" or plane == "education" else "platform_commercial"
+            "platform_commercial" if plane == "commercial" else "platform"
         )
         user = args.user or (
-            "platform_app" if plane == "core" or plane == "education" else "platform_control"
+            "platform_control" if plane == "commercial" else "platform_app"
         )
         command = (
             [args.psql, "-h", args.host, "-p", str(args.port)]

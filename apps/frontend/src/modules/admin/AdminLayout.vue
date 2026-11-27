@@ -13,6 +13,7 @@ import { useCoreAccountSettings } from '@/core/admin/accountSettingsStore';
 import { usePresenceHeartbeat } from '@/core/admin/usePresenceHeartbeat';
 import { setLocale } from '@/shared/i18n';
 import {
+  Bell,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -21,12 +22,15 @@ import {
   LayoutGrid,
   LogOut,
   Moon,
+  Search,
   Settings,
   ShieldCheck,
   Sun,
   Tag,
+  Trash2,
   X,
 } from '@/shared/ui/icons';
+import WorkspaceShellControls from '@/modules/workspace/WorkspaceShellControls.vue';
 import { lockScroll, unlockScroll } from '@/shared/composables/useScrollLock';
 import { useFocusTrap } from '@/shared/composables/useFocusTrap';
 import { cachedAdminGet } from './adminCache';
@@ -84,7 +88,13 @@ const sections = computed<Array<{ key: string; title: string; items: AdminNavIte
   {
     key: 'overview',
     title: t('admin.overview'),
-    items: [{ label: t('admin.dashboard'), name: 'admin-dashboard', icon: LayoutGrid }],
+    items: [
+      { label: t('admin.dashboard'), name: 'admin-dashboard', icon: LayoutGrid },
+      { label: t('nav.workspace'), name: 'workspace', icon: Layers },
+      { label: t('nav.search'), name: 'search', icon: Search },
+      { label: t('nav.notifications'), name: 'universal-notifications', icon: Bell },
+      { label: t('nav.trash'), name: 'trash', icon: Trash2 },
+    ],
   },
   {
     key: 'platform',
@@ -535,6 +545,12 @@ onBeforeUnmount(() => {
           />
         </div>
         <div class="admin__topbar-actions">
+          <WorkspaceShellControls
+            :show-search-input="true"
+            :show-search-link="true"
+            :show-notifications="true"
+            :show-back="true"
+          />
           <span
             class="admin__identity"
             :title="auth.identity?.account.id"

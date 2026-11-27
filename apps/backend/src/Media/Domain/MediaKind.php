@@ -33,12 +33,22 @@ enum MediaKind: string
     public function allowedMimeTypes(): array
     {
         return match ($this) {
-            self::Voice => ['audio/ogg', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/mpeg'],
+            self::Voice => ['audio/ogg', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/x-wav', 'audio/mpeg'],
             self::VideoNote => ['video/mp4', 'video/webm', 'video/quicktime'],
-            self::Audio => ['audio/mpeg', 'audio/ogg', 'audio/webm', 'audio/wav', 'audio/flac', 'audio/aac', 'audio/mp4'],
+            self::Audio => ['audio/mpeg', 'audio/ogg', 'audio/webm', 'audio/wav', 'audio/x-wav', 'audio/flac', 'audio/aac', 'audio/mp4'],
             self::Image => ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'],
             self::Video => ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska'],
-            self::Document => ['application/pdf', 'text/plain', 'application/json', 'application/zip'],
+            self::Document => [
+                'application/pdf',
+                'text/plain',
+                'text/csv',
+                'application/json',
+                'application/zip',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            ],
         };
     }
 }

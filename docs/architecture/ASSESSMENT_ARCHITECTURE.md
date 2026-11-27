@@ -119,3 +119,17 @@ When `GET /api/education/student/assessments/{id}/start` or `GET /student/assess
 - `answerKey` is completely stripped from each question object.
 - `explanation` is completely stripped from each question object.
 - When `reveal_answers_policy` permits (e.g. `immediate` or `after_grading`), the evaluated result response provides detailed correctness breakdowns.
+
+---
+
+## 5. Concurrency, Server Deadlines & Homework Linking (PLATFORM_09)
+
+1. **Optimistic Locking via Atomic CAS**:
+   - `saveStudentAttempt()` executes an atomic `UPDATE ... WHERE id = :id AND revision = :expected_revision AND state = 'IN_PROGRESS'`.
+   - Any concurrent modification or stale client revision returns affected rows = 0, triggering an immediate `409 conflict` (`revision_conflict` or `attempt_conflict`).
+2. **Server-Enforced Time Limits**:
+   - The server enforces strict deadlines: `now > started_at + time_limit_seconds + 30s` rejects further autosaves (`409 attempt_time_expired`).
+   - When deadline passes, `submitStudentAttempt()` rejects late answers and deterministically grades only saved responses.
+3. **Activity Engine & Homework Synchronization**:
+   - On completion (`submitStudentAttempt` or `finalizeExpiredAttempt`), assessment records are written to `education.activity_attempts` (`platform-assessment`).
+   - `ActivityResultSink::finished()` is dispatched, allowing `HomeworkAttemptLinker` to automatically record the attempt against assigned homework.

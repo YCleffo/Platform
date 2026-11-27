@@ -54,6 +54,34 @@ final readonly class S3Objects
         }
     }
 
+    /**
+     * Opens a bounded byte range stream directly from S3/SeaweedFS without reading skipped prefix bytes.
+     *
+     * @return resource
+     */
+    public function openRange(string $bucket, string $key, int $start, int $end)
+    {
+        try {
+            $result = $this->clients->internal()->getObject([
+                'Bucket' => $bucket,
+                'Key' => $key,
+                'Range' => "bytes=$start-$end",
+                '@http' => ['stream' => true],
+            ]);
+            $body = $result['Body'] ?? null;
+            if (!$body instanceof StreamInterface) {
+                throw new StorageError(503, 's3_unavailable');
+            }
+            $stream = $body->detach();
+            if (!is_resource($stream)) {
+                throw new StorageError(503, 's3_unavailable');
+            }
+            return $stream;
+        } catch (Throwable $error) {
+            throw S3Failure::storage($error);
+        }
+    }
+
     /** @return array{sizeBytes:int,etag:string}|null */
     public function head(string $bucket, string $key): ?array
     {

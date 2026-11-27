@@ -5,9 +5,17 @@ import {
   DEFAULT_APPEARANCE,
   useAppearance,
   type AppearancePreset,
+  type ColorMode,
   type Density,
+  type FontFamilyKey,
   type Shadows,
 } from '@/app/appearance';
+import {
+  PALETTE_PRESETS,
+  contrastRatio,
+  normalizeHex,
+  type PalettePreset,
+} from '@/app/theme/palette';
 import { useTheme, type Theme } from '@/app/theme';
 import { setLocale } from '@/shared/i18n';
 import { LayoutGrid, Moon, Sun } from '@/shared/ui/icons';
@@ -33,7 +41,7 @@ const {
   beginEdit,
   endEdit,
 } = useAppearance();
-const { theme, setTheme } = useTheme();
+const { theme, resolved, setTheme } = useTheme();
 const themes = [
   { value: 'light', icon: Sun },
   { value: 'dark', icon: Moon },
@@ -42,6 +50,9 @@ const themes = [
 const densities: Density[] = ['compact', 'comfortable', 'spacious'];
 const shadows: Shadows[] = ['none', 'subtle', 'normal', 'strong'];
 const presets: AppearancePreset[] = ['default', 'compact', 'reading'];
+const colorModes: ColorMode[] = ['default', 'accent', 'custom', 'monochrome'];
+const fontFamilies: FontFamilyKey[] = ['inter', 'roboto', 'mono', 'system', 'serif'];
+const advancedOpen = ref(true);
 const numeric = [
   { key: 'fontScale', id: 'font-scale', min: 0.9, max: 1.4, step: 0.05, unit: '%' },
   { key: 'spacingScale', id: 'spacing-scale', min: 0.75, max: 1.25, step: 0.05, unit: '%' },
@@ -54,6 +65,56 @@ const dialogOpen = ref(false);
 const spinning = ref(false);
 const previewSelected = ref(true);
 const motionOff = computed(() => !appearance.animations || systemReduced.value);
+
+const accentHexDraft = computed({
+  get: () => appearance.accentColor,
+  set: (value: string) => {
+    const clean = normalizeHex(value, '');
+    if (clean) updateAppearance({ accentColor: clean });
+  },
+});
+
+const backgroundHexDraft = computed({
+  get: () => appearance.backgroundColor,
+  set: (value: string) => {
+    const clean = normalizeHex(value, '');
+    if (clean) updateAppearance({ backgroundColor: clean });
+  },
+});
+
+const liveContrast = computed(() => {
+  const bg =
+    appearance.colorMode === 'custom'
+      ? appearance.backgroundColor
+      : resolved.value === 'dark'
+        ? '#0E1422'
+        : '#FFFFFF';
+  const ratio = contrastRatio(appearance.accentColor, bg);
+  return {
+    ratio: ratio.toFixed(1),
+    level: ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : 'AA Large',
+  };
+});
+
+function isColorPresetActive(preset: PalettePreset): boolean {
+  if (appearance.colorMode !== preset.mode) return false;
+  if (preset.mode === 'default') return true;
+  return appearance.accentColor.toUpperCase() === preset.accent.toUpperCase();
+}
+
+function applyColorPreset(preset: PalettePreset): void {
+  updateAppearance({
+    colorMode: preset.mode,
+    accentColor: preset.accent,
+    ...(preset.background ? { backgroundColor: preset.background } : {}),
+  });
+}
+
+function fontChange(value: string | string[]): void {
+  if (typeof value === 'string' && fontFamilies.includes(value as FontFamilyKey)) {
+    updateAppearance({ fontFamily: value as FontFamilyKey });
+  }
+}
 
 function languageChange(value: string | string[]): void {
   if (value === 'en' || value === 'ru') setLocale(value);
@@ -112,6 +173,150 @@ function chooseTheme(value: Theme): void {
             { value: 'en', label: 'English' },
           ]"
           @update:model-value="languageChange"
+        />
+      </AppCard>
+
+      <AppCard>
+        <h2>{{ $t('appearance.colorSection') }}</h2>
+        <h3 class="appearance-view__presets-title">{{ $t('appearance.colorPresets') }}</h3>
+        <div
+          class="appearance-palettes"
+          role="group"
+          :aria-label="$t('appearance.colorPresets')"
+        >
+          <button
+            v-for="preset in PALETTE_PRESETS"
+            :key="preset.id"
+            type="button"
+            class="appearance-palette-chip"
+            :aria-pressed="isColorPresetActive(preset)"
+            @click="applyColorPreset(preset)"
+          >
+            <span
+              class="appearance-palette-chip__swatch"
+              :style="{ backgroundColor: preset.accent }"
+              aria-hidden="true"
+            />
+            <span class="appearance-palette-chip__label">
+              {{ $t(`appearance.presetPalette_${preset.id}`) }}
+            </span>
+          </button>
+        </div>
+
+        <fieldset class="appearance-view__fieldset">
+          <legend>{{ $t('appearance.colorMode') }}</legend>
+          <div class="appearance-view__choices">
+            <label
+              v-for="mode in colorModes"
+              :key="mode"
+              class="appearance-choice"
+              :class="{ 'appearance-choice--selected': appearance.colorMode === mode }"
+            >
+              <input
+                type="radio"
+                name="appearance-color-mode"
+                :value="mode"
+                :checked="appearance.colorMode === mode"
+                @change="updateAppearance({ colorMode: mode })"
+              />
+              <span>{{ $t(`appearance.colorMode_${mode}`) }}</span>
+            </label>
+          </div>
+          <p class="appearance-view__note appearance-view__mode-hint">
+            {{ $t('appearance.colorModeHint') }}
+          </p>
+        </fieldset>
+
+        <div
+          v-if="appearance.colorMode !== 'default'"
+          class="appearance-color-pickers"
+        >
+          <div class="appearance-color-field">
+            <label
+              for="appearance-accent-picker"
+              class="appearance-view__select-label"
+            >
+              {{ $t('appearance.accentColor') }}
+            </label>
+            <div class="appearance-color-row">
+              <input
+                id="appearance-accent-picker"
+                type="color"
+                class="appearance-color-native"
+                :value="appearance.accentColor"
+                @input="
+                  updateAppearance({
+                    accentColor: ($event.target as HTMLInputElement).value.toUpperCase(),
+                  })
+                "
+              />
+              <AppInput
+                id="appearance-accent-hex"
+                v-model="accentHexDraft"
+                :label="$t('appearance.accentColor')"
+                maxlength="7"
+              />
+            </div>
+          </div>
+
+          <div
+            v-if="appearance.colorMode === 'custom'"
+            class="appearance-color-field"
+          >
+            <label
+              for="appearance-bg-picker"
+              class="appearance-view__select-label"
+            >
+              {{ $t('appearance.backgroundColor') }}
+            </label>
+            <div class="appearance-color-row">
+              <input
+                id="appearance-bg-picker"
+                type="color"
+                class="appearance-color-native"
+                :value="appearance.backgroundColor"
+                @input="
+                  updateAppearance({
+                    backgroundColor: ($event.target as HTMLInputElement).value.toUpperCase(),
+                  })
+                "
+              />
+              <AppInput
+                id="appearance-bg-hex"
+                v-model="backgroundHexDraft"
+                :label="$t('appearance.backgroundColor')"
+                maxlength="7"
+              />
+            </div>
+          </div>
+        </div>
+
+        <p
+          v-if="appearance.colorMode !== 'default'"
+          class="appearance-view__note appearance-contrast-badge"
+        >
+          <AppBadge variant="neutral">
+            {{ $t('appearance.contrastBadge', liveContrast) }}
+          </AppBadge>
+        </p>
+
+        <label
+          class="appearance-view__select-label"
+          for="appearance-font-family"
+        >
+          {{ $t('appearance.fontFamily') }}
+        </label>
+        <AppDropdown
+          id="appearance-font-family"
+          :model-value="appearance.fontFamily"
+          :label="$t('appearance.fontFamily')"
+          :options="
+            fontFamilies.map((font) => ({
+              value: font,
+              label: $t(`appearance.font_${font}`),
+            }))
+          "
+          @update:model-value="fontChange"
         />
       </AppCard>
 
@@ -175,6 +380,7 @@ function chooseTheme(value: Theme): void {
         />
         <AppDisclosure
           id="appearance-advanced"
+          v-model="advancedOpen"
           class="appearance-view__advanced"
           :label="$t('appearance.advanced')"
         >
@@ -458,8 +664,85 @@ function chooseTheme(value: Theme): void {
   cursor: pointer;
 }
 .appearance-choice:has(:focus-visible) {
-  box-shadow: var(--focus-ring);
+  border-color: var(--focus-border);
   transition: var(--theme-transition);
+}
+.appearance-palettes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 138px), 1fr));
+  gap: var(--gap-s);
+  margin: var(--space-12) 0 var(--space-20);
+}
+.appearance-palette-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-10);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control-m);
+  background: var(--surface);
+  color: var(--text-1);
+  cursor: pointer;
+  min-width: 0;
+  text-align: left;
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line);
+  font-weight: var(--type-body-small-weight);
+  transition: var(--theme-transition);
+}
+.appearance-palette-chip:hover {
+  background: var(--surface-hover);
+}
+.appearance-palette-chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: var(--type-body-small-emphasis-weight);
+}
+.appearance-palette-chip__swatch {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: var(--radius-circle);
+  border: 1px solid var(--border-strong);
+}
+.appearance-palette-chip__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.appearance-view__mode-hint {
+  margin-top: var(--space-8);
+}
+.appearance-color-pickers {
+  display: grid;
+  gap: var(--space-16);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  margin-bottom: var(--space-16);
+}
+.appearance-color-field {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.appearance-color-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: end;
+}
+.appearance-color-native {
+  width: 44px;
+  height: 44px;
+  padding: 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control-m);
+  background: var(--surface);
+  cursor: pointer;
+}
+.appearance-contrast-badge {
+  margin-bottom: var(--space-16);
 }
 .appearance-choice--selected {
   color: var(--accent-text);

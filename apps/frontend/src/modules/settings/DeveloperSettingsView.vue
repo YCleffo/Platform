@@ -954,7 +954,7 @@ onMounted(() => {
 }
 
 .dev-settings__code {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--type-body-small-size);
   line-height: var(--type-body-small-line);
   font-weight: var(--type-body-small-weight);
@@ -1037,7 +1037,7 @@ onMounted(() => {
 }
 
 .dev-settings__endpoint-path {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-emphasis-weight);
@@ -1233,7 +1233,7 @@ onMounted(() => {
 
 .dev-settings__secret-code {
   flex: 1;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--type-body-medium-size);
   line-height: var(--type-body-medium-line);
   font-weight: var(--type-body-medium-weight);

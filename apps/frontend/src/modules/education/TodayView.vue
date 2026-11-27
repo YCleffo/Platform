@@ -13,6 +13,7 @@ import {
   Message,
 } from '@/shared/ui/icons';
 import { calendarWeek, formatCalendarDate, formatZonedTime } from '@/shared/formatting/calendar';
+import { workspaceApi } from '@/shared/api/workspaceApi';
 import { useEducationWorkspace } from './workspace';
 import { educationApi, type Lesson } from './api';
 import { useEducationI18n } from './i18n';
@@ -20,6 +21,48 @@ import { useEducationResource } from './resources';
 import { lessonDisplayStatus } from './status';
 import EducationAvatar from './EducationAvatar.vue';
 import EducationState from './EducationState.vue';
+
+interface DashboardGroupItem {
+  id: string;
+  name: string;
+  studentCount: number;
+}
+
+interface DashboardPendingReview {
+  submissionId: string;
+  assignmentId: string;
+  assignmentTitle: string;
+  state: string;
+  updatedAt: string;
+}
+
+interface DashboardManualGrading {
+  attemptId: string;
+  activityId: string;
+  activityTitle: string;
+  pluginCode: string;
+  studentName: string;
+  submittedAt: string | null;
+}
+
+interface DashboardNotificationItem {
+  id: string;
+  title: string;
+  body?: string | null;
+  resourcePath?: string | null;
+  createdAt: string;
+  readAt?: string | null;
+}
+
+interface DashboardUpcomingLesson {
+  id: string;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  groupId?: string;
+  groupName: string;
+}
+
 const workspace = useEducationWorkspace();
 const { t, locale, students } = useEducationI18n();
 const selected = ref(workspace.header!.date);
@@ -34,22 +77,51 @@ watch(
 const resource = useEducationResource(
   async (org, signal) => {
     const days = calendarWeek(selected.value);
-    const [schedule, timeline, next, attention] = await Promise.all([
+    const [schedule, timeline, next, attention, dashboard] = await Promise.all([
       educationApi.schedule(org, days[0]!, days[6]!, signal),
       educationApi.timeline(org, selected.value, signal),
       educationApi.next(org, signal),
       educationApi.attention(org, signal),
+      workspaceApi.getDashboard(org).catch(() => null),
     ]);
-    return { schedule, timeline, next, attention };
+    return { schedule, timeline, next, attention, dashboard };
   },
   [selected, () => workspace.header?.now.slice(0, 16)],
 );
 const { data, loading, error, refresh } = resource;
+
+const educationWidgetData = computed(() => {
+  const widget = data.value?.dashboard?.widgets.find((w) => w.id === 'education.overview') as
+    | {
+        data?: {
+          upcomingLessons?: DashboardUpcomingLesson[];
+          currentGroups?: DashboardGroupItem[];
+          pendingReviews?: DashboardPendingReview[];
+          pendingManualGrading?: DashboardManualGrading[];
+        };
+      }
+    | undefined;
+  return widget?.data ?? {};
+});
+
+const currentGroups = computed(() => educationWidgetData.value.currentGroups ?? []);
+const pendingReviews = computed(() => educationWidgetData.value.pendingReviews ?? []);
+const pendingManualGrading = computed(() => educationWidgetData.value.pendingManualGrading ?? []);
+const upcomingLessons = computed(() => educationWidgetData.value.upcomingLessons ?? []);
+const recentNotifications = computed<DashboardNotificationItem[]>(() => {
+  const widget = data.value?.dashboard?.widgets.find((w) => w.id === 'notifications.unread') as
+    | { data?: { items?: DashboardNotificationItem[] } }
+    | undefined;
+  return widget?.data?.items ?? [];
+});
+
 const quick = [
   { key: 'currentLesson', path: '/lessons/current', icon: ChevronRight, tone: 'primary' },
   { key: 'createLesson', path: '/lessons/new', icon: Plus, tone: 'success' },
   { key: 'createGroup', path: '/groups/new', icon: People, tone: 'warning' },
   { key: 'addStudent', path: '/students/new', icon: UserPlus, tone: 'info' },
+  { key: 'createHomework', path: '/homework/new', icon: Book, tone: 'primary' },
+  { key: 'assessments', path: '/assessments', icon: Book, tone: 'info' },
   { key: 'uploadMaterials', path: '/materials/upload', icon: Upload, tone: 'warning' },
   { key: 'writeMessage', path: '/messages/new', icon: Message, tone: 'primary' },
 ];
@@ -349,6 +421,89 @@ const dateLine = computed(() =>
               </li>
             </ol>
           </section>
+          <section
+            v-if="upcomingLessons.length"
+            class="edu-timeline-section"
+          >
+            <div class="edu-section-title">
+              <h2>{{ t('education.upcomingLessons') }}</h2>
+              <RouterLink
+                to="/calendar"
+                class="edu-link"
+              >
+                {{ t('education.calendar') }}
+                <ChevronRight
+                  :size="14"
+                  aria-hidden="true"
+                />
+              </RouterLink>
+            </div>
+            <ul class="edu-list">
+              <li
+                v-for="lesson in upcomingLessons"
+                :key="lesson.id"
+              >
+                <RouterLink
+                  :to="`/lessons/${lesson.id}`"
+                  class="edu-list__item"
+                >
+                  <div class="edu-list__main">
+                    <strong>{{ lesson.title }}</strong>
+                    <p class="edu-subtle">
+                      {{ lesson.groupName }} · {{ time(lesson.startsAt) }} –
+                      {{ time(lesson.endsAt) }}
+                    </p>
+                  </div>
+                  <ChevronRight
+                    :size="18"
+                    aria-hidden="true"
+                  />
+                </RouterLink>
+              </li>
+            </ul>
+          </section>
+          <section class="edu-timeline-section">
+            <div class="edu-section-title">
+              <h2>{{ t('education.currentGroups') }}</h2>
+              <RouterLink
+                to="/people?tab=groups"
+                class="edu-link"
+              >
+                {{ t('education.groups') }}
+                <ChevronRight
+                  :size="14"
+                  aria-hidden="true"
+                />
+              </RouterLink>
+            </div>
+            <EducationState
+              v-if="!currentGroups.length"
+              :empty="t('education.noGroups')"
+            />
+            <ul
+              v-else
+              class="edu-list"
+            >
+              <li
+                v-for="group in currentGroups"
+                :key="group.id"
+              >
+                <RouterLink
+                  :to="`/groups/${group.id}`"
+                  class="edu-list__item"
+                >
+                  <div class="edu-list__main">
+                    <strong>{{ group.name }}</strong>
+                    <p class="edu-subtle">{{ students(group.studentCount) }}</p>
+                  </div>
+                  <ChevronRight
+                    :size="18"
+                    aria-hidden="true"
+                  />
+                </RouterLink>
+              </li>
+            </ul>
+          </section>
         </div>
         <div class="edu-today-secondary">
           <section class="edu-quick-section">
@@ -374,6 +529,149 @@ const dateLine = computed(() =>
                 <span>{{ t(`education.${item.key}`) }}</span>
               </RouterLink>
             </div>
+          </section>
+          <section class="edu-timeline-section">
+            <div class="edu-section-title">
+              <h2>{{ t('education.pendingHomeworkReviews') }}</h2>
+              <RouterLink
+                to="/homework"
+                class="edu-link"
+              >
+                {{ t('education.homework') }}
+                <ChevronRight
+                  :size="14"
+                  aria-hidden="true"
+                />
+              </RouterLink>
+            </div>
+            <EducationState
+              v-if="!pendingReviews.length"
+              :empty="t('education.noPendingReviews')"
+            />
+            <ul
+              v-else
+              class="edu-list"
+            >
+              <li
+                v-for="item in pendingReviews"
+                :key="item.submissionId"
+              >
+                <RouterLink
+                  :to="`/homework/submissions/${item.submissionId}`"
+                  class="edu-list__item"
+                >
+                  <div class="edu-list__main">
+                    <strong>{{ item.assignmentTitle }}</strong>
+                    <p class="edu-subtle">{{ t(`education.homework${item.state}`) }}</p>
+                  </div>
+                  <ChevronRight
+                    :size="18"
+                    aria-hidden="true"
+                  />
+                </RouterLink>
+              </li>
+            </ul>
+          </section>
+          <section class="edu-timeline-section">
+            <div class="edu-section-title">
+              <h2>{{ t('education.pendingManualGrading') }}</h2>
+              <RouterLink
+                to="/assessments"
+                class="edu-link"
+              >
+                {{ t('education.assessments') }}
+                <ChevronRight
+                  :size="14"
+                  aria-hidden="true"
+                />
+              </RouterLink>
+            </div>
+            <EducationState
+              v-if="!pendingManualGrading.length"
+              :empty="t('education.noPendingManualGrading')"
+            />
+            <ul
+              v-else
+              class="edu-list"
+            >
+              <li
+                v-for="item in pendingManualGrading"
+                :key="item.attemptId"
+              >
+                <RouterLink
+                  :to="`/assessments/${item.activityId}/results/${item.attemptId}`"
+                  class="edu-list__item"
+                >
+                  <div class="edu-list__main">
+                    <strong>{{ item.activityTitle }}</strong>
+                    <p
+                      v-if="item.studentName"
+                      class="edu-subtle"
+                    >
+                      {{ item.studentName }}
+                    </p>
+                  </div>
+                  <ChevronRight
+                    :size="18"
+                    aria-hidden="true"
+                  />
+                </RouterLink>
+              </li>
+            </ul>
+          </section>
+          <section class="edu-timeline-section">
+            <div class="edu-section-title">
+              <h2>{{ t('education.recentNotifications') }}</h2>
+              <RouterLink
+                to="/notifications"
+                class="edu-link"
+              >
+                {{ t('education.all') }}
+                <ChevronRight
+                  :size="14"
+                  aria-hidden="true"
+                />
+              </RouterLink>
+            </div>
+            <EducationState
+              v-if="!recentNotifications.length"
+              :empty="t('education.noNotifications')"
+            />
+            <ul
+              v-else
+              class="edu-list"
+            >
+              <li
+                v-for="item in recentNotifications"
+                :key="item.id"
+              >
+                <RouterLink
+                  :to="item.resourcePath || '/notifications'"
+                  class="edu-list__item"
+                >
+                  <div class="edu-list__main">
+                    <strong>{{ item.title }}</strong>
+                    <p
+                      v-if="item.body"
+                      class="edu-subtle"
+                    >
+                      {{ item.body }}
+                    </p>
+                  </div>
+                  <span
+                    v-if="!item.readAt"
+                    class="edu-status edu-status--now"
+                  >
+                    {{ t('education.unread') }}
+                  </span>
+                  <ChevronRight
+                    v-else
+                    :size="18"
+                    aria-hidden="true"
+                  />
+                </RouterLink>
+              </li>
+            </ul>
           </section>
           <section
             v-if="data.attention.items.length"

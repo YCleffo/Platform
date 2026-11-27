@@ -119,6 +119,7 @@ final readonly class EducationAction
             return $responses->success($result)->withStatus(in_array(
                 $operation,
                 ['create_group', 'enroll_student', 'create_lesson', 'create_event', 'start_thread', 'send_message',
+                    'student_start_thread', 'student_send_message',
                     'invite_student', 'activities_assign', 'student_start_attempt'],
                 true,
             ) ? 201 : 200);

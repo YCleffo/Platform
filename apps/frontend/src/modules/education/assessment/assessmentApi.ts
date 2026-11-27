@@ -1,4 +1,7 @@
+import { getActivePinia } from 'pinia';
 import { coreAdminHttp } from '@/shared/api/core/adminHttp';
+import { studentSession } from '../student/session';
+import { useEducationWorkspace } from '../workspace';
 import type {
   AssessmentItem,
   AssessmentVersion,
@@ -7,8 +10,30 @@ import type {
   AssessmentResult,
 } from '../activityTypes';
 
+function resolveOrganizationId(): string {
+  if (studentSession.organizationId) {
+    return studentSession.organizationId;
+  }
+  try {
+    if (getActivePinia()) {
+      const workspace = useEducationWorkspace();
+      if (workspace.organizationId) {
+        return workspace.organizationId;
+      }
+    }
+  } catch {
+    // Pinia store inactive in isolated component tests
+  }
+  return '';
+}
+
 async function api<T>(path: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET', body?: unknown): Promise<T> {
-  return coreAdminHttp.request<T>(`/education${path}`, { method, ...(body === undefined ? {} : { body }) });
+  const organizationId = resolveOrganizationId();
+  return coreAdminHttp.request<T>(`/education${path}`, {
+    method,
+    ...(organizationId ? { headers: { 'X-Education-Organization': organizationId } } : {}),
+    ...(body === undefined ? {} : { body }),
+  });
 }
 
 export const assessmentApi = {
@@ -61,8 +86,9 @@ export const assessmentApi = {
     return api<{ items: (AssessmentItem & { versionId: string; studentAttemptsCount: number; bestPercentage: number | null })[] }>('/student/assessments');
   },
 
-  async startStudentAssessment(assessmentId: string, data?: Record<string, unknown>): Promise<AssessmentAttempt & { title: string; instructions: string; questions: unknown[]; timeLimitSeconds: number | null; passingScorePercent: number }> {
-    return api<AssessmentAttempt & { title: string; instructions: string; questions: unknown[]; timeLimitSeconds: number | null; passingScorePercent: number }>(`/student/assessments/${encodeURIComponent(assessmentId)}/start`, 'POST', data ?? {});
+  async startStudentAssessment(assessmentId: string, data?: Record<string, unknown> | string): Promise<AssessmentAttempt & { title: string; instructions: string; questions: unknown[]; timeLimitSeconds: number | null; passingScorePercent: number }> {
+    const payload = typeof data === 'string' ? { assignmentId: data } : (data ?? {});
+    return api<AssessmentAttempt & { title: string; instructions: string; questions: unknown[]; timeLimitSeconds: number | null; passingScorePercent: number }>(`/student/assessments/${encodeURIComponent(assessmentId)}/start`, 'POST', payload);
   },
 
   async getStudentAssessmentAttempt(attemptId: string): Promise<AssessmentAttempt & { title: string; instructions: string; questions: unknown[]; timeLimitSeconds: number | null; passingScorePercent: number }> {
@@ -73,7 +99,7 @@ export const assessmentApi = {
     return api<{ saved: boolean; revision?: number }>(`/student/assessment-attempts/${encodeURIComponent(attemptId)}/save`, 'PUT', data);
   },
 
-  async submitStudentAssessmentAttempt(attemptId: string, data: { answers: Record<string, unknown>; elapsedSeconds: number }): Promise<AssessmentAttempt & { result: AssessmentResult }> {
+  async submitStudentAssessmentAttempt(attemptId: string, data: { answers: Record<string, unknown>; elapsedSeconds: number; revision?: number }): Promise<AssessmentAttempt & { result: AssessmentResult }> {
     return api<AssessmentAttempt & { result: AssessmentResult }>(`/student/assessment-attempts/${encodeURIComponent(attemptId)}/submit`, 'POST', data);
   },
 

@@ -1,18 +1,22 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { activityApi, type ActivityAttempt, type ActivityItem } from '@/modules/activity/activityApi';
+import TypingArenaPlugin from '@/modules/activity/plugins/TypingArenaPlugin.vue';
+import { defaultTypingArenaConfig, type TypingArenaConfig } from '@/modules/activity/typing/typingEngine';
+import { invalidateEducationCache } from '../cache';
 import { homeworkApi } from '../homework/api';
 import { useHomeworkResource } from '../homework/resources';
-import { studentPortalApi } from './api';
-import { studentSession } from './session';
 import { useEducationI18n } from '../i18n';
 import EducationState from '../EducationState.vue';
-import TypingTrainer from './TypingTrainer.vue';
 import StudentLearningAssignments from './StudentLearningAssignments.vue';
 import { useLearningAssignments } from './learningAssignments';
+import { studentSession } from './session';
+
 const { t } = useEducationI18n();
 const org = computed(() => studentSession.organizationId);
 const route = useRoute();
+
 const homeworkId = computed(() =>
   typeof route.query.homework === 'string' ? route.query.homework : '',
 );
@@ -25,6 +29,7 @@ const assigned = useHomeworkResource(
       : Promise.resolve(null),
   [homeworkId],
 );
+
 const canRunAssigned = computed(
   () =>
     assigned.data.value &&
@@ -32,25 +37,130 @@ const canRunAssigned = computed(
     ['typing', 'activity'].includes(assigned.data.value.assignment.type) &&
     ['NOT_STARTED', 'IN_PROGRESS', 'RETURNED'].includes(assigned.data.value.submission.state),
 );
-const offset = ref(0);
-const { data, loading, error, refresh } = useHomeworkResource(
-  () => org.value,
-  async (organization, signal) =>
-    studentPortalApi.typingHistory(organization, offset.value, signal),
-  [offset],
+
+const typingItem = ref<ActivityItem | null>(null);
+const attempt = ref<ActivityAttempt | null>(null);
+const history = ref<Array<Record<string, unknown>>>([]);
+const arenaLoading = ref(false);
+const arenaError = ref<unknown>(null);
+
+const isAssignedSession = computed(
+  () => Boolean(homeworkId.value || learning.id.value),
 );
-watch(
-  () => [org.value],
-  () => {
-    offset.value = 0;
-  },
+
+const isReadonly = computed(
+  () => attempt.value !== null && !['CREATED', 'IN_PROGRESS'].includes(attempt.value.state),
 );
-function onFinished(): void {
-  void refresh();
+
+async function loadHistory(): Promise<void> {
+  if (!org.value) return;
+  try {
+    const res = await activityApi.analytics(org.value, { pluginCode: 'platform-typing' });
+    history.value = res.recentAttempts.filter((r) =>
+      ['EVALUATED', 'COMPLETED'].includes(String(r.state ?? '')),
+    );
+  } catch {
+    // ignore non-fatal history load error
+  }
 }
+
+async function startSession(configOverride?: TypingArenaConfig): Promise<void> {
+  if (!org.value) return;
+  if (homeworkId.value && !canRunAssigned.value) return;
+  if (!homeworkId.value && !learning.allowed.value) return;
+
+  arenaLoading.value = true;
+  arenaError.value = null;
+  try {
+    if (!typingItem.value) {
+      typingItem.value = await activityApi.bootstrapTyping(org.value);
+    }
+
+    const assignmentId = homeworkId.value
+      ? (assigned.data.value?.recipient.activityAssignmentId ?? undefined)
+      : (learning.selected.value?.id ?? undefined);
+
+    const cfg = assignmentId
+      ? undefined
+      : (configOverride ??
+          defaultTypingArenaConfig(
+            (assigned.data.value?.assignment.activityConfig as Record<string, unknown> | undefined) ??
+              (learning.selected.value?.effectiveConfig as Record<string, unknown> | undefined),
+          ));
+
+    attempt.value = await activityApi.startAttempt(org.value, typingItem.value.id, {
+      assignmentId,
+      resumeActive: Boolean(assignmentId),
+      ...(cfg ? { config: cfg as unknown as Record<string, unknown> } : {}),
+    });
+  } catch (err) {
+    arenaError.value = err;
+  } finally {
+    arenaLoading.value = false;
+  }
+}
+
+async function onSubmit(
+  submission: Record<string, unknown>,
+  telemetry: Record<string, unknown>,
+): Promise<void> {
+  if (!org.value || !attempt.value || isReadonly.value) return;
+  arenaError.value = null;
+  try {
+    const evaluated = await activityApi.submitAttempt(org.value, attempt.value.id, {
+      submission,
+      telemetry,
+      revision: attempt.value.revision,
+    });
+    attempt.value = evaluated;
+
+    if (homeworkId.value) {
+      await homeworkApi.attachActivity(org.value, homeworkId.value, evaluated.id);
+    }
+
+    invalidateEducationCache([
+      'homework',
+      'student',
+      'students',
+      'groups',
+      'lessons',
+      'messages',
+      'header',
+    ]);
+    await loadHistory();
+  } catch (err) {
+    arenaError.value = err;
+  }
+}
+
+async function onRestart(nextConfig: TypingArenaConfig): Promise<void> {
+  if (isAssignedSession.value) return;
+  await startSession(nextConfig);
+}
+
+watch(
+  [org, homeworkId, () => learning.id.value, canRunAssigned, () => learning.allowed.value],
+  () => {
+    if (!org.value) return;
+    void loadHistory();
+    if (homeworkId.value ? canRunAssigned.value : learning.allowed.value) {
+      void startSession();
+    } else {
+      attempt.value = null;
+    }
+  },
+  { immediate: true },
+);
+
+onMounted(() => {
+  if (org.value) {
+    void loadHistory();
+  }
+});
 </script>
+
 <template>
-  <section>
+  <section class="edu-typing-page">
     <header class="edu-page-title">
       <h2>Platform Typing</h2>
       <RouterLink
@@ -60,6 +170,7 @@ function onFinished(): void {
         {{ t('education.activities') }}
       </RouterLink>
     </header>
+
     <template v-if="homeworkId">
       <RouterLink
         :to="`/student/homework/${homeworkId}`"
@@ -78,6 +189,7 @@ function onFinished(): void {
         {{ assigned.data.value.assignment.maxAttempts }}
       </p>
     </template>
+
     <template v-else>
       <StudentLearningAssignments
         :items="learning.items.value"
@@ -95,83 +207,39 @@ function onFinished(): void {
         {{ t('education.learningAssignmentUnavailable') }}
       </p>
     </template>
+
     <EducationState
-      :loading="loading"
-      :error="error"
-      @retry="refresh"
+      :loading="arenaLoading"
+      :error="arenaError"
+      @retry="startSession()"
     />
-    <TypingTrainer
-      v-if="org && (homeworkId ? canRunAssigned : learning.allowed.value)"
-      :key="`${org}:${homeworkId}:${learning.id.value}`"
-      :organization-id="org"
-      :homework-id="homeworkId || undefined"
-      :assignment-id="homeworkId ? undefined : learning.selected.value?.id"
-      :assigned-config="
-        homeworkId
-          ? assigned.data.value?.assignment.activityConfig
-          : learning.selected.value?.effectiveConfig
-      "
-      @finished="onFinished"
-    />
+
     <p
       v-if="homeworkId && assigned.data.value && !canRunAssigned"
       class="edu-subtle"
     >
       {{ t('education.homeworkLocked') }}
     </p>
-    <template v-if="data">
-      <div class="edu-section-title">
-        <h2>{{ t('education.bestTyping') }}</h2>
-      </div>
-      <p v-if="data.best">
-        {{ data.best.wpm }} {{ t('education.wpm') }} · {{ data.best.accuracy }}% ·
-        {{ data.best.durationSeconds }} {{ t('education.seconds') }}
-      </p>
-      <EducationState
-        v-else
-        :empty="t('education.noTrainingResults')"
-      />
-      <div class="edu-section-title">
-        <h2>{{ t('education.trainingHistory') }}</h2>
-      </div>
-      <EducationState
-        v-if="!data.items.length"
-        :empty="t('education.noTrainingResults')"
-      />
-      <ul
-        v-else
-        class="edu-list"
-      >
-        <li
-          v-for="entry in data.items"
-          :key="entry.attemptId"
-          class="edu-list__item"
-        >
-          <strong>{{ entry.wpm }} {{ t('education.wpm') }}</strong>
-          <span>
-            {{ entry.accuracy }}% · {{ entry.errors }} · {{ entry.durationSeconds
-            }}{{ t('education.seconds') }}
-          </span>
-        </li>
-      </ul>
-      <div class="edu-form-actions">
-        <button
-          v-if="offset"
-          type="button"
-          class="edu-button"
-          @click="offset = Math.max(0, offset - 50)"
-        >
-          {{ t('education.back') }}
-        </button>
-        <button
-          v-if="data.nextOffset !== null"
-          type="button"
-          class="edu-button"
-          @click="offset = data.nextOffset ?? 0"
-        >
-          {{ t('education.loadMore') }}
-        </button>
-      </div>
-    </template>
+
+    <TypingArenaPlugin
+      v-if="attempt"
+      :exercise="attempt.exercise"
+      :initial-answers="attempt.answers"
+      :readonly="isReadonly"
+      :config="attempt.config"
+      :attempt="attempt"
+      :assigned="isAssignedSession"
+      :history="history"
+      @submit="onSubmit"
+      @restart="onRestart"
+    />
   </section>
 </template>
+
+<style scoped>
+.edu-typing-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+</style>

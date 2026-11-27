@@ -1,11 +1,24 @@
 export type ActivityLanguage = 'ru' | 'en';
 export type TypingMode = 'words' | 'sentences' | 'numbers' | 'code' | 'accuracy' | 'zen' | 'quote' | 'custom' | 'time';
 
-export type QuestionType = 'single_choice' | 'multi_choice' | 'true_false' | 'short_text' | 'numeric' | 'matching';
+export type QuestionType =
+  | 'single_choice'
+  | 'multi_choice'
+  | 'true_false'
+  | 'short_text'
+  | 'long_text'
+  | 'numeric'
+  | 'matching'
+  | 'ordering';
 
 export interface AssessmentOption {
   id: string;
   label: string;
+}
+
+export interface MatchingPair {
+  left: string;
+  right: string;
 }
 
 export interface AssessmentQuestion {
@@ -14,7 +27,8 @@ export interface AssessmentQuestion {
   prompt: string;
   points: number;
   options?: AssessmentOption[];
-  items?: unknown[];
+  pairs?: MatchingPair[];
+  items?: string[];
   answerKey?: unknown;
   explanation?: string;
   tolerance?: number;
@@ -103,6 +117,8 @@ export interface QuestionBankItem {
   content: {
     prompt: string;
     options?: AssessmentOption[];
+    pairs?: MatchingPair[];
+    items?: string[];
     tolerance?: number;
   };
   answerKey: unknown;

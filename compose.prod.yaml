@@ -1,0 +1,106 @@
+# Production / Staging override for compose.yaml.
+# Usage:
+#   docker compose -f compose.yaml -f compose.prod.yaml --profile control up -d --build
+#
+# Key differences from local dev:
+# - Uses immutable `prod` / `app` images with no host source mounts (./apps/backend:/app removed).
+# - Forces APP_ENV=prod, APP_DEBUG=0, XDEBUG_MODE=off.
+# - Removes host port bindings for PostgreSQL, Redis, and Mailpit.
+# - Disables Mailpit and backend-fast (dev-only services).
+# - Keeps backend, backend-realtime, and control-plane bound to 127.0.0.1 for native reverse proxy (infra/proxy/Caddyfile.example).
+
+services:
+  postgres:
+    ports: !reset []
+
+  redis:
+    ports: !reset []
+
+  mailpit:
+    profiles: ["dev-only"]
+
+  control-postgres:
+    ports: !reset []
+
+  backend:
+    image: platform-backend:prod
+    build:
+      context: ./apps/backend
+      dockerfile: docker/Dockerfile
+      target: prod
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      XDEBUG_MODE: "off"
+      LOCAL_MAIL_ENABLED: "false"
+    volumes: !override
+      - ./deployment/privacy:/run/privacy:ro
+    depends_on: !override
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  backend-fast:
+    profiles: ["dev-only"]
+
+  backend-email-worker:
+    image: platform-backend:prod
+    build:
+      context: ./apps/backend
+      dockerfile: docker/Dockerfile
+      target: prod
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      XDEBUG_MODE: "off"
+      LOCAL_MAIL_ENABLED: "false"
+    volumes: !override
+      - ./deployment/privacy:/run/privacy:ro
+    stop_grace_period: 30s
+
+  backend-realtime:
+    image: platform-backend:prod
+    build:
+      context: ./apps/backend
+      dockerfile: docker/Dockerfile
+      target: prod
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      XDEBUG_MODE: "off"
+    volumes: !override
+      - ./deployment/privacy:/run/privacy:ro
+    stop_grace_period: 15s
+
+  backend-scheduler:
+    image: platform-backend:prod
+    build:
+      context: ./apps/backend
+      dockerfile: docker/Dockerfile
+      target: prod
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      XDEBUG_MODE: "off"
+      LOCAL_MAIL_ENABLED: "false"
+    volumes: !override
+      - ./deployment/privacy:/run/privacy:ro
+    stop_grace_period: 30s
+
+  control-plane:
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+
+  control-scheduler:
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+    stop_grace_period: 30s
+
+  control-outbox-worker:
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+    stop_grace_period: 30s

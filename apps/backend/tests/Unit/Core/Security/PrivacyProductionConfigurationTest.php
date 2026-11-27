@@ -81,11 +81,11 @@ final class PrivacyProductionConfigurationTest extends TestCase
     public function testProductionConsoleReadinessPassesWithSyntheticDeploymentPolicy(): void
     {
         $fixture = dirname(__DIR__, 3) . '/Fixtures/privacy/synthetic-production-policy.json';
-        $process = new Process(['php', 'yii', 'privacy/compliance/check'], dirname(__DIR__, 4), [
-            ...getenv(),
-            'APP_ENV' => 'prod',
-            'PRIVACY_CONFIG_FILE' => $fixture,
-        ]);
+        $env = getenv();
+        $env['APP_ENV'] = 'prod';
+        $env['PRIVACY_CONFIG_FILE'] = $fixture;
+        $env['S3_PUBLIC_ENDPOINT'] = 'https://s3.platform.test';
+        $process = new Process(['php', 'yii', 'privacy/compliance/check'], dirname(__DIR__, 4), $env);
         $process->run();
 
         self::assertSame(0, $process->getExitCode(), $process->getErrorOutput());

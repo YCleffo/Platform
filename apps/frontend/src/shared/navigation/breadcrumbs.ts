@@ -27,6 +27,12 @@ export function breadcrumbs(name: unknown, params: Record<string, unknown>, t: (
   if (['security', 'privacy', 'settings-components', 'settings-developer'].includes(route)) return [item('nav.settings', { name: 'settings' }), item('navigation.' + (route === 'settings-components' ? 'components' : route === 'settings-developer' ? 'developer' : route))];
   if (route === 'operator-console') return [item('app.name', { name: 'catalog' }), item('navigation.operator')];
   if (route === 'catalog') return [item('nav.catalog')];
+  if (route === 'workspace') return [item('navigation.workspace')];
+  if (route === 'search') return [item('navigation.workspace', { name: 'workspace' }), item('navigation.search')];
+  if (route === 'trash') return [item('navigation.workspace', { name: 'workspace' }), item('navigation.trash')];
+  if (route === 'universal-notifications') return [item('navigation.workspace', { name: 'workspace' }), item('navigation.notifications')];
+  if (route === 'universal-chat' || route === 'universal-chat-room') return [item('navigation.workspace', { name: 'workspace' }), item('navigation.chat')];
+  if (route.startsWith('universal-activit')) return [item('navigation.workspace', { name: 'workspace' }), item('navigation.activities')];
   if (route === 'drive') return [item('nav.drive')];
   if (route === 'plans') return [item('nav.catalog', { name: 'catalog' }), item('navigation.comparePlans')];
   if (route === 'plan-detail') {

@@ -6,6 +6,7 @@ import { useTheme } from '@/app/theme';
 import { applyAccountLocale, setLocale } from '@/shared/i18n';
 import AppInput from '@/shared/ui/fields/AppInput.vue';
 import AppDropdown from '@/shared/ui/fields/AppDropdown.vue';
+import AppFileDropzone from '@/shared/ui/fields/AppFileDropzone.vue';
 import { educationApi } from './api';
 import { useEducationWorkspace } from './workspace';
 import { useEducationMutation, useEducationError } from './resources';
@@ -181,18 +182,15 @@ async function reconcile(): Promise<void> {
         :maxlength="160"
         :disabled="busy || uncertain"
       />
-      <label for="education-avatar-file">
-        {{ t('education.avatar') }}
-        <input
-          id="education-avatar-file"
-          class="edu-file-input"
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          :disabled="busy || uncertain"
-          @change="file = ($event.target as HTMLInputElement).files?.[0] ?? null"
-        />
-        <small>{{ t('education.fileHint') }}</small>
-      </label>
+      <AppFileDropzone
+        v-model="file"
+        compact
+        accept="image/png,image/jpeg,image/webp"
+        :label="t('education.avatar')"
+        :hint="t('education.fileHint')"
+        :disabled="busy || uncertain"
+        :busy="busy"
+      />
       <label v-if="avatar">
         <input
           type="checkbox"

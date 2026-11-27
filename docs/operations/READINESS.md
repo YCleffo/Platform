@@ -3,10 +3,10 @@
 Статус: **INTEGRATED_LOCAL / PRODUCTION_GATED**. Локальная интеграция компонентов (Core, Education, DeviceManagement, Storage, Windows Agent, Frontend) полностью верифицирована сквозными проверками и контрактами. Результаты последней локальной проверки зафиксированы в [аудите](../AUDIT.md) и отчёте CLASSROOM_03. Эта страница задаёт условия промышленного выпуска, а не историю локальных запусков.
 
 Локальная интеграция и CI-контракты подтверждены:
-- Все 5 плоскостей БД (Core 53, Commercial 62, Education 53, DeviceManagement 11, Storage 15) синхронизированы без дрифта.
+- Все 10 плоскостей БД (Core, Commercial, Education, DeviceManagement, Storage, Chat, Realtime, Notifications, Activity, Workspace — 5 таблиц `workspace` и 11 каталогов DBML) синхронизированы без дрифта (`export_schema.py --check`, `check-dbml.cjs`).
 - S3 SeaweedFS SigV4 трансферы и хранилище манифестов полностью верифицированы.
 - Windows Agent (.NET 10, 66 тестов) и C++ Credential Provider x64 компилируются и проходят регрессионные проверки.
-- Frontend (505 тестов, 19 контрактных тестов на 101 операцию Education, линтеры, токены) полностью проходит проверки.
+- Frontend (642 теста в 131 файле, линтеры, токены, 100% паритет RU/EN i18n, 555 маршрутов в `frontend07-coverage`) и Backend (391 Codeception unit + 51 PHPUnit Foundation тестов) полностью проходят проверки.
 
 До промышленной эксплуатации на боевом контуре необходимо:
 

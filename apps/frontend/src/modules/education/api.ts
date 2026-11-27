@@ -66,6 +66,7 @@ export interface MessageMedia {
   name?: string;
   mime?: string;
   size?: number;
+  duration?: number | null;
   status?: string;
 }
 

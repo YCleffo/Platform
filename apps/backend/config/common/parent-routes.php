@@ -11,7 +11,7 @@ $definitions = [
     ['GET','/parent/context','context'],['POST','/parent/activate','activate'],['POST','/parent/register','register'],
     ['GET','/parent/children/{studentId}','child'],['GET','/parent/children/{studentId}/home','home'],
     ['GET','/parent/children/{studentId}/schedule','schedule'],['GET','/parent/children/{studentId}/diary','diary'],
-    ['GET','/parent/children/{studentId}/homework','homework'],['GET','/parent/children/{studentId}/progress','progress'],
+    ['GET','/parent/children/{studentId}/homework','homework'],['GET','/parent/children/{studentId}/homework/files/{id}','homework_material_download'],['GET','/parent/children/{studentId}/progress','progress'],
     ['GET','/parent/children/{studentId}/notifications','notifications'],
     ['POST','/parent/children/{studentId}/notifications/{id}/read','read_notification'],
     ['GET','/parent/children/{studentId}/contacts','contacts'],

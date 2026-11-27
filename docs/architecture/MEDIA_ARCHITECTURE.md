@@ -1,8 +1,8 @@
-# Media Module — Target Architecture
+# Media Module — Architecture & Implementation
 
-**Date:** 2026-11-24  
-**Status:** TARGET — currently MISSING; planned for PLATFORM_08_B  
-**Depends on:** Core (identity, quota policy), Storage (byte storage, presigned URLs)
+**Date:** 2026-11-24
+**Status:** IMPLEMENTED & VERIFIED (PLATFORM_09 Hardening)
+**Depends on:** Core (identity, organization memberships), Storage (StorageFileAdapter, S3 / SeaweedFS), Media API Actions
 
 ---
 

@@ -1,5 +1,7 @@
 import { readonly, shallowRef } from 'vue';
 import { resetSessionLocales } from '@/shared/i18n';
+import { realtimeClient } from '@/shared/realtime/realtimeClient';
+import { clearAllActivityDrafts } from '@/modules/activity/draftStorage';
 
 export interface CoreAdminTokens {
   accessToken: string;
@@ -38,6 +40,8 @@ export const coreAdminSession = {
   clear(): void {
     tokens = null;
     resetSessionLocales();
+    realtimeClient.disconnect();
+    void clearAllActivityDrafts();
     epoch.value += 1;
   },
   setUnauthorizedHandler(handler: () => void): void {

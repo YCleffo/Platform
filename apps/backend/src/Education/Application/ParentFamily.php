@@ -18,7 +18,9 @@ use App\Core\Module\Application\ModuleRepository;
 use App\Core\Rbac\Application\PermissionService;
 use App\Core\Rbac\Application\RoleRepository;
 use App\Core\Time\Application\ClockInterface;
+use App\Education\Infrastructure\EducationChatBridge;
 use App\Education\Infrastructure\ParentNotifications;
+use App\Realtime\Application\RealtimeService;
 use DateTimeImmutable;
 use Yiisoft\Db\Connection\ConnectionInterface;
 
@@ -42,6 +44,7 @@ final readonly class ParentFamily
         private ModuleRepository $modules,
         private \App\Core\Security\Application\RateLimiterInterface $rateLimiter,
         private \App\Core\Security\Application\IdentifierDigestService $digests,
+        private ?RealtimeService $realtime = null,
     ) {}
 
     public function list(Scope $scope, string $studentId): array
@@ -174,6 +177,19 @@ final readonly class ParentFamily
                         WHERE student_id=CAST(:student AS uuid) AND guardian_person_id=CAST(:person AS uuid) AND organization_id=CAST(:org AS uuid)",
                         [...$params,':actor' => $scope->actor(),':now' => $now],
                     )->execute();
+                    $roomIds = $this->db->createCommand(
+                        "SELECT r.id::text FROM chat.rooms r
+                         JOIN chat.members m ON m.room_id=r.id AND m.organization_id=r.organization_id
+                         WHERE r.organization_id=CAST(:org AS uuid) AND r.context_type='student' AND r.context_id=CAST(:student AS uuid)
+                           AND m.person_id=CAST(:person AS uuid) AND m.left_at IS NULL",
+                        $params,
+                    )->queryColumn();
+                    $bridge = new EducationChatBridge($this->db, $this->realtime);
+                    foreach ($roomIds as $rid) {
+                        if (is_string($rid) && $rid !== '') {
+                            $bridge->revokeMemberAccess($scope->organizationId, $rid, $personId, $scope->actor(), $scope->personId);
+                        }
+                    }
                 } elseif ($operation === 'invite') {
                     if ($row['status'] !== 'confirmed') {
                         throw new EducationError(409, 'family_unconfirmed');

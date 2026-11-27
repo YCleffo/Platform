@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { mediaController } from '@/shared/media/mediaController';
 
 const props = withDefaults(
   defineProps<{
@@ -106,6 +107,7 @@ async function initCamera(): Promise<void> {
 
 function startRecording(): void {
   if (!streamInstance) return;
+  mediaController.notifyRecordingStart();
   errorMessage.value = null;
   recordedBlob.value = null;
   previewUrl.value = null;

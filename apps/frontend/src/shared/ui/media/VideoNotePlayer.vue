@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useControlledMediaElement } from '@/shared/media/useControlledMediaElement';
+import type { MediaSessionPolicy } from '@/shared/media/types';
 import type { MediaAsset } from './types';
 
 const props = withDefaults(
@@ -10,6 +12,7 @@ const props = withDefaults(
     size?: number;
     autoplay?: boolean;
     muted?: boolean;
+    policy?: MediaSessionPolicy;
   }>(),
   {
     src: undefined,
@@ -17,6 +20,7 @@ const props = withDefaults(
     size: 240,
     autoplay: false,
     muted: true,
+    policy: 'exclusive',
   },
 );
 
@@ -24,31 +28,46 @@ const emit = defineEmits<{
   (e: 'play'): void;
   (e: 'pause'): void;
   (e: 'ended'): void;
+  (e: 'error', message: string): void;
 }>();
 
 const { t } = useI18n();
 
 const videoRef = ref<HTMLVideoElement | null>(null);
-const isPlaying = ref(false);
-const isMuted = ref(props.muted);
-const currentTime = ref(0);
-const duration = ref(props.asset?.durationSeconds ?? 0);
-const playbackRate = ref(1);
-const speeds = [1, 1.5, 2];
+const localMuted = ref(props.muted);
+
+const effectiveSrc = computed(() => props.src || props.asset?.playbackUrl || '');
+
+const {
+  isPlaying,
+  currentTime,
+  duration,
+  playbackRate,
+  errorMessage,
+  togglePlay: controlledTogglePlay,
+  cycleSpeed: controlledCycleSpeed,
+  mediaEvents,
+} = useControlledMediaElement({
+  elementRef: videoRef,
+  policy: props.policy,
+  durationHint: () => props.asset?.durationSeconds ?? null,
+  getTrack: () => ({
+    kind: 'video_note',
+    src: effectiveSrc.value,
+    title: props.asset?.originalName || 'Video note',
+    durationHint: props.asset?.durationSeconds ?? undefined,
+    asset: props.asset,
+  }),
+  onPlay: () => emit('play'),
+  onPause: () => emit('pause'),
+  onEnded: () => emit('ended'),
+  onError: (msg) => emit('error', msg),
+});
 
 function cycleSpeed(e: MouseEvent): void {
   e.stopPropagation();
-  const idx = speeds.indexOf(playbackRate.value);
-  const next = speeds[(idx + 1) % speeds.length] ?? 1;
-  playbackRate.value = next;
-  if (videoRef.value) {
-    videoRef.value.playbackRate = next;
-  }
+  controlledCycleSpeed([1, 1.5, 2]);
 }
-
-const effectiveSrc = computed(() => {
-  return props.src || props.asset?.playbackUrl || '';
-});
 
 // SVG Circular Progress calculation
 const radius = computed(() => props.size / 2 - 4);
@@ -60,43 +79,13 @@ const strokeDashoffset = computed(() => {
 });
 
 function togglePlayback(): void {
-  const el = videoRef.value;
-  if (!el) return;
-  if (isPlaying.value) {
-    el.pause();
-  } else {
+  if (!videoRef.value || errorMessage.value) return;
+  if (!isPlaying.value) {
     // Unmute on explicit user interaction
-    isMuted.value = false;
-    void el.play();
+    localMuted.value = false;
   }
+  controlledTogglePlay();
 }
-
-function handleTimeUpdate(): void {
-  const el = videoRef.value;
-  if (!el) return;
-  currentTime.value = el.currentTime;
-}
-
-function handleLoadedMetadata(): void {
-  const el = videoRef.value;
-  if (!el) return;
-  if (Number.isFinite(el.duration) && el.duration > 0) {
-    duration.value = el.duration;
-  }
-}
-
-function handleEnded(): void {
-  isPlaying.value = false;
-  currentTime.value = 0;
-  emit('ended');
-}
-
-onBeforeUnmount(() => {
-  if (videoRef.value) {
-    videoRef.value.pause();
-    videoRef.value.src = '';
-  }
-});
 </script>
 
 <template>
@@ -140,19 +129,18 @@ onBeforeUnmount(() => {
         ref="videoRef"
         :src="effectiveSrc"
         playsinline
-        :muted="isMuted"
+        :muted="localMuted"
         class="app-video-note-player__video"
-        @play="
-          isPlaying = true;
-          emit('play');
-        "
-        @pause="
-          isPlaying = false;
-          emit('pause');
-        "
-        @timeupdate="handleTimeUpdate"
-        @loadedmetadata="handleLoadedMetadata"
-        @ended="handleEnded"
+        @loadstart="mediaEvents.loadstart"
+        @canplay="mediaEvents.canplay"
+        @waiting="mediaEvents.waiting"
+        @playing="mediaEvents.playing"
+        @play="mediaEvents.play"
+        @pause="mediaEvents.pause"
+        @timeupdate="mediaEvents.timeupdate"
+        @loadedmetadata="mediaEvents.loadedmetadata"
+        @ended="mediaEvents.ended"
+        @error="mediaEvents.error"
       />
     </div>
 

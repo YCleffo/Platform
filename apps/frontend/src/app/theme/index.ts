@@ -1,4 +1,5 @@
 import { computed, nextTick, ref } from 'vue';
+import { refreshAppearancePalette } from '@/app/appearance';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -23,6 +24,7 @@ let storageListening = false;
 
 function applyTheme(): void {
   document.documentElement.dataset.theme = resolved.value;
+  refreshAppearancePalette();
 }
 
 function changeTheme(next: Theme, persist = true): void {

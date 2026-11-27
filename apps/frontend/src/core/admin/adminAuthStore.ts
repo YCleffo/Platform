@@ -4,6 +4,7 @@ import { ApiError, SupersededOperationError } from '@/shared/api/errors';
 import { coreAdminAuth, type CoreAdminIdentity, type CoreAdminLoginResult, type CoreExternalProvider } from '@/shared/api/core/adminAuth';
 import { coreAdminSession, type CoreAdminTokens } from '@/core/admin/session';
 import { coreAdminHttp } from '@/shared/api/core/adminHttp';
+import { realtimeClient } from '@/shared/realtime/realtimeClient';
 import { authenticatePasskey } from '@/shared/webauthn';
 import { applyAccountLocale } from '@/shared/i18n';
 
@@ -82,6 +83,7 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
     assertCurrent(operation);
     if (coreAdminSession.epoch() !== epoch) throw new SupersededOperationError();
     identity.value = me;
+    realtimeClient.setAuthContext(me.account.id, tokens.sessionId);
     applyAccountLocale(me.locale);
     status.value = 'authenticated';
     challengeToken.value = null;

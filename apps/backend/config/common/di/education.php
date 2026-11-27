@@ -32,6 +32,8 @@ return [
     HomeworkStore::class => ['class' => PostgresHomeworkStore::class],
     HomeworkExtensions::class => ['class' => PostgresHomeworkExtensions::class],
     ActivityResultSink::class => ['class' => \App\Education\Infrastructure\EducationActivityEvents::class],
+    \App\Activity\Application\ActivityResultListenerInterface::class => ['class' => \App\Education\Infrastructure\EducationActivityJournalAdapter::class],
+    \App\Activity\Application\ActivityResultListenerInterface::class => ['class' => \App\Education\Infrastructure\EducationActivityJournalAdapter::class],
     EducationService::class => ['__construct()' => [
         'curriculum' => \Yiisoft\Definitions\Reference::to(CurriculumStore::class),
         'activityResults' => \Yiisoft\Definitions\Reference::to(ActivityResultSink::class),
@@ -45,6 +47,8 @@ return [
     \App\Education\Application\AssessmentService::class => ['__construct()' => [
         'db' => \Yiisoft\Definitions\Reference::to(\Yiisoft\Db\Connection\ConnectionInterface::class),
         'activityHandlers' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\ActivityHandlerRegistry::class),
+        'activityResults' => \Yiisoft\Definitions\Reference::to(ActivityResultSink::class),
+        'engine' => \Yiisoft\Definitions\Reference::to(\App\Activity\Application\ActivityEngineService::class),
     ]],
     Mutation::class => ['class' => PostgresMutation::class],
     MigrationRunner::class => ['__construct()' => ['directory' => $root . '/migrations/education']],

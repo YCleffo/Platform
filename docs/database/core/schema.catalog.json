@@ -10388,6 +10388,20 @@
       "indexes": [
         {
           "keys": [
+            "name",
+            "code"
+          ],
+          "name": "core_organizations_search_trgm_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 2,
+          "predicate": null,
+          "definition": "CREATE INDEX core_organizations_search_trgm_idx ON core.organizations USING gin (name gin_trgm_ops, code gin_trgm_ops)",
+          "attribute_count": 2
+        },
+        {
+          "keys": [
             "code"
           ],
           "name": "organizations_code_key",
@@ -11986,6 +12000,47 @@
       ],
       "comment": "Physical individuals separated from accounts. Core v1 base table (1 of 23). Data hygiene constraints applied.",
       "indexes": [
+        {
+          "keys": [
+            "to_tsvector('russian'::regconfig, (((((COALESCE(display_name, ''::character varying))::text || ' '::text) || (given_name)::text) || ' '::text) || (family_name)::text))"
+          ],
+          "name": "core_persons_fts_ru_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX core_persons_fts_ru_idx ON core.persons USING gin (to_tsvector('russian'::regconfig, (((((COALESCE(display_name, ''::character varying))::text || ' '::text) || (given_name)::text) || ' '::text) || (family_name)::text)))",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "to_tsvector('simple'::regconfig, (((((COALESCE(display_name, ''::character varying))::text || ' '::text) || (given_name)::text) || ' '::text) || (family_name)::text))"
+          ],
+          "name": "core_persons_fts_simple_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 1,
+          "predicate": null,
+          "definition": "CREATE INDEX core_persons_fts_simple_idx ON core.persons USING gin (to_tsvector('simple'::regconfig, (((((COALESCE(display_name, ''::character varying))::text || ' '::text) || (given_name)::text) || ' '::text) || (family_name)::text)))",
+          "attribute_count": 1
+        },
+        {
+          "keys": [
+            "given_name",
+            "family_name",
+            "COALESCE(display_name, ''::character varying)"
+          ],
+          "name": "core_persons_search_trgm_idx",
+          "method": "gin",
+          "unique": false,
+          "primary": false,
+          "key_count": 3,
+          "predicate": null,
+          "definition": "CREATE INDEX core_persons_search_trgm_idx ON core.persons USING gin (given_name gin_trgm_ops, family_name gin_trgm_ops, COALESCE(display_name, ''::character varying) gin_trgm_ops)",
+          "attribute_count": 3
+        },
         {
           "keys": [
             "birth_date"

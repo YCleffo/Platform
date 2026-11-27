@@ -13,6 +13,9 @@ final readonly class PrivateResponse implements MiddlewareInterface
 {
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        return $handler->handle($request)->withHeader('Cache-Control', 'no-store')->withHeader('X-Content-Type-Options', 'nosniff');
+        $response = $handler->handle($request);
+        $cacheControl = $response->getHeaderLine('Cache-Control');
+        $targetCache = str_contains($cacheControl, 'no-transform') ? 'no-store, no-transform' : 'no-store';
+        return $response->withHeader('Cache-Control', $targetCache)->withHeader('X-Content-Type-Options', 'nosniff');
     }
 }
