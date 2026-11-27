@@ -3,10 +3,19 @@ import { computed, ref, watch } from 'vue';
 import AppButton from '@/shared/ui/actions/AppButton.vue';
 import { actT } from '../activityI18n';
 
+type BreakdownRow = {
+  itemId?: string;
+  correct?: boolean;
+  expected?: string;
+  actual?: string;
+  explanation?: string;
+};
+
 const props = defineProps<{
   exercise: Record<string, unknown>;
   initialAnswers?: Record<string, unknown>;
   readonly?: boolean;
+  evaluation?: Record<string, unknown> | null;
 }>();
 
 const emit = defineEmits<{
@@ -23,6 +32,27 @@ const answers = ref<Record<string, string>>({
   ...((props.initialAnswers as Record<string, string>) ?? {}),
 });
 
+watch(
+  () => props.initialAnswers,
+  (val) => {
+    if (val && typeof val === 'object') {
+      answers.value = { ...(val as Record<string, string>) };
+    }
+  },
+);
+
+const breakdownByRound = computed<Record<string, BreakdownRow>>(() => {
+  const raw = props.evaluation?.breakdown;
+  if (!Array.isArray(raw)) return {};
+  const map: Record<string, BreakdownRow> = {};
+  for (const row of raw) {
+    if (row && typeof row === 'object' && typeof (row as BreakdownRow).itemId === 'string') {
+      map[(row as BreakdownRow).itemId as string] = row as BreakdownRow;
+    }
+  }
+  return map;
+});
+
 watch(answers, (val) => emit('update:submission', { answers: val }, {}), { deep: true });
 </script>
 
@@ -32,6 +62,10 @@ watch(answers, (val) => emit('update:submission', { answers: val }, {}), { deep:
       v-for="(r, idx) in rounds"
       :key="r.id"
       class="uact-logic__card"
+      :class="{
+        'is-correct': readonly && breakdownByRound[r.id]?.correct === true,
+        'is-wrong': readonly && breakdownByRound[r.id]?.correct === false,
+      }"
     >
       <strong>{{ idx + 1 }}. {{ r.prompt }}</strong>
       <div class="uact-logic__opts">
@@ -49,6 +83,23 @@ watch(answers, (val) => emit('update:submission', { answers: val }, {}), { deep:
           />
           <span>{{ opt }}</span>
         </label>
+      </div>
+      <div
+        v-if="readonly && breakdownByRound[r.id]"
+        class="uact-logic__feedback"
+      >
+        <p>
+          <strong>{{ breakdownByRound[r.id]?.correct ? '✓' : '✕' }}</strong>
+          <span v-if="!breakdownByRound[r.id]?.correct && breakdownByRound[r.id]?.expected">
+            ({{ breakdownByRound[r.id]?.expected }})
+          </span>
+        </p>
+        <p
+          v-if="breakdownByRound[r.id]?.explanation"
+          class="uact-logic__explanation"
+        >
+          {{ breakdownByRound[r.id]?.explanation }}
+        </p>
       </div>
     </article>
     <AppButton
@@ -76,6 +127,12 @@ watch(answers, (val) => emit('update:submission', { answers: val }, {}), { deep:
   flex-direction: column;
   gap: 8px;
 }
+.uact-logic__card.is-correct {
+  border-color: var(--success, #16a34a);
+}
+.uact-logic__card.is-wrong {
+  border-color: var(--danger, #dc2626);
+}
 .uact-logic__opts {
   display: flex;
   flex-wrap: wrap;
@@ -90,5 +147,12 @@ watch(answers, (val) => emit('update:submission', { answers: val }, {}), { deep:
   border-radius: var(--radius-control-s);
   background: var(--surface);
   cursor: pointer;
+}
+.uact-logic__feedback {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.uact-logic__feedback p {
+  margin: 2px 0;
 }
 </style>

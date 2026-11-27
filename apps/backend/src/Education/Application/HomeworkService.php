@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Education\Application;
 
+use App\Activity\Application\ActivityPluginRegistry;
 use App\Core\Rbac\Application\PermissionService;
 use App\Core\Time\Application\ClockInterface;
 use DateTimeImmutable;
@@ -20,7 +21,7 @@ final readonly class HomeworkService
         private PermissionService $permissions,
         private ClockInterface $clock,
         private HomeworkExtensions $extensions,
-        private ActivityHandlerRegistry $activityHandlers,
+        private ActivityPluginRegistry $activityPlugins,
     ) {}
 
     public function read(string $operation, Scope $scope, array $query = [], ?string $id = null): array
@@ -375,7 +376,7 @@ final readonly class HomeworkService
             if (!is_array($config) || array_is_list($config)) {
                 throw new EducationError(422, 'invalid_activity_config');
             }
-            $this->activityHandlers->validateConfig($activityCode, $config);
+            ActivityCode::toCanonicalConfig($this->activityPlugins, $activityCode, $config);
         }
         return ['title' => Input::text($input['title'] ?? null, 160), 'description' => Input::text($input['description'] ?? '', 8000, false),
             'instructions' => Input::text($input['instructions'] ?? '', 20000, false), 'type' => $type, 'groupId' => $group, 'lessonId' => $lesson,

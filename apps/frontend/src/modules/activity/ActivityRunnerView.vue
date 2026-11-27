@@ -21,9 +21,11 @@ const props = defineProps<{
   assignmentId?: string;
   organizationId?: string;
   embedded?: boolean;
+  initialConfig?: Record<string, unknown>;
 }>();
 
 const emit = defineEmits<{
+  started: [attemptId: string];
   finished: [
     result: {
       attemptId: string;
@@ -286,10 +288,12 @@ async function initAttempt(): Promise<void> {
         attempt.value = await activityApi.startAttempt(orgId.value, props.activityId, {
           assignmentId: asgnId,
           resumeActive: true,
+          ...(!asgnId && props.initialConfig ? { config: props.initialConfig } : {}),
         });
       }
 
       if (attempt.value && ['CREATED', 'IN_PROGRESS'].includes(attempt.value.state)) {
+        emit('started', attempt.value.id);
         if (personId.value) {
           storeActiveAttemptId(
             orgId.value,
@@ -728,6 +732,7 @@ onBeforeUnmount(() => {
         :exercise="attempt.exercise"
         :initial-answers="(attempt.answers.answers as Record<string, unknown>) ?? attempt.answers"
         :readonly="isReadonly"
+        :evaluation="attempt.evaluation"
         @update:submission="onSubmissionUpdate"
         @submit="submitNow"
       />

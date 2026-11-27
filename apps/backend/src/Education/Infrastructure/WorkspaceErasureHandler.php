@@ -83,6 +83,36 @@ final readonly class WorkspaceErasureHandler implements PersonalDataErasureHandl
         (new ActivityPrivacy($this->db))->erase($subject);
         (new FamilyPrivacy($this->db))->erase($subject);
         $homeworkKeys = (new HomeworkPrivacy($this->db))->erase($subject);
+        $this->db->createCommand(<<<'SQL'
+            DELETE FROM education.activity_journal_sync
+            WHERE attempt_id IN (
+                SELECT id FROM activity.attempts
+                WHERE participant_person_id = CAST(:subject AS uuid)
+                   OR participant_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
+            )
+            SQL, [':subject' => $subject])->execute();
+        $this->db->createCommand(<<<'SQL'
+            DELETE FROM activity.attempt_events
+            WHERE attempt_id IN (
+                SELECT id FROM activity.attempts
+                WHERE participant_person_id = CAST(:subject AS uuid)
+                   OR participant_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
+            )
+            SQL, [':subject' => $subject])->execute();
+        $this->db->createCommand(<<<'SQL'
+            DELETE FROM activity.attempts
+            WHERE participant_person_id = CAST(:subject AS uuid)
+               OR participant_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
+            SQL, [':subject' => $subject])->execute();
+        $this->db->createCommand(<<<'SQL'
+            DELETE FROM activity.assignments
+            WHERE assigned_by_person_id = CAST(:subject AS uuid)
+               OR (target_type IN ('student', 'homework') AND target_id IN (
+                   SELECT id FROM education.students WHERE person_id = CAST(:subject AS uuid)
+                       OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id = CAST(:subject AS uuid))
+               ))
+               OR (target_type = 'person' AND target_id = CAST(:subject AS uuid))
+            SQL, [':subject' => $subject])->execute();
         $this->db->createCommand('DELETE FROM education.student_guardians WHERE guardian_person_id=CAST(:subject AS uuid)
             OR student_id IN (SELECT id FROM education.students WHERE person_id=CAST(:subject AS uuid)
                 OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id=CAST(:subject AS uuid)))', [':subject' => $subject])->execute();

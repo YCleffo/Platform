@@ -1437,6 +1437,64 @@ final readonly class ActivityEngineService
     }
 
     /**
+     * Invalidates (revokes) an attempt from teacher/reviewer context.
+     *
+     * @return array<string, mixed>
+     */
+    public function invalidateAttempt(AuthenticatedIdentity $identity, string $organizationId, string $attemptId, string $reason = ''): array
+    {
+        $actorPersonId = $this->assertAccess($identity, $organizationId, 'activity.review');
+        $orgId = RealtimeService::assertUuid($organizationId, 'organizationId');
+        $attId = RealtimeService::assertUuid($attemptId, 'attemptId');
+        $policy = $this->policy();
+
+        $this->db->transaction(function () use ($identity, $orgId, $attId, $actorPersonId, $reason, $policy): void {
+            $row = $this->db->createCommand(
+                'SELECT a.state, a.participant_person_id::text AS "participantId", a.assignment_id::text AS "assignmentId",
+                        i.author_person_id::text AS "authorPersonId"
+                 FROM activity.attempts a
+                 JOIN activity.items i ON i.id = a.activity_id
+                 WHERE a.id = CAST(:id AS uuid) AND a.organization_id = CAST(:org AS uuid)
+                 FOR UPDATE OF a',
+                [':id' => $attId, ':org' => $orgId],
+            )->queryOne();
+            if (!is_array($row)) {
+                throw new HttpError(404, 'attempt_not_found');
+            }
+            $participantId = (string) $row['participantId'];
+            $assignmentId = is_string($row['assignmentId']) && $row['assignmentId'] !== '' ? $row['assignmentId'] : null;
+            $authorPersonId = is_string($row['authorPersonId']) && $row['authorPersonId'] !== '' ? $row['authorPersonId'] : null;
+
+            if (!$policy->canAccessParticipantAttempt($identity, $orgId, $participantId, $assignmentId, $authorPersonId)) {
+                throw new HttpError(403, 'attempt_forbidden');
+            }
+
+            $prevState = (string) $row['state'];
+            if (!in_array($prevState, ['CANCELLED', 'INVALIDATED'], true)) {
+                $this->db->createCommand(
+                    "UPDATE activity.attempts
+                     SET state = 'INVALIDATED',
+                         review_notes = CASE WHEN :notes <> '' THEN :notes ELSE review_notes END,
+                         updated_at = now()
+                     WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid)",
+                    [':notes' => trim($reason), ':id' => $attId, ':org' => $orgId],
+                )->execute();
+
+                $this->recordTransition(
+                    $attId,
+                    $prevState,
+                    'INVALIDATED',
+                    $actorPersonId,
+                    'attempt_invalidated',
+                    ['reason' => trim($reason)],
+                );
+            }
+        });
+
+        return $this->getAttempt($identity, $orgId, $attId);
+    }
+
+    /**
      * Lists attempts for an activity (for teachers/authors/reviewers), including manual review queue filtering.
      *
      * @param array<string, mixed> $query
@@ -2178,53 +2236,102 @@ final readonly class ActivityEngineService
     /** @return array<string, mixed> */
     public function bootstrapTypingActivity(AuthenticatedIdentity $identity, string $organizationId): array
     {
+        return $this->bootstrapPluginActivity($identity, $organizationId, 'platform-typing');
+    }
+
+    /**
+     * Ensures a published org-visible activity item & v1 exist for a canonical plugin code.
+     *
+     * @return array<string, mixed>
+     */
+    public function bootstrapPluginActivity(AuthenticatedIdentity $identity, string $organizationId, string $pluginCode): array
+    {
         $personId = $this->assertAccess($identity, $organizationId, 'activity.use');
         $orgId = RealtimeService::assertUuid($organizationId, 'organizationId');
+        if (!$this->plugins->has($pluginCode)) {
+            throw new HttpError(404, 'plugin_not_found');
+        }
+        $plugin = $this->plugins->get($pluginCode);
 
         $existingId = $this->db->createCommand(
             "SELECT id::text
              FROM activity.items
              WHERE organization_id = CAST(:org AS uuid)
-               AND plugin_code = 'platform-typing'
+               AND plugin_code = :code
                AND status = 'PUBLISHED'
                AND visibility IN ('public_catalog', 'organization')
              ORDER BY created_at ASC
              LIMIT 1",
-            [':org' => $orgId],
+            [':org' => $orgId, ':code' => $pluginCode],
         )->queryScalar();
 
         if (is_string($existingId) && $existingId !== '') {
             return $this->getActivity($identity, $orgId, $existingId);
         }
 
-        $plugin = $this->plugins->get('platform-typing');
         $defaultCfg = $plugin->defaultConfig();
-        $defaultCfg['revealAnswersPolicy'] = 'immediate';
+        if (!isset($defaultCfg['revealAnswersPolicy'])) {
+            $defaultCfg['revealAnswersPolicy'] = 'immediate';
+        }
+        $title = $pluginCode === 'platform-typing' ? 'Typing Arena' : $plugin->title();
+        $description = $pluginCode === 'platform-typing'
+            ? 'Universal Monkeytype-grade touch typing trainer'
+            : ('Canonical ' . $plugin->title() . ' activity');
+        $tags = json_encode([$plugin->category(), $pluginCode], JSON_THROW_ON_ERROR);
+        $timeLimit = isset($defaultCfg['timeLimitSeconds']) && is_int($defaultCfg['timeLimitSeconds'])
+            ? $defaultCfg['timeLimitSeconds']
+            : null;
+        $passing = isset($defaultCfg['minAccuracy']) && is_int($defaultCfg['minAccuracy'])
+            ? $defaultCfg['minAccuracy']
+            : 65;
 
         $createdId = '';
-        $this->db->transaction(function () use (&$createdId, $identity, $orgId, $personId, $defaultCfg): void {
+        $this->db->transaction(function () use (
+            &$createdId,
+            $identity,
+            $orgId,
+            $personId,
+            $pluginCode,
+            $title,
+            $description,
+            $tags,
+            $defaultCfg,
+            $timeLimit,
+            $passing,
+        ): void {
             $createdId = (string) $this->db->createCommand(
                 "INSERT INTO activity.items (
                     organization_id, plugin_code, author_person_id, author_account_id,
                     title, description, status, visibility, tags
                  ) VALUES (
-                    CAST(:org AS uuid), 'platform-typing', CAST(:person AS uuid), CAST(:account AS uuid),
-                    'Typing Arena', 'Universal Monkeytype-grade touch typing trainer', 'PUBLISHED', 'public_catalog', '[\"typing\",\"arena\"]'::jsonb
+                    CAST(:org AS uuid), :code, CAST(:person AS uuid), CAST(:account AS uuid),
+                    :title, :descr, 'PUBLISHED', 'public_catalog', CAST(:tags AS jsonb)
                  ) RETURNING id::text",
-                [':org' => $orgId, ':person' => $personId, ':account' => $identity->accountId],
+                [
+                    ':org' => $orgId,
+                    ':code' => $pluginCode,
+                    ':person' => $personId,
+                    ':account' => $identity->accountId,
+                    ':title' => $title,
+                    ':descr' => $description,
+                    ':tags' => $tags,
+                ],
             )->queryScalar();
 
             $verId = (string) $this->db->createCommand(
                 "INSERT INTO activity.versions (
                     activity_id, version_number, title, instructions, config, content,
-                    time_limit_seconds, max_attempts, passing_score_percent, grading_policy, reveal_answers_policy, created_by_person_id
+                    time_limit_seconds, max_attempts, passing_score_percent, grading_policy, reveal_answers_policy, auto_publish_results, created_by_person_id
                  ) VALUES (
-                    CAST(:aid AS uuid), 1, 'Typing Arena', '', CAST(:cfg AS jsonb), '{}'::jsonb,
-                    60, 0, 85, 'highest', 'immediate', CAST(:person AS uuid)
+                    CAST(:aid AS uuid), 1, :title, '', CAST(:cfg AS jsonb), '{}'::jsonb,
+                    :timeLimit, 0, :passing, 'highest', 'immediate', true, CAST(:person AS uuid)
                  ) RETURNING id::text",
                 [
                     ':aid' => $createdId,
+                    ':title' => $title,
                     ':cfg' => json_encode($defaultCfg, JSON_THROW_ON_ERROR),
+                    ':timeLimit' => $timeLimit,
+                    ':passing' => $passing,
                     ':person' => $personId,
                 ],
             )->queryScalar();

@@ -30,8 +30,8 @@ final class ParentAccessTest extends HomeworkFixture
         $typing = $this->education->write('student_start_attempt', $this->learner['scope'], ['language' => 'en','durationSeconds' => 15], 'platform-typing');
         $this->education->write('student_finish_attempt', $this->learner['scope'], ['typed' => substr($typing['exercise']['text'], 0, 25),'durationSeconds' => 15], $typing['attempt']['id']);
         $logic = $this->education->write('student_start_attempt', $this->learner['scope'], ['language' => 'en','difficulty' => 2,'roundCount' => 5], 'platform-logic');
-        $snapshot = json_decode($this->db->createCommand('SELECT exercise_payload FROM education.activity_attempts WHERE id=CAST(:id AS uuid)', [':id' => $logic['attempt']['id']])->queryScalar(), true, flags: JSON_THROW_ON_ERROR);
-        $answers = array_map(static fn(array $round): array => ['roundId' => $round['id'],'optionId' => $round['correctOptionId']], $snapshot['rounds']);
+        $snapshot = json_decode((string) $this->db->createCommand('SELECT draft_state FROM activity.attempts WHERE id=CAST(:id AS uuid)', [':id' => $logic['attempt']['id']])->queryScalar(), true, flags: JSON_THROW_ON_ERROR);
+        $answers = is_array($snapshot['_answerKey'] ?? null) ? $snapshot['_answerKey'] : [];
         $result = $this->education->write('student_finish_attempt', $this->learner['scope'], ['answers' => $answers], $logic['attempt']['id']);
         $this->sameResponse($result, $this->education->write('student_finish_attempt', $this->learner['scope'], ['answers' => $answers], $logic['attempt']['id']));
         $period = ['from' => gmdate('Y-m-d', time() - 86400),'to' => gmdate('Y-m-d', time() + 86400)];

@@ -85,7 +85,7 @@ final readonly class EducationAction
                     ->withHeader('Content-Disposition', "attachment; filename=\"download\"; filename*=UTF-8''" . rawurlencode($file['name']));
             }
             if ($request->getMethod() === 'GET') {
-                return $responses->success($education->read($operation, $scope, array_map(static fn(mixed $value): mixed => is_string($value) ? \App\Education\Application\ActivityCode::canonical($value) : $value, $request->getQueryParams()), $id));
+                return $responses->success($education->read($operation, $scope, array_map(static fn(mixed $value): mixed => is_string($value) ? \App\Education\Application\ActivityCode::canonical($value) : $value, $request->getQueryParams()), $id, $identity));
             }
             $body = $request->getParsedBody();
             if ($body !== null && !is_array($body)) {
@@ -115,7 +115,7 @@ final readonly class EducationAction
                 return $responses->success($education->upload($scope, $upload, $lessonId, $purpose === 'avatar'))->withStatus(201);
             }
             $studentId = $route->getArgument('studentId');
-            $result = $education->write($operation, $scope, $body, $id, is_string($studentId) ? $studentId : null);
+            $result = $education->write($operation, $scope, $body, $id, is_string($studentId) ? $studentId : null, $identity);
             return $responses->success($result)->withStatus(in_array(
                 $operation,
                 ['create_group', 'enroll_student', 'create_lesson', 'create_event', 'start_thread', 'send_message',

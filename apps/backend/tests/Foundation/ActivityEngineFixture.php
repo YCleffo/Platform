@@ -16,6 +16,7 @@ abstract class ActivityEngineFixture extends HomeworkFixture
         $defaults = $code === 'platform-typing'
             ? ['language' => 'en', 'durationSeconds' => 15]
             : ['language' => 'en', 'difficulty' => 1, 'roundCount' => 5];
+
         return $this->education->write('student_start_attempt', $scope ?? $this->learner['scope'], array_replace($defaults, $config), $code);
     }
 
@@ -23,27 +24,32 @@ abstract class ActivityEngineFixture extends HomeworkFixture
     {
         $scope ??= $this->learner['scope'];
         $started = $this->startActivity(config: $config, scope: $scope);
+        $text = (string) ($started['exercise']['text'] ?? $started['exercise']['promptText'] ?? '');
+        $duration = (int) ($started['exercise']['durationSeconds'] ?? $started['exercise']['timeLimitSeconds'] ?? 15);
+
         return $this->education->write('student_finish_attempt', $scope, [
-            'typed' => mb_substr($started['exercise']['text'], 0, $characters, 'UTF-8'),
-            'durationSeconds' => $started['exercise']['durationSeconds'],
+            'typed' => mb_substr($text, 0, $characters, 'UTF-8'),
+            'durationSeconds' => $duration,
         ], $started['attempt']['id']);
     }
 
     protected function savedAttempt(string $id): array
     {
-        $row = $this->db->createCommand('SELECT * FROM education.activity_attempts WHERE id=CAST(:id AS uuid)', [':id' => $id])->queryOne();
+        $row = $this->db->createCommand('SELECT * FROM activity.attempts WHERE id=CAST(:id AS uuid)', [':id' => $id])->queryOne();
         self::assertIsArray($row);
+
         return $row;
     }
 
     /** Read the private server snapshot only in test code, never from a public DTO. */
     protected function correctLogicAnswers(string $id): array
     {
-        $payload = json_decode($this->savedAttempt($id)['exercise_payload'], true, flags: JSON_THROW_ON_ERROR);
+        $payload = json_decode((string) $this->savedAttempt($id)['draft_state'], true, flags: JSON_THROW_ON_ERROR);
         $answers = [];
-        foreach ($payload['rounds'] as $round) {
-            $answers[] = ['roundId' => $round['id'], 'optionId' => $round['correctOptionId']];
+        foreach (($payload['_answerKey'] ?? []) as $roundId => $expected) {
+            $answers[(string) $roundId] = (string) $expected;
         }
+
         return $answers;
     }
 
@@ -51,6 +57,7 @@ abstract class ActivityEngineFixture extends HomeworkFixture
     {
         $scope ??= $this->learner['scope'];
         $started = $this->startActivity('platform-logic', scope: $scope);
+
         return $this->education->write(
             'student_finish_attempt',
             $scope,
@@ -62,7 +69,11 @@ abstract class ActivityEngineFixture extends HomeworkFixture
     protected function assertNoSolutions(array $dto): void
     {
         array_walk_recursive($dto, static function (mixed $value, string|int $key): void {
-            self::assertNotContains($key, ['correctOptionId', 'explanation', 'exercise_private', 'correctAnswer', 'solution'], 'Public unfinished attempt leaks a solution.');
+            self::assertNotContains(
+                $key,
+                ['correctOptionId', 'explanation', 'exercise_private', 'correctAnswer', 'solution', '_answerKey', '_explanations'],
+                'Public unfinished attempt leaks a solution.',
+            );
         });
     }
 }

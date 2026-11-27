@@ -4,342 +4,118 @@ declare(strict_types=1);
 
 namespace App\Tests\Foundation;
 
-use App\Education\Activity\ActivityPluginInterface;
-use App\Education\Application\ActivityHandlerRegistry;
+use App\Activity\Application\ActivityPluginInterface;
+use App\Activity\Application\ActivityPluginRegistry;
+use App\Activity\Infrastructure\Plugins\AssessmentActivityPlugin;
+use App\Activity\Infrastructure\Plugins\LogicActivityPlugin;
+use App\Activity\Infrastructure\Plugins\MathSprintActivityPlugin;
+use App\Activity\Infrastructure\Plugins\MemoryActivityPlugin;
+use App\Activity\Infrastructure\Plugins\TypingActivityPlugin;
+use App\Education\Application\ActivityCode;
 use App\Education\Application\EducationError;
-use App\Education\Application\MathSprintActivityHandler;
 use PHPUnit\Framework\TestCase;
 
+/** Tests canonical Universal Activity Engine plugins & Education config adapter validation. */
 final class ActivityPluginTest extends TestCase
 {
-    private ActivityHandlerRegistry $registry;
-    private MathSprintActivityHandler $plugin;
+    private ActivityPluginRegistry $registry;
 
     protected function setUp(): void
     {
-        $this->registry = new ActivityHandlerRegistry();
-        $this->plugin = new MathSprintActivityHandler();
+        $this->registry = new ActivityPluginRegistry();
     }
 
-    public function testPluginImplementsInterfaceAndRegistersCorrectly(): void
+    public function testCanonicalPluginsAreRegistered(): void
     {
-        $this->assertInstanceOf(ActivityPluginInterface::class, $this->plugin);
-        $this->assertSame('platform-math-sprint', $this->plugin->code());
-        $this->assertSame('1.0.0', $this->plugin->version());
-
-        $handler = $this->registry->handler('platform-math-sprint');
-        $this->assertInstanceOf(MathSprintActivityHandler::class, $handler);
-
-        $plugins = $this->registry->plugins();
-        $codes = array_column($plugins, 'code');
-        $this->assertContains('platform-math-sprint', $codes);
-    }
-
-    public function testConfigValidation(): void
-    {
-        $valid = $this->plugin->validateConfig(['durationSeconds' => 60, 'difficulty' => 2, 'operations' => ['add', 'mul']]);
-        $this->assertSame(60, $valid['durationSeconds']);
-        $this->assertSame(2, $valid['difficulty']);
-        $this->assertSame(['add', 'mul'], $valid['operations']);
-
-        $this->expectException(EducationError::class);
-        $this->plugin->validateConfig(['durationSeconds' => 45]); // invalid duration
-    }
-
-    public function testExerciseGenerationAndPublicMasking(): void
-    {
-        $config = $this->plugin->validateConfig(['durationSeconds' => 30, 'difficulty' => 1]);
-        $exercise = $this->plugin->createExercise($config);
-
-        $this->assertArrayHasKey('problems', $exercise);
-        $this->assertNotEmpty($exercise['problems']);
-
-        // Check private exercise has answers
-        $first = $exercise['problems'][0];
-        $this->assertArrayHasKey('prompt', $first);
-        $this->assertArrayHasKey('answer', $first);
-
-        // Check public exercise hides answers
-        $attempt = [
-            'config' => $config,
-            'exercisePayload' => $exercise,
-        ];
-        $public = $this->plugin->publicExercise($attempt);
-        $this->assertArrayHasKey('problems', $public);
-        $firstPublic = $public['problems'][0];
-        $this->assertArrayHasKey('prompt', $firstPublic);
-        $this->assertArrayNotHasKey('answer', $firstPublic);
-    }
-
-    public function testDeterministicEvaluation(): void
-    {
-        $config = $this->plugin->validateConfig(['durationSeconds' => 30, 'difficulty' => 1]);
-        $exercise = [
-            'problems' => [
-                ['id' => 1, 'prompt' => '2 + 3', 'answer' => 5],
-                ['id' => 2, 'prompt' => '10 - 4', 'answer' => 6],
-                ['id' => 3, 'prompt' => '3 * 3', 'answer' => 9],
-            ],
-            'version' => 1,
-            'code' => 'platform-math-sprint',
-        ];
-
-        $attempt = [
-            'config' => $config,
-            'exercisePayload' => $exercise,
-        ];
-
-        // 2 correct, 1 incorrect
-        $input = [
-            'durationSeconds' => 30,
-            'answers' => [
-                ['id' => 1, 'value' => 5],
-                ['id' => 2, 'value' => 6],
-                ['id' => 3, 'value' => 99], // wrong
-            ],
-            'completed' => true,
-        ];
-
-        $result = $this->plugin->evaluate($attempt, $input);
-        $this->assertArrayHasKey('metrics', $result);
-        $metrics = $result['metrics'];
-
-        $this->assertSame(2, $metrics['correctCount']);
-        $this->assertSame(1, $metrics['incorrectCount']);
-        $this->assertSame(2, $metrics['maxStreak']);
-        $this->assertEqualsWithDelta(66.67, $metrics['accuracy'], 0.1);
-        $this->assertSame(30, $metrics['score']); // 2*10 + 2*5
-    }
-
-    public function testDynamicPluginRegistrationAndSchemaRetrieval(): void
-    {
-        $registry = new ActivityHandlerRegistry();
-        $this->assertTrue($registry->has('platform-assessment'));
-        $this->assertTrue($registry->has('platform-typing'));
-        $this->assertTrue($registry->has('platform-logic'));
-        $this->assertTrue($registry->has('platform-math-sprint'));
-
-        $assessmentHandler = $registry->handler('platform-assessment');
-        $this->assertInstanceOf(\App\Education\Application\AssessmentActivityHandler::class, $assessmentHandler);
-
-        $schema = $registry->schema('platform-assessment');
-        $this->assertArrayHasKey('properties', $schema);
-        $this->assertArrayHasKey('passingScorePercent', $schema['properties']);
-
-        $defaultConfig = $registry->defaultConfig('platform-assessment');
-        $this->assertSame(60, $defaultConfig['passingScorePercent']);
-
-        // Custom dynamic plugin
-        $customPlugin = new class implements ActivityPluginInterface {
-            public function code(): string
-            {
-                return 'custom-plugin';
-            }
-            public function version(): string
-            {
-                return '1.2.0';
-            }
-            public function title(): string
-            {
-                return 'Custom Plugin';
-            }
-            public function description(): string
-            {
-                return 'Custom description';
-            }
-            public function configSchema(): array
-            {
-                return ['type' => 'object'];
-            }
-            public function defaultConfig(): array
-            {
-                return ['enabled' => true];
-            }
-            public function validateConfig(array $config): array
-            {
-                return $config;
-            }
-            public function createExercise(array $config, ?array $set = null): array
-            {
-                return ['items' => []];
-            }
-            public function publicExercise(array $attempt): array
-            {
-                return ['items' => []];
-            }
-            public function validateState(array $attempt, array $state): array
-            {
-                return $state;
-            }
-            public function evaluate(array $attempt, array $input): array
-            {
-                return ['type' => 'custom', 'metrics' => ['score' => 100]];
-            }
-        };
-
-        $registry->register('custom-plugin', $customPlugin);
-        $this->assertTrue($registry->has('custom-plugin'));
-        $this->assertSame($customPlugin, $registry->handler('custom-plugin'));
-        $plugins = $registry->plugins();
-        $codes = array_column($plugins, 'code');
-        $this->assertContains('custom-plugin', $codes);
-    }
-
-    public function testDuplicatePluginCodeThrowsConflict(): void
-    {
-        $registry = new ActivityHandlerRegistry();
-        $this->expectException(EducationError::class);
-        $this->expectExceptionMessage('activity_plugin_code_conflict');
-
-        $duplicate = new class implements ActivityPluginInterface {
-            public function code(): string
-            {
-                return 'platform-typing';
-            }
-            public function version(): string
-            {
-                return '1.0.0';
-            }
-            public function title(): string
-            {
-                return 'Typing Duplicate';
-            }
-            public function description(): string
-            {
-                return 'Duplicate';
-            }
-            public function configSchema(): array
-            {
-                return [];
-            }
-            public function defaultConfig(): array
-            {
-                return [];
-            }
-            public function validateConfig(array $config): array
-            {
-                return $config;
-            }
-            public function createExercise(array $config, ?array $set = null): array
-            {
-                return [];
-            }
-            public function publicExercise(array $attempt): array
-            {
-                return [];
-            }
-            public function validateState(array $attempt, array $state): array
-            {
-                return $state;
-            }
-            public function evaluate(array $attempt, array $input): array
-            {
-                return [];
-            }
-        };
-
-        $registry->register('platform-typing', $duplicate);
-    }
-
-    public function testInvalidPluginVersionThrowsException(): void
-    {
-        $registry = new ActivityHandlerRegistry();
-        $this->expectException(EducationError::class);
-        $this->expectExceptionMessage('activity_plugin_invalid_version');
-
-        $invalidVersionPlugin = new class implements ActivityPluginInterface {
-            public function code(): string
-            {
-                return 'plugin-bad-ver';
-            }
-            public function version(): string
-            {
-                return 'not-a-semver';
-            }
-            public function title(): string
-            {
-                return 'Bad Ver';
-            }
-            public function description(): string
-            {
-                return 'Bad Ver';
-            }
-            public function configSchema(): array
-            {
-                return [];
-            }
-            public function defaultConfig(): array
-            {
-                return [];
-            }
-            public function validateConfig(array $config): array
-            {
-                return $config;
-            }
-            public function createExercise(array $config, ?array $set = null): array
-            {
-                return [];
-            }
-            public function publicExercise(array $attempt): array
-            {
-                return [];
-            }
-            public function validateState(array $attempt, array $state): array
-            {
-                return $state;
-            }
-            public function evaluate(array $attempt, array $input): array
-            {
-                return [];
-            }
-        };
-
-        $registry->register('plugin-bad-ver', $invalidVersionPlugin);
-    }
-
-    public function testAssessmentActivityHandlerMaskingAndEvaluation(): void
-    {
-        $handler = new \App\Education\Application\AssessmentActivityHandler();
-        $config = $handler->validateConfig(['passingScorePercent' => 75, 'timeLimitSeconds' => 600]);
-        $this->assertSame(75, $config['passingScorePercent']);
-        $this->assertSame(600, $config['timeLimitSeconds']);
-
-        $exercise = $handler->createExercise($config);
-        $this->assertNotEmpty($exercise['questions']);
-
-        // Test public exercise masks answers
-        $attempt = ['config' => $config, 'exercisePayload' => $exercise];
-        $public = $handler->publicExercise($attempt);
-        $this->assertNotEmpty($public['questions']);
-        foreach ($public['questions'] as $q) {
-            $this->assertArrayNotHasKey('answerKey', $q);
-            $this->assertArrayNotHasKey('explanation', $q);
+        $codes = array_column($this->registry->describeAll(), 'code');
+        foreach (['platform-typing', 'platform-logic', 'platform-math-sprint', 'platform-memory', 'platform-assessment'] as $code) {
+            $this->assertTrue($this->registry->has($code));
+            $this->assertInstanceOf(ActivityPluginInterface::class, $this->registry->get($code));
+            $this->assertContains($code, $codes);
         }
+    }
 
-        // Test evaluation with sample questions
-        $answers = [
-            'q1' => 'opt_stack', // correct single choice
-            'q2' => ['opt_http', 'opt_dns'], // correct multi choice
-            'q3' => true, // correct true/false
-            'q4' => 1024, // correct numeric
-            'q5' => 'git switch -c', // correct short text
-        ];
-        $evaluated = $handler->evaluate($attempt, ['answers' => $answers, 'elapsedSeconds' => 120]);
-        $this->assertTrue($evaluated['metrics']['passed']);
-        $this->assertEquals(100.0, $evaluated['metrics']['percentage']);
-        $this->assertSame(7, $evaluated['metrics']['score']);
+    public function testLegacyConfigAliasesNormalizeToCanonicalPluginSchemas(): void
+    {
+        $typing = ActivityCode::toCanonicalConfig($this->registry, 'kiberone-typing', [
+            'durationSeconds' => 30,
+            'language' => 'ru',
+            'mode' => 'phrases',
+            'difficulty' => 2,
+        ]);
+        $this->assertSame(30, $typing['timeLimitSeconds']);
+        $this->assertSame('sentences', $typing['mode']);
+        $this->assertSame('ru', $typing['language']);
 
-        // Test evaluation with incorrect answers
-        $wrongAnswers = [
-            'q1' => 'opt_queue',
-            'q2' => ['opt_tcp'],
-            'q3' => false,
-            'q4' => 999,
-            'q5' => 'unknown',
+        $logic = ActivityCode::toCanonicalConfig($this->registry, 'kiberone-logic', [
+            'roundCount' => 10,
+            'difficulty' => 3,
+            'language' => 'ru',
+        ]);
+        $this->assertSame(10, $logic['rounds']);
+        $this->assertSame(3, $logic['difficulty']);
+        $this->assertSame('ru', $logic['language']);
+
+        $this->expectException(EducationError::class);
+        ActivityCode::toCanonicalConfig($this->registry, 'platform-math-sprint', ['durationSeconds' => 5]);
+    }
+
+    public function testMathSprintPluginDeterminismAndEvaluation(): void
+    {
+        $plugin = $this->registry->get('platform-math-sprint');
+        $ex1 = $plugin->generateExercise(['questionCount' => 6, 'difficulty' => 2, 'operations' => ['add', 'mul']], 555);
+        $ex2 = $plugin->generateExercise(['questionCount' => 6, 'difficulty' => 2, 'operations' => ['add', 'mul']], 555);
+
+        $this->assertSame($ex1['items'], $ex2['items']);
+        $this->assertCount(6, $ex1['items']);
+
+        $answers = $ex1['_answerKey'];
+        $eval = $plugin->evaluate(['questionCount' => 6], $ex1, ['answers' => $answers]);
+        $this->assertTrue($eval['passed']);
+        $this->assertSame(100.0, $eval['percentage']);
+        $this->assertSame(6.0, (float) $eval['rawScore']);
+    }
+
+    public function testMemoryPluginGenerationAndEvaluation(): void
+    {
+        $plugin = $this->registry->get('platform-memory');
+        $ex = $plugin->generateExercise(['rounds' => 4, 'gridSize' => 4, 'difficulty' => 1], 999);
+        $this->assertArrayHasKey('rounds', $ex);
+        $this->assertArrayHasKey('_answerKey', $ex);
+
+        $eval = $plugin->evaluate(['rounds' => 4], $ex, ['answers' => $ex['_answerKey']]);
+        $this->assertTrue($eval['passed']);
+        $this->assertSame(100.0, $eval['percentage']);
+    }
+
+    public function testAssessmentPluginQuestionEvaluation(): void
+    {
+        $plugin = $this->registry->get('platform-assessment');
+        $content = [
+            'questions' => [
+                [
+                    'id' => 'q1',
+                    'questionType' => 'single_choice',
+                    'content' => ['prompt' => '2 + 2 = ?', 'options' => [['id' => 'a', 'label' => '3'], ['id' => 'b', 'label' => '4']]],
+                    'answerKey' => 'b',
+                    'explanation' => '4',
+                    'defaultPoints' => 5,
+                ],
+                [
+                    'id' => 'q2',
+                    'questionType' => 'true_false',
+                    'content' => ['prompt' => 'Sky is blue'],
+                    'answerKey' => true,
+                    'defaultPoints' => 5,
+                ],
+            ],
         ];
-        $evaluatedWrong = $handler->evaluate($attempt, ['answers' => $wrongAnswers, 'elapsedSeconds' => 50]);
-        $this->assertFalse($evaluatedWrong['metrics']['passed']);
-        $this->assertEquals(0.0, $evaluatedWrong['metrics']['percentage']);
-        $this->assertSame(0, $evaluatedWrong['metrics']['score']);
+        $ex = $plugin->generateExercise(['shuffleQuestions' => false, 'shuffleOptions' => false, 'passingScorePercent' => 60], 1, $content);
+        $this->assertCount(2, $ex['questions']);
+
+        $eval = $plugin->evaluate(['passingScorePercent' => 60], $ex, ['answers' => ['q1' => 'b', 'q2' => true]], [], $content);
+        $this->assertTrue($eval['passed']);
+        $this->assertSame(10.0, (float) $eval['rawScore']);
+        $this->assertSame(100.0, (float) $eval['percentage']);
     }
 }

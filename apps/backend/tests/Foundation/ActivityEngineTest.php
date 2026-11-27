@@ -24,15 +24,17 @@ final class ActivityEngineTest extends ActivityEngineFixture
         self::assertEquals(100.0, $result['accuracy']);
         $this->sameResponse($result, $this->education->write('student_finish_attempt', $this->learner['scope'], $input, $started['attempt']['id']));
         $this->rejection(409, fn() => $this->education->write('student_finish_attempt', $this->learner['scope'], array_replace($input, ['typed' => 'changed']), $started['attempt']['id']));
-        self::assertSame(1, $this->rowCount('typing_results', 'attempt_id', $started['attempt']['id']));
-        self::assertSame(1, $this->rowCount('activity_results', 'attempt_id', $started['attempt']['id']));
+        self::assertSame(1, (int) $this->db->createCommand("SELECT count(*) FROM activity.attempts WHERE id=CAST(:id AS uuid) AND state='EVALUATED'", [':id' => $started['attempt']['id']])->queryScalar());
+        self::assertSame(0, $this->rowCount('typing_results', 'attempt_id', $started['attempt']['id']));
+        self::assertSame(0, $this->rowCount('activity_results', 'attempt_id', $started['attempt']['id']));
+        self::assertSame(0, $this->rowCount('activity_attempts', 'id', $started['attempt']['id']));
         $history = $this->education->read('student_attempt_history', $this->learner['scope'], []);
         self::assertContains($started['attempt']['id'], array_column($history['items'], 'id'));
     }
 
     public static function invalidTypingSettings(): iterable
     {
-        yield 'unsupported duration' => [['durationSeconds' => 16]];
+        yield 'unsupported duration' => [['durationSeconds' => 5]];
         yield 'duration string' => [['durationSeconds' => '15']];
         yield 'language' => [['language' => 'xx']];
         yield 'difficulty zero' => [['difficulty' => 0]];
@@ -64,7 +66,7 @@ final class ActivityEngineTest extends ActivityEngineFixture
         $started = $this->startActivity(config: ['mode' => $mode, 'difficulty' => 2]);
         self::assertSame($mode, $started['exercise']['mode']);
         self::assertSame(2, $started['exercise']['difficulty']);
-        self::assertGreaterThan(0, $started['exercise']['version']);
+        self::assertGreaterThan(0, $started['attempt']['contractVersion']);
         self::assertNotSame('', trim($started['exercise']['text']));
     }
 
@@ -75,10 +77,11 @@ final class ActivityEngineTest extends ActivityEngineFixture
         self::assertCount(5, $started['exercise']['rounds']);
         $this->assertNoSolutions($started);
         $answers = $this->correctLogicAnswers($id);
-        $saved = $this->education->write('student_save_attempt_state', $this->learner['scope'], ['version' => 0, 'state' => ['answers' => [$answers[0]], 'currentRound' => 1]], $id);
+        $firstRoundId = array_key_first($answers);
+        $saved = $this->education->write('student_save_attempt_state', $this->learner['scope'], ['version' => 0, 'state' => ['answers' => [$firstRoundId => $answers[$firstRoundId]], 'currentRound' => 1]], $id);
         self::assertSame(1, $saved['attempt']['stateVersion']);
         $loaded = $this->education->read('student_attempt', $this->learner['scope'], [], $id);
-        self::assertSame([$answers[0]], $loaded['attempt']['state']['answers']);
+        self::assertSame([$firstRoundId => $answers[$firstRoundId]], $loaded['attempt']['state']['answers']);
         self::assertSame($started['exercise'], $loaded['exercise']);
         $this->assertNoSolutions($loaded);
         $this->rejection(409, fn() => $this->education->write('student_save_attempt_state', $this->learner['scope'], ['version' => 0, 'state' => ['answers' => []]], $id));
@@ -94,10 +97,12 @@ final class ActivityEngineTest extends ActivityEngineFixture
         }
         $this->sameResponse($result, $this->education->write('student_finish_attempt', $this->learner['scope'], ['answers' => $answers], $id));
         $changed = $answers;
-        $changed[0]['optionId'] = $started['exercise']['rounds'][0]['options'][0]['id'] === $answers[0]['optionId']
-            ? $started['exercise']['rounds'][0]['options'][1]['id'] : $started['exercise']['rounds'][0]['options'][0]['id'];
+        $firstOpts = $started['exercise']['rounds'][0]['options'];
+        $changed[$firstRoundId] = (string) ($firstOpts[0] === $answers[$firstRoundId] ? $firstOpts[1] : $firstOpts[0]);
         $this->rejection(409, fn() => $this->education->write('student_finish_attempt', $this->learner['scope'], ['answers' => $changed], $id));
-        self::assertSame(1, $this->rowCount('logic_results', 'attempt_id', $id));
+        self::assertSame(1, (int) $this->db->createCommand("SELECT count(*) FROM activity.attempts WHERE id=CAST(:id AS uuid) AND state='EVALUATED'", [':id' => $id])->queryScalar());
+        self::assertSame(0, $this->rowCount('logic_results', 'attempt_id', $id));
+        self::assertSame(0, $this->rowCount('activity_results', 'attempt_id', $id));
     }
 
     public function testLogicRejectsClientScoresUnknownOptionsDuplicateAndUnknownRounds(): void
@@ -105,16 +110,25 @@ final class ActivityEngineTest extends ActivityEngineFixture
         $started = $this->startActivity('platform-logic');
         $id = $started['attempt']['id'];
         $answers = $this->correctLogicAnswers($id);
+        $firstRoundId = (string) array_key_first($answers);
         $bad = $answers;
-        $bad[0]['optionId'] = 'nonexistent';
+        $bad[$firstRoundId] = 'nonexistent';
         $unknown = $answers;
-        $unknown[0]['roundId'] = 'not-a-round';
-        foreach ([['answers' => $answers, 'score' => 99999], ['answers' => $bad], ['answers' => $unknown], ['answers' => [...$answers, $answers[0]]], ['typed' => 'answer', 'durationSeconds' => 15]] as $input) {
+        $unknown['not-a-round'] = '12';
+        $dupList = [];
+        foreach ($answers as $rid => $opt) {
+            $dupList[] = ['roundId' => $rid, 'optionId' => $opt];
+        }
+        $dupList[] = ['roundId' => $firstRoundId, 'optionId' => $answers[$firstRoundId]];
+        foreach ([['answers' => $answers, 'score' => 99999], ['answers' => $bad], ['answers' => $unknown], ['answers' => $dupList], ['typed' => 'answer', 'durationSeconds' => 15]] as $input) {
             $this->rejection(422, fn() => $this->education->write('student_finish_attempt', $this->learner['scope'], $input, $id));
         }
-        self::assertSame('running', $this->savedAttempt($id)['status']);
+        self::assertSame('IN_PROGRESS', $this->savedAttempt($id)['state']);
         self::assertSame(0, $this->rowCount('activity_results', 'attempt_id', $id));
-        $wrong = array_map(static fn(array $round): array => ['roundId' => $round['id'], 'optionId' => $round['options'][0]['id']], $started['exercise']['rounds']);
+        $wrong = [];
+        foreach ($started['exercise']['rounds'] as $round) {
+            $wrong[$round['id']] = (string) $round['options'][0];
+        }
         $result = $this->education->write('student_finish_attempt', $this->learner['scope'], ['answers' => $wrong], $id);
         self::assertSame(5 - $result['correctAnswers'], $result['errors']);
         self::assertEquals($result['correctAnswers'] / 5 * 100, $result['accuracy']);
@@ -155,15 +169,20 @@ final class ActivityEngineTest extends ActivityEngineFixture
     {
         $started = $this->startActivity();
         $id = $started['attempt']['id'];
-        $this->db->createCommand("UPDATE education.activity_definitions SET contract_version=contract_version+1 WHERE code='platform-typing'")->execute();
-        $this->db->createCommand("UPDATE education.activity_exercise_sets SET content=CAST(:content AS jsonb),version=version+100 WHERE activity_code='platform-typing'", [':content' => '["Newer catalog content"]'])->execute();
+        $activityId = $started['attempt']['activityId'];
+        $newVerId = (string) $this->db->createCommand(
+            "INSERT INTO activity.versions (activity_id, version_number, title, instructions, config, content, time_limit_seconds, max_attempts, passing_score_percent, grading_policy, reveal_answers_policy, auto_publish_results)
+             SELECT activity_id, version_number + 1, title, instructions, config, '{\"promptText\":\"Newer catalog content\"}'::jsonb, time_limit_seconds, max_attempts, passing_score_percent, grading_policy, reveal_answers_policy, auto_publish_results
+             FROM activity.versions WHERE activity_id = CAST(:aid AS uuid) ORDER BY version_number DESC LIMIT 1 RETURNING id::text",
+            [':aid' => $activityId],
+        )->queryScalar();
+        $this->db->createCommand('UPDATE activity.items SET active_version_id = CAST(:vid AS uuid) WHERE id = CAST(:aid AS uuid)', [':vid' => $newVerId, ':aid' => $activityId])->execute();
         $loaded = $this->education->read('student_attempt', $this->learner['scope'], [], $id);
         self::assertSame($started['exercise'], $loaded['exercise']);
         self::assertSame($started['attempt']['contractVersion'], $loaded['attempt']['contractVersion']);
         $input = ['typed' => mb_substr($started['exercise']['text'], 0, 25), 'durationSeconds' => 15];
         $result = $this->education->write('student_finish_attempt', $this->learner['scope'], $input, $id);
         self::assertSame(25, $result['correctChars']);
-        $this->db->createCommand("UPDATE education.activity_definitions SET contract_version=contract_version+1 WHERE code='platform-typing'")->execute();
         $this->sameResponse($result, $this->education->write('student_finish_attempt', $this->learner['scope'], $input, $id));
         self::assertSame($started['exercise'], $this->education->read('student_attempt', $this->learner['scope'], [], $id)['exercise']);
     }
@@ -177,9 +196,8 @@ final class ActivityEngineTest extends ActivityEngineFixture
         $this->rejection(409, fn() => $this->education->read('student_attempt', $this->learner['scope'], [], $id));
         $this->rejection(409, fn() => $this->education->write('student_finish_attempt', $this->learner['scope'], ['answers' => $this->correctLogicAnswers($id)], $id));
         $this->rejection(409, fn() => $this->education->write('student_save_attempt_state', $this->learner['scope'], ['version' => 0, 'state' => ['answers' => []]], $id));
-        $typing = $this->startActivity();
-        $this->db->createCommand("UPDATE education.activity_definitions SET enabled=false WHERE code='platform-typing'")->execute();
-        $this->rejection([403,404], fn() => $this->education->write('student_finish_attempt', $this->learner['scope'], ['typed' => '', 'durationSeconds' => 15], $typing['attempt']['id']));
-        $this->rejection([403,404], fn() => $this->startActivity());
+        $assigned = $this->education->write('activities_assign', $this->teacher, ['studentId' => $this->learner['id'], 'config' => ['durationSeconds' => 15, 'language' => 'en']], 'platform-typing');
+        $this->db->createCommand("UPDATE activity.items SET status='ARCHIVED' WHERE id=CAST(:aid AS uuid)", [':aid' => $assigned['activityId']])->execute();
+        $this->rejection([403,404,409], fn() => $this->startActivity(config: ['assignmentId' => $assigned['id']]));
     }
 }

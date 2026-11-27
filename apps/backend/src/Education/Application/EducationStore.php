@@ -168,30 +168,12 @@ interface EducationStore
     public function activityDefinitionById(string $id): ?array;
     /** @return list<array<string,mixed>> */
     public function studentAssignments(Scope $scope): array;
-    /**
-     * @return array<string,mixed>
-     */
-    public function createAttempt(Scope $scope, string $activityId, ?string $assignmentId, string $source, string $exercise, array $config): array;
-    /** @return array<string,mixed>|null */
-    public function attempt(Scope $scope, string $attemptId): ?array;
-    /** @return array<string,mixed> */
-    public function finishAttempt(Scope $scope, string $attemptId, string $typed, int $durationSeconds, array $metrics, array $payload): array;
-    public function guardAssignmentAttempt(Scope $scope, string $assignmentId, int $maxAttempts, bool $fromHomework): void;
-    public function exerciseSet(string $code, string $language, string $mode, int $difficulty): ?array;
-    public function snapshotAttempt(Scope $scope, string $attemptId, int $version, array $exercise): void;
-    public function saveAttemptState(Scope $scope, string $attemptId, int $version, array $state): void;
-    public function completeActivityAttempt(Scope $scope, string $attemptId, array $evaluation): array;
-    public function revokeActivityAttempt(Scope $scope, string $attemptId): array;
     /** @return list<array<string,mixed>> */
     public function studentAttempts(Scope $scope, int $offset): array;
     /** @return list<array<string,mixed>> */
     public function studentTypingResults(Scope $scope, int $offset): array;
     /** @return array<string,mixed>|null */
     public function bestTyping(Scope $scope): ?array;
-    /**
-     * @return array<string,mixed>
-     */
-    public function createAssignment(Scope $scope, string $activityId, ?string $groupId, ?string $studentId, array $config): array;
     /** @return list<array<string,mixed>> */
     public function assignments(Scope $scope, int $offset): array;
     /** @return list<array<string,mixed>> */

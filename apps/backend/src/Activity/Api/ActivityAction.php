@@ -65,6 +65,7 @@ final readonly class ActivityAction
                 'question_bank_import' => $engine->importQuestionBank($identity, $orgId, $body),
                 'analytics' => $engine->analytics($identity, $orgId, $query),
                 'bootstrap_typing' => $engine->bootstrapTypingActivity($identity, $orgId),
+                'bootstrap_plugin' => $engine->bootstrapPluginActivity($identity, $orgId, $id),
                 default => throw new HttpError(404, 'not_found'),
             };
 

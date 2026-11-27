@@ -68,7 +68,7 @@ final readonly class HomeworkIntegrationAction
                 throw new EducationError(422, 'invalid_input');
             }
             return $responses->success(match ($operation) {
-                'start_activity' => $activities->start($scope, $id),
+                'start_activity' => $activities->start($scope, $id, $identity),
                 'attach_activity' => $activities->attach($scope, $id, Input::uuid($body['attemptId'] ?? null)),
                 'unlink' => $files->unlink($scope, $id, Input::uuid($route->getArgument('fileId'))),
                 default => throw new EducationError(404, 'not_found'),

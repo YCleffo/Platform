@@ -247,6 +247,14 @@ export const activityApi = {
     });
   },
 
+  async bootstrapPlugin(organizationId: string, pluginCode: string): Promise<ActivityItem> {
+    return coreAdminHttp.request(`/activity/plugins/${encodeURIComponent(pluginCode)}/bootstrap`, {
+      method: 'POST',
+      headers: orgHeaders(organizationId),
+      body: {},
+    });
+  },
+
   async getAttempt(organizationId: string, attemptId: string): Promise<ActivityAttempt> {
     return coreAdminHttp.request(`/activity/attempts/${encodeURIComponent(attemptId)}`, {
       method: 'GET',

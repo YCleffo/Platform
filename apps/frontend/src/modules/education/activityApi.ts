@@ -1,6 +1,6 @@
 import { coreAdminHttp } from '@/shared/api/core/adminHttp';
 import { ApiResponseError } from '@/shared/api/errors';
-import type { Achievement, ActivityConfig, ActivityExercise, ActivityHistoryEntry, ActivityProgress, GroupActivityProgress, LogicAnswer, LogicResult } from './activityTypes';
+import type { Achievement, ActivityExercise, ActivityHistoryEntry, ActivityProgress, GroupActivityProgress, LogicResult } from './activityTypes';
 import type { StudentActivityDefinition } from './student/api';
 
 type Guard<T> = (v: unknown) => v is T;
@@ -23,11 +23,6 @@ async function request<T>(org: string, path: string, guard: Guard<T>, method: 'G
 const pathId = (value: string) => encodeURIComponent(value);
 export const activityApi = {
   catalog: (org: string, signal?: AbortSignal) => request(org, '/activities', (v): v is { items: StudentActivityDefinition[] } => record(v) && Array.isArray(v.items) && v.items.every(a => record(a) && id(a.id) && str(a.code) && str(a.name) && str(a.kind) && count(a.contractVersion) && typeof a.enabled === 'boolean' && record(a.config) && Array.isArray(a.metrics) && str(a.requiredPermission)), 'GET', undefined, signal),
-  startHomework: (org: string, homeworkId: string) => request(org, `/student/homework/${pathId(homeworkId)}/activity/start`, activityExerciseGuard, 'POST', {}),
-  startLogic: (org: string, config: ActivityConfig & { assignmentId?: string }) => request(org, '/student/activities/platform-logic/attempts', activityExerciseGuard, 'POST', config),
-  attempt: (org: string, attemptId: string, signal?: AbortSignal) => request(org, `/student/attempts/${pathId(attemptId)}`, activityExerciseGuard, 'GET', undefined, signal),
-  saveState: (org: string, attemptId: string, version: number, state: { typed?: string; answers?: LogicAnswer[]; currentRound?: number }) => request(org, `/student/attempts/${pathId(attemptId)}/state`, activityExerciseGuard, 'PUT', { version, state }),
-  finishLogic: (org: string, attemptId: string, answers: LogicAnswer[]) => request(org, `/student/attempts/${pathId(attemptId)}/finish`, logicResultGuard, 'PUT', { answers }),
   achievements: (org: string, signal?: AbortSignal) => request(org, '/student/achievements', (v): v is { items: Achievement[] } => record(v) && Array.isArray(v.items) && v.items.every(achievementGuard), 'GET', undefined, signal),
   progress: (org: string, signal?: AbortSignal) => request(org, '/student/activity-progress', progressGuard, 'GET', undefined, signal),
   groupProgress: (org: string, groupId: string, from: string, to: string, activity: string, signal?: AbortSignal) => request(org, `/groups/${pathId(groupId)}/activity-progress?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&activity=${encodeURIComponent(activity)}`, (v): v is GroupActivityProgress => record(v) && str(v.from) && str(v.to) && Array.isArray(v.items) && v.items.every(r => progressGuard(r) && id((r as ActivityProgress & { studentId?: unknown }).studentId) && str((r as ActivityProgress & { name?: unknown }).name)), 'GET', undefined, signal),

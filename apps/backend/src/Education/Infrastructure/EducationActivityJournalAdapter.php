@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Education\Infrastructure;
 
 use App\Activity\Application\ActivityResultListenerInterface;
+use App\Education\Application\AchievementService;
 use App\Education\Application\HomeworkAttemptLinker;
 use App\Education\Application\Scope;
 use Yiisoft\Db\Connection\ConnectionInterface;
@@ -21,6 +22,7 @@ final readonly class EducationActivityJournalAdapter implements ActivityResultLi
         private ConnectionInterface $db,
         private ?HomeworkAttemptLinker $homeworkLinker = null,
         private ?ParentNotifications $parentNotifications = null,
+        private ?AchievementService $achievements = null,
     ) {}
 
     public function onAttemptEvaluated(string $organizationId, string $attemptId, array $attemptData): void
@@ -111,12 +113,21 @@ final readonly class EducationActivityJournalAdapter implements ActivityResultLi
 
         $rawStuAcc = $student['studentAccountId'] ?? null;
         $studentAccountId = is_string($rawStuAcc) ? $rawStuAcc : '';
-        if ($this->homeworkLinker !== null && $assignmentId !== null && $studentAccountId !== '') {
-            try {
-                $scope = new Scope($organizationId, $studentAccountId, $participantPersonId, 'ru-RU', 'UTC', $studentId);
-                $this->homeworkLinker->finished($scope, $attemptId);
-            } catch (\Throwable) {
-                // Homework linking is best-effort for standalone assessments
+        if ($studentAccountId !== '') {
+            $scope = new Scope($organizationId, $studentAccountId, $participantPersonId, 'ru-RU', 'UTC', $studentId);
+            if ($this->achievements !== null && in_array($state, ['EVALUATED', 'COMPLETED', 'EXPIRED'], true)) {
+                try {
+                    $this->achievements->recordAttempt($scope, $attemptId);
+                } catch (\Throwable) {
+                    // Best-effort so achievement edge-cases never block journal sync
+                }
+            }
+            if ($this->homeworkLinker !== null && $assignmentId !== null) {
+                try {
+                    $this->homeworkLinker->finished($scope, $attemptId);
+                } catch (\Throwable) {
+                    // Homework linking is best-effort for standalone assessments
+                }
             }
         }
     }

@@ -1571,313 +1571,116 @@ final readonly class PostgresEducationStore implements EducationStore
     public function studentAssignments(Scope $scope): array
     {
         return $this->all(
-            'SELECT a.id::text,a.activity_id::text AS "activityId",d.code AS "activityCode",d.name AS "activityName",
-            a.group_id::text AS "groupId",g.name AS "groupName",a.student_id::text AS "studentId",
-            a.config,a.opens_at::text AS "opensAt",a.due_at::text AS "dueAt",a.completion,a.created_at::text AS "createdAt",
-            CASE WHEN EXISTS(SELECT 1 FROM education.homework_recipients r WHERE r.activity_assignment_id=a.id)
-                THEN \'homework\' ELSE \'learning\' END AS origin
-            FROM education.activity_assignments a
-            JOIN education.activity_definitions d ON d.id=a.activity_id
-            LEFT JOIN education.groups g ON g.id=a.group_id AND g.organization_id=a.organization_id
-            WHERE a.organization_id=CAST(:org AS uuid) AND (
-                a.student_id=CAST(:student AS uuid)
-                OR a.group_id IN (SELECT group_id FROM education.group_students
-                    WHERE student_id=CAST(:student AS uuid) AND organization_id=CAST(:org AS uuid))
-            ) ORDER BY a.created_at,a.id',
-            [':org' => $scope->organizationId, ':student' => (string) $scope->studentId],
+            "SELECT * FROM (
+                SELECT a.id::text, a.activity_id::text AS \"activityId\", i.plugin_code AS \"activityCode\",
+                       i.title AS \"activityName\",
+                       CASE WHEN a.target_type = 'group' THEN a.target_id::text ELSE NULL END AS \"groupId\",
+                       g.name AS \"groupName\",
+                       CASE WHEN a.target_type IN ('student', 'homework') THEN a.target_id::text ELSE :student END AS \"studentId\",
+                       a.config_override AS config,
+                       a.opens_at::text AS \"opensAt\", a.due_at::text AS \"dueAt\",
+                       NULL::jsonb AS completion, a.created_at::text AS \"createdAt\",
+                       CASE WHEN EXISTS(SELECT 1 FROM education.homework_recipients r WHERE r.activity_assignment_id = a.id)
+                            THEN 'homework' ELSE 'learning' END AS origin
+                FROM activity.assignments a
+                JOIN activity.items i ON i.id = a.activity_id
+                LEFT JOIN education.groups g ON a.target_type = 'group' AND g.id = a.target_id AND g.organization_id = a.organization_id
+                WHERE a.organization_id = CAST(:org AS uuid)
+                  AND a.status = 'ACTIVE'
+                  AND a.revoked_at IS NULL
+                  AND (
+                      (a.target_type IN ('student', 'homework') AND a.target_id = CAST(:student AS uuid))
+                      OR (a.target_type = 'person' AND a.target_id = CAST(:person AS uuid))
+                      OR (a.target_type = 'group' AND a.target_id IN (
+                          SELECT group_id FROM education.group_students
+                          WHERE student_id = CAST(:student AS uuid) AND organization_id = CAST(:org AS uuid)
+                      ))
+                      OR a.id IN (
+                          SELECT hr.activity_assignment_id FROM education.homework_recipients hr
+                          WHERE hr.student_id = CAST(:student AS uuid) AND hr.organization_id = CAST(:org AS uuid)
+                            AND hr.activity_assignment_id IS NOT NULL
+                      )
+                  )
+                UNION ALL
+                SELECT a.id::text, a.activity_id::text AS \"activityId\", d.code AS \"activityCode\", d.name AS \"activityName\",
+                       a.group_id::text AS \"groupId\", g.name AS \"groupName\", a.student_id::text AS \"studentId\",
+                       a.config, a.opens_at::text AS \"opensAt\", a.due_at::text AS \"dueAt\", a.completion, a.created_at::text AS \"createdAt\",
+                       CASE WHEN EXISTS(SELECT 1 FROM education.homework_recipients r WHERE r.activity_assignment_id=a.id)
+                            THEN 'homework' ELSE 'learning' END AS origin
+                FROM education.activity_assignments a
+                JOIN education.activity_definitions d ON d.id=a.activity_id
+                LEFT JOIN education.groups g ON g.id=a.group_id AND g.organization_id=a.organization_id
+                WHERE a.organization_id=CAST(:org AS uuid)
+                  AND NOT EXISTS (SELECT 1 FROM activity.assignments aa WHERE aa.id = a.id)
+                  AND (
+                      a.student_id=CAST(:student AS uuid)
+                      OR a.group_id IN (SELECT group_id FROM education.group_students
+                          WHERE student_id=CAST(:student AS uuid) AND organization_id=CAST(:org AS uuid))
+                  )
+             ) u ORDER BY \"createdAt\", id",
+            [':org' => $scope->organizationId, ':student' => (string) $scope->studentId, ':person' => $scope->personId],
         );
-    }
-
-    public function createAttempt(Scope $scope, string $activityId, ?string $assignmentId, string $source, string $exercise, array $config): array
-    {
-        return $this->db->transaction(function () use ($scope, $activityId, $assignmentId, $source, $exercise, $config): array {
-            $attempt = $this->required(
-                'INSERT INTO education.activity_attempts(organization_id,student_id,account_id,activity_id,assignment_id,status,source,exercise_text,config)
-                VALUES(CAST(:org AS uuid),CAST(:student AS uuid),CAST(:account AS uuid),CAST(:activity AS uuid),
-                    :assignment, \'running\', :source, :exercise, CAST(:config AS jsonb))
-                RETURNING id::text,student_id::text AS "studentId",activity_id::text AS "activityId",status,source,
-                started_at::text AS "startedAt",exercise_text AS "exercise"',
-                [':org' => $scope->organizationId, ':student' => (string) $scope->studentId, ':account' => $scope->accountId,
-                    ':activity' => $activityId, ':assignment' => $assignmentId, ':source' => $source,
-                    ':exercise' => $exercise, ':config' => json_encode($config, JSON_THROW_ON_ERROR)],
-            );
-            $this->syncAttemptCreatedToEngine($scope, (string) $attempt['id'], $activityId, $assignmentId, $config);
-            return [...$attempt, 'config' => $config];
-        });
-    }
-
-    public function attempt(Scope $scope, string $attemptId): ?array
-    {
-        return $this->one(
-            'SELECT a.id::text,a.student_id::text AS "studentId",a.account_id::text AS "accountId",
-            a.activity_id::text AS "activityId",d.code AS "activityCode",a.assignment_id::text AS "assignmentId",
-            a.status,a.source,a.contract_version AS "contractVersion",a.exercise_text AS "exercise",a.config,
-            a.started_at::text AS "startedAt",a.finished_at::text AS "finishedAt",a.exercise_payload AS "exercisePayload",
-            a.client_state AS "state",a.state_version AS "stateVersion",a.revoked_at::text AS "revokedAt",r.metrics AS "result"
-            FROM education.activity_attempts a JOIN education.activity_definitions d ON d.id=a.activity_id
-            LEFT JOIN education.activity_results r ON r.attempt_id=a.id
-            WHERE a.account_id=CAST(:account AS uuid) AND a.id=CAST(:id AS uuid) AND a.organization_id=CAST(:org AS uuid) AND a.student_id=CAST(:student AS uuid)',
-            [':org' => $scope->organizationId, ':id' => $attemptId, ':student' => (string) $scope->studentId, ':account' => $scope->accountId],
-        );
-    }
-
-    public function finishAttempt(Scope $scope, string $attemptId, string $typed, int $durationSeconds, array $metrics, array $payload): array
-    {
-        return $this->db->transaction(function () use ($scope, $attemptId, $typed, $durationSeconds, $metrics, $payload): array {
-            $attempt = $this->one(
-                'SELECT id::text,status,exercise_text AS "exercise",result_payload::text AS "payload" FROM education.activity_attempts
-                WHERE id=CAST(:id AS uuid) AND organization_id=CAST(:org AS uuid) AND student_id=CAST(:student AS uuid)
-                FOR UPDATE',
-                [':org' => $scope->organizationId, ':id' => $attemptId, ':student' => (string) $scope->studentId],
-            );
-            if ($attempt === null) {
-                throw new EducationError(404, 'not_found');
-            }
-            if ($attempt['status'] === 'finished') {
-                $existing = $this->one(
-                    'SELECT t.attempt_id::text AS "attemptId",t.duration_seconds AS "durationSeconds",t.language,
-                    t.keystrokes,t.correct_chars AS "correctChars",t.errors,t.wpm::float,t.accuracy::float
-                    FROM education.typing_results t WHERE t.attempt_id=CAST(:id AS uuid)',
-                    [':id' => $attemptId],
-                );
-                $stored = is_string($attempt['payload'] ?? null) ? json_decode((string) $attempt['payload'], true) : null;
-                if ($existing === null || $existing['durationSeconds'] !== $durationSeconds
-                    || (isset($stored['typedSha256']) ? !hash_equals((string) $stored['typedSha256'], hash('sha256', $typed))
-                        : (int) ($stored['typedLength'] ?? -1) !== strlen($typed))) {
-                    throw new EducationError(409, 'attempt_finished');
-                }
-                return $existing;
-            }
-            $this->db->createCommand(
-                'UPDATE education.activity_attempts SET status=\'finished\',finished_at=now(),
-                result_payload=CAST(:payload AS jsonb),result_version=1 WHERE id=CAST(:id AS uuid)',
-                [':payload' => json_encode($payload, JSON_THROW_ON_ERROR), ':id' => $attemptId],
-            )->execute();
-            $this->required(
-                'INSERT INTO education.typing_results(attempt_id,organization_id,student_id,duration_seconds,language,keystrokes,correct_chars,errors,wpm,accuracy)
-                VALUES(CAST(:attempt AS uuid),CAST(:org AS uuid),CAST(:student AS uuid),:duration,:language,:keystrokes,:correct,:errors,:wpm,:accuracy)
-                RETURNING attempt_id::text AS "attemptId",duration_seconds AS "durationSeconds",language,keystrokes,
-                correct_chars AS "correctChars",errors,wpm::float,accuracy::float',
-                [':attempt' => $attemptId, ':org' => $scope->organizationId, ':student' => (string) $scope->studentId,
-                    ':duration' => $durationSeconds, ':language' => $metrics['language'],
-                    ':keystrokes' => $metrics['keystrokes'], ':correct' => $metrics['correct'],
-                    ':errors' => $metrics['errors'], ':wpm' => $metrics['wpm'], ':accuracy' => $metrics['accuracy']],
-            );
-            $this->syncAttemptEvaluatedToEngine(
-                $scope,
-                $attemptId,
-                ['metrics' => $metrics, 'passed' => (int) $metrics['keystrokes'] > 0],
-                (float) $metrics['wpm'],
-                (float) $metrics['wpm'],
-                (float) $metrics['accuracy'],
-                (int) $metrics['keystrokes'] > 0,
-            );
-            return $this->one(
-                'SELECT t.attempt_id::text AS "attemptId",t.duration_seconds AS "durationSeconds",t.language,
-                t.keystrokes,t.correct_chars AS "correctChars",t.errors,t.wpm::float,t.accuracy::float
-                FROM education.typing_results t WHERE t.attempt_id=CAST(:id AS uuid)',
-                [':id' => $attemptId],
-            ) ?? throw new EducationError(409, 'write_not_confirmed');
-        });
-    }
-
-    public function guardAssignmentAttempt(Scope $scope, string $assignmentId, int $maxAttempts, bool $fromHomework): void
-    {
-        $assignment = $this->required(
-            'SELECT a.opens_at::text AS "opensAt",a.due_at::text AS "dueAt",
-            EXISTS(SELECT 1 FROM education.homework_recipients r WHERE r.activity_assignment_id=a.id) AS homework
-            FROM education.activity_assignments a WHERE a.id=CAST(:id AS uuid) AND a.organization_id=CAST(:org AS uuid)
-            AND (a.student_id=CAST(:student AS uuid) OR EXISTS(SELECT 1 FROM education.group_students gs WHERE gs.group_id=a.group_id
-                AND gs.organization_id=a.organization_id AND gs.student_id=CAST(:student AS uuid))) FOR UPDATE OF a',
-            [':id' => $assignmentId,':org' => $scope->organizationId,':student' => $scope->studentId],
-        );
-        $isHomework = in_array($assignment['homework'], [true,'t',1], true);
-        if ($isHomework && !$fromHomework) {
-            throw new EducationError(409, 'use_homework_route');
-        }
-        if (!$isHomework && $fromHomework) {
-            throw new EducationError(422, 'invalid_input');
-        }
-        if (!$isHomework) {
-            $now = new DateTimeImmutable();
-            if (($assignment['opensAt'] !== null && new DateTimeImmutable($assignment['opensAt']) > $now)
-                || ($assignment['dueAt'] !== null && new DateTimeImmutable($assignment['dueAt']) < $now)) {
-                throw new EducationError(409, 'assignment_unavailable');
-            }
-            $count = (int) $this->db->createCommand(
-                'SELECT count(*) FROM education.activity_attempts WHERE assignment_id=CAST(:id AS uuid)
-                AND organization_id=CAST(:org AS uuid) AND student_id=CAST(:student AS uuid)',
-                [':id' => $assignmentId,':org' => $scope->organizationId,':student' => $scope->studentId],
-            )->queryScalar();
-            if ($count >= $maxAttempts) {
-                throw new EducationError(409, 'attempt_limit_reached');
-            }
-        }
-    }
-
-    public function exerciseSet(string $code, string $language, string $mode, int $difficulty): ?array
-    {
-        return $this->one('SELECT code,version,content FROM education.activity_exercise_sets
-            WHERE activity_code=:code AND language=:language AND mode=:mode AND difficulty=:difficulty
-            ORDER BY version DESC LIMIT 1', [':code' => $code, ':language' => $language, ':mode' => $mode, ':difficulty' => $difficulty]);
-    }
-
-    public function snapshotAttempt(Scope $scope, string $attemptId, int $version, array $exercise): void
-    {
-        $exerciseJson = json_encode($exercise, JSON_THROW_ON_ERROR);
-        $this->db->createCommand('UPDATE education.activity_attempts SET contract_version=:version,exercise_payload=CAST(:exercise AS jsonb)
-            WHERE id=CAST(:id AS uuid) AND organization_id=CAST(:org AS uuid) AND student_id=CAST(:student AS uuid)
-            AND account_id=CAST(:account AS uuid) AND status=\'running\'', [':id' => $attemptId,':org' => $scope->organizationId,
-            ':student' => $scope->studentId,':account' => $scope->accountId,':version' => $version,':exercise' => $exerciseJson])->execute();
-        $this->db->createCommand(
-            "UPDATE activity.attempts SET draft_state = CAST(:exercise AS jsonb), updated_at = now()
-             WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid) AND state = 'IN_PROGRESS'",
-            [':exercise' => $exerciseJson, ':id' => $attemptId, ':org' => $scope->organizationId],
-        )->execute();
-    }
-
-    public function saveAttemptState(Scope $scope, string $attemptId, int $version, array $state): void
-    {
-        $stateJson = json_encode($state, JSON_THROW_ON_ERROR);
-        $changed = $this->db->createCommand(
-            'UPDATE education.activity_attempts SET client_state=CAST(:state AS jsonb),state_version=state_version+1
-            WHERE id=CAST(:id AS uuid) AND organization_id=CAST(:org AS uuid) AND student_id=CAST(:student AS uuid)
-            AND account_id=CAST(:account AS uuid) AND status=\'running\' AND revoked_at IS NULL AND state_version=:version',
-            [':id' => $attemptId,':org' => $scope->organizationId,':student' => $scope->studentId,':account' => $scope->accountId,
-                ':state' => $stateJson,':version' => $version],
-        )->execute();
-        if ($changed !== 1) {
-            throw new EducationError(409, 'state_conflict');
-        }
-        $this->db->createCommand(
-            "UPDATE activity.attempts SET answers = CAST(:state AS jsonb), revision = revision + 1, updated_at = now()
-             WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid) AND state = 'IN_PROGRESS'",
-            [':state' => $stateJson, ':id' => $attemptId, ':org' => $scope->organizationId],
-        )->execute();
-    }
-
-    public function completeActivityAttempt(Scope $scope, string $attemptId, array $evaluation): array
-    {
-        return $this->db->transaction(function () use ($scope, $attemptId, $evaluation): array {
-            $row = $this->required(
-                'SELECT a.status,a.revoked_at::text AS "revokedAt",a.result_payload,a.contract_version AS "contractVersion"
-                FROM education.activity_attempts a WHERE a.id=CAST(:id AS uuid) AND a.organization_id=CAST(:org AS uuid) AND a.student_id=CAST(:student AS uuid)
-                AND a.account_id=CAST(:account AS uuid) FOR UPDATE OF a',
-                [':id' => $attemptId,':org' => $scope->organizationId,':student' => $scope->studentId,':account' => $scope->accountId],
-            );
-            // Re-read the result AFTER the attempt row lock. A joined SELECT can retain
-            // the pre-wait snapshot of the absent result during concurrent finishes.
-            $stored = $this->one('SELECT request_hash AS "requestHash",metrics FROM education.activity_results WHERE attempt_id=CAST(:id AS uuid)', [':id' => $attemptId]);
-            $row = [...$row,'requestHash' => $stored['requestHash'] ?? null,'metrics' => $stored['metrics'] ?? null];
-            if ($row['revokedAt'] !== null) {
-                throw new EducationError(409, 'attempt_revoked');
-            }
-            if ($row['status'] === 'finished') {
-                if (is_string($row['requestHash'] ?? null) && hash_equals($row['requestHash'], $evaluation['requestHash'])) {
-                    return ['attemptId' => $attemptId,...\App\Education\Application\ActivityHandlerRegistry::json($row['metrics'])];
-                }
-                // Completed v1 typing attempts retain their historical finish contract.
-                if ($row['requestHash'] === null && $evaluation['type'] === 'typing' && (int) $row['contractVersion'] === 1) {
-                    $payload = \App\Education\Application\ActivityHandlerRegistry::json($row['result_payload']);
-                    if (isset($payload['typedSha256']) && hash_equals($payload['typedSha256'], $evaluation['evidence']['typedSha256'])
-                        && (int) ($payload['durationSeconds'] ?? 0) === $evaluation['metrics']['durationSeconds']) {
-                        return $this->required('SELECT attempt_id::text AS "attemptId",duration_seconds AS "durationSeconds",language,keystrokes,
-                            correct_chars AS "correctChars",errors,wpm::float,accuracy::float FROM education.typing_results WHERE attempt_id=CAST(:id AS uuid)', [':id' => $attemptId]);
-                    }
-                }
-                throw new EducationError(409, 'attempt_finished');
-            }
-            if ($row['status'] !== 'running') {
-                throw new EducationError(409, 'attempt_not_running');
-            }
-            $metrics = $evaluation['metrics'];
-            $params = [':attempt' => $attemptId,':org' => $scope->organizationId,':student' => $scope->studentId];
-            $this->db->createCommand(
-                'INSERT INTO education.activity_results(attempt_id,organization_id,student_id,type,version,request_hash,metrics,passed)
-                VALUES(CAST(:attempt AS uuid),CAST(:org AS uuid),CAST(:student AS uuid),:type,:version,:hash,CAST(:metrics AS jsonb),:passed)',
-                [...$params,':type' => $evaluation['type'],':version' => $evaluation['version'],':hash' => $evaluation['requestHash'],
-                    ':metrics' => json_encode($metrics, JSON_THROW_ON_ERROR),':passed' => $metrics['passed'] ? 'true' : 'false'],
-            )->execute();
-            if ($evaluation['type'] === 'typing') {
-                $this->db->createCommand(
-                    'INSERT INTO education.typing_results(attempt_id,organization_id,student_id,duration_seconds,language,keystrokes,correct_chars,errors,wpm,accuracy)
-                    VALUES(CAST(:attempt AS uuid),CAST(:org AS uuid),CAST(:student AS uuid),:duration,:language,:chars,:correct,:errors,:wpm,:accuracy)',
-                    [...$params,':duration' => $metrics['durationSeconds'],':language' => $metrics['language'],':chars' => $metrics['typedCharacters'],
-                        ':correct' => $metrics['correctChars'],':errors' => $metrics['errors'],':wpm' => $metrics['wpm'],':accuracy' => $metrics['accuracy']],
-                )->execute();
-            } else {
-                $this->db->createCommand(
-                    'INSERT INTO education.logic_results(attempt_id,organization_id,student_id,correct_answers,total_rounds,score,accuracy)
-                    VALUES(CAST(:attempt AS uuid),CAST(:org AS uuid),CAST(:student AS uuid),:correct,:total,:score,:accuracy)',
-                    [...$params,':correct' => $metrics['correctAnswers'],':total' => $metrics['totalRounds'],':score' => $metrics['score'],':accuracy' => $metrics['accuracy']],
-                )->execute();
-            }
-            $this->db->createCommand(
-                'UPDATE education.activity_attempts SET status=\'finished\',finished_at=now(),client_state=\'{}\'::jsonb,
-                result_payload=CAST(:payload AS jsonb),result_version=:version WHERE id=CAST(:id AS uuid)',
-                [':id' => $attemptId,':payload' => json_encode($evaluation['evidence'], JSON_THROW_ON_ERROR),':version' => $evaluation['version']],
-            )->execute();
-            /** @var array<string, mixed> $metricsArr */
-            $metricsArr = is_array($metrics) ? $metrics : [];
-            $rawScore = $evaluation['type'] === 'typing'
-                ? (float) ($metricsArr['wpm'] ?? 0.0)
-                : (float) ($metricsArr['correctAnswers'] ?? $metricsArr['score'] ?? 0.0);
-            $maxScore = $evaluation['type'] === 'typing'
-                ? max(1.0, (float) ($metricsArr['wpm'] ?? 1.0))
-                : max(1.0, (float) ($metricsArr['totalRounds'] ?? 10.0));
-            $this->syncAttemptEvaluatedToEngine(
-                $scope,
-                $attemptId,
-                ['metrics' => $metricsArr, 'passed' => (bool) ($metricsArr['passed'] ?? false)],
-                $rawScore,
-                $maxScore,
-                (float) ($metricsArr['accuracy'] ?? 0.0),
-                (bool) ($metricsArr['passed'] ?? false),
-            );
-            return ['attemptId' => $attemptId,...$metrics];
-        });
-    }
-
-    public function revokeActivityAttempt(Scope $scope, string $attemptId): array
-    {
-        $row = $this->required(
-            'UPDATE education.activity_attempts a SET revoked_at=COALESCE(a.revoked_at,now())
-            FROM education.students s WHERE a.id=CAST(:id AS uuid) AND a.student_id=s.id AND a.organization_id=s.organization_id
-            AND a.organization_id=CAST(:org AS uuid) AND (s.owner_account_id=CAST(:actor AS uuid) OR EXISTS(
-                SELECT 1 FROM education.group_students gs WHERE gs.student_id=s.id AND gs.organization_id=s.organization_id
-                AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id)))
-            RETURNING a.id::text,a.student_id::text AS "studentId",a.revoked_at::text AS "revokedAt"',
-            [':id' => $attemptId,':org' => $scope->organizationId,':actor' => $scope->actor()],
-        );
-        $this->db->createCommand(
-            "UPDATE activity.attempts SET state = 'INVALIDATED', updated_at = now()
-             WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid)",
-            [':id' => $attemptId, ':org' => $scope->organizationId],
-        )->execute();
-        $this->db->createCommand(
-            "INSERT INTO activity.attempt_events (attempt_id, from_state, to_state, actor_person_id, reason)
-             SELECT id, state, 'INVALIDATED', CAST(:actor AS uuid), 'attempt_revoked'
-             FROM activity.attempts WHERE id = CAST(:id AS uuid)",
-            [':actor' => $scope->personId, ':id' => $attemptId],
-        )->execute();
-        return $row;
     }
 
     public function studentAttempts(Scope $scope, int $offset): array
     {
         return $this->all(
-            'SELECT a.id::text,a.activity_id::text AS "activityId",d.code AS "activityCode",d.name AS "activityName",
-            a.status,a.source,a.assignment_id::text AS "assignmentId",
-            a.started_at::text AS "startedAt",a.finished_at::text AS "finishedAt",
-            t.duration_seconds AS "durationSeconds",COALESCE(t.language,r.metrics->>\'language\') AS language,t.wpm::float,
-            COALESCE(t.accuracy,(r.metrics->>\'accuracy\')::numeric)::float AS accuracy,t.errors,
-            (r.metrics->>\'correctAnswers\')::int AS "correctAnswers",(r.metrics->>\'totalRounds\')::int AS "totalRounds",
-            (r.metrics->>\'score\')::int AS score,r.passed,a.revoked_at::text AS "revokedAt"
-            FROM education.activity_attempts a JOIN education.activity_definitions d ON d.id=a.activity_id
-            LEFT JOIN education.typing_results t ON t.attempt_id=a.id
-            LEFT JOIN education.activity_results r ON r.attempt_id=a.id
-            WHERE a.organization_id=CAST(:org AS uuid) AND a.student_id=CAST(:student AS uuid)
-            ORDER BY a.started_at DESC,a.id DESC LIMIT 51 OFFSET :offset',
+            "SELECT * FROM (
+                SELECT a.id::text, a.activity_id::text AS \"activityId\", i.plugin_code AS \"activityCode\",
+                       i.title AS \"activityName\",
+                       CASE
+                           WHEN a.state IN ('CANCELLED', 'INVALIDATED') THEN 'revoked'
+                           WHEN a.state IN ('EVALUATED', 'COMPLETED', 'EXPIRED') THEN 'finished'
+                           ELSE 'running'
+                       END AS status,
+                       'browser' AS source,
+                       a.assignment_id::text AS \"assignmentId\",
+                       a.started_at::text AS \"startedAt\",
+                       COALESCE(a.evaluated_at, a.submitted_at)::text AS \"finishedAt\",
+                       COALESCE(
+                           NULLIF(a.evaluation->'metrics'->>'durationSeconds', '')::int,
+                           ROUND(NULLIF(a.evaluation->'metrics'->>'elapsedSeconds', '')::numeric)::int
+                       ) AS \"durationSeconds\",
+                       COALESCE(a.evaluation->'metrics'->>'language', a.runtime_config->>'language') AS language,
+                       NULLIF(a.evaluation->'metrics'->>'wpm', '')::float AS wpm,
+                       COALESCE(a.percentage, NULLIF(a.evaluation->'metrics'->>'accuracy', '')::numeric)::float AS accuracy,
+                       COALESCE(
+                           NULLIF(a.evaluation->'metrics'->>'errorCount', '')::int,
+                           NULLIF(a.evaluation->'metrics'->>'errors', '')::int
+                       ) AS errors,
+                       COALESCE(
+                           NULLIF(a.evaluation->'metrics'->>'correctAnswers', '')::int,
+                           NULLIF(a.evaluation->'metrics'->>'correct', '')::int
+                       ) AS \"correctAnswers\",
+                       COALESCE(
+                           NULLIF(a.evaluation->'metrics'->>'totalRounds', '')::int,
+                           NULLIF(a.evaluation->'metrics'->>'total', '')::int
+                       ) AS \"totalRounds\",
+                       COALESCE(
+                           ROUND(a.raw_score)::int,
+                           NULLIF(a.evaluation->'metrics'->>'score', '')::int
+                       ) AS score,
+                       a.passed,
+                       CASE WHEN a.state IN ('CANCELLED', 'INVALIDATED') THEN a.updated_at::text ELSE NULL END AS \"revokedAt\"
+                FROM activity.attempts a
+                JOIN activity.items i ON i.id = a.activity_id
+                JOIN education.students s ON s.person_id = a.participant_person_id AND s.organization_id = a.organization_id
+                WHERE a.organization_id = CAST(:org AS uuid) AND s.id = CAST(:student AS uuid)
+                UNION ALL
+                SELECT a.id::text, a.activity_id::text AS \"activityId\", d.code AS \"activityCode\", d.name AS \"activityName\",
+                       a.status, a.source, a.assignment_id::text AS \"assignmentId\",
+                       a.started_at::text AS \"startedAt\", a.finished_at::text AS \"finishedAt\",
+                       t.duration_seconds AS \"durationSeconds\", COALESCE(t.language, r.metrics->>'language') AS language, t.wpm::float,
+                       COALESCE(t.accuracy, (r.metrics->>'accuracy')::numeric)::float AS accuracy, t.errors,
+                       (r.metrics->>'correctAnswers')::int AS \"correctAnswers\", (r.metrics->>'totalRounds')::int AS \"totalRounds\",
+                       (r.metrics->>'score')::int AS score, r.passed, a.revoked_at::text AS \"revokedAt\"
+                FROM education.activity_attempts a
+                JOIN education.activity_definitions d ON d.id = a.activity_id
+                LEFT JOIN education.typing_results t ON t.attempt_id = a.id
+                LEFT JOIN education.activity_results r ON r.attempt_id = a.id
+                WHERE a.organization_id = CAST(:org AS uuid) AND a.student_id = CAST(:student AS uuid)
+                  AND NOT EXISTS (SELECT 1 FROM activity.attempts aa WHERE aa.id = a.id)
+             ) u ORDER BY \"startedAt\" DESC, id DESC LIMIT 51 OFFSET :offset",
             [':org' => $scope->organizationId, ':student' => (string) $scope->studentId, ':offset' => $offset],
         );
     }
@@ -1885,12 +1688,41 @@ final readonly class PostgresEducationStore implements EducationStore
     public function studentTypingResults(Scope $scope, int $offset): array
     {
         return $this->all(
-            'SELECT t.attempt_id::text AS "attemptId",t.duration_seconds AS "durationSeconds",t.language,
-            t.keystrokes,t.correct_chars AS "correctChars",t.errors,t.wpm::float,t.accuracy::float,t.created_at::text AS "createdAt"
-            FROM education.typing_results t JOIN education.activity_attempts a ON a.id=t.attempt_id
-            WHERE a.status=\'finished\' AND a.revoked_at IS NULL
-            AND t.organization_id=CAST(:org AS uuid) AND t.student_id=CAST(:student AS uuid)
-            ORDER BY t.created_at DESC,t.attempt_id DESC LIMIT 51 OFFSET :offset',
+            "SELECT * FROM (
+                SELECT a.id::text AS \"attemptId\",
+                       COALESCE(
+                           NULLIF(a.evaluation->'metrics'->>'durationSeconds', '')::int,
+                           ROUND(NULLIF(a.evaluation->'metrics'->>'elapsedSeconds', '')::numeric)::int,
+                           NULLIF(a.runtime_config->>'timeLimitSeconds', '')::int,
+                           0
+                       ) AS \"durationSeconds\",
+                       COALESCE(a.evaluation->'metrics'->>'language', a.runtime_config->>'language', 'en') AS language,
+                       COALESCE(
+                           NULLIF(a.evaluation->'metrics'->>'totalTypedChars', '')::int,
+                           NULLIF(a.evaluation->'metrics'->>'typedCharacters', '')::int,
+                           0
+                       ) AS keystrokes,
+                       COALESCE(NULLIF(a.evaluation->'metrics'->>'correctChars', '')::int, 0) AS \"correctChars\",
+                       COALESCE(NULLIF(a.evaluation->'metrics'->>'errorCount', '')::int, NULLIF(a.evaluation->'metrics'->>'errors', '')::int, 0) AS errors,
+                       COALESCE(NULLIF(a.evaluation->'metrics'->>'wpm', '')::float, a.raw_score::float, 0) AS wpm,
+                       COALESCE(NULLIF(a.evaluation->'metrics'->>'accuracy', '')::float, a.percentage::float, 0) AS accuracy,
+                       COALESCE(a.evaluated_at, a.submitted_at, a.created_at)::text AS \"createdAt\"
+                FROM activity.attempts a
+                JOIN activity.items i ON i.id = a.activity_id
+                JOIN education.students s ON s.person_id = a.participant_person_id AND s.organization_id = a.organization_id
+                WHERE i.plugin_code = 'platform-typing'
+                  AND a.state IN ('EVALUATED', 'COMPLETED', 'EXPIRED')
+                  AND a.organization_id = CAST(:org AS uuid)
+                  AND s.id = CAST(:student AS uuid)
+                UNION ALL
+                SELECT t.attempt_id::text AS \"attemptId\", t.duration_seconds AS \"durationSeconds\", t.language,
+                       t.keystrokes, t.correct_chars AS \"correctChars\", t.errors, t.wpm::float, t.accuracy::float, t.created_at::text AS \"createdAt\"
+                FROM education.typing_results t
+                JOIN education.activity_attempts a ON a.id = t.attempt_id
+                WHERE a.status = 'finished' AND a.revoked_at IS NULL
+                  AND t.organization_id = CAST(:org AS uuid) AND t.student_id = CAST(:student AS uuid)
+                  AND NOT EXISTS (SELECT 1 FROM activity.attempts aa WHERE aa.id = t.attempt_id)
+             ) u ORDER BY \"createdAt\" DESC, \"attemptId\" DESC LIMIT 51 OFFSET :offset",
             [':org' => $scope->organizationId, ':student' => (string) $scope->studentId, ':offset' => $offset],
         );
     }
@@ -1898,332 +1730,164 @@ final readonly class PostgresEducationStore implements EducationStore
     public function bestTyping(Scope $scope): ?array
     {
         return $this->one(
-            'SELECT t.attempt_id::text AS "attemptId",t.duration_seconds AS "durationSeconds",t.language,
-            t.keystrokes,t.correct_chars AS "correctChars",t.wpm::float,t.accuracy::float,t.errors,t.created_at::text AS "createdAt"
-            FROM education.typing_results t JOIN education.activity_attempts a ON a.id=t.attempt_id
-            WHERE a.status=\'finished\' AND a.revoked_at IS NULL
-            AND t.organization_id=CAST(:org AS uuid) AND t.student_id=CAST(:student AS uuid)
-            ORDER BY t.wpm DESC,t.created_at LIMIT 1',
+            "SELECT * FROM (
+                SELECT a.id::text AS \"attemptId\",
+                       COALESCE(
+                           NULLIF(a.evaluation->'metrics'->>'durationSeconds', '')::int,
+                           ROUND(NULLIF(a.evaluation->'metrics'->>'elapsedSeconds', '')::numeric)::int,
+                           NULLIF(a.runtime_config->>'timeLimitSeconds', '')::int,
+                           0
+                       ) AS \"durationSeconds\",
+                       COALESCE(a.evaluation->'metrics'->>'language', a.runtime_config->>'language', 'en') AS language,
+                       COALESCE(
+                           NULLIF(a.evaluation->'metrics'->>'totalTypedChars', '')::int,
+                           NULLIF(a.evaluation->'metrics'->>'typedCharacters', '')::int,
+                           0
+                       ) AS keystrokes,
+                       COALESCE(NULLIF(a.evaluation->'metrics'->>'correctChars', '')::int, 0) AS \"correctChars\",
+                       COALESCE(NULLIF(a.evaluation->'metrics'->>'errorCount', '')::int, NULLIF(a.evaluation->'metrics'->>'errors', '')::int, 0) AS errors,
+                       COALESCE(NULLIF(a.evaluation->'metrics'->>'wpm', '')::float, a.raw_score::float, 0) AS wpm,
+                       COALESCE(NULLIF(a.evaluation->'metrics'->>'accuracy', '')::float, a.percentage::float, 0) AS accuracy,
+                       COALESCE(a.evaluated_at, a.submitted_at, a.created_at)::text AS \"createdAt\"
+                FROM activity.attempts a
+                JOIN activity.items i ON i.id = a.activity_id
+                JOIN education.students s ON s.person_id = a.participant_person_id AND s.organization_id = a.organization_id
+                WHERE i.plugin_code = 'platform-typing'
+                  AND a.state IN ('EVALUATED', 'COMPLETED', 'EXPIRED')
+                  AND a.organization_id = CAST(:org AS uuid)
+                  AND s.id = CAST(:student AS uuid)
+                UNION ALL
+                SELECT t.attempt_id::text AS \"attemptId\", t.duration_seconds AS \"durationSeconds\", t.language,
+                       t.keystrokes, t.correct_chars AS \"correctChars\", t.errors, t.wpm::float, t.accuracy::float, t.created_at::text AS \"createdAt\"
+                FROM education.typing_results t
+                JOIN education.activity_attempts a ON a.id = t.attempt_id
+                WHERE a.status = 'finished' AND a.revoked_at IS NULL
+                  AND t.organization_id = CAST(:org AS uuid) AND t.student_id = CAST(:student AS uuid)
+                  AND NOT EXISTS (SELECT 1 FROM activity.attempts aa WHERE aa.id = t.attempt_id)
+             ) u ORDER BY wpm DESC, \"createdAt\" LIMIT 1",
             [':org' => $scope->organizationId, ':student' => (string) $scope->studentId],
         );
-    }
-
-    public function createAssignment(Scope $scope, string $activityId, ?string $groupId, ?string $studentId, array $config): array
-    {
-        return $this->db->transaction(function () use ($scope, $activityId, $groupId, $studentId, $config): array {
-            $group = $groupId === null ? null : $this->required(
-                'SELECT g.name FROM education.groups g WHERE ' . self::where('g') . ' AND g.id=CAST(:id AS uuid) FOR UPDATE',
-                [...self::owner($scope), ':id' => $groupId],
-            );
-            $student = $studentId === null ? null : $this->required(
-                'SELECT s.person_id::text AS "personId" FROM education.students s WHERE ' . self::where('s') . ' AND s.id=CAST(:id AS uuid) FOR UPDATE',
-                [...self::owner($scope), ':id' => $studentId],
-            );
-            $assignment = $this->required(
-                'INSERT INTO education.activity_assignments(organization_id,owner_account_id,activity_id,group_id,student_id,config)
-                VALUES(CAST(:org AS uuid),CAST(:actor AS uuid),CAST(:activity AS uuid),:group,:student,CAST(:config AS jsonb))
-                RETURNING id::text,activity_id::text AS "activityId",group_id::text AS "groupId",student_id::text AS "studentId",
-                config,opens_at::text AS "opensAt",due_at::text AS "dueAt",completion,created_at::text AS "createdAt"',
-                [...self::owner($scope), ':activity' => $activityId, ':group' => $groupId, ':student' => $studentId,
-                    ':config' => json_encode((object) $config, JSON_THROW_ON_ERROR)],
-            );
-            $this->syncAssignmentToEngine($scope, (string) $assignment['id'], $activityId, $groupId, $studentId, $config);
-            return [...$assignment, 'groupName' => $group['name'] ?? null, 'studentPersonId' => $student['personId'] ?? null];
-        });
     }
 
     public function assignments(Scope $scope, int $offset): array
     {
         return $this->all(
-            'SELECT a.id::text,a.activity_id::text AS "activityId",d.code AS "activityCode",d.name AS "activityName",
-            a.group_id::text AS "groupId",g.name AS "groupName",a.student_id::text AS "studentId",s.person_id::text AS "studentPersonId",
-            a.config,a.opens_at::text AS "opensAt",a.due_at::text AS "dueAt",a.completion,a.created_at::text AS "createdAt"
-            FROM education.activity_assignments a JOIN education.activity_definitions d ON d.id=a.activity_id
-            LEFT JOIN education.groups g ON g.id=a.group_id
-            LEFT JOIN education.students s ON s.id=a.student_id
-            WHERE a.organization_id=CAST(:org AS uuid) AND (a.owner_account_id=CAST(:actor AS uuid)
-                OR education.can_teach_group(a.organization_id,CAST(:actor AS uuid),a.group_id)
-                OR (a.group_id IS NULL AND EXISTS(SELECT 1 FROM education.group_students scope_gs
-                    WHERE scope_gs.student_id=a.student_id AND education.can_teach_group(scope_gs.organization_id,CAST(:actor AS uuid),scope_gs.group_id))))
-            ORDER BY a.created_at DESC,a.id DESC LIMIT 51 OFFSET :offset',
-            [...self::owner($scope), ':offset' => $offset],
+            "SELECT * FROM (
+                SELECT a.id::text, a.activity_id::text AS \"activityId\", i.plugin_code AS \"activityCode\",
+                       i.title AS \"activityName\",
+                       CASE WHEN a.target_type = 'group' THEN a.target_id::text ELSE NULL END AS \"groupId\",
+                       g.name AS \"groupName\",
+                       CASE WHEN a.target_type IN ('student', 'homework') THEN a.target_id::text ELSE s.id::text END AS \"studentId\",
+                       COALESCE(s.person_id::text, CASE WHEN a.target_type = 'person' THEN a.target_id::text ELSE NULL END) AS \"studentPersonId\",
+                       a.config_override AS config,
+                       a.opens_at::text AS \"opensAt\", a.due_at::text AS \"dueAt\",
+                       NULL::jsonb AS completion, a.created_at::text AS \"createdAt\"
+                FROM activity.assignments a
+                JOIN activity.items i ON i.id = a.activity_id
+                LEFT JOIN education.groups g ON a.target_type = 'group' AND g.id = a.target_id AND g.organization_id = a.organization_id
+                LEFT JOIN education.students s ON (
+                    (a.target_type IN ('student', 'homework') AND s.id = a.target_id AND s.organization_id = a.organization_id)
+                    OR (a.target_type = 'person' AND s.person_id = a.target_id AND s.organization_id = a.organization_id)
+                )
+                WHERE a.organization_id = CAST(:org AS uuid)
+                  AND a.status = 'ACTIVE'
+                  AND a.revoked_at IS NULL
+                  AND (
+                      a.assigned_by_person_id = CAST(:person AS uuid)
+                      OR (a.target_type = 'group' AND education.can_teach_group(a.organization_id, CAST(:actor AS uuid), a.target_id))
+                      OR (s.id IS NOT NULL AND EXISTS (
+                          SELECT 1 FROM education.group_students scope_gs
+                          WHERE scope_gs.student_id = s.id AND education.can_teach_group(scope_gs.organization_id, CAST(:actor AS uuid), scope_gs.group_id)
+                      ))
+                  )
+                UNION ALL
+                SELECT a.id::text, a.activity_id::text AS \"activityId\", d.code AS \"activityCode\", d.name AS \"activityName\",
+                       a.group_id::text AS \"groupId\", g.name AS \"groupName\", a.student_id::text AS \"studentId\", s.person_id::text AS \"studentPersonId\",
+                       a.config, a.opens_at::text AS \"opensAt\", a.due_at::text AS \"dueAt\", a.completion, a.created_at::text AS \"createdAt\"
+                FROM education.activity_assignments a
+                JOIN education.activity_definitions d ON d.id = a.activity_id
+                LEFT JOIN education.groups g ON g.id = a.group_id
+                LEFT JOIN education.students s ON s.id = a.student_id
+                WHERE a.organization_id = CAST(:org AS uuid)
+                  AND NOT EXISTS (SELECT 1 FROM activity.assignments aa WHERE aa.id = a.id)
+                  AND (a.owner_account_id = CAST(:actor AS uuid)
+                      OR education.can_teach_group(a.organization_id, CAST(:actor AS uuid), a.group_id)
+                      OR (a.group_id IS NULL AND EXISTS(SELECT 1 FROM education.group_students scope_gs
+                          WHERE scope_gs.student_id = a.student_id AND education.can_teach_group(scope_gs.organization_id, CAST(:actor AS uuid), scope_gs.group_id))))
+             ) u ORDER BY \"createdAt\" DESC, id DESC LIMIT 51 OFFSET :offset",
+            [...self::owner($scope), ':person' => $scope->personId, ':offset' => $offset],
         );
     }
 
     public function groupActivityResults(Scope $scope, string $groupId, string $activityCode, int $offset, ?string $from = null, ?string $to = null): array
     {
-        $range = '';
-        $params = [...self::owner($scope),':group' => $groupId,':code' => $activityCode,':offset' => $offset];
+        $engineRange = '';
+        $legacyRange = '';
+        $params = [...self::owner($scope), ':group' => $groupId, ':code' => $activityCode, ':offset' => $offset];
         if ($from !== null) {
-            $range .= ' AND a.started_at>=CAST(:from AS timestamptz)';
+            $engineRange .= ' AND a.started_at >= CAST(:from AS timestamptz)';
+            $legacyRange .= ' AND a.started_at >= CAST(:from AS timestamptz)';
             $params[':from'] = $from;
         }
         if ($to !== null) {
-            $range .= ' AND a.started_at<CAST(:to AS timestamptz)';
+            $engineRange .= ' AND a.started_at < CAST(:to AS timestamptz)';
+            $legacyRange .= ' AND a.started_at < CAST(:to AS timestamptz)';
             $params[':to'] = $to;
         }
-        return $this->all('SELECT a.id::text,a.student_id::text AS "studentId",s.person_id::text AS "personId",a.status,a.source,
-            a.started_at::text AS "startedAt",a.finished_at::text AS "finishedAt",a.revoked_at::text AS "revokedAt",
-            t.duration_seconds AS "durationSeconds",COALESCE(t.language,r.metrics->>\'language\') AS language,t.keystrokes,t.correct_chars AS "correctChars",
-            COALESCE(t.errors,(r.metrics->>\'errors\')::int) AS errors,t.wpm::float,COALESCE(t.accuracy,(r.metrics->>\'accuracy\')::numeric)::float AS accuracy,
-            (r.metrics->>\'correctAnswers\')::int AS "correctAnswers",(r.metrics->>\'totalRounds\')::int AS "totalRounds",(r.metrics->>\'score\')::int AS score,r.passed
-            FROM education.activity_attempts a JOIN education.activity_definitions d ON d.id=a.activity_id
-            JOIN education.students s ON s.id=a.student_id AND s.organization_id=a.organization_id
-            JOIN education.group_students gs ON gs.student_id=a.student_id AND gs.group_id=CAST(:group AS uuid)
-            LEFT JOIN education.typing_results t ON t.attempt_id=a.id LEFT JOIN education.activity_results r ON r.attempt_id=a.id
-            WHERE a.organization_id=CAST(:org AS uuid) AND d.code=:code
-            AND gs.organization_id=CAST(:org AS uuid) AND education.can_teach_group(gs.organization_id,CAST(:actor AS uuid),gs.group_id)' . $range . '
-            ORDER BY a.started_at DESC,a.id DESC LIMIT 51 OFFSET :offset', $params);
-    }
 
-    /** @return array{itemId: string, versionId: string}|null */
-    private function ensureEngineItemForDefinition(Scope $scope, string $definitionId): ?array
-    {
-        $existing = $this->one(
-            "SELECT i.id::text AS \"itemId\", i.active_version_id::text AS \"versionId\"
-             FROM activity.items i
-             WHERE i.organization_id = CAST(:org AS uuid)
-               AND ((i.source_legacy_type = 'activity_definition' AND i.source_legacy_id = CAST(:defId AS uuid)) OR i.id = CAST(:defId AS uuid))
-             LIMIT 1",
-            [':org' => $scope->organizationId, ':defId' => $definitionId],
+        return $this->all(
+            "SELECT * FROM (
+                SELECT a.id::text, s.id::text AS \"studentId\", s.person_id::text AS \"personId\",
+                       CASE
+                           WHEN a.state IN ('CANCELLED', 'INVALIDATED') THEN 'revoked'
+                           WHEN a.state IN ('EVALUATED', 'COMPLETED', 'EXPIRED') THEN 'finished'
+                           ELSE 'running'
+                       END AS status,
+                       'browser' AS source,
+                       a.started_at::text AS \"startedAt\",
+                       COALESCE(a.evaluated_at, a.submitted_at)::text AS \"finishedAt\",
+                       CASE WHEN a.state IN ('CANCELLED', 'INVALIDATED') THEN a.updated_at::text ELSE NULL END AS \"revokedAt\",
+                       COALESCE(
+                           NULLIF(a.evaluation->'metrics'->>'durationSeconds', '')::int,
+                           ROUND(NULLIF(a.evaluation->'metrics'->>'elapsedSeconds', '')::numeric)::int
+                       ) AS \"durationSeconds\",
+                       COALESCE(a.evaluation->'metrics'->>'language', a.runtime_config->>'language') AS language,
+                       COALESCE(NULLIF(a.evaluation->'metrics'->>'totalTypedChars', '')::int, NULLIF(a.evaluation->'metrics'->>'typedCharacters', '')::int) AS keystrokes,
+                       NULLIF(a.evaluation->'metrics'->>'correctChars', '')::int AS \"correctChars\",
+                       COALESCE(NULLIF(a.evaluation->'metrics'->>'errorCount', '')::int, NULLIF(a.evaluation->'metrics'->>'errors', '')::int) AS errors,
+                       NULLIF(a.evaluation->'metrics'->>'wpm', '')::float AS wpm,
+                       COALESCE(a.percentage, NULLIF(a.evaluation->'metrics'->>'accuracy', '')::numeric)::float AS accuracy,
+                       COALESCE(NULLIF(a.evaluation->'metrics'->>'correctAnswers', '')::int, NULLIF(a.evaluation->'metrics'->>'correct', '')::int) AS \"correctAnswers\",
+                       COALESCE(NULLIF(a.evaluation->'metrics'->>'totalRounds', '')::int, NULLIF(a.evaluation->'metrics'->>'total', '')::int) AS \"totalRounds\",
+                       COALESCE(ROUND(a.raw_score)::int, NULLIF(a.evaluation->'metrics'->>'score', '')::int) AS score,
+                       a.passed
+                FROM activity.attempts a
+                JOIN activity.items i ON i.id = a.activity_id
+                JOIN education.students s ON s.person_id = a.participant_person_id AND s.organization_id = a.organization_id
+                JOIN education.group_students gs ON gs.student_id = s.id AND gs.group_id = CAST(:group AS uuid)
+                WHERE a.organization_id = CAST(:org AS uuid)
+                  AND i.plugin_code = :code
+                  AND gs.organization_id = CAST(:org AS uuid)
+                  AND education.can_teach_group(gs.organization_id, CAST(:actor AS uuid), gs.group_id){$engineRange}
+                UNION ALL
+                SELECT a.id::text, a.student_id::text AS \"studentId\", s.person_id::text AS \"personId\", a.status, a.source,
+                       a.started_at::text AS \"startedAt\", a.finished_at::text AS \"finishedAt\", a.revoked_at::text AS \"revokedAt\",
+                       t.duration_seconds AS \"durationSeconds\", COALESCE(t.language, r.metrics->>'language') AS language, t.keystrokes, t.correct_chars AS \"correctChars\",
+                       COALESCE(t.errors, (r.metrics->>'errors')::int) AS errors, t.wpm::float, COALESCE(t.accuracy, (r.metrics->>'accuracy')::numeric)::float AS accuracy,
+                       (r.metrics->>'correctAnswers')::int AS \"correctAnswers\", (r.metrics->>'totalRounds')::int AS \"totalRounds\", (r.metrics->>'score')::int AS score, r.passed
+                FROM education.activity_attempts a
+                JOIN education.activity_definitions d ON d.id = a.activity_id
+                JOIN education.students s ON s.id = a.student_id AND s.organization_id = a.organization_id
+                JOIN education.group_students gs ON gs.student_id = a.student_id AND gs.group_id = CAST(:group AS uuid)
+                LEFT JOIN education.typing_results t ON t.attempt_id = a.id
+                LEFT JOIN education.activity_results r ON r.attempt_id = a.id
+                WHERE a.organization_id = CAST(:org AS uuid) AND d.code = :code
+                  AND gs.organization_id = CAST(:org AS uuid)
+                  AND education.can_teach_group(gs.organization_id, CAST(:actor AS uuid), gs.group_id)
+                  AND NOT EXISTS (SELECT 1 FROM activity.attempts aa WHERE aa.id = a.id){$legacyRange}
+             ) u ORDER BY \"startedAt\" DESC, id DESC LIMIT 51 OFFSET :offset",
+            $params,
         );
-        if (is_array($existing) && is_string($existing['versionId'] ?? null) && $existing['versionId'] !== '') {
-            return ['itemId' => (string) $existing['itemId'], 'versionId' => (string) $existing['versionId']];
-        }
-
-        $def = $this->activityDefinitionById($definitionId);
-        if ($def === null) {
-            return null;
-        }
-        $pluginCode = \App\Education\Application\ActivityCode::canonical((string) $def['code']);
-        $knownPlugins = ['platform-assessment', 'platform-typing', 'platform-math-sprint', 'platform-logic', 'platform-memory'];
-        if (!in_array($pluginCode, $knownPlugins, true)) {
-            $pluginCode = 'platform-typing';
-        }
-
-        $idTaken = (bool) $this->db->createCommand(
-            'SELECT EXISTS(SELECT 1 FROM activity.items WHERE id = CAST(:id AS uuid))',
-            [':id' => $definitionId],
-        )->queryScalar();
-        $itemId = $idTaken ? null : $definitionId;
-
-        $configJson = is_string($def['config']) ? $def['config'] : json_encode($def['config'] ?? [], JSON_THROW_ON_ERROR);
-        if ($itemId !== null) {
-            $this->db->createCommand(
-                "INSERT INTO activity.items (
-                    id, organization_id, plugin_code, author_person_id, author_account_id,
-                    title, description, status, visibility, source_legacy_type, source_legacy_id
-                 ) VALUES (
-                    CAST(:id AS uuid), CAST(:org AS uuid), :pcode, CAST(:person AS uuid), CAST(:account AS uuid),
-                    :title, :desc, 'PUBLISHED', 'public_catalog', 'activity_definition', CAST(:defId AS uuid)
-                 ) ON CONFLICT (id) DO NOTHING",
-                [
-                    ':id' => $itemId,
-                    ':org' => $scope->organizationId,
-                    ':pcode' => $pluginCode,
-                    ':person' => $scope->personId,
-                    ':account' => $scope->accountId,
-                    ':title' => mb_substr((string) $def['name'], 0, 200),
-                    ':desc' => '',
-                    ':defId' => $definitionId,
-                ],
-            )->execute();
-        } else {
-            $inserted = $this->db->createCommand(
-                "INSERT INTO activity.items (
-                    organization_id, plugin_code, author_person_id, author_account_id,
-                    title, description, status, visibility, source_legacy_type, source_legacy_id
-                 ) VALUES (
-                    CAST(:org AS uuid), :pcode, CAST(:person AS uuid), CAST(:account AS uuid),
-                    :title, :desc, 'PUBLISHED', 'public_catalog', 'activity_definition', CAST(:defId AS uuid)
-                 ) RETURNING id::text",
-                [
-                    ':org' => $scope->organizationId,
-                    ':pcode' => $pluginCode,
-                    ':person' => $scope->personId,
-                    ':account' => $scope->accountId,
-                    ':title' => mb_substr((string) $def['name'], 0, 200),
-                    ':desc' => '',
-                    ':defId' => $definitionId,
-                ],
-            )->queryScalar();
-            $itemId = is_string($inserted) && $inserted !== ''
-                ? $inserted
-                : (string) $this->db->createCommand(
-                    "SELECT id::text FROM activity.items
-                     WHERE organization_id = CAST(:org AS uuid) AND source_legacy_type = 'activity_definition' AND source_legacy_id = CAST(:defId AS uuid)
-                     LIMIT 1",
-                    [':org' => $scope->organizationId, ':defId' => $definitionId],
-                )->queryScalar();
-        }
-
-        $verId = $this->db->createCommand(
-            'SELECT id::text FROM activity.versions WHERE activity_id = CAST(:aid AS uuid) ORDER BY version_number DESC LIMIT 1',
-            [':aid' => $itemId],
-        )->queryScalar();
-
-        if (!is_string($verId) || $verId === '') {
-            $verId = (string) $this->db->createCommand(
-                "INSERT INTO activity.versions (
-                    activity_id, version_number, title, instructions, config, content,
-                    max_attempts, passing_score_percent, grading_policy, reveal_answers_policy, created_by_person_id
-                 ) VALUES (
-                    CAST(:aid AS uuid), 1, :title, '', CAST(:cfg AS jsonb), '{}'::jsonb,
-                    0, 60, 'highest', 'after_grading', CAST(:person AS uuid)
-                 ) ON CONFLICT (activity_id, version_number) DO NOTHING
-                 RETURNING id::text",
-                [
-                    ':aid' => $itemId,
-                    ':title' => mb_substr((string) $def['name'], 0, 200),
-                    ':cfg' => $configJson,
-                    ':person' => $scope->personId,
-                ],
-            )->queryScalar();
-            if ($verId === '') {
-                $verId = (string) $this->db->createCommand(
-                    'SELECT id::text FROM activity.versions WHERE activity_id = CAST(:aid AS uuid) ORDER BY version_number DESC LIMIT 1',
-                    [':aid' => $itemId],
-                )->queryScalar();
-            }
-        }
-
-        $this->db->createCommand(
-            'UPDATE activity.items SET active_version_id = COALESCE(active_version_id, CAST(:vid AS uuid)) WHERE id = CAST(:aid AS uuid)',
-            [':vid' => $verId, ':aid' => $itemId],
-        )->execute();
-
-        return ['itemId' => $itemId, 'versionId' => $verId];
-    }
-
-    /** @param array<array-key, mixed> $config */
-    private function syncAssignmentToEngine(
-        Scope $scope,
-        string $assignmentId,
-        string $definitionId,
-        ?string $groupId,
-        ?string $studentId,
-        array $config,
-    ): void {
-        $resolved = $this->ensureEngineItemForDefinition($scope, $definitionId);
-        if ($resolved === null) {
-            return;
-        }
-        $targetType = $groupId !== null ? 'group' : 'student';
-        $targetId = $groupId ?? $studentId;
-        if ($targetId === null) {
-            return;
-        }
-
-        $this->db->createCommand(
-            "INSERT INTO activity.assignments (
-                id, organization_id, activity_id, version_id, assigned_by_person_id,
-                target_type, target_id, config_override, status, source_legacy_type, source_legacy_id
-             ) VALUES (
-                CAST(:id AS uuid), CAST(:org AS uuid), CAST(:aid AS uuid), CAST(:vid AS uuid), CAST(:by AS uuid),
-                :ttype, CAST(:tid AS uuid), CAST(:cfg AS jsonb), 'ACTIVE', 'education_activity_assignment', CAST(:id AS uuid)
-             ) ON CONFLICT (id) DO NOTHING",
-            [
-                ':id' => $assignmentId,
-                ':org' => $scope->organizationId,
-                ':aid' => $resolved['itemId'],
-                ':vid' => $resolved['versionId'],
-                ':by' => $scope->personId,
-                ':ttype' => $targetType,
-                ':tid' => $targetId,
-                ':cfg' => json_encode((object) $config, JSON_THROW_ON_ERROR),
-            ],
-        )->execute();
-    }
-
-    /** @param array<array-key, mixed> $config */
-    private function syncAttemptCreatedToEngine(
-        Scope $scope,
-        string $attemptId,
-        string $definitionId,
-        ?string $assignmentId,
-        array $config,
-    ): void {
-        $resolved = $this->ensureEngineItemForDefinition($scope, $definitionId);
-        if ($resolved === null) {
-            return;
-        }
-        $this->db->createCommand(
-            "INSERT INTO activity.attempts (
-                id, organization_id, activity_id, version_id, assignment_id,
-                participant_person_id, participant_account_id,
-                state, revision, seed, runtime_config, draft_state,
-                started_at, source_legacy_type, source_legacy_id
-             ) VALUES (
-                CAST(:id AS uuid), CAST(:org AS uuid), CAST(:aid AS uuid), CAST(:vid AS uuid),
-                CASE WHEN CAST(:asgn AS uuid) IS NOT NULL AND EXISTS (SELECT 1 FROM activity.assignments ag WHERE ag.id = CAST(:asgn AS uuid))
-                     THEN CAST(:asgn AS uuid) ELSE NULL END,
-                CAST(:person AS uuid), CAST(:account AS uuid),
-                'IN_PROGRESS', 1, 0, CAST(:cfg AS jsonb), '{}'::jsonb,
-                now(), 'education_activity_attempt', CAST(:id AS uuid)
-             ) ON CONFLICT (id) DO NOTHING",
-            [
-                ':id' => $attemptId,
-                ':org' => $scope->organizationId,
-                ':aid' => $resolved['itemId'],
-                ':vid' => $resolved['versionId'],
-                ':asgn' => $assignmentId,
-                ':person' => $scope->personId,
-                ':account' => $scope->accountId,
-                ':cfg' => json_encode((object) $config, JSON_THROW_ON_ERROR),
-            ],
-        )->execute();
-
-        $this->db->createCommand(
-            "INSERT INTO activity.attempt_events (attempt_id, from_state, to_state, actor_person_id, reason)
-             SELECT id, 'CREATED', 'IN_PROGRESS', CAST(:person AS uuid), 'attempt_started'
-             FROM activity.attempts
-             WHERE id = CAST(:id AS uuid)
-               AND NOT EXISTS (SELECT 1 FROM activity.attempt_events e WHERE e.attempt_id = activity.attempts.id)",
-            [':id' => $attemptId, ':person' => $scope->personId],
-        )->execute();
-    }
-
-    /** @param array<string, mixed> $evaluation */
-    private function syncAttemptEvaluatedToEngine(
-        Scope $scope,
-        string $attemptId,
-        array $evaluation,
-        float $rawScore,
-        float $maxScore,
-        float $percentage,
-        bool $passed,
-    ): void {
-        $this->db->createCommand(
-            "UPDATE activity.attempts
-             SET state = 'EVALUATED',
-                 revision = revision + 1,
-                 evaluation = CAST(:ev AS jsonb),
-                 raw_score = :raw,
-                 max_score = :max,
-                 percentage = :pct,
-                 passed = :passed,
-                 submitted_at = COALESCE(submitted_at, now()),
-                 evaluated_at = now(),
-                 updated_at = now()
-             WHERE id = CAST(:id AS uuid) AND organization_id = CAST(:org AS uuid)",
-            [
-                ':ev' => json_encode($evaluation, JSON_THROW_ON_ERROR),
-                ':raw' => $rawScore,
-                ':max' => $maxScore,
-                ':pct' => min(100.0, max(0.0, $percentage)),
-                ':passed' => $passed ? 'true' : 'false',
-                ':id' => $attemptId,
-                ':org' => $scope->organizationId,
-            ],
-        )->execute();
-
-        $this->db->createCommand(
-            "INSERT INTO activity.attempt_events (attempt_id, from_state, to_state, actor_person_id, reason)
-             SELECT id, 'IN_PROGRESS', 'EVALUATED', CAST(:actor AS uuid), 'attempt_submitted'
-             FROM activity.attempts
-             WHERE id = CAST(:id AS uuid)",
-            [':actor' => $scope->personId, ':id' => $attemptId],
-        )->execute();
     }
 
     private function lockLesson(Scope $scope, string $lessonId): void

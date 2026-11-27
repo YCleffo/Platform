@@ -76,6 +76,7 @@ final readonly class PostgresHomeworkStore implements HomeworkStore
     {
         $row = $this->one(
             'SELECT s.id::text,s.recipient_id::text AS "recipientId",s.state,s.version,s.draft_text AS text,
+            s.selected_activity_attempt_id::text AS "selectedActivityAttemptId",
             s.created_at::text AS "createdAt",s.updated_at::text AS "updatedAt"
             FROM education.homework_submissions s WHERE s.organization_id=CAST(:org AS uuid) AND s.recipient_id=CAST(:recipient AS uuid)' . ($lock ? ' FOR UPDATE OF s' : ''),
             [':org' => $scope->organizationId, ':recipient' => $recipient['id']],

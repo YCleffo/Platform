@@ -123,4 +123,9 @@ return [
         ->middleware(PrivateResponse::class, RequireAuthentication::class)
         ->action(ActivityAction::class)
         ->name('activity/bootstrap_typing'),
+    Route::post('/api/activity/plugins/{id}/bootstrap')
+        ->defaults(['operation' => 'bootstrap_plugin'])
+        ->middleware(PrivateResponse::class, RequireAuthentication::class)
+        ->action(ActivityAction::class)
+        ->name('activity/bootstrap_plugin'),
 ];

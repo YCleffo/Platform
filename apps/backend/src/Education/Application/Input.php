@@ -82,4 +82,38 @@ final class Input
         }
         return (int) $value;
     }
+
+    /** @return array<array-key,mixed> */
+    public static function json(mixed $value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+        if (!is_string($value) || $value === '') {
+            return [];
+        }
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @param array<array-key,mixed> $input
+     * @param list<string> $allowed
+     */
+    public static function only(array $input, array $allowed): void
+    {
+        if (array_diff(array_keys($input), $allowed) !== []) {
+            throw new EducationError(422, 'invalid_input');
+        }
+    }
+
+    public static function integer(mixed $value, int $minimum, int $maximum): int
+    {
+        if (!is_int($value) || $value < $minimum || $value > $maximum) {
+            throw new EducationError(422, 'invalid_input');
+        }
+
+        return $value;
+    }
 }

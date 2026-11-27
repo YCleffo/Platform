@@ -30,6 +30,11 @@ final class ActivityPluginRegistry
         $this->plugins[$plugin->code()] = $plugin;
     }
 
+    public function has(string $code): bool
+    {
+        return isset($this->plugins[$code]);
+    }
+
     public function get(string $code): ActivityPluginInterface
     {
         if (!isset($this->plugins[$code])) {

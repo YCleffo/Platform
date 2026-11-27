@@ -64,10 +64,12 @@ final class HomeworkActivitiesTest extends HomeworkFixture
         $started = $this->activities->start($this->learner['scope'], $assignment['id']);
         self::assertSame(15, $started['exercise']['durationSeconds']);
         self::assertSame('en', $started['exercise']['language']);
-        $bound = $this->db->createCommand('SELECT a.assignment_id::text,a.config,r.activity_assignment_id::text FROM education.activity_attempts a JOIN education.homework_recipients r ON r.activity_assignment_id=a.assignment_id WHERE a.id=CAST(:id AS uuid)', [':id' => $started['attempt']['id']])->queryOne();
+        $bound = $this->db->createCommand('SELECT a.assignment_id::text,a.runtime_config,r.activity_assignment_id::text FROM activity.attempts a JOIN education.homework_recipients r ON r.activity_assignment_id=a.assignment_id WHERE a.id=CAST(:id AS uuid)', [':id' => $started['attempt']['id']])->queryOne();
         self::assertIsArray($bound);
         self::assertSame($bound['activity_assignment_id'], $bound['assignment_id']);
-        self::assertEquals(['durationSeconds' => 15, 'language' => 'en'], json_decode($bound['config'], true));
+        $cfg = json_decode((string) $bound['runtime_config'], true);
+        self::assertSame(15, $cfg['timeLimitSeconds'] ?? null);
+        self::assertSame('en', $cfg['language'] ?? null);
         $this->rejection(422, fn() => $this->education->write(
             'student_start_attempt',
             $this->learner['scope'],

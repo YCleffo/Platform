@@ -46,12 +46,19 @@ final readonly class HomeworkPrivacy
             $this->db->createCommand($sql, $params)->execute();
         }
         $this->db->createCommand("SELECT set_config('education.homework_erasure','off',true)")->queryScalar();
+
         foreach ($activityIds as $activity) {
+            $this->db->createCommand('DELETE FROM education.activity_journal_sync WHERE attempt_id IN (SELECT id FROM activity.attempts WHERE assignment_id=CAST(:id AS uuid))', [':id' => $activity])->execute();
+            $this->db->createCommand('DELETE FROM activity.attempt_events WHERE attempt_id IN (SELECT id FROM activity.attempts WHERE assignment_id=CAST(:id AS uuid))', [':id' => $activity])->execute();
+            $this->db->createCommand('DELETE FROM activity.attempts WHERE assignment_id=CAST(:id AS uuid)', [':id' => $activity])->execute();
+            $this->db->createCommand('DELETE FROM activity.assignments WHERE id=CAST(:id AS uuid)', [':id' => $activity])->execute();
+
             $this->db->createCommand('DELETE FROM education.typing_results WHERE attempt_id IN
                 (SELECT id FROM education.activity_attempts WHERE assignment_id=CAST(:id AS uuid))', [':id' => $activity])->execute();
             $this->db->createCommand('DELETE FROM education.activity_attempts WHERE assignment_id=CAST(:id AS uuid)', [':id' => $activity])->execute();
             $this->db->createCommand('DELETE FROM education.activity_assignments WHERE id=CAST(:id AS uuid)', [':id' => $activity])->execute();
         }
+
         $activities = 'SELECT id FROM education.activity_assignments WHERE student_id IN (' . $students . ')
             OR owner_account_id IN (SELECT id FROM core.accounts WHERE person_id=CAST(:subject AS uuid))
             OR group_id IN (SELECT id FROM education.groups WHERE owner_person_id=CAST(:subject AS uuid))';
@@ -65,6 +72,7 @@ final readonly class HomeworkPrivacy
         ] as $sql) {
             $this->db->createCommand($sql, $params)->execute();
         }
+
         return $keys;
     }
 }

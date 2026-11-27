@@ -39,23 +39,26 @@ final class LogicActivityPlugin implements ActivityPluginInterface
         return [
             'rounds' => ['type' => 'integer', 'min' => 3, 'max' => 20, 'default' => 8],
             'difficulty' => ['type' => 'integer', 'min' => 1, 'max' => 3, 'default' => 1],
+            'language' => ['type' => 'enum', 'values' => ['en', 'ru'], 'default' => 'en'],
+            'minAccuracy' => ['type' => 'integer', 'min' => 0, 'max' => 100, 'default' => 70],
         ];
     }
 
     public function defaultConfig(): array
     {
-        return ['rounds' => 8, 'difficulty' => 1];
+        return ['rounds' => 8, 'difficulty' => 1, 'language' => 'en', 'minAccuracy' => 70];
     }
 
     public function safeParticipantConfigKeys(): array
     {
-        return [];
+        return ['rounds', 'difficulty', 'language'];
     }
 
     public function generateExercise(array $config, int $seed, ?array $content = null): array
     {
         $roundsCount = max(3, min(20, (int) ($config['rounds'] ?? 8)));
         $difficulty = max(1, min(3, (int) ($config['difficulty'] ?? 1)));
+        $language = ($config['language'] ?? 'en') === 'ru' ? 'ru' : 'en';
         mt_srand($seed !== 0 ? $seed : 777);
 
         $rounds = [];
@@ -71,24 +74,36 @@ final class LogicActivityPlugin implements ActivityPluginInterface
                 $seq = [$start, $start + $step, $start + 2 * $step, $start + 3 * $step];
                 $ans = $start + 4 * $step;
                 $opts = [$ans, $ans + $step, $ans - 1, $ans + 2];
-                $prompt = 'Continue the sequence: ' . implode(', ', $seq) . ', ?';
-                $explanation = "Each term adds +{$step}.";
+                $prompt = $language === 'ru'
+                    ? 'Продолжите последовательность: ' . implode(', ', $seq) . ', ?'
+                    : 'Continue the sequence: ' . implode(', ', $seq) . ', ?';
+                $explanation = $language === 'ru'
+                    ? "Каждый следующий элемент увеличивается на +{$step}."
+                    : "Each term adds +{$step}.";
             } elseif ($variant === 1) {
                 $base = mt_rand(2, 4);
                 $mult = $difficulty === 1 ? 2 : 3;
                 $seq = [$base, $base * $mult, $base * $mult * $mult];
                 $ans = $seq[2] * $mult;
                 $opts = [$ans, $ans + $mult, $seq[2] + $mult, $ans * 2];
-                $prompt = 'Find the next value: ' . implode(', ', $seq) . ', ?';
-                $explanation = "Multiply previous value by {$mult}.";
+                $prompt = $language === 'ru'
+                    ? 'Найдите следующее число: ' . implode(', ', $seq) . ', ?'
+                    : 'Find the next value: ' . implode(', ', $seq) . ', ?';
+                $explanation = $language === 'ru'
+                    ? "Предыдущее значение умножается на {$mult}."
+                    : "Multiply previous value by {$mult}.";
             } else {
                 $a = mt_rand(2, 9);
                 $b = mt_rand(3, 8);
                 $c = mt_rand(2, 6);
                 $ans = $a + $b * $c;
                 $opts = [$ans, ($a + $b) * $c, $ans + $c, $ans - $a];
-                $prompt = "Compute following operator precedence: {$a} + {$b} * {$c}";
-                $explanation = "Multiplication runs first: {$b} * {$c} = " . ($b * $c) . ", plus {$a} = {$ans}.";
+                $prompt = $language === 'ru'
+                    ? "Вычислите с учётом приоритета операций: {$a} + {$b} * {$c}"
+                    : "Compute following operator precedence: {$a} + {$b} * {$c}";
+                $explanation = $language === 'ru'
+                    ? "Сначала выполняется умножение: {$b} * {$c} = " . ($b * $c) . ", затем + {$a} = {$ans}."
+                    : "Multiplication runs first: {$b} * {$c} = " . ($b * $c) . ", plus {$a} = {$ans}.";
             }
             $uniqueOpts = array_values(array_unique(array_map('strval', $opts)));
             sort($uniqueOpts);
@@ -103,6 +118,7 @@ final class LogicActivityPlugin implements ActivityPluginInterface
 
         return [
             'difficulty' => $difficulty,
+            'language' => $language,
             'rounds' => $rounds,
             '_answerKey' => $key,
             '_explanations' => $explanations,
@@ -140,15 +156,24 @@ final class LogicActivityPlugin implements ActivityPluginInterface
             ];
         }
 
+        $minAccuracy = (float) ($config['minAccuracy'] ?? 65.0);
         $pct = $total > 0 ? round(($correct / $total) * 100.0, 2) : 0.0;
         return [
             'rawScore' => (float) $correct,
             'maxScore' => (float) $total,
             'percentage' => $pct,
-            'passed' => $pct >= 65.0,
+            'passed' => $pct >= $minAccuracy,
             'requiresManualReview' => false,
             'breakdown' => $breakdown,
-            'metrics' => ['correct' => $correct, 'total' => $total, 'accuracy' => $pct],
+            'metrics' => [
+                'correct' => $correct,
+                'correctAnswers' => $correct,
+                'total' => $total,
+                'totalRounds' => $total,
+                'score' => $correct,
+                'accuracy' => $pct,
+                'language' => (string) ($config['language'] ?? 'en'),
+            ],
             'telemetryVerified' => false,
             'feedback' => "Solved {$correct} of {$total} logic rounds ({$pct}%).",
         ];

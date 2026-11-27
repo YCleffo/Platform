@@ -30,13 +30,36 @@ final readonly class PersonalDataContributor implements Contributor
                 expected_sha256 AS "expectedSha256",status,created_at::text AS "createdAt",confirmed_at::text AS "confirmedAt"
                 FROM education.file_transfers WHERE person_id=CAST(:subject AS uuid)',
 
-            'activity_attempt' => 'SELECT a.id::text,a.organization_id::text AS "organizationId",d.code AS "activityCode",
-                a.contract_version AS "contractVersion",a.config,a.client_state AS "clientState",a.state_version AS "stateVersion",
+            'activity_attempt' => 'SELECT a.id::text,a.organization_id::text AS "organizationId",i.plugin_code AS "activityCode",
+                a.version_id::text AS "versionId",a.runtime_config AS config,a.answers AS "clientState",a.revision AS "stateVersion",
+                a.state AS status,a.started_at::text AS "startedAt",COALESCE(a.evaluated_at,a.submitted_at)::text AS "finishedAt",
+                CASE WHEN a.state IN (\'CANCELLED\',\'INVALIDATED\') THEN a.updated_at::text ELSE NULL END AS "revokedAt"
+                FROM activity.attempts a
+                JOIN activity.items i ON i.id=a.activity_id
+                WHERE a.participant_person_id=CAST(:subject AS uuid)
+                   OR a.participant_account_id IN (SELECT id FROM core.accounts WHERE person_id=CAST(:subject AS uuid))
+                UNION ALL
+                SELECT a.id::text,a.organization_id::text AS "organizationId",d.code AS "activityCode",
+                a.contract_version::text AS "versionId",a.config,a.client_state AS "clientState",a.state_version AS "stateVersion",
                 a.status,a.started_at::text AS "startedAt",a.finished_at::text AS "finishedAt",a.revoked_at::text AS "revokedAt"
                 FROM education.activity_attempts a JOIN education.students s ON s.id=a.student_id
-                JOIN education.activity_definitions d ON d.id=a.activity_id WHERE s.person_id=CAST(:subject AS uuid)',
-            'activity_result' => 'SELECT r.attempt_id::text AS "attemptId",r.type AS "activityType",r.version,r.metrics,r.passed,r.created_at::text AS "createdAt"
-                FROM education.activity_results r JOIN education.students s ON s.id=r.student_id WHERE s.person_id=CAST(:subject AS uuid)',
+                JOIN education.activity_definitions d ON d.id=a.activity_id
+                WHERE s.person_id=CAST(:subject AS uuid)
+                  AND NOT EXISTS (SELECT 1 FROM activity.attempts ca WHERE ca.id=a.id)',
+            'activity_result' => 'SELECT a.id::text AS "attemptId",i.plugin_code AS "activityType",v.version_number AS version,
+                COALESCE(a.evaluation->\'metrics\', \'{}\'::jsonb) AS metrics,COALESCE(a.passed,false) AS passed,
+                COALESCE(a.evaluated_at,a.submitted_at,a.created_at)::text AS "createdAt"
+                FROM activity.attempts a
+                JOIN activity.items i ON i.id=a.activity_id
+                JOIN activity.versions v ON v.id=a.version_id
+                WHERE a.state IN (\'EVALUATED\',\'COMPLETED\',\'EXPIRED\')
+                  AND (a.participant_person_id=CAST(:subject AS uuid)
+                       OR a.participant_account_id IN (SELECT id FROM core.accounts WHERE person_id=CAST(:subject AS uuid)))
+                UNION ALL
+                SELECT r.attempt_id::text AS "attemptId",r.type AS "activityType",r.version,r.metrics,r.passed,r.created_at::text AS "createdAt"
+                FROM education.activity_results r JOIN education.students s ON s.id=r.student_id
+                WHERE s.person_id=CAST(:subject AS uuid)
+                  AND NOT EXISTS (SELECT 1 FROM activity.attempts ca WHERE ca.id=r.attempt_id)',
             'achievement_event' => 'SELECT e.id::text,e.source_type AS "sourceType",e.source_id::text AS "sourceId",
                 e.occurred_at::text AS "occurredAt",e.revoked_at::text AS "revokedAt"
                 FROM education.achievement_events e JOIN education.students s ON s.id=e.student_id WHERE s.person_id=CAST(:subject AS uuid)',

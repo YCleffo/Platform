@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Education\Application;
 
+use App\Activity\Application\ActivityEngineService;
+use App\Activity\Application\ActivityPluginRegistry;
 use App\Core\Time\Application\ClockInterface;
 use App\Core\Rbac\Application\PermissionService;
 use App\Core\Organization\Application\OrganizationRepository;
 use App\Core\Auth\Application\AuthenticatedIdentity;
+use App\Shared\Application\HttpError;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
 use Psr\Http\Message\UploadedFileInterface;
+use RuntimeException;
 
 final readonly class EducationService
 {
@@ -27,16 +31,17 @@ final readonly class EducationService
         private ?ActivityResultSink $activityResults = null,
         private ?HomeworkService $homework = null,
         private ?StudentFamily $families = null,
-        private ?ActivityHandlerRegistry $activityHandlers = null,
+        private ?ActivityEngineService $activityEngine = null,
         private ?AchievementService $achievements = null,
         private ?ActivityResultView $activityView = null,
+        private ?ActivityPluginRegistry $pluginRegistry = null,
     ) {}
 
     /**
      * @param array<array-key,mixed> $query
      * @return array<string,mixed>|null
      */
-    public function read(string $operation, Scope $scope, array $query, ?string $id = null): ?array
+    public function read(string $operation, Scope $scope, array $query, ?string $id = null, ?AuthenticatedIdentity $identity = null): ?array
     {
         if (str_starts_with($operation, 'student_') && !in_array($operation, ['student_attendance', 'student_results', 'student_progress'], true)) {
             $this->assertActivityStudent($scope);
@@ -81,8 +86,8 @@ final readonly class EducationService
                 static fn(array $row): array => self::jsonFields($row, ['config', 'metrics']),
                 $this->store->activityCatalog(),
             )],
-            'student_activity_config' => $this->studentActivityConfig($scope, (string) $id),
-            'student_attempt' => $this->attemptView($scope, Input::uuid($id)),
+            'student_activity_config' => $this->studentActivityConfig($scope, (string) $id, $identity),
+            'student_attempt' => $this->attemptView($scope, Input::uuid($id), $identity),
             'student_achievements' => ['items' => $this->achievements?->readForStudent($scope->organizationId, (string) $scope->studentId, fn(string $type, string $resource): bool => $this->access->resourceAllowed($scope->personId, $type, $resource)) ?? []],
             'student_activity_progress' => $this->studentActivityProgress($scope, $query),
             'group_activity_progress' => $this->groupActivityProgress($scope, Input::uuid($id), $query),
@@ -96,7 +101,7 @@ final readonly class EducationService
      * @param array<array-key,mixed> $input
      * @return array<string,mixed>
      */
-    public function write(string $operation, Scope $scope, array $input, ?string $id = null, ?string $studentId = null): array
+    public function write(string $operation, Scope $scope, array $input, ?string $id = null, ?string $studentId = null, ?AuthenticatedIdentity $identity = null): array
     {
         if (str_starts_with($operation, 'student_')) {
             $this->assertActivityStudent($scope);
@@ -145,11 +150,11 @@ final readonly class EducationService
             'save_lesson_result' => $this->saveLessonResult($scope, Input::uuid($id), Input::uuid($studentId), $input),
             'invite_student' => $this->inviteStudent($scope, Input::uuid($id)),
             'revoke_student_account' => $this->revokeStudentAccount($scope, Input::uuid($id)),
-            'activities_assign' => $this->assignActivity($scope, (string) $id, $input),
-            'student_start_attempt' => $this->startAttempt($scope, (string) $id, $input),
-            'student_finish_attempt' => $this->finishAttempt($scope, Input::uuid($id), $input),
-            'student_save_attempt_state' => $this->saveAttemptState($scope, Input::uuid($id), $input),
-            'revoke_activity_attempt' => $this->revokeActivityAttempt($scope, Input::uuid($id), $input),
+            'activities_assign' => $this->assignActivity($scope, (string) $id, $input, $identity),
+            'student_start_attempt' => $this->startAttempt($scope, (string) $id, $input, false, $identity),
+            'student_finish_attempt' => $this->finishAttempt($scope, Input::uuid($id), $input, $identity),
+            'student_save_attempt_state' => $this->saveAttemptState($scope, Input::uuid($id), $input, $identity),
+            'revoke_activity_attempt' => $this->revokeActivityAttempt($scope, Input::uuid($id), $input, $identity),
             'create_event' => $this->createEvent($scope, $input),
             'mark_attendance' => $this->attendance($scope, Input::uuid($id), Input::uuid($studentId), $input),
             'save_profile' => $this->profile($scope, $input),
@@ -786,27 +791,62 @@ final readonly class EducationService
     }
 
     /** @return array<string,mixed> */
-    private function studentActivityConfig(Scope $scope, string $code): array
+    private function studentActivityConfig(Scope $scope, string $code, ?AuthenticatedIdentity $identity = null): array
     {
-        $definition = $this->store->activityDefinition(Input::text($code, 60));
-        if ($definition === null || !in_array($definition['enabled'], [true, 't', 1], true)) {
+        $canonicalCode = ActivityCode::canonical(Input::text($code, 60));
+        if (!$this->plugins()->has($canonicalCode)) {
             throw new EducationError(404, 'not_found');
         }
-        if (!$this->permissionsAllowed($scope, (string) $definition['requiredPermission'])) {
+        if (!$this->permissionsAllowed($scope, 'education.activities.use')) {
             throw new EducationError(403, 'access_denied');
         }
+        $definition = $this->store->activityDefinition($canonicalCode);
+        if ($definition !== null && !in_array($definition['enabled'], [true, 't', 1], true)) {
+            throw new EducationError(404, 'not_found');
+        }
+        $item = $this->runEngineCall(fn(): array => $this->engine()->bootstrapPluginActivity(
+            $this->identity($scope, $identity),
+            $scope->organizationId,
+            $canonicalCode,
+        ));
         $assignments = array_values(array_filter(
             $this->store->studentAssignments($scope),
-            static fn(array $row): bool => $row['activityId'] === $definition['id'],
+            static fn(array $row): bool => ActivityCode::canonical((string) ($row['activityCode'] ?? '')) === $canonicalCode,
         ));
-        $assignments = array_map(function (array $row) use ($code): array {
+        $assignments = array_map(function (array $row) use ($canonicalCode): array {
             $row = self::activityAssignmentPayload($row);
-            if (in_array($code, ['platform-typing', 'platform-logic'], true)) {
-                $row['effectiveConfig'] = $this->handlers()->validateConfig($code, ActivityHandlerRegistry::json($row['config']));
+            if (in_array($canonicalCode, ['platform-typing', 'platform-logic'], true)) {
+                $row['effectiveConfig'] = ActivityCode::toCanonicalConfig(
+                    $this->plugins(),
+                    $canonicalCode,
+                    Input::json($row['config']),
+                    true,
+                );
             }
             return $row;
         }, $assignments);
-        return [...self::jsonFields($definition, ['config', 'metrics']), 'assignments' => $assignments];
+
+        $plugin = $this->plugins()->get($canonicalCode);
+        if ($definition !== null) {
+            return [
+                ...self::jsonFields($definition, ['config', 'metrics']),
+                'id' => (string) ($item['id'] ?? $definition['id']),
+                'assignments' => $assignments,
+            ];
+        }
+
+        return [
+            'id' => (string) ($item['id'] ?? ''),
+            'code' => $canonicalCode,
+            'name' => (string) ($item['title'] ?? $plugin->title()),
+            'kind' => $plugin->category(),
+            'contractVersion' => $plugin->version(),
+            'enabled' => true,
+            'config' => $item['config'] ?? $plugin->defaultConfig(),
+            'metrics' => [],
+            'requiredPermission' => 'education.activities.use',
+            'assignments' => $assignments,
+        ];
     }
 
     /**
@@ -907,11 +947,11 @@ final readonly class EducationService
      * @param array<array-key,mixed> $input
      * @return array<string,mixed>
      */
-    private function assignActivity(Scope $scope, string $code, array $input): array
+    private function assignActivity(Scope $scope, string $code, array $input, ?AuthenticatedIdentity $identity = null): array
     {
         self::only($input, ['groupId', 'studentId', 'config']);
-        $definition = $this->store->activityDefinition(Input::text($code, 60));
-        if ($definition === null) {
+        $canonicalCode = ActivityCode::canonical(Input::text($code, 60));
+        if (!$this->plugins()->has($canonicalCode)) {
             throw new EducationError(404, 'not_found');
         }
         $groupId = empty($input['groupId']) ? null : Input::uuid($input['groupId']);
@@ -922,10 +962,34 @@ final readonly class EducationService
         if (isset($input['config']) && (!is_array($input['config']) || array_is_list($input['config']) && $input['config'] !== [])) {
             throw new EducationError(422, 'invalid_input');
         }
-        $this->handlers()->validateConfig($code, $input['config'] ?? []);
-        $config = $input['config'] ?? [];
-        $assignment = $this->store->createAssignment($scope, (string) $definition['id'], $groupId, $studentId, $config);
-        return [...self::activityAssignmentPayload($assignment), 'activityCode' => $code, 'activityName' => $definition['name']];
+        $config = ActivityCode::toCanonicalConfig($this->plugins(), $canonicalCode, $input['config'] ?? []);
+
+        $idObj = $this->identity($scope, $identity);
+        $item = $this->runEngineCall(fn(): array => $this->engine()->bootstrapPluginActivity($idObj, $scope->organizationId, $canonicalCode));
+        $created = $this->runEngineCall(fn(): array => $this->engine()->assignActivity(
+            $idObj,
+            $scope->organizationId,
+            (string) $item['id'],
+            [
+                'targetType' => $studentId !== null ? 'student' : 'group',
+                'targetId' => $studentId ?? $groupId,
+                'configOverride' => $config,
+            ],
+        ));
+
+        return self::activityAssignmentPayload([
+            'id' => (string) ($created['id'] ?? ''),
+            'activityId' => (string) ($created['activityId'] ?? $item['id']),
+            'groupId' => $groupId,
+            'studentId' => $studentId,
+            'config' => $created['configOverride'] ?? $config,
+            'opensAt' => $created['opensAt'] ?? null,
+            'dueAt' => $created['dueAt'] ?? null,
+            'completion' => null,
+            'createdAt' => $created['createdAt'] ?? gmdate(DATE_ATOM),
+            'activityCode' => $canonicalCode,
+            'activityName' => (string) ($item['title'] ?? $this->plugins()->get($canonicalCode)->title()),
+        ]);
     }
 
     /** @return array<string,mixed> */
@@ -989,62 +1053,259 @@ final readonly class EducationService
      * @return array<string,mixed>
      */
     /** Homework calls this only inside its assignment/recipient state and attempt-limit locks. */
-    public function startHomeworkAttempt(Scope $scope, string $code, array $input): array
+    public function startHomeworkAttempt(Scope $scope, string $code, array $input, ?AuthenticatedIdentity $identity = null): array
     {
         $this->assertActivityStudent($scope);
-        return $this->mutations->run($scope, 'student_start_attempt', fn(): array => $this->startAttempt($scope, $code, $input, true));
+        return $this->mutations->run($scope, 'student_start_attempt', fn(): array => $this->startAttempt($scope, $code, $input, true, $identity));
     }
 
-    private function startAttempt(Scope $scope, string $code, array $input, bool $fromHomework = false): array
+    private function startAttempt(Scope $scope, string $code, array $input, bool $fromHomework = false, ?AuthenticatedIdentity $identity = null): array
     {
-        $definition = $this->store->activityDefinition(Input::text($code, 60));
-        if ($definition === null || !in_array($definition['enabled'], [true, 't', 1], true)) {
+        $canonicalCode = ActivityCode::canonical(Input::text($code, 60));
+        if (!$this->plugins()->has($canonicalCode)) {
             throw new EducationError(404, 'not_found');
         }
-        if (!$this->permissionsAllowed($scope, (string) $definition['requiredPermission'])) {
+        if (!$this->permissionsAllowed($scope, 'education.activities.use')) {
             throw new EducationError(403, 'access_denied');
         }
-        $configInput = array_diff_key($input, array_flip(['source', 'assignmentId']));
-        $config = $this->handlers()->validateConfig($code, $configInput);
+
         $source = $input['source'] ?? 'browser';
         if (!in_array($source, ['browser', 'managed-device', 'native-app'], true)) {
             throw new EducationError(422, 'invalid_input');
         }
+
+        $configInput = array_diff_key($input, array_flip(['source', 'assignmentId']));
+        $canonicalFull = ActivityCode::toCanonicalConfig($this->plugins(), $canonicalCode, $configInput, true);
+        $clientConfig = ActivityCode::toCanonicalConfig($this->plugins(), $canonicalCode, $configInput, false);
+        unset($clientConfig['assessmentId'], $clientConfig['maxAttempts']);
+
         $assignmentId = isset($input['assignmentId']) ? Input::uuid($input['assignmentId']) : null;
+        $idObj = $this->identity($scope, $identity);
+
         if ($assignmentId !== null) {
-            $assigned = array_values(array_filter($this->store->studentAssignments($scope), static fn(array $a): bool => $a['id'] === $assignmentId))[0] ?? null;
-            if ($assigned === null || $assigned['activityId'] !== $definition['id']) {
+            $assigned = array_values(array_filter(
+                $this->store->studentAssignments($scope),
+                static fn(array $a): bool => $a['id'] === $assignmentId,
+            ))[0] ?? null;
+            if ($assigned === null || ActivityCode::canonical((string) ($assigned['activityCode'] ?? '')) !== $canonicalCode) {
                 throw new EducationError(404, 'not_found');
             }
-            if ($this->handlers()->validateConfig($code, ActivityHandlerRegistry::json($assigned['config'])) != $config) {
+            $isHomework = ($assigned['origin'] ?? 'learning') === 'homework';
+            if ($isHomework && !$fromHomework) {
+                $assignedCfg = Input::json($assigned['config']);
+                if (!array_key_exists('minAccuracy', $configInput)) {
+                    unset($assignedCfg['minAccuracy']);
+                }
+                if (!ActivityCode::sameConfig($this->plugins(), $canonicalCode, $assignedCfg, $configInput)) {
+                    throw new EducationError(422, 'invalid_input');
+                }
+                throw new EducationError(409, 'use_homework_route');
+            }
+            if (!$isHomework && $fromHomework) {
                 throw new EducationError(422, 'invalid_input');
             }
-            $this->store->guardAssignmentAttempt($scope, $assignmentId, $config['maxAttempts'], $fromHomework);
+            if (!$fromHomework && !ActivityCode::sameConfig($this->plugins(), $canonicalCode, Input::json($assigned['config']), $configInput)) {
+                throw new EducationError(422, 'invalid_input');
+            }
+            $activityId = (string) $assigned['activityId'];
+        } else {
+            $item = $this->runEngineCall(fn(): array => $this->engine()->bootstrapPluginActivity($idObj, $scope->organizationId, $canonicalCode));
+            $activityId = (string) $item['id'];
         }
-        $set = $code === 'platform-typing' ? $this->store->exerciseSet($code, $config['language'], $config['mode'], $config['difficulty']) : null;
-        $exercise = $this->handlers()->handler($code)->createExercise($config, $set);
-        $exercise['configSnapshot'] = $config;
-        $snapshotConfig = $code === 'platform-typing' && array_diff(array_keys($configInput), ['durationSeconds', 'language']) === []
-            ? $configInput : $config;
-        $exerciseText = (string) ($exercise['text'] ?? ($exercise['title'] ?? ''));
-        $attempt = $this->store->createAttempt($scope, (string) $definition['id'], $assignmentId, $source, $exerciseText, $snapshotConfig);
-        $this->store->snapshotAttempt($scope, $attempt['id'], (int) $definition['contractVersion'], $exercise);
-        return $this->attemptView($scope, $attempt['id']);
+
+        $attempt = $this->runEngineCall(fn(): array => $this->engine()->startAttempt($idObj, $scope->organizationId, $activityId, [
+            'assignmentId' => $assignmentId,
+            'config' => $clientConfig,
+            'resumeActive' => false,
+        ]));
+
+        return $this->formatLegacyAttemptView($scope, $attempt, $source);
     }
 
-    private function finishAttempt(Scope $scope, string $attemptId, array $input): array
+    private function finishAttempt(Scope $scope, string $attemptId, array $input, ?AuthenticatedIdentity $identity = null): array
     {
-        $attempt = $this->authorizedAttempt($scope, $attemptId);
-        $evaluation = $this->handlers()->handler($attempt['activityCode'])->evaluate($attempt, $input);
-        $result = $this->store->completeActivityAttempt($scope, $attemptId, $evaluation);
+        $this->access->assertResource($scope, 'attempt', $attemptId);
+        foreach (['score', 'passed', 'accuracy', 'wpm', 'cpm', 'correctChars', 'errors'] as $forbidden) {
+            if (array_key_exists($forbidden, $input)) {
+                throw new EducationError(422, 'invalid_input');
+            }
+        }
+
+        $idObj = $this->identity($scope, $identity);
+        $current = $this->runEngineCall(fn(): array => $this->engine()->getAttempt($idObj, $scope->organizationId, $attemptId));
+        $pluginCode = (string) ($current['pluginCode'] ?? '');
+
+        if (isset($input['activityCode'])) {
+            if (!is_string($input['activityCode']) || ActivityCode::canonical($input['activityCode']) !== $pluginCode) {
+                throw new EducationError(422, 'invalid_input');
+            }
+        }
+
+        $submissionPayload = $this->buildCanonicalSubmission($pluginCode, $input, $current);
+        $stateStr = (string) ($current['state'] ?? 'IN_PROGRESS');
+        if ($stateStr !== 'IN_PROGRESS') {
+            if (in_array($stateStr, ['EVALUATED', 'COMPLETED', 'EXPIRED'], true)) {
+                $stored = is_array($current['answers'] ?? null) ? $current['answers'] : [];
+                if ($this->sameNormalizedSubmission($pluginCode, $stored, $submissionPayload)) {
+                    return $this->activityView?->forAttempt($scope->organizationId, $attemptId) ?? ['attemptId' => $attemptId];
+                }
+            }
+            throw new EducationError(409, 'attempt_finished');
+        }
+
+        $submitInput = [
+            'revision' => (int) ($current['revision'] ?? 1),
+            'submission' => $submissionPayload,
+        ];
+        if (isset($submissionPayload['telemetry']) && is_array($submissionPayload['telemetry'])) {
+            $submitInput['telemetry'] = $submissionPayload['telemetry'];
+        }
+
+        $this->runEngineCall(fn(): array => $this->engine()->submitAttempt($idObj, $scope->organizationId, $attemptId, $submitInput));
         $this->achievements?->recordAttempt($scope, $attemptId);
         $this->activityResults?->finished($scope, $attemptId);
-        return $result;
+
+        return $this->activityView?->forAttempt($scope->organizationId, $attemptId) ?? ['attemptId' => $attemptId];
     }
 
-    private function handlers(): ActivityHandlerRegistry
+    /**
+     * Validates and normalizes legacy finish payloads into canonical plugin submission payloads.
+     *
+     * @param array<string, mixed> $input
+     * @param array<string, mixed> $currentAttempt
+     * @return array<string, mixed>
+     */
+    private function buildCanonicalSubmission(string $pluginCode, array $input, array $currentAttempt): array
     {
-        return $this->activityHandlers ?? new ActivityHandlerRegistry();
+        if ($pluginCode === 'platform-typing') {
+            Input::only($input, ['typed', 'typedText', 'durationSeconds', 'elapsedSeconds', 'corrections', 'inputErrors', 'telemetry', 'revision', 'idempotencyKey', 'activityCode']);
+            $typed = $input['typedText'] ?? $input['typed'] ?? null;
+            if (!is_string($typed)) {
+                throw new EducationError(422, 'invalid_input');
+            }
+            $duration = $input['elapsedSeconds'] ?? $input['durationSeconds'] ?? 1;
+            if ((!is_int($duration) && !is_float($duration)) || (float) $duration < 0) {
+                throw new EducationError(422, 'invalid_input');
+            }
+            $telemetry = is_array($input['telemetry'] ?? null) ? $input['telemetry'] : [];
+            $telemetry['backspaceCount'] = (int) ($telemetry['backspaceCount'] ?? $input['corrections'] ?? 0);
+            $telemetry['inputErrors'] = (int) ($telemetry['inputErrors'] ?? $input['inputErrors'] ?? 0);
+
+            return [
+                'typedText' => $typed,
+                'elapsedSeconds' => (float) $duration,
+                'telemetry' => $telemetry,
+            ];
+        }
+
+        if ($pluginCode === 'platform-logic') {
+            Input::only($input, ['answers', 'revision', 'idempotencyKey', 'activityCode']);
+            if (!is_array($input['answers'] ?? null)) {
+                throw new EducationError(422, 'invalid_input');
+            }
+            $rounds = is_array($currentAttempt['exercise']['rounds'] ?? null) ? $currentAttempt['exercise']['rounds'] : [];
+            $validOptions = [];
+            foreach ($rounds as $round) {
+                if (!is_array($round) || !is_string($round['id'] ?? null)) {
+                    continue;
+                }
+                $opts = is_array($round['options'] ?? null) ? array_map('strval', $round['options']) : [];
+                $validOptions[$round['id']] = $opts;
+            }
+            $answersMap = [];
+            if (array_is_list($input['answers'])) {
+                foreach ($input['answers'] as $item) {
+                    if (!is_array($item) || !is_string($item['roundId'] ?? null) || !is_scalar($item['optionId'] ?? null)) {
+                        throw new EducationError(422, 'invalid_input');
+                    }
+                    $rid = $item['roundId'];
+                    $opt = (string) $item['optionId'];
+                    if (isset($answersMap[$rid]) || !isset($validOptions[$rid]) || !in_array($opt, $validOptions[$rid], true)) {
+                        throw new EducationError(422, 'invalid_input');
+                    }
+                    $answersMap[$rid] = $opt;
+                }
+            } else {
+                foreach ($input['answers'] as $rid => $opt) {
+                    if (!is_string($rid) || !is_scalar($opt)) {
+                        throw new EducationError(422, 'invalid_input');
+                    }
+                    $optStr = (string) $opt;
+                    if (!isset($validOptions[$rid]) || !in_array($optStr, $validOptions[$rid], true)) {
+                        throw new EducationError(422, 'invalid_input');
+                    }
+                    $answersMap[$rid] = $optStr;
+                }
+            }
+
+            return ['answers' => $answersMap];
+        }
+
+        return ['answers' => $input['answers'] ?? $input, ...$input];
+    }
+
+    /**
+     * Checks whether a repeat submit payload matches the already-stored submission for idempotent replay.
+     *
+     * @param array<string, mixed> $stored
+     * @param array<string, mixed> $incoming
+     */
+    private function sameNormalizedSubmission(string $pluginCode, array $stored, array $incoming): bool
+    {
+        if ($pluginCode === 'platform-typing') {
+            return (string) ($stored['typedText'] ?? '') === (string) ($incoming['typedText'] ?? '')
+                && abs((float) ($stored['elapsedSeconds'] ?? 0) - (float) ($incoming['elapsedSeconds'] ?? 0)) < 0.001;
+        }
+        if ($pluginCode === 'platform-logic') {
+            return ($stored['answers'] ?? []) === ($incoming['answers'] ?? []);
+        }
+
+        return $stored === $incoming;
+    }
+
+    private function engine(): ActivityEngineService
+    {
+        return $this->activityEngine ?? throw new RuntimeException('ActivityEngineService is required.');
+    }
+
+    private function plugins(): ActivityPluginRegistry
+    {
+        return $this->pluginRegistry ?? throw new RuntimeException('ActivityPluginRegistry is required.');
+    }
+
+    private function identity(Scope $scope, ?AuthenticatedIdentity $identity = null): AuthenticatedIdentity
+    {
+        return $identity ?? new AuthenticatedIdentity(
+            $scope->actor(),
+            $scope->personId,
+            'scope',
+            [],
+            [],
+            $scope->locale,
+            $scope->timezone,
+        );
+    }
+
+    /**
+     * @template T
+     * @param callable(): T $call
+     * @return T
+     */
+    private function runEngineCall(callable $call): mixed
+    {
+        try {
+            return $call();
+        } catch (HttpError $e) {
+            $reason = match ($e->reason) {
+                'revision_conflict' => 'state_conflict',
+                'attempt_not_editable' => 'attempt_finished',
+                'max_attempts_reached' => 'attempt_limit_reached',
+                'attempt_not_found', 'activity_not_found', 'assignment_not_found' => 'not_found',
+                'attempt_forbidden', 'activity_forbidden' => 'access_denied',
+                default => $e->reason,
+            };
+            throw new EducationError($e->status, $reason);
+        }
     }
 
     private function assertActivityStudent(Scope $scope): void
@@ -1058,56 +1319,126 @@ final readonly class EducationService
         }
     }
 
-    private function authorizedAttempt(Scope $scope, string $id): array
+    /** No private answer key, result evidence or account identity enters the running DTO. */
+    private function attemptView(Scope $scope, string $id, ?AuthenticatedIdentity $identity = null): array
     {
-        $attempt = $this->store->attempt($scope, $id) ?? throw new EducationError(404, 'not_found');
-        if (($attempt['revokedAt'] ?? null) !== null) {
+        $this->access->assertResource($scope, 'attempt', $id);
+        $attempt = $this->runEngineCall(fn(): array => $this->engine()->getAttempt(
+            $this->identity($scope, $identity),
+            $scope->organizationId,
+            $id,
+        ));
+        if (in_array((string) ($attempt['state'] ?? ''), ['CANCELLED', 'INVALIDATED'], true)) {
             throw new EducationError(409, 'attempt_revoked');
         }
-        $definition = $this->store->activityDefinition((string) $attempt['activityCode']);
-        if ($definition === null || !in_array($definition['enabled'], [true, 't', 1], true) || !$this->permissionsAllowed($scope, (string) $definition['requiredPermission'])) {
-            throw new EducationError(403, 'access_denied');
-        }
-        $this->access->assertResource($scope, 'attempt', $id);
-        return $attempt;
+
+        return $this->formatLegacyAttemptView($scope, $attempt);
     }
 
-    /** No private answer key, result evidence or account identity enters the running DTO. */
-    private function attemptView(Scope $scope, string $id): array
+    /**
+     * Adapts canonical ActivityEngineService attempt DTO to the Education attempt response contract.
+     *
+     * @param array<string, mixed> $attempt
+     * @return array<string, mixed>
+     */
+    private function formatLegacyAttemptView(Scope $scope, array $attempt, string $source = 'browser'): array
     {
-        $attempt = $this->authorizedAttempt($scope, $id);
-        $public = array_intersect_key($attempt, array_flip(['id', 'studentId', 'activityId', 'activityCode', 'assignmentId', 'status', 'source', 'contractVersion', 'startedAt', 'finishedAt']));
-        $public['config'] = ActivityHandlerRegistry::json($attempt['config']);
-        $state = ActivityHandlerRegistry::json($attempt['state'] ?? []);
-        $public['state'] = $state === [] ? (object) [] : $state;
-        $public['stateVersion'] = (int) ($attempt['stateVersion'] ?? 0);
-        $out = ['attempt' => $public, 'exercise' => $this->handlers()->handler($attempt['activityCode'])->publicExercise($attempt)];
-        if ($attempt['status'] === 'finished') {
-            $out['result'] = $this->activityView?->forAttempt($scope->organizationId, $id)
-                ?? (isset($attempt['result']) ? ['attemptId' => $id, ...ActivityHandlerRegistry::json($attempt['result'])] : null);
+        $stateStr = (string) ($attempt['state'] ?? 'IN_PROGRESS');
+        $status = match ($stateStr) {
+            'EVALUATED', 'COMPLETED', 'EXPIRED' => 'finished',
+            'CANCELLED', 'INVALIDATED' => 'revoked',
+            default => 'running',
+        };
+        $cfg = is_array($attempt['config'] ?? null) ? $attempt['config'] : [];
+        if (isset($cfg['timeLimitSeconds']) && !isset($cfg['durationSeconds'])) {
+            $cfg['durationSeconds'] = $cfg['timeLimitSeconds'];
         }
+        $answers = is_array($attempt['answers'] ?? null) ? $attempt['answers'] : [];
+        $public = [
+            'id' => (string) ($attempt['id'] ?? ''),
+            'studentId' => (string) $scope->studentId,
+            'activityId' => (string) ($attempt['activityId'] ?? ''),
+            'activityCode' => (string) ($attempt['pluginCode'] ?? ''),
+            'assignmentId' => $attempt['assignmentId'] ?? null,
+            'status' => $status,
+            'source' => $source,
+            'contractVersion' => (int) ($attempt['versionNumber'] ?? 1),
+            'startedAt' => $attempt['startedAt'] ?? null,
+            'finishedAt' => $attempt['evaluatedAt'] ?? $attempt['submittedAt'] ?? null,
+            'config' => $cfg,
+            'state' => $answers === [] ? (object) [] : $answers,
+            'stateVersion' => max(0, (int) ($attempt['revision'] ?? 1) - 1),
+        ];
+
+        $exercise = is_array($attempt['exercise'] ?? null) ? $attempt['exercise'] : [];
+        if (isset($exercise['promptText']) && !isset($exercise['text'])) {
+            $exercise['text'] = $exercise['promptText'];
+        }
+        if (isset($exercise['timeLimitSeconds']) && !isset($exercise['durationSeconds'])) {
+            $exercise['durationSeconds'] = $exercise['timeLimitSeconds'];
+        }
+
+        $out = [
+            'attempt' => $public,
+            'exercise' => $exercise,
+        ];
+        if ($status === 'finished') {
+            $id = (string) ($attempt['id'] ?? '');
+            $out['result'] = $id !== '' ? $this->activityView?->forAttempt($scope->organizationId, $id) : null;
+        }
+
         return $out;
     }
 
-    private function saveAttemptState(Scope $scope, string $id, array $input): array
+    private function saveAttemptState(Scope $scope, string $id, array $input, ?AuthenticatedIdentity $identity = null): array
     {
-        ActivityHandlerRegistry::only($input, ['version', 'state']);
-        $version = ActivityHandlerRegistry::integer($input['version'] ?? null, 0, 2147483646);
+        Input::only($input, ['version', 'state']);
+        $version = Input::integer($input['version'] ?? null, 0, 2147483646);
         if (!is_array($input['state'] ?? null)) {
             throw new EducationError(422, 'invalid_input');
         }
-        $attempt = $this->authorizedAttempt($scope, $id);
-        $state = $this->handlers()->handler($attempt['activityCode'])->validateState($attempt, $input['state']);
-        $this->store->saveAttemptState($scope, $id, $version, $state);
-        return $this->attemptView($scope, $id);
+        $this->access->assertResource($scope, 'attempt', $id);
+        $state = $input['state'];
+        $this->runEngineCall(fn(): array => $this->engine()->saveDraft(
+            $this->identity($scope, $identity),
+            $scope->organizationId,
+            $id,
+            [
+                'revision' => $version + 1,
+                'draftState' => $state,
+                'answers' => $state,
+            ],
+        ));
+
+        return $this->attemptView($scope, $id, $identity);
     }
 
-    private function revokeActivityAttempt(Scope $scope, string $id, array $input): array
+    private function revokeActivityAttempt(Scope $scope, string $id, array $input, ?AuthenticatedIdentity $identity = null): array
     {
-        ActivityHandlerRegistry::only($input, []);
-        $row = $this->store->revokeActivityAttempt($scope, $id);
-        $this->achievements?->reconcileForStudent($scope->organizationId, $row['studentId']);
-        return $row;
+        Input::only($input, []);
+        $attempt = $this->runEngineCall(fn(): array => $this->engine()->invalidateAttempt(
+            $this->identity($scope, $identity),
+            $scope->organizationId,
+            $id,
+            'Revoked by teacher',
+        ));
+        $studentId = '';
+        $personId = (string) ($attempt['participantPersonId'] ?? '');
+        if ($personId !== '') {
+            $found = $this->store->studentByAccount($scope->accountId, $scope->organizationId, $personId);
+            if ($found !== null) {
+                $studentId = $found['id'];
+            }
+        }
+        if ($studentId !== '') {
+            $this->achievements?->reconcileForStudent($scope->organizationId, $studentId);
+        }
+
+        return [
+            'id' => $id,
+            'studentId' => $studentId,
+            'revokedAt' => $attempt['updatedAt'] ?? gmdate(DATE_ATOM),
+        ];
     }
 
     private function activityRange(Scope $scope, array $query): array
@@ -1116,9 +1447,9 @@ final readonly class EducationService
         $from = Input::date($query['from'] ?? $now->modify('-30 days')->format('Y-m-d'));
         $to = Input::date($query['to'] ?? $now->format('Y-m-d'));
         [$start, $end] = Input::range($from, $to, $scope->timezone);
-        $code = isset($query['activity']) ? Input::text($query['activity'], 60) : null;
-        if ($code !== null) {
-            $this->handlers()->handler($code);
+        $code = isset($query['activity']) ? ActivityCode::canonical(Input::text($query['activity'], 60)) : null;
+        if ($code !== null && !$this->plugins()->has($code)) {
+            throw new EducationError(404, 'not_found');
         }
         return [$from, $to, $start, $end, $code];
     }

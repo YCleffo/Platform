@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Activity\Application\ActivityEngineService;
+use App\Activity\Application\ActivityPluginRegistry;
+use App\Activity\Application\ActivityResultListenerInterface;
 use App\Education\Application\EducationStore;
 use App\Education\Application\CurriculumStore;
 use App\Education\Infrastructure\PostgresCurriculumStore;
@@ -32,23 +35,22 @@ return [
     HomeworkStore::class => ['class' => PostgresHomeworkStore::class],
     HomeworkExtensions::class => ['class' => PostgresHomeworkExtensions::class],
     ActivityResultSink::class => ['class' => \App\Education\Infrastructure\EducationActivityEvents::class],
-    \App\Activity\Application\ActivityResultListenerInterface::class => ['class' => \App\Education\Infrastructure\EducationActivityJournalAdapter::class],
-    \App\Activity\Application\ActivityResultListenerInterface::class => ['class' => \App\Education\Infrastructure\EducationActivityJournalAdapter::class],
+    ActivityResultListenerInterface::class => ['class' => \App\Education\Infrastructure\EducationActivityJournalAdapter::class],
     EducationService::class => ['__construct()' => [
         'curriculum' => \Yiisoft\Definitions\Reference::to(CurriculumStore::class),
         'activityResults' => \Yiisoft\Definitions\Reference::to(ActivityResultSink::class),
         'homework' => \Yiisoft\Definitions\Reference::to(HomeworkService::class),
-        'activityHandlers' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\ActivityHandlerRegistry::class),
+        'families' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\StudentFamily::class),
+        'activityEngine' => \Yiisoft\Definitions\Reference::to(ActivityEngineService::class),
+        'pluginRegistry' => \Yiisoft\Definitions\Reference::to(ActivityPluginRegistry::class),
         'achievements' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\AchievementService::class),
         'activityView' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\ActivityResultView::class),
-        'families' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\StudentFamily::class),
     ]],
     FileStore::class => ['class' => S3FileStore::class],
     \App\Education\Application\AssessmentService::class => ['__construct()' => [
         'db' => \Yiisoft\Definitions\Reference::to(\Yiisoft\Db\Connection\ConnectionInterface::class),
-        'activityHandlers' => \Yiisoft\Definitions\Reference::to(\App\Education\Application\ActivityHandlerRegistry::class),
+        'engine' => \Yiisoft\Definitions\Reference::to(ActivityEngineService::class),
         'activityResults' => \Yiisoft\Definitions\Reference::to(ActivityResultSink::class),
-        'engine' => \Yiisoft\Definitions\Reference::to(\App\Activity\Application\ActivityEngineService::class),
     ]],
     Mutation::class => ['class' => PostgresMutation::class],
     MigrationRunner::class => ['__construct()' => ['directory' => $root . '/migrations/education']],

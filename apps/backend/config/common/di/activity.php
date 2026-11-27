@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Activity\Application\ActivityDomainPolicyInterface;
 use App\Activity\Application\ActivityEngineService;
 use App\Activity\Application\ActivityPluginRegistry;
+use App\Activity\Application\ActivityResultListenerInterface;
 use App\Activity\Infrastructure\DefaultActivityDomainPolicy;
 use App\Core\Organization\Application\OrganizationRepository;
 use App\Core\Rbac\Application\PermissionService;
@@ -31,6 +32,7 @@ return [
         RealtimeService $realtime,
         NotificationsService $notifications,
         ActivityDomainPolicyInterface $domainPolicy,
+        ?ActivityResultListenerInterface $resultListener = null,
     ): ActivityEngineService {
         return new ActivityEngineService(
             $db,
@@ -40,6 +42,7 @@ return [
             $realtime,
             $notifications,
             $domainPolicy,
+            $resultListener,
         );
     },
 ];
